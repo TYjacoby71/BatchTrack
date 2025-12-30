@@ -17,6 +17,8 @@ LOGGER = logging.getLogger(__name__)
 
 from .taxonomy_constants import (
     INGREDIENT_CATEGORIES_PRIMARY,
+    ORIGIN_TO_INGREDIENT_CATEGORIES,
+    CATEGORY_ALLOWED_REFINEMENT_LEVELS,
     MASTER_CATEGORIES,
     MASTER_CATEGORY_RULE_SEED,
     ORIGINS,
@@ -76,8 +78,15 @@ def _guess_origin(ingredient: dict, term: str) -> str:
         return "Mineral/Earth"
     if any(k in t for k in ("yeast", "xanthan", "culture", "scoby", "kefir")):
         return "Fermentation"
+    # Heuristic: treat chemistry-like tokens as synthetic to avoid defaulting to Plant-Derived.
+    # Examples: "2-acetyl-1-pyrroline", "disodium tetramethylhexadecenyl..."
+    if any(ch.isdigit() for ch in t) and any(sym in t for sym in ("-", "/", ",")):
+        return "Synthetic"
+    if any(k in t for k in ("peg-", "ppg-", "poly", "copolymer", "acrylate", "quaternium", "dimethicone", "carbomer", "laureth", "ceteareth")):
+        return "Synthetic"
     if ingredient.get("botanical_name"):
         return "Plant-Derived"
+    # Conservative fallback: if nothing suggests mineral/ferment/synthetic, treat as Plant-Derived.
     return "Plant-Derived"
 
 
@@ -115,6 +124,27 @@ def _guess_primary_category(term: str, fallback: str | None = None) -> str:
 def _coerce_refinement(value: str | None) -> str:
     v = (value or "").strip()
     return v if v in REFINEMENT_LEVELS else "Other"
+
+
+def _coerce_refinement_for_category(refinement: str | None, ingredient_category: str | None) -> str:
+    """Apply category-specific refinement guardrails (best-effort)."""
+    coerced = _coerce_refinement(refinement)
+    cat = (ingredient_category or "").strip()
+    allowed = CATEGORY_ALLOWED_REFINEMENT_LEVELS.get(cat)
+    if not allowed:
+        return coerced
+    return coerced if coerced in allowed else "Other"
+
+
+def _is_category_allowed_for_origin(origin: str | None, ingredient_category: str | None) -> bool:
+    o = (origin or "").strip()
+    c = (ingredient_category or "").strip()
+    if not o or not c:
+        return False
+    allowed = ORIGIN_TO_INGREDIENT_CATEGORIES.get(o)
+    if not allowed:
+        return True
+    return c in allowed
 
 
 def _coerce_primary_category(value: str | None, term: str, seed_category: str | None) -> str:
@@ -397,6 +427,44 @@ class NormalizedTerm(Base):
     normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SourceItem(Base):
+    """Raw source 'item' extracted from INCI/TGSC/etc.
+
+    Item-first ingestion prevents source rows like 'Abies Alba Cone Oil' or
+    'Beetroot Powder' from becoming queued *base* terms.
+
+    A SourceItem may be linked to a derived base definition term, or left as an
+    orphan when no safe linkage is possible yet.
+    """
+
+    __tablename__ = "source_items"
+
+    # Deterministic content-addressed key to avoid duplicates across runs.
+    key = Column(String, primary_key=True)
+
+    source = Column(String, nullable=False)  # cosing|tgsc|...
+    raw_name = Column(Text, nullable=False)
+    inci_name = Column(Text, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    # Parsed lineage linkage
+    derived_term = Column(String, nullable=True, default=None)  # normalized base definition term
+    derived_variation = Column(String, nullable=True, default=None)
+    derived_physical_form = Column(String, nullable=True, default=None)
+
+    # Deterministic best-effort taxonomy (may be blank if unknown)
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+
+    status = Column(String, nullable=False, default="linked")  # linked|orphan|review
+    needs_review_reason = Column(Text, nullable=True, default=None)
+
+    # Full source row payload for traceability
+    payload_json = Column(Text, nullable=False, default="{}")
+    ingested_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -410,6 +478,18 @@ def ensure_tables_exist() -> None:
     _ensure_ingredient_columns()
     _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
+    _ensure_source_item_indexes()
+
+
+def _ensure_source_item_indexes() -> None:
+    """Best-effort indexing for source_items (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source ON source_items(source)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_status ON source_items(status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_derived_term ON source_items(derived_term)"))
+    except Exception:  # pragma: no cover
+        return
 
 
 def _ensure_priority_column() -> None:
@@ -1038,6 +1118,19 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
     origin = _guess_origin(ingredient, cleaned)
     refinement_level = _coerce_refinement(ingredient.get("refinement_level"))
     ingredient_category = _coerce_primary_category(ingredient_category_raw, cleaned, cleaned_category)
+    # Guardrail: don't allow invalid origin/category pairings.
+    if ingredient_category and not _is_category_allowed_for_origin(origin, ingredient_category):
+        if origin == "Synthetic":
+            ingredient_category = "Synthetic - Other"
+        elif origin == "Fermentation":
+            ingredient_category = "Fermentation - Other"
+        elif origin == "Marine-Derived":
+            ingredient_category = "Marine - Other"
+        elif origin in {"Animal-Derived", "Animal-Byproduct"}:
+            ingredient_category = "Animal - Other"
+        else:
+            ingredient_category = ""
+    refinement_level = _coerce_refinement_for_category(refinement_level, ingredient_category)
     derived_from = (ingredient.get("derived_from") or "").strip() or None
     usage_restrictions = ingredient.get("usage_restrictions")
     prohibited_flag = _coerce_bool(ingredient.get("prohibited_flag"), default=False)
@@ -1394,3 +1487,57 @@ def get_queue_summary() -> dict:
             summary[status] = summary.get(status, 0) + 1
     summary["total"] = sum(summary.values())
     return summary
+
+
+def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
+    """Upsert source item rows (INCI/TGSC) into source_items. Returns newly inserted count."""
+    ensure_tables_exist()
+    inserted = 0
+    with get_session() as session:
+        existing = {r[0] for r in session.query(SourceItem.key).all()}
+        for row in rows:
+            key = (row.get("key") or "").strip()
+            if not key or key in existing:
+                continue
+            raw_name = (row.get("raw_name") or "").strip()
+            if not raw_name:
+                continue
+            status = (row.get("status") or "linked").strip().lower()
+            if status not in {"linked", "orphan", "review"}:
+                status = "review"
+            item = SourceItem(
+                key=key,
+                source=(row.get("source") or "").strip() or "unknown",
+                raw_name=raw_name,
+                inci_name=(row.get("inci_name") or "").strip() or None,
+                cas_number=(row.get("cas_number") or "").strip() or None,
+                derived_term=(row.get("derived_term") or "").strip() or None,
+                derived_variation=(row.get("derived_variation") or "").strip() or None,
+                derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
+                origin=(row.get("origin") or "").strip() or None,
+                ingredient_category=(row.get("ingredient_category") or "").strip() or None,
+                refinement_level=(row.get("refinement_level") or "").strip() or None,
+                status=status,
+                needs_review_reason=(row.get("needs_review_reason") or "").strip() or None,
+                payload_json=(row.get("payload_json") or "{}"),
+                ingested_at=datetime.utcnow(),
+            )
+            session.add(item)
+            existing.add(key)
+            inserted += 1
+    return inserted
+
+
+def get_source_item_summary() -> dict[str, int]:
+    """Return counts for source item ingestion statuses."""
+    ensure_tables_exist()
+    out: dict[str, int] = {"linked": 0, "orphan": 0, "review": 0, "total": 0}
+    with get_session() as session:
+        rows = session.query(SourceItem.status, func.count(SourceItem.key)).group_by(SourceItem.status).all()
+        for status, count in rows:
+            s = (status or "").strip().lower()
+            if s not in out:
+                out[s] = 0
+            out[s] = int(count or 0)
+    out["total"] = sum(v for k, v in out.items() if k != "total")
+    return out

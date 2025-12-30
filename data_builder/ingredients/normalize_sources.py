@@ -1,8 +1,10 @@
-"""Deterministically normalize source CSVs into base ingredient terms.
+"""Deterministically normalize source CSVs into base *definition* terms.
 
 Outputs:
 - data_builder/ingredients/output/normalized_terms.csv
 - Upserts normalized term records into compiler_state.db (normalized_terms table)
+- Also ingests *source items* into compiler_state.db (source_items table) so item
+  strings do not become base terms (e.g., "Beetroot Powder" should not be a base).
 """
 
 from __future__ import annotations
@@ -684,13 +686,55 @@ def main(argv: List[str] | None = None) -> None:
     cosing_path = Path(args.cosing).resolve()
     out_path = Path(args.out).resolve()
 
-    rows = normalize_sources(tgsc_path, cosing_path)
-    write_csv(out_path, rows)
-    LOGGER.info("Wrote %s normalized terms to %s", len(rows), out_path)
+    # New preferred path: item-first ingestion (writes source_items + normalized_terms).
+    try:
+        from .ingest_source_items import ingest_sources
+    except Exception:  # pragma: no cover
+        ingest_sources = None  # type: ignore
 
-    if not args.no_db:
-        inserted = database_manager.upsert_normalized_terms(rows)
-        LOGGER.info("Upserted normalized_terms into DB (new=%s)", inserted)
+    if ingest_sources is not None and not args.no_db:
+        inserted_items, inserted_terms = ingest_sources(
+            cosing_path=cosing_path,
+            tgsc_path=tgsc_path,
+            limit=None,
+        )
+        LOGGER.info("Ingested source_items (new=%s) and normalized_terms (new=%s)", inserted_items, inserted_terms)
+        # Export normalized_terms from DB for easy inspection.
+        with database_manager.get_session() as session:
+            db_rows = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc()).all()
+        export_rows: List[Dict[str, Any]] = []
+        for r in db_rows:
+            export_rows.append(
+                {
+                    "term": r.term,
+                    "seed_category": r.seed_category or "",
+                    "ingredient_category": r.ingredient_category or "",
+                    "origin": r.origin or "",
+                    "refinement_level": r.refinement_level or "",
+                    "derived_from": r.derived_from or "",
+                    "ingredient_category_confidence": r.ingredient_category_confidence or "",
+                    "origin_confidence": r.origin_confidence or "",
+                    "refinement_confidence": r.refinement_confidence or "",
+                    "derived_from_confidence": r.derived_from_confidence or "",
+                    "overall_confidence": r.overall_confidence or "",
+                    "botanical_name": r.botanical_name or "",
+                    "inci_name": r.inci_name or "",
+                    "cas_number": r.cas_number or "",
+                    "description": r.description or "",
+                    "source_count": "",
+                }
+            )
+        write_csv(out_path, export_rows)
+        LOGGER.info("Wrote %s normalized terms to %s (from DB)", len(export_rows), out_path)
+    else:
+        # Legacy fallback: normalize_sources() returns normalized_terms rows only.
+        rows = normalize_sources(tgsc_path, cosing_path)
+        write_csv(out_path, rows)
+        LOGGER.info("Wrote %s normalized terms to %s", len(rows), out_path)
+
+        if not args.no_db:
+            inserted = database_manager.upsert_normalized_terms(rows)
+            LOGGER.info("Upserted normalized_terms into DB (new=%s)", inserted)
 
 
 if __name__ == "__main__":

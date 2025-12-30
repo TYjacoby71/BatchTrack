@@ -96,6 +96,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
             # Summary counts
             summary = database_manager.get_queue_summary()
+            source_summary = database_manager.get_source_item_summary()
 
         def _qs(**overrides: Any) -> str:
             args = dict(request.args)
@@ -202,6 +203,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         <div class="muted">processing: {summary.get('processing', 0)}</div>
         <div class="muted">completed: {summary.get('completed', 0)}</div>
         <div class="muted">error: {summary.get('error', 0)}</div>
+        <hr style="border:none;border-top:1px solid #eee;margin:10px 0;"/>
+        <div class="muted"><b>source_items</b>: {source_summary.get('total', 0)}</div>
+        <div class="muted">linked: {source_summary.get('linked', 0)}</div>
+        <div class="muted">orphans: {source_summary.get('orphan', 0)}</div>
+        <div class="muted">review: {source_summary.get('review', 0)}</div>
       </div>
 
       <div class="card" style="flex: 1;">
