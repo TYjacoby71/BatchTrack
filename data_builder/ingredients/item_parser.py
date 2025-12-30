@@ -383,6 +383,11 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Normalize repeated whitespace/hyphens already handled by _clean.
 
+    # Concentrations / solutions (high-signal, common in catalogs)
+    # Examples: "SODIUM HYDROXIDE 50% SOLUTION", "LACTIC ACID 80%"
+    if "solution" in t or re.search(r"\b\d{1,3}\s*%(\s*w/w)?\b", t):
+        return "Solution", "Liquid"
+
     # Oil variants (plant parts)
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
         token = f"{part} oil"
@@ -392,6 +397,21 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
         return "Essential Oil", "Oil"
+
+    # Polymer / surfactant families (synthetic derivatives)
+    if "crosspolymer" in t:
+        return "Crosspolymer", "Solid"
+    if "copolymer" in t:
+        return "Copolymer", "Solid"
+    if any(k in t for k in ("peg-", "glycereth", "laureth", "ceteareth", "oleth", "steareth", "ceteth", "pareth", "alketh")):
+        return "Ethoxylated", "Liquid"
+    if "ppg-" in t:
+        return "Propoxylated", "Liquid"
+    if any(k in t for k in ("quaternium", "trimonium", "polyquaternium")):
+        return "Quaternary Ammonium", "Solid"
+    if any(k in t for k in ("dimethicone", "siloxane", "silicone")):
+        return "Silicone", "Liquid"
+
     # Common physical material forms
     if " butter" in f" {t} " or t.endswith(" butter"):
         return "Butter", "Butter"
@@ -402,6 +422,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Esters", "Liquid"
     if " oleyl esters" in t:
         return "Oleyl Esters", "Liquid"
+    if " resin" in f" {t} " or t.endswith(" resin"):
+        return "Resin", "Resin"
+    if " gum" in f" {t} " or t.endswith(" gum"):
+        return "Gum", "Gum"
+    if " gel" in f" {t} " or t.endswith(" gel"):
+        return "Gel", "Gel"
+    if " paste" in f" {t} " or t.endswith(" paste"):
+        return "Paste", "Paste"
 
     if "ferment filtrate" in t:
         return "Ferment Filtrate", "Liquid"
@@ -411,6 +439,19 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Ferment Filtrate", "Liquid"
     if "ferment" in t:
         return "Ferment", "Liquid"
+
+    # Processing modifiers (single-label best-effort)
+    if "hydrolyzed" in t:
+        return "Hydrolyzed", "Liquid"
+    if "hydrogenated" in t:
+        return "Hydrogenated", "Solid"
+    if "acetylated" in t:
+        return "Acetylated", "Liquid"
+    if "sulfated" in t:
+        return "Sulfated", "Solid"
+    if "phosphated" in t:
+        return "Phosphated", "Solid"
+
     if "co2 extract" in t or "co₂ extract" in t:
         return "CO2 Extract", "Liquid"
     if "absolute" in t:
@@ -433,6 +474,16 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Flour", "Powder"
     if " starch" in f" {t} " or t.endswith(" starch"):
         return "Starch", "Powder"
+    if t.endswith(" crystals") or " crystals" in f" {t} ":
+        return "Crystals", "Solid"
+    if t.endswith(" granules") or " granules" in f" {t} ":
+        return "Granules", "Solid"
+    if t.endswith(" flakes") or " flakes" in f" {t} ":
+        return "Flakes", "Solid"
+
+    # Inorganic salts (only when the word is at the end; avoids over-tagging mid-string).
+    if any(t.endswith(f" {suffix}") or t == suffix for suffix in ("chloride", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate")):
+        return "Salt", "Solid"
 
     return "", ""
 
