@@ -377,7 +377,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     - "LAVANDULA ANGUSTIFOLIA HERB OIL" -> ("Herb Oil", "Oil")
     """
     cleaned = _clean(raw_name)
-    t = cleaned.lower()
+    t = cleaned.lower().strip(" ,")
     if not t:
         return "", ""
 
@@ -393,6 +393,9 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         token = f"{part} oil"
         if token in t:
             return _title_case_soft(token), "Oil"
+    # Plain oil (no plant part specified) — common in INCI.
+    if t.endswith(" oil"):
+        return "Oil", "Oil"
 
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
@@ -411,6 +414,28 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Quaternary Ammonium", "Solid"
     if any(k in t for k in ("dimethicone", "siloxane", "silicone")):
         return "Silicone", "Liquid"
+
+    # Surfactant / cleanser families (common INCI suffix families)
+    # Keep these as variation tags so items can be filtered and grouped deterministically.
+    if "amine oxide" in t or t.endswith(" oxide"):
+        return "Amine Oxide", "Liquid"
+    if re.search(r"\bbetaine\b", t):
+        return "Betaine", "Liquid"
+    if re.search(r"\bglucoside\b", t):
+        return "Glucoside", "Liquid"
+    if re.search(r"\bisethionate\b", t):
+        return "Isethionate", "Solid"
+    if re.search(r"\bsarcosinate\b", t):
+        return "Sarcosinate", "Liquid"
+    if re.search(r"\btaurate\b", t) or t.endswith("taurate"):
+        return "Taurate", "Liquid"
+    # Many INCI salts are concatenated (e.g., "cumenesulfonate", "lignosulfonate").
+    if re.search(r"sulfonate$", t) or re.search(r"\bsulfonate\b", t):
+        return "Sulfonate", "Solid"
+    if re.search(r"\bsulfosuccinate\b", t):
+        return "Sulfosuccinate", "Liquid"
+    if re.search(r"\bsulfoacetate\b", t):
+        return "Sulfoacetate", "Liquid"
 
     # Common physical material forms
     if " butter" in f" {t} " or t.endswith(" butter"):
@@ -439,6 +464,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Ferment Filtrate", "Liquid"
     if "ferment" in t:
         return "Ferment", "Liquid"
+    if "lysate" in t:
+        return "Lysate", "Liquid"
 
     # Processing modifiers (single-label best-effort)
     if "hydrolyzed" in t:
@@ -458,6 +485,9 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Absolute", "Liquid"
     if "concrete" in t:
         return "Concrete", "Solid"
+    if " expressed" in f" {t} ":
+        # Common label for citrus oils; treat as a variation of oil extraction.
+        return "Expressed", "Oil"
     if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
         return "Hydrosol", "Hydrosol"
     if "tincture" in t:
@@ -481,9 +511,43 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if t.endswith(" flakes") or " flakes" in f" {t} ":
         return "Flakes", "Solid"
 
+    # Organic acid salts / esters (very common in INCI)
+    # If it ends in a salt-like suffix, treat as Salt; if it ends in a fatty-acid ester suffix, treat as Esters.
+    _CATION_PREFIXES = (
+        "sodium",
+        "potassium",
+        "calcium",
+        "magnesium",
+        "ammonium",
+        "disodium",
+        "dipotassium",
+        "trisalts",  # rare
+    )
+    is_cation_salt = t.startswith(_CATION_PREFIXES) or any(f" {_c} " in f" {t} " for _c in _CATION_PREFIXES)
+    if any(t.endswith(suffix) for suffix in ("lactate", "citrate", "gluconate", "succinate", "octenylsuccinate")):
+        return ("Salt", "Solid") if is_cation_salt else ("Ester", "Liquid")
+    if t.endswith(" acetate"):
+        # "Geranyl acetate" etc are esters; "Sodium acetate" etc are salts.
+        return ("Salt", "Solid") if is_cation_salt else ("Ester", "Liquid")
+    if any(t.endswith(f" {suffix}") or t.endswith(suffix) for suffix in ("stearate", "palmitate", "oleate", "myristate", "laurate")):
+        return "Esters", "Solid"
+    # Generic ester catch-all (many aroma chemicals): "...ate" at end.
+    if t.endswith("ate") and not is_cation_salt:
+        return "Ester", "Liquid"
+
+    # Triglycerides
+    if "triglyceride" in t or "triglycerides" in t:
+        return "Triglyceride", "Oil"
+
     # Inorganic salts (only when the word is at the end; avoids over-tagging mid-string).
-    if any(t.endswith(f" {suffix}") or t == suffix for suffix in ("chloride", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate")):
+    if any(t.endswith(f" {suffix}") or t == suffix for suffix in ("chloride", "hydrochloride", "hcl", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate", "bromide")):
         return "Salt", "Solid"
+
+    # Proteins/peptides (common actives) - helps keep these from staying totally untyped.
+    if "peptide" in t or "polypeptide" in t:
+        return "Peptide", "Solid"
+    if "enzyme" in t:
+        return "Enzyme", "Solid"
 
     return "", ""
 
