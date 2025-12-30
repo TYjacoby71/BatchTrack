@@ -100,6 +100,15 @@ def _base_from_common_name(common_name: str, variation: str | None) -> str:
     return out or cn
 
 
+def _tokenize(s: str) -> set[str]:
+    t = _clean(s).lower()
+    t = re.sub(r"[^a-z0-9]+", " ", t).strip()
+    parts = {p for p in t.split() if p and len(p) >= 3}
+    # drop generic noise words
+    parts -= {"the", "and", "with", "for", "from", "oil", "extract", "absolute", "concrete", "water", "juice", "puree", "pulp"}
+    return parts
+
+
 def derive_display_names(*, limit: int = 0) -> dict[str, int]:
     """Populate display name fields for source_items using source_catalog_items as cross-reference."""
     database_manager.ensure_tables_exist()
@@ -156,6 +165,11 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
                     if inci_norm:
                         cat_inci = _norm_inci(_clean(cas_to_inci.get(cas, ""))) if _clean(cas_to_inci.get(cas, "")) else ""
                         if cat_inci and cat_inci != inci_norm:
+                            continue
+                    else:
+                        # TGSC-only rows have no INCI; require at least one meaningful token overlap
+                        # between the source raw name and the candidate common name.
+                        if _tokenize(raw).isdisjoint(_tokenize(c)):
                             continue
                     common = c
                     break

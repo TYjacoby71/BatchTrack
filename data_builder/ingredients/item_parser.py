@@ -416,8 +416,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Copolymer", "Solid"
     if any(k in t for k in ("peg-", "glycereth", "laureth", "ceteareth", "oleth", "steareth", "ceteth", "pareth", "alketh")):
         return "Ethoxylated", "Liquid"
+    # Generic "-eth" family (e.g., MYRETH-3, ISODECETH-2)
+    if re.search(r"\b[a-z]{2,}eth-\d+\b", t):
+        return "Ethoxylated", "Liquid"
     if "ppg-" in t:
         return "Propoxylated", "Liquid"
+    if "poloxamer" in t:
+        return "Poloxamer", "Solid"
     if any(k in t for k in ("quaternium", "trimonium", "polyquaternium")):
         return "Quaternary Ammonium", "Solid"
     if any(k in t for k in ("dimethicone", "siloxane", "silicone")):
@@ -546,6 +551,15 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Triglycerides
     if "triglyceride" in t or "triglycerides" in t:
         return "Triglyceride", "Oil"
+    if "glyceride" in t or "glycerides" in t:
+        return "Glycerides", "Oil"
+
+    if re.search(r"\bpca\b", t):
+        return "PCA", "Solid"
+
+    # Colorants/dyes markers (very common in INCI)
+    if re.match(r"^\s*ci\s*\d+", t) or t.startswith("pigment ") or t.startswith("basic "):
+        return "Colorant", "Solid"
 
     # Inorganic salts (only when the word is at the end; avoids over-tagging mid-string).
     if any(t.endswith(f" {suffix}") or t == suffix for suffix in ("chloride", "hydrochloride", "hcl", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate", "bromide")):

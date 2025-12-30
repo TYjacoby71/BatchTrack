@@ -213,7 +213,10 @@ def ingest_sources(
             lower = raw.lower()
             if not any(tok in lower for tok in ("seed oil", "kernel oil", "nut oil")):
                 desc = (payload.get("Chem/IUPAC Name / Description") or "").strip().lower()
-                if "volatile oil" in desc:
+                funcs = (payload.get("Function") or "").strip().lower()
+                # Guardrail: only essential-oil classify when CosIng also marks it as perfuming/fragrance.
+                is_perfuming = any(k in funcs for k in ("fragrance", "perfuming", "masking"))
+                if "volatile oil" in desc and is_perfuming:
                     variation, physical_form = "Essential Oil", "Oil"
 
         status = "linked" if definition else "orphan"
