@@ -26,6 +26,21 @@ _PUNCT_RE = re.compile(r"[^\w\s\-\&/()]", flags=re.UNICODE)
 # Must tolerate ALL CAPS INCI rows (e.g., "LAVANDULA ANGUSTIFOLIA ...").
 _BINOMIAL_RE = re.compile(r"^\s*([A-Za-z]{2,})\s+([A-Za-z]{2,})\b")
 _PAREN_COMMON_RE = re.compile(r"\(([^)]+)\)")
+_BINOMIAL_STOPWORDS = {
+    "oil",
+    "extract",
+    "butter",
+    "wax",
+    "resin",
+    "gum",
+    "water",
+    "powder",
+    "flour",
+    "starch",
+    "juice",
+    "concrete",
+    "absolute",
+}
 
 # Common plant-part tokens seen in INCI/TGSC
 _PLANT_PART_TOKENS = {
@@ -171,21 +186,25 @@ def derive_definition_term(raw_name: str) -> str:
         species_raw = m.group(2)
         genus = genus_raw[:1].upper() + genus_raw[1:].lower() if genus_raw else ""
         species = (species_raw or "").lower()
-        common_match = _PAREN_COMMON_RE.search(cleaned)
-        if common_match:
-            common_raw = _clean(common_match.group(1))
-            common = _title_case_soft(common_raw)
-            if common:
-                # Special-case: "Beet" + root -> Beetroot (common maker term)
-                if common.strip().lower() == "beet" and "root" in lowered:
-                    return "Beetroot"
-                # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
-                if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
-                    return _title_case_soft(f"{common} Flour")
-                # Default: use common name as definition (more maker-friendly than Latin).
-                return common
-        # Otherwise: use Genus species as canonical base.
-        return f"{genus} {species}".strip()
+        # Avoid treating generic item tokens as "species" (e.g., "Jojoba Oil").
+        if species in _BINOMIAL_STOPWORDS:
+            m = None
+        else:
+            common_match = _PAREN_COMMON_RE.search(cleaned)
+            if common_match:
+                common_raw = _clean(common_match.group(1))
+                common = _title_case_soft(common_raw)
+                if common:
+                    # Special-case: "Beet" + root -> Beetroot (common maker term)
+                    if common.strip().lower() == "beet" and "root" in lowered:
+                        return "Beetroot"
+                    # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
+                    if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
+                        return _title_case_soft(f"{common} Flour")
+                    # Default: use common name as definition (more maker-friendly than Latin).
+                    return common
+            # Otherwise: use Genus species as canonical base.
+            return f"{genus} {species}".strip()
 
     # Keep flour as definition for grain-like items.
     if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):

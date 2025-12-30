@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import database_manager
+from .item_parser import derive_definition_term
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +46,12 @@ def _first_cas(value: str) -> str:
     v = _clean_text(value)
     if not v or v in {"-", "—"}:
         return ""
+    # CosIng often uses "/" to separate multiple CAS numbers.
+    # Extract the first CAS-like token deterministically.
+    m = re.search(r"\b(\d{2,7}-\d{2}-\d)\b", v)
+    if m:
+        return m.group(1)
+    # Fallback: old behavior (comma-separated lists).
     return v.split(",")[0].strip()
 
 
@@ -60,6 +67,60 @@ def _norm_inci(value: str) -> str:
     v = v.upper()
     v = re.sub(r"\s+", " ", v).strip()
     return v
+
+
+_BINOMIAL_FROM_INCI_RE = re.compile(r"^\s*([A-Z][A-Z\-]+)\s+([A-Z][A-Z\-]+)\b")
+
+
+def _binomial_key_from_inci(inci_name: str) -> str:
+    """
+    Best-effort key for botanical matching when CAS/EC are missing.
+    Example: "SIMMONDSIA CHINENSIS SEED OIL" -> "simmondsia chinensis"
+    """
+    s = _norm_inci(inci_name)
+    if not s:
+        return ""
+    m = _BINOMIAL_FROM_INCI_RE.match(s)
+    if not m:
+        return ""
+    genus = (m.group(1) or "").strip().lower()
+    species = (m.group(2) or "").strip().lower()
+    if not genus or not species:
+        return ""
+    # Use the parser as a guardrail against stopword false positives (e.g., "JOJOBA OIL").
+    parsed = derive_definition_term(f"{genus.title()} {species}")
+    if " " not in parsed:
+        return ""
+    return parsed.strip().lower()
+
+
+def _extract_binomial_key_from_tgsc_row(row: dict[str, Any]) -> str:
+    """
+    Pull a binomial key from TGSC fields (botanical_name/synonyms/etc).
+    We accept both "Genus species" and uppercase versions in synonyms blobs.
+    """
+    candidates = [
+        row.get("botanical_name"),
+        row.get("synonyms"),
+        row.get("inci_name"),
+        row.get("common_name"),
+        row.get("name"),
+    ]
+    for cand in candidates:
+        s = _clean_text(cand)
+        if not s:
+            continue
+        m = re.search(r"\b([A-Z][a-z]+)\s+([a-z]{2,})\b", s)
+        if m:
+            return f"{m.group(1).lower()} {m.group(2).lower()}".strip()
+        m2 = re.search(r"\b([A-Z]{3,})\s+([A-Z]{3,})\b", s)
+        if m2:
+            genus = m2.group(1).lower()
+            species = m2.group(2).lower()
+            parsed = derive_definition_term(f"{genus.title()} {species}")
+            if " " in parsed:
+                return parsed.strip().lower()
+    return ""
 
 
 def _parse_cosing_functions(value: str) -> list[str]:
@@ -111,6 +172,7 @@ def build_catalog(
     cas_to_key: dict[str, str] = {}
     ec_to_key: dict[str, str] = {}
     inci_to_key: dict[str, str] = {}
+    binomial_to_key: dict[str, str] = {}
 
     upserts = 0
     cosing_count = 0
@@ -121,6 +183,9 @@ def build_catalog(
         for row in existing:
             if row.cas_number:
                 cas_to_key[row.cas_number.strip()] = row.key
+                first = _first_cas(row.cas_number)
+                if first:
+                    cas_to_key.setdefault(first, row.key)
             if row.ec_number:
                 ec_to_key[row.ec_number.strip()] = row.key
             if row.inci_name:
@@ -159,7 +224,12 @@ def build_catalog(
 
                 # Identifiers (authoritative)
                 item.inci_name = item.inci_name or inci
-                item.cas_number = item.cas_number or (cas or None)
+                if cas:
+                    # Normalize to the first CAS token to keep matching stable over time.
+                    if not item.cas_number or _first_cas(item.cas_number) != cas:
+                        item.cas_number = cas
+                else:
+                    item.cas_number = item.cas_number or None
                 item.ec_number = item.ec_number or (ec or None)
 
                 # CosIng fields
@@ -205,6 +275,9 @@ def build_catalog(
                     ec_to_key[item.ec_number.strip()] = item.key
                 if item.inci_name:
                     inci_to_key[_norm_inci(item.inci_name)] = item.key
+                    bkey = _binomial_key_from_inci(item.inci_name)
+                    if bkey and item.key:
+                        binomial_to_key.setdefault(bkey, item.key)
 
                 cosing_count += 1
 
@@ -226,12 +299,16 @@ def build_catalog(
                 einecs = _clean_text(row.get("einecs_number") or "")
 
                 key = ""
-                # Match priority: CAS -> EC/EINECS -> exact INCI string (rare, last resort)
+                # Match priority: CAS -> EC/EINECS -> botanical/binomial -> create new
                 if cas and cas in cas_to_key:
                     key = cas_to_key[cas]
                 elif einecs and einecs in ec_to_key:
                     key = ec_to_key[einecs]
                 else:
+                    bkey = _extract_binomial_key_from_tgsc_row(row)
+                    if bkey and bkey in binomial_to_key:
+                        key = binomial_to_key[bkey]
+                if not key:
                     # Create new record for TGSC-only rows
                     key = f"cas:{cas}" if cas else (f"ec:{einecs}" if einecs else f"tgsc:{name.lower()}")
 
