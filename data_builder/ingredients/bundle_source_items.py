@@ -67,18 +67,33 @@ def _cas_tokens(s: str) -> list[str]:
     return out
 
 
-_BINOMIAL_RE = re.compile(r"^\s*([A-Z][a-z]+)\s+([a-z]{2,})\b")
+_BINOMIAL_RE = re.compile(r"^\s*([A-Z][a-z]+)\s+([a-z]{2,})(?:\s+([a-z]{2,}))?\b")
+
+_NON_EPITHET = {
+    "seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem",
+    "oil", "extract", "water", "juice", "puree", "purée", "pulp",
+    "gum", "resin", "wax", "cera",
+    "sp", "ssp", "subsp", "var", "cv", "hybrid", "x",
+}
 
 
 def _binomial_key(text: str) -> str:
-    """Return 'genus species' lowercased if present, else ''."""
+    """Return 'genus species [epithet]' lowercased if present, else ''."""
     s = _clean(text)
     if not s:
         return ""
     m = _BINOMIAL_RE.match(s)
     if not m:
         return ""
-    return f"{m.group(1).lower()} {m.group(2).lower()}".strip()
+    genus = (m.group(1) or "").lower()
+    species = (m.group(2) or "").lower()
+    epithet = (m.group(3) or "").lower()
+    parts = [genus, species]
+    if epithet and epithet not in _NON_EPITHET:
+        # Drop accidental repeats: "angustifolia angustifolia"
+        if epithet != species:
+            parts.append(epithet)
+    return " ".join([p for p in parts if p]).strip()
 
 
 def _cluster_for_item(item: database_manager.SourceItem) -> tuple[str, int, str, str]:

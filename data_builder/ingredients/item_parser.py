@@ -42,6 +42,22 @@ _BINOMIAL_STOPWORDS = {
     "absolute",
 }
 
+# Tokens that should NOT be treated as a botanical epithet (they indicate part/form).
+def _format_botanical_name(tokens: list[str]) -> str:
+    """Format botanical tokens as 'Genus species [epithet]' with lowercase epithets."""
+    toks = [t for t in tokens if t]
+    if not toks:
+        return ""
+    genus = toks[0][:1].upper() + toks[0][1:].lower()
+    rest = [t.lower() for t in toks[1:]]
+    # Deduplicate accidental repeats (e.g., 'angustifolia angustifolia')
+    out = [genus]
+    for t in rest:
+        if out and out[-1].lower() == t.lower():
+            continue
+        out.append(t)
+    return " ".join(out).strip()
+
 # Common plant-part tokens seen in INCI/TGSC
 _PLANT_PART_TOKENS = {
     "leaf",
@@ -84,6 +100,17 @@ _FORM_TOKENS_DROP = {
     "gum",
     "solution",
     "distillate",
+}
+
+# Tokens that should NOT be treated as a botanical epithet (they indicate part/form).
+_BOTANICAL_NON_EPITHET_TOKENS = set(_PLANT_PART_TOKENS) | set(_FORM_TOKENS_DROP) | _BINOMIAL_STOPWORDS | {
+    "sp",
+    "ssp",
+    "subsp",
+    "var",
+    "cv",
+    "hybrid",
+    "x",
 }
 
 # Exceptions: tokens that are definition-level for maker UX (by your direction).
@@ -219,8 +246,17 @@ def derive_definition_term(raw_name: str) -> str:
                         return _title_case_soft(f"{common} Flour")
                     # Default: use common name as definition (more maker-friendly than Latin).
                     return common
-            # Otherwise: use Genus species as canonical base.
-            return f"{genus} {species}".strip()
+            # Otherwise: include an optional 3rd botanical epithet token when present.
+            # This helps distinguish cases like:
+            # - Citrus aurantium bergamia (bergamot) vs Citrus aurantium amara (bitter orange)
+            tokens = cleaned.split()
+            epithet = ""
+            if len(tokens) >= 3:
+                cand = tokens[2].strip().lower()
+                if cand and cand not in _BOTANICAL_NON_EPITHET_TOKENS and cand.isalpha():
+                    epithet = cand
+            base_tokens = [genus, species] + ([epithet] if epithet else [])
+            return _format_botanical_name([t for t in base_tokens if t])
 
     # Keep flour as definition for grain-like items.
     if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
