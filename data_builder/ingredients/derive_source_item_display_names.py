@@ -92,11 +92,28 @@ def _base_from_common_name(common_name: str, variation: str | None) -> str:
     if not cn:
         return ""
     v = _clean(variation)
-    if not v:
-        return cn
-    # remove variation at end (case-insensitive)
-    pat = re.compile(rf"\s+{re.escape(v)}\s*$", re.IGNORECASE)
-    out = pat.sub("", cn).strip(" ,-/")
+    # Always remove common variation tokens at end (even if they don't match current variation).
+    # This prevents cases like "peppermint absolute" becoming the base label for an Extract item.
+    trailing_variations = [
+        v,
+        "absolute",
+        "concrete",
+        "essential oil",
+        "oil",
+        "extract",
+        "water",
+        "hydrosol",
+        "juice",
+        "puree",
+        "purée",
+        "pulp",
+    ]
+    out = cn
+    for token in [t for t in trailing_variations if t]:
+        pat = re.compile(rf"\s+{re.escape(token)}\s*$", re.IGNORECASE)
+        out2 = pat.sub("", out).strip(" ,-/")
+        if out2 and out2 != out:
+            out = out2
     return out or cn
 
 

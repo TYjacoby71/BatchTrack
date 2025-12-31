@@ -569,6 +569,24 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if re.search(r"\bpca\b", t):
         return "PCA", "Solid"
 
+    # Common chemical family suffixes (helps classify remaining null-variation chemicals)
+    if t.endswith(" alcohol"):
+        return "Alcohol", "Liquid"
+    if t.endswith(" aldehyde"):
+        return "Aldehyde", "Liquid"
+    if t.endswith(" ketone"):
+        return "Ketone", "Liquid"
+    if t.endswith(" ether"):
+        return "Ether", "Liquid"
+    if t.endswith(" acetal") or " acetal " in f" {t} ":
+        return "Acetal", "Liquid"
+    if t.endswith(" lactone"):
+        return "Lactone", "Liquid"
+    if t.endswith(" amine"):
+        return "Amine", "Liquid"
+    if t.endswith(" amide"):
+        return "Amide", "Solid"
+
     # Colorants/dyes markers (very common in INCI)
     if re.match(r"^\s*ci\s*\d+", t) or t.startswith("pigment ") or t.startswith("basic "):
         return "Colorant", "Solid"

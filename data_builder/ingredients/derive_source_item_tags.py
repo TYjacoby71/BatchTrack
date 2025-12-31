@@ -58,6 +58,17 @@ _COSING_TO_FUNCTION_TAG: dict[str, str] = {
     "FRAGRANCE": "Fragrance",
     "PERFUMING": "Fragrance",
     "MASKING": "Fragrance",
+    "DEODORANT": "Fragrance",
+    "REFRESHING": "Fragrance",
+    "TONIC": "Skin Conditioning",
+    "SKIN CONDITIONING": "Skin Conditioning",
+    "EMOLLIENT": "Skin Conditioning",
+    "HUMECTANT": "Skin Conditioning",
+    "SKIN PROTECTING": "Skin Conditioning",
+    "SOOTHING": "Skin Conditioning",
+    "ANTI-ACNE": "Active",
+    "ANTIMICROBIAL": "Preservative",
+    "ANTIFOAMING": "Stabilizer",
 }
 
 
@@ -88,6 +99,9 @@ def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
         tags.add("Surfactant")
     if v in {"Essential Oil", "Absolute", "Concrete"}:
         tags.add("Fragrance")
+
+    # If CosIng already provides functions, do not add redundant low-signal heuristics.
+    # (we already did only high-confidence inferences above)
     return sorted(tags)
 
 
