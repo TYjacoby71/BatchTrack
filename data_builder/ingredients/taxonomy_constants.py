@@ -281,6 +281,17 @@ VARIATIONS_CURATED: list[str] = [
     "Extract",
     "Absolute",
     "Concrete",
+    # Common chemical/material families (used by deterministic parsing).
+    "Acid",
+    "Salt",
+    "Colorant",
+    "Unsaponifiables",
+    "Glycol",
+    "Amine",
+    "Imidazoline",
+    "Alkanolamide",
+    "Silicone",
+    "Protein",
     # Plant-part / material qualifiers that appear constantly in INCI/TGSC item names.
     # Keeping these pre-approved prevents mass quarantine when the compiler extracts them.
     "Leaf",

@@ -475,6 +475,11 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if t.endswith(" oil"):
         return "Oil", "Oil"
 
+    # Plant part materials (non-oil) - useful for grouping and term bundling.
+    for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem", "peel", "fruit", "berry", "bran", "germ"):
+        if t.endswith(f" {part}"):
+            return _title_case_soft(part), "Whole"
+
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
         return "Essential Oil", "Oil"
@@ -504,7 +509,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Amine Oxide", "Liquid"
     if re.search(r"\bbetaine\b", t):
         return "Betaine", "Liquid"
-    if re.search(r"\bsultaine\b", t) or re.search(r"\bhydroxysultaine\b", t):
+    if "hydroxysultaine" in t or "sultaine" in t:
         return "Sultaine", "Liquid"
     if re.search(r"\bglucoside\b", t):
         return "Glucoside", "Liquid"
@@ -516,13 +521,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Taurate", "Liquid"
     if re.search(r"\blactylate\b", t):
         return "Lactylate", "Solid"
-    if re.search(r"\bamphoacetate\b", t) or re.search(r"\bamphodiacetate\b", t):
+    if "amphoacetate" in t or "amphodiacetate" in t:
         return "Amphoacetate", "Liquid"
-    if re.search(r"\bglutamate\b", t):
+    if "glutamate" in t:
         return "Glutamate", "Solid"
-    if re.search(r"\bglycinate\b", t):
+    if "glycinate" in t:
         return "Glycinate", "Solid"
-    if re.search(r"\balaninate\b", t):
+    if "alaninate" in t:
         return "Alaninate", "Solid"
     # Many INCI salts are concatenated (e.g., "cumenesulfonate", "lignosulfonate").
     if re.search(r"sulfonate$", t) or re.search(r"\bsulfonate\b", t):
@@ -561,6 +566,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Ferment", "Liquid"
     if "lysate" in t:
         return "Lysate", "Liquid"
+    if "conditioned media" in t:
+        return "Conditioned Media", "Liquid"
 
     # Processing modifiers (single-label best-effort)
     if "hydrolyzed" in t:
@@ -631,7 +638,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         "trisalts",  # rare
     )
     is_cation_salt = t.startswith(_CATION_PREFIXES) or any(f" {_c} " in f" {t} " for _c in _CATION_PREFIXES)
-    if any(t.endswith(suffix) for suffix in ("lactate", "citrate", "gluconate", "succinate", "octenylsuccinate")):
+    if any(t.endswith(suffix) for suffix in ("lactate", "citrate", "gluconate", "succinate", "octenylsuccinate", "propionate")):
         return ("Salt", "Solid") if is_cation_salt else ("Ester", "Liquid")
     if t.endswith(" acetate"):
         # "Geranyl acetate" etc are esters; "Sodium acetate" etc are salts.
@@ -652,6 +659,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "PCA", "Solid"
 
     # Common chemical family suffixes (helps classify remaining null-variation chemicals)
+    if t.endswith(" acid"):
+        return "Acid", "Solid"
+    if t.endswith(" acids"):
+        return "Acid", "Solid"
     if t.endswith(" alcohol"):
         return "Alcohol", "Liquid"
     if t.endswith(" aldehyde"):
@@ -666,22 +677,86 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Lactone", "Liquid"
     if t.endswith(" amine"):
         return "Amine", "Liquid"
+    if t.endswith("amine"):
+        return "Amine", "Liquid"
     if t.endswith(" amide"):
         return "Amide", "Solid"
+    if t.endswith("imidazoline"):
+        return "Imidazoline", "Liquid"
+    if t.endswith(" glycol") or t.endswith("glycol"):
+        return "Glycol", "Liquid"
+
+    # Alkanolamides / alkanolamine salts (common surfactant intermediates)
+    if t.endswith(" mea") or t.endswith(" dea") or t.endswith(" mipa"):
+        return "Alkanolamide", "Liquid"
+
+    # Silicone families
+    if "methicone" in t:
+        return "Silicone", "Liquid"
+
+    # Single-token chemical family suffixes (e.g., BENZOPHENONE, LIMONENE, GERANIOL)
+    if " " not in t and "/" not in t:
+        if t.endswith("ol") and len(t) > 5:
+            return "Alcohol", "Liquid"
+        if t.endswith("one") and len(t) > 6:
+            return "Ketone", "Liquid"
+        if t.endswith("al") and len(t) > 5:
+            return "Aldehyde", "Liquid"
+        if t.endswith("ene") and len(t) > 6:
+            return "Alkene", "Liquid"
+        if t.endswith("ine") and len(t) > 6:
+            return "Amine", "Liquid"
+        if t.endswith("amide") and len(t) > 8:
+            return "Amide", "Solid"
+        if t.endswith("acid") and len(t) > 7:
+            return "Acid", "Solid"
 
     # Colorants/dyes markers (very common in INCI)
     if re.match(r"^\s*ci\s*\d+", t) or t.startswith("pigment ") or t.startswith("basic "):
         return "Colorant", "Solid"
+    # Common dye naming family in CosIng (e.g., "DIRECT RED 81")
+    if t.startswith("direct ") and any(ch.isdigit() for ch in t):
+        return "Colorant", "Solid"
+    if t.startswith("solvent ") and any(ch.isdigit() for ch in t):
+        return "Colorant", "Solid"
+    if t.startswith("hc ") and any(ch.isdigit() for ch in t):
+        return "Colorant", "Solid"
 
     # Inorganic salts (only when the word is at the end; avoids over-tagging mid-string).
-    if any(t.endswith(f" {suffix}") or t == suffix for suffix in ("chloride", "hydrochloride", "hcl", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate", "bromide")):
+    if any(
+        t.endswith(f" {suffix}") or t == suffix
+        for suffix in (
+            "chloride",
+            "chlorite",
+            "chlorate",
+            "perchlorate",
+            "hypochlorite",
+            "hydrochloride",
+            "hcl",
+            "sulfate",
+            "sulfide",
+            "silicate",
+            "phosphate",
+            "carbonate",
+            "hydroxide",
+            "nitrate",
+            "bromide",
+            "iodide",
+        )
+    ):
         return "Salt", "Solid"
+
+    # Oil fractions
+    if "unsaponifiables" in t or "unsaponifiable" in t:
+        return "Unsaponifiables", "Oil"
 
     # Proteins/peptides (common actives) - helps keep these from staying totally untyped.
     if "peptide" in t or "polypeptide" in t:
         return "Peptide", "Solid"
     if "enzyme" in t:
         return "Enzyme", "Solid"
+    if t.endswith(" protein") or t.endswith(" proteins"):
+        return "Protein", "Solid"
 
     return "", ""
 

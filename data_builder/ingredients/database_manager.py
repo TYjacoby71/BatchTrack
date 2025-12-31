@@ -460,6 +460,11 @@ class SourceItem(Base):
     derived_function_tags_json = Column(Text, nullable=False, default="[]")
     derived_master_categories_json = Column(Text, nullable=False, default="[]")
 
+    # If derived_variation is intentionally absent (e.g., base chemical / base term),
+    # mark as bypass so "missing variation" doesn't imply a parsing gap.
+    variation_bypass = Column(Integer, nullable=False, default=0)  # 0/1
+    variation_bypass_reason = Column(Text, nullable=True, default=None)
+
     # Deterministic bundling: link items to a derived definition cluster.
     definition_cluster_id = Column(String, nullable=True, default=None, index=True)
     definition_cluster_confidence = Column(Integer, nullable=True, default=None)
@@ -630,6 +635,8 @@ def _ensure_source_item_columns() -> None:
                 ("item_display_name", "TEXT"),
                 ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("variation_bypass", "INTEGER NOT NULL DEFAULT 0"),
+                ("variation_bypass_reason", "TEXT"),
                 ("definition_cluster_id", "TEXT"),
                 ("definition_cluster_confidence", "INTEGER"),
                 ("definition_cluster_reason", "TEXT"),
@@ -1663,14 +1670,18 @@ def get_queue_summary() -> dict:
 
 
 def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
-    """Upsert source item rows (INCI/TGSC) into source_items. Returns newly inserted count."""
+    """Upsert source item rows (INCI/TGSC) into source_items.
+
+    Returns:
+        Newly inserted count (updates are performed in-place but not counted).
+    """
     ensure_tables_exist()
     inserted = 0
     with get_session() as session:
-        existing = {r[0] for r in session.query(SourceItem.key).all()}
+        existing_rows = {r.key: r for r in session.query(SourceItem).all()}
         for row in rows:
             key = (row.get("key") or "").strip()
-            if not key or key in existing:
+            if not key:
                 continue
             raw_name = (row.get("raw_name") or "").strip()
             if not raw_name:
@@ -1678,32 +1689,56 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
             status = (row.get("status") or "linked").strip().lower()
             if status not in {"linked", "orphan", "review"}:
                 status = "review"
-            item = SourceItem(
-                key=key,
-                source=(row.get("source") or "").strip() or "unknown",
-                source_row_id=(row.get("source_row_id") or "").strip() or None,
-                source_row_number=row.get("source_row_number"),
-                source_ref=(row.get("source_ref") or "").strip() or None,
-                content_hash=(row.get("content_hash") or "").strip() or None,
-                is_composite=bool(row.get("is_composite")) if row.get("is_composite") is not None else False,
-                raw_name=raw_name,
-                inci_name=(row.get("inci_name") or "").strip() or None,
-                cas_number=(row.get("cas_number") or "").strip() or None,
-                cas_numbers_json=(row.get("cas_numbers_json") or "[]"),
-                derived_term=(row.get("derived_term") or "").strip() or None,
-                derived_variation=(row.get("derived_variation") or "").strip() or None,
-                derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
-                origin=(row.get("origin") or "").strip() or None,
-                ingredient_category=(row.get("ingredient_category") or "").strip() or None,
-                refinement_level=(row.get("refinement_level") or "").strip() or None,
-                status=status,
-                needs_review_reason=(row.get("needs_review_reason") or "").strip() or None,
-                payload_json=(row.get("payload_json") or "{}"),
-                ingested_at=datetime.utcnow(),
-            )
-            session.add(item)
-            existing.add(key)
-            inserted += 1
+            existing = existing_rows.get(key)
+            if existing is None:
+                item = SourceItem(
+                    key=key,
+                    source=(row.get("source") or "").strip() or "unknown",
+                    source_row_id=(row.get("source_row_id") or "").strip() or None,
+                    source_row_number=row.get("source_row_number"),
+                    source_ref=(row.get("source_ref") or "").strip() or None,
+                    content_hash=(row.get("content_hash") or "").strip() or None,
+                    is_composite=bool(row.get("is_composite")) if row.get("is_composite") is not None else False,
+                    raw_name=raw_name,
+                    inci_name=(row.get("inci_name") or "").strip() or None,
+                    cas_number=(row.get("cas_number") or "").strip() or None,
+                    cas_numbers_json=(row.get("cas_numbers_json") or "[]"),
+                    derived_term=(row.get("derived_term") or "").strip() or None,
+                    derived_variation=(row.get("derived_variation") or "").strip() or None,
+                    derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
+                    origin=(row.get("origin") or "").strip() or None,
+                    ingredient_category=(row.get("ingredient_category") or "").strip() or None,
+                    refinement_level=(row.get("refinement_level") or "").strip() or None,
+                    status=status,
+                    needs_review_reason=(row.get("needs_review_reason") or "").strip() or None,
+                    payload_json=(row.get("payload_json") or "{}"),
+                    ingested_at=datetime.utcnow(),
+                )
+                session.add(item)
+                existing_rows[key] = item
+                inserted += 1
+            else:
+                # Update deterministic fields from the latest parsing pass.
+                existing.source = (row.get("source") or "").strip() or existing.source
+                existing.source_row_id = (row.get("source_row_id") or "").strip() or existing.source_row_id
+                existing.source_row_number = row.get("source_row_number") if row.get("source_row_number") is not None else existing.source_row_number
+                existing.source_ref = (row.get("source_ref") or "").strip() or existing.source_ref
+                existing.content_hash = (row.get("content_hash") or "").strip() or existing.content_hash
+                existing.is_composite = bool(row.get("is_composite")) if row.get("is_composite") is not None else bool(existing.is_composite)
+                existing.raw_name = raw_name
+                existing.inci_name = (row.get("inci_name") or "").strip() or None
+                existing.cas_number = (row.get("cas_number") or "").strip() or None
+                existing.cas_numbers_json = (row.get("cas_numbers_json") or "[]")
+                existing.derived_term = (row.get("derived_term") or "").strip() or None
+                existing.derived_variation = (row.get("derived_variation") or "").strip() or None
+                existing.derived_physical_form = (row.get("derived_physical_form") or "").strip() or None
+                existing.origin = (row.get("origin") or "").strip() or None
+                existing.ingredient_category = (row.get("ingredient_category") or "").strip() or None
+                existing.refinement_level = (row.get("refinement_level") or "").strip() or None
+                existing.status = status
+                existing.needs_review_reason = (row.get("needs_review_reason") or "").strip() or None
+                existing.payload_json = (row.get("payload_json") or "{}")
+                existing.ingested_at = datetime.utcnow()
     return inserted
 
 
