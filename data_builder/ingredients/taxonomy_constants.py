@@ -31,6 +31,7 @@ INGREDIENT_CATEGORIES_PRIMARY: list[str] = [
     "Flowers",
     "Roots",
     "Barks",
+    "Fibers",
     # Mineral/Earth families
     "Clays",
     "Minerals",
@@ -56,6 +57,7 @@ INGREDIENT_CATEGORIES_PRIMARY: list[str] = [
     # Animal families (minimal; can be expanded later)
     "Animal - Fats",
     "Animal - Proteins",
+    "Animal - Fibers",
     "Animal - Dairy",
     "Animal - Other",
     # Marine families (minimal)
@@ -125,6 +127,7 @@ ORIGIN_TO_INGREDIENT_CATEGORIES: dict[str, list[str]] = {
         "Flowers",
         "Roots",
         "Barks",
+        "Fibers",
         "Sugars",
         "Liquid Sweeteners",
         "Acids",
@@ -138,12 +141,14 @@ ORIGIN_TO_INGREDIENT_CATEGORIES: dict[str, list[str]] = {
     "Animal-Derived": [
         "Animal - Fats",
         "Animal - Proteins",
+        "Animal - Fibers",
         "Animal - Dairy",
         "Animal - Other",
     ],
     "Animal-Byproduct": [
         "Animal - Fats",
         "Animal - Proteins",
+        "Animal - Fibers",
         "Animal - Dairy",
         "Animal - Other",
     ],
@@ -182,6 +187,7 @@ CATEGORY_ALLOWED_REFINEMENT_LEVELS: dict[str, set[str]] = {
     "Grains": {"Raw/Unprocessed", "Minimally Processed", "Milled/Ground", "Other"},
     "Nuts": {"Raw/Unprocessed", "Minimally Processed", "Extracted Fat", "Other"},
     "Seeds": {"Raw/Unprocessed", "Minimally Processed", "Extracted Fat", "Other"},
+    "Fibers": {"Raw/Unprocessed", "Minimally Processed", "Milled/Ground", "Other"},
     "Clays": {"Raw/Unprocessed", "Other"},
     "Minerals": {"Raw/Unprocessed", "Other"},
     "Salts": {"Raw/Unprocessed", "Other"},
@@ -200,6 +206,8 @@ CATEGORY_ALLOWED_REFINEMENT_LEVELS: dict[str, set[str]] = {
     "Fermentation - Polysaccharides": {"Fermented", "Other"},
     "Fermentation - Actives": {"Fermented", "Other"},
     "Fermentation - Other": {"Fermented", "Other"},
+    # Animal
+    "Animal - Fibers": {"Raw/Unprocessed", "Minimally Processed", "Other"},
 }
 
 REFINEMENT_LEVELS: list[str] = [

@@ -153,8 +153,8 @@ _SYNTHETIC_MARKERS = {
     "edta",
 }
 
-_FERMENT_MARKERS = {"ferment", "lysate", "filtrate", "culture"}
-_MARINE_MARKERS = {"algae", "seaweed", "kelp", "marine", "aqua maris", "sea salt", "chondrus"}
+_FERMENT_MARKERS = {"ferment", "lysate", "filtrate", "culture", "conditioned media", "exosome"}
+_MARINE_MARKERS = {"algae", "seaweed", "kelp", "marine", "aqua maris", "sea salt", "chondrus", "carrageenan", "agar", "alginate"}
 _MINERAL_MARKERS = {
     # True mineral/material signals (avoid generic salt anions; those are ambiguous in organic salts).
     "clay",
@@ -168,7 +168,7 @@ _MINERAL_MARKERS = {
     "mineral",
     "salt",
 }
-_ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard"}
+_ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard", "silk", "wool", "cashmere", "angora"}
 
 
 def _clean(value: str) -> str:
@@ -355,6 +355,8 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
         return "Marine - Botanicals"
 
     if o in {"Animal-Derived", "Animal-Byproduct"}:
+        if any(k in blob for k in ("wool", "silk", "cashmere", "angora")):
+            return "Animal - Fibers"
         if any(k in t for k in ("milk", "whey", "casein", "lactose")):
             return "Animal - Dairy"
         if any(k in t for k in ("tallow", "lard", "fat", "oil")):
@@ -384,6 +386,8 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
         return "Liquid Sweeteners"
     if any(k in blob for k in _GRAIN_KEYWORDS) or any(k in blob for k in ("starch", "flour", "malt", "bran")):
         return "Grains"
+    if any(k in blob for k in ("gum", "cellulose", "fiber", "fibre", "pectin", "inulin", "mucilage", "lignin", "beta-glucan")):
+        return "Fibers"
     if any(k in blob for k in ("almond", "walnut", "hazelnut", "macadamia", "pecan", "pistachio", "cashew")):
         return "Nuts"
     if any(k in blob for k in ("chia", "sesame", "flax", "linseed", "sunflower", "pumpkin seed", "poppy")):
