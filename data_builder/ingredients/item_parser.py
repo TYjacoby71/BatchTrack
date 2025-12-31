@@ -118,13 +118,29 @@ _SYNTHETIC_MARKERS = {
     "carbomer",
     "laureth",
     "ceteareth",
+    "oleth",
+    "steareth",
+    "ceteth",
+    "glycereth",
     "pareth",
     "edta",
 }
 
 _FERMENT_MARKERS = {"ferment", "lysate", "filtrate", "culture"}
 _MARINE_MARKERS = {"algae", "seaweed", "kelp", "marine", "aqua maris", "sea salt", "chondrus"}
-_MINERAL_MARKERS = {"oxide", "dioxide", "hydroxide", "carbonate", "chloride", "sulfate", "phosphate", "mica", "kaolin", "bentonite", "clay"}
+_MINERAL_MARKERS = {
+    # True mineral/material signals (avoid generic salt anions; those are ambiguous in organic salts).
+    "clay",
+    "kaolin",
+    "bentonite",
+    "mica",
+    "talc",
+    "silica",
+    "oxide",
+    "dioxide",
+    "mineral",
+    "salt",
+}
 _ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard"}
 
 
@@ -238,13 +254,22 @@ def infer_origin(raw_name: str) -> str:
         return "Marine-Derived"
     if any(k in t for k in _FERMENT_MARKERS):
         return "Fermentation"
-    if any(k in t for k in _MINERAL_MARKERS):
-        return "Mineral/Earth"
     if any(k in t for k in _ANIMAL_MARKERS):
         # keep split between animal-derived and byproduct later; for now treat as Animal-Derived
         return "Animal-Derived"
     if any(k in t for k in _SYNTHETIC_MARKERS) or _looks_chemical_like(t):
         return "Synthetic"
+
+    # Inorganic salt heuristic (handles cases like "SODIUM CHLORIDE" even without other mineral tokens).
+    parts = t.split()
+    inorganic_cations = {"sodium", "potassium", "calcium", "magnesium", "zinc", "iron", "copper", "aluminum", "ammonium"}
+    inorganic_anions = {"chloride", "bromide", "iodide", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate"}
+    if len(parts) == 2 and parts[1] in inorganic_anions:
+        # If the cation is a simple inorganic cation, treat as mineral; otherwise treat as synthetic organic salt.
+        return "Mineral/Earth" if parts[0] in inorganic_cations else "Synthetic"
+
+    if any(k in t for k in _MINERAL_MARKERS):
+        return "Mineral/Earth"
 
     # Botanical signals: Latin-ish binomial or plant parts
     if _BINOMIAL_RE.match(cleaned) or any(p in t for p in _PLANT_PART_TOKENS):
@@ -269,7 +294,7 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
     if o == "Synthetic":
         if any(k in t for k in ("copolymer", "polymer", "acrylate", "carbomer", "poly")):
             return "Synthetic - Polymers"
-        if any(k in t for k in ("laureth", "ceteareth", "sulfate", "sulfonate", "betaine", "glucoside", "surfactant")):
+        if any(k in t for k in ("laureth", "ceteareth", "oleth", "steareth", "ceteth", "pareth", "glycereth", "sulfate", "sulfonate", "betaine", "glucoside", "sultaine", "amphoacetate", "isethionate", "sarcosinate", "taurate", "surfactant")):
             return "Synthetic - Surfactants"
         if any(k in t for k in ("glycol", "alcohol", "solvent", "propanediol", "butylene", "propylene")):
             return "Synthetic - Solvents"
