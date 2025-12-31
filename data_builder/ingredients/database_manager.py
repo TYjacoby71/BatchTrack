@@ -460,6 +460,11 @@ class SourceItem(Base):
     derived_function_tags_json = Column(Text, nullable=False, default="[]")
     derived_master_categories_json = Column(Text, nullable=False, default="[]")
 
+    # Deterministic bundling: link items to a derived definition cluster.
+    definition_cluster_id = Column(String, nullable=True, default=None, index=True)
+    definition_cluster_confidence = Column(Integer, nullable=True, default=None)
+    definition_cluster_reason = Column(Text, nullable=True, default=None)
+
     raw_name = Column(Text, nullable=False)
     inci_name = Column(Text, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
@@ -546,6 +551,34 @@ class SourceCatalogItem(Base):
     merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SourceDefinition(Base):
+    """Deterministic derived definition cluster (pre-AI).
+
+    This represents a grouping/bundle of items that likely share the same ingredient
+    definition identity (term). This is intentionally conservative and can be refined
+    by AI or manual review later.
+    """
+
+    __tablename__ = "source_definitions"
+
+    cluster_id = Column(String, primary_key=True)
+    canonical_term = Column(Text, nullable=True, default=None)
+    botanical_key = Column(String, nullable=True, default=None)
+
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+
+    confidence = Column(Integer, nullable=True, default=None)
+    reason = Column(Text, nullable=True, default=None)
+
+    item_count = Column(Integer, nullable=False, default=0)
+    sample_item_keys_json = Column(Text, nullable=False, default="[]")
+    member_cas_json = Column(Text, nullable=False, default="[]")
+    member_inci_samples_json = Column(Text, nullable=False, default="[]")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -561,6 +594,7 @@ def ensure_tables_exist() -> None:
     _seed_taxonomy_tables()
     _ensure_source_item_indexes()
     _ensure_source_item_columns()
+    _ensure_source_definition_indexes()
     _ensure_source_catalog_indexes()
 
 
@@ -573,6 +607,7 @@ def _ensure_source_item_indexes() -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_derived_term ON source_items(derived_term)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source_row_id ON source_items(source_row_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_content_hash ON source_items(content_hash)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_cluster_id ON source_items(definition_cluster_id)"))
     except Exception:  # pragma: no cover
         return
 
@@ -595,6 +630,9 @@ def _ensure_source_item_columns() -> None:
                 ("item_display_name", "TEXT"),
                 ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("definition_cluster_id", "TEXT"),
+                ("definition_cluster_confidence", "INTEGER"),
+                ("definition_cluster_reason", "TEXT"),
             ]
             for name, col_type in additions:
                 if name in column_names:
@@ -604,6 +642,16 @@ def _ensure_source_item_columns() -> None:
     except Exception:  # pragma: no cover
         return
 
+
+def _ensure_source_definition_indexes() -> None:
+    """Best-effort indexing for source_definitions (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_origin ON source_definitions(origin)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_category ON source_definitions(ingredient_category)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_botanical ON source_definitions(botanical_key)"))
+    except Exception:  # pragma: no cover
+        return
 
 def _ensure_source_catalog_indexes() -> None:
     """Best-effort indexing for source_catalog_items (SQLite-safe)."""
