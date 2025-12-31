@@ -39,37 +39,57 @@ def _parse_cosing_functions(payload: dict[str, Any]) -> list[str]:
     return [p for p in parts if p]
 
 
-_COSING_TO_FUNCTION_TAG: dict[str, str] = {
-    # High-signal mappings (extend as needed)
-    "SURFACTANT": "Surfactant",
-    "CLEANSING": "Surfactant",
-    "EMULSIFYING": "Emulsifier",
-    "EMULSION STABILISING": "Stabilizer",
-    "VISCOSITY CONTROLLING": "Thickener",
-    "BINDING": "Stabilizer",
-    "FILM FORMING": "Stabilizer",
-    "PRESERVATIVE": "Preservative",
-    "ANTIOXIDANT": "Antioxidant",
-    "CHELATING": "Stabilizer",
-    "BUFFERING": "Acid",
-    "PH ADJUSTERS": "Acid",
-    "COLORANT": "Colorant",
-    "HAIR DYEING": "Colorant",
-    "FRAGRANCE": "Fragrance",
-    "PERFUMING": "Fragrance",
-    "MASKING": "Fragrance",
-    "DEODORANT": "Fragrance",
-    "REFRESHING": "Fragrance",
-    "TONIC": "Skin Conditioning",
-    "SKIN CONDITIONING": "Skin Conditioning",
-    "EMOLLIENT": "Skin Conditioning",
-    "HUMECTANT": "Skin Conditioning",
-    "SKIN PROTECTING": "Skin Conditioning",
-    "SOOTHING": "Skin Conditioning",
-    "ANTI-ACNE": "Active",
-    "ANTIMICROBIAL": "Preservative",
-    "ANTIFOAMING": "Stabilizer",
-}
+def _map_cosing_function_to_tags(func: str) -> list[str]:
+    """
+    Map CosIng function strings to normalized function tags.
+    CosIng functions often look like:
+    - "SURFACTANT - CLEANSING"
+    - "SKIN CONDITIONING - EMOLLIENT"
+    """
+    f = _clean(func).upper()
+    if not f or f == "NOT REPORTED":
+        return []
+
+    tags: set[str] = set()
+
+    # Broad categories
+    if "SURFACTANT" in f or "CLEANSING" in f:
+        tags.add("Surfactant")
+    if "EMULSIFYING" in f:
+        tags.add("Emulsifier")
+    if "EMULSION STABILISING" in f or "FILM FORMING" in f or "BINDING" in f or "CHELATING" in f or "ANTIFOAMING" in f:
+        tags.add("Stabilizer")
+    if "VISCOSITY CONTROLLING" in f:
+        tags.add("Thickener")
+
+    if "PRESERVATIVE" in f or "ANTIMICROBIAL" in f:
+        tags.add("Preservative")
+    if "ANTIOXIDANT" in f or "LIGHT STABILIZER" in f:
+        tags.add("Antioxidant")
+    if "BUFFERING" in f or "PH ADJUSTERS" in f:
+        tags.add("Acid")
+
+    if "COLORANT" in f or "HAIR DYEING" in f or "BLEACHING" in f:
+        tags.add("Colorant")
+    if "UV FILTER" in f or "UV ABSORBER" in f:
+        tags.add("UV Filter")
+
+    if "PERFUMING" in f or "FRAGRANCE" in f or "MASKING" in f or "DEODORANT" in f or "REFRESHING" in f:
+        tags.add("Fragrance")
+
+    if "SKIN CONDITIONING" in f or "SKIN PROTECTING" in f or "EMOLLIENT" in f or "HUMECTANT" in f or "SOOTHING" in f or "MOISTURISING" in f or "TONIC" in f:
+        tags.add("Skin Conditioning")
+
+    if "HAIR CONDITIONING" in f:
+        tags.add("Hair Conditioning")
+
+    if "SOLVENT" in f:
+        tags.add("Solvent")
+
+    if "ANTI-ACNE" in f or "ANTI-SEBUM" in f or "ANTI-SEBORRHEIC" in f:
+        tags.add("Active")
+
+    return sorted(tags)
 
 
 def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
@@ -85,8 +105,7 @@ def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
     # CosIng authoritative function tags
     if (item.source or "").strip().lower() == "cosing":
         for f in _parse_cosing_functions(payload):
-            mapped = _COSING_TO_FUNCTION_TAG.get(f.strip().upper())
-            if mapped:
+            for mapped in _map_cosing_function_to_tags(f):
                 tags.add(mapped)
 
     # High-confidence derivations from variation/form (kept conservative)

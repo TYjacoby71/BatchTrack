@@ -170,6 +170,11 @@ _MINERAL_MARKERS = {
 }
 _ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard", "silk", "wool", "cashmere", "angora"}
 
+# Word-boundary fiber markers (avoid false positives like "longum" containing "gum").
+_FIBER_MARKER_RE = re.compile(
+    r"\b(gum|cellulose|fiber|fibre|pectin|inulin|mucilage|lignin|beta[\s\-]?glucan)\b"
+)
+
 
 def _clean(value: str) -> str:
     text = (value or "").strip().strip('"').strip()
@@ -386,7 +391,7 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
         return "Liquid Sweeteners"
     if any(k in blob for k in _GRAIN_KEYWORDS) or any(k in blob for k in ("starch", "flour", "malt", "bran")):
         return "Grains"
-    if any(k in blob for k in ("gum", "cellulose", "fiber", "fibre", "pectin", "inulin", "mucilage", "lignin", "beta-glucan")):
+    if _FIBER_MARKER_RE.search(blob):
         return "Fibers"
     if any(k in blob for k in ("almond", "walnut", "hazelnut", "macadamia", "pecan", "pistachio", "cashew")):
         return "Nuts"
@@ -564,6 +569,18 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Hydrogenated", "Solid"
     if "acetylated" in t:
         return "Acetylated", "Liquid"
+    if "cold pressed" in t or "cold-pressed" in t:
+        return "Cold-Pressed", "Oil"
+    if "steam distilled" in t or "steam-distilled" in t:
+        return "Steam-Distilled", "Oil"
+    if "refined" in t:
+        return "Refined", "Liquid"
+    if "unrefined" in t:
+        return "Unrefined", "Liquid"
+    if "virgin" in t:
+        return "Virgin", "Oil"
+    if "deodorized" in t or "deodorised" in t:
+        return "Deodorized", "Oil"
     if "sulfated" in t:
         return "Sulfated", "Solid"
     if "phosphated" in t:
