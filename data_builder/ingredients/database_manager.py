@@ -1380,6 +1380,24 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             "Stock Solution",
         }
 
+        # Inventory requirement: always seed at least 1 item under the ingredient definition.
+        # If the upstream compiler/AI provides no items, create a deterministic base item.
+        # This is especially important for variation_bypass chemicals where the item name
+        # may be identical to the ingredient definition.
+        if not items:
+            items = [
+                {
+                    "item_name": cleaned,  # will be re-derived deterministically below
+                    "variation": "",
+                    "physical_form": "",
+                    "variation_bypass": True,
+                    "form_bypass": True,
+                    # keep minimal SOP list fields so the portal doesn't show empty lists
+                    "applications": ["Unknown"],
+                }
+            ]
+            ingredient["items"] = items
+
         for raw_item in items:
             if not isinstance(raw_item, dict):
                 continue
@@ -1450,7 +1468,9 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     approved = False
                     status = "quarantine"
                     reasons.append(f"Unapproved variation: {variation}")
-            if not physical_form:
+            # Allow form-less items when form_bypass is explicitly set.
+            # This supports inventory items for \"identity-only\" chemicals.
+            if not physical_form and not form_bypass:
                 approved = False
                 status = "quarantine"
                 reasons.append("Missing/invalid physical_form")
