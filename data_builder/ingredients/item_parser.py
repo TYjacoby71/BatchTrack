@@ -298,16 +298,41 @@ def infer_origin(raw_name: str) -> str:
     if any(k in t for k in _ANIMAL_MARKERS):
         # keep split between animal-derived and byproduct later; for now treat as Animal-Derived
         return "Animal-Derived"
+    # Amine oxides are an INCI surfactant family (synthetic), not mineral oxides.
+    if "amine oxide" in t:
+        return "Synthetic"
     if any(k in t for k in _SYNTHETIC_MARKERS) or _looks_chemical_like(t):
         return "Synthetic"
 
     # Inorganic salt heuristic (handles cases like "SODIUM CHLORIDE" even without other mineral tokens).
     parts = t.split()
     inorganic_cations = {"sodium", "potassium", "calcium", "magnesium", "zinc", "iron", "copper", "aluminum", "ammonium"}
-    inorganic_anions = {"chloride", "bromide", "iodide", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate"}
+    inorganic_anions = {
+        "chloride",
+        "bromide",
+        "iodide",
+        "fluoride",
+        "sulfate",
+        "phosphate",
+        "carbonate",
+        "bicarbonate",
+        "hydroxide",
+        "nitrate",
+        "silicate",
+        "borate",
+        "peroxide",
+        "dioxide",
+        "oxide",
+    }
+    # Multi-word salts: if it begins with a simple cation and ends with a common inorganic anion,
+    # treat as Mineral/Earth; otherwise treat as Synthetic organic salt.
+    if len(parts) >= 2 and parts[0] in inorganic_cations and parts[-1] in inorganic_anions:
+        return "Mineral/Earth"
     if len(parts) == 2 and parts[1] in inorganic_anions:
         # If the cation is a simple inorganic cation, treat as mineral; otherwise treat as synthetic organic salt.
         return "Mineral/Earth" if parts[0] in inorganic_cations else "Synthetic"
+    if len(parts) >= 2 and parts[0] in inorganic_cations and parts[-1].endswith(("ate", "ite", "ide", "urate")):
+        return "Synthetic"
 
     if any(k in t for k in _MINERAL_MARKERS):
         return "Mineral/Earth"
@@ -335,7 +360,29 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
     if o == "Synthetic":
         if any(k in t for k in ("copolymer", "polymer", "acrylate", "carbomer", "poly")):
             return "Synthetic - Polymers"
-        if any(k in t for k in ("laureth", "ceteareth", "oleth", "steareth", "ceteth", "pareth", "glycereth", "sulfate", "sulfonate", "betaine", "glucoside", "sultaine", "amphoacetate", "isethionate", "sarcosinate", "taurate", "surfactant")):
+        if any(
+            k in t
+            for k in (
+                "amine oxide",
+                "laureth",
+                "ceteareth",
+                "oleth",
+                "steareth",
+                "ceteth",
+                "pareth",
+                "glycereth",
+                "sulfate",
+                "sulfonate",
+                "betaine",
+                "glucoside",
+                "sultaine",
+                "amphoacetate",
+                "isethionate",
+                "sarcosinate",
+                "taurate",
+                "surfactant",
+            )
+        ):
             return "Synthetic - Surfactants"
         if any(k in t for k in ("glycol", "alcohol", "solvent", "propanediol", "butylene", "propylene")):
             return "Synthetic - Solvents"
@@ -457,6 +504,9 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Examples: "SODIUM HYDROXIDE 50% SOLUTION", "LACTIC ACID 80%"
     if "solution" in t or re.search(r"\b\d{1,3}\s*%(\s*w/w)?\b", t):
         return "Solution", "Liquid"
+    # Denatured alcohol families (CosIng: "SD ALCOHOL 40", etc.)
+    if "sd alcohol" in t or re.search(r"\balcohol\s+\d{1,3}\b", t):
+        return "Alcohol", "Liquid"
 
     # Food-like forms (important for makers; common in TGSC/other sources)
     if " puree" in f" {t} " or " purée" in f" {t} " or t.endswith(" puree") or t.endswith(" purée"):
@@ -465,6 +515,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Juice", "Liquid"
     if " pulp" in f" {t} " or t.endswith(" pulp"):
         return "Pulp", "Paste"
+    if "oil (fixed)" in t or t.endswith("(fixed)"):
+        return "Fixed Oil", "Oil"
 
     # Oil variants (plant parts)
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
@@ -473,6 +525,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
             return _title_case_soft(token), "Oil"
     # Plain oil (no plant part specified) — common in INCI.
     if t.endswith(" oil"):
+        return "Oil", "Oil"
+    # TGSC: oils often include extra trailing descriptors (country, processing notes, etc).
+    # If "oil" appears as a token and it's not an "oil replacer", classify as Oil.
+    if re.search(r"\boil\b", t) and "replacer" not in t and "(fixed)" not in t:
         return "Oil", "Oil"
 
     # Plant part materials (non-oil) - useful for grouping and term bundling.
@@ -505,7 +561,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Surfactant / cleanser families (common INCI suffix families)
     # Keep these as variation tags so items can be filtered and grouped deterministically.
-    if "amine oxide" in t or t.endswith(" oxide"):
+    if "amine oxide" in t:
         return "Amine Oxide", "Liquid"
     if re.search(r"\bbetaine\b", t):
         return "Betaine", "Liquid"
@@ -545,8 +601,12 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if " esters" in f" {t} " or t.endswith(" esters"):
         # Esters are often liquids/waxes; keep as Liquid for now (safe for UI gating).
         return "Esters", "Liquid"
+    if t.endswith(" ester"):
+        return "Ester", "Liquid"
     if " oleyl esters" in t:
         return "Oleyl Esters", "Liquid"
+    if "oleoresin" in t:
+        return "Oleoresin", "Resin"
     if " resin" in f" {t} " or t.endswith(" resin"):
         return "Resin", "Resin"
     if " gum" in f" {t} " or t.endswith(" gum"):
@@ -568,6 +628,23 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Lysate", "Liquid"
     if "conditioned media" in t:
         return "Conditioned Media", "Liquid"
+    # Plant/biotech culture families (common in CosIng)
+    if "meristem cell culture" in t:
+        return "Meristem Cell Culture", "Liquid"
+    if "meristem cell" in t:
+        return "Meristem Cell", "Liquid"
+    if "callus culture" in t:
+        return "Callus Culture", "Liquid"
+    if "callus" in t:
+        return "Callus", "Liquid"
+    if "cell culture" in t:
+        return "Cell Culture", "Liquid"
+    if "extracellular vesicles" in t:
+        return "Extracellular Vesicles", "Liquid"
+    if "exosomes" in t:
+        return "Exosomes", "Liquid"
+    if "protoplasts" in t:
+        return "Protoplasts", "Liquid"
 
     # Processing modifiers (single-label best-effort)
     if "hydrolyzed" in t:
@@ -604,6 +681,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Expressed", "Oil"
     if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
         return "Hydrosol", "Hydrosol"
+    if "distillates" in t or "distillate" in t:
+        return "Distillate", "Liquid"
+    if "infusion" in t:
+        return "Infusion", "Liquid"
     if "tincture" in t:
         return "Tincture", "Liquid"
     if "glycerite" in t:
@@ -624,6 +705,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Granules", "Solid"
     if t.endswith(" flakes") or " flakes" in f" {t} ":
         return "Flakes", "Solid"
+    if t.endswith(" meal") or " meal" in f" {t} ":
+        return "Meal", "Powder"
 
     # Organic acid salts / esters (very common in INCI)
     # If it ends in a salt-like suffix, treat as Salt; if it ends in a fatty-acid ester suffix, treat as Esters.
@@ -632,12 +715,25 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         "potassium",
         "calcium",
         "magnesium",
+        "zinc",
+        "iron",
+        "copper",
+        "aluminum",
+        "silver",
+        "lithium",
         "ammonium",
         "disodium",
         "dipotassium",
+        "trisodium",
+        "tripotassium",
+        "tetrasodium",
+        "tetrapotassium",
         "trisalts",  # rare
     )
     is_cation_salt = t.startswith(_CATION_PREFIXES) or any(f" {_c} " in f" {t} " for _c in _CATION_PREFIXES)
+    # If the presence of a cation is explicit and the name ends in a salt-like suffix, treat as Salt.
+    if is_cation_salt and t.split() and t.split()[-1].endswith(("ate", "ite", "ide", "urate")):
+        return "Salt", "Solid"
     if any(t.endswith(suffix) for suffix in ("lactate", "citrate", "gluconate", "succinate", "octenylsuccinate", "propionate")):
         return ("Salt", "Solid") if is_cation_salt else ("Ester", "Liquid")
     if t.endswith(" acetate"):
@@ -648,6 +744,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Generic ester catch-all (many aroma chemicals): "...ate" at end.
     if t.endswith("ate") and not is_cation_salt:
         return "Ester", "Liquid"
+
+    # Generic "salt" token at end (common in TGSC, e.g., "acetic acid, copper salt,")
+    if t.endswith(" salt") or t.endswith(" salts"):
+        return "Salt", "Solid"
 
     # Triglycerides
     if "triglyceride" in t or "triglycerides" in t:
@@ -675,6 +775,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Acetal", "Liquid"
     if t.endswith(" lactone"):
         return "Lactone", "Liquid"
+    if t.endswith(" epoxide"):
+        return "Epoxide", "Liquid"
+    if t.endswith(" anhydride"):
+        return "Anhydride", "Solid"
+    if t.endswith(" mercaptan"):
+        return "Mercaptan", "Liquid"
+    if t.endswith(" disulfide"):
+        return "Disulfide", "Liquid"
     if t.endswith(" amine"):
         return "Amine", "Liquid"
     if t.endswith("amine"):
@@ -746,6 +854,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     ):
         return "Salt", "Solid"
 
+    # Oxides / dioxides / peroxides (common mineral families; do NOT treat as amine oxide).
+    if t.endswith(" peroxide") or t.endswith(" peroxides"):
+        return "Peroxide", "Solid"
+    if t.endswith(" dioxide") or t.endswith(" dioxides"):
+        return "Dioxide", "Solid"
+    if t.endswith(" oxide") or t.endswith(" oxides"):
+        return "Oxide", "Solid"
+
     # Oil fractions
     if "unsaponifiables" in t or "unsaponifiable" in t:
         return "Unsaponifiables", "Oil"
@@ -757,6 +873,16 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Enzyme", "Solid"
     if t.endswith(" protein") or t.endswith(" proteins"):
         return "Protein", "Solid"
+    if t.endswith(" albumin"):
+        return "Protein", "Solid"
+    if t.endswith(" elastin"):
+        return "Protein", "Solid"
+    if t.endswith(" lipids") or " lipids" in f" {t} ":
+        return "Lipids", "Oil"
+    if t.endswith(" dna") or " dna" in f" {t} ":
+        return "DNA", "Solid"
+    if t.endswith(" sap") or " sap" in f" {t} ":
+        return "Sap", "Liquid"
 
     return "", ""
 
