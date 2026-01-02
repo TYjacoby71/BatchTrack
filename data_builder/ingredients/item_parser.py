@@ -517,6 +517,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Pulp", "Paste"
     if "oil (fixed)" in t or t.endswith("(fixed)"):
         return "Fixed Oil", "Oil"
+    if " vinegar" in f" {t} " or t.endswith(" vinegar"):
+        return "Vinegar", "Liquid"
+    if " nectar" in f" {t} " or t.endswith(" nectar"):
+        return "Nectar", "Liquid"
+    # Common misspelling observed in source data
+    if " extraxt" in f" {t} " or t.endswith(" extraxt"):
+        return "Extract", "Liquid"
 
     # Oil variants (plant parts)
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
@@ -535,6 +542,23 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem", "peel", "fruit", "berry", "bran", "germ"):
         if t.endswith(f" {part}"):
             return _title_case_soft(part), "Whole"
+    # Common botanical fractions/actives that appear as trailing tokens (CosIng/TGSC)
+    if t.endswith(" oleosomes") or " oleosomes" in f" {t} ":
+        return "Oleosomes", "Oil"
+    if t.endswith(" vesicles") or " vesicles" in f" {t} ":
+        return "Vesicles", "Liquid"
+    if t.endswith(" oligosaccharides") or " oligosaccharides" in f" {t} ":
+        return "Oligosaccharides", "Solid"
+    if t.endswith(" catechins") or " catechins" in f" {t} ":
+        return "Catechins", "Solid"
+    if t.endswith(" prenylflavonoids") or " prenylflavonoids" in f" {t} ":
+        return "Prenylflavonoids", "Solid"
+    if t.endswith(" terpenoids") or " terpenoids" in f" {t} ":
+        return "Terpenoids", "Solid"
+    if t.endswith(" fiber") or t.endswith(" fibre"):
+        return "Fiber", "Powder"
+    if t.endswith(" silicates") or t.endswith(" silicate"):
+        return "Silicates", "Solid"
 
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:

@@ -99,10 +99,42 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
                     # ingredient variations (e.g., "... flavor", "... fragrance").
                     if raw_stripped and any(
                         low.endswith(f" {tok}") or low == tok
-                        for tok in ("flavor", "fragrance", "essence", "specialty", "enhancer", "blockers", "replacer")
+                        for tok in (
+                            "flavor",
+                            "fragrance",
+                            "essence",
+                            "specialty",
+                            "enhancer",
+                            "blockers",
+                            "replacer",
+                            "compound",
+                        )
                     ):
                         new_bypass = 1
                         new_reason = "descriptor_only"
+                    elif source == "tgsc" and raw_stripped and any(tok in low for tok in ("colouring matters", "coloring matters")):
+                        new_bypass = 1
+                        new_reason = "descriptor_only"
+                    elif (
+                        # TGSC sometimes includes long \"produced in / derived from\" enzyme/process descriptions
+                        # without a clean ingredient identity; bypass rather than treating as missing variation.
+                        source == "tgsc"
+                        and not _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and any(tok in low for tok in (" produced in ", " derived from ", " expressing a gene ", " from "))
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_process_descriptor"
+                    elif (
+                        # TGSC sometimes includes chemistry-like phrases without a CAS number.
+                        # Treat these as identity-level (variation not meaningful) rather than "missing".
+                        source == "tgsc"
+                        and not _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and any(tok in low for tok in ("acetyl", "amido", "n-", "dl"))
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_identity_phrase_no_cas"
                     elif (
                         # CosIng frequently contains chemistry identities that are all-caps phrases
                         # (e.g., "METHYL PYRROLIDONE") where a variation label is not meaningful.
@@ -125,6 +157,16 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
                     ):
                         new_bypass = 1
                         new_reason = "tgsc_series_suffix"
+                    elif (
+                        # TGSC often contains multi-token chemical/trade names (with CAS) where a variation label
+                        # is not meaningful (the name *is* the identity).
+                        source == "tgsc"
+                        and _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and not _BINOMIAL_RE.match(raw_stripped)  # avoid bypassing true botanicals
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_identity_phrase"
                     elif raw_stripped and (" " not in raw_stripped) and ("/" not in raw_stripped) and len(raw_stripped) >= 3:
                         # Single token with no explicit form/variation (common for chemistry + some base materials).
                         new_bypass = 1

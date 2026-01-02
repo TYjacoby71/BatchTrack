@@ -1,0 +1,212 @@
+{
+  "db_path": "/workspace/data_builder/ingredients/compiler_state.db",
+  "sample_n_per_category": 10,
+  "category_count": 34,
+  "issues_by_type": {},
+  "categories": [
+    {
+      "ingredient_category": "Herbs",
+      "total_items_in_db": 16761,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Other",
+      "total_items_in_db": 5416,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Polymers",
+      "total_items_in_db": 2556,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Fermentation - Other",
+      "total_items_in_db": 1712,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Surfactants",
+      "total_items_in_db": 974,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Grains",
+      "total_items_in_db": 833,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Seeds",
+      "total_items_in_db": 691,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Acids",
+      "total_items_in_db": 532,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Fruits & Berries",
+      "total_items_in_db": 421,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Minerals",
+      "total_items_in_db": 324,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Salts & Bases",
+      "total_items_in_db": 285,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Salts",
+      "total_items_in_db": 181,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Animal - Fats",
+      "total_items_in_db": 166,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Flowers",
+      "total_items_in_db": 166,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Animal - Other",
+      "total_items_in_db": 151,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Solvents",
+      "total_items_in_db": 149,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Fibers",
+      "total_items_in_db": 134,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Marine - Botanicals",
+      "total_items_in_db": 131,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Animal - Proteins",
+      "total_items_in_db": 118,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Nuts",
+      "total_items_in_db": 118,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Spices",
+      "total_items_in_db": 81,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Animal - Fibers",
+      "total_items_in_db": 63,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Animal - Dairy",
+      "total_items_in_db": 60,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Colorants",
+      "total_items_in_db": 54,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Roots",
+      "total_items_in_db": 34,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Synthetic - Preservatives",
+      "total_items_in_db": 31,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Liquid Sweeteners",
+      "total_items_in_db": 27,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Fermentation - Polysaccharides",
+      "total_items_in_db": 19,
+      "sample_size": 6,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Vegetables",
+      "total_items_in_db": 19,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Clays",
+      "total_items_in_db": 18,
+      "sample_size": 10,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Fermentation - Acids",
+      "total_items_in_db": 16,
+      "sample_size": 0,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Barks",
+      "total_items_in_db": 7,
+      "sample_size": 5,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Marine - Minerals",
+      "total_items_in_db": 6,
+      "sample_size": 2,
+      "issue_count_in_sample": 0
+    },
+    {
+      "ingredient_category": "Sugars",
+      "total_items_in_db": 2,
+      "sample_size": 2,
+      "issue_count_in_sample": 0
+    }
+  ]
+}
