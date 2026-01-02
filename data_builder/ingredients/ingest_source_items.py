@@ -208,7 +208,7 @@ def ingest_sources(
         variation, physical_form = extract_variation_and_physical_form(raw)
         # CosIng provides descriptions that explicitly distinguish volatile (essential) oils.
         # If the INCI contains "... OIL" but is not a seed/nut/kernel oil, and the description
-        # says "volatile oil", treat as Essential Oil deterministically.
+        # says "volatile oil" (or clearly indicates an essential oil), treat as Essential Oil deterministically.
         if source == "cosing" and " oil" in raw.lower():
             lower = raw.lower()
             if not any(tok in lower for tok in ("seed oil", "kernel oil", "nut oil")):
@@ -216,7 +216,13 @@ def ingest_sources(
                 funcs = (payload.get("Function") or "").strip().lower()
                 # Guardrail: only essential-oil classify when CosIng also marks it as perfuming/fragrance.
                 is_perfuming = any(k in funcs for k in ("fragrance", "perfuming", "masking"))
-                if "volatile oil" in desc and is_perfuming:
+                is_essential_oil_desc = (
+                    ("volatile oil" in desc)
+                    or ("essential oil" in desc)
+                    or ("oil distilled" in desc)
+                    or ("distilled" in desc and "oil" in desc)
+                )
+                if is_essential_oil_desc and is_perfuming:
                     variation, physical_form = "Essential Oil", "Oil"
 
         status = "linked" if definition else "orphan"
