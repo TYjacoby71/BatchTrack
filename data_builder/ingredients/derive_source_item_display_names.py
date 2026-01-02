@@ -60,7 +60,8 @@ def _is_chemical_like(name: str) -> bool:
     if n[0].isdigit():
         return True
     # Common INCI chemical-ish patterns
-    if any(tok in n.upper() for tok in ("PEG-", "PPG-", "QUATERNIUM-", "POLY", "COPOLYMER", "CROSSPOLYMER")):
+    # NOTE: avoid broad substring checks like "POLY" which false-positive botanicals (e.g. POLYGONUM).
+    if any(tok in n.upper() for tok in ("PEG-", "PPG-", "QUATERNIUM-", "POLYQUATERNIUM", "COPOLYMER", "CROSSPOLYMER", "POLYMER")):
         return True
     if sum(ch.isdigit() for ch in n) >= 3:
         return True
@@ -192,23 +193,24 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
                     break
 
             # Base label priority:
-            # 1) catalog common_name (stripped of variation suffix)
-            # 2) INCI label for chemical-like identities; otherwise derived_term
-            # 3) derived_term (parser) / raw_name fallback
+            # 1) INCI label for chemical-like identities (keep the INCI/chemical identity stable)
+            # 2) derived_term (parser): this is the canonical definition label we want to carry
+            # 3) catalog common_name (stripped of variation suffix) as a fallback only
             # 4) raw_name (last resort)
             derived_term = _clean(row.derived_term)
             base = ""
-            if common:
-                base = _base_from_common_name(common, variation)
-            elif _clean(row.inci_name):
-                # Keep INCI label as base for chemical-like; for botanicals prefer derived_term.
+            if _clean(row.inci_name):
                 inci_label = _clean(row.inci_name)
                 if _is_chemical_like(inci_label):
                     base = inci_label
+                elif derived_term:
+                    base = derived_term
                 else:
-                    base = derived_term or inci_label
+                    base = inci_label
             elif derived_term:
                 base = derived_term
+            elif common:
+                base = _base_from_common_name(common, variation)
             else:
                 base = raw
 

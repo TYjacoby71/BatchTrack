@@ -111,6 +111,18 @@ _BOTANICAL_NON_EPITHET_TOKENS = set(_PLANT_PART_TOKENS) | set(_FORM_TOKENS_DROP)
     "cv",
     "hybrid",
     "x",
+    # non-taxonomic processing/biotech tokens that often appear as the 3rd token in INCI names
+    # (avoid incorrectly treating these as botanical epithets)
+    "callus",
+    "culture",
+    "cell",
+    "cells",
+    "meristem",
+    "tissue",
+    "filtrate",
+    "lysate",
+    "ferment",
+    "fermented",
 }
 
 # Exceptions: tokens that are definition-level for maker UX (by your direction).
@@ -168,7 +180,25 @@ _MINERAL_MARKERS = {
     "mineral",
     "salt",
 }
-_ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard", "silk", "wool", "cashmere", "angora"}
+_ANIMAL_MARKERS = {
+    "lanolin",
+    "beeswax",
+    "cera alba",
+    "cera flava",
+    "collagen",
+    "keratin",
+    "gelatin",
+    "milk",
+    "whey",
+    "casein",
+    "honey",
+    "tallow",
+    "lard",
+    "silk",
+    "wool",
+    "cashmere",
+    "angora",
+}
 
 # Word-boundary fiber markers (avoid false positives like "longum" containing "gum").
 _FIBER_MARKER_RE = re.compile(

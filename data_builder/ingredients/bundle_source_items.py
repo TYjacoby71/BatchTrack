@@ -19,6 +19,8 @@ from . import database_manager
 
 LOGGER = logging.getLogger(__name__)
 
+_AMBIGUOUS_CAS_DERIVED_TERM_THRESHOLD = 5
+
 
 def _clean(s: Any) -> str:
     return ("" if s is None else str(s)).strip()
@@ -76,6 +78,54 @@ _NON_EPITHET = {
     "sp", "ssp", "subsp", "var", "cv", "hybrid", "x",
 }
 
+# Tokens that should never be treated as a botanical genus (prevents false "binomial:" clusters
+# like "Hydrolyzed collagen" or "Aluminum iron calcium ...").
+_NON_GENUS = {
+    # processing/modifiers
+    "hydrolyzed",
+    "hydrogenated",
+    "acetylated",
+    "oxidized",
+    "sulfated",
+    "phosphated",
+    "refined",
+    "unrefined",
+    # common chemistry/ions
+    "sodium",
+    "potassium",
+    "calcium",
+    "magnesium",
+    "zinc",
+    "iron",
+    "copper",
+    "aluminum",
+    "ammonium",
+    "disodium",
+    "dipotassium",
+    "tetrasodium",
+    "tetrapotassium",
+    "trisodium",
+    "tripotassium",
+    # generic chemical prefixes
+    "methyl",
+    "ethyl",
+    "propyl",
+    "butyl",
+    "isopropyl",
+    "isobutyl",
+    "tert",
+    "sec",
+    "bis",
+    "di",
+    "tri",
+    "tetra",
+    "mono",
+    # polymers
+    "poly",
+    "peg",
+    "ppg",
+}
+
 
 def _binomial_key(text: str) -> str:
     """Return 'genus species [epithet]' lowercased if present, else ''."""
@@ -88,6 +138,11 @@ def _binomial_key(text: str) -> str:
     genus = (m.group(1) or "").lower()
     species = (m.group(2) or "").lower()
     epithet = (m.group(3) or "").lower()
+    if genus in _NON_GENUS:
+        return ""
+    # Avoid treating non-botanical "species" tokens as botanical identities.
+    if species in _NON_EPITHET:
+        return ""
     parts = [genus, species]
     if epithet and epithet not in _NON_EPITHET:
         # Drop accidental repeats: "angustifolia angustifolia"
@@ -96,7 +151,9 @@ def _binomial_key(text: str) -> str:
     return " ".join([p for p in parts if p]).strip()
 
 
-def _cluster_for_item(item: database_manager.SourceItem) -> tuple[str, int, str, str]:
+def _cluster_for_item(
+    item: database_manager.SourceItem, *, ambiguous_cas: set[str] | None = None
+) -> tuple[str, int, str, str]:
     """
     Returns (cluster_id, confidence, reason, botanical_key).
 
@@ -116,10 +173,22 @@ def _cluster_for_item(item: database_manager.SourceItem) -> tuple[str, int, str,
 
     inci = _clean(getattr(item, "inci_name", None))
     inci_norm = _norm_inci(inci) if inci else ""
+    ambiguous = ambiguous_cas or set()
 
     # Prefer single CAS clusters for identity
     if len(cas_list) == 1:
         cas = cas_list[0]
+        if cas in ambiguous:
+            # Some CAS numbers are effectively "family" identifiers (esp. polymers/mixtures) and
+            # will incorrectly collapse many distinct INCI identities into one definition.
+            # In those cases, prefer INCI/term identity over CAS.
+            if inci_norm:
+                return f"inci:{inci_norm}", 82, "ambiguous_cas_use_inci", _binomial_key(
+                    _clean(getattr(item, "derived_term", ""))
+                )
+            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
+            term_norm = re.sub(r"\s+", " ", term).strip().lower()
+            return f"term:{term_norm}", 78, "ambiguous_cas_use_term", ""
         if inci_norm:
             return f"cas:{cas}", 90, "single_cas_with_inci", _binomial_key(_clean(getattr(item, "derived_term", "")))
         return f"cas:{cas}", 85, "single_cas", _binomial_key(_clean(getattr(item, "derived_term", "")))
@@ -156,6 +225,27 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
     created_defs = 0
 
     with database_manager.get_session() as session:
+        # Identify CAS numbers that map to many distinct derived terms. These are usually
+        # non-unique "family" CAS values (esp. polymers/mixtures), and clustering by CAS
+        # would incorrectly merge many distinct INCI identities into one definition.
+        cas_to_terms: dict[str, set[str]] = defaultdict(set)
+        for item in session.query(database_manager.SourceItem).yield_per(2000):
+            if bool(getattr(item, "is_composite", False)):
+                continue
+            cas_list = _cas_list_from_json(_clean(getattr(item, "cas_numbers_json", "")))
+            if not cas_list:
+                cas_list = _cas_tokens(_clean(getattr(item, "cas_number", "")))
+            if len(cas_list) != 1:
+                continue
+            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
+            term_norm = re.sub(r"\s+", " ", term).strip().lower()
+            if not term_norm:
+                continue
+            cas_to_terms[cas_list[0]].add(term_norm)
+        ambiguous_cas = {
+            cas for cas, terms in cas_to_terms.items() if len(terms) >= _AMBIGUOUS_CAS_DERIVED_TERM_THRESHOLD
+        }
+
         # Clear previous definitions (deterministic rebuild)
         session.query(database_manager.SourceDefinition).delete()
 
@@ -167,7 +257,7 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
         meta: dict[str, tuple[int, str, str]] = {}
 
         for item in q.yield_per(1000):
-            cluster_id, conf, reason, bkey = _cluster_for_item(item)
+            cluster_id, conf, reason, bkey = _cluster_for_item(item, ambiguous_cas=ambiguous_cas)
             buckets[cluster_id].append(item)
             meta.setdefault(cluster_id, (conf, reason, bkey))
 
