@@ -27,6 +27,133 @@ from .taxonomy_constants import (
     VARIATIONS_CURATED,
 )
 
+
+def _parse_first_float(text_value: str | None) -> float | None:
+    """Extract the first float-like token from a TGSC-ish string."""
+    if not isinstance(text_value, str):
+        return None
+    t = text_value.strip()
+    if not t:
+        return None
+    m = re.search(r"(-?\d+(?:\.\d+)?)", t)
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except Exception:
+        return None
+
+
+def _deterministic_item_seed_for_term(session: Session, term: str, *, limit: int = 24) -> list[dict[str, Any]]:
+    """
+    Build deterministic item-form seeds for a base ingredient term from ingested source rows.
+
+    This does NOT create compiled rows; it produces a small, explainable context blob that can
+    be fed into the AI compiler so it acts more like a verifier than a generator.
+
+    Shape is intentionally close to the Stage 2B item schema, with extra `_deterministic`
+    metadata that is safe to persist in item_json (app can surface it later).
+    """
+    cleaned = (term or "").strip()
+    if not cleaned:
+        return []
+
+    # Gather source-backed item forms for this term.
+    rows = (
+        session.query(
+            SourceItem.derived_variation,
+            SourceItem.derived_physical_form,
+            SourceItem.cas_number,
+            SourceItem.source,
+        )
+        .filter(
+            SourceItem.is_composite == False,  # noqa: E712
+            SourceItem.status == "linked",
+            func.lower(SourceItem.derived_term) == func.lower(cleaned),
+        )
+        .all()
+    )
+    if not rows:
+        return []
+
+    # Group by (variation, form) and pick the most common CAS (mode) for enrichment.
+    from collections import Counter, defaultdict
+
+    buckets: dict[tuple[str, str], dict[str, Any]] = defaultdict(lambda: {"cas": Counter(), "sources": Counter()})
+    for var, form, cas, src in rows:
+        v = (var or "").strip()
+        f = (form or "").strip()
+        key = (v, f)
+        if cas and str(cas).strip():
+            buckets[key]["cas"][str(cas).strip()] += 1
+        if src and str(src).strip():
+            buckets[key]["sources"][str(src).strip()] += 1
+
+    seeds: list[dict[str, Any]] = []
+    for (v, f), meta in buckets.items():
+        cas_mode = meta["cas"].most_common(1)[0][0] if meta["cas"] else ""
+
+        # Pull TGSC physchem fields if we can (via merged catalog).
+        tgsc_density = None
+        tgsc_melting_point = None
+        tgsc_boiling_point = None
+        if cas_mode:
+            cat = session.get(SourceCatalogItem, f"cas:{cas_mode}")
+            if cat is not None:
+                tgsc_density = getattr(cat, "tgsc_density", None)
+                tgsc_melting_point = getattr(cat, "tgsc_melting_point", None)
+                tgsc_boiling_point = getattr(cat, "tgsc_boiling_point", None)
+
+        # Build a conservative specifications object. Only populate values we actually have.
+        specs: dict[str, Any] = {}
+        # TGSC mp is often a single point; map to min/max when numeric.
+        mp_val = _parse_first_float(tgsc_melting_point)
+        if mp_val is not None:
+            specs["melting_point_celsius"] = {"min": mp_val, "max": mp_val}
+        # Flash point / SAP / iodine / pH are NOT safely derived deterministically here.
+
+        # Density is not currently a promoted column, but we can persist it into item_json
+        # for later use in the app.
+        if isinstance(tgsc_density, str) and tgsc_density.strip():
+            specs["density"] = tgsc_density.strip()
+
+        det_notes: list[str] = []
+        det_sources: dict[str, str] = {}
+        if cas_mode and (isinstance(tgsc_density, str) and tgsc_density.strip()):
+            det_sources["specifications.density"] = f"tgsc via catalog cas:{cas_mode}"
+        if mp_val is not None:
+            det_sources["specifications.melting_point_celsius"] = f"tgsc via catalog cas:{cas_mode}" if cas_mode else "tgsc via catalog"
+
+        # Mark obvious hints for "not applicable" rather than guessing numbers.
+        # (We keep them as notes so UI can explain nulls without faking data.)
+        if (f or "").strip() not in {"Oil", "Butter", "Wax"}:
+            det_notes.append("SAP/iodine are typically not applicable outside fats/oils; left null unless sourced.")
+        if (f or "").strip() in {"Mineral", "Powder", "Crystals"}:
+            det_notes.append("pH is formulation-dependent for solids/minerals; left null unless sourced.")
+
+        seed_item: dict[str, Any] = {
+            "variation": v,
+            "physical_form": f,
+            "variation_bypass": bool(not v),
+            "form_bypass": False,
+        }
+        if specs:
+            seed_item["specifications"] = specs
+        if det_notes or det_sources:
+            seed_item["_deterministic"] = {
+                "notes": det_notes,
+                "sources": det_sources,
+                "evidence": {
+                    "cas_mode": cas_mode or None,
+                    "source_counts": dict(meta["sources"]),
+                },
+            }
+        seeds.append(seed_item)
+
+    # Prefer more specific forms/variations first (non-empty), and cap for prompt size.
+    seeds.sort(key=lambda it: (0 if (it.get("variation") or "").strip() else 1, 0 if (it.get("physical_form") or "").strip() else 1, (it.get("variation") or "").casefold(), (it.get("physical_form") or "").casefold()))
+    return seeds[: max(0, int(limit))]
+
 def _derive_master_categories_from_rules(
     session: Session,
     *,
@@ -1645,7 +1772,7 @@ def get_normalized_term(term: str) -> Optional[dict[str, Any]]:
         row: Optional[NormalizedTerm] = session.get(NormalizedTerm, cleaned)
         if row is None:
             return None
-        return {
+        out = {
             "term": row.term,
             "seed_category": row.seed_category,
             "ingredient_category": row.ingredient_category,
@@ -1663,6 +1790,10 @@ def get_normalized_term(term: str) -> Optional[dict[str, Any]]:
             "overall_confidence": row.overall_confidence,
             "sources_json": row.sources_json,
         }
+        # Deterministic item-form seeds derived from source_items + TGSC physchem catalog.
+        # This helps the AI compiler act as a verifier (and provides density/mp hints when available).
+        out["deterministic_item_seeds"] = _deterministic_item_seed_for_term(session, cleaned, limit=16)
+        return out
 
 
 def queue_is_empty() -> bool:
