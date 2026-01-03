@@ -623,6 +623,15 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Normalize repeated whitespace/hyphens already handled by _clean.
 
+    # CO2 / supercritical extracts (must win over oil keywords like "seed oil")
+    # Examples:
+    # - "punica granatum seed oil CO2 extract" -> ("CO2 Extract", "Liquid")
+    # - "rosehip CO2 extract" -> ("CO2 Extract", "Liquid")
+    if re.search(r"\bco2\b", t) and ("extract" in t or "supercritical" in t):
+        return "CO2 Extract", "Liquid"
+    if "supercritical extract" in t:
+        return "CO2 Extract", "Liquid"
+
     # Preserve botanical part for common part+extract patterns (otherwise they collapse into "Extract").
     # Examples:
     # - "AESCULUS HIPPOCASTANUM BARK EXTRACT" -> ("Bark Extract", "Liquid")
