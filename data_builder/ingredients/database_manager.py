@@ -466,6 +466,9 @@ class SourceItem(Base):
     derived_specs_sources_json = Column(Text, nullable=False, default="{}")
     derived_specs_notes_json = Column(Text, nullable=False, default="[]")
 
+    # Link to merged item-form (ingestion-stage dedupe table).
+    merged_item_id = Column(Integer, nullable=True, default=None, index=True)
+
     # If derived_variation is intentionally absent (e.g., base chemical / base term),
     # mark as bypass so "missing variation" doesn't imply a parsing gap.
     variation_bypass = Column(Integer, nullable=False, default=0)  # 0/1
@@ -565,6 +568,32 @@ class SourceCatalogItem(Base):
     merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class MergedItemForm(Base):
+    """Deterministically merged item-form (definition + variation + physical form)."""
+
+    __tablename__ = "merged_item_forms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    derived_term = Column(Text, nullable=False)
+    derived_variation = Column(Text, nullable=True, default="")
+    derived_physical_form = Column(Text, nullable=True, default="")
+
+    derived_parts_json = Column(Text, nullable=False, default="[]")
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+    member_source_item_keys_json = Column(Text, nullable=False, default="[]")
+    sources_json = Column(Text, nullable=False, default="{}")
+
+    merged_specs_json = Column(Text, nullable=False, default="{}")
+    merged_specs_sources_json = Column(Text, nullable=False, default="{}")
+    merged_specs_notes_json = Column(Text, nullable=False, default="[]")
+
+    source_row_count = Column(Integer, nullable=False, default=0)
+    has_cosing = Column(Boolean, nullable=False, default=False)
+    has_tgsc = Column(Boolean, nullable=False, default=False)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class SourceDefinition(Base):
     """Deterministic derived definition cluster (pre-AI).
 
@@ -657,6 +686,7 @@ def _ensure_source_item_columns() -> None:
                 ("derived_specs_json", "TEXT NOT NULL DEFAULT '{}'"),
                 ("derived_specs_sources_json", "TEXT NOT NULL DEFAULT '{}'"),
                 ("derived_specs_notes_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("merged_item_id", "INTEGER"),
             ]
             for name, col_type in additions:
                 if name in column_names:

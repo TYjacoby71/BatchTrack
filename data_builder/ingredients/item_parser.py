@@ -662,6 +662,11 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Alcohol", "Liquid"
 
     # Food-like forms (important for makers; common in TGSC/other sources)
+    # "juice powder" and "juice extract" must win over the generic "juice" rule.
+    if re.search(r"\bjuice\s+powder\b", t):
+        return "Juice Powder", "Powder"
+    if re.search(r"\bjuice\s+extract\b", t):
+        return "Juice Extract", "Liquid"
     if " puree" in f" {t} " or " purée" in f" {t} " or t.endswith(" puree") or t.endswith(" purée"):
         return "Puree", "Liquid"
     if " juice" in f" {t} " or t.endswith(" juice"):
@@ -679,6 +684,18 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Extract", "Liquid"
 
     # Oil variants (plant parts)
+    # Unsaponifiables and esterified oils should not collapse into plain "Oil".
+    if "unsaponifiables" in t and " oil" in t:
+        return "Unsaponifiables", "Oil"
+    m = re.search(r"\boil\s+([a-z0-9\-]+)\s+esters?\b", t)
+    if m:
+        label = _title_case_soft(f"{m.group(1)} esters")
+        return label, "Oil"
+    # e.g. "oil ethyl ester" / "oil ethyl esters"
+    m = re.search(r"\boil\s+([a-z0-9\-]+)\s+ester(s)?\b", t)
+    if m:
+        label = _title_case_soft(f"{m.group(1)} ester")
+        return label, "Oil"
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
         token = f"{part} oil"
         if token in t:
