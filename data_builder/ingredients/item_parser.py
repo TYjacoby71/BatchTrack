@@ -344,12 +344,9 @@ def derive_definition_term(raw_name: str) -> str:
         genus = genus_raw[:1].upper() + genus_raw[1:].lower() if genus_raw else ""
         species = (species_raw or "").lower()
         # Guardrail: reject common non-botanical leading tokens (dyes, descriptors, etc.)
-        if genus.lower() in _NON_BINOMIAL_GENUS:
-            m = None
-        # Avoid treating generic item tokens as "species" (e.g., "Jojoba Oil").
-        if species in _BINOMIAL_STOPWORDS:
-            m = None
-        else:
+        # and generic item tokens as "species" (e.g., "Jojoba Oil").
+        is_binomial = genus.lower() not in _NON_BINOMIAL_GENUS and species not in _BINOMIAL_STOPWORDS
+        if is_binomial:
             common_match = _PAREN_COMMON_RE.search(cleaned)
             if common_match:
                 common_raw = _clean(common_match.group(1))
