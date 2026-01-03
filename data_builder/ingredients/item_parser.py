@@ -239,6 +239,44 @@ def _title_case_soft(text: str) -> str:
     return " ".join(parts).strip()
 
 
+# Plant-part tokens that should be preserved at the item level for botanicals.
+_PLANT_PART_LABELS: dict[str, str] = {
+    "bark": "Bark",
+    "leaf": "Leaf",
+    "seed": "Seed",
+    "flower": "Flower",
+    "root": "Root",
+    "bud": "Bud",
+    "stem": "Stem",
+    "fruit": "Fruit",
+    "peel": "Peel",
+    "rind": "Rind",
+    "kernel": "Kernel",
+    "nut": "Nut",
+    "wood": "Wood",
+    "cone": "Cone",
+    "needle": "Needle",
+    "herb": "Herb",
+    "rhizome": "Rhizome",
+    # less common but appears in CosIng
+    "seedcoat": "Seedcoat",
+    "shell": "Shell",
+    "branch": "Branch",
+}
+
+
+def extract_plant_part(raw_name: str) -> str:
+    """Best-effort extract a single plant-part label from an item name."""
+    cleaned = _clean(raw_name)
+    if not cleaned:
+        return ""
+    t = cleaned.lower()
+    # Prefer longer tokens first (seedcoat before seed).
+    for tok in sorted(_PLANT_PART_LABELS.keys(), key=lambda s: -len(s)):
+        if re.search(rf"\b{re.escape(tok)}\b", t):
+            return _PLANT_PART_LABELS[tok]
+    return ""
+
 def derive_definition_term(raw_name: str) -> str:
     """Derive a canonical definition term from an item string.
 
@@ -529,6 +567,19 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "", ""
 
     # Normalize repeated whitespace/hyphens already handled by _clean.
+
+    # Preserve botanical part for common part+extract patterns (otherwise they collapse into "Extract").
+    # Examples:
+    # - "AESCULUS HIPPOCASTANUM BARK EXTRACT" -> ("Bark Extract", "Liquid")
+    # - "PRUNUS PERSICA LEAF EXTRACT" -> ("Leaf Extract", "Liquid")
+    for tok, label in _PLANT_PART_LABELS.items():
+        if re.search(rf"\b{re.escape(tok)}\s+(?:cell\s+)?extract\b", t):
+            return f"{label} Extract", "Liquid"
+
+    # Preserve part for part+powder patterns (otherwise they collapse into "Powder").
+    for tok, label in _PLANT_PART_LABELS.items():
+        if re.search(rf"\b{re.escape(tok)}\s+powder\b", t):
+            return f"{label} Powder", "Powder"
 
     # Concentrations / solutions (high-signal, common in catalogs)
     # Examples: "SODIUM HYDROXIDE 50% SOLUTION", "LACTIC ACID 80%"

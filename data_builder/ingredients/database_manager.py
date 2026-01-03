@@ -484,6 +484,9 @@ class SourceItem(Base):
     derived_term = Column(String, nullable=True, default=None)  # normalized base definition term
     derived_variation = Column(String, nullable=True, default=None)
     derived_physical_form = Column(String, nullable=True, default=None)
+    # Best-effort plant-part label (Leaf/Seed/Bark/etc.) for filtering and UI.
+    derived_part = Column(Text, nullable=True, default=None)
+    derived_part_reason = Column(Text, nullable=True, default=None)
 
     # CAS list support (some sources provide multiple CAS numbers per row).
     cas_numbers_json = Column(Text, nullable=False, default="[]")
@@ -641,6 +644,8 @@ def _ensure_source_item_columns() -> None:
                 ("item_display_name", "TEXT"),
                 ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_part", "TEXT"),
+                ("derived_part_reason", "TEXT"),
                 ("variation_bypass", "INTEGER NOT NULL DEFAULT 0"),
                 ("variation_bypass_reason", "TEXT"),
                 ("definition_cluster_id", "TEXT"),
@@ -1738,6 +1743,8 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
                     derived_term=(row.get("derived_term") or "").strip() or None,
                     derived_variation=(row.get("derived_variation") or "").strip() or None,
                     derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
+                    derived_part=(row.get("derived_part") or "").strip() or None,
+                    derived_part_reason=(row.get("derived_part_reason") or "").strip() or None,
                     origin=(row.get("origin") or "").strip() or None,
                     ingredient_category=(row.get("ingredient_category") or "").strip() or None,
                     refinement_level=(row.get("refinement_level") or "").strip() or None,
@@ -1764,6 +1771,8 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
                 existing.derived_term = (row.get("derived_term") or "").strip() or None
                 existing.derived_variation = (row.get("derived_variation") or "").strip() or None
                 existing.derived_physical_form = (row.get("derived_physical_form") or "").strip() or None
+                existing.derived_part = (row.get("derived_part") or "").strip() or None
+                existing.derived_part_reason = (row.get("derived_part_reason") or "").strip() or None
                 existing.origin = (row.get("origin") or "").strip() or None
                 existing.ingredient_category = (row.get("ingredient_category") or "").strip() or None
                 existing.refinement_level = (row.get("refinement_level") or "").strip() or None
