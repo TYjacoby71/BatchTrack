@@ -25,6 +25,37 @@ _PUNCT_RE = re.compile(r"[^\w\s\-\&/()]", flags=re.UNICODE)
 # Rough Latin binomial detector (Genus species).
 # Must tolerate ALL CAPS INCI rows (e.g., "LAVANDULA ANGUSTIFOLIA ...").
 _BINOMIAL_RE = re.compile(r"^\s*([A-Za-z]{2,})\s+([A-Za-z]{2,})\b")
+
+# Tokens that are common words / chemical descriptors (not botanical genera). If a name starts
+# with these, do NOT treat the first two tokens as a botanical binomial.
+# This prevents false binomial parsing like:
+# - "bitter almond oil (fixed)" -> "Fixed"
+# - "ACID RED 18" -> "Acid red" (dropping the number)
+# - "HC YELLOW NO. 10" -> "Hc yellow no" (dropping the number)
+_NON_BINOMIAL_GENUS = {
+    "acid",
+    "basic",
+    "solvent",
+    "pigment",
+    "hc",
+    "fd",
+    "d&c",
+    "color",
+    "colour",
+    "yellow",
+    "red",
+    "blue",
+    "green",
+    "orange",
+    "violet",
+    "black",
+    "brown",
+    "white",
+    "bitter",
+    "sweet",
+    "fixed",
+    "alcohol",
+}
 _PAREN_COMMON_RE = re.compile(r"\(([^)]+)\)")
 _BINOMIAL_STOPWORDS = {
     "oil",
@@ -295,6 +326,16 @@ def derive_definition_term(raw_name: str) -> str:
 
     lowered = cleaned.lower()
 
+    # Special-case: denatured alcohol families are not botanicals.
+    # Keep the definition stable and represent the grade/spec at the item level.
+    if lowered.startswith("alcohol denat"):
+        return "Alcohol Denat"
+
+    # Remove parenthetical fixed-oil marker before further parsing.
+    # This prevents "(fixed)" being treated as a "common name" override.
+    cleaned = re.sub(r"\(\s*fixed\s*\)", "", cleaned, flags=re.IGNORECASE).strip()
+    lowered = cleaned.lower()
+
     # If we have a Latin binomial at the start, prefer a common name in parentheses when present.
     m = _BINOMIAL_RE.match(cleaned)
     if m:
@@ -302,6 +343,9 @@ def derive_definition_term(raw_name: str) -> str:
         species_raw = m.group(2)
         genus = genus_raw[:1].upper() + genus_raw[1:].lower() if genus_raw else ""
         species = (species_raw or "").lower()
+        # Guardrail: reject common non-botanical leading tokens (dyes, descriptors, etc.)
+        if genus.lower() in _NON_BINOMIAL_GENUS:
+            m = None
         # Avoid treating generic item tokens as "species" (e.g., "Jojoba Oil").
         if species in _BINOMIAL_STOPWORDS:
             m = None
@@ -311,14 +355,18 @@ def derive_definition_term(raw_name: str) -> str:
                 common_raw = _clean(common_match.group(1))
                 common = _title_case_soft(common_raw)
                 if common:
-                    # Special-case: "Beet" + root -> Beetroot (common maker term)
-                    if common.strip().lower() == "beet" and "root" in lowered:
-                        return "Beetroot"
-                    # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
-                    if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
-                        return _title_case_soft(f"{common} Flour")
-                    # Default: use common name as definition (more maker-friendly than Latin).
-                    return common
+                    # Never allow "(fixed)" to become the definition term.
+                    if common.strip().lower() == "fixed":
+                        common = ""
+                    if common:
+                        # Special-case: "Beet" + root -> Beetroot (common maker term)
+                        if common.strip().lower() == "beet" and "root" in lowered:
+                            return "Beetroot"
+                        # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
+                        if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
+                            return _title_case_soft(f"{common} Flour")
+                        # Default: use common name as definition (more maker-friendly than Latin).
+                        return common
             # Otherwise: include an optional 3rd botanical epithet token when present.
             # This helps distinguish cases like:
             # - Citrus aurantium bergamia (bergamot) vs Citrus aurantium amara (bitter orange)
@@ -358,6 +406,13 @@ def infer_origin(raw_name: str) -> str:
     """Best-effort single-select origin."""
     cleaned = _clean(raw_name)
     t = cleaned.lower()
+
+    # Dye/colorant families (usually synthetic; avoid falling back to Plant-Derived).
+    if re.search(r"\b(hc|fd|d&c)\s+(red|blue|yellow|orange|green|violet|black|brown|white)\b", t) or re.search(
+        r"\b(acid|basic|solvent|pigment)\s+(red|blue|yellow|orange|green|violet|black|brown)\b",
+        t,
+    ):
+        return "Synthetic"
 
     if any(k in t for k in _MARINE_MARKERS):
         return "Marine-Derived"
@@ -426,6 +481,9 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
     o = (origin or "").strip()
 
     if o == "Synthetic":
+        # Dye/colorant families
+        if re.search(r"\b(hc|fd|d&c)\b", t) or re.search(r"\b(acid|basic|solvent|pigment)\b", t):
+            return "Synthetic - Colorants"
         if any(k in t for k in ("copolymer", "polymer", "acrylate", "carbomer", "poly")):
             return "Synthetic - Polymers"
         if any(
@@ -586,7 +644,15 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if "solution" in t or re.search(r"\b\d{1,3}\s*%(\s*w/w)?\b", t):
         return "Solution", "Liquid"
     # Denatured alcohol families (CosIng: "SD ALCOHOL 40", etc.)
-    if "sd alcohol" in t or re.search(r"\balcohol\s+\d{1,3}\b", t):
+    if "sd alcohol" in t:
+        m = re.search(r"\bsd\s+alcohol\s+(\d{1,3})\b", t)
+        if m:
+            return f"SD Alcohol {m.group(1)}", "Liquid"
+        return "SD Alcohol", "Liquid"
+    if re.search(r"\balcohol\s+\d{1,3}\b", t) and "denat" in t:
+        m = re.search(r"\balcohol\s+(\d{1,3})\b", t)
+        if m:
+            return f"Alcohol {m.group(1)}", "Liquid"
         return "Alcohol", "Liquid"
 
     # Food-like forms (important for makers; common in TGSC/other sources)
