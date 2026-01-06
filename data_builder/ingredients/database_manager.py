@@ -460,6 +460,15 @@ class SourceItem(Base):
     derived_function_tags_json = Column(Text, nullable=False, default="[]")
     derived_master_categories_json = Column(Text, nullable=False, default="[]")
 
+    # Deterministic item-level specification enrichment (non-AI).
+    # This is a flexible JSON blob so we can add spec fields without schema churn.
+    derived_specs_json = Column(Text, nullable=False, default="{}")
+    derived_specs_sources_json = Column(Text, nullable=False, default="{}")
+    derived_specs_notes_json = Column(Text, nullable=False, default="[]")
+
+    # Link to merged item-form (ingestion-stage dedupe table).
+    merged_item_id = Column(Integer, nullable=True, default=None, index=True)
+
     # If derived_variation is intentionally absent (e.g., base chemical / base term),
     # mark as bypass so "missing variation" doesn't imply a parsing gap.
     variation_bypass = Column(Integer, nullable=False, default=0)  # 0/1
@@ -478,6 +487,9 @@ class SourceItem(Base):
     derived_term = Column(String, nullable=True, default=None)  # normalized base definition term
     derived_variation = Column(String, nullable=True, default=None)
     derived_physical_form = Column(String, nullable=True, default=None)
+    # Best-effort plant-part label (Leaf/Seed/Bark/etc.) for filtering and UI.
+    derived_part = Column(Text, nullable=True, default=None)
+    derived_part_reason = Column(Text, nullable=True, default=None)
 
     # CAS list support (some sources provide multiple CAS numbers per row).
     cas_numbers_json = Column(Text, nullable=False, default="[]")
@@ -554,6 +566,32 @@ class SourceCatalogItem(Base):
     # Provenance
     sources_json = Column(Text, nullable=False, default="{}")  # merged source refs
     merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class MergedItemForm(Base):
+    """Deterministically merged item-form (definition + variation + physical form)."""
+
+    __tablename__ = "merged_item_forms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    derived_term = Column(Text, nullable=False)
+    derived_variation = Column(Text, nullable=True, default="")
+    derived_physical_form = Column(Text, nullable=True, default="")
+
+    derived_parts_json = Column(Text, nullable=False, default="[]")
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+    member_source_item_keys_json = Column(Text, nullable=False, default="[]")
+    sources_json = Column(Text, nullable=False, default="{}")
+
+    merged_specs_json = Column(Text, nullable=False, default="{}")
+    merged_specs_sources_json = Column(Text, nullable=False, default="{}")
+    merged_specs_notes_json = Column(Text, nullable=False, default="[]")
+
+    source_row_count = Column(Integer, nullable=False, default=0)
+    has_cosing = Column(Boolean, nullable=False, default=False)
+    has_tgsc = Column(Boolean, nullable=False, default=False)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class SourceDefinition(Base):
@@ -635,11 +673,20 @@ def _ensure_source_item_columns() -> None:
                 ("item_display_name", "TEXT"),
                 ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_part", "TEXT"),
+                ("derived_part_reason", "TEXT"),
                 ("variation_bypass", "INTEGER NOT NULL DEFAULT 0"),
                 ("variation_bypass_reason", "TEXT"),
                 ("definition_cluster_id", "TEXT"),
                 ("definition_cluster_confidence", "INTEGER"),
                 ("definition_cluster_reason", "TEXT"),
+                # Deterministic item-level spec enrichment (non-AI). These fields are derived from
+                # TGSC/CosIng (via merged `source_catalog_items`) and safe deterministic rules.
+                # JSON shape is data-driven so we don't need schema changes per attribute.
+                ("derived_specs_json", "TEXT NOT NULL DEFAULT '{}'"),
+                ("derived_specs_sources_json", "TEXT NOT NULL DEFAULT '{}'"),
+                ("derived_specs_notes_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("merged_item_id", "INTEGER"),
             ]
             for name, col_type in additions:
                 if name in column_names:
@@ -1380,6 +1427,24 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             "Stock Solution",
         }
 
+        # Inventory requirement: always seed at least 1 item under the ingredient definition.
+        # If the upstream compiler/AI provides no items, create a deterministic base item.
+        # This is especially important for variation_bypass chemicals where the item name
+        # may be identical to the ingredient definition.
+        if not items:
+            items = [
+                {
+                    "item_name": cleaned,  # will be re-derived deterministically below
+                    "variation": "",
+                    "physical_form": "",
+                    "variation_bypass": True,
+                    "form_bypass": True,
+                    # keep minimal SOP list fields so the portal doesn't show empty lists
+                    "applications": ["Unknown"],
+                }
+            ]
+            ingredient["items"] = items
+
         for raw_item in items:
             if not isinstance(raw_item, dict):
                 continue
@@ -1450,7 +1515,9 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     approved = False
                     status = "quarantine"
                     reasons.append(f"Unapproved variation: {variation}")
-            if not physical_form:
+            # Allow form-less items when form_bypass is explicitly set.
+            # This supports inventory items for \"identity-only\" chemicals.
+            if not physical_form and not form_bypass:
                 approved = False
                 status = "quarantine"
                 reasons.append("Missing/invalid physical_form")
@@ -1706,6 +1773,8 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
                     derived_term=(row.get("derived_term") or "").strip() or None,
                     derived_variation=(row.get("derived_variation") or "").strip() or None,
                     derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
+                    derived_part=(row.get("derived_part") or "").strip() or None,
+                    derived_part_reason=(row.get("derived_part_reason") or "").strip() or None,
                     origin=(row.get("origin") or "").strip() or None,
                     ingredient_category=(row.get("ingredient_category") or "").strip() or None,
                     refinement_level=(row.get("refinement_level") or "").strip() or None,
@@ -1732,6 +1801,8 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
                 existing.derived_term = (row.get("derived_term") or "").strip() or None
                 existing.derived_variation = (row.get("derived_variation") or "").strip() or None
                 existing.derived_physical_form = (row.get("derived_physical_form") or "").strip() or None
+                existing.derived_part = (row.get("derived_part") or "").strip() or None
+                existing.derived_part_reason = (row.get("derived_part_reason") or "").strip() or None
                 existing.origin = (row.get("origin") or "").strip() or None
                 existing.ingredient_category = (row.get("ingredient_category") or "").strip() or None
                 existing.refinement_level = (row.get("refinement_level") or "").strip() or None

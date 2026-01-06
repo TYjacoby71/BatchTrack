@@ -23,6 +23,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from . import database_manager
 from .item_parser import (
     derive_definition_term,
+    extract_plant_part,
     extract_variation_and_physical_form,
     infer_origin,
     infer_primary_category,
@@ -206,9 +207,10 @@ def ingest_sources(
         ingredient_category = infer_primary_category(definition, origin, raw_name=raw) if definition else ""
         refinement_level = infer_refinement(definition or raw, raw)
         variation, physical_form = extract_variation_and_physical_form(raw)
+        derived_part = extract_plant_part(raw)
         # CosIng provides descriptions that explicitly distinguish volatile (essential) oils.
         # If the INCI contains "... OIL" but is not a seed/nut/kernel oil, and the description
-        # says "volatile oil", treat as Essential Oil deterministically.
+        # says "volatile oil" (or clearly indicates an essential oil), treat as Essential Oil deterministically.
         if source == "cosing" and " oil" in raw.lower():
             lower = raw.lower()
             if not any(tok in lower for tok in ("seed oil", "kernel oil", "nut oil")):
@@ -216,7 +218,13 @@ def ingest_sources(
                 funcs = (payload.get("Function") or "").strip().lower()
                 # Guardrail: only essential-oil classify when CosIng also marks it as perfuming/fragrance.
                 is_perfuming = any(k in funcs for k in ("fragrance", "perfuming", "masking"))
-                if "volatile oil" in desc and is_perfuming:
+                is_essential_oil_desc = (
+                    ("volatile oil" in desc)
+                    or ("essential oil" in desc)
+                    or ("oil distilled" in desc)
+                    or ("distilled" in desc and "oil" in desc)
+                )
+                if is_essential_oil_desc and is_perfuming:
                     variation, physical_form = "Essential Oil", "Oil"
 
         status = "linked" if definition else "orphan"
@@ -274,6 +282,8 @@ def ingest_sources(
                 "derived_term": definition or None,
                 "derived_variation": variation or None,
                 "derived_physical_form": physical_form or None,
+                "derived_part": derived_part or None,
+                "derived_part_reason": "token_in_raw_name" if derived_part else None,
                 "origin": origin,
                 "ingredient_category": ingredient_category or None,
                 "refinement_level": refinement_level or None,

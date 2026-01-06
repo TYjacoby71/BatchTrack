@@ -38,7 +38,22 @@ def _is_chemical_like(name: str) -> bool:
     return False
 
 
-_BINOMIAL_RE = re.compile(r"^[A-Z][a-z]+ [a-z]{2,}(?: [a-z]{2,})?$")
+_BINOMIAL_RE = re.compile(r"^([A-Za-z]{2,})\s+([A-Za-z]{2,})(?:\s+([A-Za-z]{2,}))?$")
+_BINOMIAL_STOPWORDS = {
+    # Not botanical identities
+    "conditioning",
+    "extract",
+    "oil",
+    "water",
+    "juice",
+    "puree",
+    "purée",
+    "pulp",
+    "flavor",
+    "fragrance",
+    "essence",
+    "specialty",
+}
 
 
 def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
@@ -61,6 +76,7 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
             is_comp = bool(getattr(row, "is_composite", False))
             raw = _clean(getattr(row, "raw_name", ""))
             inci = _clean(getattr(row, "inci_name", ""))
+            source = _clean(getattr(row, "source", "")).lower()
 
             new_bypass = 0
             new_reason: str | None = None
@@ -73,24 +89,99 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
                 new_bypass = 0
                 new_reason = None
             else:
-                if _is_chemical_like(raw) or _is_chemical_like(inci):
+                raw_stripped = raw.strip(" ,")
+                low = raw_stripped.lower()
+                if _is_chemical_like(raw_stripped) or _is_chemical_like(inci):
                     new_bypass = 1
                     new_reason = "chemical_like"
-                elif raw:
-                    low = raw.lower().strip(" ,")
+                else:
                     # TGSC often includes marketing/usage descriptors that are not meaningful
                     # ingredient variations (e.g., "... flavor", "... fragrance").
-                    if any(low.endswith(f" {tok}") or low == tok for tok in ("flavor", "fragrance", "essence", "specialty")):
+                    if raw_stripped and any(
+                        low.endswith(f" {tok}") or low == tok
+                        for tok in (
+                            "flavor",
+                            "fragrance",
+                            "essence",
+                            "specialty",
+                            "enhancer",
+                            "blockers",
+                            "replacer",
+                            "compound",
+                        )
+                    ):
                         new_bypass = 1
                         new_reason = "descriptor_only"
-                elif raw and (" " not in raw) and ("/" not in raw) and len(raw) >= 4:
-                    # Single token with no explicit form/variation.
-                    new_bypass = 1
-                    new_reason = "single_token"
-                elif raw and _BINOMIAL_RE.match(raw):
-                    # Base botanical identity (e.g. "Panax ginseng") with no extra item modifiers.
-                    new_bypass = 1
-                    new_reason = "botanical_base"
+                    elif source == "tgsc" and raw_stripped and any(tok in low for tok in ("colouring matters", "coloring matters")):
+                        new_bypass = 1
+                        new_reason = "descriptor_only"
+                    elif (
+                        # TGSC sometimes includes long \"produced in / derived from\" enzyme/process descriptions
+                        # without a clean ingredient identity; bypass rather than treating as missing variation.
+                        source == "tgsc"
+                        and not _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and any(tok in low for tok in (" produced in ", " derived from ", " expressing a gene ", " from "))
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_process_descriptor"
+                    elif (
+                        # TGSC sometimes includes chemistry-like phrases without a CAS number.
+                        # Treat these as identity-level (variation not meaningful) rather than "missing".
+                        source == "tgsc"
+                        and not _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and any(tok in low for tok in ("acetyl", "amido", "n-", "dl"))
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_identity_phrase_no_cas"
+                    elif (
+                        # CosIng frequently contains chemistry identities that are all-caps phrases
+                        # (e.g., "METHYL PYRROLIDONE") where a variation label is not meaningful.
+                        source == "cosing"
+                        and raw_stripped
+                        and raw_stripped == raw_stripped.upper()
+                        and " " in raw_stripped
+                        and "/" not in raw_stripped
+                        and not any(tok in low for tok in (" seed ", " kernel ", " nut ", " leaf ", " root ", " bark ", " flower ", " fruit ", " peel "))
+                    ):
+                        new_bypass = 1
+                        new_reason = "cosing_caps_identity"
+                    elif (
+                        # TGSC: many named isolates end with a series suffix like "A," / "B," / "II,".
+                        # These are identity-level names (not variations) and should bypass.
+                        source == "tgsc"
+                        and _clean(getattr(row, "cas_number", ""))  # strong identity hint
+                        and raw_stripped
+                        and re.search(r"\b([A-Z]|I|II|III|IV|V)\b\s*$", raw_stripped.rstrip(","))
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_series_suffix"
+                    elif (
+                        # TGSC often contains multi-token chemical/trade names (with CAS) where a variation label
+                        # is not meaningful (the name *is* the identity).
+                        source == "tgsc"
+                        and _clean(getattr(row, "cas_number", ""))
+                        and raw_stripped
+                        and not _BINOMIAL_RE.match(raw_stripped)  # avoid bypassing true botanicals
+                    ):
+                        new_bypass = 1
+                        new_reason = "tgsc_identity_phrase"
+                    elif raw_stripped and (" " not in raw_stripped) and ("/" not in raw_stripped) and len(raw_stripped) >= 3:
+                        # Single token with no explicit form/variation (common for chemistry + some base materials).
+                        new_bypass = 1
+                        new_reason = "single_token"
+                    elif raw_stripped and _BINOMIAL_RE.match(raw_stripped):
+                        # Base botanical identity (e.g., "Panax ginseng") with no extra item modifiers.
+                        m = _BINOMIAL_RE.match(raw_stripped)
+                        genus = (m.group(1) or "").lower() if m else ""
+                        species = (m.group(2) or "").lower() if m else ""
+                        epithet = (m.group(3) or "").lower() if m else ""
+                        if genus and species and species not in _BINOMIAL_STOPWORDS and genus not in _BINOMIAL_STOPWORDS:
+                            # Avoid treating obviously non-botanical strings as botanicals (e.g. "Hair conditioning").
+                            if not any(tok in (species, epithet) for tok in _BINOMIAL_STOPWORDS):
+                                new_bypass = 1
+                                new_reason = "botanical_base"
 
             old_bypass = int(getattr(row, "variation_bypass", 0) or 0)
             old_reason = getattr(row, "variation_bypass_reason", None)

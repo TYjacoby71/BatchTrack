@@ -25,6 +25,37 @@ _PUNCT_RE = re.compile(r"[^\w\s\-\&/()]", flags=re.UNICODE)
 # Rough Latin binomial detector (Genus species).
 # Must tolerate ALL CAPS INCI rows (e.g., "LAVANDULA ANGUSTIFOLIA ...").
 _BINOMIAL_RE = re.compile(r"^\s*([A-Za-z]{2,})\s+([A-Za-z]{2,})\b")
+
+# Tokens that are common words / chemical descriptors (not botanical genera). If a name starts
+# with these, do NOT treat the first two tokens as a botanical binomial.
+# This prevents false binomial parsing like:
+# - "bitter almond oil (fixed)" -> "Fixed"
+# - "ACID RED 18" -> "Acid red" (dropping the number)
+# - "HC YELLOW NO. 10" -> "Hc yellow no" (dropping the number)
+_NON_BINOMIAL_GENUS = {
+    "acid",
+    "basic",
+    "solvent",
+    "pigment",
+    "hc",
+    "fd",
+    "d&c",
+    "color",
+    "colour",
+    "yellow",
+    "red",
+    "blue",
+    "green",
+    "orange",
+    "violet",
+    "black",
+    "brown",
+    "white",
+    "bitter",
+    "sweet",
+    "fixed",
+    "alcohol",
+}
 _PAREN_COMMON_RE = re.compile(r"\(([^)]+)\)")
 _BINOMIAL_STOPWORDS = {
     "oil",
@@ -111,6 +142,18 @@ _BOTANICAL_NON_EPITHET_TOKENS = set(_PLANT_PART_TOKENS) | set(_FORM_TOKENS_DROP)
     "cv",
     "hybrid",
     "x",
+    # non-taxonomic processing/biotech tokens that often appear as the 3rd token in INCI names
+    # (avoid incorrectly treating these as botanical epithets)
+    "callus",
+    "culture",
+    "cell",
+    "cells",
+    "meristem",
+    "tissue",
+    "filtrate",
+    "lysate",
+    "ferment",
+    "fermented",
 }
 
 # Exceptions: tokens that are definition-level for maker UX (by your direction).
@@ -168,7 +211,25 @@ _MINERAL_MARKERS = {
     "mineral",
     "salt",
 }
-_ANIMAL_MARKERS = {"lanolin", "beeswax", "collagen", "keratin", "gelatin", "milk", "whey", "casein", "honey", "tallow", "lard", "silk", "wool", "cashmere", "angora"}
+_ANIMAL_MARKERS = {
+    "lanolin",
+    "beeswax",
+    "cera alba",
+    "cera flava",
+    "collagen",
+    "keratin",
+    "gelatin",
+    "milk",
+    "whey",
+    "casein",
+    "honey",
+    "tallow",
+    "lard",
+    "silk",
+    "wool",
+    "cashmere",
+    "angora",
+}
 
 # Word-boundary fiber markers (avoid false positives like "longum" containing "gum").
 _FIBER_MARKER_RE = re.compile(
@@ -209,6 +270,44 @@ def _title_case_soft(text: str) -> str:
     return " ".join(parts).strip()
 
 
+# Plant-part tokens that should be preserved at the item level for botanicals.
+_PLANT_PART_LABELS: dict[str, str] = {
+    "bark": "Bark",
+    "leaf": "Leaf",
+    "seed": "Seed",
+    "flower": "Flower",
+    "root": "Root",
+    "bud": "Bud",
+    "stem": "Stem",
+    "fruit": "Fruit",
+    "peel": "Peel",
+    "rind": "Rind",
+    "kernel": "Kernel",
+    "nut": "Nut",
+    "wood": "Wood",
+    "cone": "Cone",
+    "needle": "Needle",
+    "herb": "Herb",
+    "rhizome": "Rhizome",
+    # less common but appears in CosIng
+    "seedcoat": "Seedcoat",
+    "shell": "Shell",
+    "branch": "Branch",
+}
+
+
+def extract_plant_part(raw_name: str) -> str:
+    """Best-effort extract a single plant-part label from an item name."""
+    cleaned = _clean(raw_name)
+    if not cleaned:
+        return ""
+    t = cleaned.lower()
+    # Prefer longer tokens first (seedcoat before seed).
+    for tok in sorted(_PLANT_PART_LABELS.keys(), key=lambda s: -len(s)):
+        if re.search(rf"\b{re.escape(tok)}\b", t):
+            return _PLANT_PART_LABELS[tok]
+    return ""
+
 def derive_definition_term(raw_name: str) -> str:
     """Derive a canonical definition term from an item string.
 
@@ -227,6 +326,16 @@ def derive_definition_term(raw_name: str) -> str:
 
     lowered = cleaned.lower()
 
+    # Special-case: denatured alcohol families are not botanicals.
+    # Keep the definition stable and represent the grade/spec at the item level.
+    if lowered.startswith("alcohol denat"):
+        return "Alcohol Denat"
+
+    # Remove parenthetical fixed-oil marker before further parsing.
+    # This prevents "(fixed)" being treated as a "common name" override.
+    cleaned = re.sub(r"\(\s*fixed\s*\)", "", cleaned, flags=re.IGNORECASE).strip()
+    lowered = cleaned.lower()
+
     # If we have a Latin binomial at the start, prefer a common name in parentheses when present.
     m = _BINOMIAL_RE.match(cleaned)
     if m:
@@ -234,23 +343,27 @@ def derive_definition_term(raw_name: str) -> str:
         species_raw = m.group(2)
         genus = genus_raw[:1].upper() + genus_raw[1:].lower() if genus_raw else ""
         species = (species_raw or "").lower()
-        # Avoid treating generic item tokens as "species" (e.g., "Jojoba Oil").
-        if species in _BINOMIAL_STOPWORDS:
-            m = None
-        else:
+        # Guardrail: reject common non-botanical leading tokens (dyes, descriptors, etc.)
+        # and generic item tokens as "species" (e.g., "Jojoba Oil").
+        is_binomial = genus.lower() not in _NON_BINOMIAL_GENUS and species not in _BINOMIAL_STOPWORDS
+        if is_binomial:
             common_match = _PAREN_COMMON_RE.search(cleaned)
             if common_match:
                 common_raw = _clean(common_match.group(1))
                 common = _title_case_soft(common_raw)
                 if common:
-                    # Special-case: "Beet" + root -> Beetroot (common maker term)
-                    if common.strip().lower() == "beet" and "root" in lowered:
-                        return "Beetroot"
-                    # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
-                    if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
-                        return _title_case_soft(f"{common} Flour")
-                    # Default: use common name as definition (more maker-friendly than Latin).
-                    return common
+                    # Never allow "(fixed)" to become the definition term.
+                    if common.strip().lower() == "fixed":
+                        common = ""
+                    if common:
+                        # Special-case: "Beet" + root -> Beetroot (common maker term)
+                        if common.strip().lower() == "beet" and "root" in lowered:
+                            return "Beetroot"
+                        # Grain flour definitions: (Wheat) kernel flour -> Wheat Flour
+                        if "flour" in lowered and any(k in lowered for k in _GRAIN_KEYWORDS):
+                            return _title_case_soft(f"{common} Flour")
+                        # Default: use common name as definition (more maker-friendly than Latin).
+                        return common
             # Otherwise: include an optional 3rd botanical epithet token when present.
             # This helps distinguish cases like:
             # - Citrus aurantium bergamia (bergamot) vs Citrus aurantium amara (bitter orange)
@@ -291,6 +404,13 @@ def infer_origin(raw_name: str) -> str:
     cleaned = _clean(raw_name)
     t = cleaned.lower()
 
+    # Dye/colorant families (usually synthetic; avoid falling back to Plant-Derived).
+    if re.search(r"\b(hc|fd|d&c)\s+(red|blue|yellow|orange|green|violet|black|brown|white)\b", t) or re.search(
+        r"\b(acid|basic|solvent|pigment)\s+(red|blue|yellow|orange|green|violet|black|brown)\b",
+        t,
+    ):
+        return "Synthetic"
+
     if any(k in t for k in _MARINE_MARKERS):
         return "Marine-Derived"
     if any(k in t for k in _FERMENT_MARKERS):
@@ -298,16 +418,41 @@ def infer_origin(raw_name: str) -> str:
     if any(k in t for k in _ANIMAL_MARKERS):
         # keep split between animal-derived and byproduct later; for now treat as Animal-Derived
         return "Animal-Derived"
+    # Amine oxides are an INCI surfactant family (synthetic), not mineral oxides.
+    if "amine oxide" in t:
+        return "Synthetic"
     if any(k in t for k in _SYNTHETIC_MARKERS) or _looks_chemical_like(t):
         return "Synthetic"
 
     # Inorganic salt heuristic (handles cases like "SODIUM CHLORIDE" even without other mineral tokens).
     parts = t.split()
     inorganic_cations = {"sodium", "potassium", "calcium", "magnesium", "zinc", "iron", "copper", "aluminum", "ammonium"}
-    inorganic_anions = {"chloride", "bromide", "iodide", "sulfate", "phosphate", "carbonate", "hydroxide", "nitrate"}
+    inorganic_anions = {
+        "chloride",
+        "bromide",
+        "iodide",
+        "fluoride",
+        "sulfate",
+        "phosphate",
+        "carbonate",
+        "bicarbonate",
+        "hydroxide",
+        "nitrate",
+        "silicate",
+        "borate",
+        "peroxide",
+        "dioxide",
+        "oxide",
+    }
+    # Multi-word salts: if it begins with a simple cation and ends with a common inorganic anion,
+    # treat as Mineral/Earth; otherwise treat as Synthetic organic salt.
+    if len(parts) >= 2 and parts[0] in inorganic_cations and parts[-1] in inorganic_anions:
+        return "Mineral/Earth"
     if len(parts) == 2 and parts[1] in inorganic_anions:
         # If the cation is a simple inorganic cation, treat as mineral; otherwise treat as synthetic organic salt.
         return "Mineral/Earth" if parts[0] in inorganic_cations else "Synthetic"
+    if len(parts) >= 2 and parts[0] in inorganic_cations and parts[-1].endswith(("ate", "ite", "ide", "urate")):
+        return "Synthetic"
 
     if any(k in t for k in _MINERAL_MARKERS):
         return "Mineral/Earth"
@@ -333,9 +478,34 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
     o = (origin or "").strip()
 
     if o == "Synthetic":
+        # Dye/colorant families
+        if re.search(r"\b(hc|fd|d&c)\b", t) or re.search(r"\b(acid|basic|solvent|pigment)\b", t):
+            return "Synthetic - Colorants"
         if any(k in t for k in ("copolymer", "polymer", "acrylate", "carbomer", "poly")):
             return "Synthetic - Polymers"
-        if any(k in t for k in ("laureth", "ceteareth", "oleth", "steareth", "ceteth", "pareth", "glycereth", "sulfate", "sulfonate", "betaine", "glucoside", "sultaine", "amphoacetate", "isethionate", "sarcosinate", "taurate", "surfactant")):
+        if any(
+            k in t
+            for k in (
+                "amine oxide",
+                "laureth",
+                "ceteareth",
+                "oleth",
+                "steareth",
+                "ceteth",
+                "pareth",
+                "glycereth",
+                "sulfate",
+                "sulfonate",
+                "betaine",
+                "glucoside",
+                "sultaine",
+                "amphoacetate",
+                "isethionate",
+                "sarcosinate",
+                "taurate",
+                "surfactant",
+            )
+        ):
             return "Synthetic - Surfactants"
         if any(k in t for k in ("glycol", "alcohol", "solvent", "propanediol", "butylene", "propylene")):
             return "Synthetic - Solvents"
@@ -453,20 +623,79 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Normalize repeated whitespace/hyphens already handled by _clean.
 
+    # CO2 / supercritical extracts (must win over oil keywords like "seed oil")
+    # Examples:
+    # - "punica granatum seed oil CO2 extract" -> ("CO2 Extract", "Liquid")
+    # - "rosehip CO2 extract" -> ("CO2 Extract", "Liquid")
+    if re.search(r"\bco2\b", t) and ("extract" in t or "supercritical" in t):
+        return "CO2 Extract", "Liquid"
+    if "supercritical extract" in t:
+        return "CO2 Extract", "Liquid"
+
+    # Preserve botanical part for common part+extract patterns (otherwise they collapse into "Extract").
+    # Examples:
+    # - "AESCULUS HIPPOCASTANUM BARK EXTRACT" -> ("Bark Extract", "Liquid")
+    # - "PRUNUS PERSICA LEAF EXTRACT" -> ("Leaf Extract", "Liquid")
+    for tok, label in _PLANT_PART_LABELS.items():
+        if re.search(rf"\b{re.escape(tok)}\s+(?:cell\s+)?extract\b", t):
+            return f"{label} Extract", "Liquid"
+
+    # Preserve part for part+powder patterns (otherwise they collapse into "Powder").
+    for tok, label in _PLANT_PART_LABELS.items():
+        if re.search(rf"\b{re.escape(tok)}\s+powder\b", t):
+            return f"{label} Powder", "Powder"
+
     # Concentrations / solutions (high-signal, common in catalogs)
     # Examples: "SODIUM HYDROXIDE 50% SOLUTION", "LACTIC ACID 80%"
     if "solution" in t or re.search(r"\b\d{1,3}\s*%(\s*w/w)?\b", t):
         return "Solution", "Liquid"
+    # Denatured alcohol families (CosIng: "SD ALCOHOL 40", etc.)
+    if "sd alcohol" in t:
+        m = re.search(r"\bsd\s+alcohol\s+(\d{1,3})\b", t)
+        if m:
+            return f"SD Alcohol {m.group(1)}", "Liquid"
+        return "SD Alcohol", "Liquid"
+    if re.search(r"\balcohol\s+\d{1,3}\b", t) and "denat" in t:
+        m = re.search(r"\balcohol\s+(\d{1,3})\b", t)
+        if m:
+            return f"Alcohol {m.group(1)}", "Liquid"
+        return "Alcohol", "Liquid"
 
     # Food-like forms (important for makers; common in TGSC/other sources)
+    # "juice powder" and "juice extract" must win over the generic "juice" rule.
+    if re.search(r"\bjuice\s+powder\b", t):
+        return "Juice Powder", "Powder"
+    if re.search(r"\bjuice\s+extract\b", t):
+        return "Juice Extract", "Liquid"
     if " puree" in f" {t} " or " purée" in f" {t} " or t.endswith(" puree") or t.endswith(" purée"):
         return "Puree", "Liquid"
     if " juice" in f" {t} " or t.endswith(" juice"):
         return "Juice", "Liquid"
     if " pulp" in f" {t} " or t.endswith(" pulp"):
         return "Pulp", "Paste"
+    if "oil (fixed)" in t or t.endswith("(fixed)"):
+        return "Fixed Oil", "Oil"
+    if " vinegar" in f" {t} " or t.endswith(" vinegar"):
+        return "Vinegar", "Liquid"
+    if " nectar" in f" {t} " or t.endswith(" nectar"):
+        return "Nectar", "Liquid"
+    # Common misspelling observed in source data
+    if " extraxt" in f" {t} " or t.endswith(" extraxt"):
+        return "Extract", "Liquid"
 
     # Oil variants (plant parts)
+    # Unsaponifiables and esterified oils should not collapse into plain "Oil".
+    if "unsaponifiables" in t and " oil" in t:
+        return "Unsaponifiables", "Oil"
+    m = re.search(r"\boil\s+([a-z0-9\-]+)\s+esters?\b", t)
+    if m:
+        label = _title_case_soft(f"{m.group(1)} esters")
+        return label, "Oil"
+    # e.g. "oil ethyl ester" / "oil ethyl esters"
+    m = re.search(r"\boil\s+([a-z0-9\-]+)\s+ester(s)?\b", t)
+    if m:
+        label = _title_case_soft(f"{m.group(1)} ester")
+        return label, "Oil"
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
         token = f"{part} oil"
         if token in t:
@@ -474,11 +703,32 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Plain oil (no plant part specified) — common in INCI.
     if t.endswith(" oil"):
         return "Oil", "Oil"
+    # TGSC: oils often include extra trailing descriptors (country, processing notes, etc).
+    # If "oil" appears as a token and it's not an "oil replacer", classify as Oil.
+    if re.search(r"\boil\b", t) and "replacer" not in t and "(fixed)" not in t:
+        return "Oil", "Oil"
 
     # Plant part materials (non-oil) - useful for grouping and term bundling.
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem", "peel", "fruit", "berry", "bran", "germ"):
         if t.endswith(f" {part}"):
             return _title_case_soft(part), "Whole"
+    # Common botanical fractions/actives that appear as trailing tokens (CosIng/TGSC)
+    if t.endswith(" oleosomes") or " oleosomes" in f" {t} ":
+        return "Oleosomes", "Oil"
+    if t.endswith(" vesicles") or " vesicles" in f" {t} ":
+        return "Vesicles", "Liquid"
+    if t.endswith(" oligosaccharides") or " oligosaccharides" in f" {t} ":
+        return "Oligosaccharides", "Solid"
+    if t.endswith(" catechins") or " catechins" in f" {t} ":
+        return "Catechins", "Solid"
+    if t.endswith(" prenylflavonoids") or " prenylflavonoids" in f" {t} ":
+        return "Prenylflavonoids", "Solid"
+    if t.endswith(" terpenoids") or " terpenoids" in f" {t} ":
+        return "Terpenoids", "Solid"
+    if t.endswith(" fiber") or t.endswith(" fibre"):
+        return "Fiber", "Powder"
+    if t.endswith(" silicates") or t.endswith(" silicate"):
+        return "Silicates", "Solid"
 
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
@@ -505,7 +755,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Surfactant / cleanser families (common INCI suffix families)
     # Keep these as variation tags so items can be filtered and grouped deterministically.
-    if "amine oxide" in t or t.endswith(" oxide"):
+    if "amine oxide" in t:
         return "Amine Oxide", "Liquid"
     if re.search(r"\bbetaine\b", t):
         return "Betaine", "Liquid"
@@ -545,8 +795,12 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if " esters" in f" {t} " or t.endswith(" esters"):
         # Esters are often liquids/waxes; keep as Liquid for now (safe for UI gating).
         return "Esters", "Liquid"
+    if t.endswith(" ester"):
+        return "Ester", "Liquid"
     if " oleyl esters" in t:
         return "Oleyl Esters", "Liquid"
+    if "oleoresin" in t:
+        return "Oleoresin", "Resin"
     if " resin" in f" {t} " or t.endswith(" resin"):
         return "Resin", "Resin"
     if " gum" in f" {t} " or t.endswith(" gum"):
@@ -568,6 +822,23 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Lysate", "Liquid"
     if "conditioned media" in t:
         return "Conditioned Media", "Liquid"
+    # Plant/biotech culture families (common in CosIng)
+    if "meristem cell culture" in t:
+        return "Meristem Cell Culture", "Liquid"
+    if "meristem cell" in t:
+        return "Meristem Cell", "Liquid"
+    if "callus culture" in t:
+        return "Callus Culture", "Liquid"
+    if "callus" in t:
+        return "Callus", "Liquid"
+    if "cell culture" in t:
+        return "Cell Culture", "Liquid"
+    if "extracellular vesicles" in t:
+        return "Extracellular Vesicles", "Liquid"
+    if "exosomes" in t:
+        return "Exosomes", "Liquid"
+    if "protoplasts" in t:
+        return "Protoplasts", "Liquid"
 
     # Processing modifiers (single-label best-effort)
     if "hydrolyzed" in t:
@@ -604,6 +875,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Expressed", "Oil"
     if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
         return "Hydrosol", "Hydrosol"
+    if "distillates" in t or "distillate" in t:
+        return "Distillate", "Liquid"
+    if "infusion" in t:
+        return "Infusion", "Liquid"
     if "tincture" in t:
         return "Tincture", "Liquid"
     if "glycerite" in t:
@@ -624,6 +899,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Granules", "Solid"
     if t.endswith(" flakes") or " flakes" in f" {t} ":
         return "Flakes", "Solid"
+    if t.endswith(" meal") or " meal" in f" {t} ":
+        return "Meal", "Powder"
 
     # Organic acid salts / esters (very common in INCI)
     # If it ends in a salt-like suffix, treat as Salt; if it ends in a fatty-acid ester suffix, treat as Esters.
@@ -632,12 +909,25 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         "potassium",
         "calcium",
         "magnesium",
+        "zinc",
+        "iron",
+        "copper",
+        "aluminum",
+        "silver",
+        "lithium",
         "ammonium",
         "disodium",
         "dipotassium",
+        "trisodium",
+        "tripotassium",
+        "tetrasodium",
+        "tetrapotassium",
         "trisalts",  # rare
     )
     is_cation_salt = t.startswith(_CATION_PREFIXES) or any(f" {_c} " in f" {t} " for _c in _CATION_PREFIXES)
+    # If the presence of a cation is explicit and the name ends in a salt-like suffix, treat as Salt.
+    if is_cation_salt and t.split() and t.split()[-1].endswith(("ate", "ite", "ide", "urate")):
+        return "Salt", "Solid"
     if any(t.endswith(suffix) for suffix in ("lactate", "citrate", "gluconate", "succinate", "octenylsuccinate", "propionate")):
         return ("Salt", "Solid") if is_cation_salt else ("Ester", "Liquid")
     if t.endswith(" acetate"):
@@ -648,6 +938,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Generic ester catch-all (many aroma chemicals): "...ate" at end.
     if t.endswith("ate") and not is_cation_salt:
         return "Ester", "Liquid"
+
+    # Generic "salt" token at end (common in TGSC, e.g., "acetic acid, copper salt,")
+    if t.endswith(" salt") or t.endswith(" salts"):
+        return "Salt", "Solid"
 
     # Triglycerides
     if "triglyceride" in t or "triglycerides" in t:
@@ -675,6 +969,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Acetal", "Liquid"
     if t.endswith(" lactone"):
         return "Lactone", "Liquid"
+    if t.endswith(" epoxide"):
+        return "Epoxide", "Liquid"
+    if t.endswith(" anhydride"):
+        return "Anhydride", "Solid"
+    if t.endswith(" mercaptan"):
+        return "Mercaptan", "Liquid"
+    if t.endswith(" disulfide"):
+        return "Disulfide", "Liquid"
     if t.endswith(" amine"):
         return "Amine", "Liquid"
     if t.endswith("amine"):
@@ -746,6 +1048,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     ):
         return "Salt", "Solid"
 
+    # Oxides / dioxides / peroxides (common mineral families; do NOT treat as amine oxide).
+    if t.endswith(" peroxide") or t.endswith(" peroxides"):
+        return "Peroxide", "Solid"
+    if t.endswith(" dioxide") or t.endswith(" dioxides"):
+        return "Dioxide", "Solid"
+    if t.endswith(" oxide") or t.endswith(" oxides"):
+        return "Oxide", "Solid"
+
     # Oil fractions
     if "unsaponifiables" in t or "unsaponifiable" in t:
         return "Unsaponifiables", "Oil"
@@ -757,6 +1067,16 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Enzyme", "Solid"
     if t.endswith(" protein") or t.endswith(" proteins"):
         return "Protein", "Solid"
+    if t.endswith(" albumin"):
+        return "Protein", "Solid"
+    if t.endswith(" elastin"):
+        return "Protein", "Solid"
+    if t.endswith(" lipids") or " lipids" in f" {t} ":
+        return "Lipids", "Oil"
+    if t.endswith(" dna") or " dna" in f" {t} ":
+        return "DNA", "Solid"
+    if t.endswith(" sap") or " sap" in f" {t} ":
+        return "Sap", "Liquid"
 
     return "", ""
 

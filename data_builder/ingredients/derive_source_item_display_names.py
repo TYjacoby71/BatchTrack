@@ -60,11 +60,67 @@ def _is_chemical_like(name: str) -> bool:
     if n[0].isdigit():
         return True
     # Common INCI chemical-ish patterns
-    if any(tok in n.upper() for tok in ("PEG-", "PPG-", "QUATERNIUM-", "POLY", "COPOLYMER", "CROSSPOLYMER")):
+    # NOTE: avoid broad substring checks like "POLY" which false-positive botanicals (e.g. POLYGONUM).
+    if any(tok in n.upper() for tok in ("PEG-", "PPG-", "QUATERNIUM-", "POLYQUATERNIUM", "COPOLYMER", "CROSSPOLYMER", "POLYMER")):
         return True
     if sum(ch.isdigit() for ch in n) >= 3:
         return True
     return False
+
+
+def _soft_title_common(s: str) -> str:
+    """Title-case a plain common name; keep acronyms/digit-heavy strings unchanged."""
+    t = _clean(s)
+    if not t:
+        return ""
+    # Preserve obviously non-human labels.
+    if sum(ch.isdigit() for ch in t) >= 2:
+        return t
+    if t.isupper() or t.islower():
+        return t.title()
+    return t
+
+
+def _clean_tgsc_common_base(raw: str) -> str:
+    """
+    Reduce TGSC-style item names down to a stable base *common name* candidate.
+    Examples:
+    - "lavender absolute bulgaria," -> "lavender"
+    - "aorta extract," -> "aorta"
+    """
+    t = _clean(raw).strip(" ,\"'")
+    if not t:
+        return ""
+    # Drop anything after a comma (TGSC often adds location/marketing after commas).
+    if "," in t:
+        t = t.split(",", 1)[0].strip()
+    # Remove parenthetical clarifiers.
+    t = re.sub(r"\([^)]*\)", "", t).strip()
+    t = re.sub(r"\s+", " ", t).strip()
+    # Drop trailing geo/country qualifiers.
+    parts = t.split()
+    geo = {
+        "bulgaria",
+        "france",
+        "spain",
+        "italy",
+        "morocco",
+        "tunisia",
+        "usa",
+        "u.s.a.",
+        "uk",
+        "u.k.",
+    }
+    while parts and parts[-1].lower().strip(".") in geo:
+        parts = parts[:-1]
+    t = " ".join(parts).strip()
+    # Drop common trailing variation tokens even when they aren't the parsed variation.
+    for token in ("absolute", "concrete", "extract", "oil", "water", "hydrosol", "juice", "powder", "pulp"):
+        t = re.sub(rf"\s+{re.escape(token)}\s*$", "", t, flags=re.IGNORECASE).strip(" ,-/")
+    # Reject noisy strings.
+    if not t or sum(ch.isdigit() for ch in t) >= 2:
+        return ""
+    return t.strip()
 
 
 def _truncate(s: str, max_len: int = 80) -> str:
@@ -135,11 +191,44 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
     # Build cross-ref maps from merged catalog.
     cas_to_common: dict[str, str] = {}
     cas_to_inci: dict[str, str] = {}
+    # Item-first cross-ref: allow CosIng source_items to inherit a stable TGSC common name
+    # when they share a strong identity token (CAS). This does NOT merge rows; it only
+    # improves maker-facing display names deterministically.
+    cas_to_best_tgsc_common_base: dict[str, str] = {}
     # NOTE: INCI->common overlay is intentionally NOT used here because it can produce
     # incorrect mappings when TGSC rows get merged onto an INCI string loosely.
     # We only trust common_name when it was obtained via strong identity linkage (CAS).
 
     with database_manager.get_session() as session:
+        # Build CAS -> best TGSC base common name candidate.
+        for row in (
+            session.query(database_manager.SourceItem)
+            .filter(database_manager.SourceItem.source == "tgsc")
+            .yield_per(2000)
+        ):
+            raw = _clean(getattr(row, "raw_name", ""))
+            if not raw:
+                continue
+            cas_list: list[str] = []
+            try:
+                cas_list = json.loads(getattr(row, "cas_numbers_json", None) or "[]")
+                if not isinstance(cas_list, list):
+                    cas_list = []
+            except Exception:
+                cas_list = []
+            if not cas_list:
+                cas_list = _cas_tokens(_clean(getattr(row, "cas_number", "")))
+            if not cas_list:
+                continue
+            base = _clean_tgsc_common_base(raw)
+            if not base:
+                continue
+            # Prefer shorter, cleaner bases per CAS.
+            for cas in cas_list:
+                cur_base = _clean(cas_to_best_tgsc_common_base.get(cas, ""))
+                if (not cur_base) or (len(base) < len(cur_base)):
+                    cas_to_best_tgsc_common_base[cas] = base
+
         for item in session.query(database_manager.SourceCatalogItem).yield_per(1000):
             inci = _clean(getattr(item, "inci_name", None))
             common = _clean(getattr(item, "common_name", None))
@@ -174,6 +263,14 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
             # Pull best catalog common_name if we can.
             common = ""
             for cas in cas_list:
+                # Prefer TGSC source_items-derived common base name when available.
+                # This is safer than catalog common_name for botanicals because it is closer
+                # to the actual TGSC item naming, but we still only use it as a *base* label.
+                tgsc_base = _clean(cas_to_best_tgsc_common_base.get(cas, ""))
+                if tgsc_base:
+                    common = tgsc_base
+                    break
+
                 c = _clean(cas_to_common.get(cas, ""))
                 if c:
                     # Guardrail: CAS can be shared/ambiguous for natural materials.
@@ -192,23 +289,33 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
                     break
 
             # Base label priority:
-            # 1) catalog common_name (stripped of variation suffix)
-            # 2) INCI label for chemical-like identities; otherwise derived_term
-            # 3) derived_term (parser) / raw_name fallback
+            # 1) INCI label for chemical-like identities (keep the INCI/chemical identity stable)
+            # 2) derived_term (parser): this is the canonical definition label we want to carry
+            # 3) catalog common_name (stripped of variation suffix) as a fallback only
             # 4) raw_name (last resort)
             derived_term = _clean(row.derived_term)
             base = ""
-            if common:
-                base = _base_from_common_name(common, variation)
-            elif _clean(row.inci_name):
-                # Keep INCI label as base for chemical-like; for botanicals prefer derived_term.
+            if _clean(row.inci_name):
                 inci_label = _clean(row.inci_name)
                 if _is_chemical_like(inci_label):
                     base = inci_label
+                elif derived_term:
+                    # Prefer a stable TGSC common base name when available (and non-chemical).
+                    # This is how we let a CAS-linked TGSC common name drive the maker-facing
+                    # definition label instead of forcing a binomial/scientific fallback.
+                    if common and not _is_chemical_like(derived_term):
+                        base = _soft_title_common(common)
+                    else:
+                        base = derived_term
                 else:
-                    base = derived_term or inci_label
+                    base = inci_label
             elif derived_term:
-                base = derived_term
+                if common and not _is_chemical_like(derived_term):
+                    base = _soft_title_common(common)
+                else:
+                    base = derived_term
+            elif common:
+                base = _soft_title_common(_base_from_common_name(common, variation))
             else:
                 base = raw
 
