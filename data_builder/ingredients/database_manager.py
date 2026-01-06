@@ -458,6 +458,9 @@ class SourceItem(Base):
 
     # Deterministic derived tags for UI grouping / filtering (pre-compile).
     derived_function_tags_json = Column(Text, nullable=False, default="[]")
+    # Optional provenance for each derived function tag (for auditability).
+    # Stored as JSON list of objects: [{"tag": "...", "source": "COSING_raw|COSING_normalized|TGSC_keyword|heuristic", ...}, ...]
+    derived_function_tag_entries_json = Column(Text, nullable=False, default="[]")
     derived_master_categories_json = Column(Text, nullable=False, default="[]")
 
     # Deterministic item-level specification enrichment (non-AI).
@@ -672,6 +675,7 @@ def _ensure_source_item_columns() -> None:
                 ("definition_display_name", "TEXT"),
                 ("item_display_name", "TEXT"),
                 ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_function_tag_entries_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("derived_part", "TEXT"),
                 ("derived_part_reason", "TEXT"),
