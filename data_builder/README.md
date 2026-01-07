@@ -75,3 +75,16 @@ data_builder/
 | **Health Canada Natural Health Products (NHP)** | `NHP_API_KEY` (optional) | `NHP_JSON_PATH` (`…/health_canada_nhp.json`) | You can download JSON batches from health-products.canada.ca or scrape the search UI. |
 
 Any file path variables default to the `data_builder/ingredients/data_sources/` directory, so you can just place the CSV/JSON there without setting environment variables. To override, point the corresponding `_PATH` variable at another location (e.g., `COSING_CSV_PATH=/mnt/data/cosing.csv`).
+
+## Deterministic source ingestion (CosIng + TGSC)
+
+In addition to the AI compiler, `data_builder/ingredients/` includes a **deterministic ingestion + merge pipeline** that produces a traceable, de-duplicated “item-form” layer before any AI enrichment.
+
+- **`ingest_source_items.py`**: reads `data_sources/cosing.csv` + `data_sources/tgsc_ingredients.csv` and writes 1:1 `source_items` rows (plus derived `normalized_terms`) into the SQLite DB.
+- **`merge_source_items.py`**: deterministically merges duplicate item-forms into `merged_item_forms` (one row per `derived_term + derived_variation + derived_physical_form`), while keeping all source row keys for provenance.
+- **`derive_source_item_tags.py`**: derives combined tags + master categories for `source_items`.
+  - Writes `source_items.derived_function_tags_json` (combined: raw COSING functions + normalized tags + small TGSC keyword tags).
+  - Writes `source_items.derived_function_tag_entries_json` (per-tag provenance, e.g. `COSING_raw`, `COSING_normalized`, `TGSC_keyword`, `heuristic`).
+- **`derive_source_item_specs.py`**: pulls safe, deterministic spec fields (e.g. TGSC physchem) into `source_items.*_specs_*` JSON blobs with explicit provenance.
+
+Curated vocab tables (physical forms, variations, refinement levels, master categories, and master-category rules) are shipped as JSON under `data_builder/ingredients/data_sources/vocab/` and are also seeded into the DB tables on first run.

@@ -69,6 +69,7 @@ _BINOMIAL_STOPWORDS = {
     "flour",
     "starch",
     "juice",
+    "concentrate",
     "concrete",
     "absolute",
 }
@@ -131,6 +132,7 @@ _FORM_TOKENS_DROP = {
     "gum",
     "solution",
     "distillate",
+    "concentrate",
 }
 
 # Tokens that should NOT be treated as a botanical epithet (they indicate part/form).
@@ -667,6 +669,10 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Juice Powder", "Powder"
     if re.search(r"\bjuice\s+extract\b", t):
         return "Juice Extract", "Liquid"
+    # Concentrates (avoid overlapping with Extract variations).
+    # If "powder" is present, the powder rule later should win.
+    if re.search(r"\bconcentrate\b", t) and "powder" not in t:
+        return "", "Concentrate"
     if " puree" in f" {t} " or " purée" in f" {t} " or t.endswith(" puree") or t.endswith(" purée"):
         return "Puree", "Liquid"
     if " juice" in f" {t} " or t.endswith(" juice"):
@@ -894,11 +900,11 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if " starch" in f" {t} " or t.endswith(" starch"):
         return "Starch", "Powder"
     if t.endswith(" crystals") or " crystals" in f" {t} ":
-        return "Crystals", "Solid"
+        return "", "Crystals"
     if t.endswith(" granules") or " granules" in f" {t} ":
-        return "Granules", "Solid"
+        return "", "Granules"
     if t.endswith(" flakes") or " flakes" in f" {t} ":
-        return "Flakes", "Solid"
+        return "", "Flakes"
     if t.endswith(" meal") or " meal" in f" {t} ":
         return "Meal", "Powder"
 

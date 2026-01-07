@@ -6,7 +6,8 @@ Inputs:
 - taxonomy_constants.MASTER_CATEGORY_RULE_SEED
 
 Outputs (written into source_items):
-- derived_function_tags_json (list[str])
+- derived_function_tags_json (list[str])  # combined (raw + normalized + deterministic TGSC keywords)
+- derived_function_tag_entries_json (list[dict])  # optional provenance per tag
 - derived_master_categories_json (list[str])
 
 Policy:
@@ -26,6 +27,16 @@ from .taxonomy_constants import MASTER_CATEGORY_RULE_SEED
 
 LOGGER = logging.getLogger(__name__)
 
+TGSC_KEYWORD_TAGS: list[tuple[str, str]] = [
+    # Keep this intentionally small + deterministic to avoid noise.
+    ("fixative", "Fixative"),
+    ("perfumery", "Perfumery"),
+    ("perfume", "Perfumery"),
+    ("fragrance", "Fragrance"),
+    ("flavor", "Flavor"),
+    ("flavour", "Flavor"),
+]
+
 
 def _clean(s: Any) -> str:
     return ("" if s is None else str(s)).strip()
@@ -37,6 +48,19 @@ def _parse_cosing_functions(payload: dict[str, Any]) -> list[str]:
         return []
     parts = [p.strip() for p in raw.split(",")]
     return [p for p in parts if p]
+
+def _derive_tgsc_keyword_tags(payload: dict[str, Any]) -> list[str]:
+    """Extract a small deterministic tag set from TGSC free text (category + uses)."""
+    cat = _clean(payload.get("category"))
+    uses = _clean(payload.get("uses"))
+    blob = f"{cat} {uses}".strip().lower()
+    if not blob:
+        return []
+    out: set[str] = set()
+    for needle, tag in TGSC_KEYWORD_TAGS:
+        if needle in blob:
+            out.add(tag)
+    return sorted(out)
 
 
 def _map_cosing_function_to_tags(func: str) -> list[str]:
@@ -91,6 +115,24 @@ def _map_cosing_function_to_tags(func: str) -> list[str]:
 
     return sorted(tags)
 
+def _stable_dedup_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deterministically dedupe tag entries by (tag, source)."""
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        tag = _clean(e.get("tag"))
+        source = _clean(e.get("source"))
+        if not tag or not source:
+            continue
+        key = (tag, source)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"tag": tag, "source": source})
+    return sorted(out, key=lambda d: (str(d.get("tag", "")).casefold(), str(d.get("source", "")).casefold()))
+
 
 def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
     tags: set[str] = set()
@@ -102,11 +144,19 @@ def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
     except Exception:
         payload = {}
 
-    # CosIng authoritative function tags
+    # CosIng authoritative function tags:
+    # - preserve raw COSING functions verbatim
+    # - ALSO add normalized tags for high-level filtering
     if (item.source or "").strip().lower() == "cosing":
         for f in _parse_cosing_functions(payload):
+            tags.add(f)  # raw
             for mapped in _map_cosing_function_to_tags(f):
                 tags.add(mapped)
+
+    # TGSC deterministic keyword tags (small vocabulary; conservative).
+    if (item.source or "").strip().lower() == "tgsc":
+        for t in _derive_tgsc_keyword_tags(payload):
+            tags.add(t)
 
     # High-confidence derivations from variation/form (kept conservative)
     v = _clean(item.derived_variation)
@@ -122,6 +172,45 @@ def _derive_function_tags(item: database_manager.SourceItem) -> list[str]:
     # If CosIng already provides functions, do not add redundant low-signal heuristics.
     # (we already did only high-confidence inferences above)
     return sorted(tags)
+
+def _derive_function_tag_entries(item: database_manager.SourceItem) -> list[dict[str, Any]]:
+    """Return per-tag provenance entries (optional; for auditability)."""
+    payload: dict[str, Any] = {}
+    try:
+        payload = json.loads(item.payload_json or "{}")
+        if not isinstance(payload, dict):
+            payload = {}
+    except Exception:
+        payload = {}
+
+    entries: list[dict[str, Any]] = []
+    source = (item.source or "").strip().lower()
+
+    if source == "cosing":
+        for f in _parse_cosing_functions(payload):
+            if _clean(f):
+                entries.append({"tag": _clean(f), "source": "COSING_raw"})
+            for mapped in _map_cosing_function_to_tags(f):
+                if _clean(mapped):
+                    entries.append({"tag": _clean(mapped), "source": "COSING_normalized"})
+
+    if source == "tgsc":
+        for t in _derive_tgsc_keyword_tags(payload):
+            if _clean(t):
+                entries.append({"tag": _clean(t), "source": "TGSC_keyword"})
+
+    # Heuristic tags derived from variation/form (kept conservative)
+    v = _clean(item.derived_variation)
+    form = _clean(item.derived_physical_form)
+    if v in {"Gum", "Gel"} or form in {"Gum", "Gel"}:
+        entries.append({"tag": "Thickener", "source": "heuristic"})
+        entries.append({"tag": "Stabilizer", "source": "heuristic"})
+    if v in {"Sulfate", "Sulfonate", "Sulfosuccinate", "Glucoside", "Betaine", "Amine Oxide", "Sarcosinate", "Taurate", "Sultaine", "Amphoacetate"}:
+        entries.append({"tag": "Surfactant", "source": "heuristic"})
+    if v in {"Essential Oil", "Absolute", "Concrete"}:
+        entries.append({"tag": "Fragrance", "source": "heuristic"})
+
+    return _stable_dedup_entries(entries)
 
 
 def _build_master_rule_index() -> dict[tuple[str, str], set[str]]:
@@ -163,6 +252,7 @@ def derive_tags(*, limit: int = 0) -> dict[str, int]:
         for item in q.yield_per(1000):
             scanned += 1
             func_tags = _derive_function_tags(item)
+            func_entries = _derive_function_tag_entries(item)
             masters = _derive_master_categories(
                 ingredient_category=_clean(item.ingredient_category),
                 variation=_clean(item.derived_variation),
@@ -170,9 +260,15 @@ def derive_tags(*, limit: int = 0) -> dict[str, int]:
                 function_tags=func_tags,
             )
             func_json = json.dumps(func_tags, ensure_ascii=False)
+            entries_json = json.dumps(func_entries, ensure_ascii=False, sort_keys=True)
             master_json = json.dumps(masters, ensure_ascii=False)
-            if (item.derived_function_tags_json or "[]") != func_json or (item.derived_master_categories_json or "[]") != master_json:
+            if (
+                (item.derived_function_tags_json or "[]") != func_json
+                or (getattr(item, "derived_function_tag_entries_json", "[]") or "[]") != entries_json
+                or (item.derived_master_categories_json or "[]") != master_json
+            ):
                 item.derived_function_tags_json = func_json
+                item.derived_function_tag_entries_json = entries_json
                 item.derived_master_categories_json = master_json
                 updated += 1
     return {"scanned": scanned, "updated": updated}
