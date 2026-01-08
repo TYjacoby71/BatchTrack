@@ -54,6 +54,16 @@ class IngredientSourceBroker:
     def __init__(self) -> None:
         self.session = requests.Session()
 
+        def _get_json(self, url: str, *, timeout: float = 20) -> Dict[str, Any] | None:
+        try:
+            response = self.session.get(url, timeout=timeout)
+            response.raise_for_status()
+            blob = response.json()
+            return blob if isinstance(blob, dict) else None
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.debug("HTTP JSON fetch failed for %s: %s", url, exc)
+            return None
+            
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -75,17 +85,47 @@ class IngredientSourceBroker:
     # Individual source handlers
     # ------------------------------------------------------------------
     def _fetch_pubchem(self, term: str) -> Optional[SourcePayload]:
-        endpoint = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{term}/property/MolecularWeight,ExactMass,Density,BoilingPoint,FlashPoint,InChIKey,CanonicalSMILES/JSON"
-        try:
-            response = self.session.get(endpoint.format(term=requests.utils.quote(term)), timeout=10)
-            response.raise_for_status()
-            blob = response.json()
-            props = blob.get("PropertyTable", {}).get("Properties", [])
+            quoted = requests.utils.quote(term)
+
+            # 1) Resolve name -> CID
+            cid_blob = self._get_json(
+                f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{quoted}/cids/JSON",
+                timeout=20,
+            )
+            cids = (cid_blob or {}).get("IdentifierList", {}).get("CID", [])
+            if not cids:
+                return None
+            cid = cids[0]
+
+            # 2) Pull supported "PropertyTable" properties (PUG REST)
+            # Note: properties like Density/BoilingPoint/FlashPoint are *not* valid in the
+            # PropertyTable endpoint and must be retrieved via PUG View (not implemented here).
+            props_blob = self._get_json(
+                "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/"
+                f"{cid}/property/MolecularFormula,MolecularWeight,ExactMass,IUPACName,InChIKey,CanonicalSMILES/JSON",
+                timeout=20,
+            )
+            props = (props_blob or {}).get("PropertyTable", {}).get("Properties", [])
             if not props:
                 return None
-            data = props[0]
+            data: Dict[str, Any] = dict(props[0])
+
+            # 3) Pull CAS registry numbers (RN) when available
+            rn_blob = self._get_json(
+                f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/xrefs/RN/JSON",
+                timeout=20,
+            )
+            infos = (rn_blob or {}).get("InformationList", {}).get("Information", [])
+            if infos and isinstance(infos, list) and isinstance(infos[0], dict):
+                rns = infos[0].get("RN", [])
+                if isinstance(rns, list) and rns:
+                    data["cas_numbers"] = rns
+                elif isinstance(rns, str) and rns.strip():
+                    data["cas_numbers"] = [rns.strip()]
+
             if PUBCHEM_API_KEY:
                 data["api_key_used"] = True
+
             return SourcePayload(source="pubchem", data=data)
         except Exception as exc:  # pylint: disable=broad-except
             LOGGER.debug("PubChem lookup failed for %s: %s", term, exc)
