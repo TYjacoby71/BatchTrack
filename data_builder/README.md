@@ -13,6 +13,29 @@ This folder contains the autonomous tooling that compiles the ingredient library
 
 ## Workflow
 
+### Canonical deterministic ingestion (CosIng + TGSC → DB + normalized_terms.csv)
+
+This repo ships a **single canonical ingestion pipeline** that deterministically:
+- ingests item rows into `source_items` (variation/form parsing + provenance)
+- merges cross-source identities into `source_catalog_items`
+- derives deterministic tags/specs/display names
+- de-dupes into `merged_item_forms`
+- bundles items into `source_definitions`
+- derives canonical base terms into `normalized_terms` and writes `ingredients/output/normalized_terms.csv`
+
+Run:
+
+```bash
+# Optional: point at a fresh state DB file
+COMPILER_DB_PATH=/path/to/test_ingestion.db \
+  python3 -m data_builder.ingredients.run_ingestion_pipeline
+```
+
+Notes:
+- The pipeline **writes** `data_builder/ingredients/output/normalized_terms.csv` as an export.
+- The pipeline **does not read** that CSV to populate the DB.
+- `normalize_sources.py` is kept for ad-hoc inspection CSV generation; it is CSV-only by default.
+
 1. **Generate base ingredient terms (Phase 1).**
    ```bash
    python -m data_builder.ingredients.term_collector \
