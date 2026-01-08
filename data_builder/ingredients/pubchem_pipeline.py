@@ -266,6 +266,10 @@ def _pick_seed_identifiers(
     if nt is not None:
         if _clean(getattr(nt, "cas_number", None)):
             candidates.append(("cas", _clean(getattr(nt, "cas_number", None))))
+        # If we have any CAS candidates, don't fall through to name matching.
+        # This keeps stage-1 fast and high-precision (CAS lookups are usually unambiguous).
+        if candidates:
+            return candidates
         if _clean(getattr(nt, "inci_name", None)):
             candidates.append(("inci", _clean(getattr(nt, "inci_name", None))))
         if _clean(getattr(nt, "common_name", None)):
@@ -362,12 +366,24 @@ def match_seed_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[
 
     # Execute matching in parallel
     with database_manager.get_session() as session:
+        # Prioritize CAS-bearing seeds for speed/quality.
         pending_ids = [
-            int(r.entity_id)
-            for r in session.query(database_manager.PubChemItemMatch)
-            .filter(database_manager.PubChemItemMatch.entity_type == MATCH_ENTITY_TYPE)
-            .filter(database_manager.PubChemItemMatch.status.in_(sorted(match_statuses)))
-            .all()
+            int(r[0])
+            for r in (
+                session.query(database_manager.PubChemItemMatch.entity_id)
+                .join(
+                    database_manager.TermSeedItemForm,
+                    database_manager.TermSeedItemForm.id == database_manager.PubChemItemMatch.entity_id,
+                )
+                .filter(database_manager.PubChemItemMatch.entity_type == MATCH_ENTITY_TYPE)
+                .filter(database_manager.PubChemItemMatch.status.in_(sorted(match_statuses)))
+                .order_by(
+                    # cas_numbers_json != [] first (cheap heuristic)
+                    (database_manager.TermSeedItemForm.cas_numbers_json != "[]").desc(),
+                    database_manager.PubChemItemMatch.entity_id.asc(),
+                )
+                .all()
+            )
         ]
     # Respect per-run cap (process first N pending rows deterministically).
     if limit and int(limit) > 0:

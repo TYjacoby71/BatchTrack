@@ -35,14 +35,11 @@ def build_term_seed_item_forms() -> dict[str, int]:
         # Deterministic rebuild: clear existing seeds
         session.query(database_manager.TermSeedItemForm).delete()
 
-        # Terms present
-        known_terms = {r[0] for r in session.query(database_manager.NormalizedTerm.term).all()}
-
         # Build seed rows from merged item forms
         by_term: dict[str, list[database_manager.TermSeedItemForm]] = {}
         for m in session.query(database_manager.MergedItemForm).yield_per(2000):
             term = _clean(getattr(m, "derived_term", ""))
-            if not term or term not in known_terms:
+            if not term:
                 continue
             var = _clean(getattr(m, "derived_variation", "")) or ""
             form = _clean(getattr(m, "derived_physical_form", "")) or ""
@@ -75,10 +72,13 @@ def build_term_seed_item_forms() -> dict[str, int]:
             created += 1
             by_term.setdefault(term, []).append(seed)
 
-        # Ensure every normalized term has at least one identity/self item
-        for term in known_terms:
-            seeds = by_term.get(term, [])
-            has_identity = any((_clean(s.variation) == "" and _clean(s.physical_form) == "") for s in seeds)
+        # Add a self/identity item only in the "multi-item cluster missing a base item" case.
+        # This keeps the seed universe close to the deduped item-forms while still ensuring
+        # a stable baseline item for multi-form ingredients (maker-facing).
+        for term, seeds in by_term.items():
+            if len(seeds) <= 1:
+                continue
+            has_identity = any((_clean(s.variation) == "") for s in seeds)
             if has_identity:
                 continue
             session.add(
@@ -90,7 +90,7 @@ def build_term_seed_item_forms() -> dict[str, int]:
                     form_bypass=True,
                     cas_numbers_json="[]",
                     specs_json="{}",
-                    sources_json=json.dumps({"seed": "identity_item"}, ensure_ascii=False, sort_keys=True),
+                    sources_json=json.dumps({"seed": "identity_item", "reason": "multi_item_missing_base"}, ensure_ascii=False, sort_keys=True),
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 )

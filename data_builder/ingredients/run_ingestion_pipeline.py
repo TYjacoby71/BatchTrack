@@ -35,8 +35,6 @@ from . import (
     merge_source_items,
 )
 from .build_term_seed_item_forms import build_term_seed_item_forms
-from .derive_common_names import derive_common_names
-from .split_botanical_parts import split_botanical_parts
 
 LOGGER = logging.getLogger(__name__)
 
@@ -118,13 +116,7 @@ def run() -> None:
     # 7) Build canonical term seed items from merged item-forms
     LOGGER.info("term_seed_item_forms: %s", build_term_seed_item_forms())
 
-    # 8) Botanical part split (maker-facing; only when part signals exist)
-    LOGGER.info("botanical part split: %s", split_botanical_parts())
-
-    # 9) Deterministic common names (fills normalized_terms.common_name when evidence exists)
-    LOGGER.info("common names: %s", derive_common_names())
-
-    # 10) Seed compiler queue from normalized_terms (DB → DB)
+    # 8) Seed compiler queue from normalized_terms (DB → DB)
     from .enqueue_normalized import _seed_from_db  # local import to reuse existing helper
 
     inserted = _seed_from_db(limit=None)
