@@ -170,7 +170,15 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cosing", default=str(DATA_SOURCES_DIR / "cosing.csv"))
     parser.add_argument("--out", default=str(OUTPUT_CSV))
     parser.add_argument("--limit", type=int, default=0, help="Optional cap (combined across sources)")
-    parser.add_argument("--no-db", action="store_true", help="Do not upsert into compiler_state.db")
+        # Default: CSV-only. DB upsert is now opt-in because the ingestion pipeline
+    # already populates `normalized_terms` and we don't want this legacy normalizer
+    # to overwrite/refresh DB rows unintentionally.
+    parser.add_argument(
+        "--write-db",
+        action="store_true",
+        help="Also upsert derived terms into compiler_state.db (opt-in).",
+    )
+    return parser.parse_args(argv)
     return parser.parse_args(argv)
 
 
@@ -188,7 +196,7 @@ def main(argv: List[str] | None = None) -> None:
     write_csv(out_path, term_rows)
     LOGGER.info("Wrote normalized terms CSV to %s", out_path)
 
-    if not args.no_db:
+    if args.write_db:
         inserted = database_manager.upsert_normalized_terms(term_rows)
         LOGGER.info("Upserted normalized_terms into DB (new=%s)", inserted)
 
