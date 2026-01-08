@@ -6,7 +6,7 @@ This is the "terms normalizer":
 - De-duplicate into a unique set of definition terms
 - Best-effort infer origin/category/refinement for the definition
 - Upsert into compiler_state.db (normalized_terms table)
-- Write output/normalized_terms.csv for inspection
+- Optionally write output/normalized_terms.csv for inspection (disabled by default)
 
 Important:
 - This module does NOT create item rows. Item ingestion is handled separately
@@ -169,6 +169,7 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tgsc", default=str(DATA_SOURCES_DIR / "tgsc_ingredients.csv"))
     parser.add_argument("--cosing", default=str(DATA_SOURCES_DIR / "cosing.csv"))
     parser.add_argument("--out", default=str(OUTPUT_CSV))
+    parser.add_argument("--write-csv", action="store_true", help="Write normalized_terms CSV output (disabled by default)")
     parser.add_argument("--limit", type=int, default=0, help="Optional cap (combined across sources)")
     parser.add_argument("--no-db", action="store_true", help="Do not upsert into compiler_state.db")
     return parser.parse_args(argv)
@@ -185,8 +186,9 @@ def main(argv: List[str] | None = None) -> None:
 
     term_rows = normalize_to_terms(cosing_path=cosing_path, tgsc_path=tgsc_path, limit=limit)
     LOGGER.info("Derived %s normalized definition terms from sources.", len(term_rows))
-    write_csv(out_path, term_rows)
-    LOGGER.info("Wrote normalized terms CSV to %s", out_path)
+    if bool(args.write_csv):
+        write_csv(out_path, term_rows)
+        LOGGER.info("Wrote normalized terms CSV to %s", out_path)
 
     if not args.no_db:
         inserted = database_manager.upsert_normalized_terms(term_rows)

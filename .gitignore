@@ -64,6 +64,9 @@ db.sqlite3-journal
 # Local compiler state (generated)
 data_builder/ingredients/compiler_state.db
 
+# Generated CSV artifacts (can be regenerated locally)
+data_builder/ingredients/output/normalized_terms.csv
+
 # Flask stuff:
 instance/
 .webassets-cache

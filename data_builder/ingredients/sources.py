@@ -75,7 +75,13 @@ class IngredientSourceBroker:
     # Individual source handlers
     # ------------------------------------------------------------------
     def _fetch_pubchem(self, term: str) -> Optional[SourcePayload]:
-        endpoint = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{term}/property/MolecularWeight,ExactMass,Density,BoilingPoint,FlashPoint,InChIKey,CanonicalSMILES/JSON"
+        # NOTE: PubChem PropertyTable is best for computed/structured fields.
+        # Experimental properties like Density/Boiling Point are usually NOT available here;
+        # they live in PUG View sections and require a different endpoint.
+        endpoint = (
+            "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{term}/property/"
+            "MolecularFormula,MolecularWeight,ExactMass,IUPACName,InChIKey,ConnectivitySMILES,XLogP,TPSA/JSON"
+        )
         try:
             response = self.session.get(endpoint.format(term=requests.utils.quote(term)), timeout=10)
             response.raise_for_status()

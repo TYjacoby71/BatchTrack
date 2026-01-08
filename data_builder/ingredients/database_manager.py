@@ -200,7 +200,9 @@ DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    # Increase timeout to reduce transient "database is locked" during bulk ingestion.
+    # Also allow multi-threaded readers/writers (we still keep writes serialized per session).
+    connect_args={"check_same_thread": False, "timeout": 60},
     future=True,
 )
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
@@ -571,6 +573,49 @@ class SourceCatalogItem(Base):
     merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class PubChemItemMatch(Base):
+    """Resolved PubChem CID match for a local entity (deterministic, pre-AI)."""
+
+    __tablename__ = "pubchem_item_matches"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # What we matched (e.g., merged_item_forms.id)
+    entity_type = Column(String, nullable=False)  # "merged_item_form" (current)
+    entity_id = Column(Integer, nullable=False, index=True)
+
+    status = Column(String, nullable=False, default="pending")  # pending|matched|no_match|ambiguous|error
+    cid = Column(Integer, nullable=True, default=None, index=True)
+
+    matched_by = Column(String, nullable=True, default=None)  # cas|inci|raw_name|derived_term
+    identifier_type = Column(String, nullable=True, default=None)
+    identifier_value = Column(Text, nullable=True, default=None)
+    confidence = Column(Integer, nullable=True, default=None)  # heuristic 0-100
+
+    candidate_cids_json = Column(Text, nullable=False, default="[]")
+    error = Column(Text, nullable=True, default=None)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class PubChemCompound(Base):
+    """Cached PubChem compound payloads keyed by CID (dedupes enrichment fetches)."""
+
+    __tablename__ = "pubchem_compounds"
+
+    cid = Column(Integer, primary_key=True)
+
+    # Raw payloads (auditable)
+    property_json = Column(Text, nullable=True, default=None)  # PUG REST PropertyTable Properties[0]
+    pug_view_json = Column(Text, nullable=True, default=None)  # PUG View full JSON
+
+    # Best-effort extracted experimental text
+    extracted_json = Column(Text, nullable=False, default="{}")
+
+    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class MergedItemForm(Base):
     """Deterministically merged item-form (definition + variation + physical form)."""
 
@@ -632,6 +677,13 @@ def ensure_tables_exist() -> None:
     """Create the task_queue table if it does not already exist."""
 
     Base.metadata.create_all(engine)
+    # SQLite pragmas for better concurrency during ingestion/enrichment.
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA synchronous=NORMAL"))
+    except Exception:  # pragma: no cover
+        pass
     _ensure_priority_column()
     _ensure_seed_category_column()
     _ensure_ingredient_item_columns()
