@@ -3,11 +3,11 @@
 This module is intentionally conservative:
 - Match local entities to a single PubChem CID using available identifiers.
 - Fetch PubChem properties in supported "bundles".
-- Apply fill-only enrichment into `merged_item_forms.merged_specs_json` with provenance.
+- Apply fill-only enrichment into `term_seed_item_forms.specs_json` with provenance.
 
-Why merged_item_forms?
-- It's your ingestion-stage deduped "item identity" (derived_term + variation + physical_form).
-- It already aggregates provenance across sources and is the best place for pre-AI enrichment.
+Why term_seed_item_forms?
+- This is the canonical "seed inventory item" list for each term that the compiler consumes.
+- It is derived from ingestion (merged_item_forms) plus deterministic post-passes (like part splits).
 
 PubChem API reality:
 - PUG REST PropertyTable is batchable by CID list and returns computed/structured properties.
@@ -38,8 +38,10 @@ PUBCHEM_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest"
 DEFAULT_WORKERS = int(os.getenv("PUBCHEM_WORKERS", "16"))
 SLEEP_SECONDS = float(os.getenv("PUBCHEM_SLEEP_SECONDS", "0"))
 HTTP_TIMEOUT = float(os.getenv("PUBCHEM_HTTP_TIMEOUT", "15"))
+HTTP_RETRIES = int(os.getenv("PUBCHEM_HTTP_RETRIES", "4"))
+HTTP_BACKOFF_SECONDS = float(os.getenv("PUBCHEM_HTTP_BACKOFF_SECONDS", "1.0"))
 
-MATCH_ENTITY_TYPE = "merged_item_form"
+MATCH_ENTITY_TYPE = "term_seed_item_form"
 
 
 def _clean(s: Any) -> str:
@@ -87,15 +89,25 @@ class PubChemClient:
             pass
 
     def _get_json(self, url: str, *, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
-        try:
-            resp = self.session.get(url, params=params, timeout=HTTP_TIMEOUT)
-            if resp.status_code == 404:
-                return None
-            resp.raise_for_status()
-            return resp.json()
-        except Exception as exc:  # pylint: disable=broad-except
-            LOGGER.debug("PubChem GET failed: %s (%s)", url, exc)
-            return None
+        last_exc: Exception | None = None
+        for attempt in range(1, max(1, HTTP_RETRIES) + 1):
+            try:
+                resp = self.session.get(url, params=params, timeout=HTTP_TIMEOUT)
+                if resp.status_code == 404:
+                    return None
+                # PubChem is frequently rate-limited/busy; retry deterministically.
+                if resp.status_code in {429, 503}:
+                    wait = HTTP_BACKOFF_SECONDS * attempt
+                    time.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                blob = resp.json()
+                return blob if isinstance(blob, dict) else None
+            except Exception as exc:  # pylint: disable=broad-except
+                last_exc = exc
+                time.sleep(HTTP_BACKOFF_SECONDS * attempt)
+        LOGGER.debug("PubChem GET failed after retries: %s (%s)", url, last_exc)
+        return None
 
     def resolve_cids_by_identifier(self, *, identifier: str, identifier_type: str) -> list[int]:
         """Resolve identifier -> list[Cid]. Returns [] on no match."""
@@ -232,25 +244,44 @@ def _match_confidence(identifier_type: str) -> int:
     }.get(identifier_type, 50)
 
 
-def _pick_representative_source_item(session, merged_row: database_manager.MergedItemForm) -> database_manager.SourceItem | None:
-    keys = _json_loads(_clean(getattr(merged_row, "member_source_item_keys_json", "")) or "[]", [])
-    if not isinstance(keys, list) or not keys:
-        return None
-    # Prefer CosIng row (often cleaner INCI)
-    for key in keys:
-        r = session.get(database_manager.SourceItem, str(key))
-        if r is not None and (getattr(r, "source", "") or "").lower() == "cosing":
-            return r
-    # else first existing
-    for key in keys:
-        r = session.get(database_manager.SourceItem, str(key))
-        if r is not None:
-            return r
-    return None
+def _pick_seed_identifiers(
+    session, seed: database_manager.TermSeedItemForm
+) -> list[tuple[str, str]]:
+    """Build ordered identifier candidates for a seed item."""
+    candidates: list[tuple[str, str]] = []
+
+    # Seed-level CAS list (highest confidence when present)
+    cas_list = _json_loads(_clean(getattr(seed, "cas_numbers_json", "")) or "[]", [])
+    if isinstance(cas_list, list):
+        for cas in [c for c in cas_list if _clean(c)]:
+            candidates.append(("cas", _clean(cas)))
+
+    # Term-level identifiers from normalized_terms (left join)
+    term = _clean(getattr(seed, "term", ""))
+    if term:
+        nt = session.get(database_manager.NormalizedTerm, term)
+    else:
+        nt = None
+
+    if nt is not None:
+        if _clean(getattr(nt, "cas_number", None)):
+            candidates.append(("cas", _clean(getattr(nt, "cas_number", None))))
+        if _clean(getattr(nt, "inci_name", None)):
+            candidates.append(("inci", _clean(getattr(nt, "inci_name", None))))
+        if _clean(getattr(nt, "common_name", None)):
+            candidates.append(("name", _clean(getattr(nt, "common_name", None))))
+        if _clean(getattr(nt, "botanical_name", None)):
+            candidates.append(("name", _clean(getattr(nt, "botanical_name", None))))
+
+    # Fall back to term string itself
+    if term:
+        candidates.append(("derived_term", term))
+
+    return candidates
 
 
-def match_merged_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[str, int]:
-    """Assign PubChem CID matches for merged_item_forms rows."""
+def match_seed_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[str, int]:
+    """Assign PubChem CID matches for term seed item rows."""
     database_manager.ensure_tables_exist()
     client = PubChemClient()
 
@@ -259,11 +290,11 @@ def match_merged_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dic
     match_statuses = {s.strip() for s in (statuses_env or "pending").split(",") if s.strip()} or {"pending"}
 
     with database_manager.get_session() as session:
-        # Create missing match rows for each merged item.
-        q = session.query(database_manager.MergedItemForm).order_by(database_manager.MergedItemForm.id.asc())
+        # Create missing match rows for seed items (bounded by `limit` when provided).
+        q = session.query(database_manager.TermSeedItemForm).order_by(database_manager.TermSeedItemForm.id.asc())
         if limit and int(limit) > 0:
             q = q.limit(int(limit))
-        merged_rows = q.all()
+        seed_rows = q.all()
 
         existing = {
             (r.entity_type, int(r.entity_id)): r
@@ -272,44 +303,20 @@ def match_merged_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dic
             .all()
         }
 
-        for m in merged_rows:
-            key = (MATCH_ENTITY_TYPE, int(m.id))
+        for s in seed_rows:
+            key = (MATCH_ENTITY_TYPE, int(s.id))
             if key in existing:
                 continue
-            session.add(database_manager.PubChemItemMatch(entity_type=MATCH_ENTITY_TYPE, entity_id=int(m.id), status="pending"))
+            session.add(database_manager.PubChemItemMatch(entity_type=MATCH_ENTITY_TYPE, entity_id=int(s.id), status="pending"))
             stats["created_match_rows"] += 1
 
     # Worker: resolve one entity id -> match row updates
     def _resolve_one(entity_id: int) -> tuple[int, dict[str, Any]]:
         with database_manager.get_session() as session:
-            merged = session.get(database_manager.MergedItemForm, int(entity_id))
-            if merged is None:
-                return entity_id, {"status": "error", "error": "missing_merged_item"}
-
-            rep = _pick_representative_source_item(session, merged)
-            cas_list = _json_loads(_clean(getattr(merged, "cas_numbers_json", "")) or "[]", [])
-            if not isinstance(cas_list, list):
-                cas_list = []
-            cas_list = [c for c in cas_list if _clean(c)]
-            # Also extract CAS tokens from representative cas_number field just in case.
-            if rep is not None and _clean(getattr(rep, "cas_number", "")):
-                for c in _cas_tokens(_clean(getattr(rep, "cas_number", ""))):
-                    if c not in cas_list:
-                        cas_list.append(c)
-
-            candidates: list[tuple[str, str]] = []
-            for cas in cas_list:
-                candidates.append(("cas", cas))
-
-            # INCI/raw name (single representative)
-            if rep is not None and _clean(getattr(rep, "inci_name", "")):
-                candidates.append(("inci", _clean(getattr(rep, "inci_name", ""))))
-            if rep is not None and _clean(getattr(rep, "raw_name", "")):
-                candidates.append(("raw_name", _clean(getattr(rep, "raw_name", ""))))
-
-            # Derived term from merged identity
-            if _clean(getattr(merged, "derived_term", "")):
-                candidates.append(("derived_term", _clean(getattr(merged, "derived_term", ""))))
+            seed = session.get(database_manager.TermSeedItemForm, int(entity_id))
+            if seed is None:
+                return entity_id, {"status": "error", "error": "missing_seed_item"}
+            candidates = _pick_seed_identifiers(session, seed)
 
         # Try identifiers in order; accept only unambiguous single CID
         last: tuple[str, str] | None = None
@@ -364,6 +371,9 @@ def match_merged_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dic
             .filter(database_manager.PubChemItemMatch.status.in_(sorted(match_statuses)))
             .all()
         ]
+    # Respect per-run cap (process first N pending rows deterministically).
+    if limit and int(limit) > 0:
+        pending_ids = pending_ids[: int(limit)]
 
     if not pending_ids:
         return stats
@@ -414,8 +424,6 @@ PROPERTY_BUNDLE = [
     "ExactMass",
     "IUPACName",
     "InChIKey",
-    # PubChem sometimes returns ConnectivitySMILES instead of CanonicalSMILES depending on record.
-    "CanonicalSMILES",
     "ConnectivitySMILES",
     "XLogP",
     "TPSA",
@@ -435,17 +443,17 @@ def _fill_only(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _apply_pubchem_to_merged_item(
+def _apply_pubchem_to_seed_item(
     session,
     *,
-    merged: database_manager.MergedItemForm,
+    seed: database_manager.TermSeedItemForm,
     cid: int,
     property_row: dict[str, Any] | None,
     extracted: dict[str, Any] | None,
 ) -> bool:
-    """Fill-only apply into merged_specs_json and merged_specs_sources_json. Returns True if changed."""
-    old_specs = _json_loads(_clean(getattr(merged, "merged_specs_json", "")) or "{}", {})
-    old_sources = _json_loads(_clean(getattr(merged, "merged_specs_sources_json", "")) or "{}", {})
+    """Fill-only apply into term_seed_item_forms.specs_json and sources_json. Returns True if changed."""
+    old_specs = _json_loads(_clean(getattr(seed, "specs_json", "")) or "{}", {})
+    old_sources = _json_loads(_clean(getattr(seed, "sources_json", "")) or "{}", {})
     if not isinstance(old_specs, dict):
         old_specs = {}
     if not isinstance(old_sources, dict):
@@ -472,7 +480,7 @@ def _apply_pubchem_to_merged_item(
             if val is None or val == "":
                 continue
             updates[local_k] = val
-        smiles = property_row.get("CanonicalSMILES") or property_row.get("ConnectivitySMILES")
+        smiles = property_row.get("ConnectivitySMILES")
         if smiles is not None and smiles != "":
             updates["canonical_smiles"] = smiles
 
@@ -498,13 +506,14 @@ def _apply_pubchem_to_merged_item(
             continue
         new_sources.setdefault(k, prov)
 
-    merged.merged_specs_json = json.dumps(new_specs, ensure_ascii=False, sort_keys=True)
-    merged.merged_specs_sources_json = json.dumps(new_sources, ensure_ascii=False, sort_keys=True)
+    seed.specs_json = json.dumps(new_specs, ensure_ascii=False, sort_keys=True)
+    seed.sources_json = json.dumps(new_sources, ensure_ascii=False, sort_keys=True)
+    seed.updated_at = _now()
     return True
 
 
 def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -> dict[str, int]:
-    """Fetch PubChem bundles for matched CIDs and apply to merged_item_forms."""
+    """Fetch PubChem bundles for matched CIDs and apply to term_seed_item_forms."""
     database_manager.ensure_tables_exist()
     client = PubChemClient()
 
@@ -532,6 +541,11 @@ def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -
 
         cached = {int(r.cid) for r in session.query(database_manager.PubChemCompound.cid).all()}
         missing = [c for c in cids if c not in cached]
+
+    # Cap enrichment work per invocation (keeps runs batchable)
+    max_new = int(os.getenv("PUBCHEM_ENRICH_MAX_CIDS", "0") or "0")
+    if max_new and max_new > 0:
+        missing = missing[:max_new]
 
     # 2A) PropertyTable (batchable)
     property_rows: dict[int, dict[str, Any]] = {}
@@ -576,7 +590,7 @@ def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -
             rec.extracted_json = json.dumps(extracted or {}, ensure_ascii=False, sort_keys=True)
             rec.fetched_at = _now()
 
-    # Apply to merged_item_forms (fill-only)
+    # Apply to term_seed_item_forms (fill-only)
     with database_manager.get_session() as session:
         # Build fast cid -> cached payload map from DB (ensures we use cached values even if pre-existing)
         compounds = {int(r.cid): r for r in session.query(database_manager.PubChemCompound).all()}
@@ -589,8 +603,8 @@ def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -
             .yield_per(1000)
         ):
             cid = int(m.cid)
-            merged = session.get(database_manager.MergedItemForm, int(m.entity_id))
-            if merged is None:
+            seed = session.get(database_manager.TermSeedItemForm, int(m.entity_id))
+            if seed is None:
                 continue
             comp = compounds.get(cid)
             if comp is None:
@@ -598,7 +612,7 @@ def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -
             prop = _json_loads(_clean(getattr(comp, "property_json", "")) or "{}", {})
             extracted = _json_loads(_clean(getattr(comp, "extracted_json", "")) or "{}", {})
 
-            changed = _apply_pubchem_to_merged_item(session, merged=merged, cid=cid, property_row=prop, extracted=extracted)
+            changed = _apply_pubchem_to_seed_item(session, seed=seed, cid=cid, property_row=prop, extracted=extracted)
             if changed:
                 stats["applied_items"] += 1
             else:
@@ -609,7 +623,7 @@ def enrich_and_apply(*, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -
 
 def run_pipeline(*, match_limit: int = 0, workers: int = DEFAULT_WORKERS, batch_size: int = 100) -> dict[str, Any]:
     """Match then enrich+apply (single runner)."""
-    mstats = match_merged_items(limit=match_limit, workers=workers)
+    mstats = match_seed_items(limit=match_limit, workers=workers)
     estats = enrich_and_apply(workers=workers, batch_size=batch_size)
     return {"match": mstats, "enrich": estats}
 

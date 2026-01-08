@@ -408,6 +408,9 @@ class NormalizedTerm(Base):
     botanical_name = Column(String, nullable=True, default=None)
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
+    # Deterministic common name when evidence exists (otherwise null).
+    common_name = Column(String, nullable=True, default=None)
+    common_name_source = Column(String, nullable=True, default=None)
 
     # A concise canonical description if available from sources.
     description = Column(Text, nullable=True, default=None)
@@ -427,6 +430,33 @@ class NormalizedTerm(Base):
     # Full aggregated source payload (small, merged) for inspection.
     sources_json = Column(Text, nullable=False, default="{}")
     normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TermSeedItemForm(Base):
+    """Canonical item seed for a term (pre-AI).
+
+    This table is the stable "inventory seed" derived from ingestion (`merged_item_forms`)
+    and any deterministic post-processing (e.g., botanical part splits).
+    PubChem enrichment is applied here (fill-only) before AI.
+    """
+
+    __tablename__ = "term_seed_item_forms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    term = Column(String, ForeignKey("normalized_terms.term"), nullable=False, index=True)
+
+    variation = Column(Text, nullable=True, default="")
+    physical_form = Column(Text, nullable=True, default="")
+
+    variation_bypass = Column(Boolean, nullable=False, default=False)
+    form_bypass = Column(Boolean, nullable=False, default=False)
+
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+    specs_json = Column(Text, nullable=False, default="{}")
+    sources_json = Column(Text, nullable=False, default="{}")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class SourceItem(Base):
@@ -580,8 +610,8 @@ class PubChemItemMatch(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # What we matched (e.g., merged_item_forms.id)
-    entity_type = Column(String, nullable=False)  # "merged_item_form" (current)
+    # What we matched (e.g., term_seed_item_forms.id)
+    entity_type = Column(String, nullable=False)  # e.g. "term_seed_item_form"
     entity_id = Column(Integer, nullable=False, index=True)
 
     status = Column(String, nullable=False, default="pending")  # pending|matched|no_match|ambiguous|error
@@ -911,6 +941,8 @@ def _ensure_normalized_term_columns() -> None:
             ("origin", "TEXT"),
             ("refinement_level", "TEXT"),
             ("derived_from", "TEXT"),
+            ("common_name", "TEXT"),
+            ("common_name_source", "TEXT"),
             ("ingredient_category_confidence", "INTEGER"),
             ("origin_confidence", "INTEGER"),
             ("refinement_confidence", "INTEGER"),

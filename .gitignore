@@ -63,6 +63,8 @@ db.sqlite3-journal
 
 # Local compiler state (generated)
 data_builder/ingredients/compiler_state.db
+data_builder/ingredients/test_ingestion*.db*
+data_builder/ingredients/output/*.db
 
 # Generated CSV artifacts (can be regenerated locally)
 data_builder/ingredients/output/normalized_terms.csv

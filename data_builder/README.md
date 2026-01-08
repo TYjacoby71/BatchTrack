@@ -80,6 +80,38 @@ Any file path variables default to the `data_builder/ingredients/data_sources/` 
 
 In addition to the AI compiler, `data_builder/ingredients/` includes a **deterministic ingestion + merge pipeline** that produces a traceable, de-duplicated “item-form” layer before any AI enrichment.
 
+- **Canonical one-shot runner (recommended)**: `data_builder/ingredients/run_ingestion_pipeline.py`
+
+```bash
+# Creates/overwrites the state DB at the given path
+COMPILER_DB_PATH=/workspace/data_builder/ingredients/test_ingestion.db \
+  python3 -m data_builder.ingredients.run_ingestion_pipeline
+```
+
+This deterministic run will populate:
+
+- `source_catalog_items` (merged identities)
+- `source_items` (1:1 ingested rows + deterministic enrichments)
+- `merged_item_forms` (deduped item-forms)
+- `source_definitions` (definition clusters)
+- `normalized_terms` (canonical base terms)
+- `term_seed_item_forms` (seed item inventory per term; pre-AI, used for PubChem + compiler)
+- `task_queue` (seeded from `normalized_terms`; compiler input)
+
+PubChem enrichment is then run as a separate pre-AI step:
+
+```bash
+# Stage 1: match-only (run in batches)
+COMPILER_DB_PATH=/workspace/data_builder/ingredients/test_ingestion.db \
+PUBCHEM_PIPELINE_MODE=match_only PUBCHEM_WORKERS=16 PUBCHEM_SLEEP_SECONDS=0 \
+python3 -m data_builder.ingredients.run_pubchem_pipeline --match-limit 5000
+
+# Stage 2: enrich+apply (run in batches)
+COMPILER_DB_PATH=/workspace/data_builder/ingredients/test_ingestion.db \
+PUBCHEM_PIPELINE_MODE=full PUBCHEM_WORKERS=16 PUBCHEM_ENRICH_MAX_CIDS=500 \
+python3 -m data_builder.ingredients.run_pubchem_pipeline --batch-size 100
+```
+
 - **`ingest_source_items.py`**: reads `data_sources/cosing.csv` + `data_sources/tgsc_ingredients.csv` and writes 1:1 `source_items` rows (plus derived `normalized_terms`) into the SQLite DB.
 - **`merge_source_items.py`**: deterministically merges duplicate item-forms into `merged_item_forms` (one row per `derived_term + derived_variation + derived_physical_form`), while keeping all source row keys for provenance.
 - **`derive_source_item_tags.py`**: derives combined tags + master categories for `source_items`.
