@@ -404,6 +404,8 @@ class NormalizedTerm(Base):
     seed_category = Column(String, nullable=True, default=None)
 
     botanical_name = Column(String, nullable=True, default=None)
+    common_name = Column(String, nullable=True, default=None)
+    common_name_source = Column(String, nullable=True, default=None)
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
 
@@ -426,6 +428,35 @@ class NormalizedTerm(Base):
     sources_json = Column(Text, nullable=False, default="{}")
     normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+
+class PubChemTermMatch(Base):
+    """Stage 1 PubChem matcher: resolve a term/identifier to a PubChem CID."""
+
+    __tablename__ = "pubchem_term_matches"
+
+    term = Column(String, primary_key=True)  # normalized_terms.term
+    status = Column(String, nullable=False, default="pending")  # pending|matched|no_match|ambiguous|error
+
+    cid = Column(Integer, nullable=True, default=None)
+    matched_by = Column(String, nullable=True, default=None)  # inci_name|term|botanical_name|cas_number|other
+
+    # Store candidates / raw details for audit & later disambiguation.
+    candidates_json = Column(Text, nullable=False, default="[]")
+    error = Column(Text, nullable=True, default=None)
+
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class PubChemCompound(Base):
+    """Stage 2 PubChem cache (CID -> fetched payload blobs)."""
+
+    __tablename__ = "pubchem_compounds"
+
+    cid = Column(Integer, primary_key=True)
+    property_json = Column(Text, nullable=False, default="{}")
+    pug_view_json = Column(Text, nullable=False, default="{}")
+    fetched_at = Column(DateTime, nullable=True, default=None)  # property bundle fetched
+    pug_view_fetched_at = Column(DateTime, nullable=True, default=None)
 
 class SourceItem(Base):
     """Raw source 'item' extracted from INCI/TGSC/etc.
@@ -642,6 +673,36 @@ def ensure_tables_exist() -> None:
     _ensure_source_item_columns()
     _ensure_source_definition_indexes()
     _ensure_source_catalog_indexes()
+    _ensure_pubchem_indexes()
+    _ensure_pubchem_columns()
+
+
+def _ensure_pubchem_indexes() -> None:
+    """Best-effort indexing for PubChem staging tables (SQLite-safe)."""
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_status ON pubchem_term_matches(status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_cid ON pubchem_term_matches(cid)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_pubchem_columns() -> None:
+    """Add new PubChem cache columns as the schema evolves (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            columns = conn.execute(text("PRAGMA table_info(pubchem_compounds)")).fetchall()
+            col_names = {row[1] for row in columns}
+            additions = [
+                ("pug_view_fetched_at", "DATETIME"),
+            ]
+            for name, col_type in additions:
+                if name in col_names:
+                    continue
+                conn.execute(text(f"ALTER TABLE pubchem_compounds ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to pubchem_compounds", name)
+    except Exception:  # pragma: no cover
+        return
 
 
 def _ensure_source_item_indexes() -> None:
@@ -864,6 +925,8 @@ def _ensure_normalized_term_columns() -> None:
             ("refinement_confidence", "INTEGER"),
             ("derived_from_confidence", "INTEGER"),
             ("overall_confidence", "INTEGER"),
+            ("common_name", "TEXT"),
+            ("common_name_source", "TEXT"),
         ]
         for name, col_type in additions:
             if name in column_names:
@@ -1699,6 +1762,7 @@ def get_normalized_term(term: str) -> Optional[dict[str, Any]]:
         return {
             "term": row.term,
             "seed_category": row.seed_category,
+            "common_name": row.common_name,
             "ingredient_category": row.ingredient_category,
             "origin": row.origin,
             "refinement_level": row.refinement_level,
