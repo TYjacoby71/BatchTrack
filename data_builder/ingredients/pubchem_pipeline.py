@@ -290,24 +290,22 @@ def match_seed_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[
     match_statuses = {s.strip() for s in (statuses_env or "pending").split(",") if s.strip()} or {"pending"}
 
     with database_manager.get_session() as session:
-        # Create missing match rows for seed items (bounded by `limit` when provided).
-        q = session.query(database_manager.TermSeedItemForm).order_by(database_manager.TermSeedItemForm.id.asc())
-        if limit and int(limit) > 0:
-            q = q.limit(int(limit))
-        seed_rows = q.all()
-
-        existing = {
-            (r.entity_type, int(r.entity_id)): r
-            for r in session.query(database_manager.PubChemItemMatch)
+        # Create missing match rows for the *next* seed items that don't yet have one.
+        existing_ids = {
+            int(r[0])
+            for r in session.query(database_manager.PubChemItemMatch.entity_id)
             .filter(database_manager.PubChemItemMatch.entity_type == MATCH_ENTITY_TYPE)
             .all()
         }
+        q = session.query(database_manager.TermSeedItemForm.id).order_by(database_manager.TermSeedItemForm.id.asc())
+        if existing_ids:
+            q = q.filter(~database_manager.TermSeedItemForm.id.in_(sorted(existing_ids)))
+        if limit and int(limit) > 0:
+            q = q.limit(int(limit))
+        new_seed_ids = [int(r[0]) for r in q.all()]
 
-        for s in seed_rows:
-            key = (MATCH_ENTITY_TYPE, int(s.id))
-            if key in existing:
-                continue
-            session.add(database_manager.PubChemItemMatch(entity_type=MATCH_ENTITY_TYPE, entity_id=int(s.id), status="pending"))
+        for sid in new_seed_ids:
+            session.add(database_manager.PubChemItemMatch(entity_type=MATCH_ENTITY_TYPE, entity_id=int(sid), status="pending"))
             stats["created_match_rows"] += 1
 
     # Worker: resolve one entity id -> match row updates
