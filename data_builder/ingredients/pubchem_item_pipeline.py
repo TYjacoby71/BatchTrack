@@ -21,12 +21,15 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 import requests
+import re
 
 from . import database_manager
 
 LOGGER = logging.getLogger(__name__)
 
 PUBCHEM_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+
+_RE_CAS = re.compile(r"\b(\d{2,7}-\d{2}-\d)\b")
 
 
 def _clean(value: Any) -> str:
@@ -170,6 +173,50 @@ def _match_one(merged_item_id: int) -> tuple[int, str, Optional[int], Optional[s
     except Exception as exc:  # pylint: disable=broad-except
         return merged_item_id, "error", None, None, [], str(exc)
 
+def _build_cached_cas_map() -> dict[str, int]:
+    """Build CAS->CID mapping from cached PubChem PUG View JSON (offline, best-effort).
+
+    If a CAS appears under multiple CIDs, it is excluded (avoid false positives).
+    """
+    database_manager.ensure_tables_exist()
+    cas_to_cids: dict[str, set[int]] = {}
+    # 1) From cached PubChem PUG View JSON (CID-level cache)
+    with database_manager.get_session() as session:
+        q = session.query(database_manager.PubChemCompound.cid, database_manager.PubChemCompound.pug_view_json)
+        for cid, blob in q.yield_per(200):
+            if cid is None:
+                continue
+            text = blob or ""
+            if not isinstance(text, str) or not text:
+                continue
+            for cas in set(_RE_CAS.findall(text)):
+                cas_to_cids.setdefault(cas, set()).add(int(cid))
+
+    # 2) From term-level CAS numbers where the term was matched to a CID.
+    with database_manager.get_session() as session:
+        q2 = (
+            session.query(database_manager.NormalizedTerm.cas_number, database_manager.PubChemTermMatch.cid)
+            .join(database_manager.PubChemTermMatch, database_manager.PubChemTermMatch.term == database_manager.NormalizedTerm.term)
+            .filter(database_manager.PubChemTermMatch.status == "matched")
+            .filter(database_manager.PubChemTermMatch.cid.isnot(None))
+        )
+        for cas, cid in q2.yield_per(500):
+            c = _clean(cas)
+            if not c:
+                continue
+            m = _RE_CAS.search(c)
+            if not m:
+                continue
+            try:
+                cas_to_cids.setdefault(m.group(1), set()).add(int(cid))
+            except Exception:
+                continue
+    out: dict[str, int] = {}
+    for cas, cids in cas_to_cids.items():
+        if len(cids) == 1:
+            out[cas] = next(iter(cids))
+    return out
+
 
 def _select_item_ids(limit: int | None) -> list[int]:
     database_manager.ensure_tables_exist()
@@ -199,6 +246,8 @@ def match_stage(*, limit: int | None, workers: int) -> dict[str, int]:
     # Fast path: do a DB-only term_map match in a single session (no threads, avoids SQLite pool contention).
     allow_network = os.getenv("PUBCHEM_ITEM_ENABLE_NETWORK", "0").strip() in {"1", "true", "True"}
     if not allow_network:
+        # Build CAS->CID map from cached PubChem data (offline).
+        cas_map = _build_cached_cas_map()
         now = datetime.now(timezone.utc)
         database_manager.ensure_tables_exist()
         with database_manager.get_session() as session:
@@ -207,10 +256,22 @@ def match_stage(*, limit: int | None, workers: int) -> dict[str, int]:
                 mif = session.get(database_manager.MergedItemForm, int(merged_item_id))
                 term = _clean(getattr(mif, "derived_term", "")) if mif is not None else ""
                 cid: Optional[int] = None
+                matched_by: Optional[str] = None
                 if term:
                     tmatch = session.get(database_manager.PubChemTermMatch, term)
                     if tmatch is not None and getattr(tmatch, "status", None) == "matched" and getattr(tmatch, "cid", None):
                         cid = int(tmatch.cid)
+                        matched_by = "term_map"
+                # CAS fallback using cached PubChem map (higher precision than term_map).
+                if not cid and mif is not None:
+                    cas_list = _json_list(mif.cas_numbers_json or "[]")
+                    for cas in [str(x).strip() for x in cas_list if str(x).strip()]:
+                        cid2 = cas_map.get(cas)
+                        if cid2:
+                            cid = int(cid2)
+                            matched_by = "cas_cache"
+                            break
+
                 status = "matched" if cid else "no_match"
                 stats[status] = stats.get(status, 0) + 1
                 row = session.get(database_manager.PubChemItemMatch, int(merged_item_id))
@@ -219,7 +280,7 @@ def match_stage(*, limit: int | None, workers: int) -> dict[str, int]:
                     session.add(row)
                 row.status = status
                 row.cid = cid
-                row.matched_by = "term_map" if cid else None
+                row.matched_by = matched_by
                 row.candidates_json = json.dumps([cid] if cid else [], ensure_ascii=False)
                 row.error = None
                 row.updated_at = now
