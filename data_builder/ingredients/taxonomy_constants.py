@@ -1,9 +1,26 @@
-"""Curated taxonomy constants per SOP (2025 edition)."""
+"""Curated taxonomy constants for the ingredient lineage tree.
+
+Design intent (data_builder only):
+- Origin: upstream provenance bucket (single-select).
+- Ingredient category: second-level material family under an origin (single-select).
+- Master categories: UX groupings (multi-select) derived from category/form/variation/functions/apps.
+
+This file also contains lightweight guardrails used by the normalizer/compiler to:
+- constrain/refine category assignments
+- constrain refinement levels by category
+- pre-approve common variation tokens that are structurally important (to avoid mass quarantine)
+"""
 
 from __future__ import annotations
 
-# Primary base-level ingredient categories (assigned to the BASE; single-select).
+# Ingredient categories (second level under Origin; single-select).
+#
+# Notes:
+# - The original 16 plant/mineral families remain.
+# - We add a small set of non-plant families so synthetics/ferments don't get forced into "Herbs".
+# - These are NOT UX groupings; UX is handled by MASTER_CATEGORIES + derivation rules.
 INGREDIENT_CATEGORIES_PRIMARY: list[str] = [
+    # Plant-derived families
     "Fruits & Berries",
     "Vegetables",
     "Grains",
@@ -14,12 +31,39 @@ INGREDIENT_CATEGORIES_PRIMARY: list[str] = [
     "Flowers",
     "Roots",
     "Barks",
+    "Fibers",
+    # Mineral/Earth families
     "Clays",
     "Minerals",
     "Salts",
+    # Cross-domain families
     "Sugars",
     "Liquid Sweeteners",
     "Acids",
+    # Synthetic families (minimal but necessary for INCI-scale coverage)
+    "Synthetic - Polymers",
+    "Synthetic - Surfactants",
+    "Synthetic - Solvents",
+    "Synthetic - Preservatives",
+    "Synthetic - Colorants",
+    "Synthetic - Salts & Bases",
+    "Synthetic - Actives",
+    "Synthetic - Other",
+    # Fermentation families (minimal)
+    "Fermentation - Acids",
+    "Fermentation - Polysaccharides",
+    "Fermentation - Actives",
+    "Fermentation - Other",
+    # Animal families (minimal; can be expanded later)
+    "Animal - Fats",
+    "Animal - Proteins",
+    "Animal - Fibers",
+    "Animal - Dairy",
+    "Animal - Other",
+    # Marine families (minimal)
+    "Marine - Botanicals",
+    "Marine - Minerals",
+    "Marine - Other",
 ]
 
 # Master Categories (UX dropdown multi-select; curated group).
@@ -68,6 +112,103 @@ ORIGINS: list[str] = [
     "Fermentation",
     "Marine-Derived",
 ]
+
+# Origin -> allowed ingredient categories (guardrail).
+# This keeps the lineage tree smooth and prevents nonsense pairings.
+ORIGIN_TO_INGREDIENT_CATEGORIES: dict[str, list[str]] = {
+    "Plant-Derived": [
+        "Fruits & Berries",
+        "Vegetables",
+        "Grains",
+        "Nuts",
+        "Seeds",
+        "Spices",
+        "Herbs",
+        "Flowers",
+        "Roots",
+        "Barks",
+        "Fibers",
+        "Sugars",
+        "Liquid Sweeteners",
+        "Acids",
+    ],
+    "Mineral/Earth": [
+        "Clays",
+        "Minerals",
+        "Salts",
+        "Acids",
+    ],
+    "Animal-Derived": [
+        "Animal - Fats",
+        "Animal - Proteins",
+        "Animal - Fibers",
+        "Animal - Dairy",
+        "Animal - Other",
+    ],
+    "Animal-Byproduct": [
+        "Animal - Fats",
+        "Animal - Proteins",
+        "Animal - Fibers",
+        "Animal - Dairy",
+        "Animal - Other",
+    ],
+    "Synthetic": [
+        "Synthetic - Polymers",
+        "Synthetic - Surfactants",
+        "Synthetic - Solvents",
+        "Synthetic - Preservatives",
+        "Synthetic - Colorants",
+        "Synthetic - Salts & Bases",
+        "Synthetic - Actives",
+        "Synthetic - Other",
+        # synthetic acids/salts can still be treated as acids/salts at the category level if desired
+        "Acids",
+        "Salts",
+    ],
+    "Fermentation": [
+        "Fermentation - Acids",
+        "Fermentation - Polysaccharides",
+        "Fermentation - Actives",
+        "Fermentation - Other",
+        "Acids",
+    ],
+    "Marine-Derived": [
+        "Marine - Botanicals",
+        "Marine - Minerals",
+        "Marine - Other",
+        "Salts",
+    ],
+}
+
+# Category -> allowed refinement levels (guardrail). Omitted categories accept any refinement.
+# This is intentionally minimal and can be expanded as you approve lineage semantics.
+CATEGORY_ALLOWED_REFINEMENT_LEVELS: dict[str, set[str]] = {
+    # Plant/mineral staples
+    "Grains": {"Raw/Unprocessed", "Minimally Processed", "Milled/Ground", "Other"},
+    "Nuts": {"Raw/Unprocessed", "Minimally Processed", "Extracted Fat", "Other"},
+    "Seeds": {"Raw/Unprocessed", "Minimally Processed", "Extracted Fat", "Other"},
+    "Fibers": {"Raw/Unprocessed", "Minimally Processed", "Milled/Ground", "Other"},
+    "Clays": {"Raw/Unprocessed", "Other"},
+    "Minerals": {"Raw/Unprocessed", "Other"},
+    "Salts": {"Raw/Unprocessed", "Other"},
+    "Acids": {"Other", "Fermented", "Synthesized"},
+    # Synthetic
+    "Synthetic - Polymers": {"Synthesized", "Other"},
+    "Synthetic - Surfactants": {"Synthesized", "Other"},
+    "Synthetic - Solvents": {"Synthesized", "Other"},
+    "Synthetic - Preservatives": {"Synthesized", "Other"},
+    "Synthetic - Colorants": {"Synthesized", "Other"},
+    "Synthetic - Salts & Bases": {"Synthesized", "Other"},
+    "Synthetic - Actives": {"Synthesized", "Other"},
+    "Synthetic - Other": {"Synthesized", "Other"},
+    # Fermentation
+    "Fermentation - Acids": {"Fermented", "Other"},
+    "Fermentation - Polysaccharides": {"Fermented", "Other"},
+    "Fermentation - Actives": {"Fermented", "Other"},
+    "Fermentation - Other": {"Fermented", "Other"},
+    # Animal
+    "Animal - Fibers": {"Raw/Unprocessed", "Minimally Processed", "Other"},
+}
 
 REFINEMENT_LEVELS: list[str] = [
     "Raw/Unprocessed",
@@ -140,6 +281,31 @@ VARIATIONS_CURATED: list[str] = [
     "Extract",
     "Absolute",
     "Concrete",
+    # Common chemical/material families (used by deterministic parsing).
+    "Acid",
+    "Salt",
+    "Colorant",
+    "Unsaponifiables",
+    "Glycol",
+    "Amine",
+    "Imidazoline",
+    "Alkanolamide",
+    "Silicone",
+    "Protein",
+    # Plant-part / material qualifiers that appear constantly in INCI/TGSC item names.
+    # Keeping these pre-approved prevents mass quarantine when the compiler extracts them.
+    "Leaf",
+    "Needle",
+    "Cone",
+    "Seed",
+    "Kernel",
+    "Nut",
+    "Fruit",
+    "Berry",
+    "Flower",
+    "Root",
+    "Bark",
+    "Wood",
 ]
 
 PHYSICAL_FORMS: list[str] = [

@@ -168,6 +168,37 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
 
     try:
         normalized = database_manager.get_normalized_term(term) or {}
+        # Deterministic seed items from ingestion: compiler should complete these, not invent them.
+        with database_manager.get_session() as session:
+            seed_rows = (
+                session.query(database_manager.MergedItemForm)
+                .filter(database_manager.MergedItemForm.derived_term == term)
+                .order_by(database_manager.MergedItemForm.id.asc())
+                .all()
+            )
+        seed_items: list[dict[str, Any]] = []
+        for r in seed_rows:
+            try:
+                specs = json.loads(r.merged_specs_json or "{}")
+                if not isinstance(specs, dict):
+                    specs = {}
+            except Exception:
+                specs = {}
+            variation = (r.derived_variation or "").strip()
+            physical_form = (r.derived_physical_form or "").strip()
+            seed_items.append(
+                {
+                    "variation": variation,
+                    "physical_form": physical_form,
+                    # Inventory: if the ingestor didn't provide a form, treat as identity/bypass to avoid quarantine.
+                    "form_bypass": (not bool(physical_form)),
+                    "variation_bypass": (not bool(variation)),
+                    "applications": ["Unknown"],
+                    "specifications": specs,
+                }
+            )
+        if seed_items:
+            normalized["seed_items"] = seed_items
         payload = ai_worker.get_ingredient_data(term, base_context=normalized)
         if not isinstance(payload, dict) or payload.get("error"):
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")

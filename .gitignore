@@ -1,3 +1,13 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -63,6 +73,14 @@ db.sqlite3-journal
 
 # Local compiler state (generated)
 data_builder/ingredients/compiler_state.db
+
+# One-time ingestion artifacts (generated; do not commit)
+data_builder/ingredients/test_ingestion.db
+data_builder/ingredients/*.db
+data_builder/ingredients/output/*.db
+
+# Cursor pasted environment warnings (generated)
+attached_assets/Pasted-Environment-configuration-warning-APP-BASE-URL-not-set-*.txt
 
 # Flask stuff:
 instance/

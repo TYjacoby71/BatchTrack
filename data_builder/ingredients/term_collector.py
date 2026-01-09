@@ -42,33 +42,50 @@ INGEST_SOURCE_TERMS = os.getenv("TERM_GENERATOR_INGEST_SOURCE_TERMS", "0").strip
 TERM_GENERATOR_MODE = os.getenv("TERM_GENERATOR_MODE", "gapfill").strip().lower()
 GAPFILL_MAX_TRIES_PER_LETTER = int(os.getenv("TERM_GENERATOR_GAPFILL_MAX_TRIES", "5"))
 
-# Canonical base-level categories (hard-coded; Stage 1 cursor is (seed_category, letter)).
-# IMPORTANT: these categories are "pure bases" (avoid base+form names like "Frankincense Resin").
+# Canonical *definition* categories used for Stage-1 cursoring.
+# These should align with `taxonomy_constants.INGREDIENT_CATEGORIES_PRIMARY` (data_builder lineage tree).
 SEED_INGREDIENT_CATEGORIES: List[str] = [
+    # Plant-derived families
     "Fruits & Berries",
     "Vegetables",
     "Grains",
     "Nuts",
     "Seeds",
     "Spices",
-    "Culinary Herbs",
-    "Medicinal Herbs",
+    "Herbs",
     "Flowers",
     "Roots",
     "Barks",
+    # Mineral/Earth families
+    "Clays",
+    "Minerals",
+    "Salts",
+    # Cross-domain families
     "Sugars",
     "Liquid Sweeteners",
     "Acids",
-    "Salts",
-    "Minerals",
-    "Clays",
-    "Plants for Oils",
-    "Plants for Butters",
-    "Waxes",
-    "Resins",
-    "Gums",
-    "Colorants",
-    "Fermentation Starters",
+    # Synthetic families
+    "Synthetic - Polymers",
+    "Synthetic - Surfactants",
+    "Synthetic - Solvents",
+    "Synthetic - Preservatives",
+    "Synthetic - Colorants",
+    "Synthetic - Salts & Bases",
+    "Synthetic - Actives",
+    "Synthetic - Other",
+    # Fermentation families
+    "Fermentation - Acids",
+    "Fermentation - Polysaccharides",
+    "Fermentation - Actives",
+    "Fermentation - Other",
+    # Animal + Marine (minimal)
+    "Animal - Fats",
+    "Animal - Proteins",
+    "Animal - Dairy",
+    "Animal - Other",
+    "Marine - Botanicals",
+    "Marine - Minerals",
+    "Marine - Other",
 ]
 
 BASE_PHYSICAL_FORMS: Set[str] = {
@@ -259,29 +276,29 @@ def _looks_like_form_not_base(term: str) -> bool:
 
 
 def _normalize_source_name(value: str) -> str:
-    """Best-effort normalization for source-derived names into base terms."""
+    """Best-effort normalization for source-derived names into base *definition* terms.
+
+    IMPORTANT:
+    - Source CSV rows are often *items* (e.g., "abies alba cone oil").
+    - We must avoid promoting item strings into base terms ("Abies Alba Cone").
+    """
     cleaned = (value or "").strip().strip('"').strip()
     cleaned = cleaned.rstrip(",").strip()
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if not cleaned:
         return ""
-    # Drop obvious preparation suffixes (keep base).
-    cleaned = re.sub(
-        r"\b(essential\s+oil|co2\s+extract|absolute|hydrosol|distillate|tincture|glycerite|extract|resin|gum|butter|oil)\b",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -_/").strip()
-    # Title-case-ish: keep internal capitalization if present.
-    return cleaned
+    try:
+        from .item_parser import derive_definition_term
+        return derive_definition_term(cleaned)
+    except Exception:  # pragma: no cover
+        return cleaned
 
 
 def _guess_seed_category_from_name(name: str) -> str:
     """Heuristic mapper into SEED_INGREDIENT_CATEGORIES."""
     n = (name or "").strip().lower()
     if not n:
-        return "Medicinal Herbs"
+        return "Herbs"
     if any(word in n for word in ("starter", "scoby", "kefir", "culture", "yogurt", "kombucha", "sourdough")):
         return "Fermentation Starters"
     if "clay" in n:
@@ -311,7 +328,7 @@ def _guess_seed_category_from_name(name: str) -> str:
     if any(word in n for word in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
         return "Spices"
     # Default to medicinal herbs as broadest plant bucket.
-    return "Medicinal Herbs"
+    return "Herbs"
 
 
 def _ingest_source_terms_to_db() -> int:
