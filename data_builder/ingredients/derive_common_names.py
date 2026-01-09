@@ -135,6 +135,21 @@ def build_binomial_common_map() -> dict[str, str]:
                 if common3 and key3:
                     votes.setdefault(key3, Counter())[common3] += 1
 
+        # Also use TGSC-provided common_name when it is paired with a botanical binomial.
+        q2 = session.query(database_manager.SourceCatalogItem.tgsc_botanical_name, database_manager.SourceCatalogItem.common_name)
+        for bot, common in q2.yield_per(500):
+            b = _clean(bot or "")
+            c = _clean(common or "")
+            if not b or not c:
+                continue
+            m = re.match(r"^([A-Z][a-z]+)\s+([A-Za-z-]{2,})\b", b)
+            if not m:
+                continue
+            key = _binomial_key(m.group(1), m.group(2))
+            c2 = _normalize_common_phrase(c)
+            if key and c2:
+                votes.setdefault(key, Counter())[c2] += 2
+
     out: dict[str, str] = {}
     for key, counter in votes.items():
         best, _count = counter.most_common(1)[0]
@@ -178,7 +193,7 @@ def apply_common_names(*, limit: int | None = None) -> dict[str, int]:
                 continue
 
             row.common_name = common
-            row.common_name_source = "cosing_description_binomial_map"
+            row.common_name_source = "deterministic_binomial_map"
             updated += 1
 
     return {"scanned": scanned, "updated": updated, "skipped_existing": skipped_existing, "binomial_map_size": len(mapping)}
