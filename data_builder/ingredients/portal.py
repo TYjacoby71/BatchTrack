@@ -323,7 +323,6 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
           <div>
             <button type="submit">Apply</button>
             <a href="/export.csv{_qs(page=None)}" style="margin-left: 10px;">Export CSV</a>
-            <a href="/normalized_terms.csv" style="margin-left: 10px;">Normalized terms CSV</a>
             <a href="/download.db" style="margin-left: 10px;">Download DB</a>
             <a href="/cursors.csv" style="margin-left: 10px;">Cursor CSV</a>
             <a href="/admin/variations" style="margin-left: 10px;">Admin: Variations</a>
@@ -472,38 +471,6 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             out,
             mimetype="text/csv; charset=utf-8",
             headers={"Content-Disposition": "attachment; filename=cursor_progress.csv"},
-        )
-
-    @app.get("/normalized_terms.csv")
-    def export_normalized_terms_csv() -> Response:
-        """Export normalized base terms from normalized_terms table."""
-        database_manager.ensure_tables_exist()
-        with database_manager.get_session() as session:
-            rows = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc()).all()
-
-        buf = io.StringIO()
-        writer = csv.DictWriter(
-            buf,
-            fieldnames=["term", "seed_category", "botanical_name", "inci_name", "cas_number", "description", "normalized_at"],
-        )
-        writer.writeheader()
-        for r in rows:
-            writer.writerow(
-                {
-                    "term": r.term,
-                    "seed_category": r.seed_category or "",
-                    "botanical_name": r.botanical_name or "",
-                    "inci_name": r.inci_name or "",
-                    "cas_number": r.cas_number or "",
-                    "description": r.description or "",
-                    "normalized_at": _serialize_dt(r.normalized_at),
-                }
-            )
-        out = buf.getvalue()
-        return Response(
-            out,
-            mimetype="text/csv; charset=utf-8",
-            headers={"Content-Disposition": "attachment; filename=normalized_terms.csv"},
         )
 
     @app.get("/admin/variations")

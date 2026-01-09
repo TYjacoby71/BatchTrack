@@ -8,12 +8,11 @@ It:
 - derives deterministic tags/specs/display names
 - de-duplicates into `merged_item_forms`
 - bundles items into `source_definitions` (definition clusters)
-- derives canonical `normalized_terms` from the merged catalog (and writes a CSV export)
+- derives canonical `normalized_terms` from the merged catalog
 
 Notes:
 - The database path is controlled via `COMPILER_DB_PATH` (defaults to compiler_state.db).
-- The pipeline writes `data_builder/ingredients/output/normalized_terms.csv` as an export.
-- The pipeline does **not** read from that CSV for DB state.
+- The pipeline does **not** write any CSV exports.
 """
 
 from __future__ import annotations
@@ -111,11 +110,10 @@ def run() -> None:
     LOGGER.info("bundling source_items into source_definitions...")
     LOGGER.info("bundles: %s", bundle_source_items.bundle(limit=0))
 
-    # 6) Derive canonical normalized_terms from the merged catalog (and export CSV).
-    out_csv = base_dir / "output" / "normalized_terms.csv"
-    LOGGER.info("deriving canonical normalized_terms (and writing CSV to %s)...", out_csv)
+    # 6) Derive canonical normalized_terms from the merged catalog.
+    LOGGER.info("deriving canonical normalized_terms...")
     stats = derive_terms_from_catalog.build_terms_from_catalog(
-        csv_out=out_csv,
+        csv_out=None,
         limit=None,
         include=[],
         no_db=False,
