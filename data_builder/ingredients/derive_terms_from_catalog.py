@@ -63,7 +63,8 @@ def _strip_suffix_phrase(base: str, suffix: str) -> str:
     if not b or not s:
         return b
     # Match " <suffix>" at end, case-insensitive, with flexible whitespace.
-    pat = re.compile(rf"\s+{re.escape(s).replace(r'\ ', r'\s+')}s?$", re.IGNORECASE)
+    escaped_suffix = re.escape(s).replace(r"\ ", r"\s+")
+    pat = re.compile(r"\s+" + escaped_suffix + r"s?$", re.IGNORECASE)
     out = pat.sub("", b).strip(" ,-/")
     return out
 
