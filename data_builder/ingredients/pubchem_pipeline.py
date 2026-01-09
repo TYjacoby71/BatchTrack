@@ -14,6 +14,8 @@ import json
 import logging
 import os
 import re
+import random
+import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
@@ -28,6 +30,9 @@ LOGGER = logging.getLogger(__name__)
 
 _PUBCHEM_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 _PUBCHEM_PUG_VIEW = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound"
+
+_RATE_LOCK = Lock()
+_LAST_REQUEST_AT = 0.0
 
 
 def _clean(s: Any) -> str:
@@ -51,20 +56,75 @@ class PubChemClient:
         self.timeout = float(os.getenv("PUBCHEM_TIMEOUT_SECONDS", "25"))
 
     def _get_json(self, url: str) -> dict[str, Any] | None:
-        try:
-            resp = self.session.get(url, timeout=self.timeout)
-            resp.raise_for_status()
-            blob = resp.json()
-            return blob if isinstance(blob, dict) else None
-        except Exception as exc:  # pylint: disable=broad-except
-            LOGGER.debug("PubChem request failed: %s (%s)", url, exc)
+        retries = max(1, int(os.getenv("PUBCHEM_RETRIES", "8")))
+        backoff = float(os.getenv("PUBCHEM_BACKOFF_SECONDS", "0.8"))
+        min_interval = float(os.getenv("PUBCHEM_MIN_INTERVAL_SECONDS", "0.25"))
+
+        def throttle() -> None:
+            """Global throttle across threads/process-local calls.
+
+            Replit and other hosted environments often share egress IPs; this keeps us from
+            stampeding PubChem and getting 503'd/429'd.
+            """
+            global _LAST_REQUEST_AT  # pylint: disable=global-statement
+            if min_interval <= 0:
+                return
+            with _RATE_LOCK:
+                now = time.time()
+                wait = (_LAST_REQUEST_AT + min_interval) - now
+                if wait > 0:
+                    time.sleep(wait)
+                _LAST_REQUEST_AT = time.time()
+
+        last_exc: Exception | None = None
+        last_status: int | None = None
+        for attempt in range(1, retries + 1):
+            try:
+                throttle()
+                resp = self.session.get(url, timeout=self.timeout)
+                last_status = int(resp.status_code)
+                if resp.status_code in (400, 404):
+                    return None
+                if resp.status_code in (429, 503):
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after and str(retry_after).strip().isdigit():
+                        time.sleep(float(int(retry_after)))
+                    else:
+                        # Exponential backoff + jitter
+                        time.sleep(backoff * attempt + random.random() * 0.25)
+                    continue
+                resp.raise_for_status()
+                blob = resp.json()
+                return blob if isinstance(blob, dict) else None
+            except Exception as exc:  # pylint: disable=broad-except
+                last_exc = exc
+                # Retry transient errors; keep deterministic-ish with bounded jitter.
+                time.sleep(backoff * attempt + random.random() * 0.25)
+                continue
+
+        # Exhausted retries: treat PubChem as unavailable, not "no-match".
+        if last_status in (429, 503):
+            LOGGER.warning("PubChem unavailable after retries (%s): %s", last_status, url)
             return None
+        if last_exc:
+            LOGGER.debug("PubChem request failed: %s (%s)", url, last_exc)
+        return None
 
     def resolve_name_to_cids(self, name: str) -> list[int]:
         quoted = requests.utils.quote(_clean(name))
         if not quoted:
             return []
         blob = self._get_json(f"{_PUBCHEM_BASE}/compound/name/{quoted}/cids/JSON")
+        cids = (blob or {}).get("IdentifierList", {}).get("CID", [])
+        return [int(x) for x in cids if isinstance(x, (int, float, str)) and str(x).strip().isdigit()]
+
+    def resolve_cas_to_cids(self, cas: str) -> list[int]:
+        """Resolve CAS RN to CID using PubChem RN (registry number) xref endpoint."""
+        cas_clean = _clean(cas)
+        if not _is_cas(cas_clean):
+            return []
+        quoted = requests.utils.quote(cas_clean)
+        blob = self._get_json(f"{_PUBCHEM_BASE}/compound/xref/rn/{quoted}/cids/JSON")
         cids = (blob or {}).get("IdentifierList", {}).get("CID", [])
         return [int(x) for x in cids if isinstance(x, (int, float, str)) and str(x).strip().isdigit()]
 
@@ -245,7 +305,10 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                 else:
                     cids = None
             if cids is None:
-                cids = client.resolve_name_to_cids(ident)
+                if kind == "cas" and _is_cas(ident):
+                    cids = client.resolve_cas_to_cids(ident)
+                else:
+                    cids = client.resolve_name_to_cids(ident)
                 with cache_lock:
                     cache[key] = cids
             if not cids:
@@ -345,7 +408,10 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
                 else:
                     cids = None
             if cids is None:
-                cids = client.resolve_name_to_cids(ident)
+                if kind == "cas" and _is_cas(ident):
+                    cids = client.resolve_cas_to_cids(ident)
+                else:
+                    cids = client.resolve_name_to_cids(ident)
                 with cache_lock:
                     cache[key] = cids
             if not cids:
