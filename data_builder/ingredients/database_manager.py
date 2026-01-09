@@ -723,6 +723,7 @@ def ensure_tables_exist() -> None:
     _ensure_source_definition_indexes()
     _ensure_source_catalog_indexes()
     _ensure_pubchem_indexes()
+    _ensure_pubchem_columns()
 
 
 def configure_db_path(path: str | os.PathLike[str]) -> None:
@@ -844,6 +845,36 @@ def _ensure_pubchem_indexes() -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_matches_cid ON pubchem_item_matches(cid)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_status ON pubchem_term_matches(status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_cid ON pubchem_term_matches(cid)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_pubchem_columns() -> None:
+    """Add retry bookkeeping columns to PubChem match tables (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            # pubchem_item_matches
+            cols = conn.execute(text("PRAGMA table_info(pubchem_item_matches)")).fetchall()
+            names = {row[1] for row in cols}
+            additions = [
+                ("attempts", "INTEGER NOT NULL DEFAULT 0"),
+                ("last_error_at", "DATETIME"),
+                ("last_error_type", "TEXT"),
+            ]
+            for name, col_type in additions:
+                if name in names:
+                    continue
+                conn.execute(text(f"ALTER TABLE pubchem_item_matches ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to pubchem_item_matches", name)
+
+            # pubchem_term_matches
+            cols2 = conn.execute(text("PRAGMA table_info(pubchem_term_matches)")).fetchall()
+            names2 = {row[1] for row in cols2}
+            for name, col_type in additions:
+                if name in names2:
+                    continue
+                conn.execute(text(f"ALTER TABLE pubchem_term_matches ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to pubchem_term_matches", name)
     except Exception:  # pragma: no cover
         return
 

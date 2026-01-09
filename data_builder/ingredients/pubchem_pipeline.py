@@ -35,6 +35,22 @@ _RATE_LOCK = Lock()
 _LAST_REQUEST_AT = 0.0
 
 
+class PubChemUnavailableError(RuntimeError):
+    """PubChem is temporarily unavailable (rate limited / server busy)."""
+
+    def __init__(self, status_code: int, url: str) -> None:
+        super().__init__(f"pubchem_unavailable:{status_code}")
+        self.status_code = int(status_code)
+        self.url = url
+
+
+class PubChemTransientError(RuntimeError):
+    """Transient network error talking to PubChem (retry later)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(f"pubchem_transient:{message}")
+
+
 def _clean(s: Any) -> str:
     return ("" if s is None else str(s)).strip()
 
@@ -102,12 +118,11 @@ class PubChemClient:
                 time.sleep(backoff * attempt + random.random() * 0.25)
                 continue
 
-        # Exhausted retries: treat PubChem as unavailable, not "no-match".
+        # Exhausted retries: surface so caller can bucket as retryable.
         if last_status in (429, 503):
-            LOGGER.warning("PubChem unavailable after retries (%s): %s", last_status, url)
-            return None
+            raise PubChemUnavailableError(int(last_status), url)
         if last_exc:
-            LOGGER.debug("PubChem request failed: %s (%s)", url, last_exc)
+            raise PubChemTransientError(str(last_exc))
         return None
 
     def resolve_name_to_cids(self, name: str) -> list[int]:
@@ -250,11 +265,15 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
     database_manager.ensure_tables_exist()
     matched = 0
     no_match = 0
+    ambiguous = 0
+    retry = 0
     error = 0
     scanned = 0  # number of unprocessed items staged for matching (this run)
     workers = max(1, int(os.getenv("PUBCHEM_WORKERS", "16")))
     cache: dict[str, list[int]] = {}
     cache_lock = Lock()
+    retry_only = os.getenv("PUBCHEM_RETRY_ONLY", "0").strip() in {"1", "true", "True"}
+    max_retry_runs = max(1, int(os.getenv("PUBCHEM_MAX_RETRY_RUNS", "3")))
 
     # Phase 1: load worklist (avoid holding DB locks during network calls)
     work: list[dict[str, Any]] = []
@@ -262,8 +281,19 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
         q = session.query(database_manager.MergedItemForm).order_by(database_manager.MergedItemForm.id.asc())
         for item in q.yield_per(500):
             existing = session.get(database_manager.PubChemItemMatch, int(item.id))
-            if existing and _clean(existing.status) in {"matched", "no_match"}:
-                continue
+            if existing:
+                st = _clean(existing.status)
+                # Fresh runs: only process pending/error (NOT retry bucket).
+                # Retry runs: only process retry bucket.
+                if retry_only:
+                    if st != "retry":
+                        continue
+                    attempts = int(getattr(existing, "attempts", 0) or 0)
+                    if attempts >= max_retry_runs:
+                        continue
+                else:
+                    if st in {"matched", "no_match", "ambiguous", "retry"}:
+                        continue
             if limit and len(work) >= int(limit):
                 break
 
@@ -296,7 +326,7 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
     def _resolve_one(entry: dict[str, Any]) -> dict[str, Any]:
         client = PubChemClient()
         identifiers = entry.get("identifiers") or []
-        last_err = None
+        last_ambiguous = None
         for kind, ident, conf in identifiers:
             key = f"{kind}:{ident}".lower()
             with cache_lock:
@@ -305,16 +335,29 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                 else:
                     cids = None
             if cids is None:
-                if kind == "cas" and _is_cas(ident):
-                    cids = client.resolve_cas_to_cids(ident)
-                else:
-                    cids = client.resolve_name_to_cids(ident)
+                try:
+                    if kind == "cas" and _is_cas(ident):
+                        cids = client.resolve_cas_to_cids(ident)
+                    else:
+                        cids = client.resolve_name_to_cids(ident)
+                except (PubChemUnavailableError, PubChemTransientError) as exc:
+                    # Retry later (don't call it "no match").
+                    return {
+                        "id": entry["id"],
+                        "status": "retry",
+                        "cid": None,
+                        "matched_by": kind,
+                        "identifier_value": ident,
+                        "confidence": int(conf),
+                        "error": str(exc),
+                        "error_type": "rate_limit" if isinstance(exc, PubChemUnavailableError) else "transient",
+                    }
                 with cache_lock:
-                    cache[key] = cids
+                    cache[key] = cids or []
             if not cids:
                 continue
             if len(cids) != 1:
-                last_err = f"ambiguous_candidates:{len(cids)}"
+                last_ambiguous = f"ambiguous_candidates:{len(cids)}"
                 continue
             return {
                 "id": entry["id"],
@@ -324,8 +367,29 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                 "identifier_value": ident,
                 "confidence": int(conf),
                 "error": None,
+                "error_type": None,
             }
-        return {"id": entry["id"], "status": "no_match", "cid": None, "matched_by": None, "identifier_value": None, "confidence": None, "error": last_err}
+        if last_ambiguous:
+            return {
+                "id": entry["id"],
+                "status": "ambiguous",
+                "cid": None,
+                "matched_by": None,
+                "identifier_value": None,
+                "confidence": None,
+                "error": last_ambiguous,
+                "error_type": "ambiguous",
+            }
+        return {
+            "id": entry["id"],
+            "status": "no_match",
+            "cid": None,
+            "matched_by": None,
+            "identifier_value": None,
+            "confidence": None,
+            "error": None,
+            "error_type": None,
+        }
 
     results: list[dict[str, Any]] = []
     if work:
@@ -355,14 +419,34 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
             row.confidence = r.get("confidence")
             row.error = r.get("error")
             row.matched_at = datetime.utcnow()
-            if row.status == "matched":
+            # Retry bookkeeping: count attempts; after max retries, downgrade to no_match.
+            if row.status == "retry":
+                try:
+                    row.attempts = int(getattr(row, "attempts", 0) or 0) + 1
+                except Exception:
+                    row.attempts = 1
+                row.last_error_at = datetime.utcnow()
+                row.last_error_type = r.get("error_type")
+                if int(row.attempts or 0) >= max_retry_runs:
+                    row.status = "no_match"
+                    row.error = f"exhausted_retries:{r.get('error')}"
+                    row.last_error_type = "exhausted"
+                    no_match += 1
+                else:
+                    retry += 1
+            elif row.status == "matched":
                 matched += 1
+                row.last_error_type = None
             elif row.status == "no_match":
                 no_match += 1
+                row.last_error_type = None
+            elif row.status == "ambiguous":
+                ambiguous += 1
+                row.last_error_type = "ambiguous"
             else:
                 error += 1
 
-    return {"scanned": scanned, "matched": matched, "no_match": no_match, "error": error}
+    return {"scanned": scanned, "matched": matched, "no_match": no_match, "ambiguous": ambiguous, "retry": retry, "error": error}
 
 
 def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
@@ -370,19 +454,32 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
     database_manager.ensure_tables_exist()
     matched = 0
     no_match = 0
+    ambiguous = 0
+    retry = 0
     error = 0
     scanned = 0  # number of unprocessed terms staged for matching (this run)
     workers = max(1, int(os.getenv("PUBCHEM_WORKERS", "16")))
     cache: dict[str, list[int]] = {}
     cache_lock = Lock()
+    retry_only = os.getenv("PUBCHEM_RETRY_ONLY", "0").strip() in {"1", "true", "True"}
+    max_retry_runs = max(1, int(os.getenv("PUBCHEM_MAX_RETRY_RUNS", "3")))
 
     work: list[dict[str, Any]] = []
     with database_manager.get_session() as session:
         q = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc())
         for t in q.yield_per(500):
             existing = session.get(database_manager.PubChemTermMatch, str(t.term))
-            if existing and _clean(existing.status) in {"matched", "no_match"}:
-                continue
+            if existing:
+                st = _clean(existing.status)
+                if retry_only:
+                    if st != "retry":
+                        continue
+                    attempts = int(getattr(existing, "attempts", 0) or 0)
+                    if attempts >= max_retry_runs:
+                        continue
+                else:
+                    if st in {"matched", "no_match", "ambiguous", "retry"}:
+                        continue
             if limit and len(work) >= int(limit):
                 break
             identifiers: list[tuple[str, str, int]] = []
@@ -399,7 +496,7 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
     def _resolve_one_term(entry: dict[str, Any]) -> dict[str, Any]:
         client = PubChemClient()
         identifiers = entry.get("identifiers") or []
-        last_err = None
+        last_ambiguous = None
         for kind, ident, conf in identifiers:
             key = f"{kind}:{ident}".lower()
             with cache_lock:
@@ -408,16 +505,28 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
                 else:
                     cids = None
             if cids is None:
-                if kind == "cas" and _is_cas(ident):
-                    cids = client.resolve_cas_to_cids(ident)
-                else:
-                    cids = client.resolve_name_to_cids(ident)
+                try:
+                    if kind == "cas" and _is_cas(ident):
+                        cids = client.resolve_cas_to_cids(ident)
+                    else:
+                        cids = client.resolve_name_to_cids(ident)
+                except (PubChemUnavailableError, PubChemTransientError) as exc:
+                    return {
+                        "term": entry["term"],
+                        "status": "retry",
+                        "cid": None,
+                        "matched_by": kind,
+                        "identifier_value": ident,
+                        "confidence": int(conf),
+                        "error": str(exc),
+                        "error_type": "rate_limit" if isinstance(exc, PubChemUnavailableError) else "transient",
+                    }
                 with cache_lock:
-                    cache[key] = cids
+                    cache[key] = cids or []
             if not cids:
                 continue
             if len(cids) != 1:
-                last_err = f"ambiguous_candidates:{len(cids)}"
+                last_ambiguous = f"ambiguous_candidates:{len(cids)}"
                 continue
             return {
                 "term": entry["term"],
@@ -427,8 +536,29 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
                 "identifier_value": ident,
                 "confidence": int(conf),
                 "error": None,
+                "error_type": None,
             }
-        return {"term": entry["term"], "status": "no_match", "cid": None, "matched_by": None, "identifier_value": None, "confidence": None, "error": last_err}
+        if last_ambiguous:
+            return {
+                "term": entry["term"],
+                "status": "ambiguous",
+                "cid": None,
+                "matched_by": None,
+                "identifier_value": None,
+                "confidence": None,
+                "error": last_ambiguous,
+                "error_type": "ambiguous",
+            }
+        return {
+            "term": entry["term"],
+            "status": "no_match",
+            "cid": None,
+            "matched_by": None,
+            "identifier_value": None,
+            "confidence": None,
+            "error": None,
+            "error_type": None,
+        }
 
     results: list[dict[str, Any]] = []
     if work:
@@ -457,14 +587,33 @@ def stage_and_match_terms(*, limit: int | None = None) -> dict[str, int]:
             row.confidence = r.get("confidence")
             row.error = r.get("error")
             row.matched_at = datetime.utcnow()
-            if row.status == "matched":
+            if row.status == "retry":
+                try:
+                    row.attempts = int(getattr(row, "attempts", 0) or 0) + 1
+                except Exception:
+                    row.attempts = 1
+                row.last_error_at = datetime.utcnow()
+                row.last_error_type = r.get("error_type")
+                if int(row.attempts or 0) >= max_retry_runs:
+                    row.status = "no_match"
+                    row.error = f"exhausted_retries:{r.get('error')}"
+                    row.last_error_type = "exhausted"
+                    no_match += 1
+                else:
+                    retry += 1
+            elif row.status == "matched":
                 matched += 1
+                row.last_error_type = None
             elif row.status == "no_match":
                 no_match += 1
+                row.last_error_type = None
+            elif row.status == "ambiguous":
+                ambiguous += 1
+                row.last_error_type = "ambiguous"
             else:
                 error += 1
 
-    return {"scanned": scanned, "matched": matched, "no_match": no_match, "error": error}
+    return {"scanned": scanned, "matched": matched, "no_match": no_match, "ambiguous": ambiguous, "retry": retry, "error": error}
 
 def fetch_and_cache_pubchem(*, max_cids: int | None = None, batch_size: int = 100) -> dict[str, int]:
     """Fetch PubChem bundles for matched CIDs and cache them in pubchem_compounds."""
