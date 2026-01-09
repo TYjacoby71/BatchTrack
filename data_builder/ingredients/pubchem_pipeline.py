@@ -90,9 +90,11 @@ class PubChemClient:
 
     def _get_json(self, url: str, *, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
         last_exc: Exception | None = None
+        last_status: int | None = None
         for attempt in range(1, max(1, HTTP_RETRIES) + 1):
             try:
                 resp = self.session.get(url, params=params, timeout=HTTP_TIMEOUT)
+                last_status = resp.status_code
                 if resp.status_code == 404:
                     return None
                 # PubChem is frequently rate-limited/busy; retry deterministically.
@@ -106,6 +108,9 @@ class PubChemClient:
             except Exception as exc:  # pylint: disable=broad-except
                 last_exc = exc
                 time.sleep(HTTP_BACKOFF_SECONDS * attempt)
+        # Distinguish "no data" from "service unavailable" so stage-1 doesn't misclassify.
+        if last_status in {429, 503}:
+            raise RuntimeError(f"pubchem_unavailable_http_{last_status}")
         LOGGER.debug("PubChem GET failed after retries: %s (%s)", url, last_exc)
         return None
 
@@ -324,7 +329,11 @@ def match_seed_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[
         last: tuple[str, str] | None = None
         for id_type, id_value in candidates:
             last = (id_type, id_value)
-            cids = client.resolve_cids_by_identifier(identifier=id_value, identifier_type=id_type)
+            try:
+                cids = client.resolve_cids_by_identifier(identifier=id_value, identifier_type=id_type)
+            except RuntimeError as exc:
+                # PubChem is unavailable; leave row pending so we can resume later without polluting no_match.
+                return entity_id, {"status": "pending", "error": str(exc), "matched_by": id_type, "identifier_type": id_type, "identifier_value": id_value}
             if SLEEP_SECONDS:
                 time.sleep(SLEEP_SECONDS)
             if not cids:
@@ -413,7 +422,9 @@ def match_seed_items(*, limit: int = 0, workers: int = DEFAULT_WORKERS) -> dict[
                 row.identifier_value = upd.get("identifier_value")
                 row.confidence = upd.get("confidence")
                 row.candidate_cids_json = upd.get("candidate_cids_json") or row.candidate_cids_json
-                row.error = upd.get("error")
+                # Keep existing error unless a new one is provided.
+                if upd.get("error") is not None:
+                    row.error = upd.get("error")
                 row.updated_at = _now()
 
                 if row.status == "matched":
