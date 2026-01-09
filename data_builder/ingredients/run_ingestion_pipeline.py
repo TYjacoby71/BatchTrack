@@ -120,6 +120,17 @@ def run() -> None:
     )
     LOGGER.info("normalized_terms: %s", stats)
 
+    # 7) Seed the compiler queue from normalized_terms (DB -> DB).
+    # This keeps the ingestion system one-way and removes any CSV dependency.
+    inserted = 0
+    database_manager.ensure_tables_exist()
+    with database_manager.get_session() as session:
+        rows = session.query(database_manager.NormalizedTerm.term, database_manager.NormalizedTerm.seed_category).all()
+    for term, seed_category in rows:
+        if database_manager.upsert_term(str(term), database_manager.DEFAULT_PRIORITY, seed_category=seed_category):
+            inserted += 1
+    LOGGER.info("task_queue seeded from normalized_terms: inserted=%s total_terms=%s", inserted, len(rows))
+
 
 def main() -> None:
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")

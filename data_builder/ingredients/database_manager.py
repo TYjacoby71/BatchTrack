@@ -306,6 +306,12 @@ class IngredientItemRecord(Base):
     ph_min = Column(String, nullable=True, default=None)
     ph_max = Column(String, nullable=True, default=None)
 
+    density_g_ml = Column(String, nullable=True, default=None)
+    hlb = Column(String, nullable=True, default=None)
+    viscosity_cP = Column(String, nullable=True, default=None)
+    refractive_index = Column(String, nullable=True, default=None)
+    solubility = Column(Text, nullable=True, default=None)
+
     # Optional usage rates when present (kept, not required).
     usage_leave_on_max = Column(String, nullable=True, default=None)
     usage_rinse_off_max = Column(String, nullable=True, default=None)
@@ -826,6 +832,11 @@ def _ensure_ingredient_item_columns() -> None:
             ("melting_point_c_max", "TEXT"),
             ("ph_min", "TEXT"),
             ("ph_max", "TEXT"),
+            ("density_g_ml", "TEXT"),
+            ("hlb", "TEXT"),
+            ("viscosity_cP", "TEXT"),
+            ("refractive_index", "TEXT"),
+            ("solubility", "TEXT"),
             ("usage_leave_on_max", "TEXT"),
             ("usage_rinse_off_max", "TEXT"),
             ("approved", "INTEGER NOT NULL DEFAULT 1"),
@@ -1612,6 +1623,11 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 melting_point_c_max=str(mp.get("max")) if mp.get("max") not in (None, "") else None,
                 ph_min=str(ph.get("min")) if ph.get("min") not in (None, "") else None,
                 ph_max=str(ph.get("max")) if ph.get("max") not in (None, "") else None,
+                density_g_ml=str(specs.get("density_g_ml")) if specs.get("density_g_ml") not in (None, "") else None,
+                hlb=str(specs.get("hlb")) if specs.get("hlb") not in (None, "") else None,
+                viscosity_cP=str(specs.get("viscosity_cP")) if specs.get("viscosity_cP") not in (None, "") else None,
+                refractive_index=str(specs.get("refractive_index")) if specs.get("refractive_index") not in (None, "") else None,
+                solubility=str(specs.get("solubility")) if specs.get("solubility") not in (None, "") else None,
                 usage_leave_on_max=str(usage.get("leave_on_max")) if usage.get("leave_on_max") not in (None, "") else None,
                 usage_rinse_off_max=str(usage.get("rinse_off_max")) if usage.get("rinse_off_max") not in (None, "") else None,
             )
