@@ -147,7 +147,14 @@ def run() -> None:
 
 
 def main() -> None:
+    import argparse
+
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+    p = argparse.ArgumentParser(description="Deterministic ingestion pipeline (CosIng + TGSC -> SQLite state DB)")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
+    args = p.parse_args()
+    if (args.db_path or "").strip():
+        database_manager.configure_db_path((args.db_path or "").strip())
     run()
 
 

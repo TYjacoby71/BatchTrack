@@ -72,7 +72,9 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
     # Ensure DB exists / schema present.
     if db_path is not None:
-        os.environ["COMPILER_DB_PATH"] = str(db_path)
+        # NOTE: database_manager reads COMPILER_DB_PATH at import-time by default.
+        # Use configure_db_path so --db-path reliably takes effect.
+        database_manager.configure_db_path(str(db_path))
     database_manager.ensure_tables_exist()
 
     @app.get("/")
