@@ -25,10 +25,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5055
-externalPort = 3000
-
-[[ports]]
 localPort = 8000
 externalPort = 8000
 
@@ -37,7 +33,7 @@ localPort = 8089
 externalPort = 5000
 
 [workflows]
-runButton = "Run Flask Debug"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Run Flask"
@@ -56,6 +52,27 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python run.py"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask App"
+
+[[workflows.workflow]]
+name = "Flask App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python run.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 
 
