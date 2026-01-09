@@ -66,6 +66,7 @@ data_builder/ingredients/compiler_state.db
 
 # Deterministic ingestion outputs (generated)
 data_builder/ingredients/output/normalized_terms.csv
+data_builder/ingredients/output/*.db
 
 # Flask stuff:
 instance/
