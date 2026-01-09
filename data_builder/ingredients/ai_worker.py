@@ -387,6 +387,54 @@ SCHEMA:
 """
 
 
+def _render_items_completion_prompt(
+    term: str,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any],
+    existing_items: list[dict],
+) -> str:
+    """
+    Completion-mode items prompt:
+    - do NOT add/remove/reorder items
+    - do NOT change identity fields (variation, physical_form, bypass flags)
+    - fill in missing fields only (specs/storage/safety/etc.)
+    """
+    meta = _render_metadata_blob(term)
+    core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
+    items_blob = json.dumps(existing_items, ensure_ascii=False, indent=2, sort_keys=True)
+    forms = ", ".join(PHYSICAL_FORMS)
+    return f"""
+You are Stage 2B (Compiler Items — COMPLETION). Complete existing ingested ITEM records for base ingredient: "{term}".
+
+Rules:
+- You MUST NOT add or remove items. You MUST NOT reorder items.
+- You MUST NOT change these identity fields for any item:
+  - variation
+  - physical_form (must be one of: {forms})
+  - form_bypass
+  - variation_bypass
+- You MUST fill in missing fields across each item (synonyms/applications/function_tags/safety/storage/specifications/sourcing).
+- Keep values deterministic and concise. No marketing fluff.
+- applications must include at least 1 value; if unknown use ["Unknown"].
+
+Ingredient core (context):
+{core_blob}
+
+Normalized base context (context):
+{base_blob}
+
+External metadata (may be empty):
+{meta}
+
+Existing ingested items (do not change identity fields; fill missing keys only):
+{items_blob}
+
+SCHEMA:
+{ITEMS_SCHEMA_SPEC}
+"""
+
+
 def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     items_blob = json.dumps(items[:6], ensure_ascii=False, indent=2, sort_keys=True)
@@ -413,7 +461,12 @@ def _render_prompt(ingredient_name: str) -> str:
     )
 
 
-def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def get_ingredient_data(
+    ingredient_name: str,
+    base_context: Dict[str, Any] | None = None,
+    *,
+    items_override: list[dict] | None = None,
+) -> Dict[str, Any]:
     """Fetch structured data for a single ingredient via the OpenAI API."""
 
     if not ingredient_name or not ingredient_name.strip():
@@ -439,8 +492,39 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
             ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
 
             # Stage 2B: items
-            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
+            if items_override is not None:
+                # Complete existing ingested items (no new variations).
+                items_payload = _call_openai_json(
+                    client,
+                    SYSTEM_PROMPT,
+                    _render_items_completion_prompt(term, ingredient_core, base_context, list(items_override)),
+                )
+            else:
+                items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
+            # Hard-enforce identity fields when completing ingested items.
+            if items_override is not None and isinstance(items, list):
+                override_by_key: dict[tuple[str, str], dict] = {}
+                for it in items_override:
+                    if not isinstance(it, dict):
+                        continue
+                    k = ((it.get("variation") or "").strip(), (it.get("physical_form") or "").strip())
+                    override_by_key[k] = it
+                fixed: list[dict] = []
+                for it in items:
+                    if not isinstance(it, dict):
+                        continue
+                    k = ((it.get("variation") or "").strip(), (it.get("physical_form") or "").strip())
+                    ov = override_by_key.get(k)
+                    if ov:
+                        merged = dict(it)
+                        for field in ("variation", "physical_form", "form_bypass", "variation_bypass"):
+                            if field in ov:
+                                merged[field] = ov[field]
+                        fixed.append(merged)
+                    else:
+                        fixed.append(it)
+                items = fixed
 
             # Stage 2C: taxonomy
             taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))

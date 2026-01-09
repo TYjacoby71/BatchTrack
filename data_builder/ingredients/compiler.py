@@ -94,6 +94,53 @@ def validate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return ingredient
 
 
+def _build_items_override_from_ingestion(term: str) -> list[dict]:
+    """Build item stubs from deterministic ingestion (merged_item_forms)."""
+    database_manager.ensure_tables_exist()
+    out: list[dict] = []
+
+    def _as_dict(text: Any) -> dict:
+        try:
+            if isinstance(text, dict):
+                return text
+            if not isinstance(text, str) or not text.strip():
+                return {}
+            v = json.loads(text)
+            return v if isinstance(v, dict) else {}
+        except Exception:
+            return {}
+
+    with database_manager.get_session() as session:
+        q = (
+            session.query(database_manager.MergedItemForm)
+            .filter(database_manager.MergedItemForm.derived_term == term)
+            .order_by(database_manager.MergedItemForm.id.asc())
+        )
+        for mif in q.all():
+            variation = (getattr(mif, "derived_variation", "") or "").strip()
+            physical_form = (getattr(mif, "derived_physical_form", "") or "").strip()
+            variation_bypass = not bool(variation)
+            form_bypass = not bool(physical_form)
+            specs = _as_dict(getattr(mif, "merged_specs_json", "{}"))
+            out.append(
+                {
+                    "variation": variation,
+                    "physical_form": physical_form,
+                    "variation_bypass": bool(variation_bypass),
+                    "form_bypass": bool(form_bypass),
+                    "synonyms": [],
+                    "applications": [],
+                    "function_tags": [],
+                    "safety_tags": [],
+                    "sds_hazards": [],
+                    "storage": {},
+                    "specifications": specs,
+                    "sourcing": {},
+                }
+            )
+    return out
+
+
 def update_lookup_files(payload: Dict[str, Any]) -> None:
     """Refresh the supporting lookup files for physical forms, variations, and taxonomies."""
 
@@ -168,7 +215,12 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
 
     try:
         normalized = database_manager.get_normalized_term(term) or {}
-        payload = ai_worker.get_ingredient_data(term, base_context=normalized)
+        items_override = _build_items_override_from_ingestion(term)
+        payload = ai_worker.get_ingredient_data(
+            term,
+            base_context=normalized,
+            items_override=items_override if items_override else None,
+        )
         if not isinstance(payload, dict) or payload.get("error"):
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 
