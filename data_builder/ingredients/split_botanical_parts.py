@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import os
 from typing import Any, Optional
 
 from . import database_manager
@@ -133,120 +134,143 @@ def split_botanical_parts(*, limit_terms: int = 0) -> dict[str, int]:
     created_terms = 0
     created_self_items = 0
 
+    # Stage candidates in a read-only pass (avoid holding write locks for the entire run).
+    candidates: list[dict[str, Any]] = []
     with database_manager.get_session() as session:
-        # Load candidate base terms from normalized_terms (Plant-Derived + binomial-looking).
         q = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc())
         for nt in q.yield_per(500):
-            if limit_terms and scanned_terms >= int(limit_terms):
+            if limit_terms and len(candidates) >= int(limit_terms):
                 break
             term = _clean(nt.term)
             if not term or not _BINOMIAL_RE.match(term):
                 continue
             if _clean(nt.origin) != "Plant-Derived":
                 continue
-
-            scanned_terms += 1
-
-            # Pull merged item forms for this base term.
-            rows = (
-                session.query(database_manager.MergedItemForm)
-                .filter(database_manager.MergedItemForm.derived_term == term)
-                .order_by(database_manager.MergedItemForm.id.asc())
-                .all()
+            candidates.append(
+                {
+                    "term": term,
+                    "seed_category": nt.seed_category,
+                    "botanical_name": nt.botanical_name,
+                    "inci_name": nt.inci_name,
+                    "cas_number": nt.cas_number,
+                    "description": nt.description,
+                    "ingredient_category": nt.ingredient_category,
+                    "origin": nt.origin,
+                    "refinement_level": nt.refinement_level,
+                    "overall_confidence": nt.overall_confidence,
+                    "sources_json": nt.sources_json,
+                }
             )
-            if not rows:
-                continue
 
-            # Determine distinct parts present across the term.
-            distinct_parts: set[str] = set()
-            per_row_part: dict[int, str] = {}
-            for r in rows:
-                parts = _load_json_list(_clean(r.derived_parts_json))
-                part = _pick_primary_part(parts, _clean(r.derived_variation))
-                if part:
-                    distinct_parts.add(part)
-                    per_row_part[int(r.id)] = part
+    commit_every = max(25, int(os.getenv("BOTANICAL_SPLIT_COMMIT_EVERY", "200")))
+    for start in range(0, len(candidates), commit_every):
+        chunk = candidates[start : start + commit_every]
+        if not chunk:
+            continue
+        with database_manager.get_session() as session:
+            for base in chunk:
+                term = _clean(base.get("term"))
+                if not term:
+                    continue
+                scanned_terms += 1
 
-            # Only split when there is evidence of multiple parts within the same binomial term.
-            if len(distinct_parts) < 2:
-                continue
-
-            # Create/ensure part-level terms and re-home item-forms.
-            for r in rows:
-                part = per_row_part.get(int(r.id), "")
-                if not part:
-                    continue  # keep base term for no-part forms
-
-                new_term = f"{term} {part}".strip()
-                if _clean(r.derived_term) != new_term:
-                    r.derived_term = new_term
-                    updated_item_forms += 1
-
-                # Ensure normalized_terms row exists for the part term.
-                existing = session.get(database_manager.NormalizedTerm, new_term)
-                if existing is None:
-                    # Copy base row and adjust minimal fields.
-                    sources = {}
-                    try:
-                        sources = json.loads(_clean(nt.sources_json) or "{}")
-                        if not isinstance(sources, dict):
-                            sources = {}
-                    except Exception:
-                        sources = {}
-                    sources = dict(sources)
-                    sources.setdefault("botanical_part_split", []).append({"from": term, "part": part})
-
-                    session.add(
-                        database_manager.NormalizedTerm(
-                            term=new_term,
-                            seed_category=nt.seed_category,
-                            botanical_name=nt.botanical_name,
-                            inci_name=nt.inci_name,
-                            cas_number=nt.cas_number,
-                            description=nt.description,
-                            ingredient_category=nt.ingredient_category,
-                            origin=nt.origin,
-                            refinement_level=nt.refinement_level,
-                            derived_from="botanical_part_split",
-                            overall_confidence=nt.overall_confidence,
-                            sources_json=json.dumps(sources, ensure_ascii=False, sort_keys=True),
-                        )
-                    )
-                    created_terms += 1
-
-            # Ensure each part term gets a self/identity item form.
-            for part in sorted(distinct_parts):
-                part_term = f"{term} {part}".strip()
-                exists = (
-                    session.query(database_manager.MergedItemForm.id)
-                    .filter(
-                        database_manager.MergedItemForm.derived_term == part_term,
-                        (database_manager.MergedItemForm.derived_variation == "") | (database_manager.MergedItemForm.derived_variation.is_(None)),
-                        (database_manager.MergedItemForm.derived_physical_form == "") | (database_manager.MergedItemForm.derived_physical_form.is_(None)),
-                    )
-                    .first()
+                rows = (
+                    session.query(database_manager.MergedItemForm)
+                    .filter(database_manager.MergedItemForm.derived_term == term)
+                    .order_by(database_manager.MergedItemForm.id.asc())
+                    .all()
                 )
-                if exists:
+                if not rows:
                     continue
 
-                session.add(
-                    database_manager.MergedItemForm(
-                        derived_term=part_term,
-                        derived_variation="",
-                        derived_physical_form="",
-                        derived_parts_json=json.dumps([part], ensure_ascii=False, sort_keys=True),
-                        cas_numbers_json="[]",
-                        member_source_item_keys_json="[]",
-                        sources_json=json.dumps({"synthetic_self_item": True, "from_term": term, "part": part}, ensure_ascii=False, sort_keys=True),
-                        merged_specs_json="{}",
-                        merged_specs_sources_json="{}",
-                        merged_specs_notes_json="[]",
-                        source_row_count=0,
-                        has_cosing=False,
-                        has_tgsc=False,
+                distinct_parts: set[str] = set()
+                per_row_part: dict[int, str] = {}
+                for r in rows:
+                    parts = _load_json_list(_clean(r.derived_parts_json))
+                    part = _pick_primary_part(parts, _clean(r.derived_variation))
+                    if part:
+                        distinct_parts.add(part)
+                        per_row_part[int(r.id)] = part
+
+                if len(distinct_parts) < 2:
+                    continue
+
+                for r in rows:
+                    part = per_row_part.get(int(r.id), "")
+                    if not part:
+                        continue
+                    new_term = f"{term} {part}".strip()
+                    if _clean(r.derived_term) != new_term:
+                        r.derived_term = new_term
+                        updated_item_forms += 1
+
+                    existing = session.get(database_manager.NormalizedTerm, new_term)
+                    if existing is None:
+                        sources: dict[str, Any] = {}
+                        try:
+                            raw_sources = base.get("sources_json")
+                            sources = json.loads(_clean(raw_sources) or "{}")
+                            if not isinstance(sources, dict):
+                                sources = {}
+                        except Exception:
+                            sources = {}
+                        sources = dict(sources)
+                        sources.setdefault("botanical_part_split", []).append({"from": term, "part": part})
+
+                        session.add(
+                            database_manager.NormalizedTerm(
+                                term=new_term,
+                                seed_category=base.get("seed_category"),
+                                botanical_name=base.get("botanical_name"),
+                                inci_name=base.get("inci_name"),
+                                cas_number=base.get("cas_number"),
+                                description=base.get("description"),
+                                ingredient_category=base.get("ingredient_category"),
+                                origin=base.get("origin"),
+                                refinement_level=base.get("refinement_level"),
+                                derived_from="botanical_part_split",
+                                overall_confidence=base.get("overall_confidence"),
+                                sources_json=json.dumps(sources, ensure_ascii=False, sort_keys=True),
+                            )
+                        )
+                        created_terms += 1
+
+                for part in sorted(distinct_parts):
+                    part_term = f"{term} {part}".strip()
+                    exists = (
+                        session.query(database_manager.MergedItemForm.id)
+                        .filter(
+                            database_manager.MergedItemForm.derived_term == part_term,
+                            (database_manager.MergedItemForm.derived_variation == "") | (database_manager.MergedItemForm.derived_variation.is_(None)),
+                            (database_manager.MergedItemForm.derived_physical_form == "") | (database_manager.MergedItemForm.derived_physical_form.is_(None)),
+                        )
+                        .first()
                     )
-                )
-                created_self_items += 1
+                    if exists:
+                        continue
+
+                    session.add(
+                        database_manager.MergedItemForm(
+                            derived_term=part_term,
+                            derived_variation="",
+                            derived_physical_form="",
+                            derived_parts_json=json.dumps([part], ensure_ascii=False, sort_keys=True),
+                            cas_numbers_json="[]",
+                            member_source_item_keys_json="[]",
+                            sources_json=json.dumps(
+                                {"synthetic_self_item": True, "from_term": term, "part": part},
+                                ensure_ascii=False,
+                                sort_keys=True,
+                            ),
+                            merged_specs_json="{}",
+                            merged_specs_sources_json="{}",
+                            merged_specs_notes_json="[]",
+                            source_row_count=0,
+                            has_cosing=False,
+                            has_tgsc=False,
+                        )
+                    )
+                    created_self_items += 1
 
     return {
         "terms_scanned": scanned_terms,

@@ -11,6 +11,7 @@ import csv
 import io
 import json
 import os
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -56,13 +57,24 @@ def _safe_pretty_json(raw: Any) -> str:
     except Exception:
         return str(raw or "")
 
+def _url_path(value: str) -> str:
+    """URL-escape a value intended for a path segment."""
+    return urllib.parse.quote(str(value or ""), safe="")
+
+
+def _url_qs(value: str) -> str:
+    """URL-escape a value intended for querystring value."""
+    return urllib.parse.quote_plus(str(value or ""))
+
 
 def create_app(db_path: Optional[Path] = None) -> Flask:
     app = Flask(__name__)
 
     # Ensure DB exists / schema present.
     if db_path is not None:
-        os.environ["COMPILER_DB_PATH"] = str(db_path)
+        # NOTE: database_manager reads COMPILER_DB_PATH at import-time by default.
+        # Use configure_db_path so --db-path reliably takes effect.
+        database_manager.configure_db_path(str(db_path))
     database_manager.ensure_tables_exist()
 
     @app.get("/")
@@ -102,16 +114,23 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 .all()
             )
             ingredients_by_term = {r.term: r for r in ingredient_rows}
-            item_rows = (
+            # Fetch all items and filter at render time so we can show "hidden quarantine"
+            # counts instead of making it look like items are missing.
+            all_item_rows = (
                 session.query(database_manager.IngredientItemRecord)
                 .filter(database_manager.IngredientItemRecord.ingredient_term.in_(page_terms))
-                .filter(True if show_quarantine else database_manager.IngredientItemRecord.status == "active")
                 .order_by(database_manager.IngredientItemRecord.ingredient_term.asc(), database_manager.IngredientItemRecord.item_name.asc())
                 .all()
             )
-            items_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
-            for item in item_rows:
-                items_by_term.setdefault(item.ingredient_term, []).append(item)
+            items_all_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
+            for item in all_item_rows:
+                items_all_by_term.setdefault(item.ingredient_term, []).append(item)
+
+            item_rows = [
+                i
+                for i in all_item_rows
+                if (show_quarantine or (getattr(i, "status", "") or "").strip().lower() == "active")
+            ]
 
             # Pull normalized list attributes for displayed items (applications, function_tags, etc.)
             item_ids = [i.id for i in item_rows if getattr(i, "id", None) is not None]
@@ -204,7 +223,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
         def _render_term_cell(term: str) -> str:
             ingredient = ingredients_by_term.get(term)
-            items = items_by_term.get(term, [])
+            all_items = items_all_by_term.get(term, [])
+            if show_quarantine:
+                items = all_items
+            else:
+                items = [i for i in all_items if (getattr(i, "status", "") or "").strip().lower() == "active"]
             if not ingredient and not items:
                 return term
             core_bits = []
@@ -228,6 +251,10 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 if ingredient.short_description:
                     core_bits.append(f"<div class='muted'><b>short</b>: {ingredient.short_description}</div>")
             items_html = ""
+            if all_items and not show_quarantine:
+                hidden = len([i for i in all_items if (getattr(i, "status", "") or "").strip().lower() != "active"])
+                if hidden:
+                    items_html += f"<div class='muted' style='margin-top:6px;'>({hidden} quarantined/rejected items hidden — toggle Quarantine to show)</div>"
             if items:
                 items_html = (
                     "<div style='margin-top:8px;'><b>Items</b></div>"
@@ -486,13 +513,14 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             }
         rows = []
         for v in vars_:
+            qname = _url_qs(v.name)
             rows.append(
                 "<tr>"
                 f"<td>{v.name}</td>"
                 f"<td>{'true' if v.approved else 'false'}</td>"
                 f"<td>{counts.get(v.name, 0)}</td>"
-                f"<td><a href='/admin/variations/approve?name={v.name}'>approve</a> | "
-                f"<a href='/admin/variations/reject?name={v.name}'>reject</a></td>"
+                f"<td><a href='/admin/variations/approve?name={qname}'>approve</a> | "
+                f"<a href='/admin/variations/reject?name={qname}'>reject</a></td>"
                 "</tr>"
             )
         table = "\n".join(rows) if rows else "<tr><td colspan='4' class='muted'>No variations.</td></tr>"
@@ -697,7 +725,8 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     approved = False
                     status = "quarantine"
                     needs_review_reason = needs_review_reason or f"Unapproved variation: {variation}"
-                if not physical_form:
+                # Allow form-less items only when the user explicitly sets form_bypass.
+                if not physical_form and not form_bypass:
                     approved = False
                     status = "quarantine"
                     needs_review_reason = needs_review_reason or "Missing/invalid physical_form"
@@ -720,7 +749,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     form_bypass=form_bypass,
                 )
 
-                return redirect(f"/ingredient/{ing.term}")
+                return redirect(f"/ingredient/{_url_path(ing.term)}")
 
         # GET render
         checked_v = "checked" if item.variation_bypass else ""
@@ -732,7 +761,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
   <head><meta charset="utf-8"/><title>Edit Item • {escape(str(item_id))}</title></head>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
     <h2>Edit Item</h2>
-    <div><a href="/ingredient/{escape(ing.term)}">← Back to ingredient</a></div>
+    <div><a href="/ingredient/{_url_path(ing.term)}">← Back to ingredient</a></div>
     <div class="muted"><b>base</b>: {escape(ing.term)}</div>
     <div class="muted"><b>current item_name</b>: {escape(item.item_name)}</div>
     <form method="post" style="margin-top: 12px;">
@@ -745,7 +774,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         <label>Physical form<br/>
           <input name="physical_form" value="{escape(item.physical_form or '')}" style="width: 220px;" />
         </label>
-        <div class="muted">Must match curated enum; invalid values will blank + quarantine.</div>
+        <div class="muted">Must match curated enum; invalid values will blank (quarantine unless Form bypass is set).</div>
       </div>
       <div style="margin-bottom: 10px;">
         <label><input type="checkbox" name="variation_bypass" value="1" {checked_v}/> Variation bypass</label>

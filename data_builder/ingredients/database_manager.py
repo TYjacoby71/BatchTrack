@@ -198,14 +198,7 @@ DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False, "timeout": 60},
-    future=True,
-)
 
-
-@event.listens_for(engine, "connect")
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:  # pragma: no cover
     """SQLite pragmas for better concurrency/resume-safety."""
     try:
@@ -217,6 +210,20 @@ def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None: 
         cursor.close()
     except Exception:
         return
+
+
+def _make_engine(db_path: Path):
+    url = f"sqlite:///{Path(db_path)}"
+    eng = create_engine(
+        url,
+        connect_args={"check_same_thread": False, "timeout": 60},
+        future=True,
+    )
+    event.listen(eng, "connect", _configure_sqlite_connection)
+    return eng
+
+
+engine = _make_engine(DB_PATH)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 Base = declarative_base()
 
@@ -710,12 +717,45 @@ def ensure_tables_exist() -> None:
     _ensure_ingredient_columns()
     _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
+    _ensure_merged_item_form_indexes()
     _ensure_source_item_indexes()
     _ensure_source_item_columns()
     _ensure_source_definition_indexes()
     _ensure_source_catalog_indexes()
     _ensure_pubchem_indexes()
 
+
+def configure_db_path(path: str | os.PathLike[str]) -> None:
+    """Reconfigure the SQLite DB path at runtime.
+
+    Notes:
+    - Many modules import `database_manager` early, so relying on COMPILER_DB_PATH
+      *after* import is unreliable. This function makes DB selection explicit.
+    - Safe for scripts/portals that want a `--db-path` flag.
+    """
+    global DB_PATH, DATABASE_URL, engine, SessionLocal  # pylint: disable=global-statement
+    DB_PATH = Path(path)
+    DATABASE_URL = f"sqlite:///{DB_PATH}"
+    try:
+        engine.dispose()
+    except Exception:
+        pass
+    engine = _make_engine(DB_PATH)
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+
+def _ensure_merged_item_form_indexes() -> None:
+    """Best-effort indexing for merged_item_forms (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_merged_item_forms_term ON merged_item_forms(derived_term)"))
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_merged_item_forms_identity ON merged_item_forms(derived_term, derived_variation, derived_physical_form)"
+                )
+            )
+    except Exception:  # pragma: no cover
+        return
 
 def _ensure_source_item_indexes() -> None:
     """Best-effort indexing for source_items (SQLite-safe)."""

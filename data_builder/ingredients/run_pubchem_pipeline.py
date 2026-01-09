@@ -14,10 +14,12 @@ import argparse
 import logging
 
 from . import pubchem_pipeline
+from . import database_manager
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Deterministic PubChem pipeline (match -> fetch -> apply)")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
     p.add_argument("--mode", default="full", choices=["match_only", "fetch_only", "apply_only", "full"])
     p.add_argument("--match-limit", type=int, default=0, help="Max merged_item_forms to match (0 = no limit)")
     p.add_argument("--term-match-limit", type=int, default=0, help="Max normalized_terms to match (0 = no limit)")
@@ -31,6 +33,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     args = parse_args(argv)
+    if (args.db_path or "").strip():
+        database_manager.configure_db_path((args.db_path or "").strip())
 
     match_limit = int(args.match_limit) if int(args.match_limit or 0) > 0 else None
     term_match_limit = int(args.term_match_limit) if int(args.term_match_limit or 0) > 0 else None

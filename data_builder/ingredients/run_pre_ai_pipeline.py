@@ -14,6 +14,7 @@ import logging
 
 from . import run_ingestion_pipeline
 from . import run_pubchem_pipeline
+from . import database_manager
 
 
 def run() -> None:
@@ -28,7 +29,14 @@ def run() -> None:
 
 
 def main() -> None:
+    import argparse
+
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+    p = argparse.ArgumentParser(description="One-time deterministic pipeline (ingest -> pubchem), no AI")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
+    args = p.parse_args()
+    if (args.db_path or "").strip():
+        database_manager.configure_db_path((args.db_path or "").strip())
     run()
 
 
