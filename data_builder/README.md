@@ -2,6 +2,23 @@
 
 This folder contains the autonomous tooling that compiles the ingredient library which seeds BatchTrack.
 
+## One supported path (canonical)
+
+This repo is intentionally opinionated: **there is ONE supported way to run the data builder.**
+
+- **Do not run individual stage scripts** like `ingest_source_items.py`, `merge_source_items.py`, `pubchem_stage1_match.py`, etc.
+- Those modules exist for internal structure/testing, but the only supported CLI entrypoint **before AI** is:
+
+```bash
+python3 -m data_builder.ingredients.run_pre_ai_pipeline ...
+```
+
+This is designed to be:
+- deterministic (no AI)
+- resume-safe
+- reviewable between stages
+- compatible with hosted environments like Replit (throttle + bounded concurrency)
+
 ## Components
 
 | Module | Purpose |
@@ -13,26 +30,121 @@ This folder contains the autonomous tooling that compiles the ingredient library
 
 ## Workflow
 
-### Canonical deterministic ingestion (CosIng + TGSC → DB)
+### Canonical deterministic pre-AI pipeline (CosIng + TGSC → PubChem)
 
-This repo ships a **single canonical ingestion pipeline** that deterministically:
+This pipeline deterministically:
 - ingests item rows into `source_items` (variation/form parsing + provenance)
 - merges cross-source identities into `source_catalog_items`
 - derives deterministic tags/specs/display names
 - de-dupes into `merged_item_forms`
 - bundles items into `source_definitions`
 - derives canonical base terms into `normalized_terms`
+- seeds `task_queue` from `normalized_terms` (DB → DB)
+- runs **PubChem** matching + caching + fill-only apply (no overwrites)
+
+#### 0) Pick a state DB path (recommended)
+
+```bash
+# Use a single SQLite DB file as the state store for the whole run.
+DB="/absolute/path/to/state.db"
+```
+
+#### 1) Ingestion (deterministic, DB-only)
+
+This resets ingestion-stage tables in the DB (one-shot, non-overlapping) and rebuilds:
+`source_items`, `source_catalog_items`, `merged_item_forms`, `source_definitions`, `normalized_terms`, `task_queue`.
+
+```bash
+python3 -m data_builder.ingredients.run_pre_ai_pipeline \
+  --db-path "$DB" \
+  --stage ingest
+```
+
+**Review checkpoint (ingestion):** look for the final log line:
+- `task_queue seeded from normalized_terms: inserted=...`
+
+#### 2) PubChem Stage 1: match (run everything once, in batches)
+
+This assigns PubChem CIDs to deterministic items/terms and buckets the rest.
+Every record ends in exactly one bucket:
+- `matched` (1 CID)
+- `no_match` (0 CIDs for all identifiers)
+- `ambiguous` (>1 CID; we do not guess)
+- `retry` (rate-limit/server-busy/transient; retry later)
+
+Recommended Replit-safe settings (shared egress IPs):
+
+```bash
+export PUBCHEM_WORKERS=16
+export PUBCHEM_MIN_INTERVAL_SECONDS=0.25
+export PUBCHEM_RETRIES=8
+export PUBCHEM_BACKOFF_SECONDS=0.8
+export PUBCHEM_MAX_RETRY_RUNS=3
+```
+
+Run the first pass in batches (repeat until the logs show `scanned: 0`):
+
+```bash
+python3 -m data_builder.ingredients.run_pre_ai_pipeline \
+  --db-path "$DB" \
+  --stage pubchem_match \
+  --match-limit 5000 \
+  --term-match-limit 5000
+```
+
+#### 2b) PubChem Stage 1 retry passes (only the retry bucket)
+
+After the first full pass is done, rerun only the retry bucket.
+This is intentionally not automatic “all at once”: you run retry passes explicitly.
+
+Run up to 3 passes (or until `retry: 0`):
+
+```bash
+python3 -m data_builder.ingredients.run_pre_ai_pipeline \
+  --db-path "$DB" \
+  --stage pubchem_retry \
+  --match-limit 5000 \
+  --term-match-limit 5000
+```
+
+After 3 retry runs, any remaining retry items are deterministically downgraded to `no_match`
+with `error=exhausted_retries:...`.
+
+#### 3) PubChem Stage 2: fetch/cache (grouped bundles)
+
+PubChem properties live in two “bundles”:
+- **PropertyTable (batchable by CID list)**: identifiers + computed physchem
+- **PUG View (per CID)**: experimental/text sections (density/solubility/boiling point/etc.)
 
 Run:
 
 ```bash
-# Optional: point at a fresh state DB file
-COMPILER_DB_PATH=/path/to/test_ingestion.db \
-  python3 -m data_builder.ingredients.run_ingestion_pipeline
+python3 -m data_builder.ingredients.run_pre_ai_pipeline \
+  --db-path "$DB" \
+  --stage pubchem_fetch \
+  --batch-size 100
 ```
 
-Notes:
-- The pipeline is DB-only and does not produce or consume a `normalized_terms.csv`.
+**Review checkpoint (fetch):** the log shows `pubchem fetch: { unique_cids: ..., fetched_property: ..., fetched_pug_view: ... }`.
+
+#### 4) PubChem Stage 3: apply (fill-only)
+
+This writes PubChem fields back into:
+- `merged_item_forms.merged_specs_json` (fill-only; never overwrites existing values)
+- `normalized_terms.sources_json['pubchem']` (provenance)
+
+Run:
+
+```bash
+python3 -m data_builder.ingredients.run_pre_ai_pipeline \
+  --db-path "$DB" \
+  --stage pubchem_apply
+```
+
+At this point the DB is “ready for AI” (compiler stage) because:
+- ingestion is complete
+- PubChem enrichment is applied where available
+- `task_queue` is seeded from `normalized_terms`
 
 1. **Generate base ingredient terms (Phase 1).**
    ```bash

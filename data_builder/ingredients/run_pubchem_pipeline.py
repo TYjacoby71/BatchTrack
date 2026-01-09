@@ -27,6 +27,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--term-apply-limit", type=int, default=0, help="Max matched terms to apply (0 = no limit)")
     p.add_argument("--max-cids", type=int, default=0, help="Cap unique CIDs to fetch (0 = no cap)")
     p.add_argument("--batch-size", type=int, default=100, help="PropertyTable CID batch size")
+    p.add_argument(
+        "--retry-only",
+        action="store_true",
+        help="Stage-1 matching only: process only retryable (rate-limited/transient) rows.",
+    )
     return p.parse_args(argv)
 
 
@@ -35,6 +40,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     if (args.db_path or "").strip():
         database_manager.configure_db_path((args.db_path or "").strip())
+    # Matching retry mode is controlled by an env var read by pubchem_pipeline.
+    # We expose it as a flag so you can do "first pass" then "retry pass" cleanly.
+    if bool(args.retry_only):
+        import os
+        os.environ["PUBCHEM_RETRY_ONLY"] = "1"
 
     match_limit = int(args.match_limit) if int(args.match_limit or 0) > 0 else None
     term_match_limit = int(args.term_match_limit) if int(args.term_match_limit or 0) > 0 else None
