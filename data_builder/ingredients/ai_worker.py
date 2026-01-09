@@ -256,6 +256,16 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
         "flash_point_celsius": 200,
         "ph_range": {"min": 5, "max": 7},
         "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
+        // Optional physchem (when known; OK to omit):
+        // "density_g_ml": 0.91,
+        // "viscosity_cps": 1200,
+        // "refractive_index": 1.44,
+        // "molecular_formula": "C3H8O3",
+        // "molecular_weight": 92.09,
+        // "boiling_point_celsius": 290,
+        // "solubility": {"in_water": "string", "in_oil": "string"},
+        // "miscible_with": ["string"],
+        // "emulsification": {"hlb": 15.0, "oil_in_water": true, "water_in_oil": false}
       },
       "sourcing": {
         "common_origins": ["string"],
@@ -375,6 +385,85 @@ SCHEMA:
 """
 
 
+def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
+    """Stage 2B variant: complete existing ingestion-derived items (do not invent new ones)."""
+    meta = _render_metadata_blob(term)
+    core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
+    forms = ", ".join(PHYSICAL_FORMS)
+    variations = ", ".join(VARIATIONS_CURATED)
+    return f"""
+You are Stage 2B (Compiler Items — COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
+
+Rules (CRITICAL):
+- DO NOT add items.
+- DO NOT remove items.
+- DO NOT reorder items.
+- DO NOT change identity fields for any item: variation, physical_form, form_bypass, variation_bypass.
+- Your job is ONLY to fill missing schema fields (applications, function_tags, safety_tags, storage, specifications, sourcing, etc.).
+- physical_form must be one of: {forms}
+- variation should usually be chosen from this curated list when applicable: {variations}
+- applications must include at least 1 value (use ["Unknown"] only if you truly cannot infer anything).
+
+Ingredient core (context):
+{core_blob}
+
+Normalized base context (includes seed items to complete; do not contradict):
+{base_blob}
+
+External metadata (may be empty):
+{meta}
+
+SCHEMA:
+{ITEMS_SCHEMA_SPEC}
+"""
+
+
+def _merge_fill_only(base: Any, patch: Any) -> Any:
+    """Fill-only merge used to prevent overwriting ingestion-derived fields."""
+    if isinstance(base, dict) and isinstance(patch, dict):
+        out = dict(base)
+        for k, v in patch.items():
+            if k in out and out.get(k) not in (None, "", [], {}, "unknown"):
+                continue
+            if v in (None, "", [], {}, "unknown"):
+                continue
+            out[k] = v
+        return out
+    if isinstance(base, list) and isinstance(patch, list):
+        # If base is empty or a placeholder Unknown, accept patch.
+        if not base or base == ["Unknown"]:
+            return patch
+        return base
+    return base if base not in (None, "", "unknown") else patch
+
+
+def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict]:
+    """Merge AI-completed fields onto ingestion seed items while enforcing identity stability."""
+    if not seed_items:
+        return ai_items
+    out: list[dict] = []
+    for idx, seed in enumerate(seed_items):
+        ai = ai_items[idx] if idx < len(ai_items) and isinstance(ai_items[idx], dict) else {}
+        merged = dict(seed)
+
+        # Identity fields are authoritative from seed.
+        for k in ("variation", "physical_form", "form_bypass", "variation_bypass"):
+            merged[k] = seed.get(k)
+
+        # Fill-only merge for the rest.
+        for k, v in ai.items():
+            if k in ("variation", "physical_form", "form_bypass", "variation_bypass"):
+                continue
+            if k == "specifications":
+                merged["specifications"] = _merge_fill_only(seed.get("specifications", {}), v)
+                continue
+            merged[k] = _merge_fill_only(seed.get(k), v)
+
+        out.append(merged)
+    return out
+
+
 def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     items_blob = json.dumps(items[:6], ensure_ascii=False, indent=2, sort_keys=True)
@@ -427,8 +516,14 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
             ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
 
             # Stage 2B: items
-            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
+            seed_items = base_context.get("seed_items") if isinstance(base_context.get("seed_items"), list) else None
+            if seed_items:
+                items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(term, ingredient_core, base_context))
+            else:
+                items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
+            if seed_items:
+                items = _merge_seed_items(seed_items=[it for it in seed_items if isinstance(it, dict)], ai_items=[it for it in items if isinstance(it, dict)])
 
             # Stage 2C: taxonomy
             taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))
