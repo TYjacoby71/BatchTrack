@@ -18,6 +18,7 @@ from typing import Any, Optional
 from flask import Flask, Response, request, send_file
 from flask import redirect
 from markupsafe import escape
+from urllib.parse import quote
 
 from . import database_manager
 
@@ -55,6 +56,16 @@ def _safe_pretty_json(raw: Any) -> str:
         return json.dumps(raw, ensure_ascii=False, indent=2, sort_keys=True)
     except Exception:
         return str(raw or "")
+
+
+def _url_path(value: str) -> str:
+    """URL-safe path segment (keeps slashes for <path:...> routes)."""
+    return quote((value or "").strip(), safe="/")
+
+
+def _url_query(value: str) -> str:
+    """URL-safe query value."""
+    return quote((value or "").strip(), safe="")
 
 
 def create_app(db_path: Optional[Path] = None) -> Flask:
@@ -112,6 +123,23 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             items_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
             for item in item_rows:
                 items_by_term.setdefault(item.ingredient_term, []).append(item)
+
+            # Also show deterministic ingested item-forms (pre-AI), so you can debug
+            # ingestion output even when the compiler hasn't produced ingredient_items yet.
+            mif_rows = (
+                session.query(database_manager.MergedItemForm)
+                .filter(database_manager.MergedItemForm.derived_term.in_(page_terms))
+                .order_by(
+                    database_manager.MergedItemForm.derived_term.asc(),
+                    database_manager.MergedItemForm.derived_variation.asc(),
+                    database_manager.MergedItemForm.derived_physical_form.asc(),
+                    database_manager.MergedItemForm.id.asc(),
+                )
+                .all()
+            )
+            mifs_by_term: dict[str, list[database_manager.MergedItemForm]] = {}
+            for mif in mif_rows:
+                mifs_by_term.setdefault(mif.derived_term, []).append(mif)
 
             # Pull normalized list attributes for displayed items (applications, function_tags, etc.)
             item_ids = [i.id for i in item_rows if getattr(i, "id", None) is not None]
@@ -202,11 +230,49 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 "</details>"
             )
 
+        def _render_mif_block(mif: database_manager.MergedItemForm) -> str:
+            cas_list: list[Any] = []
+            try:
+                cas_list = json.loads(getattr(mif, "cas_numbers_json", "[]") or "[]")
+            except Exception:
+                cas_list = []
+            cas_preview = ", ".join([escape(str(x)) for x in cas_list[:6]])
+            cas_suffix = f" … (+{len(cas_list) - 6})" if len(cas_list) > 6 else ""
+
+            sources = _safe_pretty_json(getattr(mif, "sources_json", "") or "")
+            specs = _safe_pretty_json(getattr(mif, "merged_specs_json", "") or "")
+
+            return (
+                "<details style='margin-top:6px;'>"
+                f"<summary><b>ingested item-form</b> "
+                f"<span class='muted'>(variation: {escape(getattr(mif,'derived_variation','') or '')}, "
+                f"form: {escape(getattr(mif,'derived_physical_form','') or '')}, "
+                f"id: {escape(str(getattr(mif,'id','')))}"
+                f")</span></summary>"
+                f"<div class='muted' style='margin-top:6px;'><b>cas</b>: {cas_preview}{cas_suffix}</div>"
+                "<div style='display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;'>"
+                "<div style='flex:1; min-width:280px;'>"
+                "<div class='muted'><b>merged_specs_json</b></div>"
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(specs)}"
+                "</pre>"
+                "</div>"
+                "<div style='flex:1; min-width:280px;'>"
+                "<div class='muted'><b>sources_json</b></div>"
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(sources)}"
+                "</pre>"
+                "</div>"
+                "</div>"
+                "</details>"
+            )
+
         def _render_term_cell(term: str) -> str:
             ingredient = ingredients_by_term.get(term)
             items = items_by_term.get(term, [])
-            if not ingredient and not items:
-                return term
+            mifs = mifs_by_term.get(term, [])
+            if not ingredient and not items and not mifs:
+                return escape(term)
             core_bits = []
             if ingredient:
                 if getattr(ingredient, "ingredient_category", None):
@@ -227,14 +293,24 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     core_bits.append(f"<div class='muted'><b>cas</b>: {ingredient.cas_number}</div>")
                 if ingredient.short_description:
                     core_bits.append(f"<div class='muted'><b>short</b>: {ingredient.short_description}</div>")
+
+            core_bits.append(
+                f"<div style='margin-top:8px;'><a href='/ingredient/{_url_path(term)}'>Open term page</a></div>"
+            )
             items_html = ""
             if items:
                 items_html = (
                     "<div style='margin-top:8px;'><b>Items</b></div>"
                     + "".join(_render_item_block(i) for i in items)
                 )
-            details = "".join(core_bits) + items_html
-            return f"<details><summary>{term}</summary><div style='margin-top:6px;'>{details}</div></details>"
+            mifs_html = ""
+            if mifs:
+                mifs_html = (
+                    "<div style='margin-top:10px;'><b>Ingested item-forms (pre-AI)</b></div>"
+                    + "".join(_render_mif_block(m) for m in mifs)
+                )
+            details = "".join(core_bits) + items_html + mifs_html
+            return f"<details><summary>{escape(term)}</summary><div style='margin-top:6px;'>{details}</div></details>"
 
         # Minimal HTML (no templates) to keep footprint tiny.
         table_rows = "\n".join(
@@ -488,11 +564,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         for v in vars_:
             rows.append(
                 "<tr>"
-                f"<td>{v.name}</td>"
+                f"<td>{escape(v.name)}</td>"
                 f"<td>{'true' if v.approved else 'false'}</td>"
                 f"<td>{counts.get(v.name, 0)}</td>"
-                f"<td><a href='/admin/variations/approve?name={v.name}'>approve</a> | "
-                f"<a href='/admin/variations/reject?name={v.name}'>reject</a></td>"
+                f"<td><a href='/admin/variations/approve?name={_url_query(v.name)}'>approve</a> | "
+                f"<a href='/admin/variations/reject?name={_url_query(v.name)}'>reject</a></td>"
                 "</tr>"
             )
         table = "\n".join(rows) if rows else "<tr><td colspan='4' class='muted'>No variations.</td></tr>"
@@ -555,8 +631,42 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
         with database_manager.get_session() as session:
             ing = session.get(database_manager.IngredientRecord, cleaned)
+            mifs = (
+                session.query(database_manager.MergedItemForm)
+                .filter(database_manager.MergedItemForm.derived_term == cleaned)
+                .order_by(
+                    database_manager.MergedItemForm.derived_variation.asc(),
+                    database_manager.MergedItemForm.derived_physical_form.asc(),
+                    database_manager.MergedItemForm.id.asc(),
+                )
+                .all()
+            )
             if ing is None:
-                return f"<html><body><a href='/'>← Back</a><h2>{escape(cleaned)}</h2><p class='muted'>No compiled ingredient record.</p></body></html>"
+                mif_rows = "".join(
+                    "<tr>"
+                    f"<td>{escape(str(getattr(m,'id','')))}</td>"
+                    f"<td>{escape(getattr(m,'derived_variation','') or '')}</td>"
+                    f"<td>{escape(getattr(m,'derived_physical_form','') or '')}</td>"
+                    f"<td><pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>{escape(_safe_pretty_json(getattr(m,'merged_specs_json','') or ''))}</pre></td>"
+                    "</tr>"
+                    for m in mifs
+                ) or "<tr><td colspan='4' class='muted'>No ingested item-forms.</td></tr>"
+                return f"""
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"/><title>Ingredient • {escape(cleaned)}</title></head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
+    <div><a href="/">← Back</a></div>
+    <h2>{escape(cleaned)}</h2>
+    <p class='muted'>No compiled ingredient record yet (run the compiler). Showing ingested item-forms from ingestion.</p>
+    <h3>Ingested item-forms (pre-AI)</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+      <thead><tr><th>id</th><th>variation</th><th>physical_form</th><th>merged_specs_json</th></tr></thead>
+      <tbody>{mif_rows}</tbody>
+    </table>
+  </body>
+</html>
+"""
 
             items = (
                 session.query(database_manager.IngredientItemRecord)
@@ -635,6 +745,16 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             for i in items
         ) or "<tr><td colspan='8' class='muted'>No items.</td></tr>"
 
+        mif_rows = "".join(
+            "<tr>"
+            f"<td>{escape(str(getattr(m,'id','')))}</td>"
+            f"<td>{escape(getattr(m,'derived_variation','') or '')}</td>"
+            f"<td>{escape(getattr(m,'derived_physical_form','') or '')}</td>"
+            f"<td><pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>{escape(_safe_pretty_json(getattr(m,'merged_specs_json','') or ''))}</pre></td>"
+            "</tr>"
+            for m in mifs
+        ) or "<tr><td colspan='4' class='muted'>No ingested item-forms.</td></tr>"
+
         return f"""
 <!doctype html>
 <html>
@@ -660,6 +780,12 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
       <tbody>
         {item_rows}
       </tbody>
+    </table>
+
+    <h3 style="margin-top:18px;">Ingested item-forms (pre-AI)</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+      <thead><tr><th>id</th><th>variation</th><th>physical_form</th><th>merged_specs_json</th></tr></thead>
+      <tbody>{mif_rows}</tbody>
     </table>
   </body>
 </html>
@@ -720,7 +846,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     form_bypass=form_bypass,
                 )
 
-                return redirect(f"/ingredient/{ing.term}")
+                return redirect(f"/ingredient/{_url_path(ing.term)}")
 
         # GET render
         checked_v = "checked" if item.variation_bypass else ""
@@ -732,7 +858,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
   <head><meta charset="utf-8"/><title>Edit Item • {escape(str(item_id))}</title></head>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
     <h2>Edit Item</h2>
-    <div><a href="/ingredient/{escape(ing.term)}">← Back to ingredient</a></div>
+    <div><a href="/ingredient/{_url_path(ing.term)}">← Back to ingredient</a></div>
     <div class="muted"><b>base</b>: {escape(ing.term)}</div>
     <div class="muted"><b>current item_name</b>: {escape(item.item_name)}</div>
     <form method="post" style="margin-top: 12px;">
