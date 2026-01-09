@@ -260,6 +260,13 @@ class IngredientRecord(Base):
     payload_json = Column(Text, nullable=False, default="{}")
     compiled_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    # Enumeration lifecycle (post-compile; only stage that may add NEW items).
+    enumeration_status = Column(String, nullable=True, default=None)  # pending|processing|done|error
+    enumerated_at = Column(DateTime, nullable=True, default=None)
+    enumeration_attempts = Column(Integer, nullable=False, default=0)
+    enumeration_error = Column(Text, nullable=True, default=None)
+    enumeration_notes = Column(Text, nullable=True, default=None)
+
 
 class IngredientItemRecord(Base):
     """Compiled purchasable item for a base ingredient (base + variation + physical_form)."""
@@ -867,6 +874,11 @@ def _ensure_ingredient_columns() -> None:
             ("ifra_category", "TEXT"),
             ("allergen_flag", "INTEGER NOT NULL DEFAULT 0"),
             ("colorant_flag", "INTEGER NOT NULL DEFAULT 0"),
+            ("enumeration_status", "TEXT"),
+            ("enumerated_at", "DATETIME"),
+            ("enumeration_attempts", "INTEGER NOT NULL DEFAULT 0"),
+            ("enumeration_error", "TEXT"),
+            ("enumeration_notes", "TEXT"),
         ]
         for name, col_type in additions:
             if name in column_names:
