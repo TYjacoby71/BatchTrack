@@ -391,19 +391,19 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
             "error_type": None,
         }
 
-    results: list[dict[str, Any]] = []
-    if work:
-        with ThreadPoolExecutor(max_workers=workers) as ex:
-            futures = [ex.submit(_resolve_one, e) for e in work]
-            for f in as_completed(futures):
-                try:
-                    results.append(f.result())
-                except Exception as exc:  # pylint: disable=broad-except
-                    results.append({"id": None, "status": "error", "cid": None, "matched_by": None, "identifier_value": None, "confidence": None, "error": str(exc)})
+    time_budget = float(os.getenv("PUBCHEM_TIME_BUDGET_SECONDS", "240"))
+    start_time = time.time()
+    processed = 0
 
-    # Phase 2: write results to DB in one session
-    with database_manager.get_session() as session:
-        for r in results:
+    for entry in work:
+        if time.time() - start_time > time_budget:
+            print(f"[pubchem] Time budget reached after {processed} items", flush=True)
+            break
+
+        r = _resolve_one(entry)
+        processed += 1
+
+        with database_manager.get_session() as session:
             mid = r.get("id")
             if not mid:
                 error += 1
@@ -419,7 +419,6 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
             row.confidence = r.get("confidence")
             row.error = r.get("error")
             row.matched_at = datetime.utcnow()
-            # Retry bookkeeping: count attempts; after max retries, downgrade to no_match.
             if row.status == "retry":
                 try:
                     row.attempts = int(getattr(row, "attempts", 0) or 0) + 1
@@ -445,6 +444,9 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                 row.last_error_type = "ambiguous"
             else:
                 error += 1
+
+        if processed % 10 == 0:
+            print(f"[pubchem] {processed}/{len(work)} items (m={matched}, n={no_match}, a={ambiguous})", flush=True)
 
     return {"scanned": scanned, "matched": matched, "no_match": no_match, "ambiguous": ambiguous, "retry": retry, "error": error}
 
