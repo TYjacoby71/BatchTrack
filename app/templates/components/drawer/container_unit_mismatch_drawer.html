@@ -77,7 +77,7 @@
                                         <select class="form-select form-select-sm" name="predicted_yield_unit" required>
                                             {% for unit in unit_options %}
                                                 <option value="{{ unit.name }}"
-                                                    {% if unit.name == (recipe.predicted_yield_unit or '') %}selected{% endif %}>
+                                                    {% if unit.name == (yield_unit or recipe.predicted_yield_unit or '') %}selected{% endif %}>
                                                     {{ unit.name }}
                                                 </option>
                                             {% endfor %}

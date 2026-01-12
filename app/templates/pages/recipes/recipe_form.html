@@ -329,23 +329,36 @@
         </div>
         <div class="card-body">
             <div class="form-group">
-                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
+                <label class="form-label">Select Allowed Containers</label>
                   {% if field_values %}
                       {% set selected_containers = field_values.getlist('allowed_containers[]') %}
                   {% else %}
                       {% set selected_containers = recipe.allowed_containers if recipe and recipe.allowed_containers else [] %}
                   {% endif %}
-                  <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+                  <div class="row g-2">
                     {% for container in all_containers %}
-                      <option value="{{ container.id }}" {% if (container.id|string) in selected_containers or container.id in selected_containers %}selected{% endif %}>
-                        {{ container.container_display_name }} ({{ container.capacity }} {{ container.capacity_unit }})
-                    </option>
+                      {% set is_checked = ((container.id|string) in selected_containers) or (container.id in selected_containers) %}
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <div class="form-check border rounded p-2 h-100">
+                          <input class="form-check-input"
+                                 type="checkbox"
+                                 name="allowed_containers[]"
+                                 id="allowed_container_{{ container.id }}"
+                                 value="{{ container.id }}"
+                                 {% if is_checked %}checked{% endif %}>
+                          <label class="form-check-label" for="allowed_container_{{ container.id }}">
+                            <strong>{{ container.container_display_name }}</strong>
+                            <div class="text-muted small">
+                              Capacity: {{ container.capacity or '—' }} {{ container.capacity_unit or 'count' }}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
                     {% endfor %}
-                </select>
-                <small class="form-text text-muted">
-                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
-                    <strong>Note:</strong> Container requirement is now determined during batch planning.
-                </small>
+                  </div>
+                  <small class="form-text text-muted d-block mt-2">
+                    Leave all unchecked to allow <strong>all organization containers</strong> during Plan Production.
+                  </small>
             </div>
         </div>
     </div>

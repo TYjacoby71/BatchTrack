@@ -252,8 +252,29 @@ class PlanProductionApp {
             },
             body: options.method === 'GET' ? undefined : JSON.stringify(payload)
         });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
+        // Prefer server-provided error messages over bare HTTP codes
+        const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+        let data = null;
+        try {
+            if (contentType.includes('application/json')) {
+                data = await resp.json();
+            } else {
+                const text = await resp.text();
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (_) {
+                    data = text ? { error: text } : null;
+                }
+            }
+        } catch (_) {
+            data = null;
+        }
+
+        if (!resp.ok) {
+            const msg = data?.error || data?.message || `HTTP ${resp.status}`;
+            throw new Error(msg);
+        }
+        return data || {};
     }
 }
 
