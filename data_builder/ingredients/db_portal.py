@@ -79,6 +79,36 @@ HTML_TEMPLATE = """
         .table-container { max-height: 550px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; }
         
         .loading { text-align: center; padding: 40px; color: #666; }
+        
+        .item-row { cursor: pointer; }
+        .item-row:hover { background: #e0f2fe !important; }
+        
+        .detail-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 100; display: none; }
+        .detail-overlay.active { display: block; }
+        
+        .detail-panel { position: fixed; top: 0; right: -600px; width: 600px; height: 100%; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 101; transition: right 0.3s ease; overflow-y: auto; }
+        .detail-panel.active { right: 0; }
+        
+        .detail-header { padding: 20px; background: #2563eb; color: #fff; position: sticky; top: 0; z-index: 10; }
+        .detail-header h2 { margin: 0 0 5px; font-size: 18px; }
+        .detail-header p { margin: 0; opacity: 0.8; font-size: 13px; }
+        .detail-close { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 5px 10px; }
+        .detail-close:hover { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        
+        .detail-body { padding: 20px; }
+        
+        .detail-section { margin-bottom: 20px; }
+        .detail-section h3 { font-size: 14px; color: #374151; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
+        
+        .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px; }
+        .detail-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+        .detail-value { font-size: 13px; color: #111827; word-break: break-word; }
+        
+        .json-block { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-top: 8px; max-height: 300px; overflow-y: auto; }
+        .json-block pre { margin: 0; font-size: 11px; white-space: pre-wrap; word-break: break-all; font-family: 'Monaco', 'Menlo', monospace; }
+        
+        .json-toggle { background: #f3f4f6; border: 1px solid #d1d5db; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: 100%; text-align: left; margin-top: 8px; }
+        .json-toggle:hover { background: #e5e7eb; }
     </style>
 </head>
 <body>
@@ -171,6 +201,18 @@ HTML_TEMPLATE = """
         </div>
     </div>
     
+    <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+    <div class="detail-panel" id="detail-panel">
+        <div class="detail-header">
+            <button class="detail-close" onclick="closeDetail()">&times;</button>
+            <h2 id="detail-title">Item Details</h2>
+            <p id="detail-subtitle">Loading...</p>
+        </div>
+        <div class="detail-body" id="detail-body">
+            <div class="loading">Loading item details...</div>
+        </div>
+    </div>
+    
     <script>
         let currentSection = 'raw';
         let currentView = 'terms';
@@ -247,9 +289,13 @@ HTML_TEMPLATE = """
                     if (data.hierarchical) {
                         renderHierarchical(data.rows);
                     } else {
-                        tbody.innerHTML = data.rows.map(row => 
-                            '<tr>' + row.map(cell => `<td>${formatCell(cell)}</td>`).join('') + '</tr>'
-                        ).join('');
+                        tbody.innerHTML = data.rows.map(row => {
+                            const itemId = row[0];
+                            const isClickable = typeof itemId === 'number';
+                            const rowClass = isClickable ? 'item-row' : '';
+                            const onclick = isClickable ? `onclick="showItemDetail(${itemId})"` : '';
+                            return `<tr class="${rowClass}" ${onclick}>` + row.map(cell => `<td>${formatCell(cell)}</td>`).join('') + '</tr>';
+                        }).join('');
                     }
                 });
         }
@@ -350,6 +396,103 @@ HTML_TEMPLATE = """
             const search = document.getElementById('search').value;
             window.location.href = `/api/export/json?section=${currentSection}&view=${currentView}&mode=${viewMode}&search=${encodeURIComponent(search)}`;
         }
+        
+        function showItemDetail(itemId) {
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-body').innerHTML = '<div class="loading">Loading item details...</div>';
+            document.getElementById('detail-title').textContent = 'Item #' + itemId;
+            document.getElementById('detail-subtitle').textContent = 'Loading...';
+            
+            fetch(`/api/item/${itemId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('detail-body').innerHTML = '<p style="color: red;">Error: ' + data.error + '</p>';
+                        return;
+                    }
+                    
+                    document.getElementById('detail-title').textContent = data.derived_term || 'Item #' + itemId;
+                    document.getElementById('detail-subtitle').textContent = `ID: ${itemId} | Form: ${data.derived_physical_form || 'N/A'}`;
+                    
+                    let html = '';
+                    
+                    html += '<div class="detail-section"><h3>Basic Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">ID</div><div class="detail-value">${data.id}</div>`;
+                    html += `<div class="detail-label">Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Source Count</div><div class="detail-value">${data.source_row_count}</div>`;
+                    html += `<div class="detail-label">Has CosIng</div><div class="detail-value">${data.has_cosing ? 'Yes' : 'No'}</div>`;
+                    html += `<div class="detail-label">Has TGSC</div><div class="detail-value">${data.has_tgsc ? 'Yes' : 'No'}</div>`;
+                    html += `<div class="detail-label">Created</div><div class="detail-value">${data.created_at || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    if (data.cas_numbers && data.cas_numbers.length > 0) {
+                        html += '<div class="detail-section"><h3>CAS Numbers</h3>';
+                        html += '<div class="detail-value">' + data.cas_numbers.join(', ') + '</div></div>';
+                    }
+                    
+                    if (data.app_seed_specs) {
+                        html += '<div class="detail-section"><h3>Seed Specs</h3>';
+                        html += renderJsonSection(data.app_seed_specs);
+                        html += '</div>';
+                    }
+                    
+                    if (data.compiled_specs) {
+                        html += '<div class="detail-section"><h3>Compiled Specs</h3>';
+                        html += renderJsonSection(data.compiled_specs);
+                        html += '</div>';
+                    }
+                    
+                    if (data.merged_specs) {
+                        html += '<div class="detail-section"><h3>Merged Specs</h3>';
+                        html += renderJsonSection(data.merged_specs);
+                        html += '</div>';
+                    }
+                    
+                    if (data.derived_parts && data.derived_parts.length > 0) {
+                        html += '<div class="detail-section"><h3>Derived Parts</h3>';
+                        html += '<div class="detail-value">' + data.derived_parts.join(', ') + '</div></div>';
+                    }
+                    
+                    if (data.sources && data.sources.length > 0) {
+                        html += '<div class="detail-section"><h3>Sources</h3>';
+                        html += '<div class="detail-value">' + data.sources.join(', ') + '</div></div>';
+                    }
+                    
+                    if (data.member_source_item_keys && data.member_source_item_keys.length > 0) {
+                        html += '<div class="detail-section"><h3>Source Item Keys</h3>';
+                        html += '<div class="json-block"><pre>' + data.member_source_item_keys.join('\\n') + '</pre></div></div>';
+                    }
+                    
+                    document.getElementById('detail-body').innerHTML = html;
+                });
+        }
+        
+        function renderJsonSection(obj) {
+            if (!obj || Object.keys(obj).length === 0) return '<div class="detail-value">-</div>';
+            let html = '<div class="detail-grid">';
+            for (const [key, value] of Object.entries(obj)) {
+                html += `<div class="detail-label">${key}</div>`;
+                if (typeof value === 'object' && value !== null) {
+                    html += `<div class="detail-value"><pre style="margin:0;font-size:11px;">${JSON.stringify(value, null, 2)}</pre></div>`;
+                } else {
+                    html += `<div class="detail-value">${value ?? '-'}</div>`;
+                }
+            }
+            html += '</div>';
+            return html;
+        }
+        
+        function closeDetail() {
+            document.getElementById('detail-overlay').classList.remove('active');
+            document.getElementById('detail-panel').classList.remove('active');
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDetail();
+        });
         
         loadData();
     </script>
@@ -582,6 +725,54 @@ def api_term_items():
     
     conn.close()
     return jsonify({'items': items})
+
+@app.route('/api/item/<int:item_id>')
+def api_item_detail(item_id):
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT id, derived_term, derived_variation, derived_physical_form,
+               derived_parts_json, cas_numbers_json, member_source_item_keys_json,
+               sources_json, merged_specs_json, merged_specs_sources_json,
+               merged_specs_notes_json, source_row_count, has_cosing, has_tgsc,
+               created_at, compiled_specs_json, app_seed_specs_json
+        FROM merged_item_forms WHERE id = ?
+    """, (item_id,))
+    
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return jsonify({'error': 'Item not found'})
+    
+    def parse_json(val):
+        if val:
+            try:
+                return json.loads(val)
+            except:
+                return None
+        return None
+    
+    return jsonify({
+        'id': row[0],
+        'derived_term': row[1],
+        'derived_variation': row[2],
+        'derived_physical_form': row[3],
+        'derived_parts': parse_json(row[4]) or [],
+        'cas_numbers': parse_json(row[5]) or [],
+        'member_source_item_keys': parse_json(row[6]) or [],
+        'sources': parse_json(row[7]) or [],
+        'merged_specs': parse_json(row[8]),
+        'merged_specs_sources': parse_json(row[9]),
+        'merged_specs_notes': parse_json(row[10]),
+        'source_row_count': row[11],
+        'has_cosing': bool(row[12]),
+        'has_tgsc': bool(row[13]),
+        'created_at': row[14],
+        'compiled_specs': parse_json(row[15]),
+        'app_seed_specs': parse_json(row[16])
+    })
 
 @app.route('/api/export/<format>')
 def api_export(format):
