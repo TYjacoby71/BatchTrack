@@ -356,21 +356,34 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                     cache[key] = cids or []
             if not cids:
                 continue
-            if len(cids) != 1:
-                last_ambiguous = f"ambiguous_candidates:{len(cids)}"
-                if conf >= 75:
-                    break
-                continue
-            return {
-                "id": entry["id"],
-                "status": "matched",
-                "cid": int(cids[0]),
-                "matched_by": kind,
-                "identifier_value": ident,
-                "confidence": int(conf),
-                "error": None,
-                "error_type": None,
-            }
+            if len(cids) == 1:
+                return {
+                    "id": entry["id"],
+                    "status": "matched",
+                    "cid": int(cids[0]),
+                    "matched_by": kind,
+                    "identifier_value": ident,
+                    "confidence": int(conf),
+                    "error": None,
+                    "error_type": None,
+                }
+            # For CAS lookups with 2-3 candidates, take the first (canonical) CID
+            if kind == "cas" and 2 <= len(cids) <= 3:
+                return {
+                    "id": entry["id"],
+                    "status": "matched",
+                    "cid": int(cids[0]),
+                    "matched_by": f"{kind}_primary",
+                    "identifier_value": ident,
+                    "confidence": int(conf) - 5,  # Slightly lower confidence
+                    "error": None,
+                    "error_type": None,
+                }
+            # Otherwise mark as ambiguous
+            last_ambiguous = f"ambiguous_candidates:{len(cids)}"
+            if conf >= 75:
+                break
+            continue
         if last_ambiguous:
             return {
                 "id": entry["id"],
