@@ -25,10 +25,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
 localPort = 8089
 externalPort = 5000
 
@@ -60,15 +56,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flask App"
+args = "DB Portal"
 
 [[workflows.workflow]]
-name = "Flask App"
+name = "DB Portal"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python run.py"
+args = "python data_builder/ingredients/db_portal.py"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
