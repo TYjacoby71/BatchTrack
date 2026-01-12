@@ -358,6 +358,8 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                 continue
             if len(cids) != 1:
                 last_ambiguous = f"ambiguous_candidates:{len(cids)}"
+                if conf >= 75:
+                    break
                 continue
             return {
                 "id": entry["id"],
