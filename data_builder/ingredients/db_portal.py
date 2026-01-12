@@ -159,7 +159,6 @@ HTML_TEMPLATE = """
                 <button class="view-tab" onclick="loadView('raw', 'items')">All Items</button>
                 <button class="view-tab" onclick="loadView('raw', 'merged')">Merged Items</button>
                 <button class="view-tab" onclick="loadView('raw', 'source_items')">Source Items</button>
-                <button class="view-tab" onclick="loadView('raw', 'source_full')">Full Schema</button>
                 <button class="view-tab" onclick="loadView('raw', 'cosing')">CosIng</button>
                 <button class="view-tab" onclick="loadView('raw', 'tgsc')">TGSC</button>
             </div>
@@ -313,70 +312,95 @@ HTML_TEMPLATE = """
             const tbody = document.getElementById('table-body');
             let html = '';
             
-            rows.forEach(row => {
+            rows.forEach((row, idx) => {
                 const termKey = row[0];
+                const safeId = 'term-' + idx;
                 const isExpanded = expandedTerms.has(termKey);
                 const expandIcon = isExpanded ? '▼' : '▶';
                 
-                html += `<tr class="expandable" onclick="toggleTerm('${termKey}')">`;
+                html += `<tr class="expandable" data-term="${encodeURIComponent(termKey)}" data-idx="${idx}">`;
                 html += `<td><span class="expand-icon">${expandIcon}</span> ${formatCell(row[0])}</td>`;
                 for (let i = 1; i < row.length; i++) {
                     html += `<td>${formatCell(row[i])}</td>`;
                 }
                 html += '</tr>';
                 
-                html += `<tr class="child-row ${isExpanded ? '' : 'hidden'}" id="items-${termKey}">`;
+                html += `<tr class="child-row ${isExpanded ? '' : 'hidden'}" id="${safeId}">`;
                 html += `<td colspan="${row.length}"><div class="loading">Loading items...</div></td>`;
                 html += '</tr>';
             });
             
             tbody.innerHTML = html;
             
+            tbody.querySelectorAll('.expandable').forEach(row => {
+                row.addEventListener('click', function() {
+                    const term = decodeURIComponent(this.dataset.term);
+                    const idx = this.dataset.idx;
+                    toggleTermByIdx(term, idx, this);
+                });
+            });
+            
             expandedTerms.forEach(term => {
-                loadTermItems(term);
+                const row = tbody.querySelector(`[data-term="${encodeURIComponent(term)}"]`);
+                if (row) loadTermItemsByIdx(term, row.dataset.idx);
             });
         }
         
-        function toggleTerm(term) {
-            event.stopPropagation();
-            
+        function toggleTermByIdx(term, idx, rowEl) {
+            const safeId = 'term-' + idx;
             if (expandedTerms.has(term)) {
                 expandedTerms.delete(term);
-                document.getElementById(`items-${term}`).classList.add('hidden');
-                const row = event.currentTarget;
-                row.querySelector('.expand-icon').textContent = '▶';
+                document.getElementById(safeId).classList.add('hidden');
+                rowEl.querySelector('.expand-icon').textContent = '▶';
             } else {
                 expandedTerms.add(term);
-                document.getElementById(`items-${term}`).classList.remove('hidden');
-                const row = event.currentTarget;
-                row.querySelector('.expand-icon').textContent = '▼';
-                loadTermItems(term);
+                document.getElementById(safeId).classList.remove('hidden');
+                rowEl.querySelector('.expand-icon').textContent = '▼';
+                loadTermItemsByIdx(term, idx);
             }
         }
         
-        function loadTermItems(term) {
+        function loadTermItemsByIdx(term, idx) {
+            const safeId = 'term-' + idx;
             fetch(`/api/term-items?section=${currentSection}&term=${encodeURIComponent(term)}`)
                 .then(r => r.json())
                 .then(data => {
-                    const container = document.getElementById(`items-${term}`);
+                    const container = document.getElementById(safeId);
+                    if (!container) return;
                     if (data.items.length === 0) {
-                        container.innerHTML = '<td colspan="10" style="padding-left: 40px; color: #666; font-style: italic;">No items assigned</td>';
+                        container.innerHTML = '<td colspan="10" style="padding-left: 40px; color: #666; font-style: italic;">No items found</td>';
                     } else {
                         let html = '<td colspan="10"><table style="width: 100%; margin-left: 20px;">';
-                        html += '<tr style="background: #e5e7eb;"><th>Item</th><th>Form</th><th>CosIng</th><th>TGSC</th><th>Specs</th></tr>';
+                        html += '<tr style="background: #e5e7eb;"><th>Raw Name</th><th>Variation</th><th>Form</th><th>Category</th><th>Origin</th><th>Specs</th></tr>';
                         data.items.forEach(item => {
-                            html += `<tr>
-                                <td>${item.term}</td>
-                                <td>${item.form || '-'}</td>
-                                <td>${item.has_cosing ? '<span class="badge badge-green">Yes</span>' : '-'}</td>
-                                <td>${item.has_tgsc ? '<span class="badge badge-blue">Yes</span>' : '-'}</td>
+                            const rowClass = item.key ? 'class="item-row"' : '';
+                            const dataKey = item.key ? `data-key="${item.key}"` : '';
+                            html += `<tr ${rowClass} ${dataKey} style="cursor:pointer;">
+                                <td>${escapeHtml(item.raw_name || item.term)}</td>
+                                <td>${escapeHtml(item.variation) || '-'}</td>
+                                <td>${escapeHtml(item.form) || '-'}</td>
+                                <td>${escapeHtml(item.category) || '-'}</td>
+                                <td>${escapeHtml(item.origin) || '-'}</td>
                                 <td>${item.has_specs ? '<span class="badge badge-purple">Yes</span>' : '-'}</td>
                             </tr>`;
                         });
                         html += '</table></td>';
                         container.innerHTML = html;
+                        
+                        container.querySelectorAll('.item-row').forEach(row => {
+                            row.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                const key = this.dataset.key;
+                                if (key) showSourceItemDetail(key);
+                            });
+                        });
                     }
                 });
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
         
         function formatCell(val) {
@@ -811,31 +835,27 @@ def api_term_items():
     conn = get_db('final')
     cur = conn.cursor()
     
-    if section == 'compiled':
-        cur.execute("""
-            SELECT derived_term, derived_physical_form, has_cosing, has_tgsc,
-                   CASE WHEN app_seed_specs_json IS NOT NULL THEN 1 ELSE 0 END
-            FROM merged_item_forms 
-            WHERE derived_term = ? OR derived_term LIKE ?
-            LIMIT 100
-        """, (term, f"{term} %"))
-    else:
-        cur.execute("""
-            SELECT derived_term, derived_physical_form, has_cosing, has_tgsc,
-                   CASE WHEN app_seed_specs_json IS NOT NULL THEN 1 ELSE 0 END
-            FROM merged_item_forms 
-            WHERE derived_term = ?
-            LIMIT 100
-        """, (term,))
+    cur.execute("""
+        SELECT key, raw_name, derived_term, derived_variation, derived_physical_form,
+               ingredient_category, origin,
+               CASE WHEN derived_specs_json IS NOT NULL AND derived_specs_json != '{}' THEN 1 ELSE 0 END as has_specs
+        FROM source_items 
+        WHERE derived_term = ?
+        ORDER BY raw_name
+        LIMIT 100
+    """, (term,))
     
     items = []
     for row in cur.fetchall():
         items.append({
-            'term': row[0],
-            'form': row[1],
-            'has_cosing': bool(row[2]),
-            'has_tgsc': bool(row[3]),
-            'has_specs': bool(row[4])
+            'key': row[0],
+            'raw_name': row[1],
+            'term': row[2],
+            'variation': row[3],
+            'form': row[4],
+            'category': row[5],
+            'origin': row[6],
+            'has_specs': bool(row[7])
         })
     
     conn.close()
