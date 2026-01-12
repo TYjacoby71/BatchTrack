@@ -147,38 +147,18 @@ HTML_TEMPLATE = """
         </div>
     </div>
     
-    <div class="section-tabs">
-        <button class="section-tab active" onclick="switchSection('raw')">Raw Data</button>
-        <button class="section-tab" onclick="switchSection('compiled')">Post-Compilation</button>
-    </div>
-    
     <div class="section-content">
-        <div id="raw-section">
-            <div class="view-tabs" id="raw-tabs">
-                <button class="view-tab active" onclick="loadView('raw', 'terms')">Terms (Clusters)</button>
-                <button class="view-tab" onclick="loadView('raw', 'items')">All Items</button>
-                <button class="view-tab" onclick="loadView('raw', 'merged')">Merged Items</button>
-                <button class="view-tab" onclick="loadView('raw', 'source_items')">Source Items</button>
-                <button class="view-tab" onclick="loadView('raw', 'cosing')">CosIng</button>
-                <button class="view-tab" onclick="loadView('raw', 'tgsc')">TGSC</button>
-            </div>
-        </div>
-        
-        <div id="compiled-section" class="hidden">
-            <div class="view-tabs" id="compiled-tabs">
-                <button class="view-tab active" onclick="loadView('compiled', 'terms')">Compiled Terms</button>
-                <button class="view-tab" onclick="loadView('compiled', 'items')">Compiled Items</button>
-                <button class="view-tab" onclick="loadView('compiled', 'with_specs')">With Seed Specs</button>
-            </div>
+        <div class="view-tabs">
+            <button class="view-tab active" onclick="loadFilter('all')">All Terms</button>
+            <button class="view-tab" onclick="loadFilter('with_specs')">With Specs</button>
+            <button class="view-tab" onclick="loadFilter('cosing')">CosIng Only</button>
+            <button class="view-tab" onclick="loadFilter('tgsc')">TGSC Only</button>
+            <button class="view-tab" onclick="loadFilter('merged')">Multi-Source</button>
         </div>
         
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="search" placeholder="Search terms or items..." onkeyup="debounceSearch()">
-            </div>
-            <div class="view-toggle">
-                <button id="toggle-terms" class="active" onclick="setViewMode('terms')">Terms View</button>
-                <button id="toggle-items" onclick="setViewMode('items')">Items View</button>
+                <input type="text" id="search" placeholder="Search terms..." onkeyup="debounceSearch()">
             </div>
             <div class="export-btns">
                 <button class="export-btn" onclick="exportCSV()">Export CSV</button>
