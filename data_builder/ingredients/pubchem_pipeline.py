@@ -379,6 +379,23 @@ def stage_and_match_items(*, limit: int | None = None) -> dict[str, int]:
                     "error": None,
                     "error_type": None,
                 }
+            # For CAS lookups with 4+ candidates, try name endpoint as fallback
+            if kind == "cas" and len(cids) >= 4:
+                try:
+                    name_cids = client.resolve_name_to_cids(ident)
+                    if len(name_cids) == 1 and name_cids[0] in cids:
+                        return {
+                            "id": entry["id"],
+                            "status": "matched",
+                            "cid": int(name_cids[0]),
+                            "matched_by": f"{kind}_verified",
+                            "identifier_value": ident,
+                            "confidence": int(conf) - 10,  # Lower confidence for fallback
+                            "error": None,
+                            "error_type": None,
+                        }
+                except Exception:
+                    pass  # Fall through to ambiguous
             # Otherwise mark as ambiguous
             last_ambiguous = f"ambiguous_candidates:{len(cids)}"
             if conf >= 75:
