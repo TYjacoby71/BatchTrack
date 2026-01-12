@@ -159,6 +159,7 @@ HTML_TEMPLATE = """
                 <button class="view-tab" onclick="loadView('raw', 'items')">All Items</button>
                 <button class="view-tab" onclick="loadView('raw', 'merged')">Merged Items</button>
                 <button class="view-tab" onclick="loadView('raw', 'source_items')">Source Items</button>
+                <button class="view-tab" onclick="loadView('raw', 'source_full')">Full Schema</button>
                 <button class="view-tab" onclick="loadView('raw', 'cosing')">CosIng</button>
                 <button class="view-tab" onclick="loadView('raw', 'tgsc')">TGSC</button>
             </div>
@@ -289,11 +290,19 @@ HTML_TEMPLATE = """
                     if (data.hierarchical) {
                         renderHierarchical(data.rows);
                     } else {
+                        const isSourceView = currentView === 'source_items' || currentView === 'source_full';
                         tbody.innerHTML = data.rows.map(row => {
-                            const itemId = row[0];
-                            const isClickable = typeof itemId === 'number';
+                            const firstCol = row[0];
+                            const isNumericId = typeof firstCol === 'number';
+                            const isSourceKey = isSourceView && typeof firstCol === 'string' && firstCol.length === 40;
+                            const isClickable = isNumericId || isSourceKey;
                             const rowClass = isClickable ? 'item-row' : '';
-                            const onclick = isClickable ? `onclick="showItemDetail(${itemId})"` : '';
+                            let onclick = '';
+                            if (isNumericId) {
+                                onclick = `onclick="showItemDetail(${firstCol})"`;
+                            } else if (isSourceKey) {
+                                onclick = `onclick="showSourceItemDetail('${firstCol}')"`;
+                            }
                             return `<tr class="${rowClass}" ${onclick}>` + row.map(cell => `<td>${formatCell(cell)}</td>`).join('') + '</tr>';
                         }).join('');
                     }
@@ -490,6 +499,97 @@ HTML_TEMPLATE = """
             document.getElementById('detail-panel').classList.remove('active');
         }
         
+        function showSourceItemDetail(key) {
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-body').innerHTML = '<div class="loading">Loading source item details...</div>';
+            document.getElementById('detail-title').textContent = 'Source Item';
+            document.getElementById('detail-subtitle').textContent = 'Loading...';
+            
+            fetch(`/api/source-item/${encodeURIComponent(key)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('detail-body').innerHTML = '<p style="color: red;">Error: ' + data.error + '</p>';
+                        return;
+                    }
+                    
+                    document.getElementById('detail-title').textContent = data.raw_name || 'Source Item';
+                    document.getElementById('detail-subtitle').textContent = `Source: ${data.source} | Status: ${data.status}`;
+                    
+                    let html = '';
+                    
+                    html += '<div class="detail-section"><h3>Identity</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Key</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.key}</div>`;
+                    html += `<div class="detail-label">Source</div><div class="detail-value">${data.source}</div>`;
+                    html += `<div class="detail-label">Raw Name</div><div class="detail-value">${data.raw_name || '-'}</div>`;
+                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '-'}</div>`;
+                    html += `<div class="detail-label">CAS Number</div><div class="detail-value">${data.cas_number || '-'}</div>`;
+                    html += `<div class="detail-label">Display Name</div><div class="detail-value">${data.item_display_name || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Derivation</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Part</div><div class="detail-value">${data.derived_part || '-'}</div>`;
+                    html += `<div class="detail-label">Part Reason</div><div class="detail-value">${data.derived_part_reason || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Classification</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
+                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '-'}</div>`;
+                    html += `<div class="detail-label">Refinement</div><div class="detail-value">${data.refinement_level || '-'}</div>`;
+                    html += `<div class="detail-label">Status</div><div class="detail-value">${data.status || '-'}</div>`;
+                    html += `<div class="detail-label">Review Reason</div><div class="detail-value">${data.needs_review_reason || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Bypass Flags</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Variation Bypass</div><div class="detail-value">${data.variation_bypass ? 'Yes' : 'No'}</div>`;
+                    html += `<div class="detail-label">Bypass Reason</div><div class="detail-value">${data.variation_bypass_reason || '-'}</div>`;
+                    html += `<div class="detail-label">Is Composite</div><div class="detail-value">${data.is_composite ? 'Yes' : 'No'}</div>`;
+                    html += '</div></div>';
+                    
+                    if (data.master_categories && data.master_categories.length > 0) {
+                        html += '<div class="detail-section"><h3>Master Categories</h3>';
+                        html += '<div class="detail-value">' + data.master_categories.join(', ') + '</div></div>';
+                    }
+                    
+                    if (data.function_tags && data.function_tags.length > 0) {
+                        html += '<div class="detail-section"><h3>Function Tags</h3>';
+                        html += '<div class="detail-value">' + data.function_tags.join(', ') + '</div></div>';
+                    }
+                    
+                    if (data.specs) {
+                        html += '<div class="detail-section"><h3>Specifications (SAP, Iodine, Density, etc.)</h3>';
+                        html += renderJsonSection(data.specs);
+                        html += '</div>';
+                    }
+                    
+                    html += '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;">${data.definition_cluster_id || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Confidence</div><div class="detail-value">${data.definition_cluster_confidence ?? '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Reason</div><div class="detail-value">${data.definition_cluster_reason || '-'}</div>`;
+                    html += `<div class="detail-label">Merged Item ID</div><div class="detail-value">${data.merged_item_id ?? '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Source Reference</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Source Row ID</div><div class="detail-value">${data.source_row_id || '-'}</div>`;
+                    html += `<div class="detail-label">Source Row #</div><div class="detail-value">${data.source_row_number ?? '-'}</div>`;
+                    html += `<div class="detail-label">Source Ref</div><div class="detail-value" style="word-break:break-all;">${data.source_ref || '-'}</div>`;
+                    html += `<div class="detail-label">Content Hash</div><div class="detail-value" style="font-size:10px;">${data.content_hash || '-'}</div>`;
+                    html += `<div class="detail-label">Ingested At</div><div class="detail-value">${data.ingested_at || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    if (data.payload) {
+                        html += '<div class="detail-section"><h3>Raw Payload</h3>';
+                        html += '<div class="json-block"><pre>' + JSON.stringify(data.payload, null, 2) + '</pre></div></div>';
+                    }
+                    
+                    document.getElementById('detail-body').innerHTML = html;
+                });
+        }
+        
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeDetail();
         });
@@ -604,14 +704,29 @@ def api_data():
             columns = ['ID', 'Term', 'Form', 'Sources Merged', 'CosIng', 'TGSC']
             
         elif view == 'source_items':
-            cur.execute("SELECT COUNT(*) FROM source_items WHERE key LIKE ?", (search_param,))
+            cur.execute("SELECT COUNT(*) FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?", (search_param, search_param))
             total = cur.fetchone()[0]
             cur.execute("""
-                SELECT key, source, source_row_id, is_composite
-                FROM source_items WHERE key LIKE ?
-                ORDER BY key LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['Key', 'Source', 'Row ID', 'Composite']
+                SELECT key, source, raw_name, derived_term, derived_variation, derived_physical_form,
+                       ingredient_category, origin, variation_bypass, is_composite
+                FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?
+                ORDER BY raw_name LIMIT ? OFFSET ?
+            """, (search_param, search_param, per_page, offset))
+            columns = ['Key', 'Source', 'Raw Name', 'Term', 'Variation', 'Form', 'Category', 'Origin', 'Var Bypass', 'Composite']
+            
+        elif view == 'source_full':
+            cur.execute("SELECT COUNT(*) FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?", (search_param, search_param))
+            total = cur.fetchone()[0]
+            cur.execute("""
+                SELECT key, source, raw_name, inci_name, cas_number, derived_term, derived_variation, 
+                       derived_physical_form, derived_part, ingredient_category, origin, refinement_level,
+                       variation_bypass, variation_bypass_reason, derived_master_categories_json,
+                       derived_specs_json, status, needs_review_reason
+                FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?
+                ORDER BY raw_name LIMIT ? OFFSET ?
+            """, (search_param, search_param, per_page, offset))
+            columns = ['Key', 'Source', 'Raw Name', 'INCI', 'CAS', 'Term', 'Variation', 'Form', 'Part', 
+                       'Category', 'Origin', 'Refinement', 'Var Bypass', 'Bypass Reason', 'Master Categories', 'Specs', 'Status', 'Review Reason']
             
         elif view == 'cosing':
             cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND derived_term LIKE ?", (search_param,))
@@ -772,6 +887,79 @@ def api_item_detail(item_id):
         'created_at': row[14],
         'compiled_specs': parse_json(row[15]),
         'app_seed_specs': parse_json(row[16])
+    })
+
+@app.route('/api/source-item/<key>')
+def api_source_item_detail(key):
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT key, source, source_row_id, source_row_number, source_ref, content_hash,
+               is_composite, raw_name, inci_name, cas_number, cas_numbers_json,
+               derived_term, derived_variation, derived_physical_form, derived_part, derived_part_reason,
+               origin, ingredient_category, refinement_level, status, needs_review_reason,
+               definition_display_name, item_display_name, derived_function_tags_json,
+               derived_function_tag_entries_json, derived_master_categories_json,
+               variation_bypass, variation_bypass_reason, definition_cluster_id,
+               definition_cluster_confidence, definition_cluster_reason,
+               derived_specs_json, derived_specs_sources_json, derived_specs_notes_json,
+               merged_item_id, payload_json, ingested_at
+        FROM source_items WHERE key = ?
+    """, (key,))
+    
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return jsonify({'error': 'Source item not found'})
+    
+    def parse_json(val):
+        if val:
+            try:
+                return json.loads(val)
+            except:
+                return val
+        return None
+    
+    return jsonify({
+        'key': row[0],
+        'source': row[1],
+        'source_row_id': row[2],
+        'source_row_number': row[3],
+        'source_ref': row[4],
+        'content_hash': row[5],
+        'is_composite': bool(row[6]),
+        'raw_name': row[7],
+        'inci_name': row[8],
+        'cas_number': row[9],
+        'cas_numbers': parse_json(row[10]) or [],
+        'derived_term': row[11],
+        'derived_variation': row[12],
+        'derived_physical_form': row[13],
+        'derived_part': row[14],
+        'derived_part_reason': row[15],
+        'origin': row[16],
+        'ingredient_category': row[17],
+        'refinement_level': row[18],
+        'status': row[19],
+        'needs_review_reason': row[20],
+        'definition_display_name': row[21],
+        'item_display_name': row[22],
+        'function_tags': parse_json(row[23]) or [],
+        'function_tag_entries': parse_json(row[24]) or [],
+        'master_categories': parse_json(row[25]) or [],
+        'variation_bypass': bool(row[26]),
+        'variation_bypass_reason': row[27],
+        'definition_cluster_id': row[28],
+        'definition_cluster_confidence': row[29],
+        'definition_cluster_reason': row[30],
+        'specs': parse_json(row[31]),
+        'specs_sources': parse_json(row[32]),
+        'specs_notes': parse_json(row[33]),
+        'merged_item_id': row[34],
+        'payload': parse_json(row[35]),
+        'ingested_at': row[36]
     })
 
 @app.route('/api/export/<format>')
