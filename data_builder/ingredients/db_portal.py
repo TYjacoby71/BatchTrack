@@ -180,6 +180,9 @@ HTML_TEMPLATE = """
                     <button class="venn-btn" data-filter="both" onclick="setFilter('both')">
                         Both
                     </button>
+                    <button class="venn-btn" data-filter="pubchem" onclick="setFilter('pubchem')" style="margin-left:10px; background:#10b981; color:#fff; border-color:#10b981;">
+                        PubChem
+                    </button>
                 </div>
             </div>
         </div>
@@ -253,7 +256,8 @@ HTML_TEMPLATE = """
             'all': 'Showing all {view} from all sources.',
             'cosing': 'Showing {view} that have CosIng as a source (may also have TGSC).',
             'tgsc': 'Showing {view} that have TGSC as a source (may also have CosIng).',
-            'both': 'Showing only {view} that have BOTH CosIng AND TGSC sources (intersection).'
+            'both': 'Showing only {view} that have BOTH CosIng AND TGSC sources (intersection).',
+            'pubchem': 'Showing only {view} that have PubChem enrichment data.'
         };
         
         function updateFilterInfo() {
@@ -658,6 +662,8 @@ def api_terms():
         where_clauses.append("has_tgsc = 1")
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    elif filter_type == 'pubchem':
+        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
@@ -714,6 +720,8 @@ def api_term_items():
         where_clauses.append("has_tgsc = 1")
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    elif filter_type == 'pubchem':
+        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses)
     
@@ -767,6 +775,8 @@ def api_merged_items():
         where_clauses.append("has_tgsc = 1")
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    elif filter_type == 'pubchem':
+        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
@@ -956,6 +966,8 @@ def api_export(format):
         where_clauses.append("has_tgsc = 1")
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    elif filter_type == 'pubchem':
+        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
