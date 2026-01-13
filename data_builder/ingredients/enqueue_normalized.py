@@ -18,13 +18,17 @@ LOGGER = logging.getLogger(__name__)
 def _seed_from_db(limit: int | None) -> int:
     database_manager.ensure_tables_exist()
     inserted = 0
+    priority_map = database_manager.build_term_priority_map()
     with database_manager.get_session() as session:
         q = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc())
         if limit:
             q = q.limit(int(limit))
         rows = q.all()
         for r in rows:
-            if database_manager.upsert_term(r.term, database_manager.DEFAULT_PRIORITY, seed_category=r.seed_category):
+            priority = int(priority_map.get(r.term, database_manager.DEFAULT_PRIORITY))
+            # Ensure 1..10 priority contract.
+            priority = max(database_manager.MIN_PRIORITY, min(database_manager.MAX_PRIORITY, priority))
+            if database_manager.upsert_term(r.term, priority, seed_category=r.seed_category):
                 inserted += 1
     return inserted
 

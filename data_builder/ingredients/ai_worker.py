@@ -64,7 +64,9 @@ INGREDIENT_CATEGORIES = [
 
 SYSTEM_PROMPT = (
     "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
-    "manufacturing. You only output JSON that conforms to the provided schema."
+    "manufacturing. You only output JSON that conforms to the provided schema. "
+    "CRITICAL: Do not fabricate facts or numeric properties; omit unknown optional fields "
+    "(or use null) instead of placeholder strings like 'unknown'/'n/a'."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -257,7 +259,7 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
         "ph_range": {"min": 5, "max": 7},
         "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
         // Optional physchem (when known; OK to omit):
-        // "density_g_ml": 0.91,
+        // "density_g_ml": 0.91,  // numeric only; g/mL; include ONLY when known (do not guess)
         // "viscosity_cps": 1200,
         // "refractive_index": 1.44,
         // "molecular_formula": "C3H8O3",
@@ -331,7 +333,7 @@ def _render_core_prompt(term: str, base_context: Dict[str, Any]) -> str:
     refinements = ", ".join(REFINEMENT_LEVELS)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     return f"""
-You are Stage 2A (Compiler Core). Build canonical core fields for the base ingredient term: "{term}".
+You are Stage 2A (Compilation — Core). Build canonical core fields for the base ingredient term: "{term}".
 
 Rules:
 - You MUST NOT change the base identity fields if they are provided: term/common_name, inci_name, cas_number, botanical_name.
@@ -361,7 +363,7 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
     return f"""
-You are Stage 2B (Compiler Items). Create purchasable ITEM variants for base ingredient: "{term}".
+You are Stage 2B (Compilation — Items). Create purchasable ITEM variants for base ingredient: "{term}".
 
 Rules:
 - ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
@@ -370,6 +372,9 @@ Rules:
 - applications must include at least 1 value.
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
+- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
+- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). Only include numeric specs when you are confident they are real; otherwise omit them.
+- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
 
 Ingredient core (context):
 {core_blob}
@@ -393,7 +398,7 @@ def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], 
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
     return f"""
-You are Stage 2B (Compiler Items — COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
+You are Stage 2B (Compilation — Items COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
 
 Rules (CRITICAL):
 - DO NOT add items.
@@ -404,6 +409,9 @@ Rules (CRITICAL):
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
 - applications must include at least 1 value (use ["Unknown"] only if you truly cannot infer anything).
+- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
+- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). Only include numeric specs when you are confident they are real; otherwise omit them.
+- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
 
 Ingredient core (context):
 {core_blob}
@@ -421,12 +429,14 @@ SCHEMA:
 
 def _merge_fill_only(base: Any, patch: Any) -> Any:
     """Fill-only merge used to prevent overwriting ingestion-derived fields."""
+    if isinstance(patch, str) and patch.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+        patch = ""
     if isinstance(base, dict) and isinstance(patch, dict):
         out = dict(base)
         for k, v in patch.items():
             if k in out and out.get(k) not in (None, "", [], {}, "unknown"):
                 continue
-            if v in (None, "", [], {}, "unknown"):
+            if v in (None, "", [], {}, "unknown") or (isinstance(v, str) and v.strip().lower() in {"unknown", "n/a", "na", "none", "null"}):
                 continue
             out[k] = v
         return out
@@ -435,6 +445,8 @@ def _merge_fill_only(base: Any, patch: Any) -> Any:
         if not base or base == ["Unknown"]:
             return patch
         return base
+    if isinstance(base, str) and base.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+        base = ""
     return base if base not in (None, "", "unknown") else patch
 
 
@@ -468,7 +480,7 @@ def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: l
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     items_blob = json.dumps(items[:6], ensure_ascii=False, indent=2, sort_keys=True)
     return f"""
-You are Stage 2C (Compiler Taxonomy). Generate taxonomy tags for base ingredient: "{term}".
+You are Stage 2C (Compilation — Taxonomy). Generate taxonomy tags for base ingredient: "{term}".
 
 Context (core):
 {core_blob}
@@ -543,7 +555,7 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
 
             # Documentation may be missing; keep shape stable.
             if "documentation" not in ingredient:
-                ingredient["documentation"] = {"references": [], "last_verified": "unknown"}
+                ingredient["documentation"] = {"references": [], "last_verified": None}
 
             confidence = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else None
             if not isinstance(confidence, (int, float)):

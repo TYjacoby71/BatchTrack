@@ -33,7 +33,7 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
-# Stage 1 cursor mode:
+# Stage 1: term compilation (queue builder) cursor mode:
 # - legacy: per-letter cursor (A..Z)
 # - category cursor: per-(seed_category, letter) cursor
 USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
@@ -180,9 +180,9 @@ SYSTEM_PROMPT = (
 )
 
 TERMS_PROMPT = """
-You are running Stage 1 (Term Builder). Your ONLY job is to propose NEW base ingredient terms.
+You are running Stage 1 (Term Compilation). Your ONLY job is to propose NEW base ingredient terms.
 
-DEFINITIONS (Stage 1):
+DEFINITIONS (Stage 1: Term Compilation):
 - A BASE INGREDIENT TERM is the canonical base name (usually 1–2 words) used to group purchasable items and their variants.
 - The base is typically the plant/mineral/salt/sugar/acid/clay/etc. root name (e.g., "Apple", "Acerola Cherry", "Cinnamon", "Frankincense", "Kaolin", "Citric Acid").
 - Do NOT output base+form names for these categories:
@@ -702,6 +702,9 @@ class TermCollector:
         # Mode: deterministic gap-fill (preferred).
         # ------------------------------------------------------------------
         if TERM_GENERATOR_MODE != "ai":
+            # Stage 1 priority: compute maker-likelihood from ingestion coverage when available.
+            # This keeps queue order useful (exhaust 10s before 9s, etc.).
+            priority_map = database_manager.build_term_priority_map()
             max_tries = max(1, int(GAPFILL_MAX_TRIES_PER_LETTER or 5))
             # Keep going until we insert `count` new terms, or until a full A→Z pass yields nothing.
             while inserted < normalized_count:
@@ -730,7 +733,7 @@ class TermCollector:
                         if _looks_like_form_not_base(term):
                             continue
 
-                        priority = SEED_PRIORITY
+                        priority = int(priority_map.get(term, SEED_PRIORITY))
                         was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
                         self._register_term(term, priority)
                         if was_inserted:
