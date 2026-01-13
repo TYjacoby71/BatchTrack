@@ -338,6 +338,10 @@ def derive_definition_term(raw_name: str) -> str:
 
     lowered = cleaned.lower()
 
+    # Dairy butter: keep as the base definition term (variations live at item level).
+    if lowered.strip(" ,") in {"butter", "salted butter", "unsalted butter"}:
+        return "Butter"
+
     # Special-case: denatured alcohol families are not botanicals.
     # Keep the definition stable and represent the grade/spec at the item level.
     if lowered.startswith("alcohol denat"):
@@ -415,6 +419,11 @@ def infer_origin(raw_name: str) -> str:
     """Best-effort single-select origin."""
     cleaned = _clean(raw_name)
     t = cleaned.lower()
+
+    # Special-case: dairy butter base ingredient.
+    # IMPORTANT: do NOT classify generic "* butter" (e.g., "shea butter") as animal-derived.
+    if t.strip(" ,") in {"butter", "salted butter", "unsalted butter"}:
+        return "Animal-Derived"
 
     # Dye/colorant families (usually synthetic; avoid falling back to Plant-Derived).
     if re.search(r"\b(hc|fd|d&c)\s+(red|blue|yellow|orange|green|violet|black|brown|white)\b", t) or re.search(
@@ -542,6 +551,8 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
         return "Marine - Botanicals"
 
     if o in {"Animal-Derived", "Animal-Byproduct"}:
+        if t.strip() == "butter" or " butter" in f" {t} ":
+            return "Animal - Dairy"
         if any(k in blob for k in ("wool", "silk", "cashmere", "angora")):
             return "Animal - Fibers"
         if any(k in t for k in ("milk", "whey", "casein", "lactose")):
@@ -807,6 +818,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if " butter" in f" {t} " or t.endswith(" butter"):
         # "Butter" is a physical form for many plant fats (e.g., shea/cocoa/mango butter).
         # Treating it as a variation creates the wrong identity shape downstream.
+        if t.strip() in {"butter", "salted butter", "unsalted butter"}:
+            # Dairy butter variations.
+            if "unsalted" in t:
+                return "Unsalted", "Butter"
+            if "salted" in t:
+                return "Salted", "Butter"
+            return "", "Butter"
         return "", "Butter"
     if " wax" in f" {t} " or t.endswith(" wax") or " cera" in f" {t} ":
         return "Wax", "Wax"

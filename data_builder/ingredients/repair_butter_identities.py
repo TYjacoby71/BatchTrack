@@ -65,6 +65,7 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
     database_manager.ensure_tables_exist()
     stats = {
         "source_items_fixed": 0,
+        "source_items_bypass_updated": 0,
         "merged_item_forms_fixed": 0,
         "merged_item_forms_consolidated": 0,
     }
@@ -83,6 +84,24 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
             if not dry_run:
                 r.derived_variation = ""
             stats["source_items_fixed"] += 1
+
+        # Ensure variation_bypass is set for plant-derived butter-form rows with no variation.
+        plant_butter = (
+            session.query(database_manager.SourceItem)
+            .filter(
+                database_manager.SourceItem.derived_physical_form == "Butter",
+                database_manager.SourceItem.derived_variation.in_(("", None)),
+                database_manager.SourceItem.origin == "Plant-Derived",
+            )
+            .all()
+        )
+        for r in plant_butter:
+            old = int(getattr(r, "variation_bypass", 0) or 0)
+            if old != 1:
+                if not dry_run:
+                    r.variation_bypass = 1
+                    r.variation_bypass_reason = "form_only"
+                stats["source_items_bypass_updated"] += 1
 
         # 2) Fix merged_item_forms identity fields.
         mif_rows = (
