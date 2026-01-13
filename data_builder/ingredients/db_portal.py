@@ -153,6 +153,14 @@ HTML_TEMPLATE = """
                 <h3>{{ stats.with_specs }}</h3>
                 <p>With Specs</p>
             </div>
+            <div class="stat-box">
+                <h3>{{ stats.total_clusters }}</h3>
+                <p>Clusters</p>
+            </div>
+            <div class="stat-box">
+                <h3>{{ stats.multi_item_clusters }}</h3>
+                <p>Multi-Item Clusters</p>
+            </div>
         </div>
     </div>
     
@@ -163,6 +171,7 @@ HTML_TEMPLATE = """
                 <div class="view-toggle">
                     <button class="view-btn active" data-view="terms" onclick="setView('terms')">Terms</button>
                     <button class="view-btn" data-view="items" onclick="setView('items')">Items</button>
+                    <button class="view-btn" data-view="clusters" onclick="setView('clusters')">Clusters</button>
                 </div>
             </div>
             <div class="filter-section">
@@ -183,6 +192,14 @@ HTML_TEMPLATE = """
                     <button class="venn-btn" data-filter="pubchem" onclick="setFilter('pubchem')" style="margin-left:10px; background:#10b981; color:#fff; border-color:#10b981;">
                         PubChem
                     </button>
+                </div>
+            </div>
+            <div class="filter-section" id="cluster-filters" style="display:none;">
+                <div class="filter-label">Cluster Size</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-cluster="all" onclick="setClusterSize('all')">All</button>
+                    <button class="venn-btn" data-cluster="multi" onclick="setClusterSize('multi')" style="background:#dcfce7;color:#166534;border-color:#86efac;">Multi-Item</button>
+                    <button class="venn-btn" data-cluster="single" onclick="setClusterSize('single')" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;">Single-Item</button>
                 </div>
             </div>
             <div class="filter-section">
@@ -256,6 +273,7 @@ HTML_TEMPLATE = """
         let currentFilter = 'all';
         let currentCategory = '';
         let currentView = 'terms';
+        let currentClusterSize = 'all';
         let searchTimeout = null;
         let expandedTerms = new Set();
         
@@ -290,10 +308,13 @@ HTML_TEMPLATE = """
         };
         
         function updateFilterInfo() {
-            const viewName = currentView === 'terms' ? 'terms' : 'items';
+            const viewName = currentView === 'terms' ? 'terms' : (currentView === 'clusters' ? 'clusters' : 'items');
             let info = filterDescriptions[currentFilter].replace('{view}', viewName);
             if (currentCategory) {
                 info += ` Filtered to: ${currentCategory}`;
+            }
+            if (currentView === 'clusters') {
+                info = 'Showing source item clusters - items grouped by what the system expects to merge together.';
             }
             document.getElementById('filter-info').textContent = info;
         }
@@ -305,8 +326,18 @@ HTML_TEMPLATE = """
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
+            document.getElementById('cluster-filters').style.display = view === 'clusters' ? 'block' : 'none';
             updateFilterInfo();
             updateTableHeaders();
+            loadData();
+        }
+        
+        function setClusterSize(size) {
+            currentClusterSize = size;
+            currentPage = 1;
+            document.querySelectorAll('[data-cluster]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.cluster === size);
+            });
             loadData();
         }
         
@@ -325,6 +356,8 @@ HTML_TEMPLATE = """
             const thead = document.getElementById('table-head');
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
+            } else if (currentView === 'clusters') {
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Raw Names (Expected to Merge)</th><th>Derived Term</th><th>Count</th><th>Reason</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -342,20 +375,29 @@ HTML_TEMPLATE = """
         function loadData() {
             const search = document.getElementById('search').value;
             const tbody = document.getElementById('table-body');
-            const colSpan = currentView === 'terms' ? 4 : 6;
+            const colSpan = currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6);
             tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Loading...</td></tr>`;
             
-            const endpoint = currentView === 'terms' ? '/api/terms' : '/api/merged-items';
+            let endpoint;
+            if (currentView === 'terms') {
+                endpoint = '/api/terms';
+            } else if (currentView === 'clusters') {
+                endpoint = '/api/clusters';
+            } else {
+                endpoint = '/api/merged-items';
+            }
             
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}`)
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
                     
-                    if ((data.items || data.terms || []).length === 0) {
+                    if ((data.items || data.terms || data.clusters || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
                     } else if (currentView === 'terms') {
                         renderTermsView(data.terms);
+                    } else if (currentView === 'clusters') {
+                        renderClustersView(data.clusters);
                     } else {
                         renderItemsView(data.items);
                     }
@@ -433,6 +475,72 @@ HTML_TEMPLATE = """
                     <td>${specsBadge}</td>
                 </tr>`;
             }).join('');
+        }
+        
+        function renderClustersView(clusters) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = clusters.map(cluster => {
+                const rawNames = cluster.raw_names || [];
+                let rawNamesHtml = rawNames.map(n => `<div style="font-size:11px; padding:2px 0; border-bottom:1px dotted #ddd;">${n}</div>`).join('');
+                if (cluster.has_more_names) {
+                    rawNamesHtml += `<div style="font-size:10px; color:#6b7280; font-style:italic;">...and ${cluster.total_names - rawNames.length} more</div>`;
+                }
+                const reasonBadge = cluster.reason ? `<span class="badge" style="background:#f3e8ff;color:#6b21a8;">${cluster.reason}</span>` : '-';
+                const countBadge = cluster.count > 1 ? 
+                    `<span class="badge badge-both">${cluster.count}</span>` : 
+                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.count}</span>`;
+                
+                return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
+                    <td style="font-size:11px; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${cluster.cluster_id}</td>
+                    <td style="max-width:300px;">${rawNamesHtml || '-'}</td>
+                    <td><strong>${cluster.derived_term || '-'}</strong></td>
+                    <td>${countBadge}</td>
+                    <td>${reasonBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function showClusterDetail(clusterId) {
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-body').innerHTML = '<div class="loading">Loading...</div>';
+            
+            fetch(`/api/cluster/${encodeURIComponent(clusterId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('detail-title').textContent = data.derived_term || 'Cluster Details';
+                    document.getElementById('detail-subtitle').textContent = `Cluster: ${data.cluster_id} | ${data.items.length} items`;
+                    
+                    let html = '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:11px;">${data.cluster_id}</div>`;
+                    html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Source Items in Cluster (Expected to Merge)</h3>';
+                    html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">These raw names should all resolve to the same ingredient term:</p>';
+                    
+                    data.items.forEach(item => {
+                        const srcBadge = item.source === 'cosing' ? 
+                            '<span class="badge badge-cosing">CosIng</span>' : 
+                            '<span class="badge badge-tgsc">TGSC</span>';
+                        html += `<div class="source-item" onclick="showSourceDetail('${item.key}')">
+                            <div class="source-item-header">
+                                <span class="source-item-name">${item.raw_name || item.key}</span>
+                                ${srcBadge}
+                            </div>
+                            <div class="source-item-details">
+                                <span>INCI: ${item.inci_name || '-'}</span>
+                                <span>CAS: ${item.cas_number || '-'}</span>
+                                <span>Variation: ${item.derived_variation || '-'}</span>
+                                <span>Form: ${item.derived_physical_form || '-'}</span>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    
+                    document.getElementById('detail-body').innerHTML = html;
+                });
         }
         
         function toggleTerm(term) {
@@ -622,6 +730,19 @@ HTML_TEMPLATE = """
                         html += '</div></div>';
                     }
                     
+                    html += '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value"><strong>${data.derived_term || '-'}</strong></div>`;
+                    html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.definition_cluster_id || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Reason</div><div class="detail-value">${data.definition_cluster_reason || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Confidence</div><div class="detail-value">${data.definition_cluster_confidence || '-'}</div>`;
+                    html += '</div>';
+                    if (data.definition_cluster_id) {
+                        html += `<button onclick="event.stopPropagation(); closeSourceDetail(); closeDetail(); showClusterDetail('${data.definition_cluster_id.replace(/'/g, "\\'")}')" style="margin-top:10px; padding:8px 16px; background:#7c3aed; color:#fff; border:none; border-radius:6px; cursor:pointer;">View All Items in This Cluster</button>`;
+                    }
+                    html += '</div>';
+                    
                     document.getElementById('source-detail-body').innerHTML = html;
                 });
         }
@@ -685,6 +806,12 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
     stats['with_specs'] = cur.fetchone()[0]
     
+    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    stats['total_clusters'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
+    stats['multi_item_clusters'] = cur.fetchone()[0]
+    
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
 
@@ -702,6 +829,140 @@ def api_categories():
     categories = [{'name': row[0], 'count': row[1]} for row in cur.fetchall()]
     conn.close()
     return jsonify({'categories': categories})
+
+@app.route('/api/clusters')
+def api_clusters():
+    page = int(request.args.get('page', 1))
+    search = request.args.get('search', '').strip()
+    cluster_size = request.args.get('cluster_size', 'all')
+    filter_type = request.args.get('filter', 'all')
+    category = request.args.get('category', '').strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = ["definition_cluster_id IS NOT NULL"]
+    params = []
+    
+    if search:
+        where_clauses.append("(derived_term LIKE ? OR raw_name LIKE ? OR definition_cluster_id LIKE ?)")
+        search_param = f"%{search}%"
+        params.extend([search_param, search_param, search_param])
+    
+    if category:
+        where_clauses.append("ingredient_category = ?")
+        params.append(category)
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    having_clauses = []
+    if cluster_size == 'multi':
+        having_clauses.append("COUNT(*) > 1")
+    elif cluster_size == 'single':
+        having_clauses.append("COUNT(*) = 1")
+    
+    if filter_type == 'cosing':
+        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
+    elif filter_type == 'tgsc':
+        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+    elif filter_type == 'both':
+        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
+        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+    
+    having_clause = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
+    
+    cur.execute(f"""
+        SELECT definition_cluster_id, 
+               GROUP_CONCAT(DISTINCT raw_name) as raw_names,
+               MAX(derived_term) as derived_term,
+               COUNT(*) as cnt,
+               MAX(definition_cluster_reason) as reason
+        FROM source_items
+        {where_sql}
+        GROUP BY definition_cluster_id
+        {having_clause}
+        ORDER BY cnt DESC, derived_term
+        LIMIT ? OFFSET ?
+    """, params + [per_page, offset])
+    
+    clusters = []
+    for row in cur.fetchall():
+        raw_names_str = row[1] or ''
+        all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()]
+        display_names = all_raw_names[:8]
+        has_more = len(all_raw_names) > 8
+        clusters.append({
+            'cluster_id': row[0],
+            'raw_names': display_names,
+            'has_more_names': has_more,
+            'total_names': len(all_raw_names),
+            'derived_term': row[2],
+            'count': row[3],
+            'reason': row[4]
+        })
+    
+    cur.execute(f"""
+        SELECT COUNT(*) FROM (
+            SELECT definition_cluster_id, SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) as cosing_cnt, 
+                   SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) as tgsc_cnt
+            FROM source_items {where_sql} 
+            GROUP BY definition_cluster_id {having_clause}
+        )
+    """, params)
+    total = cur.fetchone()[0]
+    
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    
+    conn.close()
+    return jsonify({
+        'clusters': clusters,
+        'total': total,
+        'total_pages': total_pages,
+        'page': page
+    })
+
+@app.route('/api/cluster/<path:cluster_id>')
+def api_cluster_detail(cluster_id):
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT key, source, raw_name, inci_name, cas_number, 
+               derived_term, derived_variation, derived_physical_form,
+               definition_cluster_reason
+        FROM source_items 
+        WHERE definition_cluster_id = ?
+        ORDER BY source, raw_name
+    """, (cluster_id,))
+    
+    items = []
+    reason = None
+    derived_term = None
+    for row in cur.fetchall():
+        if not reason:
+            reason = row[8]
+        if not derived_term:
+            derived_term = row[5]
+        items.append({
+            'key': row[0],
+            'source': row[1],
+            'raw_name': row[2],
+            'inci_name': row[3],
+            'cas_number': row[4],
+            'derived_term': row[5],
+            'derived_variation': row[6],
+            'derived_physical_form': row[7]
+        })
+    
+    conn.close()
+    return jsonify({
+        'cluster_id': cluster_id,
+        'reason': reason,
+        'derived_term': derived_term,
+        'items': items
+    })
 
 @app.route('/api/terms')
 def api_terms():
