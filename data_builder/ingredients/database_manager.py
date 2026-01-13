@@ -1990,3 +1990,16 @@ def get_source_item_summary() -> dict[str, int]:
             out[s] = int(count or 0)
     out["total"] = sum(v for k, v in out.items() if k != "total")
     return out
+
+
+def delete_source_items_by_source(source: str) -> int:
+    """Delete all source items with a given source value.
+    
+    Returns:
+        Number of deleted rows.
+    """
+    ensure_tables_exist()
+    with get_session() as session:
+        deleted = session.query(SourceItem).filter(SourceItem.source == source).delete()
+        session.commit()
+        return deleted

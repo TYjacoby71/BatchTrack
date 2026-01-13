@@ -1,12 +1,11 @@
 """Seed file ingestion for app seeder JSON files.
 
 This script reads the seed JSON files from app/seeders/globallist/ingredients/categories/
-and writes them into the database as source_items with proper parsing,
-ensuring they match the same derivation pattern as CosIng/TGSC source data.
+and inserts them into compiler_state.db as source_items.
 
-Key difference from CosIng/TGSC: seed items have rich spec data (SAP values, iodine, density, etc.)
-that should be preserved in derived_specs_json. Also, seed item names are simpler maker-friendly
-names like "Shea Butter" rather than INCI names like "BUTYROSPERMUM PARKII (SHEA) BUTTER".
+Key difference from CosIng/TGSC: seed items use maker-friendly names ("Shea Butter")
+not INCI names ("BUTYROSPERMUM PARKII (SHEA) BUTTER"), so we use custom parsing
+but normalize terms to enable clustering with CosIng/TGSC data.
 """
 
 from __future__ import annotations
@@ -15,8 +14,9 @@ import hashlib
 import json
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from . import database_manager
 from .item_parser import (
@@ -29,13 +29,23 @@ from .item_parser import (
 LOGGER = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
+SEED_CATEGORIES_DIR = BASE_DIR.parents[1] / "app" / "seeders" / "globallist" / "ingredients" / "categories"
+
+SPEC_FIELDS = [
+    "density", "sap_value_naoh", "sap_value_koh", "iodine_value",
+    "ph_level", "flash_point", "melting_point", "boiling_point",
+    "solubility", "hlb_value", "comedogenic_rating", "shelf_life_months",
+    "recommended_usage_min", "recommended_usage_max", "recommended_usage_unit",
+    "fatty_acid_profile", "vitamin_content", "mineral_content",
+    "active_compounds", "contraindications", "storage_requirements",
+]
 
 _FORM_TOKENS = {
     "oil", "butter", "wax", "powder", "extract", "tincture", "hydrosol",
     "absolute", "concrete", "resin", "gum", "solution", "distillate",
     "concentrate", "flour", "granules", "flakes", "crystals", "chips",
     "shreds", "ribbons", "paste", "cream", "gel", "liquid", "solid",
-    "clay", "glycerite",
+    "clay", "glycerite", "milk", "water", "juice", "pulp", "puree",
 }
 
 _VARIATION_TOKENS = {
@@ -45,22 +55,42 @@ _VARIATION_TOKENS = {
     "essential", "fragrance", "carrier", "high oleic", "low linoleic",
 }
 
-_INLINE_VARIATION_TOKENS = {"essential", "fragrance", "carrier"}
-
 _PAREN_RE = re.compile(r"\s*\([^)]+\)\s*")
 _SPACE_RE = re.compile(r"\s+")
 _PERCENTAGE_RE = re.compile(r"\s+(\d+(?:\.\d+)?%)")
 
 
+def _sha_key(*parts: str) -> str:
+    joined = "|".join([str(p).strip() for p in parts if p is not None])
+    return hashlib.sha1(joined.encode("utf-8")).hexdigest()
+
+
+def _normalize_term(term: str) -> str:
+    """Normalize a term for consistent clustering.
+    
+    Title-case for proper noun treatment, consistent with item_parser output.
+    """
+    t = (term or "").strip()
+    if not t:
+        return ""
+    words = t.split()
+    result = []
+    for w in words:
+        if w.isupper() and len(w) > 2:
+            result.append(w.title())
+        else:
+            result.append(w)
+    return " ".join(result)
+
+
 def _parse_seed_name(raw_name: str, physical_form_explicit: str = "") -> tuple[str, str, str]:
     """Parse a seed item name into (term, variation, physical_form).
     
-    Seed names are simpler maker-friendly names:
+    Seed names are maker-friendly:
     - "Shea Butter" -> ("Shea", "", "Butter")
     - "Olive Oil (Extra Virgin)" -> ("Olive", "Extra Virgin", "Oil")
-    - "Sweet Almond Oil" -> ("Sweet Almond", "", "Oil")
-    - "Coconut Oil, Refined" -> ("Coconut", "Refined", "Oil")
     - "Salicylic Acid 2% Solution" -> ("Salicylic Acid", "2%", "Solution")
+    - "Citric Acid" -> ("Citric Acid", "", "")  # Keep chemical names intact
     """
     name = (raw_name or "").strip()
     if not name:
@@ -101,49 +131,17 @@ def _parse_seed_name(raw_name: str, physical_form_explicit: str = "") -> tuple[s
             physical_form = tokens[-1]
         tokens = tokens[:-1]
     
-    if tokens and tokens[-1].lower() in _INLINE_VARIATION_TOKENS:
-        if not variation:
-            variation = tokens[-1]
-        tokens = tokens[:-1]
-    
     term = " ".join(tokens).strip()
     
     if not term:
         term = name
     
+    term = _normalize_term(term)
+    
     return term, variation, physical_form
 
 
-SEED_CATEGORIES_DIR = Path(__file__).resolve().parents[2] / "app" / "seeders" / "globallist" / "ingredients" / "categories"
-
-SPEC_FIELDS = {
-    "saponification_value",
-    "iodine_value",
-    "melting_point_c",
-    "flash_point_c",
-    "fatty_acid_profile",
-    "comedogenic_rating",
-    "recommended_shelf_life_days",
-    "density",
-    "ph_range",
-    "hlb_value",
-    "solubility",
-    "viscosity",
-    "refractive_index",
-    "specific_gravity",
-    "acid_value",
-    "peroxide_value",
-    "unsaponifiable_matter",
-}
-
-
-def _sha_key(*parts: str) -> str:
-    joined = "|".join([str(p).strip() for p in parts if p is not None])
-    return hashlib.sha1(joined.encode("utf-8")).hexdigest()
-
-
 def _extract_specs(item: dict[str, Any]) -> dict[str, Any]:
-    """Extract specification fields from a seed item."""
     specs = {}
     for field in SPEC_FIELDS:
         if field in item and item[field] is not None:
@@ -151,37 +149,30 @@ def _extract_specs(item: dict[str, Any]) -> dict[str, Any]:
     return specs
 
 
-def ingest_seed_items(
-    *,
-    seed_dir: Optional[Path] = None,
-    dry_run: bool = False,
-) -> tuple[int, int]:
-    """Ingest seed items from JSON files, parsing them through item_parser.
-
+def ingest_seed_items(dry_run: bool = False) -> tuple[int, int]:
+    """Ingest seed items into compiler_state.db.
+    
     Returns:
         (inserted_source_items, inserted_normalized_terms)
     """
-    if seed_dir is None:
-        seed_dir = SEED_CATEGORIES_DIR
-
-    if not seed_dir.exists():
-        LOGGER.warning(f"Seed directory not found: {seed_dir}")
+    if not SEED_CATEGORIES_DIR.exists():
+        print(f"Seed directory not found: {SEED_CATEGORIES_DIR}")
         return 0, 0
 
     database_manager.ensure_tables_exist()
-
+    
     source_rows: list[dict[str, Any]] = []
     normalized_terms: dict[str, dict[str, Any]] = {}
-
-    json_files = sorted(seed_dir.glob("*.json"))
-    LOGGER.info(f"Found {len(json_files)} seed JSON files in {seed_dir}")
+    
+    json_files = sorted(SEED_CATEGORIES_DIR.glob("*.json"))
+    print(f"Found {len(json_files)} seed JSON files")
 
     for json_path in json_files:
         try:
             with json_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            LOGGER.error(f"Failed to parse {json_path}: {e}")
+            print(f"Failed to parse {json_path}: {e}")
             continue
 
         category_name = data.get("category_name", json_path.stem)
@@ -194,20 +185,23 @@ def ingest_seed_items(
 
             inci_name = (item.get("inci_name") or "").strip()
             physical_form_explicit = (item.get("physical_form") or "").strip()
+            specs = _extract_specs(item)
 
             definition, variation, physical_form = _parse_seed_name(raw_name, physical_form_explicit)
-
+            
             origin = infer_origin(raw_name)
-            ingredient_category = infer_primary_category(definition, origin, raw_name=raw_name) if definition else ""
+            ingredient_category = infer_primary_category(definition, origin, raw_name=raw_name) if definition else category_name
             refinement_level = infer_refinement(definition or raw_name, raw_name)
             derived_part = extract_plant_part(raw_name)
 
-            specs = _extract_specs(item)
-
-            key = _sha_key("seed", json_path.stem, str(idx), raw_name)
-            content_hash = _sha_key("seed", raw_name, inci_name)
+            status = "linked" if definition else "orphan"
+            reason = None
+            if not definition:
+                reason = "Unable to derive definition term from seed item name"
 
             source_row_id = f"seed:{json_path.stem}:{idx}"
+            key = _sha_key("seed", source_row_id, raw_name)
+            content_hash = _sha_key("seed", raw_name, inci_name or "")
 
             aliases = item.get("aliases", [])
             ingredient_block = item.get("ingredient", {})
@@ -222,6 +216,7 @@ def ingest_seed_items(
                 "certifications": certifications,
                 "default_unit": item.get("default_unit"),
                 "is_active_ingredient": item.get("is_active_ingredient", False),
+                "specs": specs,
             }
 
             source_rows.append({
@@ -229,25 +224,27 @@ def ingest_seed_items(
                 "source": "seed",
                 "source_row_id": source_row_id,
                 "source_row_number": idx,
-                "source_ref": str(json_path.relative_to(seed_dir.parent.parent.parent.parent.parent)) if seed_dir else json_path.name,
+                "source_ref": json_path.name,
                 "content_hash": content_hash,
                 "is_composite": False,
                 "raw_name": raw_name,
                 "inci_name": inci_name or None,
                 "cas_number": None,
-                "cas_numbers_json": json.dumps([], ensure_ascii=False),
+                "cas_numbers_json": "[]",
                 "derived_term": definition or None,
                 "derived_variation": variation or None,
                 "derived_physical_form": physical_form or None,
                 "derived_part": derived_part or None,
                 "derived_part_reason": "token_in_raw_name" if derived_part else None,
-                "derived_specs_json": json.dumps(specs, ensure_ascii=False) if specs else None,
-                "origin": origin,
-                "ingredient_category": ingredient_category or None,
+                "origin": origin or "Plant-Derived",
+                "ingredient_category": ingredient_category or category_name,
                 "refinement_level": refinement_level or None,
-                "status": "linked" if definition else "orphan",
-                "needs_review_reason": None if definition else "Unable to derive definition term from seed item",
-                "payload_json": json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                "status": status,
+                "needs_review_reason": reason,
+                "derived_specs_json": json.dumps(specs, ensure_ascii=False) if specs else "{}",
+                "derived_specs_sources_json": json.dumps({"seed": json_path.name}, ensure_ascii=False) if specs else "{}",
+                "derived_specs_notes_json": "[]",
+                "payload_json": json.dumps(payload, ensure_ascii=False),
             })
 
             if definition:
@@ -255,13 +252,13 @@ def ingest_seed_items(
                     definition,
                     {
                         "term": definition,
-                        "seed_category": ingredient_category or None,
+                        "seed_category": category_name,
                         "botanical_name": "",
-                        "inci_name": "",
+                        "inci_name": inci_name or "",
                         "cas_number": "",
                         "description": "",
-                        "ingredient_category": ingredient_category or None,
-                        "origin": origin,
+                        "ingredient_category": ingredient_category or category_name,
+                        "origin": origin or "Plant-Derived",
                         "refinement_level": refinement_level,
                         "derived_from": "",
                         "ingredient_category_confidence": 80,
@@ -269,55 +266,37 @@ def ingest_seed_items(
                         "refinement_confidence": 80,
                         "derived_from_confidence": 0,
                         "overall_confidence": 80,
-                        "sources_json": json.dumps({"sources": ["seed"]}, ensure_ascii=False, sort_keys=True),
+                        "sources_json": json.dumps({"sources": ["seed"]}, ensure_ascii=False),
                     },
                 )
                 if inci_name and not rec.get("inci_name"):
                     rec["inci_name"] = inci_name
 
     if dry_run:
-        LOGGER.info(f"[DRY RUN] Would insert {len(source_rows)} source items, {len(normalized_terms)} normalized terms")
-        for row in source_rows[:10]:
-            LOGGER.info(f"  -> {row['raw_name']} => term={row['derived_term']}, var={row['derived_variation']}, form={row['derived_physical_form']}")
+        print(f"\n[DRY RUN] Would insert {len(source_rows)} source items")
+        for row in source_rows[:20]:
+            print(f"  {row['raw_name']!r:45} => term={row['derived_term']!r:25}, var={row['derived_variation']!r:15}, form={row['derived_physical_form']!r}")
+        print(f"\nNormalized terms: {len(normalized_terms)}")
         return len(source_rows), len(normalized_terms)
 
-    with database_manager.get_session() as session:
-        for row in source_rows:
-            existing = session.query(database_manager.SourceItem).filter_by(key=row["key"]).first()
-            if existing:
-                for k, v in row.items():
-                    setattr(existing, k, v)
-            else:
-                session.add(database_manager.SourceItem(**row))
+    existing = database_manager.delete_source_items_by_source("seed")
+    print(f"Deleted {existing} existing seed source items")
 
-        for term, rec in normalized_terms.items():
-            existing = session.query(database_manager.NormalizedTerm).filter_by(term=term).first()
-            if not existing:
-                session.add(database_manager.NormalizedTerm(**rec))
-
-        session.commit()
-
-    LOGGER.info(f"Ingested {len(source_rows)} seed source items, {len(normalized_terms)} normalized terms")
-    return len(source_rows), len(normalized_terms)
+    inserted_items = database_manager.upsert_source_items(source_rows)
+    inserted_terms = database_manager.upsert_normalized_terms(list(normalized_terms.values()))
+    
+    print(f"Inserted {inserted_items} seed source items, {inserted_terms} normalized terms")
+    return inserted_items, inserted_terms
 
 
-def main():
+def main() -> None:
     import argparse
-
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-    parser = argparse.ArgumentParser(description="Ingest seed JSON files into source_items")
-    parser.add_argument("--dry-run", action="store_true", help="Don't write to DB, just show what would be inserted")
-    parser.add_argument("--seed-dir", type=Path, help="Override seed directory path")
-
+    parser = argparse.ArgumentParser(description="Ingest seed items into compiler_state.db")
+    parser.add_argument("--dry-run", action="store_true", help="Preview without writing to DB")
     args = parser.parse_args()
-
-    inserted, terms = ingest_seed_items(
-        seed_dir=args.seed_dir,
-        dry_run=args.dry_run,
-    )
-
-    print(f"Inserted {inserted} source items, {terms} normalized terms")
+    
+    items, terms = ingest_seed_items(dry_run=args.dry_run)
+    print(f"\nResult: {items} items, {terms} terms")
 
 
 if __name__ == "__main__":
