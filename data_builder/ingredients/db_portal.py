@@ -153,6 +153,14 @@ HTML_TEMPLATE = """
                 <h3>{{ stats.with_specs }}</h3>
                 <p>With Specs</p>
             </div>
+            <div class="stat-box">
+                <h3>{{ stats.total_clusters }}</h3>
+                <p>Clusters</p>
+            </div>
+            <div class="stat-box">
+                <h3>{{ stats.multi_item_clusters }}</h3>
+                <p>Multi-Item Clusters</p>
+            </div>
         </div>
     </div>
     
@@ -163,6 +171,7 @@ HTML_TEMPLATE = """
                 <div class="view-toggle">
                     <button class="view-btn active" data-view="terms" onclick="setView('terms')">Terms</button>
                     <button class="view-btn" data-view="items" onclick="setView('items')">Items</button>
+                    <button class="view-btn" data-view="clusters" onclick="setView('clusters')">Clusters</button>
                 </div>
             </div>
             <div class="filter-section">
@@ -185,6 +194,20 @@ HTML_TEMPLATE = """
                     </button>
                 </div>
             </div>
+            <div class="filter-section" id="cluster-filters" style="display:none;">
+                <div class="filter-label">Cluster Size</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-cluster="all" onclick="setClusterSize('all')">All</button>
+                    <button class="venn-btn" data-cluster="multi" onclick="setClusterSize('multi')" style="background:#dcfce7;color:#166534;border-color:#86efac;">Multi-Item</button>
+                    <button class="venn-btn" data-cluster="single" onclick="setClusterSize('single')" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;">Single-Item</button>
+                </div>
+            </div>
+            <div class="filter-section">
+                <div class="filter-label">Primary Category</div>
+                <select id="category-filter" onchange="setCategoryFilter(this.value)" style="padding:10px 14px; border:2px solid #d1d5db; border-radius:8px; font-size:14px; min-width:200px; background:#fff;">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
         </div>
         
         <div class="filter-info" id="filter-info">
@@ -198,6 +221,7 @@ HTML_TEMPLATE = """
             <div class="export-btns">
                 <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
                 <button class="export-btn" onclick="exportData('json')">Export JSON</button>
+                <button class="export-btn" onclick="exportAnalysis()" style="background:#7c3aed;">Export Analysis CSV</button>
             </div>
         </div>
         
@@ -248,9 +272,33 @@ HTML_TEMPLATE = """
         let currentPage = 1;
         let totalPages = 1;
         let currentFilter = 'all';
+        let currentCategory = '';
         let currentView = 'terms';
+        let currentClusterSize = 'all';
         let searchTimeout = null;
         let expandedTerms = new Set();
+        
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(r => r.json())
+                .then(data => {
+                    const select = document.getElementById('category-filter');
+                    data.categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = `${cat.name} (${cat.count})`;
+                        select.appendChild(opt);
+                    });
+                });
+        }
+        
+        function setCategoryFilter(category) {
+            currentCategory = category;
+            currentPage = 1;
+            expandedTerms.clear();
+            updateFilterInfo();
+            loadData();
+        }
         
         const filterDescriptions = {
             'all': 'Showing all {view} from all sources.',
@@ -261,8 +309,15 @@ HTML_TEMPLATE = """
         };
         
         function updateFilterInfo() {
-            const viewName = currentView === 'terms' ? 'terms' : 'items';
-            document.getElementById('filter-info').textContent = filterDescriptions[currentFilter].replace('{view}', viewName);
+            const viewName = currentView === 'terms' ? 'terms' : (currentView === 'clusters' ? 'clusters' : 'items');
+            let info = filterDescriptions[currentFilter].replace('{view}', viewName);
+            if (currentCategory) {
+                info += ` Filtered to: ${currentCategory}`;
+            }
+            if (currentView === 'clusters') {
+                info = 'Showing source item clusters - items grouped by what the system expects to merge together.';
+            }
+            document.getElementById('filter-info').textContent = info;
         }
         
         function setView(view) {
@@ -272,8 +327,18 @@ HTML_TEMPLATE = """
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
+            document.getElementById('cluster-filters').style.display = view === 'clusters' ? 'block' : 'none';
             updateFilterInfo();
             updateTableHeaders();
+            loadData();
+        }
+        
+        function setClusterSize(size) {
+            currentClusterSize = size;
+            currentPage = 1;
+            document.querySelectorAll('[data-cluster]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.cluster === size);
+            });
             loadData();
         }
         
@@ -292,6 +357,8 @@ HTML_TEMPLATE = """
             const thead = document.getElementById('table-head');
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
+            } else if (currentView === 'clusters') {
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Raw Names (Expected to Merge)</th><th>Derived Term</th><th>Count</th><th>Reason</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -309,20 +376,29 @@ HTML_TEMPLATE = """
         function loadData() {
             const search = document.getElementById('search').value;
             const tbody = document.getElementById('table-body');
-            const colSpan = currentView === 'terms' ? 4 : 6;
+            const colSpan = currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6);
             tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Loading...</td></tr>`;
             
-            const endpoint = currentView === 'terms' ? '/api/terms' : '/api/merged-items';
+            let endpoint;
+            if (currentView === 'terms') {
+                endpoint = '/api/terms';
+            } else if (currentView === 'clusters') {
+                endpoint = '/api/clusters';
+            } else {
+                endpoint = '/api/merged-items';
+            }
             
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
                     
-                    if ((data.items || data.terms || []).length === 0) {
+                    if ((data.items || data.terms || data.clusters || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
                     } else if (currentView === 'terms') {
                         renderTermsView(data.terms);
+                    } else if (currentView === 'clusters') {
+                        renderClustersView(data.clusters);
                     } else {
                         renderItemsView(data.items);
                     }
@@ -400,6 +476,72 @@ HTML_TEMPLATE = """
                     <td>${specsBadge}</td>
                 </tr>`;
             }).join('');
+        }
+        
+        function renderClustersView(clusters) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = clusters.map(cluster => {
+                const rawNames = cluster.raw_names || [];
+                let rawNamesHtml = rawNames.map(n => `<div style="font-size:11px; padding:2px 0; border-bottom:1px dotted #ddd;">${n}</div>`).join('');
+                if (cluster.has_more_names) {
+                    rawNamesHtml += `<div style="font-size:10px; color:#6b7280; font-style:italic;">...and ${cluster.total_names - rawNames.length} more</div>`;
+                }
+                const reasonBadge = cluster.reason ? `<span class="badge" style="background:#f3e8ff;color:#6b21a8;">${cluster.reason}</span>` : '-';
+                const countBadge = cluster.count > 1 ? 
+                    `<span class="badge badge-both">${cluster.count}</span>` : 
+                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.count}</span>`;
+                
+                return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
+                    <td style="font-size:11px; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${cluster.cluster_id}</td>
+                    <td style="max-width:300px;">${rawNamesHtml || '-'}</td>
+                    <td><strong>${cluster.derived_term || '-'}</strong></td>
+                    <td>${countBadge}</td>
+                    <td>${reasonBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function showClusterDetail(clusterId) {
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-body').innerHTML = '<div class="loading">Loading...</div>';
+            
+            fetch(`/api/cluster/${encodeURIComponent(clusterId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('detail-title').textContent = data.derived_term || 'Cluster Details';
+                    document.getElementById('detail-subtitle').textContent = `Cluster: ${data.cluster_id} | ${data.items.length} items`;
+                    
+                    let html = '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:11px;">${data.cluster_id}</div>`;
+                    html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    html += '<div class="detail-section"><h3>Source Items in Cluster (Expected to Merge)</h3>';
+                    html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">These raw names should all resolve to the same ingredient term:</p>';
+                    
+                    data.items.forEach(item => {
+                        const srcBadge = item.source === 'cosing' ? 
+                            '<span class="badge badge-cosing">CosIng</span>' : 
+                            '<span class="badge badge-tgsc">TGSC</span>';
+                        html += `<div class="source-item" onclick="showSourceDetail('${item.key}')">
+                            <div class="source-item-header">
+                                <span class="source-item-name">${item.raw_name || item.key}</span>
+                                ${srcBadge}
+                            </div>
+                            <div class="source-item-details">
+                                <span>INCI: ${item.inci_name || '-'}</span>
+                                <span>CAS: ${item.cas_number || '-'}</span>
+                                <span>Variation: ${item.derived_variation || '-'}</span>
+                                <span>Form: ${item.derived_physical_form || '-'}</span>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    
+                    document.getElementById('detail-body').innerHTML = html;
+                });
         }
         
         function toggleTerm(term) {
@@ -600,6 +742,19 @@ HTML_TEMPLATE = """
                         html += '</div></div>';
                     }
                     
+                    html += '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value"><strong>${data.derived_term || '-'}</strong></div>`;
+                    html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.definition_cluster_id || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Reason</div><div class="detail-value">${data.definition_cluster_reason || '-'}</div>`;
+                    html += `<div class="detail-label">Cluster Confidence</div><div class="detail-value">${data.definition_cluster_confidence || '-'}</div>`;
+                    html += '</div>';
+                    if (data.definition_cluster_id) {
+                        html += `<button onclick="event.stopPropagation(); closeSourceDetail(); closeDetail(); showClusterDetail('${data.definition_cluster_id.replace(/'/g, "\\'")}')" style="margin-top:10px; padding:8px 16px; background:#7c3aed; color:#fff; border:none; border-radius:6px; cursor:pointer;">View All Items in This Cluster</button>`;
+                    }
+                    html += '</div>';
+                    
                     document.getElementById('source-detail-body').innerHTML = html;
                 });
         }
@@ -613,10 +768,17 @@ HTML_TEMPLATE = """
             window.location.href = `/api/export/${format}?filter=${currentFilter}&view=${currentView}&search=${encodeURIComponent(search)}`;
         }
         
+        function exportAnalysis() {
+            const search = document.getElementById('search').value;
+            const category = document.getElementById('category-filter').value;
+            window.location.href = `/api/export-analysis?filter=${currentFilter}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&cluster_size=${currentClusterSize}`;
+        }
+        
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeDetail();
         });
         
+        loadCategories();
         loadData();
     </script>
 </body>
@@ -662,14 +824,170 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
     stats['with_specs'] = cur.fetchone()[0]
     
+    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    stats['total_clusters'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
+    stats['multi_item_clusters'] = cur.fetchone()[0]
+    
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
+
+@app.route('/api/categories')
+def api_categories():
+    conn = get_db('final')
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT ingredient_category, COUNT(*) as cnt 
+        FROM source_items 
+        WHERE ingredient_category IS NOT NULL AND ingredient_category != ''
+        GROUP BY ingredient_category 
+        ORDER BY cnt DESC
+    """)
+    categories = [{'name': row[0], 'count': row[1]} for row in cur.fetchall()]
+    conn.close()
+    return jsonify({'categories': categories})
+
+@app.route('/api/clusters')
+def api_clusters():
+    page = int(request.args.get('page', 1))
+    search = request.args.get('search', '').strip()
+    cluster_size = request.args.get('cluster_size', 'all')
+    filter_type = request.args.get('filter', 'all')
+    category = request.args.get('category', '').strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = ["definition_cluster_id IS NOT NULL"]
+    params = []
+    
+    if search:
+        where_clauses.append("(derived_term LIKE ? OR raw_name LIKE ? OR definition_cluster_id LIKE ?)")
+        search_param = f"%{search}%"
+        params.extend([search_param, search_param, search_param])
+    
+    if category:
+        where_clauses.append("ingredient_category = ?")
+        params.append(category)
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    having_clauses = []
+    if cluster_size == 'multi':
+        having_clauses.append("COUNT(*) > 1")
+    elif cluster_size == 'single':
+        having_clauses.append("COUNT(*) = 1")
+    
+    if filter_type == 'cosing':
+        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
+    elif filter_type == 'tgsc':
+        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+    elif filter_type == 'both':
+        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
+        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+    
+    having_clause = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
+    
+    cur.execute(f"""
+        SELECT definition_cluster_id, 
+               GROUP_CONCAT(DISTINCT raw_name) as raw_names,
+               MAX(derived_term) as derived_term,
+               COUNT(*) as cnt,
+               MAX(definition_cluster_reason) as reason
+        FROM source_items
+        {where_sql}
+        GROUP BY definition_cluster_id
+        {having_clause}
+        ORDER BY cnt DESC, derived_term
+        LIMIT ? OFFSET ?
+    """, params + [per_page, offset])
+    
+    clusters = []
+    for row in cur.fetchall():
+        raw_names_str = row[1] or ''
+        all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()]
+        display_names = all_raw_names[:8]
+        has_more = len(all_raw_names) > 8
+        clusters.append({
+            'cluster_id': row[0],
+            'raw_names': display_names,
+            'has_more_names': has_more,
+            'total_names': len(all_raw_names),
+            'derived_term': row[2],
+            'count': row[3],
+            'reason': row[4]
+        })
+    
+    cur.execute(f"""
+        SELECT COUNT(*) FROM (
+            SELECT definition_cluster_id, SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) as cosing_cnt, 
+                   SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) as tgsc_cnt
+            FROM source_items {where_sql} 
+            GROUP BY definition_cluster_id {having_clause}
+        )
+    """, params)
+    total = cur.fetchone()[0]
+    
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    
+    conn.close()
+    return jsonify({
+        'clusters': clusters,
+        'total': total,
+        'total_pages': total_pages,
+        'page': page
+    })
+
+@app.route('/api/cluster/<path:cluster_id>')
+def api_cluster_detail(cluster_id):
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT key, source, raw_name, inci_name, cas_number, 
+               derived_term, derived_variation, derived_physical_form,
+               definition_cluster_reason
+        FROM source_items 
+        WHERE definition_cluster_id = ?
+        ORDER BY source, raw_name
+    """, (cluster_id,))
+    
+    items = []
+    reason = None
+    derived_term = None
+    for row in cur.fetchall():
+        if not reason:
+            reason = row[8]
+        if not derived_term:
+            derived_term = row[5]
+        items.append({
+            'key': row[0],
+            'source': row[1],
+            'raw_name': row[2],
+            'inci_name': row[3],
+            'cas_number': row[4],
+            'derived_term': row[5],
+            'derived_variation': row[6],
+            'derived_physical_form': row[7]
+        })
+    
+    conn.close()
+    return jsonify({
+        'cluster_id': cluster_id,
+        'reason': reason,
+        'derived_term': derived_term,
+        'items': items
+    })
 
 @app.route('/api/terms')
 def api_terms():
     filter_type = request.args.get('filter', 'all')
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
     per_page = 50
     offset = (page - 1) * per_page
     
@@ -680,28 +998,32 @@ def api_terms():
     params = []
     
     if search:
-        where_clauses.append("derived_term LIKE ?")
+        where_clauses.append("m.derived_term LIKE ?")
         params.append(f"%{search}%")
     
     if filter_type == 'cosing':
-        where_clauses.append("has_cosing = 1")
+        where_clauses.append("m.has_cosing = 1")
     elif filter_type == 'tgsc':
-        where_clauses.append("has_tgsc = 1")
+        where_clauses.append("m.has_tgsc = 1")
     elif filter_type == 'both':
-        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+        where_clauses.append("m.has_cosing = 1 AND m.has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+    
+    if category:
+        where_clauses.append("EXISTS (SELECT 1 FROM source_items s WHERE s.derived_term = m.derived_term AND s.ingredient_category = ?)")
+        params.append(category)
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
     cur.execute(f"""
-        SELECT derived_term, COUNT(*) as item_count,
-               MAX(has_cosing) as has_cosing, MAX(has_tgsc) as has_tgsc,
+        SELECT m.derived_term, COUNT(*) as item_count,
+               MAX(m.has_cosing) as has_cosing, MAX(m.has_tgsc) as has_tgsc,
                (SELECT ingredient_category FROM source_items WHERE derived_term = m.derived_term LIMIT 1) as category
         FROM merged_item_forms m
         {where_sql}
-        GROUP BY derived_term
-        ORDER BY derived_term
+        GROUP BY m.derived_term
+        ORDER BY m.derived_term
         LIMIT ? OFFSET ?
     """, params + [per_page, offset])
     
@@ -716,7 +1038,7 @@ def api_terms():
         })
     
     cur.execute(f"""
-        SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms {where_sql}
+        SELECT COUNT(DISTINCT m.derived_term) FROM merged_item_forms m {where_sql}
     """, params)
     total = cur.fetchone()[0]
     
@@ -782,6 +1104,7 @@ def api_merged_items():
     filter_type = request.args.get('filter', 'all')
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
     per_page = 50
     offset = (page - 1) * per_page
     
@@ -792,31 +1115,35 @@ def api_merged_items():
     params = []
     
     if search:
-        where_clauses.append("(derived_term LIKE ? OR cas_numbers_json LIKE ?)")
+        where_clauses.append("(m.derived_term LIKE ? OR m.cas_numbers_json LIKE ?)")
         search_param = f"%{search}%"
         params.extend([search_param, search_param])
     
     if filter_type == 'cosing':
-        where_clauses.append("has_cosing = 1")
+        where_clauses.append("m.has_cosing = 1")
     elif filter_type == 'tgsc':
-        where_clauses.append("has_tgsc = 1")
+        where_clauses.append("m.has_tgsc = 1")
     elif filter_type == 'both':
-        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+        where_clauses.append("m.has_cosing = 1 AND m.has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+    
+    if category:
+        where_clauses.append("EXISTS (SELECT 1 FROM source_items s WHERE s.derived_term = m.derived_term AND s.ingredient_category = ?)")
+        params.append(category)
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
-    cur.execute(f"SELECT COUNT(*) FROM merged_item_forms {where_sql}", params)
+    cur.execute(f"SELECT COUNT(*) FROM merged_item_forms m {where_sql}", params)
     total = cur.fetchone()[0]
     
     cur.execute(f"""
-        SELECT id, derived_term, derived_variation, derived_physical_form,
-               cas_numbers_json, has_cosing, has_tgsc, source_row_count,
-               CASE WHEN merged_specs_json IS NOT NULL AND merged_specs_json != '{{}}' THEN 1 ELSE 0 END as has_specs
-        FROM merged_item_forms
+        SELECT m.id, m.derived_term, m.derived_variation, m.derived_physical_form,
+               m.cas_numbers_json, m.has_cosing, m.has_tgsc, m.source_row_count,
+               CASE WHEN m.merged_specs_json IS NOT NULL AND m.merged_specs_json != '{{}}' THEN 1 ELSE 0 END as has_specs
+        FROM merged_item_forms m
         {where_sql}
-        ORDER BY derived_term
+        ORDER BY m.derived_term
         LIMIT ? OFFSET ?
     """, params + [per_page, offset])
     
@@ -1011,6 +1338,118 @@ def api_source_item_detail(key):
         'merged_item_id': row[34],
         'ingested_at': row[35]
     })
+
+@app.route('/api/export-analysis')
+def api_export_analysis():
+    """Export comprehensive analysis CSV with cluster context for pre-AI data review."""
+    filter_type = request.args.get('filter', 'all')
+    search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
+    cluster_size = request.args.get('cluster_size', 'all')
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = ["s.definition_cluster_id IS NOT NULL"]
+    params = []
+    
+    if search:
+        where_clauses.append("(s.derived_term LIKE ? OR s.raw_name LIKE ? OR s.definition_cluster_id LIKE ?)")
+        search_param = f"%{search}%"
+        params.extend([search_param, search_param, search_param])
+    
+    if category:
+        where_clauses.append("s.ingredient_category = ?")
+        params.append(category)
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    having_clauses = []
+    if cluster_size == 'multi':
+        having_clauses.append("cluster_size > 1")
+    elif cluster_size == 'single':
+        having_clauses.append("cluster_size = 1")
+    
+    if filter_type == 'cosing':
+        having_clauses.append("cosing_count > 0")
+    elif filter_type == 'tgsc':
+        having_clauses.append("tgsc_count > 0")
+    elif filter_type == 'both':
+        having_clauses.append("cosing_count > 0 AND tgsc_count > 0")
+    elif filter_type == 'pubchem':
+        having_clauses.append("has_pubchem > 0")
+    
+    having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
+    
+    cur.execute(f"""
+        WITH cluster_stats AS (
+            SELECT 
+                s.definition_cluster_id,
+                COUNT(*) as cluster_size,
+                SUM(CASE WHEN s.source = 'cosing' THEN 1 ELSE 0 END) as cosing_count,
+                SUM(CASE WHEN s.source = 'tgsc' THEN 1 ELSE 0 END) as tgsc_count,
+                MAX(CASE WHEN json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL THEN 1 ELSE 0 END) as has_pubchem,
+                GROUP_CONCAT(DISTINCT s.source) as sources_in_cluster
+            FROM source_items s
+            LEFT JOIN merged_item_forms m ON s.merged_item_id = m.id
+            {where_sql}
+            GROUP BY s.definition_cluster_id
+            {having_sql}
+        )
+        SELECT 
+            s.key,
+            s.source,
+            s.raw_name,
+            s.inci_name,
+            s.cas_number,
+            s.derived_term,
+            s.derived_variation,
+            s.derived_physical_form,
+            s.ingredient_category,
+            s.definition_display_name,
+            s.definition_cluster_id,
+            s.definition_cluster_reason,
+            cs.cluster_size,
+            cs.cosing_count,
+            cs.tgsc_count,
+            cs.sources_in_cluster
+        FROM source_items s
+        JOIN cluster_stats cs ON s.definition_cluster_id = cs.definition_cluster_id
+        ORDER BY s.definition_cluster_id, s.source, s.raw_name
+    """, params)
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'key',
+        'source',
+        'raw_name',
+        'inci_name',
+        'cas_number',
+        'derived_term',
+        'derived_variation',
+        'derived_physical_form',
+        'ingredient_category',
+        'definition_display_name',
+        'cluster_id',
+        'cluster_reason',
+        'cluster_size',
+        'cosing_items_in_cluster',
+        'tgsc_items_in_cluster',
+        'sources_in_cluster'
+    ])
+    
+    for row in rows:
+        writer.writerow(row)
+    
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=analysis_export.csv'}
+    )
 
 @app.route('/api/export/<format>')
 def api_export(format):
