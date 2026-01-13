@@ -462,13 +462,38 @@ HTML_TEMPLATE = """
                     html += '</div></div>';
                     
                     if (data.merged_specs && Object.keys(data.merged_specs).length > 0) {
-                        html += '<div class="detail-section"><h3>Specifications</h3>';
-                        html += '<div class="detail-grid">';
-                        for (const [key, val] of Object.entries(data.merged_specs)) {
-                            const displayVal = typeof val === 'object' ? JSON.stringify(val) : val;
-                            html += `<div class="detail-label">${key}</div><div class="detail-value">${displayVal}</div>`;
+                        const pubchem = data.merged_specs.pubchem;
+                        const otherSpecs = Object.entries(data.merged_specs).filter(([k]) => k !== 'pubchem');
+                        
+                        if (otherSpecs.length > 0) {
+                            html += '<div class="detail-section"><h3>Specifications</h3>';
+                            html += '<div class="detail-grid">';
+                            for (const [key, val] of otherSpecs) {
+                                const displayVal = typeof val === 'object' ? JSON.stringify(val) : val;
+                                html += `<div class="detail-label">${key}</div><div class="detail-value">${displayVal}</div>`;
+                            }
+                            html += '</div></div>';
                         }
-                        html += '</div></div>';
+                        
+                        if (pubchem) {
+                            html += '<div class="detail-section"><h3>PubChem Data</h3>';
+                            html += '<div class="detail-grid">';
+                            html += `<div class="detail-label">CID</div><div class="detail-value"><a href="https://pubchem.ncbi.nlm.nih.gov/compound/${pubchem.cid}" target="_blank">${pubchem.cid}</a></div>`;
+                            if (pubchem.iupac_name) html += `<div class="detail-label">IUPAC Name</div><div class="detail-value">${pubchem.iupac_name}</div>`;
+                            if (pubchem.molecular_formula) html += `<div class="detail-label">Molecular Formula</div><div class="detail-value">${pubchem.molecular_formula}</div>`;
+                            if (pubchem.molecular_weight) html += `<div class="detail-label">Molecular Weight</div><div class="detail-value">${pubchem.molecular_weight}</div>`;
+                            if (pubchem.inchi_key) html += `<div class="detail-label">InChI Key</div><div class="detail-value" style="font-size:10px;">${pubchem.inchi_key}</div>`;
+                            if (pubchem.xlogp !== undefined) html += `<div class="detail-label">XLogP</div><div class="detail-value">${pubchem.xlogp}</div>`;
+                            if (pubchem.tpsa !== undefined) html += `<div class="detail-label">TPSA</div><div class="detail-value">${pubchem.tpsa}</div>`;
+                            if (pubchem.density) html += `<div class="detail-label">Density</div><div class="detail-value">${pubchem.density}</div>`;
+                            if (pubchem.melting_point) html += `<div class="detail-label">Melting Point</div><div class="detail-value">${pubchem.melting_point}</div>`;
+                            if (pubchem.boiling_point) html += `<div class="detail-label">Boiling Point</div><div class="detail-value">${pubchem.boiling_point}</div>`;
+                            if (pubchem.flash_point) html += `<div class="detail-label">Flash Point</div><div class="detail-value">${pubchem.flash_point}</div>`;
+                            if (pubchem.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${pubchem.solubility}</div>`;
+                            html += `<div class="detail-label">Match Confidence</div><div class="detail-value">${pubchem.confidence}%</div>`;
+                            html += `<div class="detail-label">Matched By</div><div class="detail-value">${pubchem.matched_by}</div>`;
+                            html += '</div></div>';
+                        }
                     }
                     
                     html += '<div class="detail-section"><h3>Source Records</h3>';
