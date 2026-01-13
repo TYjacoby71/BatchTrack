@@ -805,7 +805,9 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Common physical material forms
     if " butter" in f" {t} " or t.endswith(" butter"):
-        return "Butter", "Butter"
+        # "Butter" is a physical form for many plant fats (e.g., shea/cocoa/mango butter).
+        # Treating it as a variation creates the wrong identity shape downstream.
+        return "", "Butter"
     if " wax" in f" {t} " or t.endswith(" wax") or " cera" in f" {t} ":
         return "Wax", "Wax"
     if " esters" in f" {t} " or t.endswith(" esters"):
