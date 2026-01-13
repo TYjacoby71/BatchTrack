@@ -24,6 +24,8 @@ import json
 import logging
 from typing import Any
 
+from sqlalchemy import or_
+
 from . import database_manager
 
 LOGGER = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
     stats = {
         "source_items_fixed": 0,
         "source_items_bypass_updated": 0,
+        "source_items_dairy_butter_normalized": 0,
         "merged_item_forms_fixed": 0,
         "merged_item_forms_consolidated": 0,
     }
@@ -84,6 +87,41 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
             if not dry_run:
                 r.derived_variation = ""
             stats["source_items_fixed"] += 1
+
+        # Normalize dairy butter: ensure it's treated as an Animal/Dairy base term.
+        # We use a conservative matcher (raw_name / inci_name equals butter family, or well-known CAS).
+        dairy_candidates = (
+            session.query(database_manager.SourceItem)
+            .filter(
+                or_(
+                    database_manager.func.lower(database_manager.func.trim(database_manager.SourceItem.raw_name)).in_(
+                        ["butter", "salted butter", "unsalted butter"]
+                    ),
+                    database_manager.func.lower(database_manager.func.trim(database_manager.SourceItem.inci_name)).in_(["butter"]),
+                    database_manager.SourceItem.cas_number == "8029-34-3",
+                )
+            )
+            .all()
+        )
+        for r in dairy_candidates:
+            raw = (getattr(r, "raw_name", "") or "").strip().lower().strip(" ,")
+            inci = (getattr(r, "inci_name", "") or "").strip().lower().strip(" ,")
+            cas = (getattr(r, "cas_number", "") or "").strip()
+            if raw not in {"butter", "salted butter", "unsalted butter"} and inci not in {"butter"} and cas != "8029-34-3":
+                continue
+            # Force base term + animal/dairy classification.
+            new_var = ""
+            if "unsalted" in raw:
+                new_var = "Unsalted"
+            elif "salted" in raw:
+                new_var = "Salted"
+            if not dry_run:
+                r.derived_term = "Butter"
+                r.derived_physical_form = "Butter"
+                r.derived_variation = new_var
+                r.origin = "Animal-Derived"
+                r.ingredient_category = "Animal - Dairy"
+            stats["source_items_dairy_butter_normalized"] += 1
 
         # Ensure variation_bypass is set for plant-derived butter-form rows with no variation.
         plant_butter = (
