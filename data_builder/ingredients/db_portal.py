@@ -457,9 +457,7 @@ HTML_TEMPLATE = """
                     }
                     
                     if (data.compiled_specs) {
-                        html += '<div class="detail-section"><h3>Compiled Specs</h3>';
-                        html += renderJsonSection(data.compiled_specs);
-                        html += '</div>';
+                        html += renderCompiledSpecs(data.compiled_specs);
                     }
                     
                     if (data.merged_specs) {
@@ -499,6 +497,79 @@ HTML_TEMPLATE = """
                 }
             }
             html += '</div>';
+            return html;
+        }
+        
+        function renderCompiledSpecs(specs) {
+            if (!specs) return '';
+            let html = '';
+            
+            const ing = specs.ingredient || specs;
+            
+            html += '<div class="detail-section"><h3>Compiled Ingredient</h3><div class="detail-grid">';
+            html += `<div class="detail-label">Common Name</div><div class="detail-value">${ing.common_name || '-'}</div>`;
+            html += `<div class="detail-label">Category</div><div class="detail-value">${ing.category || '-'}</div>`;
+            html += `<div class="detail-label">Botanical Name</div><div class="detail-value">${ing.botanical_name || '-'}</div>`;
+            html += `<div class="detail-label">INCI Name</div><div class="detail-value">${ing.inci_name || '-'}</div>`;
+            html += `<div class="detail-label">CAS Number</div><div class="detail-value">${ing.cas_number || '-'}</div>`;
+            html += '</div></div>';
+            
+            if (ing.short_description) {
+                html += '<div class="detail-section"><h3>Description</h3>';
+                html += `<div class="detail-value">${ing.short_description}</div>`;
+                if (ing.detailed_description) {
+                    html += `<div class="detail-value" style="margin-top:8px;font-size:12px;color:#666;">${ing.detailed_description}</div>`;
+                }
+                html += '</div>';
+            }
+            
+            if (ing.primary_functions && ing.primary_functions.length > 0) {
+                html += '<div class="detail-section"><h3>Primary Functions</h3>';
+                html += '<div class="detail-value">' + ing.primary_functions.map(f => `<span class="badge badge-green">${f}</span>`).join(' ') + '</div></div>';
+            }
+            
+            if (ing.items && ing.items.length > 0) {
+                html += '<div class="detail-section"><h3>Items (' + ing.items.length + ')</h3>';
+                for (const item of ing.items) {
+                    html += '<div style="border:1px solid #eee;padding:8px;margin:4px 0;border-radius:4px;">';
+                    html += `<strong>${item.item_name || '-'}</strong>`;
+                    if (item.variation) html += ` <span class="badge badge-gray">${item.variation}</span>`;
+                    if (item.physical_form) html += ` <span class="badge badge-gray">${item.physical_form}</span>`;
+                    if (item.variation_bypass) html += ` <span class="badge badge-green">Bypass</span>`;
+                    if (item.function_tags && item.function_tags.length > 0) {
+                        html += '<div style="margin-top:4px;">' + item.function_tags.map(t => `<span class="badge badge-green" style="font-size:10px;">${t}</span>`).join(' ') + '</div>';
+                    }
+                    if (item.applications && item.applications.length > 0) {
+                        html += '<div style="margin-top:4px;font-size:11px;color:#666;">Applications: ' + item.applications.join(', ') + '</div>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            
+            if (ing.taxonomy) {
+                html += '<div class="detail-section"><h3>Taxonomy</h3><div class="detail-grid">';
+                if (ing.taxonomy.color_profile && ing.taxonomy.color_profile.length > 0) {
+                    html += `<div class="detail-label">Color</div><div class="detail-value">${ing.taxonomy.color_profile.join(', ')}</div>`;
+                }
+                if (ing.taxonomy.scent_profile && ing.taxonomy.scent_profile.length > 0) {
+                    html += `<div class="detail-label">Scent</div><div class="detail-value">${ing.taxonomy.scent_profile.join(', ')}</div>`;
+                }
+                if (ing.taxonomy.texture_profile && ing.taxonomy.texture_profile.length > 0) {
+                    html += `<div class="detail-label">Texture</div><div class="detail-value">${ing.taxonomy.texture_profile.join(', ')}</div>`;
+                }
+                html += '</div></div>';
+            }
+            
+            if (specs.data_quality) {
+                html += '<div class="detail-section"><h3>Data Quality</h3><div class="detail-grid">';
+                html += `<div class="detail-label">Confidence</div><div class="detail-value">${(specs.data_quality.confidence * 100).toFixed(0)}%</div>`;
+                if (specs.data_quality.caveats && specs.data_quality.caveats.length > 0) {
+                    html += `<div class="detail-label">Notes</div><div class="detail-value">${specs.data_quality.caveats.join('; ')}</div>`;
+                }
+                html += '</div></div>';
+            }
+            
             return html;
         }
         

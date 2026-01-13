@@ -16,7 +16,7 @@ FINAL_DB_PATH = Path(__file__).parent / "output" / "Final DB.db"
 
 CATEGORY_MAP = {
     "Agave Nectar": "Liquid Sweeteners",
-    "All-Purpose": "Grains",
+    "Flour": "Grains",
     "Almonds": "Nuts",
     "Aloe Vera 10x": "Herbs",
     "Alpha Arbutin": "Synthetic - Other",
@@ -29,7 +29,7 @@ CATEGORY_MAP = {
 
 COMMON_NAME_MAP = {
     "Agave Nectar": "Agave Nectar",
-    "All-Purpose": "All-Purpose Flour",
+    "Flour": "Flour",
     "Almonds": "Almonds",
     "Aloe Vera 10x": "Aloe Vera 10x Concentrate",
     "Alpha Arbutin": "Alpha Arbutin",
@@ -45,9 +45,9 @@ DESCRIPTION_MAP = {
         "short": "A natural liquid sweetener derived from the agave plant.",
         "detailed": "Agave nectar is a natural sweetener produced from the sap of the agave plant. It has a lower glycemic index than sugar and dissolves easily in cold liquids, making it popular for beverages and baked goods."
     },
-    "All-Purpose": {
-        "short": "A versatile wheat flour suitable for most baking applications.",
-        "detailed": "All-purpose flour is a finely milled wheat flour with moderate protein content. It is the most commonly used flour in baking and is suitable for cookies, cakes, breads, and pastries."
+    "Flour": {
+        "short": "Finely milled grain powder used as a primary baking ingredient.",
+        "detailed": "Flour is a finely milled powder made from grains. Different varieties (all-purpose, bread, whole wheat, etc.) have varying protein content and are suited for different baking applications."
     },
     "Almonds": {
         "short": "Nutrient-rich tree nuts used whole, sliced, or ground.",
@@ -85,7 +85,7 @@ DESCRIPTION_MAP = {
 
 ORIGIN_MAP = {
     "Agave Nectar": "Plant-Derived",
-    "All-Purpose": "Plant-Derived",
+    "Flour": "Plant-Derived",
     "Almonds": "Plant-Derived",
     "Aloe Vera 10x": "Plant-Derived",
     "Alpha Arbutin": "Synthetic",
@@ -96,13 +96,21 @@ ORIGIN_MAP = {
     "Bamboo & Coconut": "Synthetic",
 }
 
+REFINEMENT_MAP = {
+    "Flour": "Milled",
+}
+
+VARIATION_BYPASS_TERMS = {
+    "Apple Cider Vinegar",
+}
+
 FUNCTIONS_MAP = {
     "Agave Nectar": ["Sweetener", "Humectant"],
-    "All-Purpose": ["Thickener", "Binder", "Structure"],
+    "Flour": ["Thickener", "Binder", "Structure"],
     "Almonds": ["Exfoliant", "Protein Source", "Flavoring"],
     "Aloe Vera 10x": ["Moisturizer", "Soothing Agent", "Humectant"],
     "Alpha Arbutin": ["Skin Brightener", "Tyrosinase Inhibitor"],
-    "Apple Cider Vinegar": ["pH Adjuster", "Clarifying Agent", "Preservative"],
+    "Apple Cider Vinegar": ["pH Adjuster", "Clarifying Agent"],
     "Apricot Kernel Meal": ["Exfoliant", "Absorbent"],
     "Argan": ["Emollient", "Moisturizer", "Anti-oxidant"],
     "BTMS-50": ["Emulsifier", "Conditioner", "Detangler"],
@@ -111,11 +119,11 @@ FUNCTIONS_MAP = {
 
 APPLICATIONS_MAP = {
     "Agave Nectar": ["Baked Goods", "Beverages", "Confectionery", "Lip Products"],
-    "All-Purpose": ["Baked Goods", "Bread", "Pastry", "Cookies"],
+    "Flour": ["Baked Goods", "Bread", "Pastry", "Cookies"],
     "Almonds": ["Baked Goods", "Confectionery", "Exfoliating Scrubs"],
     "Aloe Vera 10x": ["Lotion", "Cream", "Serum", "Gel", "After Sun"],
     "Alpha Arbutin": ["Serum", "Cream", "Lotion", "Toner"],
-    "Apple Cider Vinegar": ["Hair Rinse", "Toner", "Culinary", "Cleaning"],
+    "Apple Cider Vinegar": ["Hair Rinse", "Toner", "Culinary"],
     "Apricot Kernel Meal": ["Facial Scrub", "Body Scrub", "Soap"],
     "Argan": ["Lotion", "Cream", "Serum", "Hair Oil", "Soap"],
     "BTMS-50": ["Conditioner", "Lotion", "Cream", "Leave-in Treatment"],
@@ -125,8 +133,12 @@ APPLICATIONS_MAP = {
 
 def build_item(term: str, variation: str, physical_form: str) -> Dict[str, Any]:
     """Build an item entry for the payload."""
-    item_name = term
-    if variation:
+    variation_bypass = term in VARIATION_BYPASS_TERMS
+    
+    if variation_bypass:
+        item_name = COMMON_NAME_MAP.get(term, term)
+        variation = ""
+    elif variation:
         item_name = f"{COMMON_NAME_MAP.get(term, term)} ({variation})"
     else:
         item_name = COMMON_NAME_MAP.get(term, term)
@@ -136,7 +148,7 @@ def build_item(term: str, variation: str, physical_form: str) -> Dict[str, Any]:
         "variation": variation or "",
         "physical_form": physical_form or "Liquid",
         "form_bypass": False,
-        "variation_bypass": False,
+        "variation_bypass": variation_bypass,
         "function_tags": FUNCTIONS_MAP.get(term, []),
         "applications": APPLICATIONS_MAP.get(term, []),
         "safety_tags": [],
