@@ -118,23 +118,6 @@ def global_link_confirm():
                 inventory_item.density = global_item.density
             inventory_item.global_item_id = global_item.id
 
-            if inventory_item.type == 'ingredient':
-                inventory_item.saponification_value = global_item.saponification_value
-                inventory_item.iodine_value = global_item.iodine_value
-                inventory_item.melting_point_c = global_item.melting_point_c
-                inventory_item.flash_point_c = global_item.flash_point_c
-                inventory_item.ph_value = global_item.ph_value
-                inventory_item.moisture_content_percent = global_item.moisture_content_percent
-                inventory_item.comedogenic_rating = global_item.comedogenic_rating
-                
-                inventory_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
-                inventory_item.protein_content_pct = global_item.protein_content_pct
-                inventory_item.brewing_color_srm = global_item.brewing_color_srm
-                inventory_item.brewing_potential_sg = global_item.brewing_potential_sg
-                inventory_item.brewing_diastatic_power_lintner = global_item.brewing_diastatic_power_lintner
-                inventory_item.fatty_acid_profile = global_item.fatty_acid_profile
-                inventory_item.certifications = global_item.certifications
-
             history_event = UnifiedInventoryHistory(
                 inventory_item_id=inventory_item.id,
                 change_type='link_global',
