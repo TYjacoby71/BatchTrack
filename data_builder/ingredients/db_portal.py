@@ -221,6 +221,7 @@ HTML_TEMPLATE = """
             <div class="export-btns">
                 <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
                 <button class="export-btn" onclick="exportData('json')">Export JSON</button>
+                <button class="export-btn" onclick="exportAnalysis()" style="background:#7c3aed;">Export Analysis CSV</button>
             </div>
         </div>
         
@@ -754,6 +755,12 @@ HTML_TEMPLATE = """
         function exportData(format) {
             const search = document.getElementById('search').value;
             window.location.href = `/api/export/${format}?filter=${currentFilter}&view=${currentView}&search=${encodeURIComponent(search)}`;
+        }
+        
+        function exportAnalysis() {
+            const search = document.getElementById('search').value;
+            const category = document.getElementById('category-filter').value;
+            window.location.href = `/api/export-analysis?filter=${currentFilter}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&cluster_size=${currentClusterSize}`;
         }
         
         document.addEventListener('keydown', function(e) {
@@ -1293,6 +1300,118 @@ def api_source_item_detail(key):
         'merged_item_id': row[34],
         'ingested_at': row[35]
     })
+
+@app.route('/api/export-analysis')
+def api_export_analysis():
+    """Export comprehensive analysis CSV with cluster context for pre-AI data review."""
+    filter_type = request.args.get('filter', 'all')
+    search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
+    cluster_size = request.args.get('cluster_size', 'all')
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = ["s.definition_cluster_id IS NOT NULL"]
+    params = []
+    
+    if search:
+        where_clauses.append("(s.derived_term LIKE ? OR s.raw_name LIKE ? OR s.definition_cluster_id LIKE ?)")
+        search_param = f"%{search}%"
+        params.extend([search_param, search_param, search_param])
+    
+    if category:
+        where_clauses.append("s.ingredient_category = ?")
+        params.append(category)
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    having_clauses = []
+    if cluster_size == 'multi':
+        having_clauses.append("cluster_size > 1")
+    elif cluster_size == 'single':
+        having_clauses.append("cluster_size = 1")
+    
+    if filter_type == 'cosing':
+        having_clauses.append("cosing_count > 0")
+    elif filter_type == 'tgsc':
+        having_clauses.append("tgsc_count > 0")
+    elif filter_type == 'both':
+        having_clauses.append("cosing_count > 0 AND tgsc_count > 0")
+    elif filter_type == 'pubchem':
+        having_clauses.append("has_pubchem > 0")
+    
+    having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
+    
+    cur.execute(f"""
+        WITH cluster_stats AS (
+            SELECT 
+                s.definition_cluster_id,
+                COUNT(*) as cluster_size,
+                SUM(CASE WHEN s.source = 'cosing' THEN 1 ELSE 0 END) as cosing_count,
+                SUM(CASE WHEN s.source = 'tgsc' THEN 1 ELSE 0 END) as tgsc_count,
+                MAX(CASE WHEN json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL THEN 1 ELSE 0 END) as has_pubchem,
+                GROUP_CONCAT(DISTINCT s.source) as sources_in_cluster
+            FROM source_items s
+            LEFT JOIN merged_item_forms m ON s.merged_item_id = m.id
+            {where_sql}
+            GROUP BY s.definition_cluster_id
+            {having_sql}
+        )
+        SELECT 
+            s.key,
+            s.source,
+            s.raw_name,
+            s.inci_name,
+            s.cas_number,
+            s.derived_term,
+            s.derived_variation,
+            s.derived_physical_form,
+            s.ingredient_category,
+            s.definition_display_name,
+            s.definition_cluster_id,
+            s.definition_cluster_reason,
+            cs.cluster_size,
+            cs.cosing_count,
+            cs.tgsc_count,
+            cs.sources_in_cluster
+        FROM source_items s
+        JOIN cluster_stats cs ON s.definition_cluster_id = cs.definition_cluster_id
+        ORDER BY s.definition_cluster_id, s.source, s.raw_name
+    """, params)
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'key',
+        'source',
+        'raw_name',
+        'inci_name',
+        'cas_number',
+        'derived_term',
+        'derived_variation',
+        'derived_physical_form',
+        'ingredient_category',
+        'definition_display_name',
+        'cluster_id',
+        'cluster_reason',
+        'cluster_size',
+        'cosing_items_in_cluster',
+        'tgsc_items_in_cluster',
+        'sources_in_cluster'
+    ])
+    
+    for row in rows:
+        writer.writerow(row)
+    
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=analysis_export.csv'}
+    )
 
 @app.route('/api/export/<format>')
 def api_export(format):
