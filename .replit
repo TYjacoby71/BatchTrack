@@ -20,14 +20,6 @@ run = ["sh", "-c", "FLASK_ENV=production FLASK_DEBUG=false python wsgi.py"]
 deploymentTarget = "cloudrun"
 build = ["sh", "-c", "pip install -r requirements.txt"]
 
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
-localPort = 8089
-externalPort = 5000
-
 [workflows]
 runButton = "Project"
 
@@ -62,13 +54,17 @@ args = "DB Portal"
 name = "DB Portal"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python data_builder/ingredients/db_portal.py"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd data_builder/ingredients && python db_portal.py"
+waitForPort = 5000
+
+[[ports]]
+localPort = 5000
+externalPort = 5000
 
 
 

@@ -156,13 +156,13 @@ def _select_cids_to_fetch(*, max_cids: int | None) -> list[int]:
         cids = [int(r[0]) for r in q.all() if r and r[0] is not None]
     cids = sorted(set(cids))
 
-    # Filter out CIDs already fetched (property bundle fetched_at populated).
+    # Filter out CIDs already fetched (property bundle fetched_property_at populated).
     with database_manager.get_session() as session:
         existing = {
             int(r[0])
             for r in session.query(database_manager.PubChemCompound.cid)
             .filter(database_manager.PubChemCompound.cid.in_(cids))
-            .filter(database_manager.PubChemCompound.fetched_at.isnot(None))
+            .filter(database_manager.PubChemCompound.fetched_property_at.isnot(None))
             .all()
         }
     remaining = [c for c in cids if c not in existing]
@@ -187,7 +187,7 @@ def _select_cids_missing_pug_view(*, max_cids: int | None) -> list[int]:
             int(r[0])
             for r in session.query(database_manager.PubChemCompound.cid)
             .filter(database_manager.PubChemCompound.cid.in_(cids))
-            .filter(database_manager.PubChemCompound.pug_view_fetched_at.isnot(None))
+            .filter(database_manager.PubChemCompound.fetched_pug_view_at.isnot(None))
             .all()
         }
     remaining = [c for c in cids if c not in done]
@@ -234,7 +234,7 @@ def run(*, max_cids: int | None, batch_size: int, workers: int, fetch_pug_view: 
                 rec.property_json = json.dumps(property_by_cid.get(int(cid), {}), ensure_ascii=False, sort_keys=True)
                 if rec.pug_view_json is None:
                     rec.pug_view_json = "{}"
-                rec.fetched_at = now
+                rec.fetched_property_at = now
                 stats["property_rows_cached"] += 1
 
     # 2B) PUG View (per CID, optional)
@@ -256,7 +256,7 @@ def run(*, max_cids: int | None, batch_size: int, workers: int, fetch_pug_view: 
                     rec = database_manager.PubChemCompound(cid=int(cid))
                     session.add(rec)
                 rec.pug_view_json = json.dumps(blob or {}, ensure_ascii=False)
-                rec.pug_view_fetched_at = now
+                rec.fetched_pug_view_at = now
                 stats["pug_view_cached"] += 1
 
     # Apply back onto normalized_terms.sources_json (fill-only), optional.
