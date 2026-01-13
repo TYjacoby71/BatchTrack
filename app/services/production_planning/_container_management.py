@@ -167,11 +167,29 @@ def _load_suitable_containers(
     logger.info(f"🔍 CONTAINER DEBUG: Loading containers for recipe {recipe.id} with yield unit '{yield_unit}'")
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
-    allowed_container_ids = getattr(recipe, 'allowed_containers', [])
+    # IMPORTANT: If none are selected on the recipe, treat it as "no restriction"
+    # and fall back to *all* organization containers.
+    allowed_container_ids = list(getattr(recipe, 'allowed_containers', []) or [])
     logger.info(f"🔍 CONTAINER DEBUG: Recipe {recipe.id} has allowed containers: {allowed_container_ids}")
 
     if not allowed_container_ids:
-        raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
+        logger.info(
+            "🔍 CONTAINER DEBUG: No allowed_containers configured; falling back to all org containers (org_id=%s)",
+            org_id,
+        )
+        allowed_container_ids = [
+            c.id
+            for c in InventoryItem.query.filter(
+                InventoryItem.type == 'container',
+                InventoryItem.organization_id == org_id,
+                InventoryItem.is_archived.is_(False),
+                InventoryItem.is_active.is_(True),
+            ).all()
+        ]
+        if not allowed_container_ids:
+            raise ValueError(
+                f"No containers found for your organization. Add container inventory items before planning production."
+            )
 
     # Fetch inventory data for allowed containers (including out-of-stock for mismatch check)
     inventory_items = {}

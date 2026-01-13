@@ -32,6 +32,7 @@ from app.services.global_item_listing_service import (
     SCOPE_LABELS as GLOBAL_SCOPE_LABELS,
     fetch_global_item_listing,
 )
+from app.services.global_item_sync_service import GlobalItemSyncService
 
 from ..routes import developer_bp
 
@@ -534,6 +535,13 @@ def global_item_edit(item_id):
             item.name = submitted_name
 
     try:
+        # Sync linked inventory items in the same transaction so orgs see updated defaults.
+        # Unit safety: inventory units are only updated when they still match the prior default.
+        try:
+            GlobalItemSyncService.sync_linked_inventory_items(item, before=before)
+        except Exception as sync_exc:
+            logging.warning("GLOBAL_ITEM_EDIT: sync skipped due to error: %s", sync_exc)
+
         db.session.commit()
         logging.info(
             "GLOBAL_ITEM_EDIT: user=%s item_id=%s before=%s",

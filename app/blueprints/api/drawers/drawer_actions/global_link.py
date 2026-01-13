@@ -117,6 +117,7 @@ def global_link_confirm():
             if global_item.density is not None:
                 inventory_item.density = global_item.density
             inventory_item.global_item_id = global_item.id
+            inventory_item.ownership = 'global'
 
             history_event = UnifiedInventoryHistory(
                 inventory_item_id=inventory_item.id,

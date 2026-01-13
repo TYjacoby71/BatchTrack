@@ -160,7 +160,13 @@ class InventoryItem(ScopedModelMixin, db.Model):
 def _derive_ownership_before_insert(mapper, connection, target):
     """Derive ownership from global linkage on insert."""
     try:
-        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
+        # If ownership is not provided, default based on global linkage.
+        if getattr(target, 'ownership', None) in (None, ''):
+            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # If the item is disconnected (no global_item_id), always mark as org-owned.
+        if getattr(target, 'global_item_id', None) is None:
+            target.ownership = 'org'
     except Exception:
         # Best-effort; do not block insert on ownership derivation
         pass
@@ -170,7 +176,14 @@ def _derive_ownership_before_insert(mapper, connection, target):
 def _derive_ownership_before_update(mapper, connection, target):
     """Derive ownership from global linkage on update."""
     try:
-        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
+        # Only fill ownership when missing; never forcibly flip 'org' -> 'global' just
+        # because a global_item_id exists (we may be intentionally unlinked but retaining source).
+        if getattr(target, 'ownership', None) in (None, ''):
+            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # If the item is disconnected (no global_item_id), always mark as org-owned.
+        if getattr(target, 'global_item_id', None) is None:
+            target.ownership = 'org'
     except Exception:
         # Best-effort; do not block update on ownership derivation
         pass

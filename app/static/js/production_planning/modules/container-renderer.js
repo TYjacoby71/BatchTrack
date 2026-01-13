@@ -10,8 +10,22 @@ export class ContainerRenderer {
 
         // Rendering container plan
 
-        if (!containerResults || !this.container.containerPlan?.success) {
+        if (!containerResults) {
             this.clearResults();
+            return;
+        }
+
+        if (!this.container.containerPlan) {
+            this.clearResults();
+            return;
+        }
+
+        if (!this.container.containerPlan.success) {
+            const msg =
+                this.container.containerPlan.error ||
+                this.container.containerPlan.message ||
+                'Container planning failed';
+            this.displayError(msg);
             return;
         }
 
