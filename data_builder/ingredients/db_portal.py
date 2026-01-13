@@ -457,12 +457,16 @@ HTML_TEMPLATE = """
                     document.getElementById('detail-subtitle').textContent = `Sources: ${sources.join(', ')} | ${data.source_row_count} source records`;
                     
                     let html = '';
+                    const td = data.term_data || {};
+                    const commonName = (data.source_items && data.source_items.length > 0) ? data.source_items[0].raw_name : null;
                     
-                    html += '<div class="detail-section"><h3>Basic Info</h3><div class="detail-grid">';
+                    html += '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value">${commonName || '-'}</div>`;
                     html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
+                    html += `<div class="detail-label">Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
                     html += '</div></div>';
                     
                     const specs = data.merged_specs || {};
@@ -529,6 +533,12 @@ HTML_TEMPLATE = """
                         html += '<p style="color:#999;">No source records available</p>';
                     }
                     html += '</div>';
+                    
+                    html += '<div class="detail-section"><h3>Term Data</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Origin</div><div class="detail-value">${td.origin || '-'}</div>`;
+                    html += `<div class="detail-label">Primary Ingredient Category</div><div class="detail-value">${td.ingredient_category || '-'}</div>`;
+                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${td.inci_name || '-'}</div>`;
+                    html += '</div></div>';
                     
                     document.getElementById('detail-body').innerHTML = html;
                 });
@@ -845,11 +855,12 @@ def api_merged_item_detail(item_id):
     member_keys = parse_json(row[6]) or []
     
     source_items = []
+    term_data = {'origin': None, 'ingredient_category': None, 'inci_name': None, 'master_categories': []}
     if member_keys:
         keys_to_fetch = member_keys[:20]
         placeholders = ','.join(['?' for _ in keys_to_fetch])
         cur.execute(f"""
-            SELECT key, source, raw_name, inci_name, cas_number
+            SELECT key, source, raw_name, inci_name, cas_number, origin, ingredient_category, derived_master_categories_json
             FROM source_items WHERE key IN ({placeholders})
         """, keys_to_fetch)
         
@@ -859,8 +870,21 @@ def api_merged_item_detail(item_id):
                 'source': src_row[1],
                 'raw_name': src_row[2],
                 'inci_name': src_row[3],
-                'cas_number': src_row[4]
+                'cas_number': src_row[4],
+                'origin': src_row[5],
+                'ingredient_category': src_row[6],
+                'master_categories': parse_json(src_row[7]) or []
             })
+            if src_row[5] and not term_data['origin']:
+                term_data['origin'] = src_row[5]
+            if src_row[6] and not term_data['ingredient_category']:
+                term_data['ingredient_category'] = src_row[6]
+            if src_row[3] and not term_data['inci_name']:
+                term_data['inci_name'] = src_row[3]
+            master_cats = parse_json(src_row[7]) or []
+            for mc in master_cats:
+                if mc and mc not in term_data['master_categories']:
+                    term_data['master_categories'].append(mc)
     
     conn.close()
     
@@ -882,7 +906,8 @@ def api_merged_item_detail(item_id):
         'created_at': row[14],
         'compiled_specs': parse_json(row[15]),
         'app_seed_specs': parse_json(row[16]),
-        'source_items': source_items
+        'source_items': source_items,
+        'term_data': term_data
     })
 
 @app.route('/api/source-item/<key>')
