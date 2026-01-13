@@ -324,7 +324,14 @@
       </div>
       <div class="col-md-3">
         <label class="form-label">Capacity Unit</label>
-        <input type="text" name="capacity_unit" class="form-control" placeholder="e.g. ml, oz, count" value="{{ capacity_unit_value }}">
+        <select name="capacity_unit" class="form-select">
+          <option value="">Select Unit</option>
+          {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}" {% if capacity_unit_value == unit.name %}selected{% endif %}>
+              {{ unit.name }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-3">
         <label class="form-label">Container Type</label>

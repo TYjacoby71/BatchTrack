@@ -117,6 +117,7 @@ def global_link_confirm():
             if global_item.density is not None:
                 inventory_item.density = global_item.density
             inventory_item.global_item_id = global_item.id
+            inventory_item.ownership = 'global'
 
             if inventory_item.type == 'ingredient':
                 inventory_item.saponification_value = global_item.saponification_value

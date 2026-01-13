@@ -189,6 +189,8 @@ def api_get_inventory_item(item_id):
             'cost_per_unit': float(item.cost_per_unit or 0),
             'type': item.type,
             'global_item_id': getattr(item, 'global_item_id', None),
+            'ownership': getattr(item, 'ownership', None),
+            'global_item_name': getattr(getattr(item, 'global_item', None), 'name', None),
             'category_id': getattr(item, 'category_id', None),
             'density': item.density,
             'is_perishable': bool(item.is_perishable),
@@ -204,6 +206,103 @@ def api_get_inventory_item(item_id):
     except Exception as e:
         logger.exception('Failed to load inventory item for edit modal')
         return jsonify({'error': str(e)}), 500
+
+
+@inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
+@login_required
+@permission_required('inventory.edit')
+def api_toggle_global_link(item_id: int):
+    """Link/unlink (soft) an inventory item to its GlobalItem.
+
+    This does NOT clear global_item_id on unlink; it only switches ownership to 'org'
+    so the user can edit local specs while retaining a relinkable source.
+
+    JSON: { action: 'unlink'|'relink'|'resync' }
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        action = (data.get('action') or '').strip().lower()
+        if action not in {'unlink', 'relink', 'resync'}:
+            return jsonify({'success': False, 'error': 'Invalid action'}), 400
+
+        query = InventoryItem.query
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+        item = query.filter_by(id=item_id).first()
+        if not item:
+            return jsonify({'success': False, 'error': 'Item not found'}), 404
+
+        if not getattr(item, 'global_item_id', None):
+            return jsonify({'success': False, 'error': 'Item is not associated with a global item'}), 400
+
+        gi = db.session.get(GlobalItem, int(item.global_item_id))
+        if not gi:
+            return jsonify({'success': False, 'error': 'Global item not found'}), 404
+
+        # Prevent cross-type mismatch
+        if gi.item_type != item.type:
+            return jsonify({'success': False, 'error': 'Global item type does not match inventory item type'}), 400
+
+        from app.services.global_item_sync_service import GlobalItemSyncService
+
+        if action == 'unlink':
+            item.ownership = 'org'
+            db.session.add(
+                UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type='unlink_global',
+                    quantity_change=0.0,
+                    unit=item.unit or 'count',
+                    notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
+                    created_by=getattr(current_user, 'id', None),
+                    organization_id=item.organization_id,
+                )
+            )
+        elif action == 'relink':
+            GlobalItemSyncService.relink_inventory_item(item, gi)
+            db.session.add(
+                UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type='relink_global',
+                    quantity_change=0.0,
+                    unit=item.unit or 'count',
+                    notes=f"Relinked to GlobalItem '{gi.name}'",
+                    created_by=getattr(current_user, 'id', None),
+                    organization_id=item.organization_id,
+                )
+            )
+        elif action == 'resync':
+            # Keep linked, re-apply global specs. (Unit is preserved if user chose a different one.)
+            GlobalItemSyncService.relink_inventory_item(item, gi)
+            db.session.add(
+                UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type='sync_global',
+                    quantity_change=0.0,
+                    unit=item.unit or 'count',
+                    notes=f"Re-synced from GlobalItem '{gi.name}'",
+                    created_by=getattr(current_user, 'id', None),
+                    organization_id=item.organization_id,
+                )
+            )
+
+        db.session.commit()
+
+        return jsonify(
+            {
+                'success': True,
+                'item': {
+                    'id': item.id,
+                    'global_item_id': item.global_item_id,
+                    'global_item_name': getattr(gi, 'name', None),
+                    'ownership': getattr(item, 'ownership', None),
+                },
+            }
+        )
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Failed to toggle global link")
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
@@ -691,7 +790,10 @@ def edit_inventory(id):
             update_form_data.pop('quantity', None)
 
         # Enforce immutability for globally-managed identity fields
-        is_global_locked = getattr(item, 'global_item_id', None) is not None
+        is_global_locked = (
+            getattr(item, 'global_item_id', None) is not None
+            and getattr(item, 'ownership', None) == 'global'
+        )
 
         # Update basic fields
         if not is_global_locked:
