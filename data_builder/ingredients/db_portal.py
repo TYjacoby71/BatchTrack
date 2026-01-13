@@ -663,7 +663,7 @@ def api_terms():
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
@@ -721,7 +721,7 @@ def api_term_items():
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses)
     
@@ -776,7 +776,7 @@ def api_merged_items():
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
@@ -967,7 +967,7 @@ def api_export(format):
     elif filter_type == 'both':
         where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("has_specs = 1 AND json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
