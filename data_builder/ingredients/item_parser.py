@@ -729,11 +729,11 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
             return _title_case_soft(token), "Oil"
     # Plain oil (no plant part specified) — common in INCI.
     if t.endswith(" oil"):
-        return "Oil", "Oil"
+        return "", "Oil"
     # TGSC: oils often include extra trailing descriptors (country, processing notes, etc).
     # If "oil" appears as a token and it's not an "oil replacer", classify as Oil.
     if re.search(r"\boil\b", t) and "replacer" not in t and "(fixed)" not in t:
-        return "Oil", "Oil"
+        return "", "Oil"
 
     # Plant part materials (non-oil) - useful for grouping and term bundling.
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem", "peel", "fruit", "berry", "bran", "germ"):
@@ -827,7 +827,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
             return "", "Butter"
         return "", "Butter"
     if " wax" in f" {t} " or t.endswith(" wax") or " cera" in f" {t} ":
-        return "Wax", "Wax"
+        return "", "Wax"
     if " esters" in f" {t} " or t.endswith(" esters"):
         # Esters are often liquids/waxes; keep as Liquid for now (safe for UI gating).
         return "Esters", "Liquid"
@@ -838,13 +838,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if "oleoresin" in t:
         return "Oleoresin", "Resin"
     if " resin" in f" {t} " or t.endswith(" resin"):
-        return "Resin", "Resin"
+        return "", "Resin"
     if " gum" in f" {t} " or t.endswith(" gum"):
-        return "Gum", "Gum"
+        return "", "Gum"
     if " gel" in f" {t} " or t.endswith(" gel"):
-        return "Gel", "Gel"
+        return "", "Gel"
     if " paste" in f" {t} " or t.endswith(" paste"):
-        return "Paste", "Paste"
+        return "", "Paste"
 
     if "ferment filtrate" in t:
         return "Ferment Filtrate", "Liquid"
@@ -910,7 +910,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         # Common label for citrus oils; treat as a variation of oil extraction.
         return "Expressed", "Oil"
     if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
-        return "Hydrosol", "Hydrosol"
+        return "", "Hydrosol"
     if "distillates" in t or "distillate" in t:
         return "Distillate", "Liquid"
     if "infusion" in t:
@@ -924,7 +924,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Powders / flours
     if " powder" in f" {t} " or t.endswith(" powder"):
-        return "Powder", "Powder"
+        return "", "Powder"
     if " flour" in f" {t} " or t.endswith(" flour"):
         return "Flour", "Powder"
     if " starch" in f" {t} " or t.endswith(" starch"):

@@ -74,12 +74,13 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
     }
 
     with database_manager.get_session() as session:
-        # 1) Fix source_items identity fields.
+        # 1) Fix source_items identity fields (form-only tokens mistakenly stored as variations).
+        form_only_tokens = {"Butter", "Wax", "Resin", "Gum", "Gel", "Paste", "Hydrosol", "Oil", "Powder"}
         src_rows = (
             session.query(database_manager.SourceItem)
             .filter(
-                database_manager.SourceItem.derived_variation == "Butter",
-                database_manager.SourceItem.derived_physical_form == "Butter",
+                database_manager.SourceItem.derived_variation.in_(list(form_only_tokens)),
+                database_manager.SourceItem.derived_variation == database_manager.SourceItem.derived_physical_form,
             )
             .all()
         )
@@ -123,11 +124,11 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
                 r.ingredient_category = "Animal - Dairy"
             stats["source_items_dairy_butter_normalized"] += 1
 
-        # Ensure variation_bypass is set for plant-derived butter-form rows with no variation.
+        # Ensure variation_bypass is set for plant-derived form-only rows with no variation.
         plant_butter = (
             session.query(database_manager.SourceItem)
             .filter(
-                database_manager.SourceItem.derived_physical_form == "Butter",
+                database_manager.SourceItem.derived_physical_form.in_(list(form_only_tokens)),
                 database_manager.SourceItem.derived_variation.in_(("", None)),
                 database_manager.SourceItem.origin == "Plant-Derived",
             )
@@ -145,8 +146,8 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
         mif_rows = (
             session.query(database_manager.MergedItemForm)
             .filter(
-                database_manager.MergedItemForm.derived_variation == "Butter",
-                database_manager.MergedItemForm.derived_physical_form == "Butter",
+                database_manager.MergedItemForm.derived_variation.in_(list(form_only_tokens)),
+                database_manager.MergedItemForm.derived_variation == database_manager.MergedItemForm.derived_physical_form,
             )
             .all()
         )
@@ -158,67 +159,62 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
             stats["merged_item_forms_fixed"] += 1
 
         # 3) Consolidate duplicates created by normalization.
+        # NOTE: this can create duplicates for ANY form-only token we normalize, not just Butter.
         if consolidate and affected_terms:
             for term in sorted(affected_terms):
-                # Only consider identities where physical_form is Butter and variation is empty.
-                dupes = (
-                    session.query(database_manager.MergedItemForm)
-                    .filter(
-                        database_manager.MergedItemForm.derived_term == term,
-                        database_manager.MergedItemForm.derived_physical_form == "Butter",
-                        database_manager.MergedItemForm.derived_variation.in_(("", None)),
+                for form in sorted(form_only_tokens):
+                    dupes = (
+                        session.query(database_manager.MergedItemForm)
+                        .filter(
+                            database_manager.MergedItemForm.derived_term == term,
+                            database_manager.MergedItemForm.derived_physical_form == form,
+                            database_manager.MergedItemForm.derived_variation.in_(("", None)),
+                        )
+                        .order_by(database_manager.MergedItemForm.id.asc())
+                        .all()
                     )
-                    .order_by(database_manager.MergedItemForm.id.asc())
-                    .all()
-                )
-                if len(dupes) <= 1:
-                    continue
+                    if len(dupes) <= 1:
+                        continue
 
-                keep = dupes[0]
-                for d in dupes[1:]:
-                    # Merge member_source_item_keys_json, cas_numbers_json, derived_parts_json (set union).
-                    keep_keys = set(_safe_json(getattr(keep, "member_source_item_keys_json", "[]"), []))
-                    drop_keys = set(_safe_json(getattr(d, "member_source_item_keys_json", "[]"), []))
-                    merged_keys = sorted({k for k in (keep_keys | drop_keys) if k})
+                    keep = dupes[0]
+                    for d in dupes[1:]:
+                        keep_keys = set(_safe_json(getattr(keep, "member_source_item_keys_json", "[]"), []))
+                        drop_keys = set(_safe_json(getattr(d, "member_source_item_keys_json", "[]"), []))
+                        merged_keys = sorted({k for k in (keep_keys | drop_keys) if k})
 
-                    keep_cas = set(_safe_json(getattr(keep, "cas_numbers_json", "[]"), []))
-                    drop_cas = set(_safe_json(getattr(d, "cas_numbers_json", "[]"), []))
-                    merged_cas = sorted({c for c in (keep_cas | drop_cas) if c})
+                        keep_cas = set(_safe_json(getattr(keep, "cas_numbers_json", "[]"), []))
+                        drop_cas = set(_safe_json(getattr(d, "cas_numbers_json", "[]"), []))
+                        merged_cas = sorted({c for c in (keep_cas | drop_cas) if c})
 
-                    keep_parts = set(_safe_json(getattr(keep, "derived_parts_json", "[]"), []))
-                    drop_parts = set(_safe_json(getattr(d, "derived_parts_json", "[]"), []))
-                    merged_parts = sorted({p for p in (keep_parts | drop_parts) if p})
+                        keep_parts = set(_safe_json(getattr(keep, "derived_parts_json", "[]"), []))
+                        drop_parts = set(_safe_json(getattr(d, "derived_parts_json", "[]"), []))
+                        merged_parts = sorted({p for p in (keep_parts | drop_parts) if p})
 
-                    if not dry_run:
-                        keep.member_source_item_keys_json = json.dumps(merged_keys, ensure_ascii=False, sort_keys=True)
-                        keep.cas_numbers_json = json.dumps(merged_cas, ensure_ascii=False, sort_keys=True)
-                        keep.derived_parts_json = json.dumps(merged_parts, ensure_ascii=False, sort_keys=True)
-                        keep.source_row_count = int(getattr(keep, "source_row_count", 0) or 0) + int(getattr(d, "source_row_count", 0) or 0)
-                        keep.has_cosing = bool(getattr(keep, "has_cosing", False) or getattr(d, "has_cosing", False))
-                        keep.has_tgsc = bool(getattr(keep, "has_tgsc", False) or getattr(d, "has_tgsc", False))
-                        keep.has_seed = bool(getattr(keep, "has_seed", False) or getattr(d, "has_seed", False))
-                        keep.merged_specs_json = _merge_json_fill_only(getattr(keep, "merged_specs_json", "{}"), getattr(d, "merged_specs_json", "{}"))
-                        keep.merged_specs_sources_json = _merge_json_fill_only(getattr(keep, "merged_specs_sources_json", "{}"), getattr(d, "merged_specs_sources_json", "{}"))
-                        # Notes: append lists (set union).
-                        a_notes = _safe_json(getattr(keep, "merged_specs_notes_json", "[]"), [])
-                        b_notes = _safe_json(getattr(d, "merged_specs_notes_json", "[]"), [])
-                        if isinstance(a_notes, list) and isinstance(b_notes, list):
-                            keep.merged_specs_notes_json = json.dumps(a_notes + [x for x in b_notes if x not in a_notes], ensure_ascii=False, sort_keys=True)
+                        if not dry_run:
+                            keep.member_source_item_keys_json = json.dumps(merged_keys, ensure_ascii=False, sort_keys=True)
+                            keep.cas_numbers_json = json.dumps(merged_cas, ensure_ascii=False, sort_keys=True)
+                            keep.derived_parts_json = json.dumps(merged_parts, ensure_ascii=False, sort_keys=True)
+                            keep.source_row_count = int(getattr(keep, "source_row_count", 0) or 0) + int(getattr(d, "source_row_count", 0) or 0)
+                            keep.has_cosing = bool(getattr(keep, "has_cosing", False) or getattr(d, "has_cosing", False))
+                            keep.has_tgsc = bool(getattr(keep, "has_tgsc", False) or getattr(d, "has_tgsc", False))
+                            keep.has_seed = bool(getattr(keep, "has_seed", False) or getattr(d, "has_seed", False))
+                            keep.merged_specs_json = _merge_json_fill_only(getattr(keep, "merged_specs_json", "{}"), getattr(d, "merged_specs_json", "{}"))
+                            keep.merged_specs_sources_json = _merge_json_fill_only(getattr(keep, "merged_specs_sources_json", "{}"), getattr(d, "merged_specs_sources_json", "{}"))
+                            a_notes = _safe_json(getattr(keep, "merged_specs_notes_json", "[]"), [])
+                            b_notes = _safe_json(getattr(d, "merged_specs_notes_json", "[]"), [])
+                            if isinstance(a_notes, list) and isinstance(b_notes, list):
+                                keep.merged_specs_notes_json = json.dumps(a_notes + [x for x in b_notes if x not in a_notes], ensure_ascii=False, sort_keys=True)
 
-                        # Repoint source_items foreign key.
-                        session.query(database_manager.SourceItem).filter(database_manager.SourceItem.merged_item_id == d.id).update({"merged_item_id": keep.id})
-
-                        # If pubchem_item_matches exists, repoint it too (best-effort).
-                        try:
-                            session.execute(
-                                database_manager.text("UPDATE pubchem_item_matches SET merged_item_form_id = :to_id WHERE merged_item_form_id = :from_id"),
-                                {"to_id": keep.id, "from_id": d.id},
-                            )
-                        except Exception:
-                            pass
-
-                        session.delete(d)
-                    stats["merged_item_forms_consolidated"] += 1
+                            session.query(database_manager.SourceItem).filter(database_manager.SourceItem.merged_item_id == d.id).update({"merged_item_id": keep.id})
+                            try:
+                                session.execute(
+                                    database_manager.text("UPDATE pubchem_item_matches SET merged_item_form_id = :to_id WHERE merged_item_form_id = :from_id"),
+                                    {"to_id": keep.id, "from_id": d.id},
+                                )
+                            except Exception:
+                                pass
+                            session.delete(d)
+                        stats["merged_item_forms_consolidated"] += 1
 
     return stats
 

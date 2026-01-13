@@ -93,7 +93,7 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
             else:
                 # Form-only plant fats (e.g., Shea Butter) should bypass variation when variation is empty.
                 # This prevents "missing variation" from being treated as a parsing gap.
-                if origin == "Plant-Derived" and physical_form == "Butter":
+                if origin == "Plant-Derived" and physical_form in {"Butter", "Wax", "Resin", "Gum", "Hydrosol", "Oil", "Powder", "Gel", "Paste"}:
                     new_bypass = 1
                     new_reason = "form_only"
                 else:

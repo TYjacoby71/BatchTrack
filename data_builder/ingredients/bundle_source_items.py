@@ -1,9 +1,17 @@
 """Deterministically bundle SourceItem rows into derived definition clusters.
 
 Goal:
-- Minimize AI usage by grouping items under high-confidence clusters first.
+- Create *definition clusters* that group many source rows under the same base ingredient definition.
+- A cluster is expected to be a *collapsed grouping* of items that share the same `derived_term`
+  (or the closest available fallback when derived_term is missing).
 - Produce `source_definitions` (one row per cluster) and annotate each `source_item`
   with `definition_cluster_id`, confidence, and reason.
+
+Important:
+- This is NOT the same as `merged_item_forms` which is an item-identity table keyed by
+  (derived_term, derived_variation, derived_physical_form).
+- Clusters are intentionally *broader* than item identities. CAS/INCI signals should be
+  treated as metadata/QA flags within a cluster, not primary keys that fragment clusters.
 """
 
 from __future__ import annotations
@@ -152,60 +160,34 @@ def _binomial_key(text: str) -> str:
 
 
 def _cluster_for_item(
-    item: database_manager.SourceItem, *, ambiguous_cas: set[str] | None = None
+    item: database_manager.SourceItem
 ) -> tuple[str, int, str, str]:
     """
     Returns (cluster_id, confidence, reason, botanical_key).
 
     Confidence tiers (rough):
-    - 90: single CAS + INCI present (strong identity)
-    - 85: binomial botanical key (genus+species)
-    - 75: normalized derived_term fallback
+    - 90: derived_term present (primary; intended cluster shape)
     - 40: composites (kept isolated)
+    - 30: no derived_term (fallback to INCI/raw name)
     """
     is_composite = bool(getattr(item, "is_composite", False))
     if is_composite:
         return f"composite:{item.key}", 40, "composite_item", ""
 
-    cas_list = _cas_list_from_json(_clean(getattr(item, "cas_numbers_json", "")))
-    if not cas_list:
-        cas_list = _cas_tokens(_clean(getattr(item, "cas_number", "")))
+    # Primary: derived_term (what the ingestion system has already normalized the base to).
+    term = _clean(getattr(item, "derived_term", ""))
+    if term:
+        term_norm = re.sub(r"\s+", " ", term).strip().lower()
+        return f"term:{term_norm}", 90, "derived_term_primary", _binomial_key(term)
 
+    # Fallbacks when derived_term is missing (rare; keep deterministic).
     inci = _clean(getattr(item, "inci_name", None))
     inci_norm = _norm_inci(inci) if inci else ""
-    ambiguous = ambiguous_cas or set()
-
-    # Prefer single CAS clusters for identity
-    if len(cas_list) == 1:
-        cas = cas_list[0]
-        if cas in ambiguous:
-            # Some CAS numbers are effectively "family" identifiers (esp. polymers/mixtures) and
-            # will incorrectly collapse many distinct INCI identities into one definition.
-            # In those cases, prefer INCI/term identity over CAS.
-            if inci_norm:
-                return f"inci:{inci_norm}", 82, "ambiguous_cas_use_inci", _binomial_key(
-                    _clean(getattr(item, "derived_term", ""))
-                )
-            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-            term_norm = re.sub(r"\s+", " ", term).strip().lower()
-            return f"term:{term_norm}", 78, "ambiguous_cas_use_term", ""
-        if inci_norm:
-            return f"cas:{cas}", 90, "single_cas_with_inci", _binomial_key(_clean(getattr(item, "derived_term", "")))
-        return f"cas:{cas}", 85, "single_cas", _binomial_key(_clean(getattr(item, "derived_term", "")))
-
-    # Botanical binomial key
-    bkey = _binomial_key(_clean(getattr(item, "derived_term", "")))
-    if bkey:
-        return f"binomial:{bkey}", 85, "binomial_key", bkey
-
-    # INCI-based fallback for chemicals
     if inci_norm:
-        return f"inci:{inci_norm}", 80, "inci_identity", ""
-
-    # Last resort: derived_term string
-    term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-    term_norm = re.sub(r"\s+", " ", term).strip().lower()
-    return f"term:{term_norm}", 75, "derived_term", ""
+        return f"inci:{inci_norm}", 30, "missing_derived_term_use_inci", ""
+    raw = _clean(getattr(item, "raw_name", ""))
+    raw_norm = re.sub(r"\s+", " ", raw).strip().lower()
+    return f"raw:{raw_norm}", 20, "missing_derived_term_use_raw", ""
 
 
 def _choose_canonical_term(def_names: Iterable[str]) -> str:
@@ -225,27 +207,6 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
     created_defs = 0
 
     with database_manager.get_session() as session:
-        # Identify CAS numbers that map to many distinct derived terms. These are usually
-        # non-unique "family" CAS values (esp. polymers/mixtures), and clustering by CAS
-        # would incorrectly merge many distinct INCI identities into one definition.
-        cas_to_terms: dict[str, set[str]] = defaultdict(set)
-        for item in session.query(database_manager.SourceItem).yield_per(2000):
-            if bool(getattr(item, "is_composite", False)):
-                continue
-            cas_list = _cas_list_from_json(_clean(getattr(item, "cas_numbers_json", "")))
-            if not cas_list:
-                cas_list = _cas_tokens(_clean(getattr(item, "cas_number", "")))
-            if len(cas_list) != 1:
-                continue
-            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-            term_norm = re.sub(r"\s+", " ", term).strip().lower()
-            if not term_norm:
-                continue
-            cas_to_terms[cas_list[0]].add(term_norm)
-        ambiguous_cas = {
-            cas for cas, terms in cas_to_terms.items() if len(terms) >= _AMBIGUOUS_CAS_DERIVED_TERM_THRESHOLD
-        }
-
         # Clear previous definitions (deterministic rebuild)
         session.query(database_manager.SourceDefinition).delete()
 
@@ -257,7 +218,7 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
         meta: dict[str, tuple[int, str, str]] = {}
 
         for item in q.yield_per(1000):
-            cluster_id, conf, reason, bkey = _cluster_for_item(item, ambiguous_cas=ambiguous_cas)
+            cluster_id, conf, reason, bkey = _cluster_for_item(item)
             buckets[cluster_id].append(item)
             meta.setdefault(cluster_id, (conf, reason, bkey))
 
