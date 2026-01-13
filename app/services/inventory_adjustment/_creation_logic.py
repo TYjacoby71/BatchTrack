@@ -283,8 +283,6 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
                 new_item.comedogenic_rating = global_item.comedogenic_rating
                 
                 new_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
-                new_item.inci_name = global_item.inci_name
-                new_item.cas_number = getattr(global_item, 'cas_number', None)
                 new_item.protein_content_pct = global_item.protein_content_pct
                 new_item.brewing_color_srm = global_item.brewing_color_srm
                 new_item.brewing_potential_sg = global_item.brewing_potential_sg

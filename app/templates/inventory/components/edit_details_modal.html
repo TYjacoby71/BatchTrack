@@ -205,14 +205,18 @@
                     <label for="editRecommendedFragrance">Fragrance Load %</label>
                     <input type="text" class="form-control" id="editRecommendedFragrance" name="recommended_fragrance_load_pct" value="{{ item.recommended_fragrance_load_pct or '' }}" placeholder="e.g. 6% - 10%">
                   </div>
+                  {% if item.global_item_id and item.global_item %}
                   <div class="form-group col-md-6" id="inciNameField" style="display:none;">
-                    <label for="editInciName">INCI Name</label>
-                    <input type="text" class="form-control" id="editInciName" name="inci_name" value="{{ item.inci_name or '' }}" placeholder="e.g. Butyrospermum Parkii Butter">
+                    <label>INCI Name</label>
+                    <div class="form-control bg-light" readonly>{{ item.global_item.inci_name or '' }}</div>
+                    <small class="form-text text-muted">From Global Library (linked item)</small>
                   </div>
                   <div class="form-group col-md-6" id="casNumberField" style="display:none;">
-                    <label for="editCasNumber">CAS Number</label>
-                    <input type="text" class="form-control" id="editCasNumber" name="cas_number" value="{{ item.cas_number or '' }}" placeholder="e.g. 8006-64-2">
+                    <label>CAS Number</label>
+                    <div class="form-control bg-light" readonly>{{ item.global_item.cas_number or '' }}</div>
+                    <small class="form-text text-muted">From Global Library (linked item)</small>
                   </div>
+                  {% endif %}
                 </div>
                 <div class="form-row">
                   <div class="form-group col-md-4" id="proteinContentField" style="display:none;">
