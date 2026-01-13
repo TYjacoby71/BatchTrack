@@ -31,10 +31,18 @@ HTML_TEMPLATE = """
         
         .main-content { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
-        .filter-section { margin-bottom: 20px; }
+        .filter-row { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-section { }
         .filter-label { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 10px; }
         
-        .venn-filters { display: flex; gap: 0; margin-bottom: 15px; }
+        .view-toggle { display: flex; gap: 0; }
+        .view-btn { padding: 10px 20px; background: #e5e7eb; border: 2px solid #d1d5db; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .view-btn:first-child { border-radius: 8px 0 0 8px; }
+        .view-btn:last-child { border-radius: 0 8px 8px 0; }
+        .view-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+        .view-btn:hover:not(.active) { background: #d1d5db; }
+        
+        .venn-filters { display: flex; gap: 0; }
         .venn-btn { padding: 10px 20px; background: #e5e7eb; border: 2px solid #d1d5db; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
         .venn-btn:first-child { border-radius: 8px 0 0 8px; }
         .venn-btn:last-child { border-radius: 0 8px 8px 0; }
@@ -65,6 +73,13 @@ HTML_TEMPLATE = """
         
         .item-row { cursor: pointer; }
         .item-row:hover { background: #e0f2fe !important; }
+        
+        .term-row { cursor: pointer; }
+        .term-row:hover { background: #f0fdf4 !important; }
+        .expand-icon { display: inline-block; width: 20px; color: #7c3aed; font-weight: bold; }
+        .child-row { background: #fafafa; }
+        .child-row td:first-child { padding-left: 40px; }
+        .child-row:hover { background: #e0f2fe !important; }
         
         .pagination { margin-top: 15px; display: flex; gap: 10px; align-items: center; }
         .pagination button { padding: 8px 16px; border: 1px solid #ddd; background: #fff; border-radius: 4px; cursor: pointer; }
@@ -115,6 +130,10 @@ HTML_TEMPLATE = """
     <div class="stats">
         <div class="stats-grid">
             <div class="stat-box">
+                <h3>{{ stats.total_terms }}</h3>
+                <p>Terms</p>
+            </div>
+            <div class="stat-box">
                 <h3>{{ stats.total_merged }}</h3>
                 <p>Merged Items</p>
             </div>
@@ -134,38 +153,44 @@ HTML_TEMPLATE = """
                 <h3>{{ stats.with_specs }}</h3>
                 <p>With Specs</p>
             </div>
-            <div class="stat-box">
-                <h3>{{ stats.with_pubchem }}</h3>
-                <p>With PubChem</p>
-            </div>
         </div>
     </div>
     
     <div class="main-content">
-        <div class="filter-section">
-            <div class="filter-label">Source Filter (Venn Diagram Style)</div>
-            <div class="venn-filters">
-                <button class="venn-btn active" data-filter="all" onclick="setFilter('all')">
-                    All<span class="count">({{ stats.total_merged }})</span>
-                </button>
-                <button class="venn-btn" data-filter="cosing" onclick="setFilter('cosing')">
-                    CosIng<span class="count">({{ stats.has_cosing }})</span>
-                </button>
-                <button class="venn-btn" data-filter="tgsc" onclick="setFilter('tgsc')">
-                    TGSC<span class="count">({{ stats.has_tgsc }})</span>
-                </button>
-                <button class="venn-btn" data-filter="both" onclick="setFilter('both')">
-                    Both<span class="count">({{ stats.both_sources }})</span>
-                </button>
+        <div class="filter-row">
+            <div class="filter-section">
+                <div class="filter-label">View Mode</div>
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="terms" onclick="setView('terms')">Terms</button>
+                    <button class="view-btn" data-view="items" onclick="setView('items')">Items</button>
+                </div>
             </div>
-            <div class="filter-info" id="filter-info">
-                Showing all merged items from all sources.
+            <div class="filter-section">
+                <div class="filter-label">Source Filter (Venn Style)</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-filter="all" onclick="setFilter('all')">
+                        All
+                    </button>
+                    <button class="venn-btn" data-filter="cosing" onclick="setFilter('cosing')">
+                        CosIng
+                    </button>
+                    <button class="venn-btn" data-filter="tgsc" onclick="setFilter('tgsc')">
+                        TGSC
+                    </button>
+                    <button class="venn-btn" data-filter="both" onclick="setFilter('both')">
+                        Both
+                    </button>
+                </div>
             </div>
+        </div>
+        
+        <div class="filter-info" id="filter-info">
+            Showing all terms from all sources.
         </div>
         
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="search" placeholder="Search terms, CAS numbers, INCI names..." onkeyup="debounceSearch()">
+                <input type="text" id="search" placeholder="Search terms, CAS numbers..." onkeyup="debounceSearch()">
             </div>
             <div class="export-btns">
                 <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
@@ -175,14 +200,12 @@ HTML_TEMPLATE = """
         
         <div class="table-container">
             <table>
-                <thead>
+                <thead id="table-head">
                     <tr>
                         <th>Term</th>
-                        <th>Variation</th>
-                        <th>Form</th>
+                        <th>Items</th>
                         <th>Sources</th>
-                        <th>CAS Numbers</th>
-                        <th>Specs</th>
+                        <th>Category</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
@@ -222,29 +245,59 @@ HTML_TEMPLATE = """
         let currentPage = 1;
         let totalPages = 1;
         let currentFilter = 'all';
+        let currentView = 'terms';
         let searchTimeout = null;
+        let expandedTerms = new Set();
         
         const filterDescriptions = {
-            'all': 'Showing all merged items from all sources.',
-            'cosing': 'Showing items that have CosIng as a source (may also have TGSC).',
-            'tgsc': 'Showing items that have TGSC as a source (may also have CosIng).',
-            'both': 'Showing only items that have BOTH CosIng AND TGSC sources (intersection).'
+            'all': 'Showing all {view} from all sources.',
+            'cosing': 'Showing {view} that have CosIng as a source (may also have TGSC).',
+            'tgsc': 'Showing {view} that have TGSC as a source (may also have CosIng).',
+            'both': 'Showing only {view} that have BOTH CosIng AND TGSC sources (intersection).'
         };
+        
+        function updateFilterInfo() {
+            const viewName = currentView === 'terms' ? 'terms' : 'items';
+            document.getElementById('filter-info').textContent = filterDescriptions[currentFilter].replace('{view}', viewName);
+        }
+        
+        function setView(view) {
+            currentView = view;
+            currentPage = 1;
+            expandedTerms.clear();
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+            });
+            updateFilterInfo();
+            updateTableHeaders();
+            loadData();
+        }
         
         function setFilter(filter) {
             currentFilter = filter;
             currentPage = 1;
+            expandedTerms.clear();
             document.querySelectorAll('.venn-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.filter === filter);
             });
-            document.getElementById('filter-info').textContent = filterDescriptions[filter];
+            updateFilterInfo();
             loadData();
+        }
+        
+        function updateTableHeaders() {
+            const thead = document.getElementById('table-head');
+            if (currentView === 'terms') {
+                thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
+            } else {
+                thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
+            }
         }
         
         function debounceSearch() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentPage = 1;
+                expandedTerms.clear();
                 loadData();
             }, 300);
         }
@@ -252,50 +305,126 @@ HTML_TEMPLATE = """
         function loadData() {
             const search = document.getElementById('search').value;
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+            const colSpan = currentView === 'terms' ? 4 : 6;
+            tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Loading...</td></tr>`;
             
-            fetch(`/api/merged-items?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
+            const endpoint = currentView === 'terms' ? '/api/terms' : '/api/merged-items';
+            
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
                     
-                    if (data.items.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="loading">No items found</td></tr>';
+                    if ((data.items || data.terms || []).length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
+                    } else if (currentView === 'terms') {
+                        renderTermsView(data.terms);
                     } else {
-                        tbody.innerHTML = data.items.map(item => {
-                            const sourceBadges = [];
-                            if (item.has_cosing && item.has_tgsc) {
-                                sourceBadges.push('<span class="badge badge-both">Both</span>');
-                            } else if (item.has_cosing) {
-                                sourceBadges.push('<span class="badge badge-cosing">CosIng</span>');
-                            } else if (item.has_tgsc) {
-                                sourceBadges.push('<span class="badge badge-tgsc">TGSC</span>');
-                            }
-                            
-                            const specsBadge = item.has_specs ? '<span class="badge badge-specs">Has Specs</span>' : '-';
-                            const casDisplay = item.cas_numbers ? item.cas_numbers.slice(0, 2).join(', ') + (item.cas_numbers.length > 2 ? '...' : '') : '-';
-                            
-                            return `<tr class="item-row" onclick="showDetail(${item.id})">
-                                <td><strong>${item.term || '-'}</strong></td>
-                                <td>${item.variation || '-'}</td>
-                                <td>${item.form || '-'}</td>
-                                <td>${sourceBadges.join('')} <small>(${item.source_count})</small></td>
-                                <td style="font-size:11px;">${casDisplay}</td>
-                                <td>${specsBadge}</td>
-                            </tr>`;
-                        }).join('');
+                        renderItemsView(data.items);
                     }
                     
                     document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
-                    document.getElementById('total-info').textContent = `${data.total} total items`;
+                    document.getElementById('total-info').textContent = `${data.total} total`;
                     document.getElementById('prev-btn').disabled = currentPage <= 1;
                     document.getElementById('next-btn').disabled = currentPage >= totalPages;
                 });
         }
         
+        function renderTermsView(terms) {
+            const tbody = document.getElementById('table-body');
+            let html = '';
+            
+            terms.forEach(term => {
+                const isExpanded = expandedTerms.has(term.term);
+                const sourceBadges = [];
+                if (term.has_cosing && term.has_tgsc) {
+                    sourceBadges.push('<span class="badge badge-both">Both</span>');
+                } else if (term.has_cosing) {
+                    sourceBadges.push('<span class="badge badge-cosing">CosIng</span>');
+                } else if (term.has_tgsc) {
+                    sourceBadges.push('<span class="badge badge-tgsc">TGSC</span>');
+                }
+                
+                html += `<tr class="term-row" onclick="toggleTerm('${term.term.replace(/'/g, "\\'")}')">
+                    <td><span class="expand-icon">${isExpanded ? '▼' : '▶'}</span> <strong>${term.term}</strong></td>
+                    <td>${term.item_count}</td>
+                    <td>${sourceBadges.join('')}</td>
+                    <td>${term.category || '-'}</td>
+                </tr>`;
+                
+                if (isExpanded && term.items) {
+                    term.items.forEach(item => {
+                        const itemSrcBadge = item.has_cosing && item.has_tgsc ? 
+                            '<span class="badge badge-both">Both</span>' :
+                            item.has_cosing ? '<span class="badge badge-cosing">CosIng</span>' : 
+                            '<span class="badge badge-tgsc">TGSC</span>';
+                        
+                        html += `<tr class="child-row item-row" onclick="event.stopPropagation(); showDetail(${item.id})">
+                            <td>${item.variation || item.term}</td>
+                            <td>${item.form || '-'}</td>
+                            <td>${itemSrcBadge}</td>
+                            <td>${item.has_specs ? '<span class="badge badge-specs">Specs</span>' : '-'}</td>
+                        </tr>`;
+                    });
+                }
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function renderItemsView(items) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = items.map(item => {
+                const sourceBadges = [];
+                if (item.has_cosing && item.has_tgsc) {
+                    sourceBadges.push('<span class="badge badge-both">Both</span>');
+                } else if (item.has_cosing) {
+                    sourceBadges.push('<span class="badge badge-cosing">CosIng</span>');
+                } else if (item.has_tgsc) {
+                    sourceBadges.push('<span class="badge badge-tgsc">TGSC</span>');
+                }
+                
+                const specsBadge = item.has_specs ? '<span class="badge badge-specs">Has Specs</span>' : '-';
+                const casDisplay = item.cas_numbers ? item.cas_numbers.slice(0, 2).join(', ') + (item.cas_numbers.length > 2 ? '...' : '') : '-';
+                
+                return `<tr class="item-row" onclick="showDetail(${item.id})">
+                    <td><strong>${item.term || '-'}</strong></td>
+                    <td>${item.variation || '-'}</td>
+                    <td>${item.form || '-'}</td>
+                    <td>${sourceBadges.join('')} <small>(${item.source_count})</small></td>
+                    <td style="font-size:11px;">${casDisplay}</td>
+                    <td>${specsBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function toggleTerm(term) {
+            if (expandedTerms.has(term)) {
+                expandedTerms.delete(term);
+                loadData();
+            } else {
+                fetch(`/api/term-items?term=${encodeURIComponent(term)}&filter=${currentFilter}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        expandedTerms.add(term);
+                        const search = document.getElementById('search').value;
+                        fetch(`/api/terms?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
+                            .then(r => r.json())
+                            .then(termsData => {
+                                const termObj = termsData.terms.find(t => t.term === term);
+                                if (termObj) {
+                                    termObj.items = data.items;
+                                }
+                                renderTermsView(termsData.terms);
+                            });
+                    });
+            }
+        }
+        
         function prevPage() {
             if (currentPage > 1) {
                 currentPage--;
+                expandedTerms.clear();
                 loadData();
             }
         }
@@ -303,6 +432,7 @@ HTML_TEMPLATE = """
         function nextPage() {
             if (currentPage < totalPages) {
                 currentPage++;
+                expandedTerms.clear();
                 loadData();
             }
         }
@@ -424,7 +554,7 @@ HTML_TEMPLATE = """
         
         function exportData(format) {
             const search = document.getElementById('search').value;
-            window.location.href = `/api/export/${format}?filter=${currentFilter}&search=${encodeURIComponent(search)}`;
+            window.location.href = `/api/export/${format}?filter=${currentFilter}&view=${currentView}&search=${encodeURIComponent(search)}`;
         }
         
         document.addEventListener('keydown', function(e) {
@@ -457,14 +587,12 @@ def index():
     cur = conn.cursor()
     
     stats = {}
+    
+    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms")
+    stats['total_terms'] = cur.fetchone()[0]
+    
     cur.execute("SELECT COUNT(*) FROM merged_item_forms")
     stats['total_merged'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1")
-    stats['has_cosing'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1")
-    stats['has_tgsc'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
     stats['both_sources'] = cur.fetchone()[0]
@@ -478,11 +606,116 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
     stats['with_specs'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
-    stats['with_pubchem'] = cur.fetchone()[0]
-    
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
+
+@app.route('/api/terms')
+def api_terms():
+    filter_type = request.args.get('filter', 'all')
+    page = int(request.args.get('page', 1))
+    search = request.args.get('search', '').strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = []
+    params = []
+    
+    if search:
+        where_clauses.append("derived_term LIKE ?")
+        params.append(f"%{search}%")
+    
+    if filter_type == 'cosing':
+        where_clauses.append("has_cosing = 1")
+    elif filter_type == 'tgsc':
+        where_clauses.append("has_tgsc = 1")
+    elif filter_type == 'both':
+        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    
+    cur.execute(f"""
+        SELECT derived_term, COUNT(*) as item_count,
+               MAX(has_cosing) as has_cosing, MAX(has_tgsc) as has_tgsc,
+               (SELECT ingredient_category FROM source_items WHERE derived_term = m.derived_term LIMIT 1) as category
+        FROM merged_item_forms m
+        {where_sql}
+        GROUP BY derived_term
+        ORDER BY derived_term
+        LIMIT ? OFFSET ?
+    """, params + [per_page, offset])
+    
+    terms = []
+    for row in cur.fetchall():
+        terms.append({
+            'term': row[0],
+            'item_count': row[1],
+            'has_cosing': bool(row[2]),
+            'has_tgsc': bool(row[3]),
+            'category': row[4]
+        })
+    
+    cur.execute(f"""
+        SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms {where_sql}
+    """, params)
+    total = cur.fetchone()[0]
+    
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    
+    conn.close()
+    return jsonify({
+        'terms': terms,
+        'total': total,
+        'total_pages': total_pages,
+        'page': page
+    })
+
+@app.route('/api/term-items')
+def api_term_items():
+    term = request.args.get('term', '')
+    filter_type = request.args.get('filter', 'all')
+    
+    conn = get_db('final')
+    cur = conn.cursor()
+    
+    where_clauses = ["derived_term = ?"]
+    params = [term]
+    
+    if filter_type == 'cosing':
+        where_clauses.append("has_cosing = 1")
+    elif filter_type == 'tgsc':
+        where_clauses.append("has_tgsc = 1")
+    elif filter_type == 'both':
+        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+    
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    cur.execute(f"""
+        SELECT id, derived_term, derived_variation, derived_physical_form,
+               has_cosing, has_tgsc,
+               CASE WHEN merged_specs_json IS NOT NULL AND merged_specs_json != '{{}}' THEN 1 ELSE 0 END as has_specs
+        FROM merged_item_forms
+        {where_sql}
+        ORDER BY derived_variation, derived_physical_form
+        LIMIT 50
+    """, params)
+    
+    items = []
+    for row in cur.fetchall():
+        items.append({
+            'id': row[0],
+            'term': row[1],
+            'variation': row[2],
+            'form': row[3],
+            'has_cosing': bool(row[4]),
+            'has_tgsc': bool(row[5]),
+            'has_specs': bool(row[6])
+        })
+    
+    conn.close()
+    return jsonify({'items': items})
 
 @app.route('/api/merged-items')
 def api_merged_items():
@@ -678,6 +911,7 @@ def api_source_item_detail(key):
 @app.route('/api/export/<format>')
 def api_export(format):
     filter_type = request.args.get('filter', 'all')
+    view = request.args.get('view', 'items')
     search = request.args.get('search', '').strip()
     
     conn = get_db('final')
