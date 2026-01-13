@@ -159,17 +159,6 @@ def _ensure_sqlite_schema_columns():
         'root_recipe_id': 'INTEGER'
     })
 
-    ensure_columns('inventory_item', {
-        'recommended_fragrance_load_pct': 'VARCHAR(64)',
-        'inci_name': 'VARCHAR(256)',
-        'protein_content_pct': 'FLOAT',
-        'brewing_color_srm': 'FLOAT',
-        'brewing_potential_sg': 'FLOAT',
-        'brewing_diastatic_power_lintner': 'FLOAT',
-        'fatty_acid_profile': 'TEXT',
-        'certifications': 'TEXT'
-    })
-
     ensure_columns('global_item', {
         'aliases': 'TEXT',
         'recommended_shelf_life_days': 'INTEGER',
