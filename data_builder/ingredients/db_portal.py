@@ -335,18 +335,32 @@ HTML_TEMPLATE = """
                         container.innerHTML = '<td colspan="10" style="padding-left: 40px; color: #666; font-style: italic;">No items found</td>';
                     } else {
                         let html = '<td colspan="10"><table style="width: 100%; margin-left: 20px;">';
-                        html += '<tr style="background: #e5e7eb;"><th>Raw Name</th><th>Variation</th><th>Form</th><th>Category</th><th>Origin</th><th>Specs</th></tr>';
+                        if (currentSection === 'compiled') {
+                            html += '<tr style="background: #e5e7eb;"><th>Derived Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>Specs</th></tr>';
+                        } else {
+                            html += '<tr style="background: #e5e7eb;"><th>Raw Name</th><th>Variation</th><th>Form</th><th>Category</th><th>Origin</th><th>Specs</th></tr>';
+                        }
                         data.items.forEach(item => {
-                            const rowClass = item.key ? 'class="item-row"' : '';
-                            const dataKey = item.key ? `data-key="${item.key}"` : '';
-                            html += `<tr ${rowClass} ${dataKey} style="cursor:pointer;">
-                                <td>${escapeHtml(item.raw_name || item.term)}</td>
-                                <td>${escapeHtml(item.variation) || '-'}</td>
-                                <td>${escapeHtml(item.form) || '-'}</td>
-                                <td>${escapeHtml(item.category) || '-'}</td>
-                                <td>${escapeHtml(item.origin) || '-'}</td>
-                                <td>${item.has_specs ? '<span class="badge badge-purple">Yes</span>' : '-'}</td>
-                            </tr>`;
+                            const hasId = item.id !== undefined;
+                            const dataAttr = hasId ? `data-id="${item.id}"` : (item.key ? `data-key="${item.key}"` : '');
+                            if (currentSection === 'compiled') {
+                                html += `<tr class="item-row" ${dataAttr} style="cursor:pointer;">
+                                    <td>${escapeHtml(item.raw_name || item.term)}</td>
+                                    <td>${escapeHtml(item.variation) || '-'}</td>
+                                    <td>${escapeHtml(item.form) || '-'}</td>
+                                    <td>${item.source_count || '-'}</td>
+                                    <td>${item.has_specs ? '<span class="badge badge-purple">Yes</span>' : '-'}</td>
+                                </tr>`;
+                            } else {
+                                html += `<tr class="item-row" ${dataAttr} style="cursor:pointer;">
+                                    <td>${escapeHtml(item.raw_name || item.term)}</td>
+                                    <td>${escapeHtml(item.variation) || '-'}</td>
+                                    <td>${escapeHtml(item.form) || '-'}</td>
+                                    <td>${escapeHtml(item.category) || '-'}</td>
+                                    <td>${escapeHtml(item.origin) || '-'}</td>
+                                    <td>${item.has_specs ? '<span class="badge badge-purple">Yes</span>' : '-'}</td>
+                                </tr>`;
+                            }
                         });
                         html += '</table></td>';
                         container.innerHTML = html;
@@ -354,8 +368,10 @@ HTML_TEMPLATE = """
                         container.querySelectorAll('.item-row').forEach(row => {
                             row.addEventListener('click', function(e) {
                                 e.stopPropagation();
+                                const id = this.dataset.id;
                                 const key = this.dataset.key;
-                                if (key) showSourceItemDetail(key);
+                                if (id) showItemDetail(id);
+                                else if (key) showSourceItemDetail(key);
                             });
                         });
                     }
@@ -705,28 +721,55 @@ def api_term_items():
     conn = get_db('final')
     cur = conn.cursor()
     
-    cur.execute("""
-        SELECT key, raw_name, derived_term, derived_variation, derived_physical_form,
-               ingredient_category, origin,
-               CASE WHEN derived_specs_json IS NOT NULL AND derived_specs_json != '{}' THEN 1 ELSE 0 END as has_specs
-        FROM source_items 
-        WHERE derived_term = ?
-        ORDER BY raw_name
-        LIMIT 100
-    """, (term,))
-    
-    items = []
-    for row in cur.fetchall():
-        items.append({
-            'key': row[0],
-            'raw_name': row[1],
-            'term': row[2],
-            'variation': row[3],
-            'form': row[4],
-            'category': row[5],
-            'origin': row[6],
-            'has_specs': bool(row[7])
-        })
+    if section == 'compiled':
+        # For compiled section, show merged_item_forms that match the ingredient term
+        # Use case-insensitive LIKE since seed terms are title case and source terms are uppercase
+        search_term = f"%{term}%"
+        cur.execute("""
+            SELECT id, derived_term, derived_variation, derived_physical_form,
+                   source_row_count,
+                   CASE WHEN app_seed_specs_json IS NOT NULL OR compiled_specs_json IS NOT NULL THEN 1 ELSE 0 END as has_specs
+            FROM merged_item_forms 
+            WHERE LOWER(derived_term) LIKE LOWER(?)
+            ORDER BY derived_term
+            LIMIT 100
+        """, (search_term,))
+        
+        items = []
+        for row in cur.fetchall():
+            items.append({
+                'id': row[0],
+                'raw_name': row[1],  # Use term as display name
+                'term': row[1],
+                'variation': row[2],
+                'form': row[3],
+                'source_count': row[4],
+                'has_specs': bool(row[5])
+            })
+    else:
+        # Raw section - show source_items for exact term match
+        cur.execute("""
+            SELECT key, raw_name, derived_term, derived_variation, derived_physical_form,
+                   ingredient_category, origin,
+                   CASE WHEN derived_specs_json IS NOT NULL AND derived_specs_json != '{}' THEN 1 ELSE 0 END as has_specs
+            FROM source_items 
+            WHERE derived_term = ?
+            ORDER BY raw_name
+            LIMIT 100
+        """, (term,))
+        
+        items = []
+        for row in cur.fetchall():
+            items.append({
+                'key': row[0],
+                'raw_name': row[1],
+                'term': row[2],
+                'variation': row[3],
+                'form': row[4],
+                'category': row[5],
+                'origin': row[6],
+                'has_specs': bool(row[7])
+            })
     
     conn.close()
     return jsonify({'items': items})
