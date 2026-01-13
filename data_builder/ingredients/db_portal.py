@@ -185,6 +185,12 @@ HTML_TEMPLATE = """
                     </button>
                 </div>
             </div>
+            <div class="filter-section">
+                <div class="filter-label">Primary Category</div>
+                <select id="category-filter" onchange="setCategoryFilter(this.value)" style="padding:10px 14px; border:2px solid #d1d5db; border-radius:8px; font-size:14px; min-width:200px; background:#fff;">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
         </div>
         
         <div class="filter-info" id="filter-info">
@@ -248,9 +254,32 @@ HTML_TEMPLATE = """
         let currentPage = 1;
         let totalPages = 1;
         let currentFilter = 'all';
+        let currentCategory = '';
         let currentView = 'terms';
         let searchTimeout = null;
         let expandedTerms = new Set();
+        
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(r => r.json())
+                .then(data => {
+                    const select = document.getElementById('category-filter');
+                    data.categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = `${cat.name} (${cat.count})`;
+                        select.appendChild(opt);
+                    });
+                });
+        }
+        
+        function setCategoryFilter(category) {
+            currentCategory = category;
+            currentPage = 1;
+            expandedTerms.clear();
+            updateFilterInfo();
+            loadData();
+        }
         
         const filterDescriptions = {
             'all': 'Showing all {view} from all sources.',
@@ -262,7 +291,11 @@ HTML_TEMPLATE = """
         
         function updateFilterInfo() {
             const viewName = currentView === 'terms' ? 'terms' : 'items';
-            document.getElementById('filter-info').textContent = filterDescriptions[currentFilter].replace('{view}', viewName);
+            let info = filterDescriptions[currentFilter].replace('{view}', viewName);
+            if (currentCategory) {
+                info += ` Filtered to: ${currentCategory}`;
+            }
+            document.getElementById('filter-info').textContent = info;
         }
         
         function setView(view) {
@@ -314,7 +347,7 @@ HTML_TEMPLATE = """
             
             const endpoint = currentView === 'terms' ? '/api/terms' : '/api/merged-items';
             
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -606,6 +639,7 @@ HTML_TEMPLATE = """
             if (e.key === 'Escape') closeDetail();
         });
         
+        loadCategories();
         loadData();
     </script>
 </body>
@@ -654,11 +688,27 @@ def index():
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
 
+@app.route('/api/categories')
+def api_categories():
+    conn = get_db('final')
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT ingredient_category, COUNT(*) as cnt 
+        FROM source_items 
+        WHERE ingredient_category IS NOT NULL AND ingredient_category != ''
+        GROUP BY ingredient_category 
+        ORDER BY cnt DESC
+    """)
+    categories = [{'name': row[0], 'count': row[1]} for row in cur.fetchall()]
+    conn.close()
+    return jsonify({'categories': categories})
+
 @app.route('/api/terms')
 def api_terms():
     filter_type = request.args.get('filter', 'all')
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
     per_page = 50
     offset = (page - 1) * per_page
     
@@ -669,28 +719,32 @@ def api_terms():
     params = []
     
     if search:
-        where_clauses.append("derived_term LIKE ?")
+        where_clauses.append("m.derived_term LIKE ?")
         params.append(f"%{search}%")
     
     if filter_type == 'cosing':
-        where_clauses.append("has_cosing = 1")
+        where_clauses.append("m.has_cosing = 1")
     elif filter_type == 'tgsc':
-        where_clauses.append("has_tgsc = 1")
+        where_clauses.append("m.has_tgsc = 1")
     elif filter_type == 'both':
-        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+        where_clauses.append("m.has_cosing = 1 AND m.has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+    
+    if category:
+        where_clauses.append("EXISTS (SELECT 1 FROM source_items s WHERE s.derived_term = m.derived_term AND s.ingredient_category = ?)")
+        params.append(category)
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
     cur.execute(f"""
-        SELECT derived_term, COUNT(*) as item_count,
-               MAX(has_cosing) as has_cosing, MAX(has_tgsc) as has_tgsc,
+        SELECT m.derived_term, COUNT(*) as item_count,
+               MAX(m.has_cosing) as has_cosing, MAX(m.has_tgsc) as has_tgsc,
                (SELECT ingredient_category FROM source_items WHERE derived_term = m.derived_term LIMIT 1) as category
         FROM merged_item_forms m
         {where_sql}
-        GROUP BY derived_term
-        ORDER BY derived_term
+        GROUP BY m.derived_term
+        ORDER BY m.derived_term
         LIMIT ? OFFSET ?
     """, params + [per_page, offset])
     
@@ -705,7 +759,7 @@ def api_terms():
         })
     
     cur.execute(f"""
-        SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms {where_sql}
+        SELECT COUNT(DISTINCT m.derived_term) FROM merged_item_forms m {where_sql}
     """, params)
     total = cur.fetchone()[0]
     
@@ -771,6 +825,7 @@ def api_merged_items():
     filter_type = request.args.get('filter', 'all')
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
     per_page = 50
     offset = (page - 1) * per_page
     
@@ -781,31 +836,35 @@ def api_merged_items():
     params = []
     
     if search:
-        where_clauses.append("(derived_term LIKE ? OR cas_numbers_json LIKE ?)")
+        where_clauses.append("(m.derived_term LIKE ? OR m.cas_numbers_json LIKE ?)")
         search_param = f"%{search}%"
         params.extend([search_param, search_param])
     
     if filter_type == 'cosing':
-        where_clauses.append("has_cosing = 1")
+        where_clauses.append("m.has_cosing = 1")
     elif filter_type == 'tgsc':
-        where_clauses.append("has_tgsc = 1")
+        where_clauses.append("m.has_tgsc = 1")
     elif filter_type == 'both':
-        where_clauses.append("has_cosing = 1 AND has_tgsc = 1")
+        where_clauses.append("m.has_cosing = 1 AND m.has_tgsc = 1")
     elif filter_type == 'pubchem':
-        where_clauses.append("json_extract(merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+        where_clauses.append("json_extract(m.merged_specs_json, '$.pubchem.cid') IS NOT NULL")
+    
+    if category:
+        where_clauses.append("EXISTS (SELECT 1 FROM source_items s WHERE s.derived_term = m.derived_term AND s.ingredient_category = ?)")
+        params.append(category)
     
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     
-    cur.execute(f"SELECT COUNT(*) FROM merged_item_forms {where_sql}", params)
+    cur.execute(f"SELECT COUNT(*) FROM merged_item_forms m {where_sql}", params)
     total = cur.fetchone()[0]
     
     cur.execute(f"""
-        SELECT id, derived_term, derived_variation, derived_physical_form,
-               cas_numbers_json, has_cosing, has_tgsc, source_row_count,
-               CASE WHEN merged_specs_json IS NOT NULL AND merged_specs_json != '{{}}' THEN 1 ELSE 0 END as has_specs
-        FROM merged_item_forms
+        SELECT m.id, m.derived_term, m.derived_variation, m.derived_physical_form,
+               m.cas_numbers_json, m.has_cosing, m.has_tgsc, m.source_row_count,
+               CASE WHEN m.merged_specs_json IS NOT NULL AND m.merged_specs_json != '{{}}' THEN 1 ELSE 0 END as has_specs
+        FROM merged_item_forms m
         {where_sql}
-        ORDER BY derived_term
+        ORDER BY m.derived_term
         LIMIT ? OFFSET ?
     """, params + [per_page, offset])
     
