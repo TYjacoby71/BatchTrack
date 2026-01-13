@@ -621,6 +621,7 @@ class MergedItemForm(Base):
     source_row_count = Column(Integer, nullable=False, default=0)
     has_cosing = Column(Boolean, nullable=False, default=False)
     has_tgsc = Column(Boolean, nullable=False, default=False)
+    has_seed = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

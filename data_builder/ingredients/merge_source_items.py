@@ -128,6 +128,7 @@ def merge_source_items(*, limit: int = 0) -> dict[str, int]:
                 source_row_count=len(rows),
                 has_cosing=bool(source_counts.get("cosing")),
                 has_tgsc=bool(source_counts.get("tgsc")),
+                has_seed=bool(source_counts.get("seed")),
             )
             session.add(merged)
             session.flush()  # get merged.id

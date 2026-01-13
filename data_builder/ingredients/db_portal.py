@@ -144,6 +144,10 @@ HTML_TEMPLATE = """
                 <h3>{{ stats.from_tgsc }}</h3>
                 <p>TGSC Source</p>
             </div>
+            <div class="stat-box">
+                <h3>{{ stats.from_seed }}</h3>
+                <p>Seed Source</p>
+            </div>
         </div>
     </div>
     
@@ -636,6 +640,9 @@ def index():
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1")
     stats['from_tgsc'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_seed = 1")
+    stats['from_seed'] = cur.fetchone()[0]
     
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
