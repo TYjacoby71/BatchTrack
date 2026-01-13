@@ -43,9 +43,18 @@ SPEC_FIELDS = [
 _FORM_TOKENS = {
     "oil", "butter", "wax", "powder", "extract", "tincture", "hydrosol",
     "absolute", "concrete", "resin", "gum", "solution", "distillate",
-    "concentrate", "flour", "granules", "flakes", "crystals", "chips",
+    "concentrate", "granules", "flakes", "crystals", "chips",
     "shreds", "ribbons", "paste", "cream", "gel", "liquid", "solid",
     "clay", "glycerite", "milk", "water", "juice", "pulp", "puree",
+}
+
+_DERIVATIVE_INGREDIENTS = {
+    "flour": {"term": "Flour", "physical_form": "Powder"},
+    "meal": {"term": "Meal", "physical_form": "Powder"},
+    "starch": {"term": "Starch", "physical_form": "Powder"},
+    "sugar": {"term": "Sugar", "physical_form": "Granules"},
+    "salt": {"term": "Salt", "physical_form": "Granules"},
+    "vinegar": {"term": "Vinegar", "physical_form": "Liquid"},
 }
 
 _VARIATION_TOKENS = {
@@ -89,6 +98,8 @@ def _parse_seed_name(raw_name: str, physical_form_explicit: str = "") -> tuple[s
     Seed names are maker-friendly:
     - "Shea Butter" -> ("Shea", "", "Butter")
     - "Olive Oil (Extra Virgin)" -> ("Olive", "Extra Virgin", "Oil")
+    - "Bread Flour" -> ("Flour", "Bread", "Powder")  # Flour is a derivative ingredient
+    - "Apple Cider Vinegar" -> ("Vinegar", "Apple Cider", "Liquid")  # Vinegar is a derivative
     - "Salicylic Acid 2% Solution" -> ("Salicylic Acid", "2%", "Solution")
     - "Citric Acid" -> ("Citric Acid", "", "")  # Keep chemical names intact
     """
@@ -125,6 +136,16 @@ def _parse_seed_name(raw_name: str, physical_form_explicit: str = "") -> tuple[s
     
     name = _SPACE_RE.sub(" ", name).strip()
     tokens = name.split()
+    
+    if tokens and tokens[-1].lower() in _DERIVATIVE_INGREDIENTS:
+        derivative_key = tokens[-1].lower()
+        derivative_info = _DERIVATIVE_INGREDIENTS[derivative_key]
+        term = derivative_info["term"]
+        if not physical_form:
+            physical_form = derivative_info["physical_form"]
+        if len(tokens) > 1:
+            variation = " ".join(tokens[:-1])
+        return term, variation, physical_form
     
     if tokens and tokens[-1].lower() in _FORM_TOKENS:
         if not physical_form:
