@@ -4,12 +4,14 @@
 import csv
 import io
 import json
+import os
 import sqlite3
 from flask import Flask, render_template_string, request, jsonify, Response
 
 app = Flask(__name__)
-FINAL_DB_PATH = "data_builder/ingredients/output/Final DB.db"
-BACKUP_DB_PATH = "data_builder/ingredients/output/Final DB backup.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FINAL_DB_PATH = os.path.join(BASE_DIR, "output/Final DB.db")
+BACKUP_DB_PATH = os.path.join(BASE_DIR, "output/Final DB backup.db")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
