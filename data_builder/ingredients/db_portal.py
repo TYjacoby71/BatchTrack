@@ -458,6 +458,7 @@ HTML_TEMPLATE = """
                     
                     let html = '';
                     const td = data.term_data || {};
+                    const tc = data.term_cluster || {};
                     const commonName = (data.source_items && data.source_items.length > 0) ? data.source_items[0].raw_name : null;
                     
                     html += '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
@@ -538,6 +539,16 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Origin</div><div class="detail-value">${td.origin || '-'}</div>`;
                     html += `<div class="detail-label">Primary Ingredient Category</div><div class="detail-value">${td.ingredient_category || '-'}</div>`;
                     html += `<div class="detail-label">INCI Name</div><div class="detail-value">${td.inci_name || '-'}</div>`;
+                    const clusterIds = (tc.cluster_ids || []).filter(x => x);
+                    const clusterTerms = (tc.cluster_terms || []).filter(x => x);
+                    if (clusterIds.length > 0) {
+                        html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:11px;">${clusterIds.join(', ')}</div>`;
+                    }
+                    if (clusterTerms.length > 0) {
+                        const shown = clusterTerms.slice(0, 12);
+                        const more = clusterTerms.length > shown.length ? ` (+${clusterTerms.length - shown.length} more)` : '';
+                        html += `<div class="detail-label">Cluster Terms</div><div class="detail-value">${shown.join(', ')}${more}</div>`;
+                    }
                     html += '</div></div>';
                     
                     document.getElementById('detail-body').innerHTML = html;
@@ -856,15 +867,20 @@ def api_merged_item_detail(item_id):
     
     source_items = []
     term_data = {'origin': None, 'ingredient_category': None, 'inci_name': None, 'master_categories': []}
+    cluster_ids = []
+    cluster_terms = []
     if member_keys:
         keys_to_fetch = member_keys[:20]
         placeholders = ','.join(['?' for _ in keys_to_fetch])
         cur.execute(f"""
-            SELECT key, source, raw_name, inci_name, cas_number, origin, ingredient_category, derived_master_categories_json
+            SELECT key, source, raw_name, inci_name, cas_number, origin, ingredient_category, derived_master_categories_json,
+                   definition_cluster_id, definition_cluster_confidence
             FROM source_items WHERE key IN ({placeholders})
         """, keys_to_fetch)
         
         for src_row in cur.fetchall():
+            if src_row[8] and src_row[8] not in cluster_ids:
+                cluster_ids.append(src_row[8])
             source_items.append({
                 'key': src_row[0],
                 'source': src_row[1],
@@ -873,7 +889,9 @@ def api_merged_item_detail(item_id):
                 'cas_number': src_row[4],
                 'origin': src_row[5],
                 'ingredient_category': src_row[6],
-                'master_categories': parse_json(src_row[7]) or []
+                'master_categories': parse_json(src_row[7]) or [],
+                'definition_cluster_id': src_row[8],
+                'definition_cluster_confidence': src_row[9],
             })
             if src_row[5] and not term_data['origin']:
                 term_data['origin'] = src_row[5]
@@ -885,6 +903,22 @@ def api_merged_item_detail(item_id):
             for mc in master_cats:
                 if mc and mc not in term_data['master_categories']:
                     term_data['master_categories'].append(mc)
+
+        # Cluster terms: show other derived_term values that map to the same definition_cluster_id(s).
+        if cluster_ids:
+            placeholders = ','.join(['?' for _ in cluster_ids])
+            cur.execute(f"""
+                SELECT DISTINCT derived_term
+                FROM source_items
+                WHERE definition_cluster_id IN ({placeholders})
+                  AND derived_term IS NOT NULL
+                  AND TRIM(derived_term) != ''
+                ORDER BY derived_term
+                LIMIT 50
+            """, cluster_ids)
+            cluster_terms = [r[0] for r in cur.fetchall() if r and r[0]]
+            # Keep the response small; UI will show truncated list if needed.
+            cluster_terms = cluster_terms[:30]
     
     conn.close()
     
@@ -907,7 +941,11 @@ def api_merged_item_detail(item_id):
         'compiled_specs': parse_json(row[15]),
         'app_seed_specs': parse_json(row[16]),
         'source_items': source_items,
-        'term_data': term_data
+        'term_data': term_data,
+        'term_cluster': {
+            'cluster_ids': cluster_ids,
+            'cluster_terms': cluster_terms,
+        },
     })
 
 @app.route('/api/source-item/<key>')
