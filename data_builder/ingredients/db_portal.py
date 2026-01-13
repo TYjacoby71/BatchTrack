@@ -147,13 +147,27 @@ HTML_TEMPLATE = """
         </div>
     </div>
     
+    <div class="section-tabs">
+        <button class="section-tab active" onclick="switchSection('raw')">Raw Data</button>
+        <button class="section-tab" onclick="switchSection('compiled')">Post-Compilation</button>
+    </div>
+    
     <div class="section-content">
-        <div class="view-tabs">
-            <button class="view-tab active" onclick="loadFilter('all')">All Terms</button>
-            <button class="view-tab" onclick="loadFilter('with_specs')">With Specs</button>
-            <button class="view-tab" onclick="loadFilter('cosing')">CosIng Only</button>
-            <button class="view-tab" onclick="loadFilter('tgsc')">TGSC Only</button>
-            <button class="view-tab" onclick="loadFilter('merged')">Multi-Source</button>
+        <div id="raw-section">
+            <div class="view-tabs">
+                <button class="view-tab active" onclick="loadFilter('all')">All Terms</button>
+                <button class="view-tab" onclick="loadFilter('with_specs')">With Specs</button>
+                <button class="view-tab" onclick="loadFilter('cosing')">CosIng Only</button>
+                <button class="view-tab" onclick="loadFilter('tgsc')">TGSC Only</button>
+                <button class="view-tab" onclick="loadFilter('merged')">Multi-Source</button>
+            </div>
+        </div>
+        
+        <div id="compiled-section" class="hidden">
+            <div class="view-tabs">
+                <button class="view-tab active" onclick="loadFilter('all')">All Compiled</button>
+                <button class="view-tab" onclick="loadFilter('with_specs')">With Specs</button>
+            </div>
         </div>
         
         <div class="controls">
@@ -195,8 +209,7 @@ HTML_TEMPLATE = """
     
     <script>
         let currentSection = 'raw';
-        let currentView = 'terms';
-        let viewMode = 'terms';
+        let currentFilter = 'all';
         let currentPage = 1;
         let totalPages = 1;
         let totalItems = 0;
@@ -205,6 +218,7 @@ HTML_TEMPLATE = """
         
         function switchSection(section) {
             currentSection = section;
+            currentFilter = 'all';
             currentPage = 1;
             expandedTerms.clear();
             
@@ -214,31 +228,19 @@ HTML_TEMPLATE = """
             document.getElementById('raw-section').classList.toggle('hidden', section !== 'raw');
             document.getElementById('compiled-section').classList.toggle('hidden', section !== 'compiled');
             
-            currentView = 'terms';
             document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`#${section}-section .view-tab`).classList.add('active');
             
             loadData();
         }
         
-        function loadView(section, view) {
-            currentView = view;
+        function loadFilter(filter) {
+            currentFilter = filter;
             currentPage = 1;
             expandedTerms.clear();
             
-            document.querySelectorAll(`#${section}-section .view-tab`).forEach(t => t.classList.remove('active'));
+            document.querySelectorAll(`#${currentSection}-section .view-tab`).forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            
-            loadData();
-        }
-        
-        function setViewMode(mode) {
-            viewMode = mode;
-            currentPage = 1;
-            expandedTerms.clear();
-            
-            document.getElementById('toggle-terms').classList.toggle('active', mode === 'terms');
-            document.getElementById('toggle-items').classList.toggle('active', mode === 'items');
             
             loadData();
         }
@@ -253,7 +255,7 @@ HTML_TEMPLATE = """
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '<tr><td colspan="10" class="loading">Loading...</td></tr>';
             
-            fetch(`/api/data?section=${currentSection}&view=${currentView}&mode=${viewMode}&page=${currentPage}&search=${encodeURIComponent(search)}`)
+            fetch(`/api/data?section=${currentSection}&filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -266,25 +268,7 @@ HTML_TEMPLATE = """
                     const thead = document.getElementById('table-head');
                     thead.innerHTML = '<tr>' + data.columns.map(c => `<th>${c}</th>`).join('') + '</tr>';
                     
-                    if (data.hierarchical) {
-                        renderHierarchical(data.rows);
-                    } else {
-                        const isSourceView = currentView === 'source_items' || currentView === 'source_full';
-                        tbody.innerHTML = data.rows.map(row => {
-                            const firstCol = row[0];
-                            const isNumericId = typeof firstCol === 'number';
-                            const isSourceKey = isSourceView && typeof firstCol === 'string' && firstCol.length === 40;
-                            const isClickable = isNumericId || isSourceKey;
-                            const rowClass = isClickable ? 'item-row' : '';
-                            let onclick = '';
-                            if (isNumericId) {
-                                onclick = `onclick="showItemDetail(${firstCol})"`;
-                            } else if (isSourceKey) {
-                                onclick = `onclick="showSourceItemDetail('${firstCol}')"`;
-                            }
-                            return `<tr class="${rowClass}" ${onclick}>` + row.map(cell => `<td>${formatCell(cell)}</td>`).join('') + '</tr>';
-                        }).join('');
-                    }
+                    renderHierarchical(data.rows);
                 });
         }
         
@@ -643,8 +627,7 @@ def index():
 @app.route('/api/data')
 def api_data():
     section = request.args.get('section', 'raw')
-    view = request.args.get('view', 'terms')
-    mode = request.args.get('mode', 'terms')
+    filter_type = request.args.get('filter', 'all')
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
     per_page = 50
@@ -653,7 +636,6 @@ def api_data():
     conn = get_db('final')
     cur = conn.cursor()
     
-    hierarchical = False
     columns = []
     rows = []
     total = 0
@@ -661,139 +643,47 @@ def api_data():
     search_param = f"%{search}%" if search else "%"
     
     if section == 'raw':
-        if mode == 'items' and view == 'terms':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, has_cosing, has_tgsc,
-                       CASE WHEN app_seed_specs_json IS NOT NULL THEN 'Yes' ELSE '-' END,
-                       CASE WHEN compiled_specs_json IS NOT NULL THEN 'Yes' ELSE '-' END
-                FROM merged_item_forms WHERE derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'CosIng', 'TGSC', 'Specs', 'Compiled']
-            
-        elif view == 'terms':
-            hierarchical = True
-            cur.execute("SELECT COUNT(*) FROM normalized_terms WHERE term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT term, inci_name, botanical_name, ingredient_category, origin,
-                       (SELECT COUNT(*) FROM merged_item_forms WHERE derived_term = normalized_terms.term) as item_count
-                FROM normalized_terms WHERE term LIKE ?
-                ORDER BY term LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['Term', 'INCI Name', 'Botanical', 'Category', 'Origin', 'Items']
-            
-        elif view == 'items':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, has_cosing, has_tgsc,
-                       CASE WHEN app_seed_specs_json IS NOT NULL THEN 'Yes' ELSE '-' END,
-                       CASE WHEN compiled_specs_json IS NOT NULL THEN 'Yes' ELSE '-' END
-                FROM merged_item_forms WHERE derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'CosIng', 'TGSC', 'Specs', 'Compiled']
-            
-        elif view == 'merged':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE source_row_count > 1 AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, source_row_count, has_cosing, has_tgsc
-                FROM merged_item_forms WHERE source_row_count > 1 AND derived_term LIKE ?
-                ORDER BY source_row_count DESC LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'Sources Merged', 'CosIng', 'TGSC']
-            
-        elif view == 'source_items':
-            cur.execute("SELECT COUNT(*) FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?", (search_param, search_param))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT key, source, raw_name, derived_term, derived_variation, derived_physical_form,
-                       ingredient_category, origin, variation_bypass, is_composite
-                FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?
-                ORDER BY raw_name LIMIT ? OFFSET ?
-            """, (search_param, search_param, per_page, offset))
-            columns = ['Key', 'Source', 'Raw Name', 'Term', 'Variation', 'Form', 'Category', 'Origin', 'Var Bypass', 'Composite']
-            
-        elif view == 'source_full':
-            cur.execute("SELECT COUNT(*) FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?", (search_param, search_param))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT key, source, raw_name, inci_name, cas_number, derived_term, derived_variation, 
-                       derived_physical_form, derived_part, ingredient_category, origin, refinement_level,
-                       variation_bypass, variation_bypass_reason, derived_master_categories_json,
-                       derived_specs_json, status, needs_review_reason
-                FROM source_items WHERE raw_name LIKE ? OR derived_term LIKE ?
-                ORDER BY raw_name LIMIT ? OFFSET ?
-            """, (search_param, search_param, per_page, offset))
-            columns = ['Key', 'Source', 'Raw Name', 'INCI', 'CAS', 'Term', 'Variation', 'Form', 'Part', 
-                       'Category', 'Origin', 'Refinement', 'Var Bypass', 'Bypass Reason', 'Master Categories', 'Specs', 'Status', 'Review Reason']
-            
-        elif view == 'cosing':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, cas_numbers_json, source_row_count
-                FROM merged_item_forms WHERE has_cosing = 1 AND derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'CAS Numbers', 'Row Count']
-            
-        elif view == 'tgsc':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1 AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, cas_numbers_json, source_row_count
-                FROM merged_item_forms WHERE has_tgsc = 1 AND derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'CAS Numbers', 'Row Count']
+        base_query = "FROM normalized_terms WHERE term LIKE ?"
+        extra_cond = ""
+        
+        if filter_type == 'with_specs':
+            extra_cond = " AND EXISTS (SELECT 1 FROM source_items WHERE source_items.derived_term = normalized_terms.term AND derived_specs_json IS NOT NULL AND derived_specs_json != '{}')"
+        elif filter_type == 'cosing':
+            extra_cond = " AND EXISTS (SELECT 1 FROM source_items WHERE source_items.derived_term = normalized_terms.term AND source = 'cosing')"
+        elif filter_type == 'tgsc':
+            extra_cond = " AND EXISTS (SELECT 1 FROM source_items WHERE source_items.derived_term = normalized_terms.term AND source = 'tgsc')"
+        elif filter_type == 'merged':
+            extra_cond = " AND (SELECT COUNT(*) FROM source_items WHERE source_items.derived_term = normalized_terms.term) > 1"
+        
+        cur.execute(f"SELECT COUNT(*) {base_query}{extra_cond}", (search_param,))
+        total = cur.fetchone()[0]
+        
+        cur.execute(f"""
+            SELECT term, inci_name, botanical_name, ingredient_category, origin,
+                   (SELECT COUNT(*) FROM source_items WHERE source_items.derived_term = normalized_terms.term) as item_count
+            {base_query}{extra_cond}
+            ORDER BY term LIMIT ? OFFSET ?
+        """, (search_param, per_page, offset))
+        columns = ['Term', 'INCI Name', 'Botanical', 'Category', 'Origin', 'Items']
     
     elif section == 'compiled':
-        if mode == 'items' and view == 'terms':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, compiled_specs_json
-                FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'Compiled Specs']
-            
-        elif view == 'terms':
-            hierarchical = True
-            cur.execute("SELECT COUNT(*) FROM ingredients WHERE term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT term, ingredient_category, origin, botanical_name, inci_name,
-                       CASE WHEN prohibited_flag THEN 'Yes' ELSE 'No' END
-                FROM ingredients WHERE term LIKE ?
-                ORDER BY term LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['Term', 'Category', 'Origin', 'Botanical', 'INCI', 'Prohibited']
-            
-        elif view == 'items':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, compiled_specs_json
-                FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'Compiled Specs']
-            
-        elif view == 'with_specs':
-            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE app_seed_specs_json IS NOT NULL AND derived_term LIKE ?", (search_param,))
-            total = cur.fetchone()[0]
-            cur.execute("""
-                SELECT id, derived_term, derived_physical_form, app_seed_specs_json
-                FROM merged_item_forms WHERE app_seed_specs_json IS NOT NULL AND derived_term LIKE ?
-                ORDER BY id LIMIT ? OFFSET ?
-            """, (search_param, per_page, offset))
-            columns = ['ID', 'Term', 'Form', 'Seed Specs']
+        base_query = "FROM ingredients WHERE term LIKE ?"
+        extra_cond = ""
+        
+        if filter_type == 'with_specs':
+            extra_cond = " AND EXISTS (SELECT 1 FROM merged_item_forms WHERE merged_item_forms.derived_term = ingredients.term AND (app_seed_specs_json IS NOT NULL OR compiled_specs_json IS NOT NULL))"
+        
+        cur.execute(f"SELECT COUNT(*) {base_query}{extra_cond}", (search_param,))
+        total = cur.fetchone()[0]
+        
+        cur.execute(f"""
+            SELECT term, ingredient_category, origin, botanical_name, inci_name,
+                   CASE WHEN prohibited_flag THEN 'Yes' ELSE 'No' END as prohibited,
+                   (SELECT COUNT(*) FROM source_items WHERE source_items.derived_term = ingredients.term) as sources
+            {base_query}{extra_cond}
+            ORDER BY term LIMIT ? OFFSET ?
+        """, (search_param, per_page, offset))
+        columns = ['Term', 'Category', 'Origin', 'Botanical', 'INCI', 'Prohibited', 'Sources']
     
     rows = [list(row) for row in cur.fetchall()]
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -804,7 +694,7 @@ def api_data():
         'rows': rows, 
         'total_pages': total_pages,
         'total': total,
-        'hierarchical': hierarchical
+        'hierarchical': True
     })
 
 @app.route('/api/term-items')
