@@ -662,11 +662,6 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Ingested At</div><div class="detail-value">${data.ingested_at || '-'}</div>`;
                     html += '</div></div>';
                     
-                    if (data.payload) {
-                        html += '<div class="detail-section"><h3>Raw Payload</h3>';
-                        html += '<div class="json-block"><pre>' + JSON.stringify(data.payload, null, 2) + '</pre></div></div>';
-                    }
-                    
                     document.getElementById('detail-body').innerHTML = html;
                 });
         }
