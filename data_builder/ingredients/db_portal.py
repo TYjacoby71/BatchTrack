@@ -361,7 +361,7 @@ HTML_TEMPLATE = """
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
             } else if (currentView === 'clusters') {
-                thead.innerHTML = '<tr><th>Cluster ID</th><th>Raw Names (Expected to Merge)</th><th>Derived Term</th><th>Count</th><th>Derivatives</th><th>Reason</th></tr>';
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Reconciled To</th><th>Parent Cluster</th><th>Items</th><th>Sources</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -484,26 +484,47 @@ HTML_TEMPLATE = """
         function renderClustersView(clusters) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = clusters.map(cluster => {
-                const rawNames = cluster.raw_names || [];
-                let rawNamesHtml = rawNames.map(n => `<div style="font-size:11px; padding:2px 0; border-bottom:1px dotted #ddd;">${n}</div>`).join('');
-                if (cluster.has_more_names) {
-                    rawNamesHtml += `<div style="font-size:10px; color:#6b7280; font-style:italic;">...and ${cluster.total_names - rawNames.length} more</div>`;
+                // Source badges
+                const sourceBadges = [];
+                if (cluster.cosing_count > 0 && cluster.tgsc_count > 0) {
+                    sourceBadges.push(`<span class="badge badge-both">Both (${cluster.cosing_count}/${cluster.tgsc_count})</span>`);
+                } else if (cluster.cosing_count > 0) {
+                    sourceBadges.push(`<span class="badge badge-cosing">CosIng (${cluster.cosing_count})</span>`);
+                } else if (cluster.tgsc_count > 0) {
+                    sourceBadges.push(`<span class="badge badge-tgsc">TGSC (${cluster.tgsc_count})</span>`);
+                } else {
+                    sourceBadges.push('<span style="color:#9ca3af;">0</span>');
                 }
-                const reasonBadge = cluster.reason ? `<span class="badge" style="background:#f3e8ff;color:#6b21a8;">${cluster.reason}</span>` : '-';
-                const countBadge = cluster.count > 1 ? 
-                    `<span class="badge badge-both">${cluster.count}</span>` : 
-                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.count}</span>`;
-                const derivativeBadge = cluster.derivative_count > 0 ?
-                    `<span class="badge" style="background:#dbeafe;color:#1e40af;">${cluster.derivative_count}</span>` : 
-                    '<span style="color:#9ca3af;">-</span>';
+                
+                // Reconciled display
+                let reconciledHtml = '-';
+                if (cluster.reconciled_term) {
+                    reconciledHtml = `<strong>${cluster.reconciled_term}</strong>`;
+                    if (cluster.reconciled_variation) {
+                        reconciledHtml += `<div style="font-size:10px;color:#6b7280;">var: ${cluster.reconciled_variation}</div>`;
+                    }
+                }
+                
+                // Parent cluster display
+                let parentHtml = '-';
+                if (cluster.parent_cluster_id) {
+                    parentHtml = `<a href="#" onclick="event.stopPropagation(); event.preventDefault(); showClusterDetail('${cluster.parent_cluster_id.replace(/'/g, "\\'")}'); return false;" style="font-size:10px;color:#7c3aed;">${cluster.parent_cluster_id}</a>`;
+                }
+                
+                // Item count badge
+                const countBadge = cluster.item_count > 1 ? 
+                    `<span class="badge badge-both">${cluster.item_count}</span>` : 
+                    cluster.item_count > 0 ?
+                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.item_count}</span>` :
+                    '<span style="color:#9ca3af;">0</span>';
                 
                 return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
-                    <td style="font-size:11px; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${cluster.cluster_id}</td>
-                    <td style="max-width:300px;">${rawNamesHtml || '-'}</td>
-                    <td><strong>${cluster.derived_term || '-'}</strong></td>
+                    <td style="font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${cluster.cluster_id}">${cluster.cluster_id}</td>
+                    <td><strong>${cluster.canonical_term || '-'}</strong></td>
+                    <td>${reconciledHtml}</td>
+                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis;">${parentHtml}</td>
                     <td>${countBadge}</td>
-                    <td>${derivativeBadge}</td>
-                    <td>${reasonBadge}</td>
+                    <td>${sourceBadges.join('')}</td>
                 </tr>`;
             }).join('');
         }
@@ -955,6 +976,7 @@ def api_categories():
 
 @app.route('/api/clusters')
 def api_clusters():
+    """Show raw cluster data from source_definitions - no overlays, no aggregation."""
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
     cluster_size = request.args.get('cluster_size', 'all')
@@ -966,114 +988,87 @@ def api_clusters():
     conn = get_db('final')
     cur = conn.cursor()
     
-    # When searching, find parent clusters that match OR have matching children
-    # Then show only parent/root clusters with derivative counts
+    # Simple search - no parent/child aggregation
+    where_clauses = ["sd.cluster_id IS NOT NULL"]
+    params = []
+    
     if search:
         search_param = f"%{search}%"
-        
-        # Get parent cluster IDs for matching child derivatives
-        cur.execute("""
-            SELECT DISTINCT COALESCE(sd.parent_cluster_id, sd.cluster_id) as root_cluster
-            FROM source_definitions sd
-            WHERE sd.canonical_term LIKE ? 
-               OR sd.reconciled_term LIKE ?
-               OR sd.cluster_id LIKE ?
-        """, (search_param, search_param, search_param))
-        matching_roots = set(r[0] for r in cur.fetchall() if r[0])
-        
-        # Build query to get clusters that are either:
-        # 1. In matching_roots (parent clusters)
-        # 2. Match search but have no parent (standalone clusters)
-        if matching_roots:
-            placeholders = ','.join(['?' for _ in matching_roots])
-            where_clauses = [f"definition_cluster_id IN ({placeholders})"]
-            params = list(matching_roots)
-        else:
-            where_clauses = ["1=0"]  # No matches
-            params = []
-    else:
-        # No search - show all clusters that are NOT children of another cluster
-        where_clauses = ["definition_cluster_id IS NOT NULL"]
-        params = []
+        where_clauses.append("(sd.canonical_term LIKE ? OR sd.cluster_id LIKE ? OR sd.reconciled_term LIKE ?)")
+        params.extend([search_param, search_param, search_param])
     
     if category:
-        where_clauses.append("ingredient_category = ?")
+        where_clauses.append("""EXISTS (
+            SELECT 1 FROM source_items si 
+            WHERE si.definition_cluster_id = sd.cluster_id 
+            AND si.ingredient_category = ?
+        )""")
         params.append(category)
     
     where_sql = "WHERE " + " AND ".join(where_clauses)
     
+    # Build having clauses for source filters
     having_clauses = []
     if cluster_size == 'multi':
-        having_clauses.append("COUNT(*) > 1")
+        having_clauses.append("item_count > 1")
     elif cluster_size == 'single':
-        having_clauses.append("COUNT(*) = 1")
+        having_clauses.append("item_count = 1")
     
     if filter_type == 'cosing':
-        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
+        having_clauses.append("cosing_count > 0")
     elif filter_type == 'tgsc':
-        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+        having_clauses.append("tgsc_count > 0")
     elif filter_type == 'both':
-        having_clauses.append("SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) > 0")
-        having_clauses.append("SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) > 0")
+        having_clauses.append("cosing_count > 0 AND tgsc_count > 0")
     
-    having_clause = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
+    having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
     
+    # Query raw cluster data from source_definitions
     cur.execute(f"""
-        SELECT definition_cluster_id, 
-               GROUP_CONCAT(DISTINCT raw_name) as raw_names,
-               MAX(derived_term) as derived_term,
-               COUNT(*) as cnt,
-               MAX(definition_cluster_reason) as reason
-        FROM source_items
+        SELECT 
+            sd.cluster_id,
+            sd.canonical_term,
+            sd.reconciled_term,
+            sd.reconciled_variation,
+            sd.parent_cluster_id,
+            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id) as item_count,
+            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing') as cosing_count,
+            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc') as tgsc_count,
+            (SELECT GROUP_CONCAT(DISTINCT si.raw_name) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id LIMIT 8) as raw_names
+        FROM source_definitions sd
         {where_sql}
-        GROUP BY definition_cluster_id
-        {having_clause}
-        ORDER BY cnt DESC, derived_term
+        {having_sql}
+        ORDER BY sd.canonical_term, sd.cluster_id
         LIMIT ? OFFSET ?
     """, params + [per_page, offset])
     
     clusters = []
     for row in cur.fetchall():
-        cluster_id = row[0]
-        raw_names_str = row[1] or ''
-        all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()]
-        display_names = all_raw_names[:8]
-        has_more = len(all_raw_names) > 8
-        
-        # Get derivative count for this cluster
-        cur.execute("""
-            SELECT COUNT(*) FROM source_definitions 
-            WHERE parent_cluster_id = ?
-        """, (cluster_id,))
-        derivative_count = cur.fetchone()[0]
-        
-        # Get canonical term from source_definitions
-        cur.execute("""
-            SELECT canonical_term FROM source_definitions WHERE cluster_id = ?
-        """, (cluster_id,))
-        def_row = cur.fetchone()
-        canonical_term = def_row[0] if def_row else row[2]
+        raw_names_str = row[8] or ''
+        all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()][:8]
         
         clusters.append({
-            'cluster_id': cluster_id,
-            'raw_names': display_names,
-            'has_more_names': has_more,
-            'total_names': len(all_raw_names),
-            'derived_term': canonical_term or row[2],
-            'count': row[3],
-            'derivative_count': derivative_count,
-            'reason': row[4]
+            'cluster_id': row[0],
+            'canonical_term': row[1],
+            'reconciled_term': row[2],
+            'reconciled_variation': row[3],
+            'parent_cluster_id': row[4],
+            'item_count': row[5] or 0,
+            'cosing_count': row[6] or 0,
+            'tgsc_count': row[7] or 0,
+            'raw_names': all_raw_names,
         })
     
-    # Sort by derivative count (descending), then by count
-    clusters.sort(key=lambda x: (-x['derivative_count'], -x['count'], x['derived_term'] or ''))
-    
+    # Get total count
     cur.execute(f"""
         SELECT COUNT(*) FROM (
-            SELECT definition_cluster_id, SUM(CASE WHEN source = 'cosing' THEN 1 ELSE 0 END) as cosing_cnt, 
-                   SUM(CASE WHEN source = 'tgsc' THEN 1 ELSE 0 END) as tgsc_cnt
-            FROM source_items {where_sql} 
-            GROUP BY definition_cluster_id {having_clause}
+            SELECT sd.cluster_id,
+                (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id) as item_count,
+                (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing') as cosing_count,
+                (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc') as tgsc_count
+            FROM source_definitions sd
+            {where_sql}
+            {having_sql}
         )
     """, params)
     total = cur.fetchone()[0]
