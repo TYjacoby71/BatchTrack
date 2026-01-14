@@ -1,17 +1,17 @@
 """Deterministically bundle SourceItem rows into derived definition clusters.
 
 Goal:
-- Create *definition clusters* that group many source rows under the same base ingredient definition.
-- A cluster is expected to be a *collapsed grouping* of source rows that share the same `derived_term`
-  (or the closest available fallback when derived_term is missing).
+- Create *definition clusters* **post-merge**, driven by `merged_item_forms` (deduped purchasable item identities).
+- Each cluster corresponds to a proposed base ingredient definition (canonical term candidate).
+- Practically, we assign every merged item-form to a cluster keyed by its base `derived_term`, then
+  backfill `source_items.definition_cluster_id` via `source_items.merged_item_id`.
 - Produce `source_definitions` (one row per cluster) and annotate each `source_item`
   with `definition_cluster_id`, confidence, and reason.
 
 Important:
-- This is NOT the same as `merged_item_forms` which is the deduped item-identity table keyed by
-  (derived_term, derived_variation, derived_physical_form).
-- This clustering stage does not change item identities; it only groups source rows under a proposed
-  base definition term prior to AI compilation.
+- `merged_item_forms` are the post-merge item identities (term + variation + form) with provenance back to source rows.
+- This clustering stage groups *those item identities* into term-candidate clusters for the AI to adjudicate.
+- Composites remain isolated at the source row level (they do not participate in term clustering).
 """
 
 from __future__ import annotations
@@ -159,35 +159,9 @@ def _binomial_key(text: str) -> str:
     return " ".join([p for p in parts if p]).strip()
 
 
-def _cluster_for_item(
-    item: database_manager.SourceItem
-) -> tuple[str, int, str, str]:
-    """
-    Returns (cluster_id, confidence, reason, botanical_key).
-
-    Confidence tiers (rough):
-    - 90: derived_term present (primary; intended cluster shape)
-    - 40: composites (kept isolated)
-    - 30: no derived_term (fallback to INCI/raw name)
-    """
-    is_composite = bool(getattr(item, "is_composite", False))
-    if is_composite:
-        return f"composite:{item.key}", 40, "composite_item", ""
-
-    # Primary: derived_term (what the ingestion system has already normalized the base to).
-    term = _clean(getattr(item, "derived_term", ""))
-    if term:
-        term_norm = re.sub(r"\s+", " ", term).strip().lower()
-        return f"term:{term_norm}", 90, "derived_term_primary", _binomial_key(term)
-
-    # Fallbacks when derived_term is missing (rare; keep deterministic).
-    inci = _clean(getattr(item, "inci_name", None))
-    inci_norm = _norm_inci(inci) if inci else ""
-    if inci_norm:
-        return f"inci:{inci_norm}", 30, "missing_derived_term_use_inci", ""
-    raw = _clean(getattr(item, "raw_name", ""))
-    raw_norm = re.sub(r"\s+", " ", raw).strip().lower()
-    return f"raw:{raw_norm}", 20, "missing_derived_term_use_raw", ""
+def _cluster_id_for_term(term: str) -> str:
+    t = re.sub(r"\s+", " ", _clean(term)).strip().lower()
+    return f"term:{t}" if t else ""
 
 
 def _choose_canonical_term(def_names: Iterable[str]) -> str:
@@ -210,6 +184,17 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
         # Clear previous definitions (deterministic rebuild)
         session.query(database_manager.SourceDefinition).delete()
 
+        # 1) Build cluster assignment for merged item identities (post-merge).
+        mif_q = session.query(database_manager.MergedItemForm)
+        if limit and int(limit) > 0:
+            mif_q = mif_q.limit(int(limit))
+        merged_cluster_by_id: dict[int, str] = {}
+        for mif in mif_q.yield_per(2000):
+            cid = _cluster_id_for_term(_clean(getattr(mif, "derived_term", "")))
+            if cid:
+                merged_cluster_by_id[int(mif.id)] = cid
+
+        # 2) Assign each source row to its merged item's cluster (or isolate composites).
         q = session.query(database_manager.SourceItem)
         if limit and int(limit) > 0:
             q = q.limit(int(limit))
@@ -217,8 +202,17 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
         buckets: dict[str, list[database_manager.SourceItem]] = defaultdict(list)
         meta: dict[str, tuple[int, str, str]] = {}
 
-        for item in q.yield_per(1000):
-            cluster_id, conf, reason, bkey = _cluster_for_item(item)
+        for item in q.yield_per(2000):
+            if bool(getattr(item, "is_composite", False)):
+                cluster_id, conf, reason, bkey = f"composite:{item.key}", 40, "composite_item", ""
+            else:
+                mid = getattr(item, "merged_item_id", None)
+                cluster_id = merged_cluster_by_id.get(int(mid)) if mid is not None else ""
+                # Fallback to derived_term if merge link is missing.
+                if not cluster_id:
+                    cluster_id = _cluster_id_for_term(_clean(getattr(item, "derived_term", ""))) or f"raw:{re.sub(r'\\s+', ' ', _clean(getattr(item, 'raw_name', ''))).strip().lower()}"
+                conf, reason, bkey = 90, "post_merge_term_cluster", _binomial_key(_clean(getattr(item, "derived_term", "")))
+
             buckets[cluster_id].append(item)
             meta.setdefault(cluster_id, (conf, reason, bkey))
 
