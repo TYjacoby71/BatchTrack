@@ -210,7 +210,12 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
                 cluster_id = merged_cluster_by_id.get(int(mid)) if mid is not None else ""
                 # Fallback to derived_term if merge link is missing.
                 if not cluster_id:
-                    cluster_id = _cluster_id_for_term(_clean(getattr(item, "derived_term", ""))) or f"raw:{re.sub(r'\\s+', ' ', _clean(getattr(item, 'raw_name', ''))).strip().lower()}"
+                    term_cluster = _cluster_id_for_term(_clean(getattr(item, "derived_term", "")))
+                    if term_cluster:
+                        cluster_id = term_cluster
+                    else:
+                        raw_fallback = re.sub(r'\s+', ' ', _clean(getattr(item, 'raw_name', ''))).strip().lower()
+                        cluster_id = f"raw:{raw_fallback}"
                 conf, reason, bkey = 90, "post_merge_term_cluster", _binomial_key(_clean(getattr(item, "derived_term", "")))
 
             buckets[cluster_id].append(item)

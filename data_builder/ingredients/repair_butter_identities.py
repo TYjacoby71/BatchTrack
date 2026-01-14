@@ -135,7 +135,7 @@ def repair(*, consolidate: bool, dry_run: bool) -> dict[str, int]:
         plant_butter = (
             session.query(database_manager.SourceItem)
             .filter(
-                database_manager.SourceItem.derived_physical_form.in_(list(form_only_tokens)),
+                database_manager.SourceItem.derived_physical_form.in_(list(form_token_bypass)),
                 database_manager.SourceItem.derived_variation.in_(("", None)),
                 database_manager.SourceItem.origin == "Plant-Derived",
             )

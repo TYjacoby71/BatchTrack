@@ -1,0 +1,47 @@
+With existing data already ingested/merged in the DB, you just need to run the post-processing passes (no full reset, no PubChem refetch):
+
+Do this (in order)
+Repair the known identity issues (butter + bypass flags):
+python3 -m data_builder.ingredients.repair_butter_identities --db-path "PATH_TO_YOUR_DB" --dry-run
+python3 -m data_builder.ingredients.repair_butter_identities --db-path "PATH_TO_YOUR_DB"
+Re-derive variation bypass flags (so Oil/Oil, Hydrosol/Hydrosol render correctly):
+python3 -m data_builder.ingredients.derive_source_item_variation_bypass --db-path "PATH_TO_YOUR_DB"
+Rebuild clusters post-merge (this is the “swap to merged items” change):
+python3 -m data_builder.ingredients.bundle_source_items --db-path "PATH_TO_YOUR_DB"
+That’s it. After those three, your portal should show clusters that are post-merge and no longer fragmented by CAS/INCI.
+
+If you tell me the exact DB path Replit is using (e.g., compiler_state.db vs output/Final DB.db), I’ll give you the exact commands with the correct path.
+
+it seems like the db is jsut holding and filtering info instead of writing new data at each stage. is that right? so is all the source data there to be finltered corectly? or is it writted wrong after the bad clustering?
+Mostly yes: your ingestion DB is a state database. It keeps one copy of each stage’s outputs in dedicated tables/columns, and later stages update/overwrite those derived columns rather than creating a brand‑new DB at every step.
+
+What that means in practice
+Raw provenance is preserved in source_items:
+raw_name, inci_name, cas_number, payload_json, etc. stay as your “ground truth” from CosIng/TGSC/seed.
+The pipeline writes derived fields onto those same rows:
+derived_term, derived_variation, derived_physical_form
+merged_item_id (link to merged_item_forms)
+definition_cluster_id (cluster assignment)
+plus tags/specs/bypass flags
+And it also writes post-merge/post-cluster artifacts in separate tables:
+
+merged_item_forms = deduped purchasable item identities (term + variation + form) with provenance back to source rows
+source_definitions = cluster summaries (one row per cluster id)
+PubChem enrichment is applied fill-only into merged_item_forms.merged_specs_json (and term match cache)
+Is your data “written wrong” because clustering was wrong?
+The key point: bad clustering does not destroy your raw source data. It mainly affects:
+
+source_items.definition_cluster_id / source_definitions (cluster assignments)
+and potentially the derived term/variation/form fields if the parser rules were wrong (e.g., Butter/Butter).
+So:
+
+Your raw source evidence is still there.
+Some derived columns were wrong (butter, form-token variations, and the cluster IDs).
+Those are repairable in-place by re-running the relevant stages.
+What to do if you already have data
+You don’t need to re-ingest. Just re-run the “derived stages” in order so the DB rewrites the derived columns correctly:
+
+repair_butter_identities.py (fixes the known identity mistakes + bypass flags)
+derive_source_item_variation_bypass.py (sets bypass so display/name is correct)
+bundle_source_items.py (rebuilds clusters post-merge with the corrected logic)
+After that, the DB will be “filtered/written” correctly again using the same preserved source rows.
