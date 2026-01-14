@@ -522,7 +522,7 @@ HTML_TEMPLATE = """
                         document.getElementById('detail-subtitle').textContent = `Composite Cluster | ${data.source_items.length} source items`;
                         
                         html += '<div class="detail-section"><h3>Source Items (Composite)</h3>';
-                        html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">This is a composite ingredient blend with multiple source records:</p>';
+                        html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">This is a composite ingredient blend:</p>';
                         
                         data.source_items.forEach(item => {
                             const srcBadge = item.source === 'cosing' ? 
@@ -541,53 +541,53 @@ HTML_TEMPLATE = """
                         });
                         html += '</div>';
                     } else {
-                        // Term clusters - show merged items + source items for drilldown
-                        document.getElementById('detail-subtitle').textContent = `Cluster: ${data.cluster_id} | ${data.items.length} merged items`;
+                        // Term clusters - show items categorized by source
+                        document.getElementById('detail-subtitle').textContent = `${data.total_items} post-merge items`;
                         
-                        html += '<div class="detail-section"><h3>Merged Items in Cluster</h3>';
-                        html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Deduplicated items grouped under this term:</p>';
-                        
-                        data.items.forEach(item => {
-                            const srcBadges = item.sources.map(s => 
-                                s === 'CosIng' ? '<span class="badge badge-cosing">CosIng</span>' : 
-                                '<span class="badge badge-tgsc">TGSC</span>'
-                            ).join(' ');
-                            
-                            let displayName = item.derived_term || '';
-                            if (item.derived_variation) displayName += `, ${item.derived_variation}`;
-                            if (item.derived_physical_form) displayName += ` (${item.derived_physical_form})`;
-                            
-                            html += `<div class="source-item" onclick="showDetail(${item.id})">
-                                <div class="source-item-header">
-                                    <span class="source-item-name">${displayName}</span>
-                                    ${srcBadges}
-                                </div>
-                                <div class="source-item-details">
-                                    <span>INCI: ${item.inci_name || '-'}</span>
-                                    <span>CAS: ${item.cas_number || '-'}</span>
-                                </div>
-                            </div>`;
-                        });
-                        html += '</div>';
-                        
-                        // Show source items for per-source drilldown
-                        if (data.source_items && data.source_items.length > 0) {
-                            html += '<div class="detail-section"><h3>Source Records (Pre-Merge)</h3>';
-                            html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Click to view raw source data:</p>';
-                            html += '<div style="max-height:300px;overflow-y:auto;">';
-                            
-                            data.source_items.forEach(item => {
-                                const srcBadge = item.source === 'cosing' ? 
-                                    '<span class="badge badge-cosing">CosIng</span>' : 
-                                    '<span class="badge badge-tgsc">TGSC</span>';
-                                html += `<div class="source-item" onclick="showSourceDetail('${item.key.replace(/'/g, "\\'")}')">
+                        // Helper to render item list
+                        function renderItemList(items, badgeHtml) {
+                            let itemHtml = '';
+                            items.forEach(item => {
+                                let displayName = item.derived_term || '';
+                                if (item.derived_variation) displayName += `, ${item.derived_variation}`;
+                                if (item.derived_physical_form) displayName += ` (${item.derived_physical_form})`;
+                                
+                                itemHtml += `<div class="source-item" onclick="showDetail(${item.id})">
                                     <div class="source-item-header">
-                                        <span class="source-item-name" style="font-size:12px;">${item.raw_name}</span>
-                                        ${srcBadge}
+                                        <span class="source-item-name">${displayName}</span>
+                                        ${badgeHtml}
+                                    </div>
+                                    <div class="source-item-details">
+                                        <span>INCI: ${item.inci_name || '-'}</span>
+                                        <span>CAS: ${item.cas_number || '-'}</span>
                                     </div>
                                 </div>`;
                             });
-                            html += '</div></div>';
+                            return itemHtml;
+                        }
+                        
+                        // Deduplicated items (both sources)
+                        if (data.both_sources && data.both_sources.length > 0) {
+                            html += `<div class="detail-section"><h3>Deduplicated Items (${data.both_sources.length})</h3>`;
+                            html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Items found in both CosIng and TGSC:</p>';
+                            html += renderItemList(data.both_sources, '<span class="badge badge-cosing">CosIng</span> <span class="badge badge-tgsc">TGSC</span>');
+                            html += '</div>';
+                        }
+                        
+                        // CosIng-only items
+                        if (data.cosing_only && data.cosing_only.length > 0) {
+                            html += `<div class="detail-section"><h3>CosIng Only (${data.cosing_only.length})</h3>`;
+                            html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Items only in CosIng database:</p>';
+                            html += renderItemList(data.cosing_only, '<span class="badge badge-cosing">CosIng</span>');
+                            html += '</div>';
+                        }
+                        
+                        // TGSC-only items
+                        if (data.tgsc_only && data.tgsc_only.length > 0) {
+                            html += `<div class="detail-section"><h3>TGSC Only (${data.tgsc_only.length})</h3>`;
+                            html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Items only in TGSC database:</p>';
+                            html += renderItemList(data.tgsc_only, '<span class="badge badge-tgsc">TGSC</span>');
+                            html += '</div>';
                         }
                     }
                     
@@ -1040,10 +1040,10 @@ def api_cluster_detail(cluster_id):
             'raw_names': []
         })
     
-    # For term clusters, get merged items (deduplicated)
+    # For term clusters, get merged items categorized by source
     cur.execute("""
         SELECT DISTINCT m.id, m.derived_term, m.derived_variation, m.derived_physical_form,
-               m.cas_numbers_json, m.sources_json, m.has_cosing, m.has_tgsc,
+               m.cas_numbers_json, m.has_cosing, m.has_tgsc,
                (SELECT s.inci_name FROM source_items s WHERE s.merged_item_id = m.id LIMIT 1) as inci_name
         FROM merged_item_forms m
         JOIN source_items s ON s.merged_item_id = m.id
@@ -1051,18 +1051,17 @@ def api_cluster_detail(cluster_id):
         ORDER BY m.derived_term, m.derived_variation, m.derived_physical_form
     """, (cluster_id,))
     
-    items = []
+    cosing_only = []
+    tgsc_only = []
+    both_sources = []
     derived_term = None
+    
     for row in cur.fetchall():
         if not derived_term:
             derived_term = row[1]
         
-        # Parse sources
-        sources = []
-        if row[6]:  # has_cosing
-            sources.append('CosIng')
-        if row[7]:  # has_tgsc
-            sources.append('TGSC')
+        has_cosing = row[5]
+        has_tgsc = row[6]
         
         # Parse CAS numbers
         cas_numbers = ''
@@ -1073,15 +1072,22 @@ def api_cluster_detail(cluster_id):
         except:
             pass
         
-        items.append({
+        item = {
             'id': row[0],
             'derived_term': row[1],
             'derived_variation': row[2] or '',
             'derived_physical_form': row[3] or '',
             'cas_number': cas_numbers,
-            'inci_name': row[8] or '',
-            'sources': sources
-        })
+            'inci_name': row[7] or ''
+        }
+        
+        # Categorize by source presence
+        if has_cosing and has_tgsc:
+            both_sources.append(item)
+        elif has_cosing:
+            cosing_only.append(item)
+        else:
+            tgsc_only.append(item)
     
     # Get cluster reason from source_definitions
     cur.execute("""
@@ -1090,34 +1096,16 @@ def api_cluster_detail(cluster_id):
     reason_row = cur.fetchone()
     reason = reason_row[0] if reason_row else None
     
-    # Get raw source items for per-source drilldown
-    cur.execute("""
-        SELECT key, source, raw_name, inci_name, cas_number, derived_variation, derived_physical_form
-        FROM source_items 
-        WHERE definition_cluster_id = ?
-        ORDER BY source, raw_name
-    """, (cluster_id,))
-    source_items = []
-    for row in cur.fetchall():
-        source_items.append({
-            'key': row[0],
-            'source': row[1],
-            'raw_name': row[2],
-            'inci_name': row[3],
-            'cas_number': row[4],
-            'derived_variation': row[5],
-            'derived_physical_form': row[6]
-        })
-    
     conn.close()
     return jsonify({
         'cluster_id': cluster_id,
         'reason': reason,
         'derived_term': derived_term,
         'is_composite': False,
-        'items': items,
-        'source_items': source_items,
-        'raw_names': [si['raw_name'] for si in source_items]
+        'cosing_only': cosing_only,
+        'tgsc_only': tgsc_only,
+        'both_sources': both_sources,
+        'total_items': len(cosing_only) + len(tgsc_only) + len(both_sources)
     })
 
 @app.route('/api/terms')
