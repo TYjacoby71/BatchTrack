@@ -359,11 +359,11 @@ HTML_TEMPLATE = """
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
             if (currentView === 'terms') {
-                thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
+                thead.innerHTML = '<tr><th>Derived Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
             } else if (currentView === 'clusters') {
                 thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Merged Items</th><th>Sources</th></tr>';
             } else {
-                thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
+                thead.innerHTML = '<tr><th>Derived Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
         }
         
