@@ -361,7 +361,7 @@ HTML_TEMPLATE = """
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
             } else if (currentView === 'clusters') {
-                thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Reconciled To</th><th>Parent Cluster</th><th>Items</th><th>Sources</th></tr>';
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Merged Items</th><th>Sources</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -487,42 +487,25 @@ HTML_TEMPLATE = """
                 // Source badges
                 const sourceBadges = [];
                 if (cluster.cosing_count > 0 && cluster.tgsc_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-both">Both (${cluster.cosing_count}/${cluster.tgsc_count})</span>`);
+                    sourceBadges.push(`<span class="badge badge-both">Both</span>`);
                 } else if (cluster.cosing_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-cosing">CosIng (${cluster.cosing_count})</span>`);
+                    sourceBadges.push(`<span class="badge badge-cosing">CosIng</span>`);
                 } else if (cluster.tgsc_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-tgsc">TGSC (${cluster.tgsc_count})</span>`);
+                    sourceBadges.push(`<span class="badge badge-tgsc">TGSC</span>`);
                 } else {
-                    sourceBadges.push('<span style="color:#9ca3af;">0</span>');
+                    sourceBadges.push('<span style="color:#9ca3af;">-</span>');
                 }
                 
-                // Reconciled display
-                let reconciledHtml = '-';
-                if (cluster.reconciled_term) {
-                    reconciledHtml = `<strong>${cluster.reconciled_term}</strong>`;
-                    if (cluster.reconciled_variation) {
-                        reconciledHtml += `<div style="font-size:10px;color:#6b7280;">var: ${cluster.reconciled_variation}</div>`;
-                    }
-                }
-                
-                // Parent cluster display
-                let parentHtml = '-';
-                if (cluster.parent_cluster_id) {
-                    parentHtml = `<a href="#" onclick="event.stopPropagation(); event.preventDefault(); showClusterDetail('${cluster.parent_cluster_id.replace(/'/g, "\\'")}'); return false;" style="font-size:10px;color:#7c3aed;">${cluster.parent_cluster_id}</a>`;
-                }
-                
-                // Item count badge
-                const countBadge = cluster.item_count > 1 ? 
-                    `<span class="badge badge-both">${cluster.item_count}</span>` : 
-                    cluster.item_count > 0 ?
-                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.item_count}</span>` :
+                // Merged item count badge
+                const countBadge = cluster.merged_item_count > 1 ? 
+                    `<span class="badge badge-both">${cluster.merged_item_count}</span>` : 
+                    cluster.merged_item_count > 0 ?
+                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.merged_item_count}</span>` :
                     '<span style="color:#9ca3af;">0</span>';
                 
                 return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
-                    <td style="font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${cluster.cluster_id}">${cluster.cluster_id}</td>
+                    <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${cluster.cluster_id}">${cluster.cluster_id}</td>
                     <td><strong>${cluster.canonical_term || '-'}</strong></td>
-                    <td>${reconciledHtml}</td>
-                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis;">${parentHtml}</td>
                     <td>${countBadge}</td>
                     <td>${sourceBadges.join('')}</td>
                 </tr>`;
@@ -1010,9 +993,9 @@ def api_clusters():
     # Build having clauses for source filters
     having_clauses = []
     if cluster_size == 'multi':
-        having_clauses.append("item_count > 1")
+        having_clauses.append("merged_item_count > 1")
     elif cluster_size == 'single':
-        having_clauses.append("item_count = 1")
+        having_clauses.append("merged_item_count = 1")
     
     if filter_type == 'cosing':
         having_clauses.append("cosing_count > 0")
@@ -1023,18 +1006,14 @@ def api_clusters():
     
     having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
     
-    # Query raw cluster data from source_definitions
+    # Query raw cluster data from source_definitions with merged item counts
     cur.execute(f"""
         SELECT 
             sd.cluster_id,
             sd.canonical_term,
-            sd.reconciled_term,
-            sd.reconciled_variation,
-            sd.parent_cluster_id,
-            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id) as item_count,
-            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing') as cosing_count,
-            (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc') as tgsc_count,
-            (SELECT GROUP_CONCAT(DISTINCT si.raw_name) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id LIMIT 8) as raw_names
+            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.merged_item_id IS NOT NULL) as merged_item_count,
+            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing' AND si.merged_item_id IS NOT NULL) as cosing_count,
+            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc' AND si.merged_item_id IS NOT NULL) as tgsc_count
         FROM source_definitions sd
         {where_sql}
         {having_sql}
@@ -1044,19 +1023,12 @@ def api_clusters():
     
     clusters = []
     for row in cur.fetchall():
-        raw_names_str = row[8] or ''
-        all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()][:8]
-        
         clusters.append({
             'cluster_id': row[0],
             'canonical_term': row[1],
-            'reconciled_term': row[2],
-            'reconciled_variation': row[3],
-            'parent_cluster_id': row[4],
-            'item_count': row[5] or 0,
-            'cosing_count': row[6] or 0,
-            'tgsc_count': row[7] or 0,
-            'raw_names': all_raw_names,
+            'merged_item_count': row[2] or 0,
+            'cosing_count': row[3] or 0,
+            'tgsc_count': row[4] or 0,
         })
     
     # Get total count
