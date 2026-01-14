@@ -712,10 +712,10 @@ HTML_TEMPLATE = """
                     const rawName = (data.source_items && data.source_items.length > 0) ? data.source_items[0].raw_name : null;
                     
                     html += '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
                     html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(tc.canonical_term, rawName)}</div>`;
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(tc.botanical_key, null)}</div>`;
-                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
                     html += `<div class="detail-label">Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
