@@ -169,7 +169,9 @@ def _extract_base_and_variation(term: str) -> tuple[str | None, str | None]:
                     break
             else:
                 base = base.title()
-            variation = f"Butter {parts[1].strip().title()}"
+            # Include "Butter" in base term so it matches the correct parent cluster
+            base = f"{base} Butter"
+            variation = parts[1].strip().title()
             if _has_modifier(parts[1]):
                 return base, variation
     
@@ -183,7 +185,9 @@ def _extract_base_and_variation(term: str) -> tuple[str | None, str | None]:
                     break
             else:
                 base = base.title()
-            variation = f"Oil {parts[1].strip().title()}"
+            # Include "Oil" in base term so it matches the correct parent cluster
+            base = f"{base} Oil"
+            variation = parts[1].strip().title()
             if _has_modifier(parts[1]):
                 return base, variation
     
@@ -204,6 +208,7 @@ def _find_parent_cluster(conn: sqlite3.Connection, base_term: str) -> str | None
     base_lower = base_term.lower().strip()
     cur = conn.cursor()
     
+    # First try exact match on canonical_term
     cur.execute(
         "SELECT cluster_id, canonical_term FROM source_definitions WHERE LOWER(canonical_term) = ?",
         (base_lower,)
@@ -212,8 +217,35 @@ def _find_parent_cluster(conn: sqlite3.Connection, base_term: str) -> str | None
     if row:
         return row[0]
     
+    # For "X Butter" or "X Oil", also search for just "X" as canonical
+    base_parts = base_lower.split()
+    if len(base_parts) >= 2 and base_parts[-1] in ('butter', 'oil', 'wax', 'seed', 'leaf', 'fruit', 'nut'):
+        # Try "Shea Butter" first, then fallback to "Shea"
+        product_type = base_parts[-1]
+        ingredient_name = ' '.join(base_parts[:-1])
+        
+        # Look for cluster with matching product type (e.g., "Shea Butter")
+        cur.execute(
+            "SELECT cluster_id, canonical_term FROM source_definitions WHERE LOWER(canonical_term) = ?",
+            (base_lower,)
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        
+        # Look for cluster that ends with product type (e.g., canonical_term = "Shea Butter")
+        cur.execute(
+            "SELECT cluster_id, canonical_term FROM source_definitions WHERE LOWER(canonical_term) LIKE ? AND parent_cluster_id IS NULL",
+            (f"%{ingredient_name} {product_type}%",)
+        )
+        candidates = cur.fetchall()
+        for cluster_id, ct in candidates:
+            ct_norm = _normalize(ct or "")
+            if not _has_modifier(ct_norm):
+                return cluster_id
+    
     cur.execute(
-        "SELECT cluster_id, canonical_term FROM source_definitions WHERE LOWER(canonical_term) LIKE ?",
+        "SELECT cluster_id, canonical_term FROM source_definitions WHERE LOWER(canonical_term) LIKE ? AND parent_cluster_id IS NULL",
         (f"%{base_lower}%",)
     )
     candidates = cur.fetchall()
@@ -222,7 +254,11 @@ def _find_parent_cluster(conn: sqlite3.Connection, base_term: str) -> str | None
         ct_norm = _normalize(ct or "")
         if ct_norm == base_lower:
             return cluster_id
-        if ct_norm in (base_lower, f"{base_lower} butter", f"{base_lower} oil"):
+    
+    # For "Shea Butter", match clusters where canonical_term is "Shea Butter"
+    for cluster_id, ct in candidates:
+        ct_norm = _normalize(ct or "")
+        if ct_norm == base_lower or ct_norm == base_lower.replace(' butter', '') or ct_norm == base_lower.replace(' oil', ''):
             return cluster_id
     
     for cluster_id, ct in candidates:
