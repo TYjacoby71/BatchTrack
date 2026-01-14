@@ -68,6 +68,9 @@ HTML_TEMPLATE = """
         .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-right: 4px; }
         .badge-cosing { background: #dbeafe; color: #1e40af; }
         .badge-tgsc { background: #fef3c7; color: #92400e; }
+        .fallback { font-style: italic; color: #9ca3af; }
+        .fallback::after { content: ' (not compiled)'; font-size: 10px; color: #d1d5db; }
+        .curated { font-weight: 500; color: #1f2937; }
         .badge-both { background: #dcfce7; color: #166534; }
         .badge-specs { background: #ede9fe; color: #5b21b6; }
         
@@ -509,12 +512,24 @@ HTML_TEMPLATE = """
             fetch(`/api/cluster/${encodeURIComponent(clusterId)}`)
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('detail-title').textContent = data.derived_term || 'Cluster Details';
+                    // Helper to show curated vs fallback values
+                    function showValue(curated, fallback, label) {
+                        if (curated) {
+                            return `<span class="curated">${curated}</span>`;
+                        } else if (fallback) {
+                            return `<span class="fallback">${fallback}</span>`;
+                        }
+                        return '-';
+                    }
+                    
+                    document.getElementById('detail-title').textContent = data.canonical_term || data.derived_term || 'Cluster Details';
                     
                     let html = '<div class="detail-section"><h3>Cluster Info</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:11px;">${data.cluster_id}</div>`;
                     html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
-                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(data.canonical_term, data.derived_term)}</div>`;
+                    html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(data.botanical_key, null)}</div>`;
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value" style="font-size:11px;color:#6b7280;">${data.derived_term || '-'}</div>`;
                     html += '</div></div>';
                     
                     if (data.is_composite) {
@@ -642,6 +657,16 @@ HTML_TEMPLATE = """
             fetch(`/api/merged-item/${id}`)
                 .then(r => r.json())
                 .then(data => {
+                    // Helper to show curated vs fallback values
+                    function showValue(curated, fallback) {
+                        if (curated) {
+                            return `<span class="curated">${curated}</span>`;
+                        } else if (fallback) {
+                            return `<span class="fallback">${fallback}</span>`;
+                        }
+                        return '-';
+                    }
+                    
                     document.getElementById('detail-title').textContent = data.derived_term || 'Unknown';
                     
                     const sources = [];
@@ -652,11 +677,12 @@ HTML_TEMPLATE = """
                     let html = '';
                     const td = data.term_data || {};
                     const tc = data.term_cluster || {};
-                    const commonName = (data.source_items && data.source_items.length > 0) ? data.source_items[0].raw_name : null;
+                    const rawName = (data.source_items && data.source_items.length > 0) ? data.source_items[0].raw_name : null;
                     
                     html += '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
-                    html += `<div class="detail-label">Common Name</div><div class="detail-value">${commonName || '-'}</div>`;
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(tc.canonical_term, rawName)}</div>`;
+                    html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(tc.botanical_key, null)}</div>`;
                     html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
@@ -1089,18 +1115,22 @@ def api_cluster_detail(cluster_id):
         else:
             tgsc_only.append(item)
     
-    # Get cluster reason from source_definitions
+    # Get cluster info from source_definitions
     cur.execute("""
-        SELECT reason FROM source_definitions WHERE cluster_id = ?
+        SELECT reason, canonical_term, botanical_key FROM source_definitions WHERE cluster_id = ?
     """, (cluster_id,))
-    reason_row = cur.fetchone()
-    reason = reason_row[0] if reason_row else None
+    def_row = cur.fetchone()
+    reason = def_row[0] if def_row else None
+    canonical_term = def_row[1] if def_row else None
+    botanical_key = def_row[2] if def_row else None
     
     conn.close()
     return jsonify({
         'cluster_id': cluster_id,
         'reason': reason,
         'derived_term': derived_term,
+        'canonical_term': canonical_term,
+        'botanical_key': botanical_key,
         'is_composite': False,
         'cosing_only': cosing_only,
         'tgsc_only': tgsc_only,
@@ -1358,6 +1388,8 @@ def api_merged_item_detail(item_id):
                     term_data['master_categories'].append(mc)
 
         # Cluster terms: show other derived_term values that map to the same definition_cluster_id(s).
+        canonical_term = None
+        botanical_key = None
         if cluster_ids:
             placeholders = ','.join(['?' for _ in cluster_ids])
             cur.execute(f"""
@@ -1372,6 +1404,18 @@ def api_merged_item_detail(item_id):
             cluster_terms = [r[0] for r in cur.fetchall() if r and r[0]]
             # Keep the response small; UI will show truncated list if needed.
             cluster_terms = cluster_terms[:30]
+            
+            # Get canonical_term and botanical_key from source_definitions
+            cur.execute(f"""
+                SELECT canonical_term, botanical_key 
+                FROM source_definitions 
+                WHERE cluster_id IN ({placeholders})
+                LIMIT 1
+            """, cluster_ids)
+            def_row = cur.fetchone()
+            if def_row:
+                canonical_term = def_row[0]
+                botanical_key = def_row[1]
     
     conn.close()
     
@@ -1398,6 +1442,8 @@ def api_merged_item_detail(item_id):
         'term_cluster': {
             'cluster_ids': cluster_ids,
             'cluster_terms': cluster_terms,
+            'canonical_term': canonical_term,
+            'botanical_key': botanical_key,
         },
     })
 
