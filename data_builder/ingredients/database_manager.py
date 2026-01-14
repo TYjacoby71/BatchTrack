@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from contextlib import contextmanager
@@ -315,6 +316,11 @@ class IngredientItemRecord(Base):
 
     # Full item JSON for the rest of attributes.
     item_json = Column(Text, nullable=False, default="{}")
+
+    # Provenance marker: which stage created this item identity.
+    # - compiler: Stage 2 compilation (ingestion-derived items completed)
+    # - enumerator: Stage 3 enumeration (new items added post-compilation)
+    source_stage = Column(String, nullable=False, default="compiler")
 
     # Common scalar/range fields promoted for querying (nullable where absent).
     shelf_life_days = Column(Integer, nullable=True, default=None)
@@ -707,6 +713,154 @@ class PubChemTermMatch(Base):
 
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
+# ---------------------------------------------------------------------------
+# Storage normalization: missing/null + spec pruning
+# ---------------------------------------------------------------------------
+_PLACEHOLDER_STRINGS = {"unknown", "n/a", "na", "none", "null", "nil", "tbd"}
+_RE_FLOAT = re.compile(r"(-?\d+(?:\.\d+)?)")
+
+
+def _normalize_placeholder(value: Any) -> Any:
+    """Normalize placeholder/missing values to None.
+
+    Contract:
+    - Do not persist placeholder strings like "unknown"/"n/a" into JSON blobs.
+    - Prefer omitting keys or storing null (None) for unknown optional fields.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if cleaned.lower() in _PLACEHOLDER_STRINGS:
+            return None
+        return cleaned
+    if isinstance(value, list):
+        out = []
+        for v in value:
+            nv = _normalize_placeholder(v)
+            if nv is None:
+                continue
+            out.append(nv)
+        return out or None
+    if isinstance(value, dict):
+        out: dict[str, Any] = {}
+        for k, v in value.items():
+            nv = _normalize_placeholder(v)
+            if nv is None:
+                continue
+            out[str(k)] = nv
+        return out or None
+    return value
+
+
+_DENSITY_FORMS = {
+    "Oil",
+    "Syrup",
+    "Juice",
+    "Hydrosol",
+    "Tincture",
+    "Infusion",
+    "Decoction",
+    "Puree",
+    "Paste",
+    "Concentrate",
+    "Sap",
+    "Latex",
+    "Emulsion",
+}
+_OIL_FAT_FORMS = {"Oil", "Butter", "Wax"}
+_AQUEOUS_FORMS = {"Juice", "Hydrosol", "Tincture", "Infusion", "Decoction", "Sap", "Emulsion"}
+_SOLID_FORMS = {"Crystals", "Isolate", "Resin", "Gum", "Wax", "Butter"}
+
+
+def _coerce_density_g_ml(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        v = float(value)
+    elif isinstance(value, str):
+        m = _RE_FLOAT.search(value)
+        if not m:
+            return None
+        try:
+            v = float(m.group(1))
+        except Exception:
+            return None
+    else:
+        return None
+    # Plausibility window for common ingredient materials in g/mL.
+    if v <= 0:
+        return None
+    if v < 0.3 or v > 3.5:
+        return None
+    return v
+
+
+def _prune_specifications_for_form(specs: dict[str, Any], physical_form: str) -> dict[str, Any]:
+    """Drop irrelevant or invalid spec fields based on physical_form.
+
+    Goal: avoid persisting nonsense (e.g., SAP values on powders) and enforce a tight density contract.
+    """
+    if not specs:
+        return {}
+    form = (physical_form or "").strip()
+    out: dict[str, Any] = {}
+
+    # Always allow usage rates when present (policy data, not physicochemical).
+    if isinstance(specs.get("usage_rate_percent"), dict):
+        usage = _normalize_placeholder(specs.get("usage_rate_percent"))
+        if isinstance(usage, dict) and usage:
+            out["usage_rate_percent"] = usage
+
+    # pH only makes sense for aqueous/liquid systems in this taxonomy.
+    if form in _AQUEOUS_FORMS and isinstance(specs.get("ph_range"), dict):
+        ph = _normalize_placeholder(specs.get("ph_range"))
+        if isinstance(ph, dict) and ph:
+            out["ph_range"] = ph
+
+    # Melting point: solids/fats/waxes/resins.
+    if form in _SOLID_FORMS and isinstance(specs.get("melting_point_celsius"), dict):
+        mp = _normalize_placeholder(specs.get("melting_point_celsius"))
+        if isinstance(mp, dict) and mp:
+            out["melting_point_celsius"] = mp
+
+    # Flash point: typically oils/solvents; keep it limited to oils/fats for now.
+    if form in _OIL_FAT_FORMS:
+        fp = _normalize_placeholder(specs.get("flash_point_celsius"))
+        if isinstance(fp, (int, float)):
+            out["flash_point_celsius"] = float(fp)
+        elif isinstance(fp, str):
+            m = _RE_FLOAT.search(fp)
+            if m:
+                try:
+                    out["flash_point_celsius"] = float(m.group(1))
+                except Exception:
+                    pass
+
+    # Soapmaking SAP/iodine only for oils/fats/waxes.
+    if form in _OIL_FAT_FORMS:
+        for k in ("sap_naoh", "sap_koh", "iodine_value"):
+            v = _normalize_placeholder(specs.get(k))
+            if isinstance(v, (int, float)):
+                out[k] = float(v)
+            elif isinstance(v, str):
+                m = _RE_FLOAT.search(v)
+                if m:
+                    try:
+                        out[k] = float(m.group(1))
+                    except Exception:
+                        pass
+
+    # Density is *tightened*: numeric density_g_ml only, only for liquid-like forms.
+    if form in _DENSITY_FORMS:
+        dens = _coerce_density_g_ml(specs.get("density_g_ml"))
+        if dens is not None:
+            out["density_g_ml"] = dens
+
+    return out
+
 
 def ensure_tables_exist() -> None:
     """Create the task_queue table if it does not already exist."""
@@ -926,6 +1080,7 @@ def _ensure_ingredient_item_columns() -> None:
             ("approved", "INTEGER NOT NULL DEFAULT 1"),
             ("status", "TEXT NOT NULL DEFAULT 'active'"),
             ("needs_review_reason", "TEXT"),
+            ("source_stage", "TEXT NOT NULL DEFAULT 'compiler'"),
         ]
 
         for name, col_type in additions:
@@ -1255,6 +1410,59 @@ def upsert_terms(term_entries: Iterable[Tuple[str, int]]) -> int:
     if inserted:
         LOGGER.info("Inserted %s new terms into the queue via upsert.", inserted)
     return inserted
+
+
+def build_term_priority_map() -> dict[str, int]:
+    """Compute a 1-10 maker-likelihood priority score per derived base term.
+
+    Heuristic intent:
+    - Prefer terms that appear in many merged item-forms and many source rows.
+    - Give a small boost to terms that have seed coverage (has_seed).
+    - Keep scores bounded 1..10.
+
+    This is used by Stage 1 term compilation when seeding `task_queue` from `normalized_terms`.
+    """
+    ensure_tables_exist()
+    out: dict[str, int] = {}
+    with get_session() as session:
+        rows = session.execute(
+            text(
+                """
+                SELECT
+                  derived_term AS term,
+                  COUNT(*) AS item_forms,
+                  COALESCE(SUM(source_row_count), 0) AS source_rows,
+                  COALESCE(MAX(has_seed), 0) AS has_seed
+                FROM merged_item_forms
+                GROUP BY derived_term
+                """
+            )
+        ).fetchall()
+    for term, item_forms, source_rows, has_seed in rows:
+        t = (str(term) if term is not None else "").strip()
+        if not t:
+            continue
+        try:
+            item_forms_i = int(item_forms or 0)
+        except Exception:
+            item_forms_i = 0
+        try:
+            source_rows_i = int(source_rows or 0)
+        except Exception:
+            source_rows_i = 0
+        seed_boost = 2 if int(has_seed or 0) > 0 else 0
+        # Smooth/log-scale: many terms are long-tailed.
+        # Base score ~1..10.
+        raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
+        # Add log growth.
+        if item_forms_i > 0:
+            raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
+        if source_rows_i > 0:
+            raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
+        raw += seed_boost
+        score = max(1, min(10, int(round(raw))))
+        out[t] = score
+    return out
 
 
 def get_all_terms() -> List[Tuple[str, int]]:
@@ -1649,6 +1857,46 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
+
+            # Provenance marker: allow upstream pipeline (enumeration) to tag new items.
+            source_stage = (cleaned_item.get("item_source") or cleaned_item.get("source_stage") or "").strip().lower()
+            if source_stage not in {"compiler", "enumerator"}:
+                source_stage = "compiler"
+            cleaned_item["source_stage"] = source_stage
+            cleaned_item["item_source"] = source_stage  # backward/forward compatible key
+
+            # Normalize placeholder/missing values early to avoid persisting "unknown"/"n/a" strings.
+            for k in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
+                normalized = _normalize_placeholder(cleaned_item.get(k))
+                if normalized is None:
+                    cleaned_item.pop(k, None)
+                else:
+                    cleaned_item[k] = normalized
+
+            storage_norm = _normalize_placeholder(cleaned_item.get("storage"))
+            if isinstance(storage_norm, dict):
+                cleaned_item["storage"] = storage_norm
+            else:
+                cleaned_item.pop("storage", None)
+
+            sourcing_norm = _normalize_placeholder(cleaned_item.get("sourcing"))
+            if isinstance(sourcing_norm, dict):
+                cleaned_item["sourcing"] = sourcing_norm
+            else:
+                cleaned_item.pop("sourcing", None)
+
+            specs_raw = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
+            specs_norm = _normalize_placeholder(specs_raw)
+            specs_norm = specs_norm if isinstance(specs_norm, dict) else {}
+            cleaned_item["specifications"] = _prune_specifications_for_form(specs_norm, physical_form)
+            if not cleaned_item["specifications"]:
+                cleaned_item.pop("specifications", None)
+
+            # Normalize scalar placeholders.
+            for k in ("shelf_life_days",):
+                v = cleaned_item.get(k)
+                if isinstance(v, str) and v.strip().lower() in _PLACEHOLDER_STRINGS:
+                    cleaned_item.pop(k, None)
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
             # Promote common scalar/range fields.
@@ -1698,6 +1946,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 status=status,
                 needs_review_reason="; ".join(reasons) if reasons else None,
                 item_json=item_json,
+                source_stage=source_stage,
                 shelf_life_days=shelf_life_days,
                 storage_temp_c_min=st_min,
                 storage_temp_c_max=st_max,

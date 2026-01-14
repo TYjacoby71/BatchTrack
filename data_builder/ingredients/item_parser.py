@@ -338,6 +338,10 @@ def derive_definition_term(raw_name: str) -> str:
 
     lowered = cleaned.lower()
 
+    # Dairy butter: keep as the base definition term (variations live at item level).
+    if lowered.strip(" ,") in {"butter", "salted butter", "unsalted butter"}:
+        return "Butter"
+
     # Special-case: denatured alcohol families are not botanicals.
     # Keep the definition stable and represent the grade/spec at the item level.
     if lowered.startswith("alcohol denat"):
@@ -415,6 +419,11 @@ def infer_origin(raw_name: str) -> str:
     """Best-effort single-select origin."""
     cleaned = _clean(raw_name)
     t = cleaned.lower()
+
+    # Special-case: dairy butter base ingredient.
+    # IMPORTANT: do NOT classify generic "* butter" (e.g., "shea butter") as animal-derived.
+    if t.strip(" ,") in {"butter", "salted butter", "unsalted butter"}:
+        return "Animal-Derived"
 
     # Dye/colorant families (usually synthetic; avoid falling back to Plant-Derived).
     if re.search(r"\b(hc|fd|d&c)\s+(red|blue|yellow|orange|green|violet|black|brown|white)\b", t) or re.search(
@@ -542,6 +551,8 @@ def infer_primary_category(definition_term: str, origin: str, raw_name: str = ""
         return "Marine - Botanicals"
 
     if o in {"Animal-Derived", "Animal-Byproduct"}:
+        if t.strip() == "butter" or " butter" in f" {t} ":
+            return "Animal - Dairy"
         if any(k in blob for k in ("wool", "silk", "cashmere", "angora")):
             return "Animal - Fibers"
         if any(k in t for k in ("milk", "whey", "casein", "lactose")):
@@ -717,6 +728,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         if token in t:
             return _title_case_soft(token), "Oil"
     # Plain oil (no plant part specified) — common in INCI.
+    # Keep variation="Oil" so we preserve a purchasable-item label, but rely on variation_bypass
+    # downstream to avoid rendering "Base (Oil)".
     if t.endswith(" oil"):
         return "Oil", "Oil"
     # TGSC: oils often include extra trailing descriptors (country, processing notes, etc).
@@ -805,9 +818,18 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Common physical material forms
     if " butter" in f" {t} " or t.endswith(" butter"):
-        return "Butter", "Butter"
+        # "Butter" is a physical form for many plant fats (e.g., shea/cocoa/mango butter).
+        # Treating it as a variation creates the wrong identity shape downstream.
+        if t.strip() in {"butter", "salted butter", "unsalted butter"}:
+            # Dairy butter variations.
+            if "unsalted" in t:
+                return "Unsalted", "Butter"
+            if "salted" in t:
+                return "Salted", "Butter"
+            return "", "Butter"
+        return "", "Butter"
     if " wax" in f" {t} " or t.endswith(" wax") or " cera" in f" {t} ":
-        return "Wax", "Wax"
+        return "", "Wax"
     if " esters" in f" {t} " or t.endswith(" esters"):
         # Esters are often liquids/waxes; keep as Liquid for now (safe for UI gating).
         return "Esters", "Liquid"
@@ -818,13 +840,13 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if "oleoresin" in t:
         return "Oleoresin", "Resin"
     if " resin" in f" {t} " or t.endswith(" resin"):
-        return "Resin", "Resin"
+        return "", "Resin"
     if " gum" in f" {t} " or t.endswith(" gum"):
-        return "Gum", "Gum"
+        return "", "Gum"
     if " gel" in f" {t} " or t.endswith(" gel"):
-        return "Gel", "Gel"
+        return "", "Gel"
     if " paste" in f" {t} " or t.endswith(" paste"):
-        return "Paste", "Paste"
+        return "", "Paste"
 
     if "ferment filtrate" in t:
         return "Ferment Filtrate", "Liquid"

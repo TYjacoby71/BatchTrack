@@ -1,8 +1,8 @@
-"""Enumeration runner (post-compile).
+"""Stage 3 runner: enumeration (post-compilation).
 
-This is the ONLY stage allowed to propose NEW items/variations for an ingredient.
+This is the ONLY stage allowed to propose NEW items/variations for an ingredient after Stage 2 compilation.
 
-Workflow:
+Workflow (Stage 3):
 - select compiled ingredients (task_queue.status='completed')
 - skip those with ingredients.enumeration_status == 'done'
 - ask AI to propose additional item identities (variation + physical_form + bypass flags)
@@ -112,7 +112,7 @@ def enumerate_term(term: str) -> bool:
 
     # Ask AI for new item identities only.
     prompt = f"""
-You are Stage 2D (Enumeration). Propose NEW missing purchasable item identities for ingredient: "{term}".
+You are Stage 3 (Enumeration — Items). Propose NEW missing purchasable item identities for ingredient: "{term}".
 
 Rules:
 - Only propose items that are NOT already present.
@@ -158,8 +158,21 @@ SCHEMA:
         # Merge existing items + new completed items.
         ing2 = payload2.get("ingredient") if isinstance(payload2.get("ingredient"), dict) else {}
         completed_new = ing2.get("items") if isinstance(ing2.get("items"), list) else []
+        # Mark provenance so DB can distinguish compiled vs enumerated items.
+        for it in completed_new:
+            if isinstance(it, dict):
+                it["item_source"] = "enumerator"
+                it["source_stage"] = "enumerator"
         ingredient["items"] = list(existing_items) + list(completed_new)
         compiled_payload["ingredient"] = ingredient
+
+        labels: list[str] = []
+        for it in completed_new:
+            if not isinstance(it, dict):
+                continue
+            v = (it.get("variation") or "").strip()
+            f = (it.get("physical_form") or "").strip()
+            labels.append(f"{v} [{f}]".strip() if v else f"[{f}]")
         # Re-save through DB writer.
         database_manager.upsert_compiled_ingredient(term, compiled_payload, seed_category=base.get("seed_category"))
         with database_manager.get_session() as session:
@@ -167,7 +180,10 @@ SCHEMA:
             if ing3 is not None:
                 ing3.enumeration_status = "done"
                 ing3.enumerated_at = datetime.now(timezone.utc)
-                ing3.enumeration_notes = f"added_items={len(completed_new)}"
+                ing3.enumeration_notes = f"added_items={len(completed_new)}; new={', '.join(labels[:12])}"
+        # Human-readable log summary.
+        if completed_new:
+            LOGGER.info("Stage 3 enumeration complete for %s: added_items=%s (%s)", term, len(completed_new), ", ".join(labels[:12]))
         return True
     except Exception as exc:  # pylint: disable=broad-except
         with database_manager.get_session() as session:

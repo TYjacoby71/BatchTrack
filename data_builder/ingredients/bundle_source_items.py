@@ -1,9 +1,17 @@
 """Deterministically bundle SourceItem rows into derived definition clusters.
 
 Goal:
-- Minimize AI usage by grouping items under high-confidence clusters first.
+- Create *definition clusters* **post-merge**, driven by `merged_item_forms` (deduped purchasable item identities).
+- Each cluster corresponds to a proposed base ingredient definition (canonical term candidate).
+- Practically, we assign every merged item-form to a cluster keyed by its base `derived_term`, then
+  backfill `source_items.definition_cluster_id` via `source_items.merged_item_id`.
 - Produce `source_definitions` (one row per cluster) and annotate each `source_item`
   with `definition_cluster_id`, confidence, and reason.
+
+Important:
+- `merged_item_forms` are the post-merge item identities (term + variation + form) with provenance back to source rows.
+- This clustering stage groups *those item identities* into term-candidate clusters for the AI to adjudicate.
+- Composites remain isolated at the source row level (they do not participate in term clustering).
 """
 
 from __future__ import annotations
@@ -151,61 +159,9 @@ def _binomial_key(text: str) -> str:
     return " ".join([p for p in parts if p]).strip()
 
 
-def _cluster_for_item(
-    item: database_manager.SourceItem, *, ambiguous_cas: set[str] | None = None
-) -> tuple[str, int, str, str]:
-    """
-    Returns (cluster_id, confidence, reason, botanical_key).
-
-    Confidence tiers (rough):
-    - 90: single CAS + INCI present (strong identity)
-    - 85: binomial botanical key (genus+species)
-    - 75: normalized derived_term fallback
-    - 40: composites (kept isolated)
-    """
-    is_composite = bool(getattr(item, "is_composite", False))
-    if is_composite:
-        return f"composite:{item.key}", 40, "composite_item", ""
-
-    cas_list = _cas_list_from_json(_clean(getattr(item, "cas_numbers_json", "")))
-    if not cas_list:
-        cas_list = _cas_tokens(_clean(getattr(item, "cas_number", "")))
-
-    inci = _clean(getattr(item, "inci_name", None))
-    inci_norm = _norm_inci(inci) if inci else ""
-    ambiguous = ambiguous_cas or set()
-
-    # Prefer single CAS clusters for identity
-    if len(cas_list) == 1:
-        cas = cas_list[0]
-        if cas in ambiguous:
-            # Some CAS numbers are effectively "family" identifiers (esp. polymers/mixtures) and
-            # will incorrectly collapse many distinct INCI identities into one definition.
-            # In those cases, prefer INCI/term identity over CAS.
-            if inci_norm:
-                return f"inci:{inci_norm}", 82, "ambiguous_cas_use_inci", _binomial_key(
-                    _clean(getattr(item, "derived_term", ""))
-                )
-            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-            term_norm = re.sub(r"\s+", " ", term).strip().lower()
-            return f"term:{term_norm}", 78, "ambiguous_cas_use_term", ""
-        if inci_norm:
-            return f"cas:{cas}", 90, "single_cas_with_inci", _binomial_key(_clean(getattr(item, "derived_term", "")))
-        return f"cas:{cas}", 85, "single_cas", _binomial_key(_clean(getattr(item, "derived_term", "")))
-
-    # Botanical binomial key
-    bkey = _binomial_key(_clean(getattr(item, "derived_term", "")))
-    if bkey:
-        return f"binomial:{bkey}", 85, "binomial_key", bkey
-
-    # INCI-based fallback for chemicals
-    if inci_norm:
-        return f"inci:{inci_norm}", 80, "inci_identity", ""
-
-    # Last resort: derived_term string
-    term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-    term_norm = re.sub(r"\s+", " ", term).strip().lower()
-    return f"term:{term_norm}", 75, "derived_term", ""
+def _cluster_id_for_term(term: str) -> str:
+    t = re.sub(r"\s+", " ", _clean(term)).strip().lower()
+    return f"term:{t}" if t else ""
 
 
 def _choose_canonical_term(def_names: Iterable[str]) -> str:
@@ -225,30 +181,20 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
     created_defs = 0
 
     with database_manager.get_session() as session:
-        # Identify CAS numbers that map to many distinct derived terms. These are usually
-        # non-unique "family" CAS values (esp. polymers/mixtures), and clustering by CAS
-        # would incorrectly merge many distinct INCI identities into one definition.
-        cas_to_terms: dict[str, set[str]] = defaultdict(set)
-        for item in session.query(database_manager.SourceItem).yield_per(2000):
-            if bool(getattr(item, "is_composite", False)):
-                continue
-            cas_list = _cas_list_from_json(_clean(getattr(item, "cas_numbers_json", "")))
-            if not cas_list:
-                cas_list = _cas_tokens(_clean(getattr(item, "cas_number", "")))
-            if len(cas_list) != 1:
-                continue
-            term = _clean(getattr(item, "derived_term", "")) or _clean(getattr(item, "raw_name", ""))
-            term_norm = re.sub(r"\s+", " ", term).strip().lower()
-            if not term_norm:
-                continue
-            cas_to_terms[cas_list[0]].add(term_norm)
-        ambiguous_cas = {
-            cas for cas, terms in cas_to_terms.items() if len(terms) >= _AMBIGUOUS_CAS_DERIVED_TERM_THRESHOLD
-        }
-
         # Clear previous definitions (deterministic rebuild)
         session.query(database_manager.SourceDefinition).delete()
 
+        # 1) Build cluster assignment for merged item identities (post-merge).
+        mif_q = session.query(database_manager.MergedItemForm)
+        if limit and int(limit) > 0:
+            mif_q = mif_q.limit(int(limit))
+        merged_cluster_by_id: dict[int, str] = {}
+        for mif in mif_q.yield_per(2000):
+            cid = _cluster_id_for_term(_clean(getattr(mif, "derived_term", "")))
+            if cid:
+                merged_cluster_by_id[int(mif.id)] = cid
+
+        # 2) Assign each source row to its merged item's cluster (or isolate composites).
         q = session.query(database_manager.SourceItem)
         if limit and int(limit) > 0:
             q = q.limit(int(limit))
@@ -256,8 +202,17 @@ def bundle(*, limit: int = 0) -> dict[str, int]:
         buckets: dict[str, list[database_manager.SourceItem]] = defaultdict(list)
         meta: dict[str, tuple[int, str, str]] = {}
 
-        for item in q.yield_per(1000):
-            cluster_id, conf, reason, bkey = _cluster_for_item(item, ambiguous_cas=ambiguous_cas)
+        for item in q.yield_per(2000):
+            if bool(getattr(item, "is_composite", False)):
+                cluster_id, conf, reason, bkey = f"composite:{item.key}", 40, "composite_item", ""
+            else:
+                mid = getattr(item, "merged_item_id", None)
+                cluster_id = merged_cluster_by_id.get(int(mid)) if mid is not None else ""
+                # Fallback to derived_term if merge link is missing.
+                if not cluster_id:
+                    cluster_id = _cluster_id_for_term(_clean(getattr(item, "derived_term", ""))) or f"raw:{re.sub(r'\\s+', ' ', _clean(getattr(item, 'raw_name', ''))).strip().lower()}"
+                conf, reason, bkey = 90, "post_merge_term_cluster", _binomial_key(_clean(getattr(item, "derived_term", "")))
+
             buckets[cluster_id].append(item)
             meta.setdefault(cluster_id, (conf, reason, bkey))
 
