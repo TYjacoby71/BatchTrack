@@ -71,7 +71,9 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
         for row in q.yield_per(2000):
             scanned += 1
 
-            # If we already derived a variation, it's not a bypass.
+            # If we already derived a variation, it's usually not a bypass.
+            # Exception: when the parser uses a form token as the variation label (e.g., Oil/Oil, Hydrosol/Hydrosol),
+            # we still want to bypass so the UI renders "Base Oil" instead of "Base (Oil)".
             has_var = bool(_clean(getattr(row, "derived_variation", "")))
             is_comp = bool(getattr(row, "is_composite", False))
             raw = _clean(getattr(row, "raw_name", ""))
@@ -79,11 +81,16 @@ def derive_variation_bypass(*, limit: int = 0) -> dict[str, int]:
             source = _clean(getattr(row, "source", "")).lower()
             origin = _clean(getattr(row, "origin", "")).strip()
             physical_form = _clean(getattr(row, "derived_physical_form", "")).strip()
+            variation = _clean(getattr(row, "derived_variation", "")).strip()
 
             new_bypass = 0
             new_reason: str | None = None
 
-            if has_var:
+            form_tokens = {"Oil", "Hydrosol", "Powder", "Wax", "Resin", "Gum", "Gel", "Paste"}
+            if has_var and variation == physical_form and variation in form_tokens:
+                new_bypass = 1
+                new_reason = "form_token"
+            elif has_var:
                 new_bypass = 0
                 new_reason = None
             elif is_comp:

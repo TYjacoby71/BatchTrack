@@ -2,16 +2,16 @@
 
 Goal:
 - Create *definition clusters* that group many source rows under the same base ingredient definition.
-- A cluster is expected to be a *collapsed grouping* of items that share the same `derived_term`
+- A cluster is expected to be a *collapsed grouping* of source rows that share the same `derived_term`
   (or the closest available fallback when derived_term is missing).
 - Produce `source_definitions` (one row per cluster) and annotate each `source_item`
   with `definition_cluster_id`, confidence, and reason.
 
 Important:
-- This is NOT the same as `merged_item_forms` which is an item-identity table keyed by
+- This is NOT the same as `merged_item_forms` which is the deduped item-identity table keyed by
   (derived_term, derived_variation, derived_physical_form).
-- Clusters are intentionally *broader* than item identities. CAS/INCI signals should be
-  treated as metadata/QA flags within a cluster, not primary keys that fragment clusters.
+- This clustering stage does not change item identities; it only groups source rows under a proposed
+  base definition term prior to AI compilation.
 """
 
 from __future__ import annotations

@@ -728,12 +728,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         if token in t:
             return _title_case_soft(token), "Oil"
     # Plain oil (no plant part specified) — common in INCI.
+    # Keep variation="Oil" so we preserve a purchasable-item label, but rely on variation_bypass
+    # downstream to avoid rendering "Base (Oil)".
     if t.endswith(" oil"):
-        return "", "Oil"
+        return "Oil", "Oil"
     # TGSC: oils often include extra trailing descriptors (country, processing notes, etc).
     # If "oil" appears as a token and it's not an "oil replacer", classify as Oil.
     if re.search(r"\boil\b", t) and "replacer" not in t and "(fixed)" not in t:
-        return "", "Oil"
+        return "Oil", "Oil"
 
     # Plant part materials (non-oil) - useful for grouping and term bundling.
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem", "peel", "fruit", "berry", "bran", "germ"):
@@ -910,7 +912,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         # Common label for citrus oils; treat as a variation of oil extraction.
         return "Expressed", "Oil"
     if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
-        return "", "Hydrosol"
+        return "Hydrosol", "Hydrosol"
     if "distillates" in t or "distillate" in t:
         return "Distillate", "Liquid"
     if "infusion" in t:
@@ -924,7 +926,7 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
 
     # Powders / flours
     if " powder" in f" {t} " or t.endswith(" powder"):
-        return "", "Powder"
+        return "Powder", "Powder"
     if " flour" in f" {t} " or t.endswith(" flour"):
         return "Flour", "Powder"
     if " starch" in f" {t} " or t.endswith(" starch"):
