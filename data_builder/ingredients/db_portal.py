@@ -361,7 +361,7 @@ HTML_TEMPLATE = """
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Derived Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
             } else if (currentView === 'clusters') {
-                thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Merged Items</th><th>Sources</th></tr>';
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Canonical Term</th><th>Total Items</th><th>CosIng Only</th><th>TGSC Only</th><th>Both Sources</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Derived Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -484,30 +484,15 @@ HTML_TEMPLATE = """
         function renderClustersView(clusters) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = clusters.map(cluster => {
-                // Source badges
-                const sourceBadges = [];
-                if (cluster.cosing_count > 0 && cluster.tgsc_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-both">Both</span>`);
-                } else if (cluster.cosing_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-cosing">CosIng</span>`);
-                } else if (cluster.tgsc_count > 0) {
-                    sourceBadges.push(`<span class="badge badge-tgsc">TGSC</span>`);
-                } else {
-                    sourceBadges.push('<span style="color:#9ca3af;">-</span>');
-                }
-                
-                // Merged item count badge
-                const countBadge = cluster.merged_item_count > 1 ? 
-                    `<span class="badge badge-both">${cluster.merged_item_count}</span>` : 
-                    cluster.merged_item_count > 0 ?
-                    `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.merged_item_count}</span>` :
-                    '<span style="color:#9ca3af;">0</span>';
+                const fmtCount = (n) => n > 0 ? n : '<span style="color:#9ca3af;">0</span>';
                 
                 return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${cluster.cluster_id}">${cluster.cluster_id}</td>
                     <td><strong>${cluster.canonical_term || '-'}</strong></td>
-                    <td>${countBadge}</td>
-                    <td>${sourceBadges.join('')}</td>
+                    <td><strong>${cluster.total_items}</strong></td>
+                    <td>${fmtCount(cluster.cosing_only)}</td>
+                    <td>${fmtCount(cluster.tgsc_only)}</td>
+                    <td>${fmtCount(cluster.both_sources)}</td>
                 </tr>`;
             }).join('');
         }
@@ -993,27 +978,37 @@ def api_clusters():
     # Build having clauses for source filters
     having_clauses = []
     if cluster_size == 'multi':
-        having_clauses.append("merged_item_count > 1")
+        having_clauses.append("total_items > 1")
     elif cluster_size == 'single':
-        having_clauses.append("merged_item_count = 1")
+        having_clauses.append("total_items = 1")
     
     if filter_type == 'cosing':
-        having_clauses.append("cosing_count > 0")
+        having_clauses.append("cosing_only > 0")
     elif filter_type == 'tgsc':
-        having_clauses.append("tgsc_count > 0")
+        having_clauses.append("tgsc_only > 0")
     elif filter_type == 'both':
-        having_clauses.append("cosing_count > 0 AND tgsc_count > 0")
+        having_clauses.append("both_sources > 0")
     
     having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
     
-    # Query raw cluster data from source_definitions with merged item counts
+    # Query raw cluster data from source_definitions with item counts by source type
+    # Items are counted from merged_item_forms: cosing_only, tgsc_only, or both (merged duplicates)
     cur.execute(f"""
         SELECT 
             sd.cluster_id,
             sd.canonical_term,
-            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.merged_item_id IS NOT NULL) as merged_item_count,
-            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing' AND si.merged_item_id IS NOT NULL) as cosing_count,
-            (SELECT COUNT(DISTINCT si.merged_item_id) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc' AND si.merged_item_id IS NOT NULL) as tgsc_count
+            (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
+             JOIN source_items si ON si.merged_item_id = mif.id 
+             WHERE si.definition_cluster_id = sd.cluster_id) as total_items,
+            (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
+             JOIN source_items si ON si.merged_item_id = mif.id 
+             WHERE si.definition_cluster_id = sd.cluster_id AND mif.has_cosing = 1 AND mif.has_tgsc = 0) as cosing_only,
+            (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
+             JOIN source_items si ON si.merged_item_id = mif.id 
+             WHERE si.definition_cluster_id = sd.cluster_id AND mif.has_cosing = 0 AND mif.has_tgsc = 1) as tgsc_only,
+            (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
+             JOIN source_items si ON si.merged_item_id = mif.id 
+             WHERE si.definition_cluster_id = sd.cluster_id AND mif.has_cosing = 1 AND mif.has_tgsc = 1) as both_sources
         FROM source_definitions sd
         {where_sql}
         {having_sql}
@@ -1026,9 +1021,10 @@ def api_clusters():
         clusters.append({
             'cluster_id': row[0],
             'canonical_term': row[1],
-            'merged_item_count': row[2] or 0,
-            'cosing_count': row[3] or 0,
-            'tgsc_count': row[4] or 0,
+            'total_items': row[2] or 0,
+            'cosing_only': row[3] or 0,
+            'tgsc_only': row[4] or 0,
+            'both_sources': row[5] or 0,
         })
     
     # Get total count
