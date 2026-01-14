@@ -361,7 +361,7 @@ HTML_TEMPLATE = """
             if (currentView === 'terms') {
                 thead.innerHTML = '<tr><th>Term</th><th>Items</th><th>Sources</th><th>Category</th></tr>';
             } else if (currentView === 'clusters') {
-                thead.innerHTML = '<tr><th>Cluster ID</th><th>Raw Names (Expected to Merge)</th><th>Derived Term</th><th>Count</th><th>Reason</th></tr>';
+                thead.innerHTML = '<tr><th>Cluster ID</th><th>Raw Names (Expected to Merge)</th><th>Derived Term</th><th>Count</th><th>Derivatives</th><th>Reason</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Sources</th><th>CAS Numbers</th><th>Specs</th></tr>';
             }
@@ -493,12 +493,16 @@ HTML_TEMPLATE = """
                 const countBadge = cluster.count > 1 ? 
                     `<span class="badge badge-both">${cluster.count}</span>` : 
                     `<span class="badge" style="background:#fee2e2;color:#991b1b;">${cluster.count}</span>`;
+                const derivativeBadge = cluster.derivative_count > 0 ?
+                    `<span class="badge" style="background:#dbeafe;color:#1e40af;">${cluster.derivative_count}</span>` : 
+                    '<span style="color:#9ca3af;">-</span>';
                 
                 return `<tr class="item-row" onclick="showClusterDetail('${cluster.cluster_id.replace(/'/g, "\\'")}')">
                     <td style="font-size:11px; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${cluster.cluster_id}</td>
                     <td style="max-width:300px;">${rawNamesHtml || '-'}</td>
                     <td><strong>${cluster.derived_term || '-'}</strong></td>
                     <td>${countBadge}</td>
+                    <td>${derivativeBadge}</td>
                     <td>${reasonBadge}</td>
                 </tr>`;
             }).join('');
@@ -962,17 +966,35 @@ def api_clusters():
     conn = get_db('final')
     cur = conn.cursor()
     
-    where_clauses = ["definition_cluster_id IS NOT NULL"]
-    params = []
-    
+    # When searching, find parent clusters that match OR have matching children
+    # Then show only parent/root clusters with derivative counts
     if search:
-        where_clauses.append("""(derived_term LIKE ? OR raw_name LIKE ? OR definition_cluster_id LIKE ?
-            OR definition_cluster_id IN (
-                SELECT cluster_id FROM source_definitions 
-                WHERE reconciled_term LIKE ? OR canonical_term LIKE ?
-            ))""")
         search_param = f"%{search}%"
-        params.extend([search_param, search_param, search_param, search_param, search_param])
+        
+        # Get parent cluster IDs for matching child derivatives
+        cur.execute("""
+            SELECT DISTINCT COALESCE(sd.parent_cluster_id, sd.cluster_id) as root_cluster
+            FROM source_definitions sd
+            WHERE sd.canonical_term LIKE ? 
+               OR sd.reconciled_term LIKE ?
+               OR sd.cluster_id LIKE ?
+        """, (search_param, search_param, search_param))
+        matching_roots = set(r[0] for r in cur.fetchall() if r[0])
+        
+        # Build query to get clusters that are either:
+        # 1. In matching_roots (parent clusters)
+        # 2. Match search but have no parent (standalone clusters)
+        if matching_roots:
+            placeholders = ','.join(['?' for _ in matching_roots])
+            where_clauses = [f"definition_cluster_id IN ({placeholders})"]
+            params = list(matching_roots)
+        else:
+            where_clauses = ["1=0"]  # No matches
+            params = []
+    else:
+        # No search - show all clusters that are NOT children of another cluster
+        where_clauses = ["definition_cluster_id IS NOT NULL"]
+        params = []
     
     if category:
         where_clauses.append("ingredient_category = ?")
@@ -1012,19 +1034,39 @@ def api_clusters():
     
     clusters = []
     for row in cur.fetchall():
+        cluster_id = row[0]
         raw_names_str = row[1] or ''
         all_raw_names = [n.strip() for n in raw_names_str.split(',') if n.strip()]
         display_names = all_raw_names[:8]
         has_more = len(all_raw_names) > 8
+        
+        # Get derivative count for this cluster
+        cur.execute("""
+            SELECT COUNT(*) FROM source_definitions 
+            WHERE parent_cluster_id = ?
+        """, (cluster_id,))
+        derivative_count = cur.fetchone()[0]
+        
+        # Get canonical term from source_definitions
+        cur.execute("""
+            SELECT canonical_term FROM source_definitions WHERE cluster_id = ?
+        """, (cluster_id,))
+        def_row = cur.fetchone()
+        canonical_term = def_row[0] if def_row else row[2]
+        
         clusters.append({
-            'cluster_id': row[0],
+            'cluster_id': cluster_id,
             'raw_names': display_names,
             'has_more_names': has_more,
             'total_names': len(all_raw_names),
-            'derived_term': row[2],
+            'derived_term': canonical_term or row[2],
             'count': row[3],
+            'derivative_count': derivative_count,
             'reason': row[4]
         })
+    
+    # Sort by derivative count (descending), then by count
+    clusters.sort(key=lambda x: (-x['derivative_count'], -x['count'], x['derived_term'] or ''))
     
     cur.execute(f"""
         SELECT COUNT(*) FROM (
