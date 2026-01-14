@@ -38,9 +38,12 @@ BASE_INGREDIENT_PATTERNS = {
     "mango": "Mango",
     "coconut": "Coconut",
     "coco": "Coconut",
+    "coca": "Coconut",
+    "coc": "Coconut",
     "almond": "Almond",
     "argan": "Argan",
     "avocado": "Avocado",
+    "avocad": "Avocado",
     "olive": "Olive",
     "sunflower": "Sunflower",
     "safflower": "Safflower",
@@ -55,6 +58,7 @@ BASE_INGREDIENT_PATTERNS = {
     "rice": "Rice",
     "oat": "Oat",
     "canola": "Canola",
+    "canol": "Canola",
     "rapeseed": "Rapeseed",
     "sesame": "Sesame",
     "flax": "Flax",
@@ -106,6 +110,12 @@ BASE_INGREDIENT_PATTERNS = {
     "isostear": "Isostearic Acid",
     "undecylen": "Undecylenic Acid",
     "ricin": "Ricinoleic Acid",
+    "hippophae rhamnoides": "Sea Buckthorn",
+    "cannabis": "Hemp",
+    "acryl": "Acrylic",
+    "acet": "Acetic Acid",
+    "form": "Formic Acid",
+    "dimer dilinole": "Dimer Dilinoleic Acid",
 }
 
 

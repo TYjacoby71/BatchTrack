@@ -529,8 +529,32 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
                     html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(data.canonical_term, data.derived_term)}</div>`;
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(data.botanical_key, null)}</div>`;
+                    if (data.reconciled_term) {
+                        html += `<div class="detail-label">Reconciled Base</div><div class="detail-value"><span class="curated">${data.reconciled_term}</span></div>`;
+                    }
+                    if (data.reconciled_variation) {
+                        html += `<div class="detail-label">Reconciled Variation</div><div class="detail-value"><span class="curated">${data.reconciled_variation}</span></div>`;
+                    }
+                    if (data.parent_cluster_id) {
+                        html += `<div class="detail-label">Parent Cluster</div><div class="detail-value"><a href="#" onclick="event.preventDefault(); closeDetail(); showClusterDetail('${data.parent_cluster_id.replace(/'/g, "\\'")}')" style="color:#7c3aed;">${data.parent_cluster_id}</a></div>`;
+                    }
                     html += `<div class="detail-label">Derived Term</div><div class="detail-value" style="font-size:11px;color:#6b7280;">${data.derived_term || '-'}</div>`;
                     html += '</div></div>';
+                    
+                    // Show child derivatives if any
+                    if (data.child_derivatives && data.child_derivatives.length > 0) {
+                        html += `<div class="detail-section"><h3>Derivatives (${data.child_derivatives.length})</h3>`;
+                        html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Chemical/processed derivatives linked to this base ingredient:</p>';
+                        data.child_derivatives.forEach(child => {
+                            html += `<div class="source-item" onclick="closeDetail(); showClusterDetail('${child.cluster_id.replace(/'/g, "\\'")}')">
+                                <div class="source-item-header">
+                                    <span class="source-item-name">${child.canonical_term || child.cluster_id}</span>
+                                    <span class="badge" style="background:#e0f2fe;color:#0369a1;">${child.variation || 'derivative'}</span>
+                                </div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                    }
                     
                     if (data.is_composite) {
                         // Composite clusters - show source items directly
@@ -942,9 +966,13 @@ def api_clusters():
     params = []
     
     if search:
-        where_clauses.append("(derived_term LIKE ? OR raw_name LIKE ? OR definition_cluster_id LIKE ?)")
+        where_clauses.append("""(derived_term LIKE ? OR raw_name LIKE ? OR definition_cluster_id LIKE ?
+            OR definition_cluster_id IN (
+                SELECT cluster_id FROM source_definitions 
+                WHERE reconciled_term LIKE ? OR canonical_term LIKE ?
+            ))""")
         search_param = f"%{search}%"
-        params.extend([search_param, search_param, search_param])
+        params.extend([search_param, search_param, search_param, search_param, search_param])
     
     if category:
         where_clauses.append("ingredient_category = ?")
@@ -1117,12 +1145,25 @@ def api_cluster_detail(cluster_id):
     
     # Get cluster info from source_definitions
     cur.execute("""
-        SELECT reason, canonical_term, botanical_key FROM source_definitions WHERE cluster_id = ?
+        SELECT reason, canonical_term, botanical_key, reconciled_term, reconciled_variation, parent_cluster_id 
+        FROM source_definitions WHERE cluster_id = ?
     """, (cluster_id,))
     def_row = cur.fetchone()
     reason = def_row[0] if def_row else None
     canonical_term = def_row[1] if def_row else None
     botanical_key = def_row[2] if def_row else None
+    reconciled_term = def_row[3] if def_row else None
+    reconciled_variation = def_row[4] if def_row else None
+    parent_cluster_id = def_row[5] if def_row else None
+    
+    # Get child derivatives (clusters that have this cluster as parent)
+    cur.execute("""
+        SELECT cluster_id, canonical_term, reconciled_variation 
+        FROM source_definitions 
+        WHERE parent_cluster_id = ?
+        ORDER BY canonical_term
+    """, (cluster_id,))
+    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1], 'variation': r[2]} for r in cur.fetchall()]
     
     conn.close()
     return jsonify({
@@ -1131,6 +1172,10 @@ def api_cluster_detail(cluster_id):
         'derived_term': derived_term,
         'canonical_term': canonical_term,
         'botanical_key': botanical_key,
+        'reconciled_term': reconciled_term,
+        'reconciled_variation': reconciled_variation,
+        'parent_cluster_id': parent_cluster_id,
+        'child_derivatives': child_derivatives,
         'is_composite': False,
         'cosing_only': cosing_only,
         'tgsc_only': tgsc_only,
