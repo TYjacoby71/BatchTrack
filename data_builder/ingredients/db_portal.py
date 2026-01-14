@@ -1157,13 +1157,15 @@ def api_cluster_detail(cluster_id):
     parent_cluster_id = def_row[5] if def_row else None
     
     # Get child derivatives (clusters that have this cluster as parent)
+    # Also include siblings if this cluster itself has a parent
     cur.execute("""
         SELECT cluster_id, canonical_term, reconciled_variation 
         FROM source_definitions 
         WHERE parent_cluster_id = ?
+           OR (? IS NOT NULL AND parent_cluster_id = ?)
         ORDER BY canonical_term
-    """, (cluster_id,))
-    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1], 'variation': r[2]} for r in cur.fetchall()]
+    """, (cluster_id, parent_cluster_id, parent_cluster_id))
+    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1], 'variation': r[2]} for r in cur.fetchall() if r[0] != cluster_id]
     
     conn.close()
     return jsonify({
