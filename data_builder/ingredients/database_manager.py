@@ -657,6 +657,11 @@ class SourceDefinition(Base):
     member_cas_json = Column(Text, nullable=False, default="[]")
     member_inci_samples_json = Column(Text, nullable=False, default="[]")
 
+    # Reconciliation fields for post-processing derivative grouping
+    reconciled_term = Column(Text, nullable=True, default=None)
+    reconciled_variation = Column(Text, nullable=True, default=None)
+    parent_cluster_id = Column(String, nullable=True, default=None)
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
