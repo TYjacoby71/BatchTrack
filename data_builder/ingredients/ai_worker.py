@@ -232,6 +232,26 @@ Return JSON using this schema (all strings trimmed):
 }
 """
 
+CLUSTER_TERM_SCHEMA_SPEC = r"""
+Return JSON using this schema (all strings trimmed):
+{
+  "term": "string (required) - canonical base ingredient term (no form/variation words)",
+  "ingredient_core": {
+    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived",
+    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids",
+    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Extracted Fat, Other",
+    "derived_from": "string (optional; natural source if base is derived)",
+    "category": "one of the approved ingredient categories",
+    "botanical_name": "string",
+    "inci_name": "string",
+    "cas_number": "string",
+    "short_description": "string",
+    "detailed_description": "string"
+  },
+  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+}
+"""
+
 ITEMS_SCHEMA_SPEC = r"""
 Return JSON using this schema (all strings trimmed; lists sorted alphabetically):
 {
@@ -355,6 +375,48 @@ Normalized base context (do not contradict):
 SCHEMA:
 {CORE_SCHEMA_SPEC}
 """
+
+
+def _render_cluster_term_prompt(cluster_id: str, cluster_context: Dict[str, Any]) -> str:
+    """Stage 1 prompt: pick canonical base term from a raw cluster."""
+    meta = json.dumps(cluster_context, ensure_ascii=False, indent=2, sort_keys=True)
+    return f"""
+You are Stage 1 (Term Completion / Normalization).
+
+TASK:
+- Given one RAW ingestion cluster, determine the single canonical BASE ingredient term for the entire cluster.
+- Complete the core identity fields for that term using the cluster evidence.
+
+CRITICAL RULES:
+- Every cluster must map to ONE base term.
+- The base term must NOT include variation/form/processing words.
+  Examples:
+  - "Hydrolyzed Shea Butter" -> "Shea" (or "Shea Butter" ONLY if "butter" is truly the ingredient identity, not the form)
+  - "Coconut Butter" -> "Coconut"
+  - "Lavender Essential Oil" -> "Lavender"
+- Treat words like hydrolyzed, deodorized, refined, unrefined, filtered, hydrogenated, oil, butter, wax, resin, powder, extract, tincture, glycerite, hydrosol, solution, concentrate as NOT part of the base term unless the cluster evidence strongly indicates otherwise.
+- Prefer what the CLUSTER implies: multiple items in the cluster should share the same base term.
+- Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
+
+Cluster ID: "{cluster_id}"
+
+Cluster evidence (JSON; use as source-of-truth hints):
+{meta}
+
+SCHEMA:
+{CLUSTER_TERM_SCHEMA_SPEC}
+"""
+
+
+def normalize_cluster_term(cluster_id: str, cluster_context: Dict[str, Any]) -> Dict[str, Any]:
+    """Stage 1: normalize a raw cluster into canonical term + core fields."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    cid = (cluster_id or "").strip()
+    if not cid:
+        raise ValueError("cluster_id is required")
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_cluster_term_prompt(cid, cluster_context or {}))
 
 
 def compile_core(term: str, base_context: Dict[str, Any] | None = None) -> Dict[str, Any]:

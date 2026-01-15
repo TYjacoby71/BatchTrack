@@ -73,6 +73,7 @@ HTML_TEMPLATE = """
         .curated { font-weight: 500; color: #1f2937; }
         .badge-both { background: #dcfce7; color: #166534; }
         .badge-specs { background: #ede9fe; color: #5b21b6; }
+        .badge-compiled { background: #d1fae5; color: #065f46; }
         
         .item-row { cursor: pointer; }
         .item-row:hover { background: #e0f2fe !important; }
@@ -341,15 +342,14 @@ HTML_TEMPLATE = """
                 btn.classList.toggle('active', btn.dataset.dataset === dataset);
             });
 
-            // Compiled dataset does not support clusters or raw-source venn filters.
+            // Compiled dataset uses separate tables; disable raw-source venn filters.
             if (currentDataset === 'compiled') {
                 currentFilter = 'all';
                 document.querySelectorAll('.venn-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.filter === 'all');
                 });
-                if (currentView === 'clusters') {
-                    currentView = 'terms';
-                }
+                // Default compiled view is clusters (mirrors raw clusters/items).
+                currentView = 'clusters';
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.view === currentView);
                 });
@@ -399,10 +399,12 @@ HTML_TEMPLATE = """
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
             if (currentDataset === 'compiled') {
-                if (currentView === 'terms') {
+                if (currentView === 'clusters') {
+                    thead.innerHTML = '<tr><th>Cluster ID</th><th>Compiled Term</th><th>Items</th><th>Term Status</th><th>Items Compiled</th></tr>';
+                } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
                 } else {
-                    thead.innerHTML = '<tr><th>Ingredient</th><th>Item Name</th><th>Variation</th><th>Form</th><th>Status</th><th>Specs</th></tr>';
+                    thead.innerHTML = '<tr><th>Cluster</th><th>Variation</th><th>Form</th><th>Status</th><th>Raw Specs</th><th>Compiled</th></tr>';
                 }
                 return;
             }
@@ -428,13 +430,15 @@ HTML_TEMPLATE = """
             const search = document.getElementById('search').value;
             const tbody = document.getElementById('table-body');
             const colSpan = currentDataset === 'compiled'
-                ? (currentView === 'terms' ? 4 : 6)
+                ? (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6))
                 : (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6));
             tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Loading...</td></tr>`;
             
             let endpoint;
             if (currentDataset === 'compiled') {
-                endpoint = currentView === 'terms' ? '/api/compiled/ingredients' : '/api/compiled/items';
+                endpoint = currentView === 'clusters'
+                    ? '/api/compiled/clusters'
+                    : (currentView === 'terms' ? '/api/compiled/ingredients' : '/api/compiled/items');
             } else {
                 if (currentView === 'terms') {
                     endpoint = '/api/terms';
@@ -453,7 +457,9 @@ HTML_TEMPLATE = """
                     if ((data.items || data.terms || data.clusters || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
                     } else if (currentDataset === 'compiled') {
-                        if (currentView === 'terms') {
+                        if (currentView === 'clusters') {
+                            renderCompiledClustersView(data.clusters);
+                        } else if (currentView === 'terms') {
                             renderCompiledIngredientsView(data.ingredients);
                         } else {
                             renderCompiledItemsView(data.items);
@@ -485,17 +491,32 @@ HTML_TEMPLATE = """
             }).join('');
         }
 
+        function renderCompiledClustersView(clusters) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = (clusters || []).map(row => {
+                const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
+                return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
+                    <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>
+                    <td><strong>${row.compiled_term || row.raw_canonical_term || '-'}</strong></td>
+                    <td>${row.total_items || 0}</td>
+                    <td>${row.term_status || '-'}</td>
+                    <td>${itemsCompiled}</td>
+                </tr>`;
+            }).join('');
+        }
+
         function renderCompiledItemsView(items) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = (items || []).map(row => {
-                const specsBadge = row.has_specs ? '<span class="badge badge-specs">Specs</span>' : '-';
-                return `<tr class="item-row" onclick="showCompiledItem(${row.id})">
-                    <td><strong>${row.ingredient_term || '-'}</strong></td>
-                    <td>${row.item_name || '-'}</td>
-                    <td>${row.variation || '-'}</td>
-                    <td>${row.physical_form || '-'}</td>
-                    <td>${row.status || '-'}</td>
-                    <td>${specsBadge}</td>
+                const rawSpecs = row.has_raw_specs ? '<span class="badge badge-specs">Raw Specs</span>' : '-';
+                const compiledBadge = row.has_compiled ? '<span class="badge badge-compiled">Compiled</span>' : '-';
+                return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
+                    <td style="font-size:11px;">${row.cluster_id || '-'}</td>
+                    <td>${row.derived_variation || '-'}</td>
+                    <td>${row.derived_physical_form || '-'}</td>
+                    <td>${row.item_status || '-'}</td>
+                    <td>${rawSpecs}</td>
+                    <td>${compiledBadge}</td>
                 </tr>`;
             }).join('');
         }
@@ -919,6 +940,52 @@ HTML_TEMPLATE = """
                 });
         }
 
+        function showCompiledCluster(clusterId) {
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-body').innerHTML = '<div class="loading">Loading...</div>';
+
+            fetch(`/api/compiled/cluster/${encodeURIComponent(clusterId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('detail-title').textContent = 'Error';
+                        document.getElementById('detail-body').innerHTML = `<div class="loading">${data.error}</div>`;
+                        return;
+                    }
+                    document.getElementById('detail-title').textContent = data.compiled_term || data.raw_canonical_term || clusterId;
+                    document.getElementById('detail-subtitle').textContent = `Compiled cluster | term: ${data.term_status || '-'} | items: ${(data.items_done || 0)}/${(data.total_items || 0)}`;
+                    let html = '<div class="detail-section"><h3>Compiled Cluster</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.cluster_id || clusterId}</div>`;
+                    html += `<div class="detail-label">Raw canonical</div><div class="detail-value">${data.raw_canonical_term || '-'}</div>`;
+                    html += `<div class="detail-label">Compiled term</div><div class="detail-value"><strong>${data.compiled_term || '-'}</strong></div>`;
+                    html += `<div class="detail-label">Term status</div><div class="detail-value">${data.term_status || '-'}</div>`;
+                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '-'}</div>`;
+                    html += `<div class="detail-label">Primary Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
+                    html += '</div></div>';
+                    if (data.items && data.items.length) {
+                        html += `<div class="detail-section"><h3>Items (${data.items.length})</h3>`;
+                        data.items.forEach(it => {
+                            const rawBadge = it.has_raw_specs ? '<span class="badge badge-specs">Raw Specs</span>' : '';
+                            const compBadge = it.has_compiled ? '<span class="badge badge-compiled">Compiled</span>' : '';
+                            html += `<div class="source-item" style="cursor:default;">
+                                <div class="source-item-header">
+                                    <span class="source-item-name">${it.derived_variation || '(no variation)'} • ${it.derived_physical_form || '(no form)'}</span>
+                                    <span class="badge" style="background:#e5e7eb;color:#111827;">${it.item_status || '-'}</span>
+                                    ${rawBadge}
+                                    ${compBadge}
+                                </div>
+                                <div class="source-item-details">
+                                    <span>MIF ID: ${it.merged_item_form_id || '-'}</span>
+                                </div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                    }
+                    document.getElementById('detail-body').innerHTML = html;
+                });
+        }
+
         function showCompiledItem(id) {
             document.getElementById('detail-overlay').classList.add('active');
             document.getElementById('detail-panel').classList.add('active');
@@ -1123,10 +1190,21 @@ def api_stats():
     }
 
     if dataset == "compiled":
-        if _table_exists(conn, "ingredients"):
+        if _table_exists(conn, "compiled_clusters"):
+            cur.execute("SELECT COUNT(*) FROM compiled_clusters")
+            stats["total_clusters"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_clusters WHERE term_status = 'done'")
+            stats["total_terms"] = cur.fetchone()[0]
+        if _table_exists(conn, "compiled_cluster_items"):
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
+            stats["total_merged"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
+            stats["with_specs"] = cur.fetchone()[0]
+        # Legacy fallback
+        if stats["total_terms"] == 0 and _table_exists(conn, "ingredients"):
             cur.execute("SELECT COUNT(*) FROM ingredients")
             stats["total_terms"] = cur.fetchone()[0]
-        if _table_exists(conn, "ingredient_items"):
+        if stats["total_merged"] == 0 and _table_exists(conn, "ingredient_items"):
             cur.execute("SELECT COUNT(*) FROM ingredient_items")
             stats["total_merged"] = cur.fetchone()[0]
         conn.close()
@@ -1158,6 +1236,18 @@ def api_categories():
     conn = get_db('final')
     cur = conn.cursor()
     if dataset == "compiled":
+        # Prefer cluster-mirror compiled categories when present; fallback to legacy ingredients.
+        if _table_exists(conn, "compiled_clusters"):
+            cur.execute("""
+                SELECT ingredient_category, COUNT(*) as cnt
+                FROM compiled_clusters
+                WHERE ingredient_category IS NOT NULL AND ingredient_category != ''
+                GROUP BY ingredient_category
+                ORDER BY cnt DESC
+            """)
+            categories = [{'name': row[0], 'count': row[1]} for row in cur.fetchall()]
+            conn.close()
+            return jsonify({'categories': categories})
         if not _table_exists(conn, "ingredients"):
             conn.close()
             return jsonify({"categories": []})
@@ -1252,6 +1342,48 @@ def api_compiled_items():
 
     conn = get_db("final")
     cur = conn.cursor()
+    # Prefer cluster-mirror compiled items when present; fallback to legacy ingredient_items.
+    if _table_exists(conn, "compiled_cluster_items"):
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("(cluster_id LIKE ? OR derived_term LIKE ? OR derived_variation LIKE ? OR derived_physical_form LIKE ?)")
+            s = f"%{search}%"
+            params.extend([s, s, s, s])
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        cur.execute(f"SELECT COUNT(*) FROM compiled_cluster_items {where_sql}", params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            f"""
+            SELECT cluster_id, merged_item_form_id, derived_term, derived_variation, derived_physical_form, item_status,
+                   CASE WHEN raw_item_json IS NOT NULL AND raw_item_json != '{{}}' THEN 1 ELSE 0 END as has_raw_specs,
+                   CASE WHEN item_json IS NOT NULL AND item_json != '{{}}' THEN 1 ELSE 0 END as has_compiled
+            FROM compiled_cluster_items
+            {where_sql}
+            ORDER BY cluster_id, merged_item_form_id
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+        items = [
+            {
+                "cluster_id": r[0],
+                "merged_item_form_id": r[1],
+                "derived_term": r[2],
+                "derived_variation": r[3],
+                "derived_physical_form": r[4],
+                "item_status": r[5],
+                "has_raw_specs": bool(r[6]),
+                "has_compiled": bool(r[7]),
+            }
+            for r in cur.fetchall()
+        ]
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        conn.close()
+        return jsonify({"items": items, "total": total, "total_pages": total_pages, "page": page})
+
     if not _table_exists(conn, "ingredient_items"):
         conn.close()
         return jsonify({"items": [], "total": 0, "total_pages": 1, "page": page})
@@ -1293,6 +1425,125 @@ def api_compiled_items():
     total_pages = max(1, (total + per_page - 1) // per_page)
     conn.close()
     return jsonify({"items": items, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/compiled/clusters")
+def api_compiled_clusters():
+    page = int(request.args.get("page", 1))
+    search = (request.args.get("search") or "").strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_clusters"):
+        conn.close()
+        return jsonify({"clusters": [], "total": 0, "total_pages": 1, "page": page})
+
+    where_clauses = []
+    params = []
+    if search:
+        where_clauses.append("(cluster_id LIKE ? OR compiled_term LIKE ? OR raw_canonical_term LIKE ?)")
+        s = f"%{search}%"
+        params.extend([s, s, s])
+    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+    cur.execute(f"SELECT COUNT(*) FROM compiled_clusters {where_sql}", params)
+    total = cur.fetchone()[0]
+
+    cur.execute(
+        f"""
+        SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
+               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
+               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done
+        FROM compiled_clusters c
+        {where_sql}
+        ORDER BY c.cluster_id
+        LIMIT ? OFFSET ?
+        """,
+        params + [per_page, offset],
+    )
+    clusters = [
+        {
+            "cluster_id": r[0],
+            "raw_canonical_term": r[1],
+            "compiled_term": r[2],
+            "term_status": r[3],
+            "total_items": int(r[4] or 0),
+            "items_done": int(r[5] or 0),
+        }
+        for r in cur.fetchall()
+    ]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    conn.close()
+    return jsonify({"clusters": clusters, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/compiled/cluster/<path:cluster_id>")
+def api_compiled_cluster_detail(cluster_id: str):
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_clusters"):
+        conn.close()
+        return jsonify({"error": "Compiled cluster tables not found"})
+
+    cur.execute(
+        """
+        SELECT cluster_id, raw_canonical_term, compiled_term, term_status, origin, ingredient_category
+        FROM compiled_clusters WHERE cluster_id = ?
+        """,
+        (cluster_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Compiled cluster not found"})
+
+    cur.execute(
+        """
+        SELECT merged_item_form_id, derived_term, derived_variation, derived_physical_form, item_status,
+               raw_item_json, item_json
+        FROM compiled_cluster_items
+        WHERE cluster_id = ?
+        ORDER BY merged_item_form_id
+        """,
+        (cluster_id,),
+    )
+    items = []
+    done = 0
+    for r in cur.fetchall():
+        raw = parse_json(r[5]) if r[5] else {}
+        raw_specs = (raw or {}).get("merged_specs") if isinstance((raw or {}).get("merged_specs"), dict) else {}
+        has_raw_specs = bool(raw_specs)
+        has_compiled = bool(r[6] and r[6] != "{}")
+        items.append(
+            {
+                "merged_item_form_id": r[0],
+                "derived_term": r[1],
+                "derived_variation": r[2],
+                "derived_physical_form": r[3],
+                "item_status": r[4],
+                "has_raw_specs": has_raw_specs,
+                "has_compiled": has_compiled,
+            }
+        )
+        if (r[4] or "").strip().lower() == "done":
+            done += 1
+
+    conn.close()
+    return jsonify(
+        {
+            "cluster_id": row[0],
+            "raw_canonical_term": row[1],
+            "compiled_term": row[2],
+            "term_status": row[3],
+            "origin": row[4],
+            "ingredient_category": row[5],
+            "total_items": len(items),
+            "items_done": done,
+            "items": items,
+        }
+    )
 
 
 @app.route("/api/compiled/ingredient/<path:term>")
