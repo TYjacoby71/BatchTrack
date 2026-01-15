@@ -1451,6 +1451,60 @@ def derive_item_display_name(
     )
 
 
+_FORM_BYPASS_VARIATION_TOKENS = {
+    "essential oil",
+    "co2 extract",
+    "absolute",
+    "hydrosol",
+    "tincture",
+    "glycerite",
+    "infusion",
+    "decoction",
+    "extract",
+    "oleoresin",
+    "distillate",
+    "seed oil",
+}
+_GENERIC_FORMS = {"oil", "liquid", "water"}
+
+
+def derive_item_bypass_flags(
+    *,
+    base_term: str,
+    variation: str,
+    physical_form: str,
+    form_bypass: bool | None = None,
+    variation_bypass: bool | None = None,
+) -> tuple[bool, bool]:
+    """Derive bypass flags to keep item names deterministic."""
+    base_clean = (base_term or "").strip()
+    var_clean = (variation or "").strip()
+    form_clean = (physical_form or "").strip()
+
+    vb = bool(variation_bypass) if variation_bypass is not None else False
+    fb = bool(form_bypass) if form_bypass is not None else False
+
+    if not var_clean:
+        vb = True
+    if base_clean and var_clean and base_clean.casefold() == var_clean.casefold():
+        vb = True
+    if not form_clean:
+        fb = True
+
+    if var_clean and form_clean:
+        v_cf = var_clean.casefold()
+        f_cf = form_clean.casefold()
+        if f_cf in v_cf or v_cf in f_cf:
+            fb = True
+        if f_cf in _GENERIC_FORMS:
+            for token in _FORM_BYPASS_VARIATION_TOKENS:
+                if token in v_cf:
+                    fb = True
+                    break
+
+    return fb, vb
+
+
 @contextmanager
 def get_session() -> Iterable[Session]:
     """Provide a transactional scope around a series of operations."""
@@ -2088,6 +2142,13 @@ def upsert_compiled_ingredient(
                     session.add(VariationTerm(name=variation, approved=(variation in VARIATIONS_CURATED)))
             form_bypass = _coerce_bool(raw_item.get("form_bypass"), default=False)
             variation_bypass = _coerce_bool(raw_item.get("variation_bypass"), default=False)
+            form_bypass, variation_bypass = derive_item_bypass_flags(
+                base_term=cleaned,
+                variation=variation,
+                physical_form=physical_form,
+                form_bypass=form_bypass,
+                variation_bypass=variation_bypass,
+            )
 
             derived_item_name = _derive_item_display_name(
                 base_term=cleaned,

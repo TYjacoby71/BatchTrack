@@ -756,13 +756,28 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                         variation = _clean(raw.get("derived_variation") or getattr(it, "derived_variation", ""))
                         physical_form = _clean(raw.get("derived_physical_form") or getattr(it, "derived_physical_form", ""))
                         specs = raw.get("merged_specs") if isinstance(raw.get("merged_specs"), dict) else {}
+                        form_bypass, variation_bypass = database_manager.derive_item_bypass_flags(
+                            base_term=term,
+                            variation=variation,
+                            physical_form=physical_form,
+                            form_bypass=(not bool(physical_form)),
+                            variation_bypass=(not bool(variation)),
+                        )
+                        item_name = database_manager.derive_item_display_name(
+                            base_term=term,
+                            variation=variation,
+                            variation_bypass=variation_bypass,
+                            physical_form=physical_form,
+                            form_bypass=form_bypass,
+                        )
                         stubs.append(
                             {
                                 "variation": variation,
                                 "physical_form": physical_form,
-                                "form_bypass": (not bool(physical_form)),
-                                "variation_bypass": (not bool(variation)),
-                            "applications": ["Not Found"],
+                                "form_bypass": form_bypass,
+                                "variation_bypass": variation_bypass,
+                                "item_name": item_name,
+                                "applications": ["Not Found"],
                                 "specifications": specs,
                             }
                         )
