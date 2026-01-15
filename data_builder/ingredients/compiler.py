@@ -719,6 +719,7 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
             term = ""
             ingredient_exists = False
             skip_ai = False
+            stubs: list[dict[str, Any]] = []
             with database_manager.get_session() as session:
                 rec = session.get(database_manager.CompiledClusterRecord, cid)
                 if rec is None or rec.term_status != "done":
@@ -749,35 +750,34 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                 if not item_rows:
                     ok += 1
                     skip_ai = True
+                else:
+                    for it in item_rows:
+                        raw = _safe_json_dict(getattr(it, "raw_item_json", None))
+                        variation = _clean(raw.get("derived_variation") or getattr(it, "derived_variation", ""))
+                        physical_form = _clean(raw.get("derived_physical_form") or getattr(it, "derived_physical_form", ""))
+                        specs = raw.get("merged_specs") if isinstance(raw.get("merged_specs"), dict) else {}
+                        stubs.append(
+                            {
+                                "variation": variation,
+                                "physical_form": physical_form,
+                                "form_bypass": (not bool(physical_form)),
+                                "variation_bypass": (not bool(variation)),
+                                "applications": ["Unknown"],
+                                "specifications": specs,
+                            }
+                        )
+
+                    # Mark processing for these items
+                    now = datetime.now(timezone.utc)
+                    for it in item_rows:
+                        it.item_status = "processing"
+                        it.item_error = None
+                        it.updated_at = now
 
             if skip_ai:
                 if not ingredient_exists:
                     _finalize_cluster_if_complete(cid)
                 continue
-
-                stubs: list[dict[str, Any]] = []
-                for it in item_rows:
-                    raw = _safe_json_dict(getattr(it, "raw_item_json", None))
-                    variation = _clean(raw.get("derived_variation") or getattr(it, "derived_variation", ""))
-                    physical_form = _clean(raw.get("derived_physical_form") or getattr(it, "derived_physical_form", ""))
-                    specs = raw.get("merged_specs") if isinstance(raw.get("merged_specs"), dict) else {}
-                    stubs.append(
-                        {
-                            "variation": variation,
-                            "physical_form": physical_form,
-                            "form_bypass": (not bool(physical_form)),
-                            "variation_bypass": (not bool(variation)),
-                            "applications": ["Unknown"],
-                            "specifications": specs,
-                        }
-                    )
-
-                # Mark processing for these items
-                now = datetime.now(timezone.utc)
-                for it in item_rows:
-                    it.item_status = "processing"
-                    it.item_error = None
-                    it.updated_at = now
 
             if not term:
                 continue

@@ -191,7 +191,7 @@ data_builder/
 - All scripts share the same OpenAI credentials via `OPENAI_API_KEY`.
 - `term_collector.py` remains available for supplemental term discovery, but cluster compilation is the only supported AI build path.
 - Ingredient categories are standardized (`Botanical`, `Mineral`, `Animal-Derived`, `Fermentation`, `Chemical`, `Resin`, `Wax`, `Fat or Oil`, `Sugar or Sweetener`, `Acid`, `Salt`, `Solution or Stock`, `Aroma or Flavor`, `Colorant`, `Functional Additive`) and every ingredient JSON includes one of these.
-- The `compiler.py` loop is resume-safe. If it stops mid-run, rerun the same command and it continues with the next `pending` term, honoring whatever `--min-priority` threshold you set.
+- The `compiler.py` cluster runner is resume-safe. If it stops mid-run, rerun the same stage and it continues with the next pending cluster/items.
 - Physical forms are maintained in `output/physical_forms.json`, which the seeder can process before touching ingredient files. They include essential oil, absolute, CO₂ extract, hydrosol, infusion, powder, chopped, buds, dairy variants, lye solution, tincture, glycerite, etc., ensuring every ingredient+form combination can be represented as an inventory item later. Ingredients like water/ice can set a `form_bypass` flag so display names stay clean.
 
 ### Optional external data sources
