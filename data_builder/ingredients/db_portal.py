@@ -955,27 +955,34 @@ HTML_TEMPLATE = """
                     }
                     document.getElementById('detail-title').textContent = data.compiled_term || data.raw_canonical_term || clusterId;
                     document.getElementById('detail-subtitle').textContent = `Compiled cluster | term: ${data.term_status || '-'} | items: ${(data.items_done || 0)}/${(data.total_items || 0)}`;
-                    let html = '<div class="detail-section"><h3>Compiled Cluster</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.compiled_term || '-'}</strong></div>`;
-                    html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '-'}</em></div>`;
-                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '-'}</div>`;
-                    html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '-'}</div>`;
-                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '-'}</div>`;
-                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
-                    html += `<div class="detail-label">Refinement</div><div class="detail-value">${data.refinement_level || '-'}</div>`;
-                    if (data.derived_from) {
-                        html += `<div class="detail-label">Derived From</div><div class="detail-value">${data.derived_from}</div>`;
-                    }
+                    
+                    // Identity section
+                    let html = '<div class="detail-section"><h3>Identity</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</strong></div>`;
+                    html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '<span style="color:#ef4444;">MISSING</span>'}</em></div>`;
+                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += '</div></div>';
+                    
+                    // Classification section
+                    html += '<div class="detail-section"><h3>Classification</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Base Refinement</div><div class="detail-value">${data.refinement_level || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Derived From</div><div class="detail-value">${data.derived_from || '<span style="color:#9ca3af;">N/A</span>'}</div>`;
+                    html += '</div></div>';
+                    
+                    // Descriptions section
+                    html += '<div class="detail-section"><h3>Descriptions</h3>';
+                    html += `<div class="detail-grid"><div class="detail-label">Short Description</div><div class="detail-value">${data.short_description || '<span style="color:#ef4444;">MISSING</span>'}</div></div>`;
+                    html += `<div class="detail-grid"><div class="detail-label">Detailed Description</div><div class="detail-value">${data.detailed_description || '<span style="color:#ef4444;">MISSING</span>'}</div></div>`;
                     html += '</div>';
-                    if (data.short_description) {
-                        html += `<p style="margin:10px 0;color:#374151;font-size:13px;">${data.short_description}</p>`;
-                    }
-                    if (data.detailed_description) {
-                        html += `<p style="margin:10px 0;color:#6b7280;font-size:12px;">${data.detailed_description}</p>`;
-                    }
-                    html += `<div class="detail-grid" style="margin-top:10px;">`;
+                    
+                    // Metadata section
+                    html += '<div class="detail-section"><h3>Metadata</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.cluster_id || clusterId}</div>`;
                     html += `<div class="detail-label">Raw Source Term</div><div class="detail-value">${data.raw_canonical_term || '-'}</div>`;
+                    html += `<div class="detail-label">Term Status</div><div class="detail-value">${data.term_status || '-'}</div>`;
                     html += '</div></div>';
                     if (data.items && data.items.length) {
                         html += `<div class="detail-section"><h3>Items (${data.items.length})</h3>`;
@@ -1017,9 +1024,9 @@ HTML_TEMPLATE = """
                     document.getElementById('source-detail-subtitle').textContent = `MIF ID: ${mifId} | Status: ${data.item_status || '-'}`;
                     
                     let html = '<div class="detail-section"><h3>Item Identity</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '-'}</div>`;
-                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
-                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
                     html += `<div class="detail-label">Status</div><div class="detail-value">${data.item_status || '-'}</div>`;
                     html += '</div></div>';
                     
