@@ -968,10 +968,11 @@ HTML_TEMPLATE = """
                         data.items.forEach(it => {
                             const rawBadge = it.has_raw_specs ? '<span class="badge badge-specs">Raw Specs</span>' : '';
                             const compBadge = it.has_compiled ? '<span class="badge badge-compiled">Compiled</span>' : '';
-                            html += `<div class="source-item" style="cursor:default;">
+                            const statusColor = it.item_status === 'done' ? 'background:#d1fae5;color:#065f46;' : 'background:#e5e7eb;color:#111827;';
+                            html += `<div class="source-item" onclick="showCompiledClusterItem('${data.cluster_id}', ${it.merged_item_form_id})">
                                 <div class="source-item-header">
                                     <span class="source-item-name">${it.derived_variation || '(no variation)'} • ${it.derived_physical_form || '(no form)'}</span>
-                                    <span class="badge" style="background:#e5e7eb;color:#111827;">${it.item_status || '-'}</span>
+                                    <span class="badge" style="${statusColor}">${it.item_status || '-'}</span>
                                     ${rawBadge}
                                     ${compBadge}
                                 </div>
@@ -983,6 +984,58 @@ HTML_TEMPLATE = """
                         html += '</div>';
                     }
                     document.getElementById('detail-body').innerHTML = html;
+                });
+        }
+        
+        function showCompiledClusterItem(clusterId, mifId) {
+            document.getElementById('source-detail-panel').classList.add('active');
+            document.getElementById('source-detail-body').innerHTML = '<div class="loading">Loading...</div>';
+            
+            fetch(`/api/compiled/cluster-item/${encodeURIComponent(clusterId)}/${mifId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('source-detail-title').textContent = 'Error';
+                        document.getElementById('source-detail-body').innerHTML = `<div class="loading">${data.error}</div>`;
+                        return;
+                    }
+                    document.getElementById('source-detail-title').textContent = `${data.derived_variation || data.derived_term} • ${data.derived_physical_form || ''}`;
+                    document.getElementById('source-detail-subtitle').textContent = `MIF ID: ${mifId} | Status: ${data.item_status || '-'}`;
+                    
+                    let html = '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '-'}</div>`;
+                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
+                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Status</div><div class="detail-value">${data.item_status || '-'}</div>`;
+                    html += '</div></div>';
+                    
+                    if (data.source_data && Object.keys(data.source_data).length) {
+                        html += '<div class="detail-section"><h3>Source Data (from merged_item_forms)</h3><div class="detail-grid">';
+                        if (data.source_data.cas_numbers && data.source_data.cas_numbers.length) {
+                            html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${data.source_data.cas_numbers.join(', ')}</div>`;
+                        }
+                        html += `<div class="detail-label">Has CosIng</div><div class="detail-value">${data.source_data.has_cosing ? 'Yes' : 'No'}</div>`;
+                        html += `<div class="detail-label">Has TGSC</div><div class="detail-value">${data.source_data.has_tgsc ? 'Yes' : 'No'}</div>`;
+                        html += `<div class="detail-label">Has Seed</div><div class="detail-value">${data.source_data.has_seed ? 'Yes' : 'No'}</div>`;
+                        html += '</div>';
+                        if (data.source_data.merged_specs && Object.keys(data.source_data.merged_specs).length) {
+                            html += '<div class="json-block"><pre>' + JSON.stringify(data.source_data.merged_specs, null, 2) + '</pre></div>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    if (data.item_json && Object.keys(data.item_json).length) {
+                        html += '<div class="detail-section"><h3>Compiled Item JSON (AI-generated)</h3>';
+                        html += '<div class="json-block"><pre>' + JSON.stringify(data.item_json, null, 2) + '</pre></div></div>';
+                    }
+                    
+                    if (data.raw_item_json && Object.keys(data.raw_item_json).length) {
+                        html += '<div class="detail-section"><h3>Raw Item JSON (pre-compilation)</h3>';
+                        html += '<div class="json-block"><pre>' + JSON.stringify(data.raw_item_json, null, 2) + '</pre></div></div>';
+                    }
+                    
+                    document.getElementById('source-detail-body').innerHTML = html;
                 });
         }
 
@@ -1625,6 +1678,68 @@ def api_compiled_item_detail(item_id: int):
             "physical_form": row[4],
             "status": row[5],
             "item_json": parse_json(row[6]),
+        }
+    )
+
+
+@app.route("/api/compiled/cluster-item/<path:cluster_id>/<int:mif_id>")
+def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
+    """Get detailed compiled cluster item with its raw and compiled JSON data."""
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"error": "Compiled cluster items table not found"})
+    cur.execute(
+        """
+        SELECT cci.cluster_id, cci.merged_item_form_id, cci.derived_term, cci.derived_variation, 
+               cci.derived_physical_form, cci.item_status, cci.raw_item_json, cci.item_json,
+               cc.compiled_term
+        FROM compiled_cluster_items cci
+        LEFT JOIN compiled_clusters cc ON cc.cluster_id = cci.cluster_id
+        WHERE cci.cluster_id = ? AND cci.merged_item_form_id = ?
+        """,
+        (cluster_id, mif_id),
+    )
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Compiled cluster item not found"})
+    
+    # Also get source data from merged_item_forms
+    cur.execute(
+        """
+        SELECT cas_numbers_json, merged_specs_json, sources_json, has_cosing, has_tgsc, has_seed
+        FROM merged_item_forms WHERE id = ?
+        """,
+        (mif_id,),
+    )
+    mif_row = cur.fetchone()
+    conn.close()
+    
+    mif_data = {}
+    if mif_row:
+        mif_data = {
+            "cas_numbers": parse_json(mif_row[0]) if mif_row[0] else [],
+            "merged_specs": parse_json(mif_row[1]) if mif_row[1] else {},
+            "sources": parse_json(mif_row[2]) if mif_row[2] else {},
+            "has_cosing": bool(mif_row[3]),
+            "has_tgsc": bool(mif_row[4]),
+            "has_seed": bool(mif_row[5]),
+        }
+    
+    return jsonify(
+        {
+            "cluster_id": row[0],
+            "merged_item_form_id": row[1],
+            "derived_term": row[2],
+            "derived_variation": row[3],
+            "derived_physical_form": row[4],
+            "item_status": row[5],
+            "raw_item_json": parse_json(row[6]) if row[6] else {},
+            "item_json": parse_json(row[7]) if row[7] else {},
+            "compiled_term": row[8],
+            "source_data": mif_data,
         }
     )
 
