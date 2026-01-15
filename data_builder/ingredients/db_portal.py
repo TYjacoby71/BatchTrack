@@ -956,12 +956,26 @@ HTML_TEMPLATE = """
                     document.getElementById('detail-title').textContent = data.compiled_term || data.raw_canonical_term || clusterId;
                     document.getElementById('detail-subtitle').textContent = `Compiled cluster | term: ${data.term_status || '-'} | items: ${(data.items_done || 0)}/${(data.total_items || 0)}`;
                     let html = '<div class="detail-section"><h3>Compiled Cluster</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.cluster_id || clusterId}</div>`;
-                    html += `<div class="detail-label">Raw canonical</div><div class="detail-value">${data.raw_canonical_term || '-'}</div>`;
-                    html += `<div class="detail-label">Compiled term</div><div class="detail-value"><strong>${data.compiled_term || '-'}</strong></div>`;
-                    html += `<div class="detail-label">Term status</div><div class="detail-value">${data.term_status || '-'}</div>`;
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.compiled_term || '-'}</strong></div>`;
+                    html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '-'}</em></div>`;
+                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '-'}</div>`;
+                    html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '-'}</div>`;
                     html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '-'}</div>`;
-                    html += `<div class="detail-label">Primary Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
+                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
+                    html += `<div class="detail-label">Refinement</div><div class="detail-value">${data.refinement_level || '-'}</div>`;
+                    if (data.derived_from) {
+                        html += `<div class="detail-label">Derived From</div><div class="detail-value">${data.derived_from}</div>`;
+                    }
+                    html += '</div>';
+                    if (data.short_description) {
+                        html += `<p style="margin:10px 0;color:#374151;font-size:13px;">${data.short_description}</p>`;
+                    }
+                    if (data.detailed_description) {
+                        html += `<p style="margin:10px 0;color:#6b7280;font-size:12px;">${data.detailed_description}</p>`;
+                    }
+                    html += `<div class="detail-grid" style="margin-top:10px;">`;
+                    html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.cluster_id || clusterId}</div>`;
+                    html += `<div class="detail-label">Raw Source Term</div><div class="detail-value">${data.raw_canonical_term || '-'}</div>`;
                     html += '</div></div>';
                     if (data.items && data.items.length) {
                         html += `<div class="detail-section"><h3>Items (${data.items.length})</h3>`;
@@ -1542,7 +1556,8 @@ def api_compiled_cluster_detail(cluster_id: str):
 
     cur.execute(
         """
-        SELECT cluster_id, raw_canonical_term, compiled_term, term_status, origin, ingredient_category
+        SELECT cluster_id, raw_canonical_term, compiled_term, term_status, origin, ingredient_category,
+               botanical_name, inci_name, cas_number, refinement_level, derived_from, payload_json
         FROM compiled_clusters WHERE cluster_id = ?
         """,
         (cluster_id,),
@@ -1551,6 +1566,11 @@ def api_compiled_cluster_detail(cluster_id: str):
     if not row:
         conn.close()
         return jsonify({"error": "Compiled cluster not found"})
+
+    payload = parse_json(row[11]) if row[11] else {}
+    stage1_core = {}
+    if payload and isinstance(payload.get("stage1"), dict):
+        stage1_core = payload["stage1"].get("ingredient_core", {})
 
     cur.execute(
         """
@@ -1592,6 +1612,13 @@ def api_compiled_cluster_detail(cluster_id: str):
             "term_status": row[3],
             "origin": row[4],
             "ingredient_category": row[5],
+            "botanical_name": row[6],
+            "inci_name": row[7],
+            "cas_number": row[8],
+            "refinement_level": row[9],
+            "derived_from": row[10],
+            "short_description": stage1_core.get("short_description"),
+            "detailed_description": stage1_core.get("detailed_description"),
             "total_items": len(items),
             "items_done": done,
             "items": items,
