@@ -39,12 +39,10 @@ def _reset_ingestion_tables() -> None:
     """Clear ingestion-stage tables for a clean one-shot run."""
     database_manager.ensure_tables_exist()
     with database_manager.get_session() as session:
-        # Compiler/AI stages (clear for a truly clean one-time run)
+        # Compilation staging (queue) is part of the deterministic pre-AI pipeline.
+        # IMPORTANT: compiled output tables (`ingredients`, `ingredient_items`, etc.) are intentionally
+        # NOT cleared here so "compiled" can remain a separate, removable/exportable dataset.
         session.query(database_manager.TaskQueue).delete()
-        session.query(database_manager.IngredientItemValue).delete()
-        session.query(database_manager.IngredientItemRecord).delete()
-        session.query(database_manager.IngredientMasterCategory).delete()
-        session.query(database_manager.IngredientRecord).delete()
 
         # Raw ingestion + derived staging
         session.query(database_manager.SourceItem).delete()
