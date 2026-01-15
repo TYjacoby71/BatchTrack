@@ -104,9 +104,9 @@ def enumerate_term(term: str) -> bool:
         ing.enumeration_status = "processing"
         ing.enumeration_attempts = int(getattr(ing, "enumeration_attempts", 0) or 0) + 1
         ing.enumeration_error = None
+        compiled_payload = _clean_json(getattr(ing, "payload_json", "{}"))
 
     base = database_manager.get_normalized_term(term) or {}
-    compiled_payload = _clean_json(getattr(ing, "payload_json", "{}") if "ing" in locals() else "{}")
     ingredient = compiled_payload.get("ingredient") if isinstance(compiled_payload.get("ingredient"), dict) else {}
     existing_items = ingredient.get("items") if isinstance(ingredient.get("items"), list) else []
 
@@ -152,12 +152,9 @@ SCHEMA:
     # Complete schemas for those new items (reuse ai_worker completion mode).
     stubs = _build_new_item_stubs(new_items)
     try:
-        payload2 = ai_worker.get_ingredient_data(term, base_context=base, items_override=stubs)
-        if not isinstance(payload2, dict) or payload2.get("error"):
-            raise RuntimeError(payload2.get("error") if isinstance(payload2, dict) else "Unknown AI failure")
-        # Merge existing items + new completed items.
-        ing2 = payload2.get("ingredient") if isinstance(payload2.get("ingredient"), dict) else {}
-        completed_new = ing2.get("items") if isinstance(ing2.get("items"), list) else []
+        ingredient_core = dict(ingredient)
+        ingredient_core.pop("items", None)
+        completed_new = ai_worker.complete_item_stubs(term, ingredient_core=ingredient_core, base_context=base, item_stubs=stubs)
         # Mark provenance so DB can distinguish compiled vs enumerated items.
         for it in completed_new:
             if isinstance(it, dict):
@@ -196,23 +193,56 @@ SCHEMA:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run enumeration over compiled ingredients")
+    p.add_argument(
+        "--mode",
+        choices=["items", "terms", "full"],
+        default=os.getenv("ENUMERATION_MODE", "items"),
+        help="items=enumerate new items for compiled terms; terms=create/enqueue new terms; full=do both (terms first).",
+    )
     p.add_argument("--limit", type=int, default=int(os.getenv("ENUMERATION_LIMIT", "50")))
+    p.add_argument(
+        "--term-count",
+        type=int,
+        default=int(os.getenv("ENUMERATION_TERM_COUNT", "0")),
+        help="When mode includes 'terms', enqueue up to this many new terms (0 disables).",
+    )
+    p.add_argument(
+        "--seed-category",
+        action="append",
+        default=[],
+        help="When mode includes 'terms', restrict term creation to this primary seed_category (repeatable).",
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=os.getenv("COMPILER_LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     args = parse_args(argv or sys.argv[1:])
-    terms = _select_next_terms(int(args.limit) if int(args.limit or 0) > 0 else None)
-    if not terms:
-        LOGGER.info("No completed terms to enumerate.")
-        return
-    ok = 0
-    for term in terms:
-        if enumerate_term(term):
-            ok += 1
-        time.sleep(SLEEP_SECONDS)
-    LOGGER.info("Enumeration finished: ok=%s total=%s", ok, len(terms))
+    mode = str(getattr(args, "mode", "items") or "items").strip().lower()
+
+    # Term creation/enqueue (this is the ONLY place we generate new terms post-compilation).
+    if mode in {"terms", "full"} and int(getattr(args, "term_count", 0) or 0) > 0:
+        try:
+            from .term_collector import TermCollector
+
+            tc = TermCollector()
+            inserted = tc.seed_next_terms_to_db(count=int(args.term_count), seed_categories=list(args.seed_category or []))
+            LOGGER.info("Stage 3 term enumeration: enqueued_terms=%s", inserted)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.exception("Stage 3 term enumeration failed: %s", exc)
+
+    # Item enumeration (adds items to already-compiled terms).
+    if mode in {"items", "full"}:
+        terms = _select_next_terms(int(args.limit) if int(args.limit or 0) > 0 else None)
+        if not terms:
+            LOGGER.info("No completed terms to enumerate.")
+            return
+        ok = 0
+        for term in terms:
+            if enumerate_term(term):
+                ok += 1
+            time.sleep(SLEEP_SECONDS)
+        LOGGER.info("Enumeration finished: ok=%s total=%s", ok, len(terms))
 
 
 if __name__ == "__main__":

@@ -154,10 +154,29 @@ def save_payload(payload: Dict[str, Any], slug: str) -> Path:
     return target
 
 
-def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
+def _safe_json_dict(text: str | None) -> dict[str, Any]:
+    try:
+        val = json.loads(text or "{}")
+        return val if isinstance(val, dict) else {}
+    except Exception:
+        return {}
+
+
+def _fetch_existing_compiled_payload(term: str) -> dict[str, Any] | None:
+    database_manager.ensure_tables_exist()
+    with database_manager.get_session() as session:
+        row = session.get(database_manager.IngredientRecord, term)
+        if row is None:
+            return None
+        blob = getattr(row, "payload_json", None)
+        payload = _safe_json_dict(blob if isinstance(blob, str) else "{}")
+        return payload or None
+
+
+def process_next_term(*, sleep_seconds: float, min_priority: int, phase: str, seed_category: str | None) -> bool:
     """Process a single pending task honoring the priority floor. Returns False when queue is empty."""
 
-    task = database_manager.get_next_pending_task(min_priority=min_priority)
+    task = database_manager.get_next_pending_task(min_priority=min_priority, seed_category=seed_category)
     if not task:
         LOGGER.info("No pending tasks found at priority >= %s; compiler is finished.", min_priority)
         return False
@@ -168,6 +187,8 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
 
     try:
         normalized = database_manager.get_normalized_term(term) or {}
+        phase_clean = (phase or "full").strip().lower()
+
         # Deterministic seed items from ingestion: compiler should complete these, not invent them.
         with database_manager.get_session() as session:
             seed_rows = (
@@ -199,11 +220,61 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
             )
         if seed_items:
             normalized["seed_items"] = seed_items
-        payload = ai_worker.get_ingredient_data(term, base_context=normalized)
-        if not isinstance(payload, dict) or payload.get("error"):
-            raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 
-        ingredient = validate_payload(payload)
+        if phase_clean == "core":
+            core_payload = ai_worker.compile_core(term, base_context=normalized)
+            ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
+            confidence = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else 0.7
+            caveats = core_payload.get("data_quality", {}).get("caveats") if isinstance(core_payload.get("data_quality"), dict) else []
+            payload = {
+                "ingredient": {
+                    **ingredient_core,
+                    "common_name": term,
+                    # Allow DB writer to seed a deterministic base item.
+                    "items": [],
+                    # Keep stable fields even if AI omitted them.
+                    "documentation": ingredient_core.get("documentation") or {"references": [], "last_verified": None},
+                },
+                "data_quality": {"confidence": float(confidence) if isinstance(confidence, (int, float)) else 0.7, "caveats": caveats if isinstance(caveats, list) else []},
+            }
+        else:
+            existing_payload = _fetch_existing_compiled_payload(term) if phase_clean == "items" else None
+            existing_ingredient = existing_payload.get("ingredient") if isinstance((existing_payload or {}).get("ingredient"), dict) else {}
+
+            # Term completion (core) happens first unless we're strictly in "items" mode with an existing core.
+            if phase_clean == "items" and existing_ingredient:
+                ingredient_core = dict(existing_ingredient)
+                core_conf = (existing_payload.get("data_quality", {}) or {}).get("confidence") if isinstance(existing_payload.get("data_quality"), dict) else None
+                core_caveats = (existing_payload.get("data_quality", {}) or {}).get("caveats") if isinstance(existing_payload.get("data_quality"), dict) else []
+            else:
+                core_payload = ai_worker.compile_core(term, base_context=normalized)
+                ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
+                core_conf = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else None
+                core_caveats = core_payload.get("data_quality", {}).get("caveats") if isinstance(core_payload.get("data_quality"), dict) else []
+
+            items_payload = ai_worker.compile_items(term, ingredient_core=ingredient_core, base_context=normalized)
+            items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
+            taxonomy_payload = ai_worker.compile_taxonomy(term, ingredient_core=ingredient_core, items=[it for it in items if isinstance(it, dict)])
+            taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
+
+            # Assemble final payload matching the DB writer expectations.
+            ingredient: Dict[str, Any] = dict(ingredient_core)
+            ingredient["common_name"] = term
+            ingredient["items"] = items
+            ingredient["taxonomy"] = taxonomy
+            if "documentation" not in ingredient:
+                ingredient["documentation"] = {"references": [], "last_verified": None}
+
+            caveats: list[str] = []
+            for blob in (core_caveats, items_payload.get("data_quality", {}).get("caveats") if isinstance(items_payload.get("data_quality"), dict) else []):
+                if isinstance(blob, list):
+                    for c in blob:
+                        if isinstance(c, str) and c.strip():
+                            caveats.append(c.strip())
+
+            confidence = core_conf if isinstance(core_conf, (int, float)) else 0.7
+            payload = {"ingredient": ingredient, "data_quality": {"confidence": float(confidence), "caveats": sorted(set(caveats))}}
+
         # Persist compiled payload into the DB (source of truth).
         database_manager.upsert_compiled_ingredient(term, payload, seed_category=seed_category)
 
@@ -222,14 +293,14 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
     return True
 
 
-def run_compiler(sleep_seconds: float, max_ingredients: int | None, min_priority: int) -> None:
+def run_compiler(*, sleep_seconds: float, max_ingredients: int | None, min_priority: int, phase: str, seed_category: str | None) -> None:
     ensure_output_dirs()
     iterations = 0
     while True:
         if max_ingredients and iterations >= max_ingredients:
             LOGGER.info("Reached ingredient cap (%s); stopping.", max_ingredients)
             break
-        if not process_next_term(sleep_seconds, min_priority):
+        if not process_next_term(sleep_seconds=sleep_seconds, min_priority=min_priority, phase=phase, seed_category=seed_category):
             break
         iterations += 1
 
@@ -240,6 +311,17 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--sleep-seconds", type=float, default=DEFAULT_SLEEP_SECONDS, help="Delay between API calls")
     parser.add_argument("--max-ingredients", type=int, default=0, help="Optional cap for number of processed ingredients in this run")
     parser.add_argument("--min-priority", type=int, default=database_manager.MIN_PRIORITY, help="Minimum priority (1-10) required to process a queued ingredient")
+    parser.add_argument(
+        "--phase",
+        choices=["core", "items", "full"],
+        default=os.getenv("COMPILER_PHASE", "full"),
+        help="Compiler phase: core=complete term core only; items=compile/complete items for existing cores; full=core+items+taxonomy (default).",
+    )
+    parser.add_argument(
+        "--seed-category",
+        default=os.getenv("COMPILER_SEED_CATEGORY", ""),
+        help="Optional exact-match filter to only process queued tasks for this primary seed_category.",
+    )
     return parser.parse_args(argv)
 
 
@@ -263,6 +345,8 @@ def main(argv: List[str] | None = None) -> None:
         sleep_seconds=args.sleep_seconds,
         max_ingredients=args.max_ingredients or None,
         min_priority=max(database_manager.MIN_PRIORITY, min(args.min_priority, database_manager.MAX_PRIORITY)),
+        phase=str(args.phase or "full").strip().lower(),
+        seed_category=(str(args.seed_category).strip() or None),
     )
 
 

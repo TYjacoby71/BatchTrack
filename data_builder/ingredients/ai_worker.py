@@ -336,8 +336,9 @@ def _render_core_prompt(term: str, base_context: Dict[str, Any]) -> str:
 You are Stage 2A (Compilation — Core). Build canonical core fields for the base ingredient term: "{term}".
 
 Rules:
-- You MUST NOT change the base identity fields if they are provided: term/common_name, inci_name, cas_number, botanical_name.
-- You may SUGGEST overrides for origin / ingredient_category / refinement_level if the provided values look wrong.
+- Prefer the normalized base context when it looks correct.
+- If any provided identity field looks clearly wrong, malformed, or missing (botanical_name / inci_name / cas_number), you MAY correct it in your output.
+- If you correct or override a provided field, mention that in data_quality.caveats (briefly).
 - origin is REQUIRED and must be one of: {origins}
 - ingredient_category is REQUIRED and must be one of: {primaries}
 - refinement_level is REQUIRED and must be one of: {refinements}
@@ -354,6 +355,70 @@ Normalized base context (do not contradict):
 SCHEMA:
 {CORE_SCHEMA_SPEC}
 """
+
+
+def compile_core(term: str, base_context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Stage 2A: compile only the core ingredient fields."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    base_context = base_context or {}
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_core_prompt(t, base_context))
+
+
+def compile_items(
+    term: str,
+    *,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Stage 2B: compile items; uses completion mode if base_context.seed_items is present."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    base_context = base_context or {}
+    client = openai.OpenAI(api_key=openai.api_key)
+    seed_items = base_context.get("seed_items") if isinstance(base_context.get("seed_items"), list) else None
+    if seed_items:
+        payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(t, ingredient_core, base_context))
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        payload["items"] = _merge_seed_items(
+            seed_items=[it for it in seed_items if isinstance(it, dict)],
+            ai_items=[it for it in items if isinstance(it, dict)],
+        )
+        return payload
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+
+
+def compile_taxonomy(term: str, *, ingredient_core: Dict[str, Any], items: list[dict]) -> Dict[str, Any]:
+    """Stage 2C: compile taxonomy tags."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(t, ingredient_core, items))
+
+
+def complete_item_stubs(
+    term: str,
+    *,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any] | None,
+    item_stubs: list[dict],
+) -> list[dict]:
+    """Complete schema fields for an authoritative list of item stubs (identity fields are stable)."""
+    ctx = dict(base_context or {})
+    ctx["seed_items"] = [it for it in item_stubs if isinstance(it, dict)]
+    payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    return [it for it in items if isinstance(it, dict)]
 
 
 def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:

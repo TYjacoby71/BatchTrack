@@ -1669,20 +1669,23 @@ def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -
         return True
 
 
-def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int, str | None]]:
+def get_next_pending_task(
+    min_priority: int = MIN_PRIORITY,
+    *,
+    seed_category: str | None = None,
+) -> Optional[tuple[str, int, str | None]]:
     """Return the next pending term honoring priority sorting."""
 
     ensure_tables_exist()
+    cat = (seed_category or "").strip() or None
     with get_session() as session:
-        task: Optional[TaskQueue] = (
-            session.query(TaskQueue)
-            .filter(
-                TaskQueue.status == "pending",
-                TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
-            )
-            .order_by(TaskQueue.priority.desc(), TaskQueue.term.asc())
-            .first()
+        q = session.query(TaskQueue).filter(
+            TaskQueue.status == "pending",
+            TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
         )
+        if cat:
+            q = q.filter(TaskQueue.seed_category == cat)
+        task: Optional[TaskQueue] = q.order_by(TaskQueue.priority.desc(), TaskQueue.term.asc()).first()
         if task:
             return task.term, task.priority, (task.seed_category or None)
         return None
