@@ -1589,6 +1589,7 @@ def get_next_missing_normalized_term_between(
     initial: str,
     start_after: str,
     end_before: str | None,
+    seed_category: str | None = None,
 ) -> Optional[dict[str, str]]:
     """Return the next normalized term (from curated sources) not yet queued, constrained to a gap.
 
@@ -1596,6 +1597,7 @@ def get_next_missing_normalized_term_between(
         initial: Letter bucket (A..Z)
         start_after: Lower bound (exclusive)
         end_before: Upper bound (exclusive). If None, treat as open-ended within the letter.
+        seed_category: Optional seed_category filter (exact match).
     """
     ensure_tables_exist()
     letter = (initial or "").strip()[:1].upper()
@@ -1603,6 +1605,7 @@ def get_next_missing_normalized_term_between(
         return None
     lower = (start_after or "").strip()
     upper = (end_before or "").strip() if end_before else None
+    cat = (seed_category or "").strip() or None
 
     with get_session() as session:
         query = (
@@ -1613,6 +1616,8 @@ def get_next_missing_normalized_term_between(
             )
             .where(~exists(select(1).where(TaskQueue.term == NormalizedTerm.term)))
         )
+        if cat:
+            query = query.where(NormalizedTerm.seed_category == cat)
         if upper:
             query = query.where(NormalizedTerm.term.collate("NOCASE") < upper)
 
