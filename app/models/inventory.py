@@ -57,23 +57,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
-    # Soap making and cosmetic formulation fields
-    saponification_value = db.Column(db.Float, nullable=True)  # SAP value for oils/fats
-    iodine_value = db.Column(db.Float, nullable=True)  # Iodine value for oils
-    melting_point_c = db.Column(db.Float, nullable=True)  # Melting point in Celsius
-    flash_point_c = db.Column(db.Float, nullable=True)  # Flash point for essential oils
-    ph_value = db.Column(db.Float, nullable=True)  # pH for liquids
-    moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
-    comedogenic_rating = db.Column(db.Integer, nullable=True)
-    recommended_fragrance_load_pct = db.Column(db.String(64), nullable=True)
-    inci_name = db.Column(db.String(256), nullable=True)
-    protein_content_pct = db.Column(db.Float, nullable=True)
-    brewing_color_srm = db.Column(db.Float, nullable=True)
-    brewing_potential_sg = db.Column(db.Float, nullable=True)
-    brewing_diastatic_power_lintner = db.Column(db.Float, nullable=True)
-    fatty_acid_profile = db.Column(db.JSON, nullable=True)
-    certifications = db.Column(db.JSON, nullable=True)
-
     # Global library linkage (nullable)
     global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
     # Ownership semantics: 'global' when linked, 'org' when unlinked/customized
@@ -177,7 +160,13 @@ class InventoryItem(ScopedModelMixin, db.Model):
 def _derive_ownership_before_insert(mapper, connection, target):
     """Derive ownership from global linkage on insert."""
     try:
-        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
+        # If ownership is not provided, default based on global linkage.
+        if getattr(target, 'ownership', None) in (None, ''):
+            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # If the item is disconnected (no global_item_id), always mark as org-owned.
+        if getattr(target, 'global_item_id', None) is None:
+            target.ownership = 'org'
     except Exception:
         # Best-effort; do not block insert on ownership derivation
         pass
@@ -187,7 +176,14 @@ def _derive_ownership_before_insert(mapper, connection, target):
 def _derive_ownership_before_update(mapper, connection, target):
     """Derive ownership from global linkage on update."""
     try:
-        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
+        # Only fill ownership when missing; never forcibly flip 'org' -> 'global' just
+        # because a global_item_id exists (we may be intentionally unlinked but retaining source).
+        if getattr(target, 'ownership', None) in (None, ''):
+            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        # If the item is disconnected (no global_item_id), always mark as org-owned.
+        if getattr(target, 'global_item_id', None) is None:
+            target.ownership = 'org'
     except Exception:
         # Best-effort; do not block update on ownership derivation
         pass

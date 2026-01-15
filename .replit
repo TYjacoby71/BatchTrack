@@ -1,13 +1,13 @@
 # BatchTrack Flask Application
 entrypoint = "main.py"
-modules = ["python-3.11"]
+modules = ["python-3.11", "postgresql-16"]
 
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-24_05"
-packages = ["cargo", "freetype", "glibcLocales", "libev", "libiconv", "nano", "run", "rustc"]
+packages = ["cargo", "freetype", "glibcLocales", "libev", "libiconv", "nano", "run", "rustc", "sqlite-interactive"]
 
 [unitTest]
 language = "python3"
@@ -20,16 +20,8 @@ run = ["sh", "-c", "FLASK_ENV=production FLASK_DEBUG=false python wsgi.py"]
 deploymentTarget = "cloudrun"
 build = ["sh", "-c", "pip install -r requirements.txt"]
 
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
-localPort = 8089
-externalPort = 5000
-
 [workflows]
-runButton = "Run Flask Debug"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Run Flask"
@@ -48,6 +40,31 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python run.py"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "DB Portal"
+
+[[workflows.workflow]]
+name = "DB Portal"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd data_builder/ingredients && python db_portal.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
 
 
 

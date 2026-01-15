@@ -33,7 +33,7 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
-# Stage 1 cursor mode:
+# Stage 1: term compilation (queue builder) cursor mode:
 # - legacy: per-letter cursor (A..Z)
 # - category cursor: per-(seed_category, letter) cursor
 USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
@@ -42,33 +42,50 @@ INGEST_SOURCE_TERMS = os.getenv("TERM_GENERATOR_INGEST_SOURCE_TERMS", "0").strip
 TERM_GENERATOR_MODE = os.getenv("TERM_GENERATOR_MODE", "gapfill").strip().lower()
 GAPFILL_MAX_TRIES_PER_LETTER = int(os.getenv("TERM_GENERATOR_GAPFILL_MAX_TRIES", "5"))
 
-# Canonical base-level categories (hard-coded; Stage 1 cursor is (seed_category, letter)).
-# IMPORTANT: these categories are "pure bases" (avoid base+form names like "Frankincense Resin").
+# Canonical *definition* categories used for Stage-1 cursoring.
+# These should align with `taxonomy_constants.INGREDIENT_CATEGORIES_PRIMARY` (data_builder lineage tree).
 SEED_INGREDIENT_CATEGORIES: List[str] = [
+    # Plant-derived families
     "Fruits & Berries",
     "Vegetables",
     "Grains",
     "Nuts",
     "Seeds",
     "Spices",
-    "Culinary Herbs",
-    "Medicinal Herbs",
+    "Herbs",
     "Flowers",
     "Roots",
     "Barks",
+    # Mineral/Earth families
+    "Clays",
+    "Minerals",
+    "Salts",
+    # Cross-domain families
     "Sugars",
     "Liquid Sweeteners",
     "Acids",
-    "Salts",
-    "Minerals",
-    "Clays",
-    "Plants for Oils",
-    "Plants for Butters",
-    "Waxes",
-    "Resins",
-    "Gums",
-    "Colorants",
-    "Fermentation Starters",
+    # Synthetic families
+    "Synthetic - Polymers",
+    "Synthetic - Surfactants",
+    "Synthetic - Solvents",
+    "Synthetic - Preservatives",
+    "Synthetic - Colorants",
+    "Synthetic - Salts & Bases",
+    "Synthetic - Actives",
+    "Synthetic - Other",
+    # Fermentation families
+    "Fermentation - Acids",
+    "Fermentation - Polysaccharides",
+    "Fermentation - Actives",
+    "Fermentation - Other",
+    # Animal + Marine (minimal)
+    "Animal - Fats",
+    "Animal - Proteins",
+    "Animal - Dairy",
+    "Animal - Other",
+    "Marine - Botanicals",
+    "Marine - Minerals",
+    "Marine - Other",
 ]
 
 BASE_PHYSICAL_FORMS: Set[str] = {
@@ -163,9 +180,9 @@ SYSTEM_PROMPT = (
 )
 
 TERMS_PROMPT = """
-You are running Stage 1 (Term Builder). Your ONLY job is to propose NEW base ingredient terms.
+You are running Stage 1 (Term Compilation). Your ONLY job is to propose NEW base ingredient terms.
 
-DEFINITIONS (Stage 1):
+DEFINITIONS (Stage 1: Term Compilation):
 - A BASE INGREDIENT TERM is the canonical base name (usually 1–2 words) used to group purchasable items and their variants.
 - The base is typically the plant/mineral/salt/sugar/acid/clay/etc. root name (e.g., "Apple", "Acerola Cherry", "Cinnamon", "Frankincense", "Kaolin", "Citric Acid").
 - Do NOT output base+form names for these categories:
@@ -259,29 +276,29 @@ def _looks_like_form_not_base(term: str) -> bool:
 
 
 def _normalize_source_name(value: str) -> str:
-    """Best-effort normalization for source-derived names into base terms."""
+    """Best-effort normalization for source-derived names into base *definition* terms.
+
+    IMPORTANT:
+    - Source CSV rows are often *items* (e.g., "abies alba cone oil").
+    - We must avoid promoting item strings into base terms ("Abies Alba Cone").
+    """
     cleaned = (value or "").strip().strip('"').strip()
     cleaned = cleaned.rstrip(",").strip()
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if not cleaned:
         return ""
-    # Drop obvious preparation suffixes (keep base).
-    cleaned = re.sub(
-        r"\b(essential\s+oil|co2\s+extract|absolute|hydrosol|distillate|tincture|glycerite|extract|resin|gum|butter|oil)\b",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -_/").strip()
-    # Title-case-ish: keep internal capitalization if present.
-    return cleaned
+    try:
+        from .item_parser import derive_definition_term
+        return derive_definition_term(cleaned)
+    except Exception:  # pragma: no cover
+        return cleaned
 
 
 def _guess_seed_category_from_name(name: str) -> str:
     """Heuristic mapper into SEED_INGREDIENT_CATEGORIES."""
     n = (name or "").strip().lower()
     if not n:
-        return "Medicinal Herbs"
+        return "Herbs"
     if any(word in n for word in ("starter", "scoby", "kefir", "culture", "yogurt", "kombucha", "sourdough")):
         return "Fermentation Starters"
     if "clay" in n:
@@ -311,7 +328,7 @@ def _guess_seed_category_from_name(name: str) -> str:
     if any(word in n for word in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
         return "Spices"
     # Default to medicinal herbs as broadest plant bucket.
-    return "Medicinal Herbs"
+    return "Herbs"
 
 
 def _ingest_source_terms_to_db() -> int:
@@ -658,6 +675,7 @@ class TermCollector:
         *,
         count: int,
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
+        seed_categories: Optional[List[str]] = None,
     ) -> int:
         """Stage 1: Seed NEW base terms into the task queue.
 
@@ -680,12 +698,62 @@ class TermCollector:
             return 0
 
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        allowed_categories = [c.strip() for c in (seed_categories or []) if (c or "").strip()]
 
         # ------------------------------------------------------------------
         # Mode: deterministic gap-fill (preferred).
         # ------------------------------------------------------------------
         if TERM_GENERATOR_MODE != "ai":
+            # Stage 1 priority: compute maker-likelihood from ingestion coverage when available.
+            # This keeps queue order useful (exhaust 10s before 9s, etc.).
+            priority_map = database_manager.build_term_priority_map()
             max_tries = max(1, int(GAPFILL_MAX_TRIES_PER_LETTER or 5))
+
+            # If the user asked for specific categories, run a deterministic cursor per (category, letter)
+            # instead of random gapfill. This makes it straightforward to "go after" one category.
+            if allowed_categories:
+                while inserted < normalized_count:
+                    inserted_this_pass = 0
+                    for initial in letters:
+                        for cat in allowed_categories:
+                            if inserted >= normalized_count:
+                                break
+                            start_after = database_manager.get_last_term_for_initial_and_seed_category(initial, cat) or ""
+                            candidate = database_manager.get_next_missing_normalized_term_between(
+                                initial=initial,
+                                start_after=start_after,
+                                end_before=None,
+                                seed_category=cat,
+                            )
+                            if not candidate:
+                                continue
+                            term = candidate["term"]
+                            if _looks_like_form_not_base(term):
+                                continue
+                            priority = int(priority_map.get(term, SEED_PRIORITY))
+                            was_inserted = database_manager.upsert_term(term, priority, seed_category=cat)
+                            self._register_term(term, priority)
+                            if was_inserted:
+                                inserted += 1
+                                inserted_this_pass += 1
+                                LOGGER.info(
+                                    "Category queued %s/%s: %s [%s] (priority=%s, after='%s')",
+                                    inserted,
+                                    normalized_count,
+                                    term,
+                                    cat,
+                                    priority,
+                                    start_after or "<start>",
+                                )
+                    if inserted_this_pass == 0:
+                        LOGGER.warning(
+                            "Category cursor made no progress in a full A→Z pass; stopping early at %s/%s inserted.",
+                            inserted,
+                            normalized_count,
+                        )
+                        break
+                return inserted
+
             # Keep going until we insert `count` new terms, or until a full A→Z pass yields nothing.
             while inserted < normalized_count:
                 inserted_this_pass = 0
@@ -713,7 +781,7 @@ class TermCollector:
                         if _looks_like_form_not_base(term):
                             continue
 
-                        priority = SEED_PRIORITY
+                        priority = int(priority_map.get(term, SEED_PRIORITY))
                         was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
                         self._register_term(term, priority)
                         if was_inserted:
@@ -750,7 +818,7 @@ class TermCollector:
             LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation (TERM_GENERATOR_MODE=ai)")
             return 0
 
-        categories = SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"]
+        categories = allowed_categories or (SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"])
         for idx in range(normalized_count):
             if USE_CATEGORY_CURSOR:
                 # Iterate by (letter, category) so every letter advances across all categories.
@@ -903,6 +971,12 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
+    parser.add_argument(
+        "--seed-category",
+        action="append",
+        default=[],
+        help="Restrict Stage-1 term generation to this primary ingredient category (repeatable).",
+    )
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
     parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
@@ -933,6 +1007,7 @@ def main(argv: List[str] | None = None) -> None:
     collector.seed_next_terms_to_db(
         count=max(0, int(args.count or 0)),
         candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)),
+        seed_categories=list(args.seed_category or []),
     )
 
     if args.write_forms_file:

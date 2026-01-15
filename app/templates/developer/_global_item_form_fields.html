@@ -324,7 +324,14 @@
       </div>
       <div class="col-md-3">
         <label class="form-label">Capacity Unit</label>
-        <input type="text" name="capacity_unit" class="form-control" placeholder="e.g. ml, oz, count" value="{{ capacity_unit_value }}">
+        <select name="capacity_unit" class="form-select">
+          <option value="">Select Unit</option>
+          {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}" {% if capacity_unit_value == unit.name %}selected{% endif %}>
+              {{ unit.name }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-3">
         <label class="form-label">Container Type</label>
@@ -379,6 +386,14 @@
         <div class="col-md-3">
           <label class="form-label">Fragrance Load %</label>
           <input type="text" name="recommended_fragrance_load_pct" class="form-control" placeholder="e.g. 6% - 10%" value="{{ form_values.get('recommended_fragrance_load_pct', item.recommended_fragrance_load_pct if is_edit else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">INCI (item-level)</label>
+          <input type="text" name="inci_name" class="form-control" placeholder="e.g. Lavandula Angustifolia (Lavender) Oil" value="{{ form_values.get('inci_name', item.inci_name if is_edit else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">CAS (item-level)</label>
+          <input type="text" name="cas_number" class="form-control" placeholder="e.g. 8000-28-0" value="{{ form_values.get('cas_number', item.cas_number if is_edit else '') }}">
         </div>
         <div class="col-md-3">
           <label class="form-label">Saponification Value</label>

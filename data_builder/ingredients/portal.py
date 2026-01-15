@@ -9,7 +9,9 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import json
 import os
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -38,12 +40,41 @@ def _serialize_dt(value: Any) -> str:
     return str(value or "")
 
 
+def _safe_pretty_json(raw: Any) -> str:
+    """Pretty-print JSON for UI display (never raises)."""
+    try:
+        if raw is None:
+            return ""
+        if isinstance(raw, (dict, list)):
+            return json.dumps(raw, ensure_ascii=False, indent=2, sort_keys=True)
+        if isinstance(raw, str):
+            text = raw.strip()
+            if not text:
+                return ""
+            parsed = json.loads(text)
+            return json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
+        return json.dumps(raw, ensure_ascii=False, indent=2, sort_keys=True)
+    except Exception:
+        return str(raw or "")
+
+def _url_path(value: str) -> str:
+    """URL-escape a value intended for a path segment."""
+    return urllib.parse.quote(str(value or ""), safe="")
+
+
+def _url_qs(value: str) -> str:
+    """URL-escape a value intended for querystring value."""
+    return urllib.parse.quote_plus(str(value or ""))
+
+
 def create_app(db_path: Optional[Path] = None) -> Flask:
     app = Flask(__name__)
 
     # Ensure DB exists / schema present.
     if db_path is not None:
-        os.environ["COMPILER_DB_PATH"] = str(db_path)
+        # NOTE: database_manager reads COMPILER_DB_PATH at import-time by default.
+        # Use configure_db_path so --db-path reliably takes effect.
+        database_manager.configure_db_path(str(db_path))
     database_manager.ensure_tables_exist()
 
     @app.get("/")
@@ -83,19 +114,45 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 .all()
             )
             ingredients_by_term = {r.term: r for r in ingredient_rows}
-            item_rows = (
+            # Fetch all items and filter at render time so we can show "hidden quarantine"
+            # counts instead of making it look like items are missing.
+            all_item_rows = (
                 session.query(database_manager.IngredientItemRecord)
                 .filter(database_manager.IngredientItemRecord.ingredient_term.in_(page_terms))
-                .filter(True if show_quarantine else database_manager.IngredientItemRecord.status == "active")
                 .order_by(database_manager.IngredientItemRecord.ingredient_term.asc(), database_manager.IngredientItemRecord.item_name.asc())
                 .all()
             )
-            items_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
-            for item in item_rows:
-                items_by_term.setdefault(item.ingredient_term, []).append(item)
+            items_all_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
+            for item in all_item_rows:
+                items_all_by_term.setdefault(item.ingredient_term, []).append(item)
+
+            item_rows = [
+                i
+                for i in all_item_rows
+                if (show_quarantine or (getattr(i, "status", "") or "").strip().lower() == "active")
+            ]
+
+            # Pull normalized list attributes for displayed items (applications, function_tags, etc.)
+            item_ids = [i.id for i in item_rows if getattr(i, "id", None) is not None]
+            value_rows = []
+            if item_ids:
+                value_rows = (
+                    session.query(database_manager.IngredientItemValue)
+                    .filter(database_manager.IngredientItemValue.item_id.in_(item_ids))
+                    .order_by(
+                        database_manager.IngredientItemValue.item_id.asc(),
+                        database_manager.IngredientItemValue.field.asc(),
+                        database_manager.IngredientItemValue.value.asc(),
+                    )
+                    .all()
+                )
+            values_by_item: dict[int, dict[str, list[str]]] = {}
+            for vr in value_rows:
+                values_by_item.setdefault(vr.item_id, {}).setdefault(vr.field, []).append(vr.value)
 
             # Summary counts
             summary = database_manager.get_queue_summary()
+            source_summary = database_manager.get_source_item_summary()
 
         def _qs(**overrides: Any) -> str:
             args = dict(request.args)
@@ -108,9 +165,69 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             parts = [f"{k}={args[k]}" for k in args]
             return "?" + "&".join(parts) if parts else ""
 
+        def _render_item_block(i: database_manager.IngredientItemRecord) -> str:
+            scalars = [
+                ("status", getattr(i, "status", "") or ""),
+                ("approved", "true" if bool(getattr(i, "approved", False)) else "false"),
+                ("needs_review_reason", getattr(i, "needs_review_reason", "") or ""),
+                ("shelf_life_days", getattr(i, "shelf_life_days", None)),
+                ("ph_min", getattr(i, "ph_min", None)),
+                ("ph_max", getattr(i, "ph_max", None)),
+                ("flash_point_c", getattr(i, "flash_point_c", None)),
+                ("melting_point_c_min", getattr(i, "melting_point_c_min", None)),
+                ("melting_point_c_max", getattr(i, "melting_point_c_max", None)),
+                ("sap_naoh", getattr(i, "sap_naoh", None)),
+                ("sap_koh", getattr(i, "sap_koh", None)),
+                ("iodine_value", getattr(i, "iodine_value", None)),
+                ("usage_leave_on_max", getattr(i, "usage_leave_on_max", None)),
+                ("usage_rinse_off_max", getattr(i, "usage_rinse_off_max", None)),
+                ("storage_temp_c_min", getattr(i, "storage_temp_c_min", None)),
+                ("storage_temp_c_max", getattr(i, "storage_temp_c_max", None)),
+                ("storage_humidity_max", getattr(i, "storage_humidity_max", None)),
+            ]
+            scalars = [(k, v) for k, v in scalars if v not in (None, "", "None")]
+            scalar_html = "".join(
+                f"<div class='muted'><b>{escape(k)}</b>: {escape(str(v))}</div>" for k, v in scalars
+            )
+
+            tags = values_by_item.get(int(i.id), {}) if getattr(i, "id", None) is not None else {}
+            tag_html = ""
+            if tags:
+                sections = []
+                for field, values in tags.items():
+                    if not values:
+                        continue
+                    preview = ", ".join([escape(v) for v in values[:16]])
+                    suffix = f" … (+{len(values) - 16})" if len(values) > 16 else ""
+                    sections.append(f"<div class='muted'><b>{escape(field)}</b>: {preview}{suffix}</div>")
+                tag_html = "".join(sections)
+
+            pretty = _safe_pretty_json(getattr(i, "item_json", "") or "")
+            json_html = (
+                "<div style='margin-top:8px;'><b>item_json</b></div>"
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(pretty)}"
+                "</pre>"
+                if pretty
+                else "<div class='muted' style='margin-top:8px;'>No item_json</div>"
+            )
+
+            return (
+                "<details style='margin-top:6px;'>"
+                f"<summary><b>{escape(i.item_name)}</b> "
+                f"<span class='muted'>(variation: {escape(i.variation or '')}, form: {escape(i.physical_form or '')})</span>"
+                "</summary>"
+                f"<div style='margin-top:8px;'>{scalar_html}{tag_html}{json_html}</div>"
+                "</details>"
+            )
+
         def _render_term_cell(term: str) -> str:
             ingredient = ingredients_by_term.get(term)
-            items = items_by_term.get(term, [])
+            all_items = items_all_by_term.get(term, [])
+            if show_quarantine:
+                items = all_items
+            else:
+                items = [i for i in all_items if (getattr(i, "status", "") or "").strip().lower() == "active"]
             if not ingredient and not items:
                 return term
             core_bits = []
@@ -134,21 +251,14 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 if ingredient.short_description:
                     core_bits.append(f"<div class='muted'><b>short</b>: {ingredient.short_description}</div>")
             items_html = ""
+            if all_items and not show_quarantine:
+                hidden = len([i for i in all_items if (getattr(i, "status", "") or "").strip().lower() != "active"])
+                if hidden:
+                    items_html += f"<div class='muted' style='margin-top:6px;'>({hidden} quarantined/rejected items hidden — toggle Quarantine to show)</div>"
             if items:
-                rows_html = "".join(
-                    "<tr>"
-                    f"<td>{i.item_name}</td>"
-                    f"<td>{i.variation or ''}</td>"
-                    f"<td>{i.physical_form or ''}</td>"
-                    "</tr>"
-                    for i in items
-                )
                 items_html = (
                     "<div style='margin-top:8px;'><b>Items</b></div>"
-                    "<table style='margin-top:6px; width:100%; border-collapse:collapse;'>"
-                    "<thead><tr><th>item_name</th><th>variation</th><th>physical_form</th></tr></thead>"
-                    f"<tbody>{rows_html}</tbody>"
-                    "</table>"
+                    + "".join(_render_item_block(i) for i in items)
                 )
             details = "".join(core_bits) + items_html
             return f"<details><summary>{term}</summary><div style='margin-top:6px;'>{details}</div></details>"
@@ -202,6 +312,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         <div class="muted">processing: {summary.get('processing', 0)}</div>
         <div class="muted">completed: {summary.get('completed', 0)}</div>
         <div class="muted">error: {summary.get('error', 0)}</div>
+        <hr style="border:none;border-top:1px solid #eee;margin:10px 0;"/>
+        <div class="muted"><b>source_items</b>: {source_summary.get('total', 0)}</div>
+        <div class="muted">linked: {source_summary.get('linked', 0)}</div>
+        <div class="muted">orphans: {source_summary.get('orphan', 0)}</div>
+        <div class="muted">review: {source_summary.get('review', 0)}</div>
       </div>
 
       <div class="card" style="flex: 1;">
@@ -235,7 +350,6 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
           <div>
             <button type="submit">Apply</button>
             <a href="/export.csv{_qs(page=None)}" style="margin-left: 10px;">Export CSV</a>
-            <a href="/normalized_terms.csv" style="margin-left: 10px;">Normalized terms CSV</a>
             <a href="/download.db" style="margin-left: 10px;">Download DB</a>
             <a href="/cursors.csv" style="margin-left: 10px;">Cursor CSV</a>
             <a href="/admin/variations" style="margin-left: 10px;">Admin: Variations</a>
@@ -386,38 +500,6 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             headers={"Content-Disposition": "attachment; filename=cursor_progress.csv"},
         )
 
-    @app.get("/normalized_terms.csv")
-    def export_normalized_terms_csv() -> Response:
-        """Export normalized base terms from normalized_terms table."""
-        database_manager.ensure_tables_exist()
-        with database_manager.get_session() as session:
-            rows = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc()).all()
-
-        buf = io.StringIO()
-        writer = csv.DictWriter(
-            buf,
-            fieldnames=["term", "seed_category", "botanical_name", "inci_name", "cas_number", "description", "normalized_at"],
-        )
-        writer.writeheader()
-        for r in rows:
-            writer.writerow(
-                {
-                    "term": r.term,
-                    "seed_category": r.seed_category or "",
-                    "botanical_name": r.botanical_name or "",
-                    "inci_name": r.inci_name or "",
-                    "cas_number": r.cas_number or "",
-                    "description": r.description or "",
-                    "normalized_at": _serialize_dt(r.normalized_at),
-                }
-            )
-        out = buf.getvalue()
-        return Response(
-            out,
-            mimetype="text/csv; charset=utf-8",
-            headers={"Content-Disposition": "attachment; filename=normalized_terms.csv"},
-        )
-
     @app.get("/admin/variations")
     def admin_variations() -> str:
         """List unapproved variations and counts of impacted items."""
@@ -431,13 +513,14 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             }
         rows = []
         for v in vars_:
+            qname = _url_qs(v.name)
             rows.append(
                 "<tr>"
                 f"<td>{v.name}</td>"
                 f"<td>{'true' if v.approved else 'false'}</td>"
                 f"<td>{counts.get(v.name, 0)}</td>"
-                f"<td><a href='/admin/variations/approve?name={v.name}'>approve</a> | "
-                f"<a href='/admin/variations/reject?name={v.name}'>reject</a></td>"
+                f"<td><a href='/admin/variations/approve?name={qname}'>approve</a> | "
+                f"<a href='/admin/variations/reject?name={qname}'>reject</a></td>"
                 "</tr>"
             )
         table = "\n".join(rows) if rows else "<tr><td colspan='4' class='muted'>No variations.</td></tr>"
@@ -509,6 +592,62 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 .order_by(database_manager.IngredientItemRecord.item_name.asc())
                 .all()
             )
+            item_ids = [i.id for i in items if getattr(i, "id", None) is not None]
+            value_rows = []
+            if item_ids:
+                value_rows = (
+                    session.query(database_manager.IngredientItemValue)
+                    .filter(database_manager.IngredientItemValue.item_id.in_(item_ids))
+                    .order_by(
+                        database_manager.IngredientItemValue.item_id.asc(),
+                        database_manager.IngredientItemValue.field.asc(),
+                        database_manager.IngredientItemValue.value.asc(),
+                    )
+                    .all()
+                )
+            values_by_item: dict[int, dict[str, list[str]]] = {}
+            for vr in value_rows:
+                values_by_item.setdefault(vr.item_id, {}).setdefault(vr.field, []).append(vr.value)
+
+        def _render_item_attrs(i: database_manager.IngredientItemRecord) -> str:
+            tags = values_by_item.get(int(i.id), {}) if getattr(i, "id", None) is not None else {}
+            tag_lines = []
+            for field, values in tags.items():
+                if not values:
+                    continue
+                preview = ", ".join(values[:18])
+                suffix = f" … (+{len(values) - 18})" if len(values) > 18 else ""
+                tag_lines.append(f"{field}: {preview}{suffix}")
+            tag_blob = "\n".join(tag_lines)
+
+            pretty = _safe_pretty_json(getattr(i, "item_json", "") or "")
+            promoted = (
+                f"shelf_life_days={getattr(i,'shelf_life_days', None)}, "
+                f"ph_min={getattr(i,'ph_min', None)}, ph_max={getattr(i,'ph_max', None)}, "
+                f"usage_leave_on_max={getattr(i,'usage_leave_on_max', None)}, usage_rinse_off_max={getattr(i,'usage_rinse_off_max', None)}"
+            )
+
+            pretty_html = (
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(pretty)}"
+                "</pre>"
+                if pretty
+                else ""
+            )
+            tags_html = (
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fff; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(tag_blob)}"
+                "</pre>"
+                if tag_blob
+                else ""
+            )
+            return (
+                "<details>"
+                "<summary>view</summary>"
+                f"<div class='muted'><b>promoted</b>: {escape(promoted)}</div>"
+                f"{pretty_html}{tags_html}"
+                "</details>"
+            )
 
         item_rows = "".join(
             "<tr>"
@@ -518,10 +657,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             f"<td>{escape(i.physical_form or '')}</td>"
             f"<td>{escape(i.status)}</td>"
             f"<td>{escape(i.needs_review_reason or '')}</td>"
+            f"<td>{_render_item_attrs(i)}</td>"
             f"<td><a href='/item/{i.id}/edit'>edit</a></td>"
             "</tr>"
             for i in items
-        ) or "<tr><td colspan='7' class='muted'>No items.</td></tr>"
+        ) or "<tr><td colspan='8' class='muted'>No items.</td></tr>"
 
         return f"""
 <!doctype html>
@@ -542,7 +682,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
       <thead>
         <tr>
-          <th>id</th><th>item_name</th><th>variation</th><th>physical_form</th><th>status</th><th>needs_review_reason</th><th></th>
+          <th>id</th><th>item_name</th><th>variation</th><th>physical_form</th><th>status</th><th>needs_review_reason</th><th>attributes</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -585,7 +725,8 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     approved = False
                     status = "quarantine"
                     needs_review_reason = needs_review_reason or f"Unapproved variation: {variation}"
-                if not physical_form:
+                # Allow form-less items only when the user explicitly sets form_bypass.
+                if not physical_form and not form_bypass:
                     approved = False
                     status = "quarantine"
                     needs_review_reason = needs_review_reason or "Missing/invalid physical_form"
@@ -608,7 +749,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     form_bypass=form_bypass,
                 )
 
-                return redirect(f"/ingredient/{ing.term}")
+                return redirect(f"/ingredient/{_url_path(ing.term)}")
 
         # GET render
         checked_v = "checked" if item.variation_bypass else ""
@@ -620,7 +761,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
   <head><meta charset="utf-8"/><title>Edit Item • {escape(str(item_id))}</title></head>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
     <h2>Edit Item</h2>
-    <div><a href="/ingredient/{escape(ing.term)}">← Back to ingredient</a></div>
+    <div><a href="/ingredient/{_url_path(ing.term)}">← Back to ingredient</a></div>
     <div class="muted"><b>base</b>: {escape(ing.term)}</div>
     <div class="muted"><b>current item_name</b>: {escape(item.item_name)}</div>
     <form method="post" style="margin-top: 12px;">
@@ -633,7 +774,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         <label>Physical form<br/>
           <input name="physical_form" value="{escape(item.physical_form or '')}" style="width: 220px;" />
         </label>
-        <div class="muted">Must match curated enum; invalid values will blank + quarantine.</div>
+        <div class="muted">Must match curated enum; invalid values will blank (quarantine unless Form bypass is set).</div>
       </div>
       <div style="margin-bottom: 10px;">
         <label><input type="checkbox" name="variation_bypass" value="1" {checked_v}/> Variation bypass</label>

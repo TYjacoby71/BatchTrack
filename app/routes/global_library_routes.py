@@ -322,6 +322,17 @@ def global_library_item_stats(item_id: int):
                 'inci_name': gi.ingredient.inci_name,
                 'cas_number': gi.ingredient.cas_number,
             } if getattr(gi, 'ingredient', None) else None,
+            'variation': {
+                'id': gi.variation.id,
+                'name': gi.variation.name,
+                'slug': gi.variation.slug,
+                'default_unit': gi.variation.default_unit,
+                'form_bypass': gi.variation.form_bypass,
+                'physical_form_id': gi.variation.physical_form_id,
+                'physical_form_name': gi.variation.physical_form.name if getattr(gi.variation, 'physical_form', None) else None,
+                'physical_form_slug': gi.variation.physical_form.slug if getattr(gi.variation, 'physical_form', None) else None,
+            } if getattr(gi, 'variation', None) else None,
+            # Backwards-compatible physical form fields (derived from variation when present)
             'physical_form': gi.physical_form.name if getattr(gi, 'physical_form', None) else None,
             'physical_form_slug': gi.physical_form.slug if getattr(gi, 'physical_form', None) else None,
             'default_unit': gi.default_unit,
@@ -338,6 +349,7 @@ def global_library_item_stats(item_id: int):
             'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
             'is_active_ingredient': gi.is_active_ingredient,
             'inci_name': gi.inci_name,
+            'cas_number': getattr(gi, 'cas_number', None),
             # Container fields
             'container_material': getattr(gi, 'container_material', None),
             'container_type': getattr(gi, 'container_type', None),

@@ -1,0 +1,34 @@
+Worked for 4m 49s
+What’s going wrong in Replit (and why it looks “locked”)
+Multiple DB files: the pipeline will happily create/use the default data_builder/ingredients/compiler_state.db unless you explicitly point it at your “Final DB”. That makes it look like steps ran but the “real” DB didn’t change.
+Space in Final DB.db: SQLite/Python are fine with spaces; shell commands break if the path isn’t quoted.
+“database is locked”: SQLite allows only one writer. The biggest culprit here was split_botanical_parts holding a long write transaction, which blocks other steps if you start them in parallel (or if another process has the DB open).
+Fixes I made in this repo to unblock you
+DB path overrides now reliably work even if modules were already imported:
+Added database_manager.configure_db_path(...).
+Updated the portal to use it (your previous --db-path override was effectively ignored).
+Added --db-path flags to:
+python -m data_builder.ingredients.run_ingestion_pipeline --db-path "…"
+python -m data_builder.ingredients.run_pubchem_pipeline --db-path "…"
+python -m data_builder.ingredients.run_pre_ai_pipeline --db-path "…"
+Made split_botanical_parts chunk-commit + added indexes on merged_item_forms(derived_term, …) to reduce runtime and reduce “DB locked” windows.
+The exact Replit commands to run “up to PubChem matcher” (no server/workflow)
+Pick ONE canonical DB path (ideally rename to avoid spaces, but quoting works):
+
+Recommended: rename Final DB.db → final_db.sqlite (or similar)
+If you keep spaces, just quote it.
+Then run:
+
+python -m data_builder.ingredients.run_ingestion_pipeline --db-path "data_builder/ingredients/output/Final DB.db"
+python -m data_builder.ingredients.run_pubchem_pipeline --db-path "data_builder/ingredients/output/Final DB.db" --mode match_only
+If you want the whole deterministic pre-AI pipeline (ingest + pubchem):
+
+python -m data_builder.ingredients.run_pre_ai_pipeline --db-path "data_builder/ingredients/output/Final DB.db"
+If it still says “database is locked”
+Make sure you are not running these in parallel.
+Close anything that might be holding the file (portal, sqlite browser).
+Check holders:
+lsof "data_builder/ingredients/output/Final DB.db"
+(If you see a python process, stop that process; avoid blanket pkill -9 -f python unless you truly don’t care about killing everything.)
+
+If you paste the exact lock error + which command you ran (and whether the portal is open), I can tell you exactly which stage is holding the write lock.

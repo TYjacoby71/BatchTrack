@@ -313,7 +313,78 @@ document.addEventListener('DOMContentLoaded', function() {
                     const densityInput = document.getElementById('density');
 
                     // Toggle readonly/disabled and add visual indicators
-                    if (item.global_item_id) {
+                    const isLinkedToGlobal = !!(item.global_item_id && item.ownership === 'global');
+
+                    // Global link controls (advanced)
+                    const globalLinkSection = document.getElementById('globalLinkSection');
+                    const globalLinkSummary = document.getElementById('globalLinkSummary');
+                    const unlinkBtn = document.getElementById('unlinkGlobalBtn');
+                    const relinkBtn = document.getElementById('relinkGlobalBtn');
+                    const resyncBtn = document.getElementById('resyncGlobalBtn');
+
+                    if (globalLinkSection && item.global_item_id) {
+                        globalLinkSection.style.display = 'block';
+                        const giName = item.global_item_name || `#${item.global_item_id}`;
+                        const statusLabel = isLinkedToGlobal ? 'Linked (locked)' : 'Unlinked (editable)';
+                        if (globalLinkSummary) {
+                            globalLinkSummary.innerHTML = `Global item: <strong>${giName}</strong><br>Status: <strong>${statusLabel}</strong>`;
+                        }
+                        const setButtons = () => {
+                            if (unlinkBtn) unlinkBtn.disabled = !isLinkedToGlobal;
+                            if (relinkBtn) relinkBtn.disabled = isLinkedToGlobal;
+                            if (resyncBtn) resyncBtn.disabled = !isLinkedToGlobal;
+                        };
+                        setButtons();
+
+                        async function callGlobalLinkAction(action) {
+                            const res = await fetch(`/inventory/api/global-link/${item.id}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                                body: JSON.stringify({ action })
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok || !data.success) {
+                                throw new Error((data && (data.error || data.message)) || 'Global link update failed');
+                            }
+                            // Reload the modal state by re-fetching the item
+                            return true;
+                        }
+
+                        if (unlinkBtn) {
+                            unlinkBtn.onclick = async function() {
+                                try {
+                                    await callGlobalLinkAction('unlink');
+                                    window.location.reload();
+                                } catch (e) {
+                                    alert(e.message || 'Failed to unlink from global item');
+                                }
+                            };
+                        }
+                        if (relinkBtn) {
+                            relinkBtn.onclick = async function() {
+                                try {
+                                    await callGlobalLinkAction('relink');
+                                    window.location.reload();
+                                } catch (e) {
+                                    alert(e.message || 'Failed to relink to global item');
+                                }
+                            };
+                        }
+                        if (resyncBtn) {
+                            resyncBtn.onclick = async function() {
+                                try {
+                                    await callGlobalLinkAction('resync');
+                                    window.location.reload();
+                                } catch (e) {
+                                    alert(e.message || 'Failed to re-sync global specs');
+                                }
+                            };
+                        }
+                    } else if (globalLinkSection) {
+                        globalLinkSection.style.display = 'none';
+                    }
+
+                    if (isLinkedToGlobal) {
                         // Name field
                         if (nameInput) {
                             nameInput.readOnly = true;

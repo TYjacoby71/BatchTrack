@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Any, Dict, Optional, Tuple
 
-from flask import render_template
+from flask import render_template, session
 from flask_login import current_user
 from sqlalchemy import func
 
@@ -66,8 +66,45 @@ def _serialize_unit(unit: Unit) -> Dict[str, Any]:
 def _recipe_form_cache_key(org_id: Optional[int]) -> str:
     return f"recipes:form_data:{org_id or 'global'}"
 
+def _effective_org_id() -> Optional[int]:
+    """Resolve organization scope for recipe form inventory lists.
+
+    - Normal users: current_user.organization_id
+    - Developers: session dev_selected_org_id (to avoid cross-org leakage)
+    """
+    try:
+        org_id = getattr(current_user, "organization_id", None)
+        if org_id:
+            return org_id
+        if getattr(current_user, "is_authenticated", False) and getattr(current_user, "user_type", None) == "developer":
+            return session.get("dev_selected_org_id")
+    except Exception:
+        return None
+    return None
+
 
 def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
+    # Safety: avoid cross-organization leakage if org_id cannot be resolved
+    if not org_id:
+        units = [
+            _serialize_unit(unit)
+            for unit in Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
+        ]
+        inventory_units = get_global_unit_list()
+        categories = [
+            _serialize_product_category(cat)
+            for cat in ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+        ]
+        return {
+            'all_ingredients': [],
+            'all_consumables': [],
+            'all_containers': [],
+            'units': units,
+            'inventory_units': inventory_units,
+            'product_categories': categories,
+            'product_groups': [],
+        }
+
     ingredients_query = InventoryItem.query.filter(InventoryItem.type == 'ingredient')
     if org_id:
         ingredients_query = ingredients_query.filter_by(organization_id=org_id)
@@ -583,7 +620,7 @@ def build_draft_prompt(missing_fields, attempted_status, message):
 
 
 def get_recipe_form_data():
-    org_id = getattr(current_user, 'organization_id', None)
+    org_id = _effective_org_id()
     cache_key = _recipe_form_cache_key(org_id)
     cached = app_cache.get(cache_key)
     if cached is None:

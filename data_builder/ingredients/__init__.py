@@ -7,4 +7,4 @@ Import submodules directly as needed, e.g.:
     from data_builder.ingredients import database_manager
 """
 
-__all__ = ["ai_worker", "compiler", "database_manager", "portal", "term_collector", "normalize_sources", "sources"]
+__all__ = ["ai_worker", "compiler", "database_manager", "portal", "term_collector", "sources", "si_pipeline"]

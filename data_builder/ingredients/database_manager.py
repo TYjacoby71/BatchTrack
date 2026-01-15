@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from contextlib import contextmanager
@@ -10,13 +11,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Tuple
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, exists, func, select, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, event, exists, func, select, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
 
 from .taxonomy_constants import (
     INGREDIENT_CATEGORIES_PRIMARY,
+    ORIGIN_TO_INGREDIENT_CATEGORIES,
+    CATEGORY_ALLOWED_REFINEMENT_LEVELS,
     MASTER_CATEGORIES,
     MASTER_CATEGORY_RULE_SEED,
     ORIGINS,
@@ -76,8 +79,15 @@ def _guess_origin(ingredient: dict, term: str) -> str:
         return "Mineral/Earth"
     if any(k in t for k in ("yeast", "xanthan", "culture", "scoby", "kefir")):
         return "Fermentation"
+    # Heuristic: treat chemistry-like tokens as synthetic to avoid defaulting to Plant-Derived.
+    # Examples: "2-acetyl-1-pyrroline", "disodium tetramethylhexadecenyl..."
+    if any(ch.isdigit() for ch in t) and any(sym in t for sym in ("-", "/", ",")):
+        return "Synthetic"
+    if any(k in t for k in ("peg-", "ppg-", "poly", "copolymer", "acrylate", "quaternium", "dimethicone", "carbomer", "laureth", "ceteareth")):
+        return "Synthetic"
     if ingredient.get("botanical_name"):
         return "Plant-Derived"
+    # Conservative fallback: if nothing suggests mineral/ferment/synthetic, treat as Plant-Derived.
     return "Plant-Derived"
 
 
@@ -115,6 +125,27 @@ def _guess_primary_category(term: str, fallback: str | None = None) -> str:
 def _coerce_refinement(value: str | None) -> str:
     v = (value or "").strip()
     return v if v in REFINEMENT_LEVELS else "Other"
+
+
+def _coerce_refinement_for_category(refinement: str | None, ingredient_category: str | None) -> str:
+    """Apply category-specific refinement guardrails (best-effort)."""
+    coerced = _coerce_refinement(refinement)
+    cat = (ingredient_category or "").strip()
+    allowed = CATEGORY_ALLOWED_REFINEMENT_LEVELS.get(cat)
+    if not allowed:
+        return coerced
+    return coerced if coerced in allowed else "Other"
+
+
+def _is_category_allowed_for_origin(origin: str | None, ingredient_category: str | None) -> bool:
+    o = (origin or "").strip()
+    c = (ingredient_category or "").strip()
+    if not o or not c:
+        return False
+    allowed = ORIGIN_TO_INGREDIENT_CATEGORIES.get(o)
+    if not allowed:
+        return True
+    return c in allowed
 
 
 def _coerce_primary_category(value: str | None, term: str, seed_category: str | None) -> str:
@@ -168,11 +199,32 @@ DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    future=True,
-)
+
+def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:  # pragma: no cover
+    """SQLite pragmas for better concurrency/resume-safety."""
+    try:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA synchronous=NORMAL;")
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.execute("PRAGMA busy_timeout=60000;")
+        cursor.close()
+    except Exception:
+        return
+
+
+def _make_engine(db_path: Path):
+    url = f"sqlite:///{Path(db_path)}"
+    eng = create_engine(
+        url,
+        connect_args={"check_same_thread": False, "timeout": 60},
+        future=True,
+    )
+    event.listen(eng, "connect", _configure_sqlite_connection)
+    return eng
+
+
+engine = _make_engine(DB_PATH)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 Base = declarative_base()
 
@@ -230,6 +282,81 @@ class IngredientRecord(Base):
     payload_json = Column(Text, nullable=False, default="{}")
     compiled_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    # Enumeration lifecycle (post-compile; only stage that may add NEW items).
+    enumeration_status = Column(String, nullable=True, default=None)  # pending|processing|done|error
+    enumerated_at = Column(DateTime, nullable=True, default=None)
+    enumeration_attempts = Column(Integer, nullable=False, default=0)
+    enumeration_error = Column(Text, nullable=True, default=None)
+    enumeration_notes = Column(Text, nullable=True, default=None)
+
+
+class CompiledClusterRecord(Base):
+    """Compiled mirror of a raw SourceDefinition cluster (keyed by cluster_id).
+
+    This is the compiled-side representation the portal can show as a clone of raw clusters,
+    with separate lifecycle state for:
+    - term completion/normalization (Stage 1)
+    - item compilation/enrichment (Stage 2)
+    """
+
+    __tablename__ = "compiled_clusters"
+
+    cluster_id = Column(String, primary_key=True)
+
+    # Raw-side snapshot helpers
+    raw_canonical_term = Column(Text, nullable=True, default=None)
+    raw_reason = Column(Text, nullable=True, default=None)
+    raw_origin = Column(String, nullable=True, default=None)
+    raw_ingredient_category = Column(String, nullable=True, default=None)
+
+    # Stage 1 outputs
+    compiled_term = Column(Text, nullable=True, default=None)
+    seed_category = Column(String, nullable=True, default=None)
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+    derived_from = Column(String, nullable=True, default=None)
+    botanical_name = Column(String, nullable=True, default=None)
+    inci_name = Column(String, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
+    term_compiled_at = Column(DateTime, nullable=True, default=None)
+    term_error = Column(Text, nullable=True, default=None)
+
+    # JSON payload (auditable) for stage1/stage2 use.
+    payload_json = Column(Text, nullable=False, default="{}")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class CompiledClusterItemRecord(Base):
+    """Compiled mirror of a raw merged_item_form that belongs to a cluster."""
+
+    __tablename__ = "compiled_cluster_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cluster_id = Column(String, ForeignKey("compiled_clusters.cluster_id"), nullable=False, index=True)
+
+    merged_item_form_id = Column(Integer, nullable=False, index=True)
+
+    # Identity fields copied from raw
+    derived_term = Column(Text, nullable=True, default=None)
+    derived_variation = Column(Text, nullable=True, default="")
+    derived_physical_form = Column(Text, nullable=True, default="")
+
+    item_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
+    item_compiled_at = Column(DateTime, nullable=True, default=None)
+    item_error = Column(Text, nullable=True, default=None)
+
+    # Raw snapshot + compiled fields (auditable)
+    raw_item_json = Column(Text, nullable=False, default="{}")
+    item_json = Column(Text, nullable=False, default="{}")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
 
 class IngredientItemRecord(Base):
     """Compiled purchasable item for a base ingredient (base + variation + physical_form)."""
@@ -257,6 +384,11 @@ class IngredientItemRecord(Base):
 
     # Full item JSON for the rest of attributes.
     item_json = Column(Text, nullable=False, default="{}")
+
+    # Provenance marker: which stage created this item identity.
+    # - compiler: Stage 2 compilation (ingestion-derived items completed)
+    # - enumerator: Stage 3 enumeration (new items added post-compilation)
+    source_stage = Column(String, nullable=False, default="compiler")
 
     # Common scalar/range fields promoted for querying (nullable where absent).
     shelf_life_days = Column(Integer, nullable=True, default=None)
@@ -397,7 +529,410 @@ class NormalizedTerm(Base):
     normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SourceItem(Base):
+    """Raw source 'item' extracted from INCI/TGSC/etc.
+
+    Item-first ingestion prevents source rows like 'Abies Alba Cone Oil' or
+    'Beetroot Powder' from becoming queued *base* terms.
+
+    A SourceItem may be linked to a derived base definition term, or left as an
+    orphan when no safe linkage is possible yet.
+    """
+
+    __tablename__ = "source_items"
+
+    # Deterministic key for this *source row* (1:1 traceability).
+    key = Column(String, primary_key=True)
+
+    source = Column(String, nullable=False)  # cosing|tgsc|...
+    # Stable per-source row identity (e.g., CosIng Ref No, TGSC URL, or row index fallback).
+    source_row_id = Column(String, nullable=True, default=None)
+    source_row_number = Column(Integer, nullable=True, default=None)
+    source_ref = Column(Text, nullable=True, default=None)  # e.g., CosIng Ref No / TGSC URL
+    # Content-address fingerprint to support downstream dedupe/reconciliation.
+    content_hash = Column(String, nullable=True, default=None)
+    is_composite = Column(Boolean, nullable=False, default=False)
+
+    # Derived display fields (maker-facing names; deterministic).
+    # These are computed from merged catalog signals + derived variation/form.
+    definition_display_name = Column(Text, nullable=True, default=None)
+    item_display_name = Column(Text, nullable=True, default=None)
+
+    # Deterministic derived tags for UI grouping / filtering (pre-compile).
+    derived_function_tags_json = Column(Text, nullable=False, default="[]")
+    # Optional provenance for each derived function tag (for auditability).
+    # Stored as JSON list of objects: [{"tag": "...", "source": "COSING_raw|COSING_normalized|TGSC_keyword|heuristic", ...}, ...]
+    derived_function_tag_entries_json = Column(Text, nullable=False, default="[]")
+    derived_master_categories_json = Column(Text, nullable=False, default="[]")
+
+    # Deterministic item-level specification enrichment (non-AI).
+    # This is a flexible JSON blob so we can add spec fields without schema churn.
+    derived_specs_json = Column(Text, nullable=False, default="{}")
+    derived_specs_sources_json = Column(Text, nullable=False, default="{}")
+    derived_specs_notes_json = Column(Text, nullable=False, default="[]")
+
+    # Link to merged item-form (ingestion-stage dedupe table).
+    merged_item_id = Column(Integer, nullable=True, default=None, index=True)
+
+    # If derived_variation is intentionally absent (e.g., base chemical / base term),
+    # mark as bypass so "missing variation" doesn't imply a parsing gap.
+    variation_bypass = Column(Integer, nullable=False, default=0)  # 0/1
+    variation_bypass_reason = Column(Text, nullable=True, default=None)
+
+    # Deterministic bundling: link items to a derived definition cluster.
+    definition_cluster_id = Column(String, nullable=True, default=None, index=True)
+    definition_cluster_confidence = Column(Integer, nullable=True, default=None)
+    definition_cluster_reason = Column(Text, nullable=True, default=None)
+
+    raw_name = Column(Text, nullable=False)
+    inci_name = Column(Text, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    # Parsed lineage linkage
+    derived_term = Column(String, nullable=True, default=None)  # normalized base definition term
+    derived_variation = Column(String, nullable=True, default=None)
+    derived_physical_form = Column(String, nullable=True, default=None)
+    # Best-effort plant-part label (Leaf/Seed/Bark/etc.) for filtering and UI.
+    derived_part = Column(Text, nullable=True, default=None)
+    derived_part_reason = Column(Text, nullable=True, default=None)
+
+    # CAS list support (some sources provide multiple CAS numbers per row).
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+
+    # Deterministic best-effort taxonomy (may be blank if unknown)
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+
+    status = Column(String, nullable=False, default="linked")  # linked|orphan|review
+    needs_review_reason = Column(Text, nullable=True, default=None)
+
+    # Full source row payload for traceability
+    payload_json = Column(Text, nullable=False, default="{}")
+    ingested_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SourceCatalogItem(Base):
+    """Merged, de-duplicated item record across source datasets.
+
+    Merge order (intent):
+    - Start with CosIng as authoritative for INCI/CAS/EC + function + restriction + update date.
+    - Overlay TGSC for common_name + physchem + odor/flavor + synonyms + URL when matched.
+
+    Guardrail:
+    - Never populate common_name from INCI. common_name should come from a source that
+      explicitly provides a common/trade/common name (e.g. TGSC), otherwise leave null
+      and allow the compiler to fill/alias later.
+    """
+
+    __tablename__ = "source_catalog_items"
+
+    # Canonical identity key, typically "cas:<CAS>" or "ec:<EC>" or "inci:<normalized inci>".
+    key = Column(String, primary_key=True)
+
+    # Shared identifiers
+    inci_name = Column(Text, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+    ec_number = Column(String, nullable=True, default=None)
+
+    # Common name (never set from INCI)
+    common_name = Column(Text, nullable=True, default=None)
+
+    # --- CosIng fields ---
+    cosing_ref_nos_json = Column(Text, nullable=False, default="[]")  # JSON list of ref nos
+    cosing_inn_name = Column(Text, nullable=True, default=None)
+    cosing_ph_eur_name = Column(Text, nullable=True, default=None)
+    cosing_description = Column(Text, nullable=True, default=None)
+    cosing_restriction = Column(Text, nullable=True, default=None)
+    cosing_functions_raw = Column(Text, nullable=True, default=None)
+    cosing_functions_json = Column(Text, nullable=False, default="[]")  # JSON list
+    cosing_update_date = Column(String, nullable=True, default=None)
+
+    # --- TGSC fields ---
+    tgsc_category = Column(String, nullable=True, default=None)
+    tgsc_botanical_name = Column(Text, nullable=True, default=None)
+    tgsc_einecs_number = Column(String, nullable=True, default=None)
+    tgsc_fema_number = Column(String, nullable=True, default=None)
+    tgsc_molecular_formula = Column(String, nullable=True, default=None)
+    tgsc_molecular_weight = Column(String, nullable=True, default=None)
+    tgsc_boiling_point = Column(String, nullable=True, default=None)
+    tgsc_melting_point = Column(String, nullable=True, default=None)
+    tgsc_density = Column(String, nullable=True, default=None)
+    tgsc_odor_description = Column(Text, nullable=True, default=None)
+    tgsc_flavor_description = Column(Text, nullable=True, default=None)
+    tgsc_description = Column(Text, nullable=True, default=None)
+    tgsc_uses = Column(Text, nullable=True, default=None)
+    tgsc_safety_notes = Column(Text, nullable=True, default=None)
+    tgsc_solubility = Column(Text, nullable=True, default=None)
+    tgsc_synonyms = Column(Text, nullable=True, default=None)
+    tgsc_natural_occurrence = Column(Text, nullable=True, default=None)
+    tgsc_url = Column(Text, nullable=True, default=None)
+
+    # Provenance
+    sources_json = Column(Text, nullable=False, default="{}")  # merged source refs
+    merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class MergedItemForm(Base):
+    """Deterministically merged item-form (definition + variation + physical form)."""
+
+    __tablename__ = "merged_item_forms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    derived_term = Column(Text, nullable=False)
+    derived_variation = Column(Text, nullable=True, default="")
+    derived_physical_form = Column(Text, nullable=True, default="")
+
+    derived_parts_json = Column(Text, nullable=False, default="[]")
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+    member_source_item_keys_json = Column(Text, nullable=False, default="[]")
+    sources_json = Column(Text, nullable=False, default="{}")
+
+    merged_specs_json = Column(Text, nullable=False, default="{}")
+    merged_specs_sources_json = Column(Text, nullable=False, default="{}")
+    merged_specs_notes_json = Column(Text, nullable=False, default="[]")
+
+    source_row_count = Column(Integer, nullable=False, default=0)
+    has_cosing = Column(Boolean, nullable=False, default=False)
+    has_tgsc = Column(Boolean, nullable=False, default=False)
+    has_seed = Column(Boolean, nullable=False, default=False)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SourceDefinition(Base):
+    """Deterministic derived definition cluster (pre-AI).
+
+    This represents a grouping/bundle of items that likely share the same ingredient
+    definition identity (term). This is intentionally conservative and can be refined
+    by AI or manual review later.
+    """
+
+    __tablename__ = "source_definitions"
+
+    cluster_id = Column(String, primary_key=True)
+    canonical_term = Column(Text, nullable=True, default=None)
+    botanical_key = Column(String, nullable=True, default=None)
+
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+
+    confidence = Column(Integer, nullable=True, default=None)
+    reason = Column(Text, nullable=True, default=None)
+
+    item_count = Column(Integer, nullable=False, default=0)
+    sample_item_keys_json = Column(Text, nullable=False, default="[]")
+    member_cas_json = Column(Text, nullable=False, default="[]")
+    member_inci_samples_json = Column(Text, nullable=False, default="[]")
+
+    # Reconciliation fields for post-processing derivative grouping
+    reconciled_term = Column(Text, nullable=True, default=None)
+    reconciled_variation = Column(Text, nullable=True, default=None)
+    parent_cluster_id = Column(String, nullable=True, default=None)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# PubChem deterministic enrichment (pre-AI)
+# ---------------------------------------------------------------------------
+
+
+class PubChemCompound(Base):
+    """Cached PubChem compound data keyed by CID (resume-safe)."""
+
+    __tablename__ = "pubchem_compounds"
+
+    cid = Column(Integer, primary_key=True)
+    # Raw responses (auditable)
+    property_json = Column(Text, nullable=False, default="{}")
+    xrefs_rn_json = Column(Text, nullable=False, default="{}")
+    pug_view_json = Column(Text, nullable=False, default="{}")
+
+    fetched_property_at = Column(DateTime, nullable=True, default=None)
+    fetched_pug_view_at = Column(DateTime, nullable=True, default=None)
+
+
+class PubChemItemMatch(Base):
+    """Match a deterministic merged item-form to a PubChem CID (or record no-match)."""
+
+    __tablename__ = "pubchem_item_matches"
+
+    merged_item_form_id = Column(Integer, ForeignKey("merged_item_forms.id"), primary_key=True)
+
+    status = Column(String, nullable=False, default="pending")  # pending|matched|no_match|error
+    cid = Column(Integer, nullable=True, default=None)
+    matched_by = Column(String, nullable=True, default=None)  # cas|term|inci|common|botanical
+    identifier_value = Column(Text, nullable=True, default=None)
+    confidence = Column(Integer, nullable=True, default=None)  # 0-100 heuristic
+    error = Column(Text, nullable=True, default=None)
+    matched_at = Column(DateTime, nullable=True, default=None)
+
+
+class PubChemTermMatch(Base):
+    """Match a normalized term to a PubChem CID (or record no-match)."""
+
+    __tablename__ = "pubchem_term_matches"
+
+    term = Column(String, ForeignKey("normalized_terms.term"), primary_key=True)
+
+    status = Column(String, nullable=False, default="pending")  # pending|matched|no_match|error
+    cid = Column(Integer, nullable=True, default=None)
+    matched_by = Column(String, nullable=True, default=None)  # cas|inci|botanical|term
+    identifier_value = Column(Text, nullable=True, default=None)
+    confidence = Column(Integer, nullable=True, default=None)  # 0-100 heuristic
+    error = Column(Text, nullable=True, default=None)
+    matched_at = Column(DateTime, nullable=True, default=None)
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
+
+# ---------------------------------------------------------------------------
+# Storage normalization: missing/null + spec pruning
+# ---------------------------------------------------------------------------
+_PLACEHOLDER_STRINGS = {"unknown", "n/a", "na", "none", "null", "nil", "tbd"}
+_RE_FLOAT = re.compile(r"(-?\d+(?:\.\d+)?)")
+
+
+def _normalize_placeholder(value: Any) -> Any:
+    """Normalize placeholder/missing values to None.
+
+    Contract:
+    - Do not persist placeholder strings like "unknown"/"n/a" into JSON blobs.
+    - Prefer omitting keys or storing null (None) for unknown optional fields.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if cleaned.lower() in _PLACEHOLDER_STRINGS:
+            return None
+        return cleaned
+    if isinstance(value, list):
+        out = []
+        for v in value:
+            nv = _normalize_placeholder(v)
+            if nv is None:
+                continue
+            out.append(nv)
+        return out or None
+    if isinstance(value, dict):
+        out: dict[str, Any] = {}
+        for k, v in value.items():
+            nv = _normalize_placeholder(v)
+            if nv is None:
+                continue
+            out[str(k)] = nv
+        return out or None
+    return value
+
+
+_DENSITY_FORMS = {
+    "Oil",
+    "Syrup",
+    "Juice",
+    "Hydrosol",
+    "Tincture",
+    "Infusion",
+    "Decoction",
+    "Puree",
+    "Paste",
+    "Concentrate",
+    "Sap",
+    "Latex",
+    "Emulsion",
+}
+_OIL_FAT_FORMS = {"Oil", "Butter", "Wax"}
+_AQUEOUS_FORMS = {"Juice", "Hydrosol", "Tincture", "Infusion", "Decoction", "Sap", "Emulsion"}
+_SOLID_FORMS = {"Crystals", "Isolate", "Resin", "Gum", "Wax", "Butter"}
+
+
+def _coerce_density_g_ml(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        v = float(value)
+    elif isinstance(value, str):
+        m = _RE_FLOAT.search(value)
+        if not m:
+            return None
+        try:
+            v = float(m.group(1))
+        except Exception:
+            return None
+    else:
+        return None
+    # Plausibility window for common ingredient materials in g/mL.
+    if v <= 0:
+        return None
+    if v < 0.3 or v > 3.5:
+        return None
+    return v
+
+
+def _prune_specifications_for_form(specs: dict[str, Any], physical_form: str) -> dict[str, Any]:
+    """Drop irrelevant or invalid spec fields based on physical_form.
+
+    Goal: avoid persisting nonsense (e.g., SAP values on powders) and enforce a tight density contract.
+    """
+    if not specs:
+        return {}
+    form = (physical_form or "").strip()
+    out: dict[str, Any] = {}
+
+    # Always allow usage rates when present (policy data, not physicochemical).
+    if isinstance(specs.get("usage_rate_percent"), dict):
+        usage = _normalize_placeholder(specs.get("usage_rate_percent"))
+        if isinstance(usage, dict) and usage:
+            out["usage_rate_percent"] = usage
+
+    # pH only makes sense for aqueous/liquid systems in this taxonomy.
+    if form in _AQUEOUS_FORMS and isinstance(specs.get("ph_range"), dict):
+        ph = _normalize_placeholder(specs.get("ph_range"))
+        if isinstance(ph, dict) and ph:
+            out["ph_range"] = ph
+
+    # Melting point: solids/fats/waxes/resins.
+    if form in _SOLID_FORMS and isinstance(specs.get("melting_point_celsius"), dict):
+        mp = _normalize_placeholder(specs.get("melting_point_celsius"))
+        if isinstance(mp, dict) and mp:
+            out["melting_point_celsius"] = mp
+
+    # Flash point: typically oils/solvents; keep it limited to oils/fats for now.
+    if form in _OIL_FAT_FORMS:
+        fp = _normalize_placeholder(specs.get("flash_point_celsius"))
+        if isinstance(fp, (int, float)):
+            out["flash_point_celsius"] = float(fp)
+        elif isinstance(fp, str):
+            m = _RE_FLOAT.search(fp)
+            if m:
+                try:
+                    out["flash_point_celsius"] = float(m.group(1))
+                except Exception:
+                    pass
+
+    # Soapmaking SAP/iodine only for oils/fats/waxes.
+    if form in _OIL_FAT_FORMS:
+        for k in ("sap_naoh", "sap_koh", "iodine_value"):
+            v = _normalize_placeholder(specs.get(k))
+            if isinstance(v, (int, float)):
+                out[k] = float(v)
+            elif isinstance(v, str):
+                m = _RE_FLOAT.search(v)
+                if m:
+                    try:
+                        out[k] = float(m.group(1))
+                    except Exception:
+                        pass
+
+    # Density is *tightened*: numeric density_g_ml only, only for liquid-like forms.
+    if form in _DENSITY_FORMS:
+        dens = _coerce_density_g_ml(specs.get("density_g_ml"))
+        if dens is not None:
+            out["density_g_ml"] = dens
+
+    return out
 
 
 def ensure_tables_exist() -> None:
@@ -410,7 +945,179 @@ def ensure_tables_exist() -> None:
     _ensure_ingredient_columns()
     _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
+    _ensure_merged_item_form_indexes()
+    _ensure_source_item_indexes()
+    _ensure_source_item_columns()
+    _ensure_source_definition_indexes()
+    _ensure_source_catalog_indexes()
+    _ensure_pubchem_indexes()
+    _ensure_pubchem_columns()
+    _ensure_compiled_cluster_indexes()
 
+
+def _ensure_compiled_cluster_indexes() -> None:
+    """Best-effort indexing for compiled cluster mirror tables (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term_status ON compiled_clusters(term_status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term ON compiled_clusters(compiled_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_cluster_items_status ON compiled_cluster_items(item_status)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_compiled_cluster_items_cluster_mif ON compiled_cluster_items(cluster_id, merged_item_form_id)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def configure_db_path(path: str | os.PathLike[str]) -> None:
+    """Reconfigure the SQLite DB path at runtime.
+
+    Notes:
+    - Many modules import `database_manager` early, so relying on COMPILER_DB_PATH
+      *after* import is unreliable. This function makes DB selection explicit.
+    - Safe for scripts/portals that want a `--db-path` flag.
+    """
+    global DB_PATH, DATABASE_URL, engine, SessionLocal  # pylint: disable=global-statement
+    DB_PATH = Path(path)
+    DATABASE_URL = f"sqlite:///{DB_PATH}"
+    try:
+        engine.dispose()
+    except Exception:
+        pass
+    engine = _make_engine(DB_PATH)
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+
+def _ensure_merged_item_form_indexes() -> None:
+    """Best-effort indexing for merged_item_forms (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_merged_item_forms_term ON merged_item_forms(derived_term)"))
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_merged_item_forms_identity ON merged_item_forms(derived_term, derived_variation, derived_physical_form)"
+                )
+            )
+    except Exception:  # pragma: no cover
+        return
+
+def _ensure_source_item_indexes() -> None:
+    """Best-effort indexing for source_items (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source ON source_items(source)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_status ON source_items(status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_derived_term ON source_items(derived_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source_row_id ON source_items(source_row_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_content_hash ON source_items(content_hash)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_cluster_id ON source_items(definition_cluster_id)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_source_item_columns() -> None:
+    """Add traceability/quality columns to source_items if missing."""
+    try:
+        with engine.connect() as conn:
+            columns = conn.execute(text("PRAGMA table_info(source_items)")).fetchall()
+            column_names = {row[1] for row in columns}
+
+            additions = [
+                ("source_row_id", "TEXT"),
+                ("source_row_number", "INTEGER"),
+                ("source_ref", "TEXT"),
+                ("content_hash", "TEXT"),
+                ("is_composite", "INTEGER NOT NULL DEFAULT 0"),
+                ("cas_numbers_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("definition_display_name", "TEXT"),
+                ("item_display_name", "TEXT"),
+                ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_function_tag_entries_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_part", "TEXT"),
+                ("derived_part_reason", "TEXT"),
+                ("variation_bypass", "INTEGER NOT NULL DEFAULT 0"),
+                ("variation_bypass_reason", "TEXT"),
+                ("definition_cluster_id", "TEXT"),
+                ("definition_cluster_confidence", "INTEGER"),
+                ("definition_cluster_reason", "TEXT"),
+                # Deterministic item-level spec enrichment (non-AI). These fields are derived from
+                # TGSC/CosIng (via merged `source_catalog_items`) and safe deterministic rules.
+                # JSON shape is data-driven so we don't need schema changes per attribute.
+                ("derived_specs_json", "TEXT NOT NULL DEFAULT '{}'"),
+                ("derived_specs_sources_json", "TEXT NOT NULL DEFAULT '{}'"),
+                ("derived_specs_notes_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("merged_item_id", "INTEGER"),
+            ]
+            for name, col_type in additions:
+                if name in column_names:
+                    continue
+                conn.execute(text(f"ALTER TABLE source_items ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to source_items", name)
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_source_definition_indexes() -> None:
+    """Best-effort indexing for source_definitions (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_origin ON source_definitions(origin)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_category ON source_definitions(ingredient_category)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_def_botanical ON source_definitions(botanical_key)"))
+    except Exception:  # pragma: no cover
+        return
+
+def _ensure_source_catalog_indexes() -> None:
+    """Best-effort indexing for source_catalog_items (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_cas ON source_catalog_items(cas_number)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_ec ON source_catalog_items(ec_number)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_inci ON source_catalog_items(inci_name)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_common ON source_catalog_items(common_name)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_pubchem_indexes() -> None:
+    """Best-effort indexing for PubChem tables (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_matches_status ON pubchem_item_matches(status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_matches_cid ON pubchem_item_matches(cid)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_status ON pubchem_term_matches(status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pubchem_term_matches_cid ON pubchem_term_matches(cid)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_pubchem_columns() -> None:
+    """Add retry bookkeeping columns to PubChem match tables (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            # pubchem_item_matches
+            cols = conn.execute(text("PRAGMA table_info(pubchem_item_matches)")).fetchall()
+            names = {row[1] for row in cols}
+            additions = [
+                ("attempts", "INTEGER NOT NULL DEFAULT 0"),
+                ("last_error_at", "DATETIME"),
+                ("last_error_type", "TEXT"),
+            ]
+            for name, col_type in additions:
+                if name in names:
+                    continue
+                conn.execute(text(f"ALTER TABLE pubchem_item_matches ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to pubchem_item_matches", name)
+
+            # pubchem_term_matches
+            cols2 = conn.execute(text("PRAGMA table_info(pubchem_term_matches)")).fetchall()
+            names2 = {row[1] for row in cols2}
+            for name, col_type in additions:
+                if name in names2:
+                    continue
+                conn.execute(text(f"ALTER TABLE pubchem_term_matches ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to pubchem_term_matches", name)
+    except Exception:  # pragma: no cover
+        return
 
 def _ensure_priority_column() -> None:
     with engine.connect() as conn:
@@ -459,6 +1166,7 @@ def _ensure_ingredient_item_columns() -> None:
             ("approved", "INTEGER NOT NULL DEFAULT 1"),
             ("status", "TEXT NOT NULL DEFAULT 'active'"),
             ("needs_review_reason", "TEXT"),
+            ("source_stage", "TEXT NOT NULL DEFAULT 'compiler'"),
         ]
 
         for name, col_type in additions:
@@ -484,6 +1192,11 @@ def _ensure_ingredient_columns() -> None:
             ("ifra_category", "TEXT"),
             ("allergen_flag", "INTEGER NOT NULL DEFAULT 0"),
             ("colorant_flag", "INTEGER NOT NULL DEFAULT 0"),
+            ("enumeration_status", "TEXT"),
+            ("enumerated_at", "DATETIME"),
+            ("enumeration_attempts", "INTEGER NOT NULL DEFAULT 0"),
+            ("enumeration_error", "TEXT"),
+            ("enumeration_notes", "TEXT"),
         ]
         for name, col_type in additions:
             if name in column_names:
@@ -785,6 +1498,59 @@ def upsert_terms(term_entries: Iterable[Tuple[str, int]]) -> int:
     return inserted
 
 
+def build_term_priority_map() -> dict[str, int]:
+    """Compute a 1-10 maker-likelihood priority score per derived base term.
+
+    Heuristic intent:
+    - Prefer terms that appear in many merged item-forms and many source rows.
+    - Give a small boost to terms that have seed coverage (has_seed).
+    - Keep scores bounded 1..10.
+
+    This is used by Stage 1 term compilation when seeding `task_queue` from `normalized_terms`.
+    """
+    ensure_tables_exist()
+    out: dict[str, int] = {}
+    with get_session() as session:
+        rows = session.execute(
+            text(
+                """
+                SELECT
+                  derived_term AS term,
+                  COUNT(*) AS item_forms,
+                  COALESCE(SUM(source_row_count), 0) AS source_rows,
+                  COALESCE(MAX(has_seed), 0) AS has_seed
+                FROM merged_item_forms
+                GROUP BY derived_term
+                """
+            )
+        ).fetchall()
+    for term, item_forms, source_rows, has_seed in rows:
+        t = (str(term) if term is not None else "").strip()
+        if not t:
+            continue
+        try:
+            item_forms_i = int(item_forms or 0)
+        except Exception:
+            item_forms_i = 0
+        try:
+            source_rows_i = int(source_rows or 0)
+        except Exception:
+            source_rows_i = 0
+        seed_boost = 2 if int(has_seed or 0) > 0 else 0
+        # Smooth/log-scale: many terms are long-tailed.
+        # Base score ~1..10.
+        raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
+        # Add log growth.
+        if item_forms_i > 0:
+            raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
+        if source_rows_i > 0:
+            raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
+        raw += seed_boost
+        score = max(1, min(10, int(round(raw))))
+        out[t] = score
+    return out
+
+
 def get_all_terms() -> List[Tuple[str, int]]:
     """Return all terms currently known to the queue (term, priority)."""
     ensure_tables_exist()
@@ -904,6 +1670,7 @@ def get_next_missing_normalized_term_between(
     initial: str,
     start_after: str,
     end_before: str | None,
+    seed_category: str | None = None,
 ) -> Optional[dict[str, str]]:
     """Return the next normalized term (from curated sources) not yet queued, constrained to a gap.
 
@@ -911,6 +1678,7 @@ def get_next_missing_normalized_term_between(
         initial: Letter bucket (A..Z)
         start_after: Lower bound (exclusive)
         end_before: Upper bound (exclusive). If None, treat as open-ended within the letter.
+        seed_category: Optional seed_category filter (exact match).
     """
     ensure_tables_exist()
     letter = (initial or "").strip()[:1].upper()
@@ -918,6 +1686,7 @@ def get_next_missing_normalized_term_between(
         return None
     lower = (start_after or "").strip()
     upper = (end_before or "").strip() if end_before else None
+    cat = (seed_category or "").strip() or None
 
     with get_session() as session:
         query = (
@@ -928,6 +1697,8 @@ def get_next_missing_normalized_term_between(
             )
             .where(~exists(select(1).where(TaskQueue.term == NormalizedTerm.term)))
         )
+        if cat:
+            query = query.where(NormalizedTerm.seed_category == cat)
         if upper:
             query = query.where(NormalizedTerm.term.collate("NOCASE") < upper)
 
@@ -979,20 +1750,23 @@ def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -
         return True
 
 
-def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int, str | None]]:
+def get_next_pending_task(
+    min_priority: int = MIN_PRIORITY,
+    *,
+    seed_category: str | None = None,
+) -> Optional[tuple[str, int, str | None]]:
     """Return the next pending term honoring priority sorting."""
 
     ensure_tables_exist()
+    cat = (seed_category or "").strip() or None
     with get_session() as session:
-        task: Optional[TaskQueue] = (
-            session.query(TaskQueue)
-            .filter(
-                TaskQueue.status == "pending",
-                TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
-            )
-            .order_by(TaskQueue.priority.desc(), TaskQueue.term.asc())
-            .first()
+        q = session.query(TaskQueue).filter(
+            TaskQueue.status == "pending",
+            TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
         )
+        if cat:
+            q = q.filter(TaskQueue.seed_category == cat)
+        task: Optional[TaskQueue] = q.order_by(TaskQueue.priority.desc(), TaskQueue.term.asc()).first()
         if task:
             return task.term, task.priority, (task.seed_category or None)
         return None
@@ -1038,6 +1812,19 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
     origin = _guess_origin(ingredient, cleaned)
     refinement_level = _coerce_refinement(ingredient.get("refinement_level"))
     ingredient_category = _coerce_primary_category(ingredient_category_raw, cleaned, cleaned_category)
+    # Guardrail: don't allow invalid origin/category pairings.
+    if ingredient_category and not _is_category_allowed_for_origin(origin, ingredient_category):
+        if origin == "Synthetic":
+            ingredient_category = "Synthetic - Other"
+        elif origin == "Fermentation":
+            ingredient_category = "Fermentation - Other"
+        elif origin == "Marine-Derived":
+            ingredient_category = "Marine - Other"
+        elif origin in {"Animal-Derived", "Animal-Byproduct"}:
+            ingredient_category = "Animal - Other"
+        else:
+            ingredient_category = ""
+    refinement_level = _coerce_refinement_for_category(refinement_level, ingredient_category)
     derived_from = (ingredient.get("derived_from") or "").strip() or None
     usage_restrictions = ingredient.get("usage_restrictions")
     prohibited_flag = _coerce_bool(ingredient.get("prohibited_flag"), default=False)
@@ -1107,6 +1894,24 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             "Stock Solution",
         }
 
+        # Inventory requirement: always seed at least 1 item under the ingredient definition.
+        # If the upstream compiler/AI provides no items, create a deterministic base item.
+        # This is especially important for variation_bypass chemicals where the item name
+        # may be identical to the ingredient definition.
+        if not items:
+            items = [
+                {
+                    "item_name": cleaned,  # will be re-derived deterministically below
+                    "variation": "",
+                    "physical_form": "",
+                    "variation_bypass": True,
+                    "form_bypass": True,
+                    # keep minimal SOP list fields so the portal doesn't show empty lists
+                    "applications": ["Unknown"],
+                }
+            ]
+            ingredient["items"] = items
+
         for raw_item in items:
             if not isinstance(raw_item, dict):
                 continue
@@ -1146,6 +1951,46 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
+
+            # Provenance marker: allow upstream pipeline (enumeration) to tag new items.
+            source_stage = (cleaned_item.get("item_source") or cleaned_item.get("source_stage") or "").strip().lower()
+            if source_stage not in {"compiler", "enumerator"}:
+                source_stage = "compiler"
+            cleaned_item["source_stage"] = source_stage
+            cleaned_item["item_source"] = source_stage  # backward/forward compatible key
+
+            # Normalize placeholder/missing values early to avoid persisting "unknown"/"n/a" strings.
+            for k in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
+                normalized = _normalize_placeholder(cleaned_item.get(k))
+                if normalized is None:
+                    cleaned_item.pop(k, None)
+                else:
+                    cleaned_item[k] = normalized
+
+            storage_norm = _normalize_placeholder(cleaned_item.get("storage"))
+            if isinstance(storage_norm, dict):
+                cleaned_item["storage"] = storage_norm
+            else:
+                cleaned_item.pop("storage", None)
+
+            sourcing_norm = _normalize_placeholder(cleaned_item.get("sourcing"))
+            if isinstance(sourcing_norm, dict):
+                cleaned_item["sourcing"] = sourcing_norm
+            else:
+                cleaned_item.pop("sourcing", None)
+
+            specs_raw = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
+            specs_norm = _normalize_placeholder(specs_raw)
+            specs_norm = specs_norm if isinstance(specs_norm, dict) else {}
+            cleaned_item["specifications"] = _prune_specifications_for_form(specs_norm, physical_form)
+            if not cleaned_item["specifications"]:
+                cleaned_item.pop("specifications", None)
+
+            # Normalize scalar placeholders.
+            for k in ("shelf_life_days",):
+                v = cleaned_item.get(k)
+                if isinstance(v, str) and v.strip().lower() in _PLACEHOLDER_STRINGS:
+                    cleaned_item.pop(k, None)
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
             # Promote common scalar/range fields.
@@ -1177,7 +2022,9 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     approved = False
                     status = "quarantine"
                     reasons.append(f"Unapproved variation: {variation}")
-            if not physical_form:
+            # Allow form-less items when form_bypass is explicitly set.
+            # This supports inventory items for \"identity-only\" chemicals.
+            if not physical_form and not form_bypass:
                 approved = False
                 status = "quarantine"
                 reasons.append("Missing/invalid physical_form")
@@ -1193,6 +2040,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 status=status,
                 needs_review_reason="; ".join(reasons) if reasons else None,
                 item_json=item_json,
+                source_stage=source_stage,
                 shelf_life_days=shelf_life_days,
                 storage_temp_c_min=st_min,
                 storage_temp_c_max=st_max,
@@ -1394,3 +2242,108 @@ def get_queue_summary() -> dict:
             summary[status] = summary.get(status, 0) + 1
     summary["total"] = sum(summary.values())
     return summary
+
+
+def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
+    """Upsert source item rows (INCI/TGSC) into source_items.
+
+    Returns:
+        Newly inserted count (updates are performed in-place but not counted).
+    """
+    ensure_tables_exist()
+    inserted = 0
+    with get_session() as session:
+        existing_rows = {r.key: r for r in session.query(SourceItem).all()}
+        for row in rows:
+            key = (row.get("key") or "").strip()
+            if not key:
+                continue
+            raw_name = (row.get("raw_name") or "").strip()
+            if not raw_name:
+                continue
+            status = (row.get("status") or "linked").strip().lower()
+            if status not in {"linked", "orphan", "review"}:
+                status = "review"
+            existing = existing_rows.get(key)
+            if existing is None:
+                item = SourceItem(
+                    key=key,
+                    source=(row.get("source") or "").strip() or "unknown",
+                    source_row_id=(row.get("source_row_id") or "").strip() or None,
+                    source_row_number=row.get("source_row_number"),
+                    source_ref=(row.get("source_ref") or "").strip() or None,
+                    content_hash=(row.get("content_hash") or "").strip() or None,
+                    is_composite=bool(row.get("is_composite")) if row.get("is_composite") is not None else False,
+                    raw_name=raw_name,
+                    inci_name=(row.get("inci_name") or "").strip() or None,
+                    cas_number=(row.get("cas_number") or "").strip() or None,
+                    cas_numbers_json=(row.get("cas_numbers_json") or "[]"),
+                    derived_term=(row.get("derived_term") or "").strip() or None,
+                    derived_variation=(row.get("derived_variation") or "").strip() or None,
+                    derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,
+                    derived_part=(row.get("derived_part") or "").strip() or None,
+                    derived_part_reason=(row.get("derived_part_reason") or "").strip() or None,
+                    origin=(row.get("origin") or "").strip() or None,
+                    ingredient_category=(row.get("ingredient_category") or "").strip() or None,
+                    refinement_level=(row.get("refinement_level") or "").strip() or None,
+                    status=status,
+                    needs_review_reason=(row.get("needs_review_reason") or "").strip() or None,
+                    payload_json=(row.get("payload_json") or "{}"),
+                    ingested_at=datetime.utcnow(),
+                )
+                session.add(item)
+                existing_rows[key] = item
+                inserted += 1
+            else:
+                # Update deterministic fields from the latest parsing pass.
+                existing.source = (row.get("source") or "").strip() or existing.source
+                existing.source_row_id = (row.get("source_row_id") or "").strip() or existing.source_row_id
+                existing.source_row_number = row.get("source_row_number") if row.get("source_row_number") is not None else existing.source_row_number
+                existing.source_ref = (row.get("source_ref") or "").strip() or existing.source_ref
+                existing.content_hash = (row.get("content_hash") or "").strip() or existing.content_hash
+                existing.is_composite = bool(row.get("is_composite")) if row.get("is_composite") is not None else bool(existing.is_composite)
+                existing.raw_name = raw_name
+                existing.inci_name = (row.get("inci_name") or "").strip() or None
+                existing.cas_number = (row.get("cas_number") or "").strip() or None
+                existing.cas_numbers_json = (row.get("cas_numbers_json") or "[]")
+                existing.derived_term = (row.get("derived_term") or "").strip() or None
+                existing.derived_variation = (row.get("derived_variation") or "").strip() or None
+                existing.derived_physical_form = (row.get("derived_physical_form") or "").strip() or None
+                existing.derived_part = (row.get("derived_part") or "").strip() or None
+                existing.derived_part_reason = (row.get("derived_part_reason") or "").strip() or None
+                existing.origin = (row.get("origin") or "").strip() or None
+                existing.ingredient_category = (row.get("ingredient_category") or "").strip() or None
+                existing.refinement_level = (row.get("refinement_level") or "").strip() or None
+                existing.status = status
+                existing.needs_review_reason = (row.get("needs_review_reason") or "").strip() or None
+                existing.payload_json = (row.get("payload_json") or "{}")
+                existing.ingested_at = datetime.utcnow()
+    return inserted
+
+
+def get_source_item_summary() -> dict[str, int]:
+    """Return counts for source item ingestion statuses."""
+    ensure_tables_exist()
+    out: dict[str, int] = {"linked": 0, "orphan": 0, "review": 0, "total": 0}
+    with get_session() as session:
+        rows = session.query(SourceItem.status, func.count(SourceItem.key)).group_by(SourceItem.status).all()
+        for status, count in rows:
+            s = (status or "").strip().lower()
+            if s not in out:
+                out[s] = 0
+            out[s] = int(count or 0)
+    out["total"] = sum(v for k, v in out.items() if k != "total")
+    return out
+
+
+def delete_source_items_by_source(source: str) -> int:
+    """Delete all source items with a given source value.
+    
+    Returns:
+        Number of deleted rows.
+    """
+    ensure_tables_exist()
+    with get_session() as session:
+        deleted = session.query(SourceItem).filter(SourceItem.source == source).delete()
+        session.commit()
+        return deleted

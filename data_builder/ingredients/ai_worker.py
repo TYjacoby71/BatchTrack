@@ -64,7 +64,9 @@ INGREDIENT_CATEGORIES = [
 
 SYSTEM_PROMPT = (
     "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
-    "manufacturing. You only output JSON that conforms to the provided schema."
+    "manufacturing. You only output JSON that conforms to the provided schema. "
+    "CRITICAL: Do not fabricate facts or numeric properties; omit unknown optional fields "
+    "(or use null) instead of placeholder strings like 'unknown'/'n/a'."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -183,7 +185,7 @@ FORM & SOLUTION GUIDANCE:
 VARIATION vs PHYSICAL_FORM (IMPORTANT):
 - Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
 - Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
-- `item_name` should generally be: "{common_name} ({variation})" when variation is non-empty.
+- `item_name` should generally be: "{common_name} (variation)" when variation is non-empty.
 - Do NOT emit `item_name` as a source-of-truth; code will derive it. If `variation` is empty, set `variation_bypass`=true.
 
 SCHEMA (required):
@@ -198,14 +200,14 @@ CORE_SCHEMA_SPEC = r"""
 Return JSON using this schema (all strings trimmed):
 {
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Extracted Fat, Other",
-    "derived_from": "string (optional; natural source if base is derived)",
+    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
+    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
+    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
+    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
     "category": "one of the approved ingredient categories",
-    "botanical_name": "string",
-    "inci_name": "string",
-    "cas_number": "string",
+    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca', 'Helianthus annuus')",
+    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
+    "cas_number": "string (REQUIRED if known - CAS registry number)",
     "short_description": "string",
     "detailed_description": "string",
     "usage_restrictions": "string",
@@ -230,13 +232,47 @@ Return JSON using this schema (all strings trimmed):
 }
 """
 
+CLUSTER_TERM_SCHEMA_SPEC = r"""
+Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
+For each field, you MUST provide a value OR explicitly state "not_found" or "not_applicable".
+{
+  "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
+  "ingredient_core": {
+    "origin": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
+    "ingredient_category": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
+    "base_refinement": {"value": "one of: Raw/Whole, Minimally Processed, Fermented, Synthesized", "status": "found", "reason": null},
+    "derived_from": {"value": "string (natural source if derived)", "status": "found|not_applicable", "reason": "string"},
+    "botanical_name": {"value": "Latin binomial e.g. 'Prunus armeniaca'", "status": "found|not_found|not_applicable", "reason": "string"},
+    "inci_name": {"value": "INCI nomenclature", "status": "found|not_found", "reason": "string if not found"},
+    "cas_number": {"value": "CAS registry number", "status": "found|not_found", "reason": "string if not found"},
+    "short_description": {"value": "one sentence summary", "status": "found"},
+    "detailed_description": {"value": "2-3 sentences", "status": "found"}
+  },
+  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+}
+
+FIELD RULES:
+- origin: REQUIRED. One of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived
+- ingredient_category: REQUIRED. One of: Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids, or Synthetic-* categories
+- base_refinement: REQUIRED. Describes what the BASE TERM is in its natural/common state:
+  * "Raw/Whole" = unprocessed base (Apricot fruit, Sunflower seeds, Lavender flowers)
+  * "Minimally Processed" = dried, cleaned, or simple preparation
+  * "Fermented" = base is a fermentation product (vinegar, kombucha SCOBY)
+  * "Synthesized" = fully synthetic compound
+  * NOTE: Processing like extraction, distillation, refining belongs at ITEM level, not term level!
+- botanical_name: REQUIRED for Plant-Derived. Latin binomial. Use "not_applicable" for synthetics/minerals.
+- inci_name: REQUIRED. The base INCI name. Use "not_found" only if genuinely unknown.
+- cas_number: Provide if known. Use "not_found" with reason if unable to determine.
+"""
+
 ITEMS_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed; lists sorted alphabetically):
+Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
 {
   "items": [
     {
-      "variation": "string",
-      "physical_form": "one of the curated Physical Forms enum",
+      "variation": {"value": "string (e.g., Refined, Cold Pressed, Essential Oil, 2%)", "status": "found|not_applicable"},
+      "physical_form": {"value": "one of: Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Flakes, Chunks", "status": "found"},
+      "processing_method": {"value": "one of: Unprocessed, Cold Pressed, Expeller Pressed, Solvent Extracted, Steam Distilled, CO2 Extracted, Refined, Bleached, Deodorized, Hydrogenated, Fractionated, Filtered, Milled, Dried, Freeze-Dried, Fermented, Synthesized", "status": "found"},
       "synonyms": ["aka", ...],
       "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
       "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
@@ -256,6 +292,16 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
         "flash_point_celsius": 200,
         "ph_range": {"min": 5, "max": 7},
         "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
+        // Optional physchem (when known; OK to omit):
+        // "density_g_ml": 0.91,  // numeric only; g/mL; include ONLY when known (do not guess)
+        // "viscosity_cps": 1200,
+        // "refractive_index": 1.44,
+        // "molecular_formula": "C3H8O3",
+        // "molecular_weight": 92.09,
+        // "boiling_point_celsius": 290,
+        // "solubility": {"in_water": "string", "in_oil": "string"},
+        // "miscible_with": ["string"],
+        // "emulsification": {"hlb": 15.0, "oil_in_water": true, "water_in_oil": false}
       },
       "sourcing": {
         "common_origins": ["string"],
@@ -321,11 +367,12 @@ def _render_core_prompt(term: str, base_context: Dict[str, Any]) -> str:
     refinements = ", ".join(REFINEMENT_LEVELS)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     return f"""
-You are Stage 2A (Compiler Core). Build canonical core fields for the base ingredient term: "{term}".
+You are Stage 2A (Compilation — Core). Build canonical core fields for the base ingredient term: "{term}".
 
 Rules:
-- You MUST NOT change the base identity fields if they are provided: term/common_name, inci_name, cas_number, botanical_name.
-- You may SUGGEST overrides for origin / ingredient_category / refinement_level if the provided values look wrong.
+- Prefer the normalized base context when it looks correct.
+- If any provided identity field looks clearly wrong, malformed, or missing (botanical_name / inci_name / cas_number), you MAY correct it in your output.
+- If you correct or override a provided field, mention that in data_quality.caveats (briefly).
 - origin is REQUIRED and must be one of: {origins}
 - ingredient_category is REQUIRED and must be one of: {primaries}
 - refinement_level is REQUIRED and must be one of: {refinements}
@@ -344,6 +391,129 @@ SCHEMA:
 """
 
 
+def _render_cluster_term_prompt(cluster_id: str, cluster_context: Dict[str, Any]) -> str:
+    """Stage 1 prompt: pick canonical base term from a raw cluster."""
+    meta = json.dumps(cluster_context, ensure_ascii=False, indent=2, sort_keys=True)
+    return f"""
+You are Stage 1 (Term Completion / Normalization).
+
+TASK:
+- Given one RAW ingestion cluster, determine the single canonical BASE ingredient term for the entire cluster.
+- Complete the core identity fields for that term using the cluster evidence.
+
+CRITICAL RULES:
+- Every cluster must map to ONE base term.
+- The base term must NOT include variation/form/processing words.
+  Examples:
+  - "Hydrolyzed Shea Butter" -> "Shea" (or "Shea Butter" ONLY if "butter" is truly the ingredient identity, not the form)
+  - "Coconut Butter" -> "Coconut"
+  - "Lavender Essential Oil" -> "Lavender"
+  - "Apricot Kernel Oil" -> "Apricot"
+- Treat words like hydrolyzed, deodorized, refined, unrefined, filtered, hydrogenated, oil, butter, wax, resin, powder, extract, tincture, glycerite, hydrosol, solution, concentrate as NOT part of the base term unless the cluster evidence strongly indicates otherwise.
+- Prefer what the CLUSTER implies: multiple items in the cluster should share the same base term.
+- Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
+
+NO SILENT BYPASS - EVERY FIELD MUST BE EXPLICITLY HANDLED:
+Every field in ingredient_core must return: {"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}
+
+TERM-LEVEL vs ITEM-LEVEL DISTINCTION (CRITICAL):
+- base_refinement at TERM level describes the natural state of the base ingredient:
+  * Apricot (the fruit) = "Raw/Whole"
+  * Butter (dairy product) = "Minimally Processed" (churned from cream)
+  * Vinegar = "Fermented"
+  * Sodium Hydroxide = "Synthesized"
+- Processing like oil extraction, distillation, cold-pressing belongs at ITEM level (Stage 2), NOT here!
+
+REQUIRED FIELD HANDLING:
+- botanical_name: ALWAYS provide Latin binomial for Plant-Derived (e.g., "Prunus armeniaca"). Use status="not_applicable" for synthetics/minerals.
+- inci_name: ALWAYS provide. Use status="not_found" with reason only if genuinely unknown.
+- cas_number: Provide if known. Use status="not_found" with reason if unable to determine.
+
+Cluster ID: "{cluster_id}"
+
+Cluster evidence (JSON; use as source-of-truth hints):
+{meta}
+
+SCHEMA:
+{CLUSTER_TERM_SCHEMA_SPEC}
+"""
+
+
+def normalize_cluster_term(cluster_id: str, cluster_context: Dict[str, Any]) -> Dict[str, Any]:
+    """Stage 1: normalize a raw cluster into canonical term + core fields."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    cid = (cluster_id or "").strip()
+    if not cid:
+        raise ValueError("cluster_id is required")
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_cluster_term_prompt(cid, cluster_context or {}))
+
+
+def compile_core(term: str, base_context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Stage 2A: compile only the core ingredient fields."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    base_context = base_context or {}
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_core_prompt(t, base_context))
+
+
+def compile_items(
+    term: str,
+    *,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Stage 2B: compile items; uses completion mode if base_context.seed_items is present."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    base_context = base_context or {}
+    client = openai.OpenAI(api_key=openai.api_key)
+    seed_items = base_context.get("seed_items") if isinstance(base_context.get("seed_items"), list) else None
+    if seed_items:
+        payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(t, ingredient_core, base_context))
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        payload["items"] = _merge_seed_items(
+            seed_items=[it for it in seed_items if isinstance(it, dict)],
+            ai_items=[it for it in items if isinstance(it, dict)],
+        )
+        return payload
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+
+
+def compile_taxonomy(term: str, *, ingredient_core: Dict[str, Any], items: list[dict]) -> Dict[str, Any]:
+    """Stage 2C: compile taxonomy tags."""
+    if not openai.api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
+    t = (term or "").strip()
+    if not t:
+        raise ValueError("term is required")
+    client = openai.OpenAI(api_key=openai.api_key)
+    return _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(t, ingredient_core, items))
+
+
+def complete_item_stubs(
+    term: str,
+    *,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any] | None,
+    item_stubs: list[dict],
+) -> list[dict]:
+    """Complete schema fields for an authoritative list of item stubs (identity fields are stable)."""
+    ctx = dict(base_context or {})
+    ctx["seed_items"] = [it for it in item_stubs if isinstance(it, dict)]
+    payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    return [it for it in items if isinstance(it, dict)]
+
+
 def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
     meta = _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
@@ -351,7 +521,7 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
     return f"""
-You are Stage 2B (Compiler Items). Create purchasable ITEM variants for base ingredient: "{term}".
+You are Stage 2B (Compilation — Items). Create purchasable ITEM variants for base ingredient: "{term}".
 
 Rules:
 - ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
@@ -360,6 +530,9 @@ Rules:
 - applications must include at least 1 value.
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
+- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
+- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). Only include numeric specs when you are confident they are real; otherwise omit them.
+- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
 
 Ingredient core (context):
 {core_blob}
@@ -375,11 +548,97 @@ SCHEMA:
 """
 
 
+def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
+    """Stage 2B variant: complete existing ingestion-derived items (do not invent new ones)."""
+    meta = _render_metadata_blob(term)
+    core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
+    forms = ", ".join(PHYSICAL_FORMS)
+    variations = ", ".join(VARIATIONS_CURATED)
+    return f"""
+You are Stage 2B (Compilation — Items COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
+
+Rules (CRITICAL):
+- DO NOT add items.
+- DO NOT remove items.
+- DO NOT reorder items.
+- DO NOT change identity fields for any item: variation, physical_form, form_bypass, variation_bypass.
+- Your job is ONLY to fill missing schema fields (applications, function_tags, safety_tags, storage, specifications, sourcing, etc.).
+- physical_form must be one of: {forms}
+- variation should usually be chosen from this curated list when applicable: {variations}
+- applications must include at least 1 value (use ["Unknown"] only if you truly cannot infer anything).
+- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
+- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). Only include numeric specs when you are confident they are real; otherwise omit them.
+- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
+
+Ingredient core (context):
+{core_blob}
+
+Normalized base context (includes seed items to complete; do not contradict):
+{base_blob}
+
+External metadata (may be empty):
+{meta}
+
+SCHEMA:
+{ITEMS_SCHEMA_SPEC}
+"""
+
+
+def _merge_fill_only(base: Any, patch: Any) -> Any:
+    """Fill-only merge used to prevent overwriting ingestion-derived fields."""
+    if isinstance(patch, str) and patch.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+        patch = ""
+    if isinstance(base, dict) and isinstance(patch, dict):
+        out = dict(base)
+        for k, v in patch.items():
+            if k in out and out.get(k) not in (None, "", [], {}, "unknown"):
+                continue
+            if v in (None, "", [], {}, "unknown") or (isinstance(v, str) and v.strip().lower() in {"unknown", "n/a", "na", "none", "null"}):
+                continue
+            out[k] = v
+        return out
+    if isinstance(base, list) and isinstance(patch, list):
+        # If base is empty or a placeholder Unknown, accept patch.
+        if not base or base == ["Unknown"]:
+            return patch
+        return base
+    if isinstance(base, str) and base.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+        base = ""
+    return base if base not in (None, "", "unknown") else patch
+
+
+def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict]:
+    """Merge AI-completed fields onto ingestion seed items while enforcing identity stability."""
+    if not seed_items:
+        return ai_items
+    out: list[dict] = []
+    for idx, seed in enumerate(seed_items):
+        ai = ai_items[idx] if idx < len(ai_items) and isinstance(ai_items[idx], dict) else {}
+        merged = dict(seed)
+
+        # Identity fields are authoritative from seed.
+        for k in ("variation", "physical_form", "form_bypass", "variation_bypass"):
+            merged[k] = seed.get(k)
+
+        # Fill-only merge for the rest.
+        for k, v in ai.items():
+            if k in ("variation", "physical_form", "form_bypass", "variation_bypass"):
+                continue
+            if k == "specifications":
+                merged["specifications"] = _merge_fill_only(seed.get("specifications", {}), v)
+                continue
+            merged[k] = _merge_fill_only(seed.get(k), v)
+
+        out.append(merged)
+    return out
+
+
 def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     items_blob = json.dumps(items[:6], ensure_ascii=False, indent=2, sort_keys=True)
     return f"""
-You are Stage 2C (Compiler Taxonomy). Generate taxonomy tags for base ingredient: "{term}".
+You are Stage 2C (Compilation — Taxonomy). Generate taxonomy tags for base ingredient: "{term}".
 
 Context (core):
 {core_blob}
@@ -394,6 +653,7 @@ SCHEMA:
 
 def _render_prompt(ingredient_name: str) -> str:
     return PROMPT_TEMPLATE.format(
+        common_name=ingredient_name.strip(),
         ingredient=ingredient_name.strip(),
         schema=JSON_SCHEMA_SPEC,
         error_object=json.dumps(ERROR_OBJECT),
@@ -427,8 +687,14 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
             ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
 
             # Stage 2B: items
-            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
+            seed_items = base_context.get("seed_items") if isinstance(base_context.get("seed_items"), list) else None
+            if seed_items:
+                items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(term, ingredient_core, base_context))
+            else:
+                items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
+            if seed_items:
+                items = _merge_seed_items(seed_items=[it for it in seed_items if isinstance(it, dict)], ai_items=[it for it in items if isinstance(it, dict)])
 
             # Stage 2C: taxonomy
             taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))
@@ -447,7 +713,7 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
 
             # Documentation may be missing; keep shape stable.
             if "documentation" not in ingredient:
-                ingredient["documentation"] = {"references": [], "last_verified": "unknown"}
+                ingredient["documentation"] = {"references": [], "last_verified": None}
 
             confidence = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else None
             if not isinstance(confidence, (int, float)):
