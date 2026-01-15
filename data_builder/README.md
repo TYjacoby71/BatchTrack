@@ -13,6 +13,18 @@ This repo is intentionally opinionated: **there is ONE supported way to run the 
 python3 -m data_builder.ingredients.run_pre_ai_pipeline ...
 ```
 
+### Numbered “SI pipeline” wrappers (repo-visible order)
+
+If you want the run order to be obvious when browsing the repo, use the numbered wrappers:
+
+- **SI 1**: `data_builder/ingredients/si_pipeline/si_01_ingest.py`
+- **SI 2a**: `data_builder/ingredients/si_pipeline/si_02a_pubchem_match.py`
+- **SI 2b**: `data_builder/ingredients/si_pipeline/si_02b_pubchem_retry.py`
+- **SI 3**: `data_builder/ingredients/si_pipeline/si_03_pubchem_fetch.py`
+- **SI 4**: `data_builder/ingredients/si_pipeline/si_04_pubchem_apply.py`
+
+They call `run_pre_ai_pipeline` with a fixed `--stage` and accept the same flags (notably `--db-path`).
+
 This is designed to be:
 - deterministic (no AI)
 - resume-safe
@@ -35,7 +47,6 @@ This is designed to be:
 This pipeline deterministically:
 - ingests item rows into `source_items` (variation/form parsing + provenance)
 - merges cross-source identities into `source_catalog_items`
-- derives deterministic tags/specs/display names
 - de-dupes into `merged_item_forms`
 - bundles items into `source_definitions`
 - derives canonical base terms into `normalized_terms`
@@ -215,9 +226,5 @@ In addition to the AI compiler, `data_builder/ingredients/` includes a **determi
 
 - **`ingest_source_items.py`**: reads `data_sources/cosing.csv` + `data_sources/tgsc_ingredients.csv` and writes 1:1 `source_items` rows (plus derived `normalized_terms`) into the SQLite DB.
 - **`merge_source_items.py`**: deterministically merges duplicate item-forms into `merged_item_forms` (one row per `derived_term + derived_variation + derived_physical_form`), while keeping all source row keys for provenance.
-- **`derive_source_item_tags.py`**: derives combined tags + master categories for `source_items`.
-  - Writes `source_items.derived_function_tags_json` (combined: raw COSING functions + normalized tags + small TGSC keyword tags).
-  - Writes `source_items.derived_function_tag_entries_json` (per-tag provenance, e.g. `COSING_raw`, `COSING_normalized`, `TGSC_keyword`, `heuristic`).
-- **`derive_source_item_specs.py`**: pulls safe, deterministic spec fields (e.g. TGSC physchem) into `source_items.*_specs_*` JSON blobs with explicit provenance.
 
 Curated vocab tables (physical forms, variations, refinement levels, master categories, and master-category rules) are shipped as JSON under `data_builder/ingredients/data_sources/vocab/` and are also seeded into the DB tables on first run.

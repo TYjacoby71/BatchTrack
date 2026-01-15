@@ -290,6 +290,74 @@ class IngredientRecord(Base):
     enumeration_notes = Column(Text, nullable=True, default=None)
 
 
+class CompiledClusterRecord(Base):
+    """Compiled mirror of a raw SourceDefinition cluster (keyed by cluster_id).
+
+    This is the compiled-side representation the portal can show as a clone of raw clusters,
+    with separate lifecycle state for:
+    - term completion/normalization (Stage 1)
+    - item compilation/enrichment (Stage 2)
+    """
+
+    __tablename__ = "compiled_clusters"
+
+    cluster_id = Column(String, primary_key=True)
+
+    # Raw-side snapshot helpers
+    raw_canonical_term = Column(Text, nullable=True, default=None)
+    raw_reason = Column(Text, nullable=True, default=None)
+    raw_origin = Column(String, nullable=True, default=None)
+    raw_ingredient_category = Column(String, nullable=True, default=None)
+
+    # Stage 1 outputs
+    compiled_term = Column(Text, nullable=True, default=None)
+    seed_category = Column(String, nullable=True, default=None)
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+    derived_from = Column(String, nullable=True, default=None)
+    botanical_name = Column(String, nullable=True, default=None)
+    inci_name = Column(String, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
+    term_compiled_at = Column(DateTime, nullable=True, default=None)
+    term_error = Column(Text, nullable=True, default=None)
+
+    # JSON payload (auditable) for stage1/stage2 use.
+    payload_json = Column(Text, nullable=False, default="{}")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class CompiledClusterItemRecord(Base):
+    """Compiled mirror of a raw merged_item_form that belongs to a cluster."""
+
+    __tablename__ = "compiled_cluster_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cluster_id = Column(String, ForeignKey("compiled_clusters.cluster_id"), nullable=False, index=True)
+
+    merged_item_form_id = Column(Integer, nullable=False, index=True)
+
+    # Identity fields copied from raw
+    derived_term = Column(Text, nullable=True, default=None)
+    derived_variation = Column(Text, nullable=True, default="")
+    derived_physical_form = Column(Text, nullable=True, default="")
+
+    item_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
+    item_compiled_at = Column(DateTime, nullable=True, default=None)
+    item_error = Column(Text, nullable=True, default=None)
+
+    # Raw snapshot + compiled fields (auditable)
+    raw_item_json = Column(Text, nullable=False, default="{}")
+    item_json = Column(Text, nullable=False, default="{}")
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class IngredientItemRecord(Base):
     """Compiled purchasable item for a base ingredient (base + variation + physical_form)."""
 
@@ -884,6 +952,19 @@ def ensure_tables_exist() -> None:
     _ensure_source_catalog_indexes()
     _ensure_pubchem_indexes()
     _ensure_pubchem_columns()
+    _ensure_compiled_cluster_indexes()
+
+
+def _ensure_compiled_cluster_indexes() -> None:
+    """Best-effort indexing for compiled cluster mirror tables (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term_status ON compiled_clusters(term_status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term ON compiled_clusters(compiled_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_cluster_items_status ON compiled_cluster_items(item_status)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_compiled_cluster_items_cluster_mif ON compiled_cluster_items(cluster_id, merged_item_form_id)"))
+    except Exception:  # pragma: no cover
+        return
 
 
 def configure_db_path(path: str | os.PathLike[str]) -> None:
@@ -1589,6 +1670,7 @@ def get_next_missing_normalized_term_between(
     initial: str,
     start_after: str,
     end_before: str | None,
+    seed_category: str | None = None,
 ) -> Optional[dict[str, str]]:
     """Return the next normalized term (from curated sources) not yet queued, constrained to a gap.
 
@@ -1596,6 +1678,7 @@ def get_next_missing_normalized_term_between(
         initial: Letter bucket (A..Z)
         start_after: Lower bound (exclusive)
         end_before: Upper bound (exclusive). If None, treat as open-ended within the letter.
+        seed_category: Optional seed_category filter (exact match).
     """
     ensure_tables_exist()
     letter = (initial or "").strip()[:1].upper()
@@ -1603,6 +1686,7 @@ def get_next_missing_normalized_term_between(
         return None
     lower = (start_after or "").strip()
     upper = (end_before or "").strip() if end_before else None
+    cat = (seed_category or "").strip() or None
 
     with get_session() as session:
         query = (
@@ -1613,6 +1697,8 @@ def get_next_missing_normalized_term_between(
             )
             .where(~exists(select(1).where(TaskQueue.term == NormalizedTerm.term)))
         )
+        if cat:
+            query = query.where(NormalizedTerm.seed_category == cat)
         if upper:
             query = query.where(NormalizedTerm.term.collate("NOCASE") < upper)
 
@@ -1664,20 +1750,23 @@ def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -
         return True
 
 
-def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int, str | None]]:
+def get_next_pending_task(
+    min_priority: int = MIN_PRIORITY,
+    *,
+    seed_category: str | None = None,
+) -> Optional[tuple[str, int, str | None]]:
     """Return the next pending term honoring priority sorting."""
 
     ensure_tables_exist()
+    cat = (seed_category or "").strip() or None
     with get_session() as session:
-        task: Optional[TaskQueue] = (
-            session.query(TaskQueue)
-            .filter(
-                TaskQueue.status == "pending",
-                TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
-            )
-            .order_by(TaskQueue.priority.desc(), TaskQueue.term.asc())
-            .first()
+        q = session.query(TaskQueue).filter(
+            TaskQueue.status == "pending",
+            TaskQueue.priority >= max(MIN_PRIORITY, min_priority),
         )
+        if cat:
+            q = q.filter(TaskQueue.seed_category == cat)
+        task: Optional[TaskQueue] = q.order_by(TaskQueue.priority.desc(), TaskQueue.term.asc()).first()
         if task:
             return task.term, task.priority, (task.seed_category or None)
         return None

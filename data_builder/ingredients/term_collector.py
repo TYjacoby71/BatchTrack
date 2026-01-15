@@ -675,6 +675,7 @@ class TermCollector:
         *,
         count: int,
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
+        seed_categories: Optional[List[str]] = None,
     ) -> int:
         """Stage 1: Seed NEW base terms into the task queue.
 
@@ -697,6 +698,7 @@ class TermCollector:
             return 0
 
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        allowed_categories = [c.strip() for c in (seed_categories or []) if (c or "").strip()]
 
         # ------------------------------------------------------------------
         # Mode: deterministic gap-fill (preferred).
@@ -706,6 +708,52 @@ class TermCollector:
             # This keeps queue order useful (exhaust 10s before 9s, etc.).
             priority_map = database_manager.build_term_priority_map()
             max_tries = max(1, int(GAPFILL_MAX_TRIES_PER_LETTER or 5))
+
+            # If the user asked for specific categories, run a deterministic cursor per (category, letter)
+            # instead of random gapfill. This makes it straightforward to "go after" one category.
+            if allowed_categories:
+                while inserted < normalized_count:
+                    inserted_this_pass = 0
+                    for initial in letters:
+                        for cat in allowed_categories:
+                            if inserted >= normalized_count:
+                                break
+                            start_after = database_manager.get_last_term_for_initial_and_seed_category(initial, cat) or ""
+                            candidate = database_manager.get_next_missing_normalized_term_between(
+                                initial=initial,
+                                start_after=start_after,
+                                end_before=None,
+                                seed_category=cat,
+                            )
+                            if not candidate:
+                                continue
+                            term = candidate["term"]
+                            if _looks_like_form_not_base(term):
+                                continue
+                            priority = int(priority_map.get(term, SEED_PRIORITY))
+                            was_inserted = database_manager.upsert_term(term, priority, seed_category=cat)
+                            self._register_term(term, priority)
+                            if was_inserted:
+                                inserted += 1
+                                inserted_this_pass += 1
+                                LOGGER.info(
+                                    "Category queued %s/%s: %s [%s] (priority=%s, after='%s')",
+                                    inserted,
+                                    normalized_count,
+                                    term,
+                                    cat,
+                                    priority,
+                                    start_after or "<start>",
+                                )
+                    if inserted_this_pass == 0:
+                        LOGGER.warning(
+                            "Category cursor made no progress in a full A→Z pass; stopping early at %s/%s inserted.",
+                            inserted,
+                            normalized_count,
+                        )
+                        break
+                return inserted
+
             # Keep going until we insert `count` new terms, or until a full A→Z pass yields nothing.
             while inserted < normalized_count:
                 inserted_this_pass = 0
@@ -770,7 +818,7 @@ class TermCollector:
             LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation (TERM_GENERATOR_MODE=ai)")
             return 0
 
-        categories = SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"]
+        categories = allowed_categories or (SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"])
         for idx in range(normalized_count):
             if USE_CATEGORY_CURSOR:
                 # Iterate by (letter, category) so every letter advances across all categories.
@@ -923,6 +971,12 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
+    parser.add_argument(
+        "--seed-category",
+        action="append",
+        default=[],
+        help="Restrict Stage-1 term generation to this primary ingredient category (repeatable).",
+    )
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
     parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
@@ -953,6 +1007,7 @@ def main(argv: List[str] | None = None) -> None:
     collector.seed_next_terms_to_db(
         count=max(0, int(args.count or 0)),
         candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)),
+        seed_categories=list(args.seed_category or []),
     )
 
     if args.write_forms_file:
