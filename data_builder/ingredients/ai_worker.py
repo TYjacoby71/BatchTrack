@@ -65,8 +65,8 @@ INGREDIENT_CATEGORIES = [
 SYSTEM_PROMPT = (
     "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
     "manufacturing. You only output JSON that conforms to the provided schema. "
-    "CRITICAL: Do not fabricate facts or numeric properties; omit unknown optional fields "
-    "(or use null) instead of placeholder strings like 'unknown'/'n/a'."
+    "CRITICAL: Do not fabricate facts or numeric properties. If a required field is unknown, "
+    "use the string \"Not Found\". If a field is not applicable, use \"N/A\"."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -162,7 +162,7 @@ CONTEXT:
   - Do NOT generate a final display name; the system will derive item_name in code from (base + variation + physical_form + bypass flags).
   - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and specify variation/form fields appropriately.
 - Create a dedicated `items` entry for each common purchasable variation and/or physical form used in craft production.
-- Populate every applicable attribute in the schema. Use "unknown" only when absolutely no data exists.
+- Populate every attribute in the schema. Use "Not Found" when data is missing, and "N/A" when not applicable.
 - Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
 - Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
 - All string values must be clear, sentence case, and free of marketing fluff.
@@ -291,9 +291,9 @@ Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allo
         "melting_point_celsius": {"min": 30, "max": 35},
         "flash_point_celsius": 200,
         "ph_range": {"min": 5, "max": 7},
-        "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
-        // Optional physchem (when known; OK to omit):
-        // "density_g_ml": 0.91,  // numeric only; g/mL; include ONLY when known (do not guess)
+      "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15},
+      "density_g_ml": 0.91
+      // If unknown, use "Not Found". If not applicable, use "N/A".
         // "viscosity_cps": 1200,
         // "refractive_index": 1.44,
         // "molecular_formula": "C3H8O3",
@@ -527,11 +527,11 @@ Rules:
 - ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value.
+- applications must include at least 1 value (use ["Not Found"] if needed).
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
-- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
-- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). Only include numeric specs when you are confident they are real; otherwise omit them.
+- Missing data policy: Always include all fields. Use "Not Found" when data is missing, and "N/A" when not applicable.
+- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). If unknown, use "Not Found"; if not applicable, use "N/A".
 - Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
 
 Ingredient core (context):
@@ -566,9 +566,9 @@ Rules (CRITICAL):
 - Your job is ONLY to fill missing schema fields (applications, function_tags, safety_tags, storage, specifications, sourcing, etc.).
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value (use ["Unknown"] only if you truly cannot infer anything).
-- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
-- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). Only include numeric specs when you are confident they are real; otherwise omit them.
+- applications must include at least 1 value (use ["Not Found"] only if you truly cannot infer anything).
+- Missing data policy: Always include all fields. Use "Not Found" when data is missing, and "N/A" when not applicable.
+- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). If unknown, use "Not Found"; if not applicable, use "N/A".
 - Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
 
 Ingredient core (context):
@@ -587,25 +587,55 @@ SCHEMA:
 
 def _merge_fill_only(base: Any, patch: Any) -> Any:
     """Fill-only merge used to prevent overwriting ingestion-derived fields."""
-    if isinstance(patch, str) and patch.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
-        patch = ""
+
+    def _normalize_missing(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        lowered = cleaned.lower()
+        if lowered in {"n/a", "na", "not applicable", "not_applicable"}:
+            return "N/A"
+        if lowered in {"unknown", "not found", "not_found", "none", "null", "nil", "tbd"}:
+            return "Not Found"
+        return cleaned
+
+    def _is_placeholder(value: Any) -> bool:
+        if not isinstance(value, str):
+            return False
+        lowered = value.strip().lower()
+        return lowered in {
+            "unknown",
+            "not found",
+            "not_found",
+            "n/a",
+            "na",
+            "not applicable",
+            "not_applicable",
+            "none",
+            "null",
+            "nil",
+            "tbd",
+        }
+
+    if isinstance(patch, str):
+        patch = _normalize_missing(patch)
     if isinstance(base, dict) and isinstance(patch, dict):
         out = dict(base)
         for k, v in patch.items():
-            if k in out and out.get(k) not in (None, "", [], {}, "unknown"):
+            existing = out.get(k)
+            if existing not in (None, "", [], {}) and not _is_placeholder(existing):
                 continue
-            if v in (None, "", [], {}, "unknown") or (isinstance(v, str) and v.strip().lower() in {"unknown", "n/a", "na", "none", "null"}):
+            if v in (None, "", [], {}):
                 continue
-            out[k] = v
+            out[k] = _normalize_missing(v)
         return out
     if isinstance(base, list) and isinstance(patch, list):
-        # If base is empty or a placeholder Unknown, accept patch.
-        if not base or base == ["Unknown"]:
+        if not base or all(_is_placeholder(v) for v in base if isinstance(v, str)):
             return patch
         return base
-    if isinstance(base, str) and base.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+    if isinstance(base, str) and _is_placeholder(base):
         base = ""
-    return base if base not in (None, "", "unknown") else patch
+    return base if base not in (None, "") else patch
 
 
 def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict]:

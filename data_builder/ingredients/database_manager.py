@@ -791,43 +791,145 @@ VALID_STATUSES = {"pending", "processing", "completed", "error"}
 # ---------------------------------------------------------------------------
 # Storage normalization: missing/null + spec pruning
 # ---------------------------------------------------------------------------
-_PLACEHOLDER_STRINGS = {"unknown", "n/a", "na", "none", "null", "nil", "tbd"}
+NOT_FOUND = "Not Found"
+NOT_APPLICABLE = "N/A"
+_PLACEHOLDER_NOT_FOUND = {"unknown", "not found", "not_found", "tbd", "none", "null", "nil"}
+_PLACEHOLDER_NOT_APPLICABLE = {"n/a", "na", "not applicable", "not_applicable"}
 _RE_FLOAT = re.compile(r"(-?\d+(?:\.\d+)?)")
 
 
-def _normalize_placeholder(value: Any) -> Any:
-    """Normalize placeholder/missing values to None.
-
-    Contract:
-    - Do not persist placeholder strings like "unknown"/"n/a" into JSON blobs.
-    - Prefer omitting keys or storing null (None) for unknown optional fields.
-    """
+def _normalize_text_value(value: Any, *, default: str = NOT_FOUND) -> str:
+    """Normalize text fields to a non-empty sentinel when missing."""
     if value is None:
-        return None
+        return default
     if isinstance(value, str):
         cleaned = value.strip()
         if not cleaned:
-            return None
-        if cleaned.lower() in _PLACEHOLDER_STRINGS:
-            return None
+            return default
+        lowered = cleaned.lower()
+        if lowered in _PLACEHOLDER_NOT_APPLICABLE:
+            return NOT_APPLICABLE
+        if lowered in _PLACEHOLDER_NOT_FOUND:
+            return NOT_FOUND
         return cleaned
+    return str(value).strip() or default
+
+
+def _normalize_list_values(value: Any, *, default: str = NOT_FOUND) -> list[str]:
+    """Normalize list fields and ensure at least one value."""
     if isinstance(value, list):
-        out = []
-        for v in value:
-            nv = _normalize_placeholder(v)
-            if nv is None:
-                continue
-            out.append(nv)
-        return out or None
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for k, v in value.items():
-            nv = _normalize_placeholder(v)
-            if nv is None:
-                continue
-            out[str(k)] = nv
-        return out or None
-    return value
+        values = value
+    elif isinstance(value, str):
+        values = [value]
+    else:
+        values = []
+    out: list[str] = []
+    for item in values:
+        if not isinstance(item, str):
+            continue
+        out.append(_normalize_text_value(item, default=default))
+    return out if out else [default]
+
+
+def _normalize_numeric_or_placeholder(value: Any, *, default: str) -> float | str:
+    """Return numeric value when parseable; otherwise a sentinel string."""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return default
+        lowered = cleaned.lower()
+        if lowered in _PLACEHOLDER_NOT_APPLICABLE:
+            return NOT_APPLICABLE
+        if lowered in _PLACEHOLDER_NOT_FOUND:
+            return NOT_FOUND
+        match = _RE_FLOAT.search(cleaned)
+        if match:
+            try:
+                return float(match.group(1))
+            except Exception:
+                return default
+    return default
+
+
+def _normalize_range(value: Any, *, default: str) -> dict[str, float | str]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "min": _normalize_numeric_or_placeholder(base.get("min"), default=default),
+        "max": _normalize_numeric_or_placeholder(base.get("max"), default=default),
+    }
+
+
+def _normalize_usage_range(value: Any, *, default: str) -> dict[str, float | str]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "leave_on_max": _normalize_numeric_or_placeholder(base.get("leave_on_max"), default=default),
+        "rinse_off_max": _normalize_numeric_or_placeholder(base.get("rinse_off_max"), default=default),
+    }
+
+
+def _normalize_storage(value: Any) -> dict[str, Any]:
+    base = value if isinstance(value, dict) else {}
+    temp = base.get("temperature_celsius") if isinstance(base.get("temperature_celsius"), dict) else {}
+    humidity = base.get("humidity_percent") if isinstance(base.get("humidity_percent"), dict) else {}
+    return {
+        "temperature_celsius": {
+            "min": _normalize_numeric_or_placeholder(temp.get("min"), default=NOT_FOUND),
+            "max": _normalize_numeric_or_placeholder(temp.get("max"), default=NOT_FOUND),
+        },
+        "humidity_percent": {
+            "max": _normalize_numeric_or_placeholder(humidity.get("max"), default=NOT_FOUND),
+        },
+        "special_instructions": _normalize_text_value(base.get("special_instructions"), default=NOT_FOUND),
+    }
+
+
+def _normalize_sourcing(value: Any) -> dict[str, Any]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "common_origins": _normalize_list_values(base.get("common_origins"), default=NOT_FOUND),
+        "certifications": _normalize_list_values(base.get("certifications"), default=NOT_FOUND),
+        "supply_risks": _normalize_list_values(base.get("supply_risks"), default=NOT_FOUND),
+        "sustainability_notes": _normalize_text_value(base.get("sustainability_notes"), default=NOT_FOUND),
+    }
+
+
+def _is_placeholder_value(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    lowered = value.strip().lower()
+    return lowered in _PLACEHOLDER_NOT_FOUND or lowered in _PLACEHOLDER_NOT_APPLICABLE or lowered in {"not found", "n/a"}
+
+
+def _coerce_numeric_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if _is_placeholder_value(value):
+            return None
+        match = _RE_FLOAT.search(value)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _apply_required_item_fields(item: dict[str, Any], physical_form: str) -> dict[str, Any]:
+    item["synonyms"] = _normalize_list_values(item.get("synonyms"), default=NOT_FOUND)
+    item["applications"] = _normalize_list_values(item.get("applications"), default=NOT_FOUND)
+    item["function_tags"] = _normalize_list_values(item.get("function_tags"), default=NOT_FOUND)
+    item["safety_tags"] = _normalize_list_values(item.get("safety_tags"), default=NOT_FOUND)
+    item["sds_hazards"] = _normalize_list_values(item.get("sds_hazards"), default=NOT_FOUND)
+    item["shelf_life_days"] = _normalize_numeric_or_placeholder(item.get("shelf_life_days"), default=NOT_FOUND)
+    item["storage"] = _normalize_storage(item.get("storage"))
+    item["sourcing"] = _normalize_sourcing(item.get("sourcing"))
+    specs_raw = item.get("specifications") if isinstance(item.get("specifications"), dict) else {}
+    item["specifications"] = _prune_specifications_for_form(specs_raw, physical_form)
+    return item
 
 
 _DENSITY_FORMS = {
@@ -874,65 +976,54 @@ def _coerce_density_g_ml(value: Any) -> float | None:
 
 
 def _prune_specifications_for_form(specs: dict[str, Any], physical_form: str) -> dict[str, Any]:
-    """Drop irrelevant or invalid spec fields based on physical_form.
-
-    Goal: avoid persisting nonsense (e.g., SAP values on powders) and enforce a tight density contract.
-    """
-    if not specs:
-        return {}
+    """Normalize spec fields with explicit placeholders for missing/not applicable."""
+    base = specs if isinstance(specs, dict) else {}
     form = (physical_form or "").strip()
+
+    def applicability(in_set: set[str]) -> str | None:
+        if not form:
+            return None
+        return "applicable" if form in in_set else "not_applicable"
+
     out: dict[str, Any] = {}
 
-    # Always allow usage rates when present (policy data, not physicochemical).
-    if isinstance(specs.get("usage_rate_percent"), dict):
-        usage = _normalize_placeholder(specs.get("usage_rate_percent"))
-        if isinstance(usage, dict) and usage:
-            out["usage_rate_percent"] = usage
+    # Usage rate (policy data, not physicochemical).
+    out["usage_rate_percent"] = _normalize_usage_range(base.get("usage_rate_percent"), default=NOT_FOUND)
 
     # pH only makes sense for aqueous/liquid systems in this taxonomy.
-    if form in _AQUEOUS_FORMS and isinstance(specs.get("ph_range"), dict):
-        ph = _normalize_placeholder(specs.get("ph_range"))
-        if isinstance(ph, dict) and ph:
-            out["ph_range"] = ph
+    ph_app = applicability(_AQUEOUS_FORMS)
+    out["ph_range"] = _normalize_range(
+        base.get("ph_range"),
+        default=NOT_FOUND if ph_app is None or ph_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Melting point: solids/fats/waxes/resins.
-    if form in _SOLID_FORMS and isinstance(specs.get("melting_point_celsius"), dict):
-        mp = _normalize_placeholder(specs.get("melting_point_celsius"))
-        if isinstance(mp, dict) and mp:
-            out["melting_point_celsius"] = mp
+    mp_app = applicability(_SOLID_FORMS)
+    out["melting_point_celsius"] = _normalize_range(
+        base.get("melting_point_celsius"),
+        default=NOT_FOUND if mp_app is None or mp_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Flash point: typically oils/solvents; keep it limited to oils/fats for now.
-    if form in _OIL_FAT_FORMS:
-        fp = _normalize_placeholder(specs.get("flash_point_celsius"))
-        if isinstance(fp, (int, float)):
-            out["flash_point_celsius"] = float(fp)
-        elif isinstance(fp, str):
-            m = _RE_FLOAT.search(fp)
-            if m:
-                try:
-                    out["flash_point_celsius"] = float(m.group(1))
-                except Exception:
-                    pass
+    fp_app = applicability(_OIL_FAT_FORMS)
+    out["flash_point_celsius"] = _normalize_numeric_or_placeholder(
+        base.get("flash_point_celsius"),
+        default=NOT_FOUND if fp_app is None or fp_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Soapmaking SAP/iodine only for oils/fats/waxes.
-    if form in _OIL_FAT_FORMS:
-        for k in ("sap_naoh", "sap_koh", "iodine_value"):
-            v = _normalize_placeholder(specs.get(k))
-            if isinstance(v, (int, float)):
-                out[k] = float(v)
-            elif isinstance(v, str):
-                m = _RE_FLOAT.search(v)
-                if m:
-                    try:
-                        out[k] = float(m.group(1))
-                    except Exception:
-                        pass
+    sap_app = applicability(_OIL_FAT_FORMS)
+    sap_default = NOT_FOUND if sap_app is None or sap_app == "applicable" else NOT_APPLICABLE
+    out["sap_naoh"] = _normalize_numeric_or_placeholder(base.get("sap_naoh"), default=sap_default)
+    out["sap_koh"] = _normalize_numeric_or_placeholder(base.get("sap_koh"), default=sap_default)
+    out["iodine_value"] = _normalize_numeric_or_placeholder(base.get("iodine_value"), default=sap_default)
 
-    # Density is *tightened*: numeric density_g_ml only, only for liquid-like forms.
-    if form in _DENSITY_FORMS:
-        dens = _coerce_density_g_ml(specs.get("density_g_ml"))
-        if dens is not None:
-            out["density_g_ml"] = dens
+    # Density (liquid-like forms only).
+    dens_app = applicability(_DENSITY_FORMS)
+    out["density_g_ml"] = _normalize_numeric_or_placeholder(
+        base.get("density_g_ml"),
+        default=NOT_FOUND if dens_app is None or dens_app == "applicable" else NOT_APPLICABLE,
+    )
 
     return out
 
@@ -1968,7 +2059,7 @@ def upsert_compiled_ingredient(
                     "variation_bypass": True,
                     "form_bypass": True,
                     # keep minimal SOP list fields so the portal doesn't show empty lists
-                    "applications": ["Unknown"],
+                    "applications": [NOT_FOUND],
                 }
             ]
             ingredient["items"] = items
@@ -2012,6 +2103,8 @@ def upsert_compiled_ingredient(
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
+            cleaned_item["form_bypass"] = form_bypass
+            cleaned_item["variation_bypass"] = variation_bypass
 
             # Provenance marker: allow upstream pipeline (enumeration) to tag new items.
             source_stage = (cleaned_item.get("item_source") or cleaned_item.get("source_stage") or "").strip().lower()
@@ -2020,38 +2113,7 @@ def upsert_compiled_ingredient(
             cleaned_item["source_stage"] = source_stage
             cleaned_item["item_source"] = source_stage  # backward/forward compatible key
 
-            # Normalize placeholder/missing values early to avoid persisting "unknown"/"n/a" strings.
-            for k in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
-                normalized = _normalize_placeholder(cleaned_item.get(k))
-                if normalized is None:
-                    cleaned_item.pop(k, None)
-                else:
-                    cleaned_item[k] = normalized
-
-            storage_norm = _normalize_placeholder(cleaned_item.get("storage"))
-            if isinstance(storage_norm, dict):
-                cleaned_item["storage"] = storage_norm
-            else:
-                cleaned_item.pop("storage", None)
-
-            sourcing_norm = _normalize_placeholder(cleaned_item.get("sourcing"))
-            if isinstance(sourcing_norm, dict):
-                cleaned_item["sourcing"] = sourcing_norm
-            else:
-                cleaned_item.pop("sourcing", None)
-
-            specs_raw = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
-            specs_norm = _normalize_placeholder(specs_raw)
-            specs_norm = specs_norm if isinstance(specs_norm, dict) else {}
-            cleaned_item["specifications"] = _prune_specifications_for_form(specs_norm, physical_form)
-            if not cleaned_item["specifications"]:
-                cleaned_item.pop("specifications", None)
-
-            # Normalize scalar placeholders.
-            for k in ("shelf_life_days",):
-                v = cleaned_item.get(k)
-                if isinstance(v, str) and v.strip().lower() in _PLACEHOLDER_STRINGS:
-                    cleaned_item.pop(k, None)
+            cleaned_item = _apply_required_item_fields(cleaned_item, physical_form)
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
             # Promote common scalar/range fields.
@@ -2106,16 +2168,16 @@ def upsert_compiled_ingredient(
                 storage_temp_c_min=st_min,
                 storage_temp_c_max=st_max,
                 storage_humidity_max=hm,
-                sap_naoh=str(specs.get("sap_naoh")) if specs.get("sap_naoh") not in (None, "") else None,
-                sap_koh=str(specs.get("sap_koh")) if specs.get("sap_koh") not in (None, "") else None,
-                iodine_value=str(specs.get("iodine_value")) if specs.get("iodine_value") not in (None, "") else None,
-                flash_point_c=str(specs.get("flash_point_celsius")) if specs.get("flash_point_celsius") not in (None, "") else None,
-                melting_point_c_min=str(mp.get("min")) if mp.get("min") not in (None, "") else None,
-                melting_point_c_max=str(mp.get("max")) if mp.get("max") not in (None, "") else None,
-                ph_min=str(ph.get("min")) if ph.get("min") not in (None, "") else None,
-                ph_max=str(ph.get("max")) if ph.get("max") not in (None, "") else None,
-                usage_leave_on_max=str(usage.get("leave_on_max")) if usage.get("leave_on_max") not in (None, "") else None,
-                usage_rinse_off_max=str(usage.get("rinse_off_max")) if usage.get("rinse_off_max") not in (None, "") else None,
+                sap_naoh=_coerce_numeric_text(specs.get("sap_naoh")),
+                sap_koh=_coerce_numeric_text(specs.get("sap_koh")),
+                iodine_value=_coerce_numeric_text(specs.get("iodine_value")),
+                flash_point_c=_coerce_numeric_text(specs.get("flash_point_celsius")),
+                melting_point_c_min=_coerce_numeric_text(mp.get("min")),
+                melting_point_c_max=_coerce_numeric_text(mp.get("max")),
+                ph_min=_coerce_numeric_text(ph.get("min")),
+                ph_max=_coerce_numeric_text(ph.get("max")),
+                usage_leave_on_max=_coerce_numeric_text(usage.get("leave_on_max")),
+                usage_rinse_off_max=_coerce_numeric_text(usage.get("rinse_off_max")),
             )
             session.add(item_row)
             session.flush()  # obtain item_row.id for child values
@@ -2131,17 +2193,12 @@ def upsert_compiled_ingredient(
                     return
                 for v in vals:
                     vv = v.strip()
-                    if not vv:
+                    if not vv or _is_placeholder_value(vv):
                         continue
                     session.add(IngredientItemValue(item_id=item_row.id, field=field, value=vv))
 
             _add_values("synonyms", cleaned_item.get("synonyms"))
-            # SOP: applications must have at least 1. If missing, store Unknown.
-            applications = cleaned_item.get("applications")
-            if not applications:
-                applications = ["Unknown"]
-                cleaned_item["applications"] = applications
-            _add_values("applications", applications)
+            _add_values("applications", cleaned_item.get("applications"))
             _add_values("function_tags", cleaned_item.get("function_tags"))
             _add_values("safety_tags", cleaned_item.get("safety_tags"))
             _add_values("sds_hazards", cleaned_item.get("sds_hazards"))

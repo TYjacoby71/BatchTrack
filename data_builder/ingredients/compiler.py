@@ -762,7 +762,7 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                                 "physical_form": physical_form,
                                 "form_bypass": (not bool(physical_form)),
                                 "variation_bypass": (not bool(variation)),
-                                "applications": ["Unknown"],
+                            "applications": ["Not Found"],
                                 "specifications": specs,
                             }
                         )
