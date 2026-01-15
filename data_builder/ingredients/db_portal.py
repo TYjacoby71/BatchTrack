@@ -847,13 +847,34 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Match Confidence</div><div class="detail-value">${pubchem.confidence ? pubchem.confidence + '%' : '-'}</div>`;
                     html += `<div class="detail-label">Matched By</div><div class="detail-value">${fmt(pubchem.matched_by)}</div>`;
                     
+                    // Show TGSC-specific fields prominently
+                    if (otherSpecs.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${fmt(otherSpecs.odor_description)}</div>`;
+                    if (otherSpecs.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${fmt(otherSpecs.flavor_description)}</div>`;
+                    if (otherSpecs.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${fmt(otherSpecs.safety_notes)}</div>`;
+                    if (otherSpecs.cas_number) html += `<div class="detail-label">CAS (TGSC)</div><div class="detail-value" style="font-family:monospace;">${fmt(otherSpecs.cas_number)}</div>`;
+                    if (otherSpecs.fema_number) html += `<div class="detail-label">FEMA Number</div><div class="detail-value">${fmt(otherSpecs.fema_number)}</div>`;
+                    
+                    // Show remaining other specs
+                    const shownKeys = ['odor_description', 'flavor_description', 'safety_notes', 'cas_number', 'fema_number'];
                     for (const [key, val] of Object.entries(otherSpecs)) {
-                        if (!pubchemOverlap.includes(key)) {
+                        if (!pubchemOverlap.includes(key) && !shownKeys.includes(key)) {
                             html += `<div class="detail-label">${key}</div><div class="detail-value">${fmt(val)}</div>`;
                         }
                     }
                     
                     html += '</div></div>';
+                    
+                    // Descriptors section
+                    const descs = data.merged_descriptors || {};
+                    if (Object.keys(descs).length > 0) {
+                        html += '<div class="detail-section"><h3>Descriptors</h3><div class="detail-grid">';
+                        if (descs.category) html += `<div class="detail-label">Category</div><div class="detail-value">${fmt(descs.category)}</div>`;
+                        if (descs.url) html += `<div class="detail-label">TGSC Link</div><div class="detail-value"><a href="${descs.url}" target="_blank" style="color:#3b82f6;">View on TGSC</a></div>`;
+                        if (descs.synonyms && descs.synonyms.length) html += `<div class="detail-label">Synonyms</div><div class="detail-value">${descs.synonyms.join(', ')}</div>`;
+                        if (descs.natural_occurrence && descs.natural_occurrence.length) html += `<div class="detail-label">Natural Occurrence</div><div class="detail-value">${descs.natural_occurrence.join(', ')}</div>`;
+                        if (descs.botanical_name) html += `<div class="detail-label">Botanical Name</div><div class="detail-value" style="font-style:italic;">${descs.botanical_name}</div>`;
+                        html += '</div></div>';
+                    }
                     
                     html += '<div class="detail-section"><h3>Source Records</h3>';
                     html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Click to view pre-merge source data</p>';
@@ -1041,10 +1062,16 @@ HTML_TEMPLATE = """
                         html += `<div class="detail-label">Has Seed</div><div class="detail-value">${data.source_data.has_seed ? 'Yes' : 'No'}</div>`;
                         // Show merged_specs as attributes
                         const specs = data.source_data.merged_specs || {};
+                        if (specs.cas_number) html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${specs.cas_number}</div>`;
+                        if (specs.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${specs.odor_description}</div>`;
+                        if (specs.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${specs.flavor_description}</div>`;
                         if (specs.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${specs.safety_notes}</div>`;
                         if (specs.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${specs.solubility}</div>`;
-                        if (specs.odor_type) html += `<div class="detail-label">Odor Type</div><div class="detail-value">${specs.odor_type}</div>`;
-                        if (specs.usage_rate) html += `<div class="detail-label">Usage Rate</div><div class="detail-value">${specs.usage_rate}</div>`;
+                        if (specs.boiling_point_c) html += `<div class="detail-label">Boiling Point</div><div class="detail-value">${specs.boiling_point_c}°C</div>`;
+                        if (specs.melting_point_c) html += `<div class="detail-label">Melting Point</div><div class="detail-value">${specs.melting_point_c}°C</div>`;
+                        if (specs.density) html += `<div class="detail-label">Density</div><div class="detail-value">${specs.density}</div>`;
+                        if (specs.molecular_weight) html += `<div class="detail-label">Molecular Weight</div><div class="detail-value">${specs.molecular_weight}</div>`;
+                        if (specs.molecular_formula) html += `<div class="detail-label">Molecular Formula</div><div class="detail-value" style="font-family:monospace;">${specs.molecular_formula}</div>`;
                         html += '</div></div>';
                     }
                     
@@ -1134,9 +1161,16 @@ HTML_TEMPLATE = """
                         if (rj.derived_parts && rj.derived_parts.length) html += `<div class="detail-label">Parts</div><div class="detail-value">${rj.derived_parts.join(', ')}</div>`;
                         // Merged specs
                         const ms = rj.merged_specs || {};
-                        if (ms.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${ms.solubility}</div>`;
-                        if (ms.odor_type) html += `<div class="detail-label">Odor Type</div><div class="detail-value">${ms.odor_type}</div>`;
+                        if (ms.cas_number) html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${ms.cas_number}</div>`;
+                        if (ms.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${ms.odor_description}</div>`;
+                        if (ms.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${ms.flavor_description}</div>`;
                         if (ms.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${ms.safety_notes}</div>`;
+                        if (ms.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${ms.solubility}</div>`;
+                        if (ms.boiling_point_c) html += `<div class="detail-label">Boiling Point</div><div class="detail-value">${ms.boiling_point_c}°C</div>`;
+                        if (ms.melting_point_c) html += `<div class="detail-label">Melting Point</div><div class="detail-value">${ms.melting_point_c}°C</div>`;
+                        if (ms.density) html += `<div class="detail-label">Density</div><div class="detail-value">${ms.density}</div>`;
+                        if (ms.molecular_weight) html += `<div class="detail-label">Molecular Weight</div><div class="detail-value">${ms.molecular_weight}</div>`;
+                        if (ms.molecular_formula) html += `<div class="detail-label">Molecular Formula</div><div class="detail-value" style="font-family:monospace;">${ms.molecular_formula}</div>`;
                         html += '</div></div>';
                     }
                     
@@ -2308,7 +2342,7 @@ def api_merged_item_detail(item_id):
                derived_parts_json, cas_numbers_json, member_source_item_keys_json,
                sources_json, merged_specs_json, merged_specs_sources_json,
                merged_specs_notes_json, source_row_count, has_cosing, has_tgsc,
-               created_at, compiled_specs_json, app_seed_specs_json
+               created_at, compiled_specs_json, app_seed_specs_json, merged_descriptors_json
         FROM merged_item_forms WHERE id = ?
     """, (item_id,))
     
@@ -2408,6 +2442,7 @@ def api_merged_item_detail(item_id):
         'created_at': row[14],
         'compiled_specs': parse_json(row[15]),
         'app_seed_specs': parse_json(row[16]),
+        'merged_descriptors': parse_json(row[17]) if len(row) > 17 else {},
         'source_items': source_items,
         'term_data': term_data,
         'term_cluster': {
