@@ -200,14 +200,14 @@ CORE_SCHEMA_SPEC = r"""
 Return JSON using this schema (all strings trimmed):
 {
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Extracted Fat, Other",
-    "derived_from": "string (optional; natural source if base is derived)",
+    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
+    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
+    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
+    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
     "category": "one of the approved ingredient categories",
-    "botanical_name": "string",
-    "inci_name": "string",
-    "cas_number": "string",
+    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca', 'Helianthus annuus')",
+    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
+    "cas_number": "string (REQUIRED if known - CAS registry number)",
     "short_description": "string",
     "detailed_description": "string",
     "usage_restrictions": "string",
@@ -235,18 +235,18 @@ Return JSON using this schema (all strings trimmed):
 CLUSTER_TERM_SCHEMA_SPEC = r"""
 Return JSON using this schema (all strings trimmed):
 {
-  "term": "string (required) - canonical base ingredient term (no form/variation words)",
+  "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Extracted Fat, Other",
-    "derived_from": "string (optional; natural source if base is derived)",
+    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
+    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
+    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
+    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
     "category": "one of the approved ingredient categories",
-    "botanical_name": "string",
-    "inci_name": "string",
-    "cas_number": "string",
-    "short_description": "string",
-    "detailed_description": "string"
+    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca' for Apricot, 'Helianthus annuus' for Sunflower)",
+    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
+    "cas_number": "string (REQUIRED if known - Chemical Abstracts Service registry number)",
+    "short_description": "string (REQUIRED - one sentence summary)",
+    "detailed_description": "string (REQUIRED - 2-3 sentences with uses and properties)"
   },
   "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
 }
@@ -394,9 +394,16 @@ CRITICAL RULES:
   - "Hydrolyzed Shea Butter" -> "Shea" (or "Shea Butter" ONLY if "butter" is truly the ingredient identity, not the form)
   - "Coconut Butter" -> "Coconut"
   - "Lavender Essential Oil" -> "Lavender"
+  - "Apricot Kernel Oil" -> "Apricot"
 - Treat words like hydrolyzed, deodorized, refined, unrefined, filtered, hydrogenated, oil, butter, wax, resin, powder, extract, tincture, glycerite, hydrosol, solution, concentrate as NOT part of the base term unless the cluster evidence strongly indicates otherwise.
 - Prefer what the CLUSTER implies: multiple items in the cluster should share the same base term.
 - Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
+
+REQUIRED FIELDS - DO NOT LEAVE EMPTY:
+- botanical_name: ALWAYS provide the Latin binomial for Plant-Derived ingredients (e.g., "Prunus armeniaca" for Apricot, "Olea europaea" for Olive, "Cocos nucifera" for Coconut). This is a REQUIRED field.
+- inci_name: ALWAYS provide the INCI name. Use cluster evidence or look up from standard nomenclature.
+- cas_number: Provide if known from cluster evidence or standard sources.
+- refinement_level: Use "Extracted/Distilled" for oils, butters, and extracts. Use "Minimally Processed" for dried/whole forms. Use "Milled/Ground" for powders.
 
 Cluster ID: "{cluster_id}"
 
