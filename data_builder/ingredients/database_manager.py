@@ -255,6 +255,7 @@ class IngredientRecord(Base):
 
     term = Column(String, primary_key=True)
     seed_category = Column(String, nullable=True, default=None)
+    priority = Column(Integer, nullable=True, default=None)
 
     # Primary ingredient category (single-select from curated Ingredient Categories).
     ingredient_category = Column(String, nullable=True, default=None)
@@ -319,6 +320,7 @@ class CompiledClusterRecord(Base):
     botanical_name = Column(String, nullable=True, default=None)
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
+    priority = Column(Integer, nullable=True, default=None)
 
     term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
     term_compiled_at = Column(DateTime, nullable=True, default=None)
@@ -952,6 +954,7 @@ def ensure_tables_exist() -> None:
     _ensure_source_catalog_indexes()
     _ensure_pubchem_indexes()
     _ensure_pubchem_columns()
+    _ensure_compiled_cluster_columns()
     _ensure_compiled_cluster_indexes()
 
 
@@ -961,8 +964,22 @@ def _ensure_compiled_cluster_indexes() -> None:
         with engine.connect() as conn:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term_status ON compiled_clusters(term_status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term ON compiled_clusters(compiled_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_priority ON compiled_clusters(priority)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_cluster_items_status ON compiled_cluster_items(item_status)"))
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_compiled_cluster_items_cluster_mif ON compiled_cluster_items(cluster_id, merged_item_form_id)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_compiled_cluster_columns() -> None:
+    """Add priority/metadata columns to compiled_clusters if missing."""
+    try:
+        with engine.connect() as conn:
+            columns = conn.execute(text("PRAGMA table_info(compiled_clusters)")).fetchall()
+            column_names = {row[1] for row in columns}
+            if "priority" not in column_names:
+                conn.execute(text("ALTER TABLE compiled_clusters ADD COLUMN priority INTEGER"))
+                LOGGER.info("Added priority column to compiled_clusters")
     except Exception:  # pragma: no cover
         return
 
@@ -1182,6 +1199,7 @@ def _ensure_ingredient_columns() -> None:
         columns = conn.execute(text("PRAGMA table_info(ingredients)")).fetchall()
         column_names = {row[1] for row in columns}
         additions = [
+            ("priority", "INTEGER"),
             ("ingredient_category", "TEXT"),
             ("origin", "TEXT"),
             ("refinement_level", "TEXT"),
@@ -1528,26 +1546,58 @@ def build_term_priority_map() -> dict[str, int]:
         t = (str(term) if term is not None else "").strip()
         if not t:
             continue
-        try:
-            item_forms_i = int(item_forms or 0)
-        except Exception:
-            item_forms_i = 0
-        try:
-            source_rows_i = int(source_rows or 0)
-        except Exception:
-            source_rows_i = 0
-        seed_boost = 2 if int(has_seed or 0) > 0 else 0
-        # Smooth/log-scale: many terms are long-tailed.
-        # Base score ~1..10.
-        raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
-        # Add log growth.
-        if item_forms_i > 0:
-            raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
-        if source_rows_i > 0:
-            raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
-        raw += seed_boost
-        score = max(1, min(10, int(round(raw))))
-        out[t] = score
+        out[t] = _priority_from_counts(item_forms, source_rows, has_seed)
+    return out
+
+
+def _priority_from_counts(item_forms: Any, source_rows: Any, has_seed: Any) -> int:
+    """Convert counts into a bounded 1..10 priority score."""
+    try:
+        item_forms_i = int(item_forms or 0)
+    except Exception:
+        item_forms_i = 0
+    try:
+        source_rows_i = int(source_rows or 0)
+    except Exception:
+        source_rows_i = 0
+    seed_boost = 2 if int(has_seed or 0) > 0 else 0
+    # Smooth/log-scale: many terms are long-tailed.
+    # Base score ~1..10.
+    raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
+    # Add log growth.
+    if item_forms_i > 0:
+        raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
+    if source_rows_i > 0:
+        raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
+    raw += seed_boost
+    return max(1, min(10, int(round(raw))))
+
+
+def build_cluster_priority_map() -> dict[str, int]:
+    """Compute 1-10 priority per definition cluster (source_items.definition_cluster_id)."""
+    ensure_tables_exist()
+    out: dict[str, int] = {}
+    with get_session() as session:
+        rows = session.execute(
+            text(
+                """
+                SELECT
+                  si.definition_cluster_id AS cluster_id,
+                  COUNT(DISTINCT mif.id) AS item_forms,
+                  COUNT(*) AS source_rows,
+                  COALESCE(MAX(mif.has_seed), 0) AS has_seed
+                FROM source_items si
+                LEFT JOIN merged_item_forms mif ON si.merged_item_id = mif.id
+                WHERE si.definition_cluster_id IS NOT NULL
+                GROUP BY si.definition_cluster_id
+                """
+            )
+        ).fetchall()
+    for cluster_id, item_forms, source_rows, has_seed in rows:
+        cid = (str(cluster_id) if cluster_id is not None else "").strip()
+        if not cid:
+            continue
+        out[cid] = _priority_from_counts(item_forms, source_rows, has_seed)
     return out
 
 
@@ -1787,7 +1837,13 @@ def update_task_status(term: str, status: str) -> None:
         task.last_updated = datetime.utcnow()
 
 
-def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str | None = None) -> None:
+def upsert_compiled_ingredient(
+    term: str,
+    payload: dict,
+    *,
+    seed_category: str | None = None,
+    priority: int | None = None,
+) -> None:
     """Persist the compiled ingredient + items into the DB (replaces JSON files)."""
     ensure_tables_exist()
     cleaned = (term or "").strip()
@@ -1843,6 +1899,11 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             session.add(record)
 
         record.seed_category = cleaned_category
+        if priority is not None:
+            try:
+                record.priority = int(priority)
+            except (TypeError, ValueError):
+                record.priority = record.priority
         record.category = category
         record.botanical_name = botanical_name
         record.inci_name = inci_name

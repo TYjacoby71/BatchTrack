@@ -36,7 +36,7 @@ This is designed to be:
 | Module | Purpose |
 | --- | --- |
 | `ingredients/term_collector.py` | Finds the canonical ingredient terms plus the master list of physical forms (botanical, extract, essential oil, solutions, etc.). It ships with built-in exemplar ingredients, can optionally read any directory of seed JSON you point it to, and leverages the AI API to generate 5k+ bases. Every ingredient receives a 1–10 relevance score so the compiler can process the most impactful items first. |
-| `ingredients/database_manager.py` | Manages the resumable SQLite queue (`compiler_state.db`) and persists per-term priority. |
+| `ingredients/database_manager.py` | Manages the SQLite state DB (`compiler_state.db`) and persists cluster/term metadata. |
 | `ingredients/ai_worker.py` | Sends the “perfect prompt” to the model for one ingredient and validates the JSON payload (including category assignment, shelf-life-in-days, and optional form bypass flags for items like water/ice). |
 | `ingredients/compiler.py` | Orchestrates the iterative build: grabs the next term, locks it, calls the AI worker, validates, writes `ingredients/output/ingredients/<slug>.json`, and updates lookup files. |
 
@@ -50,7 +50,7 @@ This pipeline deterministically:
 - de-dupes into `merged_item_forms`
 - bundles items into `source_definitions`
 - derives canonical base terms into `normalized_terms`
-- seeds `task_queue` from `normalized_terms` (DB → DB)
+- stores `normalized_terms` for reference alongside definition clusters
 - runs **PubChem** matching + caching + fill-only apply (no overwrites)
 
 #### 0) Pick a state DB path (recommended)
@@ -63,7 +63,7 @@ DB="/absolute/path/to/state.db"
 #### 1) Ingestion (deterministic, DB-only)
 
 This resets ingestion-stage tables in the DB (one-shot, non-overlapping) and rebuilds:
-`source_items`, `source_catalog_items`, `merged_item_forms`, `source_definitions`, `normalized_terms`, `task_queue`.
+`source_items`, `source_catalog_items`, `merged_item_forms`, `source_definitions`, `normalized_terms`.
 
 ```bash
 python3 -m data_builder.ingredients.run_pre_ai_pipeline \
@@ -71,8 +71,7 @@ python3 -m data_builder.ingredients.run_pre_ai_pipeline \
   --stage ingest
 ```
 
-**Review checkpoint (ingestion):** look for the final log line:
-- `task_queue seeded from normalized_terms: inserted=...`
+**Review checkpoint (ingestion):** verify `source_definitions` are created and item counts look sane.
 
 #### 2) PubChem Stage 1: match (run everything once, in batches)
 
@@ -155,35 +154,26 @@ python3 -m data_builder.ingredients.run_pre_ai_pipeline \
 At this point the DB is “ready for AI” (compiler stage) because:
 - ingestion is complete
 - PubChem enrichment is applied where available
-- `task_queue` is seeded from `normalized_terms`
+- `normalized_terms` exists for reference alongside cluster records
 
-1. **Generate base ingredient terms (Phase 1).**
+1. **Stage 1: term completion on clusters.**
    ```bash
-   python -m data_builder.ingredients.term_collector \
-     --count 5000             # how many NEW terms to queue now
+   OPENAI_API_KEY=... python -m data_builder.ingredients.compiler --stage 1
    ```
-   - Stage 1 uses `compiler_state.db` as the source of truth for resuming and ratcheting.
-   - Stage 1 round-robins by letter category: generates next A, then next B, then C ... through Z, repeating.
-   - By default, relies solely on the built-in exemplar list plus the AI librarian. If you want to ingest legacy seed files, pass `--ingest-seeds --seed-root <dir>`. The `output/` folder is always ignored.
-   - Uses the AI API (unless `--skip-ai`) to create a strictly alphabetical roster of base ingredients, assign them to canonical categories, and enumerate the physical forms they appear in (including essential oils, extracts, lye solutions, tinctures, powders, dairy variants, etc.).
-   - Queues terms directly into `compiler_state.db` (no `terms.json` required).
-   - Re-run anytime with a higher `--count` to extend the library. Each run resumes per-letter from the DB.
+   - Operates on `source_definitions` clusters (derived from ingestion) and writes normalized term core fields into `compiled_clusters`.
+   - The cluster-based compiler is now the only supported AI path; legacy term queues are no longer used.
 
-2. **Initialize the processing queue.**
+2. **Stage 2: item compilation per cluster.**
    ```bash
-   python -m data_builder.ingredients.compiler --terms-file data_builder/ingredients/terms.json --max-ingredients 0
+   OPENAI_API_KEY=... python -m data_builder.ingredients.compiler --stage 2
    ```
-   - Legacy only: `database_manager.initialize_queue()` can ingest an external `terms.json` list into `compiler_state.db`.
+   - Completes ingestion-derived item stubs per cluster and persists compiled ingredient payloads.
 
-3. **Compile the library (Phase 2).**
+3. **Stage 3: optional enumeration.**
    ```bash
-   OPENAI_API_KEY=... python -m data_builder.ingredients.compiler \
-     --sleep-seconds 3 \
-     --max-ingredients 0 \        # optional cap per run
-     --min-priority 8             # focus on the most relevant ingredients first
+   OPENAI_API_KEY=... python -m data_builder.ingredients.run_enumeration --limit 50
    ```
-   - The compiler loops until the queue is empty (or until `--max-ingredients` is reached): fetches the highest-priority pending term, calls `ai_worker`, writes the manicured JSON file, updates `physical_forms.json`/`taxonomies.json`, and marks the task `completed` (or `error`).
-   - Each ingredient lives in its own file, e.g., `output/ingredients/lavender.json` containing the parent ingredient and all of its items/forms.
+   - Adds new item identities after Stage 2 and updates compiled ingredient payloads.
 
 ## Output Layout
 
@@ -199,7 +189,7 @@ data_builder/
 ## Notes
 
 - All scripts share the same OpenAI credentials via `OPENAI_API_KEY`.
-- `term_collector.py` handles the “find 5–10k base ingredients” requirement and treats the target count as a minimum, not a cap. Configure `--batch-size` as low as 5–10 for exploratory passes. Every record is scored 1–10 for relevance so you can run the compiler against only the highest-impact items (e.g., `--min-priority 9`).
+- `term_collector.py` remains available for supplemental term discovery, but cluster compilation is the only supported AI build path.
 - Ingredient categories are standardized (`Botanical`, `Mineral`, `Animal-Derived`, `Fermentation`, `Chemical`, `Resin`, `Wax`, `Fat or Oil`, `Sugar or Sweetener`, `Acid`, `Salt`, `Solution or Stock`, `Aroma or Flavor`, `Colorant`, `Functional Additive`) and every ingredient JSON includes one of these.
 - The `compiler.py` loop is resume-safe. If it stops mid-run, rerun the same command and it continues with the next `pending` term, honoring whatever `--min-priority` threshold you set.
 - Physical forms are maintained in `output/physical_forms.json`, which the seeder can process before touching ingredient files. They include essential oil, absolute, CO₂ extract, hydrosol, infusion, powder, chopped, buds, dairy variants, lye solution, tincture, glycerite, etc., ensuring every ingredient+form combination can be represented as an inventory item later. Ingredients like water/ice can set a `form_bypass` flag so display names stay clean.
