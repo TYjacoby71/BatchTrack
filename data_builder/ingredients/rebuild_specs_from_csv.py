@@ -34,6 +34,22 @@ SPEC_FIELDS = [
     "molecular_formula",
 ]
 
+DESCRIPTOR_FIELDS = [
+    "category",
+    "description",
+    "uses",
+    "synonyms",
+    "natural_occurrence",
+    "botanical_name",
+    "url",
+]
+
+IDENTIFIER_FIELDS = [
+    "cas_number",
+    "fema_number",
+    "einecs_number",
+]
+
 
 def _clean(s: Any) -> str:
     return ("" if s is None else str(s)).strip()
@@ -105,8 +121,77 @@ def extract_specs_from_row(row: dict) -> dict[str, Any]:
     return specs
 
 
+def _is_descriptor_garbage(value: str, field: str) -> bool:
+    """Check if a descriptor value is garbage from bad scraping."""
+    garbage_indicators = [
+        r"GoogleAnalyticsObject",
+        r"i\[r\]=i\[r\]",
+        r"function\s*\(",
+        r"Supplier Sponsors",
+        r"Articles Notes",
+        r"Information:\s*$",
+        r"self-gelation",
+        r"^\s*\(i,s,o,g,r,a,m\)",
+        r"TERPENA S$",
+        r"Nikkaji Web:",
+        r"FDA UNII:",
+        r"CAS Number:",
+        r"3D/inchi",
+        r"Organoleptic Properties",
+        r"^\s*ring\s",
+        r"^\s*d in conjunction",
+    ]
+    for pattern in garbage_indicators:
+        if re.search(pattern, value, re.IGNORECASE):
+            return True
+    if len(value) < 3:
+        return True
+    return False
+
+
+def extract_descriptors_from_row(row: dict) -> dict[str, Any]:
+    """Extract descriptors (category, description, uses, synonyms, etc.) from a TGSC CSV row."""
+    descriptors = {}
+    
+    for field in DESCRIPTOR_FIELDS:
+        value = _clean(row.get(field, ""))
+        if not value or _is_garbage(value) or _is_descriptor_garbage(value, field):
+            continue
+        
+        if field == "synonyms":
+            syns = [s.strip() for s in value.split(";") if s.strip() and len(s.strip()) > 2 and not _is_descriptor_garbage(s.strip(), "synonyms")]
+            syns = [s for s in syns if not any(g in s.lower() for g in ["articles", "supplier", "sponsors", "notes"])]
+            if syns:
+                descriptors["synonyms"] = syns
+        elif field == "natural_occurrence":
+            occurrences = [o.strip() for o in value.split(",") if o.strip() and len(o.strip()) > 2 and not _is_descriptor_garbage(o.strip(), "natural_occurrence")]
+            occurrences = [o for o in occurrences if not any(g in o.lower() for g in ["synonyms", "articles", "self-gelation", "ring "])]
+            if occurrences:
+                descriptors["natural_occurrence"] = occurrences
+        elif field in ("description", "uses"):
+            if not _is_descriptor_garbage(value, field) and len(value) > 10:
+                descriptors[field] = value
+        else:
+            descriptors[field] = value
+    
+    return descriptors
+
+
+def extract_identifiers_from_row(row: dict) -> dict[str, Any]:
+    """Extract identifiers (CAS, FEMA, EINECS) from a TGSC CSV row."""
+    identifiers = {}
+    
+    for field in IDENTIFIER_FIELDS:
+        value = _clean(row.get(field, ""))
+        if not value or value.lower() in ("none", "n/a", ""):
+            continue
+        identifiers[field] = value
+    
+    return identifiers
+
+
 def build_tgsc_lookup() -> dict[str, dict[str, Any]]:
-    """Build a lookup from common_name to specs from TGSC CSV."""
+    """Build a lookup from common_name to all extractable data from TGSC CSV."""
     if not TGSC_CSV_PATH.exists():
         LOGGER.warning("TGSC CSV not found: %s", TGSC_CSV_PATH)
         return {}
@@ -119,16 +204,24 @@ def build_tgsc_lookup() -> dict[str, dict[str, Any]]:
             if not name:
                 continue
             name_key = name.lower().strip()
+            
             specs = extract_specs_from_row(row)
-            if specs:
-                lookup[name_key] = specs
+            descriptors = extract_descriptors_from_row(row)
+            identifiers = extract_identifiers_from_row(row)
+            
+            if specs or descriptors or identifiers:
+                lookup[name_key] = {
+                    "specs": specs,
+                    "descriptors": descriptors,
+                    "identifiers": identifiers,
+                }
     
     LOGGER.info("Built TGSC lookup with %d entries", len(lookup))
     return lookup
 
 
-def rebuild_merged_specs(dry_run: bool = True) -> dict:
-    """Rebuild merged_specs_json from TGSC CSV data."""
+def rebuild_merged_data(dry_run: bool = True) -> dict:
+    """Rebuild merged_specs_json and merged_descriptors_json from TGSC CSV data."""
     tgsc_lookup = build_tgsc_lookup()
     if not tgsc_lookup:
         return {"error": "No TGSC data available"}
@@ -137,7 +230,7 @@ def rebuild_merged_specs(dry_run: bool = True) -> dict:
     cur = conn.cursor()
     
     cur.execute("""
-        SELECT mif.id, mif.derived_term, mif.merged_specs_json, mif.has_tgsc,
+        SELECT mif.id, mif.derived_term, mif.merged_specs_json, mif.merged_descriptors_json, mif.has_tgsc,
                GROUP_CONCAT(si.raw_name, '|||') as raw_names
         FROM merged_item_forms mif
         LEFT JOIN source_items si ON si.merged_item_id = mif.id AND si.source = 'tgsc'
@@ -145,28 +238,30 @@ def rebuild_merged_specs(dry_run: bool = True) -> dict:
         GROUP BY mif.id
     """)
     
-    updates = []
+    spec_updates = []
+    desc_updates = []
     matched = 0
-    enriched = 0
+    specs_enriched = 0
+    descs_enriched = 0
     
     for row in cur.fetchall():
-        mif_id, derived_term, current_specs_json, has_tgsc, raw_names_str = row
+        mif_id, derived_term, current_specs_json, current_desc_json, has_tgsc, raw_names_str = row
         
-        tgsc_specs = None
+        tgsc_data = None
         
         if raw_names_str:
             for raw_name in raw_names_str.split("|||"):
                 name_key = _clean(raw_name).lower()
                 if name_key in tgsc_lookup:
-                    tgsc_specs = tgsc_lookup[name_key]
+                    tgsc_data = tgsc_lookup[name_key]
                     break
         
-        if not tgsc_specs:
+        if not tgsc_data:
             term_key = _clean(derived_term).lower()
             if term_key in tgsc_lookup:
-                tgsc_specs = tgsc_lookup[term_key]
+                tgsc_data = tgsc_lookup[term_key]
         
-        if not tgsc_specs:
+        if not tgsc_data:
             continue
         
         matched += 1
@@ -176,34 +271,70 @@ def rebuild_merged_specs(dry_run: bool = True) -> dict:
         except json.JSONDecodeError:
             current_specs = {}
         
-        merged = dict(current_specs)
-        changes = 0
+        try:
+            current_desc = json.loads(current_desc_json) if current_desc_json else {}
+        except json.JSONDecodeError:
+            current_desc = {}
+        
+        merged_specs = dict(current_specs)
+        merged_desc = dict(current_desc)
+        spec_changes = 0
+        desc_changes = 0
+        
+        tgsc_specs = tgsc_data.get("specs", {})
+        tgsc_descs = tgsc_data.get("descriptors", {})
+        tgsc_ids = tgsc_data.get("identifiers", {})
         
         for key, value in tgsc_specs.items():
-            if key not in merged or merged[key] in (None, "", [], {}):
-                merged[key] = value
-                changes += 1
-            elif _is_garbage(str(merged.get(key, ""))):
-                merged[key] = value
-                changes += 1
+            if key not in merged_specs or merged_specs[key] in (None, "", [], {}):
+                merged_specs[key] = value
+                spec_changes += 1
+            elif _is_garbage(str(merged_specs.get(key, ""))):
+                merged_specs[key] = value
+                spec_changes += 1
         
-        if changes > 0:
-            enriched += 1
-            updates.append((json.dumps(merged, ensure_ascii=False, sort_keys=True), mif_id))
+        for key, value in tgsc_ids.items():
+            if key not in merged_specs or merged_specs[key] in (None, "", [], {}):
+                merged_specs[key] = value
+                spec_changes += 1
+        
+        for key, value in tgsc_descs.items():
+            if key not in merged_desc or merged_desc[key] in (None, "", [], {}):
+                merged_desc[key] = value
+                desc_changes += 1
+            elif _is_garbage(str(merged_desc.get(key, ""))):
+                merged_desc[key] = value
+                desc_changes += 1
+        
+        if spec_changes > 0:
+            specs_enriched += 1
+            spec_updates.append((json.dumps(merged_specs, ensure_ascii=False, sort_keys=True), mif_id))
+        
+        if desc_changes > 0:
+            descs_enriched += 1
+            desc_updates.append((json.dumps(merged_desc, ensure_ascii=False, sort_keys=True), mif_id))
     
-    if not dry_run and updates:
-        cur.executemany(
-            "UPDATE merged_item_forms SET merged_specs_json = ? WHERE id = ?",
-            updates
-        )
+    if not dry_run:
+        if spec_updates:
+            cur.executemany(
+                "UPDATE merged_item_forms SET merged_specs_json = ? WHERE id = ?",
+                spec_updates
+            )
+        if desc_updates:
+            cur.executemany(
+                "UPDATE merged_item_forms SET merged_descriptors_json = ? WHERE id = ?",
+                desc_updates
+            )
         conn.commit()
     
     conn.close()
     
     return {
-        "tgsc_items_in_db": matched,
-        "items_enriched": enriched,
-        "updates_applied": len(updates) if not dry_run else 0,
+        "tgsc_items_matched": matched,
+        "specs_enriched": specs_enriched,
+        "descriptors_enriched": descs_enriched,
+        "spec_updates_applied": len(spec_updates) if not dry_run else 0,
+        "desc_updates_applied": len(desc_updates) if not dry_run else 0,
         "dry_run": dry_run,
     }
 
@@ -226,7 +357,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         LOGGER.info("APPLYING changes to database")
     
-    result = rebuild_merged_specs(dry_run=dry_run)
+    result = rebuild_merged_data(dry_run=dry_run)
     LOGGER.info("Rebuild results: %s", result)
     
     if dry_run:
