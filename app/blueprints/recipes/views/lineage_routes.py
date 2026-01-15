@@ -64,8 +64,8 @@ def recipe_lineage(recipe_id):
     )
 
     origin_source_org = None
-    if recipe.org_origin_purchased and recipe.origin_source_org:
-        origin_source_org = recipe.origin_source_org
+    if recipe.org_origin_purchased and recipe.org_origin_source_org:
+        origin_source_org = recipe.org_origin_source_org
 
     org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
 

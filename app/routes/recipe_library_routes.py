@@ -331,8 +331,8 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
             "type": recipe.org_origin_type,
             "purchased": recipe.org_origin_purchased,
             "source_org_id": recipe.org_origin_source_org_id,
-            "source_org_name": recipe.origin_source_org.name
-            if recipe.origin_source_org
+            "source_org_name": recipe.org_origin_source_org.name
+            if recipe.org_origin_source_org
             else None,
         },
         "download_count": recipe.download_count,
