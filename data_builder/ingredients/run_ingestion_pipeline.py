@@ -5,7 +5,6 @@ This module is the canonical entrypoint for the *deterministic* ingredient inges
 It:
 - ingests CosIng + TGSC rows into `source_items`
 - builds a merged identity catalog in `source_catalog_items`
-- derives deterministic tags/specs/display names
 - de-duplicates into `merged_item_forms`
 - bundles items into `source_definitions` (definition clusters)
 - writes initial `normalized_terms` from source ingest, then adds more canonical
@@ -25,10 +24,6 @@ from pathlib import Path
 from . import (
     bundle_source_items,
     database_manager,
-    derive_source_item_display_names,
-    derive_source_item_specs,
-    derive_source_item_tags,
-    derive_source_item_variation_bypass,
     derive_terms_from_catalog,
     enqueue_normalized,
     ingest_source_items,
@@ -108,29 +103,19 @@ def run() -> None:
     )
     LOGGER.info("catalog merged: %s", merge_stats)
 
-    # 3) Deterministic post-passes on source_items.
-    LOGGER.info("deriving source item display names...")
-    LOGGER.info("display names: %s", derive_source_item_display_names.derive_display_names(limit=0))
-    LOGGER.info("deriving source item tags...")
-    LOGGER.info("tags: %s", derive_source_item_tags.derive_tags(limit=0))
-    LOGGER.info("deriving source item specs...")
-    LOGGER.info("specs: %s", derive_source_item_specs.derive_specs(limit=0))
-    LOGGER.info("deriving source item variation_bypass flags...")
-    LOGGER.info("variation_bypass: %s", derive_source_item_variation_bypass.derive_variation_bypass(limit=0))
-
-    # 4) Merge duplicate item-forms.
+    # 3) Merge duplicate item-forms.
     LOGGER.info("merging duplicate item-forms...")
     LOGGER.info("merged item forms: %s", merge_source_items.merge_source_items(limit=0))
 
-    # 4b) Botanical part split (binomial plant-derived only; deterministic).
+    # 3b) Botanical part split (binomial plant-derived only; deterministic).
     LOGGER.info("splitting botanical parts into part-level terms/items...")
     LOGGER.info("botanical part split: %s", split_botanical_parts.split_botanical_parts(limit_terms=0))
 
-    # 5) Bundle source_items into definition clusters.
+    # 4) Bundle source_items into definition clusters.
     LOGGER.info("bundling source_items into source_definitions...")
     LOGGER.info("bundles: %s", bundle_source_items.bundle(limit=0))
 
-    # 6) Derive additional canonical normalized_terms from the merged catalog.
+    # 5) Derive additional canonical normalized_terms from the merged catalog.
     # This step may insert new terms beyond the source-ingest seeded set.
     LOGGER.info("deriving canonical normalized_terms from merged catalog...")
     stats = derive_terms_from_catalog.build_terms_from_catalog(
@@ -141,7 +126,7 @@ def run() -> None:
     )
     LOGGER.info("normalized_terms: %s", stats)
 
-    # 7) Seed compiler queue from normalized_terms (DB->DB). This is the bridge into the AI compiler.
+    # 6) Seed compiler queue from normalized_terms (DB->DB). This is the bridge into the AI compiler.
     inserted_queue = enqueue_normalized._seed_from_db(limit=None)  # intentionally one-way, no CSV
     LOGGER.info("task_queue seeded from normalized_terms: inserted=%s", inserted_queue)
 
