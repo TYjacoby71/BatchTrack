@@ -13,6 +13,18 @@ This repo is intentionally opinionated: **there is ONE supported way to run the 
 python3 -m data_builder.ingredients.run_pre_ai_pipeline ...
 ```
 
+### Numbered “SI pipeline” wrappers (repo-visible order)
+
+If you want the run order to be obvious when browsing the repo, use the numbered wrappers:
+
+- **SI 1**: `data_builder/ingredients/si_pipeline/si_01_ingest.py`
+- **SI 2a**: `data_builder/ingredients/si_pipeline/si_02a_pubchem_match.py`
+- **SI 2b**: `data_builder/ingredients/si_pipeline/si_02b_pubchem_retry.py`
+- **SI 3**: `data_builder/ingredients/si_pipeline/si_03_pubchem_fetch.py`
+- **SI 4**: `data_builder/ingredients/si_pipeline/si_04_pubchem_apply.py`
+
+They call `run_pre_ai_pipeline` with a fixed `--stage` and accept the same flags (notably `--db-path`).
+
 This is designed to be:
 - deterministic (no AI)
 - resume-safe
