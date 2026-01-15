@@ -233,32 +233,46 @@ Return JSON using this schema (all strings trimmed):
 """
 
 CLUSTER_TERM_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed):
+Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
+For each field, you MUST provide a value OR explicitly state "not_found" or "not_applicable".
 {
   "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
-    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
-    "category": "one of the approved ingredient categories",
-    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca' for Apricot, 'Helianthus annuus' for Sunflower)",
-    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
-    "cas_number": "string (REQUIRED if known - Chemical Abstracts Service registry number)",
-    "short_description": "string (REQUIRED - one sentence summary)",
-    "detailed_description": "string (REQUIRED - 2-3 sentences with uses and properties)"
+    "origin": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
+    "ingredient_category": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
+    "base_refinement": {"value": "one of: Raw/Whole, Minimally Processed, Fermented, Synthesized", "status": "found", "reason": null},
+    "derived_from": {"value": "string (natural source if derived)", "status": "found|not_applicable", "reason": "string"},
+    "botanical_name": {"value": "Latin binomial e.g. 'Prunus armeniaca'", "status": "found|not_found|not_applicable", "reason": "string"},
+    "inci_name": {"value": "INCI nomenclature", "status": "found|not_found", "reason": "string if not found"},
+    "cas_number": {"value": "CAS registry number", "status": "found|not_found", "reason": "string if not found"},
+    "short_description": {"value": "one sentence summary", "status": "found"},
+    "detailed_description": {"value": "2-3 sentences", "status": "found"}
   },
   "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
 }
+
+FIELD RULES:
+- origin: REQUIRED. One of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived
+- ingredient_category: REQUIRED. One of: Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids, or Synthetic-* categories
+- base_refinement: REQUIRED. Describes what the BASE TERM is in its natural/common state:
+  * "Raw/Whole" = unprocessed base (Apricot fruit, Sunflower seeds, Lavender flowers)
+  * "Minimally Processed" = dried, cleaned, or simple preparation
+  * "Fermented" = base is a fermentation product (vinegar, kombucha SCOBY)
+  * "Synthesized" = fully synthetic compound
+  * NOTE: Processing like extraction, distillation, refining belongs at ITEM level, not term level!
+- botanical_name: REQUIRED for Plant-Derived. Latin binomial. Use "not_applicable" for synthetics/minerals.
+- inci_name: REQUIRED. The base INCI name. Use "not_found" only if genuinely unknown.
+- cas_number: Provide if known. Use "not_found" with reason if unable to determine.
 """
 
 ITEMS_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed; lists sorted alphabetically):
+Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
 {
   "items": [
     {
-      "variation": "string",
-      "physical_form": "one of the curated Physical Forms enum",
+      "variation": {"value": "string (e.g., Refined, Cold Pressed, Essential Oil, 2%)", "status": "found|not_applicable"},
+      "physical_form": {"value": "one of: Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Flakes, Chunks", "status": "found"},
+      "processing_method": {"value": "one of: Unprocessed, Cold Pressed, Expeller Pressed, Solvent Extracted, Steam Distilled, CO2 Extracted, Refined, Bleached, Deodorized, Hydrogenated, Fractionated, Filtered, Milled, Dried, Freeze-Dried, Fermented, Synthesized", "status": "found"},
       "synonyms": ["aka", ...],
       "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
       "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
@@ -399,11 +413,21 @@ CRITICAL RULES:
 - Prefer what the CLUSTER implies: multiple items in the cluster should share the same base term.
 - Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
 
-REQUIRED FIELDS - DO NOT LEAVE EMPTY:
-- botanical_name: ALWAYS provide the Latin binomial for Plant-Derived ingredients (e.g., "Prunus armeniaca" for Apricot, "Olea europaea" for Olive, "Cocos nucifera" for Coconut). This is a REQUIRED field.
-- inci_name: ALWAYS provide the INCI name. Use cluster evidence or look up from standard nomenclature.
-- cas_number: Provide if known from cluster evidence or standard sources.
-- refinement_level: Use "Extracted/Distilled" for oils, butters, and extracts. Use "Minimally Processed" for dried/whole forms. Use "Milled/Ground" for powders.
+NO SILENT BYPASS - EVERY FIELD MUST BE EXPLICITLY HANDLED:
+Every field in ingredient_core must return: {"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}
+
+TERM-LEVEL vs ITEM-LEVEL DISTINCTION (CRITICAL):
+- base_refinement at TERM level describes the natural state of the base ingredient:
+  * Apricot (the fruit) = "Raw/Whole"
+  * Butter (dairy product) = "Minimally Processed" (churned from cream)
+  * Vinegar = "Fermented"
+  * Sodium Hydroxide = "Synthesized"
+- Processing like oil extraction, distillation, cold-pressing belongs at ITEM level (Stage 2), NOT here!
+
+REQUIRED FIELD HANDLING:
+- botanical_name: ALWAYS provide Latin binomial for Plant-Derived (e.g., "Prunus armeniaca"). Use status="not_applicable" for synthetics/minerals.
+- inci_name: ALWAYS provide. Use status="not_found" with reason only if genuinely unknown.
+- cas_number: Provide if known. Use status="not_found" with reason if unable to determine.
 
 Cluster ID: "{cluster_id}"
 

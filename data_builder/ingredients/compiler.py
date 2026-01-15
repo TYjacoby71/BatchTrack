@@ -396,18 +396,27 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
             core = result.get("ingredient_core") if isinstance(result.get("ingredient_core"), dict) else {}
             dq = result.get("data_quality") if isinstance(result.get("data_quality"), dict) else {}
 
+            def extract_field(field_data):
+                """Extract value from field status wrapper or plain value."""
+                if isinstance(field_data, dict) and "value" in field_data:
+                    status = field_data.get("status", "")
+                    if status in ("found", ""):
+                        return _clean(field_data.get("value"))
+                    return None  # not_found or not_applicable
+                return _clean(field_data)  # plain value fallback
+
             with database_manager.get_session() as session:
                 rec = session.get(database_manager.CompiledClusterRecord, cid)
                 if rec is None:
                     continue
                 rec.compiled_term = term or rec.raw_canonical_term or cid
-                rec.origin = _clean(core.get("origin")) or rec.raw_origin
-                rec.ingredient_category = _clean(core.get("ingredient_category")) or rec.raw_ingredient_category
-                rec.refinement_level = _clean(core.get("refinement_level")) or None
-                rec.derived_from = _clean(core.get("derived_from")) or None
-                rec.botanical_name = _clean(core.get("botanical_name")) or None
-                rec.inci_name = _clean(core.get("inci_name")) or None
-                rec.cas_number = _clean(core.get("cas_number")) or None
+                rec.origin = extract_field(core.get("origin")) or rec.raw_origin
+                rec.ingredient_category = extract_field(core.get("ingredient_category")) or rec.raw_ingredient_category
+                rec.refinement_level = extract_field(core.get("base_refinement")) or extract_field(core.get("refinement_level")) or None
+                rec.derived_from = extract_field(core.get("derived_from")) or None
+                rec.botanical_name = extract_field(core.get("botanical_name")) or None
+                rec.inci_name = extract_field(core.get("inci_name")) or None
+                rec.cas_number = extract_field(core.get("cas_number")) or None
                 rec.seed_category = None
                 rec.payload_json = json.dumps(
                     {"stage1": {"term": rec.compiled_term, "ingredient_core": core, "data_quality": dq}},
