@@ -1016,37 +1016,121 @@ HTML_TEMPLATE = """
                     document.getElementById('source-detail-title').textContent = `${data.derived_variation || data.derived_term} • ${data.derived_physical_form || ''}`;
                     document.getElementById('source-detail-subtitle').textContent = `MIF ID: ${mifId} | Status: ${data.item_status || '-'}`;
                     
-                    let html = '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
+                    let html = '<div class="detail-section"><h3>Item Identity</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '-'}</div>`;
-                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
                     html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
                     html += `<div class="detail-label">Status</div><div class="detail-value">${data.item_status || '-'}</div>`;
                     html += '</div></div>';
                     
+                    // Source Data
                     if (data.source_data && Object.keys(data.source_data).length) {
-                        html += '<div class="detail-section"><h3>Source Data (from merged_item_forms)</h3><div class="detail-grid">';
+                        html += '<div class="detail-section"><h3>Source Data</h3><div class="detail-grid">';
                         if (data.source_data.cas_numbers && data.source_data.cas_numbers.length) {
-                            html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${data.source_data.cas_numbers.join(', ')}</div>`;
+                            html += `<div class="detail-label">CAS Numbers</div><div class="detail-value" style="font-family:monospace;">${data.source_data.cas_numbers.join(', ')}</div>`;
                         }
                         html += `<div class="detail-label">Has CosIng</div><div class="detail-value">${data.source_data.has_cosing ? 'Yes' : 'No'}</div>`;
                         html += `<div class="detail-label">Has TGSC</div><div class="detail-value">${data.source_data.has_tgsc ? 'Yes' : 'No'}</div>`;
                         html += `<div class="detail-label">Has Seed</div><div class="detail-value">${data.source_data.has_seed ? 'Yes' : 'No'}</div>`;
+                        // Show merged_specs as attributes
+                        const specs = data.source_data.merged_specs || {};
+                        if (specs.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${specs.safety_notes}</div>`;
+                        if (specs.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${specs.solubility}</div>`;
+                        if (specs.odor_type) html += `<div class="detail-label">Odor Type</div><div class="detail-value">${specs.odor_type}</div>`;
+                        if (specs.usage_rate) html += `<div class="detail-label">Usage Rate</div><div class="detail-value">${specs.usage_rate}</div>`;
+                        html += '</div></div>';
+                    }
+                    
+                    // Compiled Item Data (AI-generated) - show as attributes
+                    const cj = data.item_json || {};
+                    if (Object.keys(cj).length) {
+                        html += '<div class="detail-section"><h3>AI-Compiled Data</h3><div class="detail-grid">';
+                        if (cj.physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${cj.physical_form}</div>`;
+                        if (cj.processing_method) html += `<div class="detail-label">Processing Method</div><div class="detail-value">${cj.processing_method}</div>`;
+                        if (cj.shelf_life_days) html += `<div class="detail-label">Shelf Life</div><div class="detail-value">${cj.shelf_life_days} days</div>`;
                         html += '</div>';
-                        if (data.source_data.merged_specs && Object.keys(data.source_data.merged_specs).length) {
-                            html += '<div class="json-block"><pre>' + JSON.stringify(data.source_data.merged_specs, null, 2) + '</pre></div>';
+                        // Applications
+                        if (cj.applications && cj.applications.length) {
+                            html += `<div style="margin:8px 0;"><strong>Applications:</strong> ${cj.applications.map(a => '<span class="badge" style="background:#dbeafe;color:#1e40af;margin:2px;">' + a + '</span>').join(' ')}</div>`;
+                        }
+                        // Function Tags
+                        if (cj.function_tags && cj.function_tags.length) {
+                            html += `<div style="margin:8px 0;"><strong>Functions:</strong> ${cj.function_tags.map(t => '<span class="badge" style="background:#fef3c7;color:#92400e;margin:2px;">' + t + '</span>').join(' ')}</div>`;
+                        }
+                        // Safety Tags
+                        if (cj.safety_tags && cj.safety_tags.length) {
+                            html += `<div style="margin:8px 0;"><strong>Safety:</strong> ${cj.safety_tags.map(t => '<span class="badge" style="background:#fee2e2;color:#991b1b;margin:2px;">' + t + '</span>').join(' ')}</div>`;
+                        }
+                        // Storage
+                        if (cj.storage) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            if (cj.storage.temperature_celsius) {
+                                const temp = cj.storage.temperature_celsius;
+                                html += `<div class="detail-label">Storage Temp</div><div class="detail-value">${temp.min || '?'}°C - ${temp.max || '?'}°C</div>`;
+                            }
+                            if (cj.storage.humidity_percent && cj.storage.humidity_percent.max) {
+                                html += `<div class="detail-label">Max Humidity</div><div class="detail-value">${cj.storage.humidity_percent.max}%</div>`;
+                            }
+                            if (cj.storage.special_instructions) {
+                                html += `<div class="detail-label">Storage Notes</div><div class="detail-value">${cj.storage.special_instructions}</div>`;
+                            }
+                            html += '</div>';
+                        }
+                        // Specifications
+                        if (cj.specifications && Object.keys(cj.specifications).length) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            const sp = cj.specifications;
+                            if (sp.sap_naoh) html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${sp.sap_naoh}</div>`;
+                            if (sp.sap_koh) html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${sp.sap_koh}</div>`;
+                            if (sp.iodine_value) html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${sp.iodine_value}</div>`;
+                            if (sp.flash_point_celsius) html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius}°C</div>`;
+                            if (sp.melting_point_celsius) {
+                                const mp = sp.melting_point_celsius;
+                                html += `<div class="detail-label">Melting Point</div><div class="detail-value">${mp.min || '?'}°C - ${mp.max || '?'}°C</div>`;
+                            }
+                            if (sp.ph_range) {
+                                const ph = sp.ph_range;
+                                html += `<div class="detail-label">pH Range</div><div class="detail-value">${ph.min || '?'} - ${ph.max || '?'}</div>`;
+                            }
+                            if (sp.usage_rate_percent) {
+                                const ur = sp.usage_rate_percent;
+                                if (ur.leave_on_max) html += `<div class="detail-label">Leave-on Max</div><div class="detail-value">${ur.leave_on_max}%</div>`;
+                                if (ur.rinse_off_max) html += `<div class="detail-label">Rinse-off Max</div><div class="detail-value">${ur.rinse_off_max}%</div>`;
+                            }
+                            html += '</div>';
+                        }
+                        // Sourcing
+                        if (cj.sourcing) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            if (cj.sourcing.common_origins && cj.sourcing.common_origins.length) {
+                                html += `<div class="detail-label">Common Origins</div><div class="detail-value">${cj.sourcing.common_origins.join(', ')}</div>`;
+                            }
+                            if (cj.sourcing.certifications && cj.sourcing.certifications.length) {
+                                html += `<div class="detail-label">Certifications</div><div class="detail-value">${cj.sourcing.certifications.join(', ')}</div>`;
+                            }
+                            if (cj.sourcing.sustainability_notes) {
+                                html += `<div class="detail-label">Sustainability</div><div class="detail-value">${cj.sourcing.sustainability_notes}</div>`;
+                            }
+                            html += '</div>';
                         }
                         html += '</div>';
                     }
                     
-                    if (data.item_json && Object.keys(data.item_json).length) {
-                        html += '<div class="detail-section"><h3>Compiled Item JSON (AI-generated)</h3>';
-                        html += '<div class="json-block"><pre>' + JSON.stringify(data.item_json, null, 2) + '</pre></div></div>';
-                    }
-                    
-                    if (data.raw_item_json && Object.keys(data.raw_item_json).length) {
-                        html += '<div class="detail-section"><h3>Raw Item JSON (pre-compilation)</h3>';
-                        html += '<div class="json-block"><pre>' + JSON.stringify(data.raw_item_json, null, 2) + '</pre></div></div>';
+                    // Raw pre-compilation data - show as attributes
+                    const rj = data.raw_item_json || {};
+                    if (Object.keys(rj).length) {
+                        html += '<div class="detail-section"><h3>Pre-Compilation Data</h3><div class="detail-grid">';
+                        if (rj.derived_term) html += `<div class="detail-label">Derived Term</div><div class="detail-value">${rj.derived_term}</div>`;
+                        if (rj.derived_variation) html += `<div class="detail-label">Variation</div><div class="detail-value">${rj.derived_variation}</div>`;
+                        if (rj.derived_physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${rj.derived_physical_form}</div>`;
+                        if (rj.cas_numbers && rj.cas_numbers.length) html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${rj.cas_numbers.join(', ')}</div>`;
+                        if (rj.derived_parts && rj.derived_parts.length) html += `<div class="detail-label">Parts</div><div class="detail-value">${rj.derived_parts.join(', ')}</div>`;
+                        // Merged specs
+                        const ms = rj.merged_specs || {};
+                        if (ms.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${ms.solubility}</div>`;
+                        if (ms.odor_type) html += `<div class="detail-label">Odor Type</div><div class="detail-value">${ms.odor_type}</div>`;
+                        if (ms.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${ms.safety_notes}</div>`;
+                        html += '</div></div>';
                     }
                     
                     document.getElementById('source-detail-body').innerHTML = html;
