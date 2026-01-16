@@ -266,16 +266,17 @@ def _item_identity_key(payload: dict[str, Any]) -> tuple[str, str]:
     return variation, physical_form
 
 
-def _stage1_snapshot(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any]]:
+def _stage1_snapshot(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any], str | None]:
     payload = _safe_json_dict(getattr(rec, "payload_json", None))
     stage1 = payload.get("stage1") if isinstance(payload.get("stage1"), dict) else {}
     core = stage1.get("ingredient_core") if isinstance(stage1.get("ingredient_core"), dict) else {}
     dq = stage1.get("data_quality") if isinstance(stage1.get("data_quality"), dict) else {}
-    return core, dq
+    common_name = stage1.get("common_name") if isinstance(stage1.get("common_name"), str) else None
+    return core, dq, common_name
 
 
-def _build_cluster_core(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any]]:
-    core_raw, dq = _stage1_snapshot(rec)
+def _build_cluster_core(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any], str | None]:
+    core_raw, dq, common_name = _stage1_snapshot(rec)
     ingredient_core = {
         "origin": _extract_stage1_field(core_raw.get("origin")) or getattr(rec, "origin", None),
         "ingredient_category": _extract_stage1_field(core_raw.get("ingredient_category")) or getattr(rec, "ingredient_category", None),
@@ -292,7 +293,7 @@ def _build_cluster_core(rec: database_manager.CompiledClusterRecord) -> tuple[di
         "short_description": _extract_stage1_field(core_raw.get("short_description")),
         "detailed_description": _extract_stage1_field(core_raw.get("detailed_description")),
     }
-    return ingredient_core, dq
+    return ingredient_core, dq, common_name
 
 
 def _backfill_cluster_items_from_ingredient(
@@ -341,12 +342,8 @@ def _assemble_cluster_payload(
     rec: database_manager.CompiledClusterRecord,
     items: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    ingredient_core, dq = _build_cluster_core(rec)
+    ingredient_core, dq, common_name = _build_cluster_core(rec)
     ingredient: dict[str, Any] = dict(ingredient_core)
-    # Extract common_name from Stage 1 payload if available, otherwise use term
-    payload_data = _safe_json_dict(getattr(rec, "payload_json", None))
-    stage1 = payload_data.get("stage1") if isinstance(payload_data, dict) else {}
-    common_name = stage1.get("common_name") if isinstance(stage1, dict) else None
     ingredient["common_name"] = common_name if common_name else term
     ingredient["items"] = items
     if "documentation" not in ingredient:
@@ -769,7 +766,7 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                     or _cluster_term_from_id(cid)
                     or cid
                 )
-                ingredient_core, _ = _build_cluster_core(rec)
+                ingredient_core, _, _ = _build_cluster_core(rec)
                 ingredient_core["documentation"] = {"references": [], "last_verified": None}
                 ingredient = _find_ingredient_by_terms(session, [term])
                 if ingredient is not None:

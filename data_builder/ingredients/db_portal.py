@@ -979,7 +979,7 @@ HTML_TEMPLATE = """
                     
                     // Identity section
                     let html = '<div class="detail-section"><h3>Identity</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</strong></div>`;
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.common_name || data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</strong></div>`;
                     html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '<span style="color:#ef4444;">MISSING</span>'}</em></div>`;
                     html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
                     html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
@@ -1691,8 +1691,10 @@ def api_compiled_cluster_detail(cluster_id: str):
 
     payload = parse_json(row[11]) if row[11] else {}
     stage1_core = {}
+    common_name = None
     if payload and isinstance(payload.get("stage1"), dict):
         stage1_core = payload["stage1"].get("ingredient_core", {})
+        common_name = payload["stage1"].get("common_name")
 
     cur.execute(
         """
@@ -1731,6 +1733,7 @@ def api_compiled_cluster_detail(cluster_id: str):
             "cluster_id": row[0],
             "raw_canonical_term": row[1],
             "compiled_term": row[2],
+            "common_name": common_name,
             "term_status": row[3],
             "origin": row[4],
             "ingredient_category": row[5],
