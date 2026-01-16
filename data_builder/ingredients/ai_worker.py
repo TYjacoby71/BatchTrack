@@ -414,7 +414,7 @@ CRITICAL RULES:
 - Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
 
 NO SILENT BYPASS - EVERY FIELD MUST BE EXPLICITLY HANDLED:
-Every field in ingredient_core must return: {"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}
+Every field in ingredient_core must return: {{"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}}
 
 TERM-LEVEL vs ITEM-LEVEL DISTINCTION (CRITICAL):
 - base_refinement at TERM level describes the natural state of the base ingredient:
