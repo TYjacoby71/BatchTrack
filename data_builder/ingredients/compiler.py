@@ -80,6 +80,37 @@ def _write_taxonomy_map(values: MutableMapping[str, Set[str]]) -> None:
     TAXONOMY_FILE.write_text(json.dumps(serialized, indent=2), encoding="utf-8")
 
 
+SPEC_FIELD_MAPPING = {
+    "density": "density_g_ml",
+    "flash_point": "flash_point_celsius",
+    "melting_point": "melting_point_celsius",
+    "boiling_point": "boiling_point_celsius",
+    "iodine": "iodine_value",
+    "sap_naoh": "sap_naoh",
+    "sap_koh": "sap_koh",
+    "molecular_weight": "molecular_weight",
+    "molecular_formula": "molecular_formula",
+    "refractive_index": "refractive_index",
+    "viscosity": "viscosity_cps",
+    "ph": "ph_range",
+}
+
+
+def _normalize_specs_for_ai(specs: Dict[str, Any]) -> Dict[str, Any]:
+    """Map source spec field names to schema-expected names for AI context."""
+    if not specs:
+        return {}
+    normalized = {}
+    for key, val in specs.items():
+        if key == "pubchem":
+            normalized[key] = val
+            continue
+        mapped_key = SPEC_FIELD_MAPPING.get(key, key)
+        if val is not None and val != "" and val != "Not Found":
+            normalized[mapped_key] = val
+    return normalized
+
+
 def validate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Guard against malformed AI responses."""
 
@@ -505,7 +536,7 @@ def _mirror_cluster_into_compiled(cluster_id: str) -> None:
                 "derived_parts": _safe_json_list(getattr(mif, "derived_parts_json", None)),
                 "cas_numbers": _safe_json_list(getattr(mif, "cas_numbers_json", None)),
                 "sources": _safe_json_dict(getattr(mif, "sources_json", None)),
-                "merged_specs": _safe_json_dict(getattr(mif, "merged_specs_json", None)),
+                "merged_specs": _normalize_specs_for_ai(_safe_json_dict(getattr(mif, "merged_specs_json", None))),
                 "merged_specs_sources": _safe_json_dict(getattr(mif, "merged_specs_sources_json", None)),
                 "source_row_count": int(getattr(mif, "source_row_count", 0) or 0),
                 "has_cosing": bool(getattr(mif, "has_cosing", False)),
@@ -572,7 +603,7 @@ def _build_cluster_context(cluster_id: str) -> dict[str, Any]:
                     "derived_variation": getattr(mif, "derived_variation", "") or "",
                     "derived_physical_form": getattr(mif, "derived_physical_form", "") or "",
                     "cas_numbers": _safe_json_list(getattr(mif, "cas_numbers_json", None)),
-                    "merged_specs": _safe_json_dict(getattr(mif, "merged_specs_json", None)),
+                    "merged_specs": _normalize_specs_for_ai(_safe_json_dict(getattr(mif, "merged_specs_json", None))),
                 }
             )
 

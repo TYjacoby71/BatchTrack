@@ -237,6 +237,7 @@ Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allo
 For each field, you MUST provide a value OR explicitly state "not_found" or "not_applicable".
 {
   "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
+  "common_name": "string (REQUIRED) - human-friendly common name (e.g., 'Apricot', 'Lavender', 'Shea Butter')",
   "ingredient_core": {
     "origin": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
     "ingredient_category": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
