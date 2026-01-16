@@ -297,7 +297,7 @@ def save_global_item_to_inventory(item_id: int):
 @global_library_bp.route('/global-items/<int:item_id>/stats')
 def global_library_item_stats(item_id: int):
     """Public stats endpoint for a GlobalItem, including cost distribution, rollup,
-    basic item details, and category-based visibility flags when applicable.
+    and basic item details.
     """
     import logging
     logger = logging.getLogger(__name__)

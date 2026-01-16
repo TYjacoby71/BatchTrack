@@ -210,7 +210,6 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
   }
 
   const item = payload.item || {};
-  const categoryVisibility = payload.category_visibility || {};
   const cost = payload.cost || {};
 
   setText(opts.nameId, item.name || `#${globalItemId}`);
@@ -252,23 +251,22 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
   showElement(ingredientSection, isIngredient);
   if (isIngredient && ingredientGrid) {
     ingredientGrid.innerHTML = '';
-    const addProp = (label, value, show) => {
-      if (!show) return;
-      if (value === null || value === undefined || value === '') return;
+    const addProp = (label, value) => {
+      if (!hasContent(value)) return;
       const display = value;
       const col = document.createElement('div');
       col.innerHTML = `<div><strong>${label}:</strong> ${display}</div>`;
       ingredientGrid.appendChild(col);
     };
 
-    addProp('Saponification', item.saponification_value, categoryVisibility.show_saponification_value);
-    addProp('Iodine', item.iodine_value, categoryVisibility.show_iodine_value);
-    addProp('Melting Point (°C)', item.melting_point_c, categoryVisibility.show_melting_point);
-    addProp('Flash Point (°C)', item.flash_point_c, categoryVisibility.show_flash_point);
-    addProp('pH', item.ph_value, categoryVisibility.show_ph_value);
-    addProp('Moisture %', item.moisture_content_percent, categoryVisibility.show_moisture_content);
-    addProp('Shelf Life (months)', item.shelf_life_months, categoryVisibility.show_shelf_life_months);
-    addProp('Comedogenic', item.comedogenic_rating, categoryVisibility.show_comedogenic_rating);
+    addProp('Saponification', item.saponification_value);
+    addProp('Iodine', item.iodine_value);
+    addProp('Melting Point (°C)', item.melting_point_c);
+    addProp('Flash Point (°C)', item.flash_point_c);
+    addProp('pH', item.ph_value);
+    addProp('Moisture %', item.moisture_content_percent);
+    addProp('Shelf Life (months)', item.shelf_life_months);
+    addProp('Comedogenic', item.comedogenic_rating);
     if (!ingredientGrid.childElementCount) {
       const empty = document.createElement('div');
       empty.className = 'text-muted';
