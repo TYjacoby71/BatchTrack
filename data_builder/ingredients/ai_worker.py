@@ -531,9 +531,11 @@ Rules:
 - applications must include at least 1 value (use ["Not Found"] if needed).
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
-- Missing data policy: Always include all fields. Use "Not Found" when data is missing, and "N/A" when not applicable.
-- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). If unknown, use "Not Found"; if not applicable, use "N/A".
-- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
+- Missing data policy: Always include all fields. Use "Not Found" ONLY when you genuinely have no knowledge, and "N/A" when not applicable.
+- Numeric/spec policy: USE YOUR KNOWLEDGE to provide numeric values (density, flash point, SAP values, iodine value, etc.) when you have reliable data. These values are well-documented for most carrier oils, essential oils, butters, and waxes. Only use "Not Found" if you truly have no knowledge of the value. For essential oils, SAP values are typically low (8-20 mg KOH/g). For carrier oils/fats, SAP values are higher (180-250 mg KOH/g).
+- Density policy: Provide density_g_ml as a NUMBER in g/mL for liquids/oils/syrups. Most oils are 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL, water-based 0.98-1.05 g/mL.
+- SAP/Iodine policy: For carrier oils, fats, butters, waxes used in soapmaking/cosmetics, ALWAYS provide sap_naoh and sap_koh values - these are well-documented! Examples: Olive Oil (sap_koh ~190), Coconut Oil (~258), Shea Butter (~180). For essential oils (distilled/extracted), SAP is typically 5-20 mg KOH/g (not triglycerides). Only use "Not Found" for truly obscure ingredients.
+- Iodine policy: Provide iodine values for oils/fats. Higher = more unsaturated. Examples: Coconut (7-10), Olive (75-94), Sunflower (125-140).
 
 Ingredient core (context):
 {core_blob}
@@ -568,9 +570,11 @@ Rules (CRITICAL):
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
 - applications must include at least 1 value (use ["Not Found"] only if you truly cannot infer anything).
-- Missing data policy: Always include all fields. Use "Not Found" when data is missing, and "N/A" when not applicable.
-- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). If unknown, use "Not Found"; if not applicable, use "N/A".
-- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
+- Missing data policy: Always include all fields. Use "Not Found" ONLY when you genuinely have no knowledge, and "N/A" when not applicable.
+- Numeric/spec policy: USE YOUR KNOWLEDGE to provide numeric values (density, flash point, SAP values, iodine value, etc.) when you have reliable data. These values are well-documented for most carrier oils, essential oils, butters, and waxes. Only use "Not Found" if you truly have no knowledge. For essential oils, SAP values are typically low (8-20 mg KOH/g). For carrier oils/fats, SAP values are higher (180-250 mg KOH/g).
+- Density policy: Provide density_g_ml as a NUMBER in g/mL for liquids/oils/syrups. Most oils are 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL, water-based 0.98-1.05 g/mL.
+- SAP/Iodine policy: For carrier oils, fats, butters, waxes used in soapmaking/cosmetics, ALWAYS provide sap_naoh and sap_koh values - these are well-documented! Examples: Olive Oil (sap_koh ~190), Coconut Oil (~258), Shea Butter (~180). For essential oils (distilled/extracted), SAP is typically 5-20 mg KOH/g (not triglycerides). Only use "Not Found" for truly obscure ingredients.
+- Iodine policy: Provide iodine values for oils/fats. Higher = more unsaturated. Examples: Coconut (7-10), Olive (75-94), Sunflower (125-140).
 
 Ingredient core (context):
 {core_blob}

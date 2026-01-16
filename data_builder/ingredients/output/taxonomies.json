@@ -64,6 +64,7 @@
     "Nutrient",
     "Nutrient Source",
     "Nutrient Supplement",
+    "Nutritional",
     "Nutritional Supplement",
     "Oil Extraction",
     "Perfume Fixative",
@@ -90,6 +91,7 @@
     "Texturizer",
     "Therapeutic",
     "Thickener",
+    "Toner",
     "Tonic",
     "Toning",
     "Traditional Medicine",
@@ -131,6 +133,7 @@
     "Food Flavoring",
     "Food Products",
     "Food Supplement",
+    "Fragrance",
     "Fragrance in candles and soaps",
     "Fragrance ingredient",
     "Fragrances",
@@ -141,6 +144,7 @@
     "Haircare",
     "Hand Sanitizer",
     "Health Beverages",
+    "Health Supplement",
     "Health Supplements",
     "Herbal Medicine",
     "Herbal Mixes",
@@ -223,6 +227,7 @@
     "Dilute before use",
     "Dilute with a carrier oil for topical applications",
     "Edible",
+    "Edible after proper preparation",
     "Flammable",
     "Generally Recognized as Safe (GRAS)",
     "Generally Recognized as Safe (GRAS) when used in accordance with good manufacturing practices",
@@ -258,6 +263,7 @@
     "Safe for topical use",
     "Safe with limited concentration in cosmetics",
     "Skin test recommended",
+    "Topical Use",
     "Use within recommended concentrations"
   ],
   "scent_profile": [
@@ -282,6 +288,7 @@
     "Spicy",
     "Sulfurous",
     "Sweet",
+    "Tropical",
     "Woody",
     "green",
     "tea"
@@ -300,6 +307,7 @@
   ],
   "texture_profile": [
     "Coarse",
+    "Creamy",
     "Crunchy",
     "Dry",
     "Fibrous",
