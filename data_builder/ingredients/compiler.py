@@ -343,7 +343,11 @@ def _assemble_cluster_payload(
 ) -> dict[str, Any]:
     ingredient_core, dq = _build_cluster_core(rec)
     ingredient: dict[str, Any] = dict(ingredient_core)
-    ingredient["common_name"] = term
+    # Extract common_name from Stage 1 payload if available, otherwise use term
+    payload_data = _safe_json_dict(getattr(rec, "payload_json", None))
+    stage1 = payload_data.get("stage1") if isinstance(payload_data, dict) else {}
+    common_name = stage1.get("common_name") if isinstance(stage1, dict) else None
+    ingredient["common_name"] = common_name if common_name else term
     ingredient["items"] = items
     if "documentation" not in ingredient:
         ingredient["documentation"] = {"references": [], "last_verified": None}
@@ -674,6 +678,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                         {
                             "stage1": {
                                 "term": rec.compiled_term,
+                                "common_name": getattr(ingredient, "common_name", None) or rec.compiled_term,
                                 "ingredient_core": core,
                                 "data_quality": {"confidence": None, "caveats": []},
                                 "seeded_from_legacy": True,
@@ -713,8 +718,9 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                 rec.cas_number = _extract_stage1_field(core.get("cas_number")) or None
                 rec.seed_category = None
                 rec.priority = priority
+                common_name = result.get("common_name") or rec.compiled_term
                 rec.payload_json = json.dumps(
-                    {"stage1": {"term": rec.compiled_term, "ingredient_core": core, "data_quality": dq}},
+                    {"stage1": {"term": rec.compiled_term, "common_name": common_name, "ingredient_core": core, "data_quality": dq}},
                     ensure_ascii=False,
                     sort_keys=True,
                 )

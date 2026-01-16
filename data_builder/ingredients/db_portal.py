@@ -1117,7 +1117,8 @@ HTML_TEMPLATE = """
                             if (sp.sap_naoh) html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${sp.sap_naoh}</div>`;
                             if (sp.sap_koh) html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${sp.sap_koh}</div>`;
                             if (sp.iodine_value) html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${sp.iodine_value}</div>`;
-                            if (sp.flash_point_celsius) html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius}°C</div>`;
+                            if (sp.density_g_ml && sp.density_g_ml !== 'Not Found' && sp.density_g_ml !== 'N/A') html += `<div class="detail-label">Density</div><div class="detail-value">${sp.density_g_ml} g/mL</div>`;
+                            if (sp.flash_point_celsius && sp.flash_point_celsius !== 'Not Found') html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius}°C</div>`;
                             if (sp.melting_point_celsius) {
                                 const mp = sp.melting_point_celsius;
                                 html += `<div class="detail-label">Melting Point</div><div class="detail-value">${mp.min || '?'}°C - ${mp.max || '?'}°C</div>`;
