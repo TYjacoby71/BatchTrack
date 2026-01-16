@@ -1110,28 +1110,24 @@ HTML_TEMPLATE = """
                             }
                             html += '</div>';
                         }
-                        // Specifications
-                        if (cj.specifications && Object.keys(cj.specifications).length) {
+                        // Specifications - show ALL fields regardless of value
+                        if (cj.specifications) {
                             html += '<div class="detail-grid" style="margin-top:8px;">';
                             const sp = cj.specifications;
-                            if (sp.sap_naoh) html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${sp.sap_naoh}</div>`;
-                            if (sp.sap_koh) html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${sp.sap_koh}</div>`;
-                            if (sp.iodine_value) html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${sp.iodine_value}</div>`;
-                            if (sp.density_g_ml && sp.density_g_ml !== 'Not Found' && sp.density_g_ml !== 'N/A') html += `<div class="detail-label">Density</div><div class="detail-value">${sp.density_g_ml} g/mL</div>`;
-                            if (sp.flash_point_celsius && sp.flash_point_celsius !== 'Not Found') html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius}°C</div>`;
-                            if (sp.melting_point_celsius) {
-                                const mp = sp.melting_point_celsius;
-                                html += `<div class="detail-label">Melting Point</div><div class="detail-value">${mp.min || '?'}°C - ${mp.max || '?'}°C</div>`;
-                            }
-                            if (sp.ph_range) {
-                                const ph = sp.ph_range;
-                                html += `<div class="detail-label">pH Range</div><div class="detail-value">${ph.min || '?'} - ${ph.max || '?'}</div>`;
-                            }
-                            if (sp.usage_rate_percent) {
-                                const ur = sp.usage_rate_percent;
-                                if (ur.leave_on_max) html += `<div class="detail-label">Leave-on Max</div><div class="detail-value">${ur.leave_on_max}%</div>`;
-                                if (ur.rinse_off_max) html += `<div class="detail-label">Rinse-off Max</div><div class="detail-value">${ur.rinse_off_max}%</div>`;
-                            }
+                            html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${sp.sap_naoh ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${sp.sap_koh ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${sp.iodine_value ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Density</div><div class="detail-value">${sp.density_g_ml ?? 'N/A'}${sp.density_g_ml && sp.density_g_ml !== 'N/A' && sp.density_g_ml !== 'Not Found' ? ' g/mL' : ''}</div>`;
+                            html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius ?? 'N/A'}${typeof sp.flash_point_celsius === 'number' ? '°C' : ''}</div>`;
+                            const mp = sp.melting_point_celsius || {};
+                            html += `<div class="detail-label">Melting Point</div><div class="detail-value">${mp.min ?? '?'}°C - ${mp.max ?? '?'}°C</div>`;
+                            const ph = sp.ph_range || {};
+                            html += `<div class="detail-label">pH Range</div><div class="detail-value">${ph.min ?? '?'} - ${ph.max ?? '?'}</div>`;
+                            html += `<div class="detail-label">Solubility</div><div class="detail-value">${sp.solubility ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${sp.safety_notes ?? 'N/A'}</div>`;
+                            const ur = sp.usage_rate_percent || {};
+                            html += `<div class="detail-label">Leave-on Max</div><div class="detail-value">${ur.leave_on_max ?? 'N/A'}${typeof ur.leave_on_max === 'number' ? '%' : ''}</div>`;
+                            html += `<div class="detail-label">Rinse-off Max</div><div class="detail-value">${ur.rinse_off_max ?? 'N/A'}${typeof ur.rinse_off_max === 'number' ? '%' : ''}</div>`;
                             html += '</div>';
                         }
                         // Sourcing
