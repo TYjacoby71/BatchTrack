@@ -246,8 +246,8 @@ For each field, you MUST provide a value OR explicitly state "not_found" or "not
     "botanical_name": {"value": "Latin binomial e.g. 'Prunus armeniaca'", "status": "found|not_found|not_applicable", "reason": "string"},
     "inci_name": {"value": "INCI nomenclature", "status": "found|not_found", "reason": "string if not found"},
     "cas_number": {"value": "CAS registry number", "status": "found|not_found", "reason": "string if not found"},
-    "short_description": {"value": "one sentence summary", "status": "found"},
-    "detailed_description": {"value": "2-3 sentences", "status": "found"}
+    "short_description": "string (one sentence summary)",
+    "detailed_description": "string (2-3 sentences)"
   },
   "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
 }
