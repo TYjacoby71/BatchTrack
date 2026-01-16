@@ -671,11 +671,21 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                     rec.botanical_name = core.get("botanical_name") or None
                     rec.inci_name = core.get("inci_name") or None
                     rec.cas_number = core.get("cas_number") or None
+                    legacy_common = getattr(ingredient, "common_name", None) or ""
+                    botanical = core.get("botanical_name") or ""
+                    compiled = ingredient.term or ""
+                    if legacy_common.lower().strip() in (botanical.lower().strip(), compiled.lower().strip(), "") or botanical.lower().strip() == legacy_common.lower().strip():
+                        try:
+                            context = _build_cluster_context(cid)
+                            ai_result = ai_worker.normalize_cluster_term(cid, context)
+                            legacy_common = ai_result.get("common_name") or legacy_common or compiled
+                        except Exception:
+                            legacy_common = legacy_common or compiled
                     rec.payload_json = json.dumps(
                         {
                             "stage1": {
                                 "term": rec.compiled_term,
-                                "common_name": getattr(ingredient, "common_name", None) or rec.compiled_term,
+                                "common_name": legacy_common or rec.compiled_term,
                                 "ingredient_core": core,
                                 "data_quality": {"confidence": None, "caveats": []},
                                 "seeded_from_legacy": True,
