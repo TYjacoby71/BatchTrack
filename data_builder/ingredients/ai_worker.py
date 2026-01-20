@@ -310,12 +310,28 @@ Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allo
         "supply_risks": ["string"],
         "sustainability_notes": "string"
       },
+      "default_unit": "string (REQUIRED) - the most common unit this item is measured/purchased in. MUST be one of the valid units listed below.",
       "form_bypass": true | false,
       "variation_bypass": true | false
     }
   ],
   "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
 }
+
+VALID UNITS (you MUST use one of these exact values for default_unit):
+Weight: gram, kg, mg, oz, lb, ton
+Volume: ml, liter, tsp, tbsp, cup, pint, quart, gallon, floz, drop, dram
+Count: count, pack, dozen, unit, batch, pair, Piece, Bar, Slice, Bottle, Jar, Tablet, Capsule, Bomb, Loaf
+
+DEFAULT UNIT RULES:
+- Essential Oils: use "ml" (commonly sold in 5ml, 10ml, 15ml bottles; drops are used in recipes but ml is the purchase unit)
+- Carrier Oils (olive, coconut, etc.): use "ml" or "floz" for small quantities, "liter" or "gallon" for bulk
+- Butters (shea, cocoa, mango): use "oz" or "lb" (sold by weight)
+- Waxes: use "oz" or "lb" (sold by weight)
+- Powders/Granules/Crystals: use "gram" or "oz" (sold by weight)
+- Whole items (herbs, flowers, fruits): use "gram" or "oz" for dried, "count" for fresh whole items
+- Liquids (hydrosols, extracts, tinctures): use "ml" or "floz"
+- Resins: use "gram" or "oz"
 """
 
 TAXONOMY_SCHEMA_SPEC = r"""

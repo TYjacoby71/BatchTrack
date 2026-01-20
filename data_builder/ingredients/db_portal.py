@@ -1084,6 +1084,7 @@ HTML_TEMPLATE = """
                         html += '<div class="detail-section"><h3>AI-Compiled Data</h3><div class="detail-grid">';
                         if (cj.physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${cj.physical_form}</div>`;
                         if (cj.processing_method) html += `<div class="detail-label">Processing Method</div><div class="detail-value">${cj.processing_method}</div>`;
+                        if (cj.default_unit) html += `<div class="detail-label">Default Unit</div><div class="detail-value"><strong style="color:#059669;">${cj.default_unit}</strong></div>`;
                         if (cj.shelf_life_days) html += `<div class="detail-label">Shelf Life</div><div class="detail-value">${cj.shelf_life_days} days</div>`;
                         html += '</div>';
                         // Applications
