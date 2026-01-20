@@ -495,9 +495,15 @@ HTML_TEMPLATE = """
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = (clusters || []).map(row => {
                 const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
+                const compiledTerm = row.compiled_term || row.raw_canonical_term || '-';
+                const commonName = row.common_name || '';
+                const showCommonName = commonName && commonName.toLowerCase() !== compiledTerm.toLowerCase();
+                const termDisplay = showCommonName 
+                    ? `<strong>${compiledTerm}</strong> <span style="color:#6366f1; font-style:italic;">(${commonName})</span>`
+                    : `<strong>${compiledTerm}</strong>`;
                 return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>
-                    <td><strong>${row.compiled_term || row.raw_canonical_term || '-'}</strong></td>
+                    <td>${termDisplay}</td>
                     <td>${row.total_items || 0}</td>
                     <td>${row.term_status || '-'}</td>
                     <td>${itemsCompiled}</td>
@@ -1644,7 +1650,8 @@ def api_compiled_clusters():
         f"""
         SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
-               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done
+               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
+               json_extract(c.payload_json, '$.stage1.common_name') as common_name
         FROM compiled_clusters c
         {where_sql}
         ORDER BY c.cluster_id
@@ -1660,6 +1667,7 @@ def api_compiled_clusters():
             "term_status": r[3],
             "total_items": int(r[4] or 0),
             "items_done": int(r[5] or 0),
+            "common_name": r[6] or None,
         }
         for r in cur.fetchall()
     ]
