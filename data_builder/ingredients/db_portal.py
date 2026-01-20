@@ -400,7 +400,7 @@ HTML_TEMPLATE = """
             const thead = document.getElementById('table-head');
             if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
-                    thead.innerHTML = '<tr><th>Cluster ID</th><th>Compiled Term</th><th>Items</th><th>Term Status</th><th>Items Compiled</th></tr>';
+                    thead.innerHTML = '<tr><th>Cluster ID</th><th>Compiled Term</th><th>Common Name</th><th>Items</th><th>Term Status</th><th>Items Compiled</th></tr>';
                 } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
                 } else {
@@ -496,14 +496,11 @@ HTML_TEMPLATE = """
             tbody.innerHTML = (clusters || []).map(row => {
                 const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
                 const compiledTerm = row.compiled_term || row.raw_canonical_term || '-';
-                const commonName = row.common_name || '';
-                const showCommonName = commonName && commonName.toLowerCase() !== compiledTerm.toLowerCase();
-                const termDisplay = showCommonName 
-                    ? `<strong>${compiledTerm}</strong> <span style="color:#6366f1; font-style:italic;">(${commonName})</span>`
-                    : `<strong>${compiledTerm}</strong>`;
+                const commonName = row.common_name || '-';
                 return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>
-                    <td>${termDisplay}</td>
+                    <td><strong>${compiledTerm}</strong></td>
+                    <td style="color:#6366f1; font-style:italic;">${commonName}</td>
                     <td>${row.total_items || 0}</td>
                     <td>${row.term_status || '-'}</td>
                     <td>${itemsCompiled}</td>
