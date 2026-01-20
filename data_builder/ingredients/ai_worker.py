@@ -272,8 +272,12 @@ Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allo
   "items": [
     {
       "variation": {"value": "string (e.g., Refined, Cold Pressed, Essential Oil, 2%)", "status": "found|not_applicable"},
+      "description": "string (REQUIRED) - 1-2 sentence description of what this item is and its primary use. Example: 'A fragrant essential oil steam distilled from Silver Fir needles, prized for its fresh, forest-like aroma in aromatherapy and perfumery.'",
       "physical_form": {"value": "one of: Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Flakes, Chunks", "status": "found"},
       "processing_method": {"value": "one of: Unprocessed, Cold Pressed, Expeller Pressed, Solvent Extracted, Steam Distilled, CO2 Extracted, Refined, Bleached, Deodorized, Hydrogenated, Fractionated, Filtered, Milled, Dried, Freeze-Dried, Fermented, Synthesized", "status": "found"},
+      "color": "string (REQUIRED) - typical color of this item. Examples: 'Pale yellow', 'Creamy white', 'Dark amber', 'Colorless', 'Green'. Use 'Variable' if color varies significantly.",
+      "odor_profile": "string (REQUIRED) - scent characteristics. Examples: 'Fresh, balsamic, woody with pine notes', 'Sweet, floral, honey-like', 'Earthy, herbaceous'. Use 'Odorless' or 'Mild/Neutral' if applicable.",
+      "flavor_profile": "string - taste characteristics for edible items. Examples: 'Sweet, nutty with hints of vanilla', 'Bitter, earthy'. Use 'Not edible' for non-food items, 'Neutral/Bland' if tasteless.",
       "synonyms": ["aka", ...],
       "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
       "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],

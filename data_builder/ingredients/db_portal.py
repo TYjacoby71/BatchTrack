@@ -1081,9 +1081,18 @@ HTML_TEMPLATE = """
                     // Compiled Item Data (AI-generated) - show as attributes
                     const cj = data.item_json || {};
                     if (Object.keys(cj).length) {
-                        html += '<div class="detail-section"><h3>AI-Compiled Data</h3><div class="detail-grid">';
+                        html += '<div class="detail-section"><h3>AI-Compiled Data</h3>';
+                        // Description at the top
+                        if (cj.description) html += `<div style="margin-bottom:12px;font-style:italic;color:#374151;">${cj.description}</div>`;
+                        html += '<div class="detail-grid">';
                         if (cj.physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${cj.physical_form}</div>`;
-                        if (cj.processing_method) html += `<div class="detail-label">Processing Method</div><div class="detail-value">${cj.processing_method}</div>`;
+                        if (cj.processing_method) {
+                            const pm = typeof cj.processing_method === 'object' ? (cj.processing_method.value || 'N/A') : cj.processing_method;
+                            html += `<div class="detail-label">Processing Method</div><div class="detail-value">${pm}</div>`;
+                        }
+                        if (cj.color) html += `<div class="detail-label">Color</div><div class="detail-value">${cj.color}</div>`;
+                        if (cj.odor_profile) html += `<div class="detail-label">Odor Profile</div><div class="detail-value">${cj.odor_profile}</div>`;
+                        if (cj.flavor_profile) html += `<div class="detail-label">Flavor Profile</div><div class="detail-value">${cj.flavor_profile}</div>`;
                         if (cj.default_unit) html += `<div class="detail-label">Default Unit</div><div class="detail-value"><strong style="color:#059669;">${cj.default_unit}</strong></div>`;
                         if (cj.shelf_life_days) html += `<div class="detail-label">Shelf Life</div><div class="detail-value">${cj.shelf_life_days} days</div>`;
                         html += '</div>';
