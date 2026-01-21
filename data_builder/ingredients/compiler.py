@@ -721,6 +721,7 @@ def _process_stage1_cluster(
                 rec.term_error = None
                 rec.updated_at = now
                 rank = rank_counter.increment()
+                rec.compilation_rank = rank
                 LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s (seeded)", rank, rec.compiled_term, legacy_common, priority)
                 return (True, rec.compiled_term, None)
 
@@ -768,6 +769,8 @@ def _process_stage1_cluster(
             rec.term_compiled_at = datetime.now(timezone.utc)
             rec.term_error = None
             rec.updated_at = datetime.now(timezone.utc)
+            rank = rank_counter.increment()
+            rec.compilation_rank = rank
             final_priority = rec.priority
             final_term = rec.compiled_term
             final_common_name = common_name
@@ -778,7 +781,6 @@ def _process_stage1_cluster(
                 ).first()
                 if tq is not None:
                     tq.priority = final_priority
-        rank = rank_counter.increment()
         LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s", rank, final_term, final_common_name, final_priority)
         return (True, final_term, None)
     except Exception as exc:

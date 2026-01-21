@@ -518,7 +518,7 @@ HTML_TEMPLATE = """
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = (clusters || []).map((row, idx) => {
                 const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
-                const rank = row.rank || (idx + 1);
+                const rank = row.rank !== null && row.rank !== undefined ? row.rank : '-';
                 const commonName = row.common_name || row.compiled_term || row.raw_canonical_term || '-';
                 const priority = row.priority || 0;
                 const priorityColor = priority >= 8 ? '#22c55e' : priority >= 5 ? '#eab308' : '#6b7280';
@@ -1714,10 +1714,10 @@ def api_compiled_clusters():
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
                json_extract(c.payload_json, '$.stage1.common_name') as common_name,
                c.priority,
-               ROW_NUMBER() OVER (ORDER BY c.priority DESC, c.cluster_id) as rank
+               c.compilation_rank
         FROM compiled_clusters c
         {where_sql}
-        ORDER BY c.priority DESC, c.cluster_id
+        ORDER BY COALESCE(c.compilation_rank, 999999) ASC, c.priority DESC, c.cluster_id
         LIMIT ? OFFSET ?
         """,
         params + [per_page, offset],
@@ -1732,7 +1732,7 @@ def api_compiled_clusters():
             "items_done": int(r[5] or 0),
             "common_name": r[6] or None,
             "priority": int(r[7] or 0),
-            "rank": int(r[8] or 0),
+            "rank": int(r[8]) if r[8] is not None else None,
         }
         for r in cur.fetchall()
     ]

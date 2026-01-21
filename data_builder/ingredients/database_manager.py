@@ -325,6 +325,7 @@ class CompiledClusterRecord(Base):
     term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
     term_compiled_at = Column(DateTime, nullable=True, default=None)
     term_error = Column(Text, nullable=True, default=None)
+    compilation_rank = Column(Integer, nullable=True, default=None)  # Order in which this term was compiled
 
     # JSON payload (auditable) for stage1/stage2 use.
     payload_json = Column(Text, nullable=False, default="{}")
