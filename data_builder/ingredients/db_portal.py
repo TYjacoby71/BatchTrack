@@ -840,6 +840,17 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
                     html += `<div class="detail-label">Master Category</div><div class="detail-value"><span class="badge badge-compiled">${data.master_category || '-'}</span></div>`;
+                    
+                    // Refinement flags - patterns identified for future batch processing
+                    const flags = data.refinement_flags || [];
+                    if (flags.length > 0) {
+                        html += `<div class="detail-label">Refinement Flags</div><div class="detail-value">`;
+                        flags.forEach(f => {
+                            html += `<span class="badge" style="background:#f59e0b;color:#000;margin-right:4px;">${f}</span>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
                     html += `<div class="detail-label">Term Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
                     html += '</div></div>';
@@ -1897,7 +1908,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
         """
         SELECT cci.cluster_id, cci.merged_item_form_id, cci.derived_term, cci.derived_variation, 
                cci.derived_physical_form, cci.item_status, cci.raw_item_json, cci.item_json,
-               cc.compiled_term
+               cc.compiled_term, cci.refinement_flags
         FROM compiled_cluster_items cci
         LEFT JOIN compiled_clusters cc ON cc.cluster_id = cci.cluster_id
         WHERE cci.cluster_id = ? AND cci.merged_item_form_id = ?
@@ -1942,6 +1953,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
             "raw_item_json": parse_json(row[6]) if row[6] else {},
             "item_json": parse_json(row[7]) if row[7] else {},
             "compiled_term": row[8],
+            "refinement_flags": row[9].split(",") if row[9] else [],
             "source_data": mif_data,
             "master_category": (parse_json(row[7]) or {}).get("master_category", ""),
         }
