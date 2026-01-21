@@ -65,8 +65,12 @@ INGREDIENT_CATEGORIES = [
 SYSTEM_PROMPT = (
     "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
     "manufacturing. You only output JSON that conforms to the provided schema. "
-    "CRITICAL: Do not fabricate facts or numeric properties. If a required field is unknown, "
-    "use the string \"Not Found\". If a field is not applicable, use \"N/A\"."
+    "CRITICAL: For well-documented ingredient properties (SAP values, iodine values, density, "
+    "solubility for common oils/fats/butters/waxes), USE YOUR TRAINING KNOWLEDGE to provide values. "
+    "These properties ARE well-documented and you should provide them. "
+    "Only use \"Not Found\" for truly obscure ingredients where you genuinely have no data. "
+    "Use \"N/A\" when a field is not applicable (e.g., pH for oils). "
+    "EVERY field in the schema must have an explicit answer - never omit fields."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -477,7 +481,7 @@ def complete_item_stubs(
         ctx["seed_items"] = stubs
         payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
         items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        return [it for it in items if isinstance(it, dict)]
+        return [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
     
     # For large clusters, batch to avoid token limit
     all_items = []
@@ -487,7 +491,7 @@ def complete_item_stubs(
         ctx["seed_items"] = batch
         payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
         items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        all_items.extend([it for it in items if isinstance(it, dict)])
+        all_items.extend([_ensure_item_fields(it) for it in items if isinstance(it, dict)])
     return all_items
 
 
@@ -665,6 +669,44 @@ def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict
 
         out.append(merged)
     return out
+
+
+REQUIRED_SPEC_FIELDS = {
+    "sap_naoh", "sap_koh", "iodine_value", "melting_point_celsius",
+    "flash_point_celsius", "ph_range", "usage_rate_percent", "density_g_ml", "solubility"
+}
+
+REQUIRED_ITEM_FIELDS = {
+    "variation", "description", "physical_form", "processing_method", "color",
+    "odor_profile", "flavor_profile", "synonyms", "applications", "function_tags",
+    "safety_tags", "shelf_life_days", "sds_hazards", "storage", "specifications",
+    "sourcing", "default_unit", "form_bypass", "variation_bypass"
+}
+
+
+def _ensure_item_fields(item: dict) -> dict:
+    """Ensure all required fields are present with at least a placeholder value."""
+    for field in REQUIRED_ITEM_FIELDS:
+        if field not in item:
+            if field in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
+                item[field] = []
+            elif field in ("specifications", "storage", "sourcing"):
+                item[field] = {}
+            elif field in ("form_bypass", "variation_bypass"):
+                item[field] = False
+            else:
+                item[field] = "Not Found"
+    
+    # Ensure spec fields
+    specs = item.get("specifications", {})
+    if not isinstance(specs, dict):
+        specs = {}
+    for spec_field in REQUIRED_SPEC_FIELDS:
+        if spec_field not in specs:
+            specs[spec_field] = "Not Found"
+    item["specifications"] = specs
+    
+    return item
 
 
 def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
