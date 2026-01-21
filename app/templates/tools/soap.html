@@ -15,106 +15,507 @@
   </div>
   {% endif %}
   <script>window.RECIPE_CATEGORY_NAME = 'Soaps';</script>
-  <p class="text-muted">Use grams by default. Convert as needed with the unit engine.</p>
+  <p class="text-muted">One door in, one door out: formulate here, then push to Recipes. Most extras stay tucked away until you need them.</p>
 
-  <div class="card mb-4">
-    <div class="card-header">Lye Calculator</div>
+  <div class="card mb-4" id="oilBlendCard">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between gap-2">
+      <div>
+        <strong>Step 1 — Oils & Blend</strong>
+        <div class="small text-muted">Add your oils, then decide if you want to work by grams or percentages.</div>
+      </div>
+      <span class="badge bg-light text-dark">Target 100% oils</span>
+    </div>
     <div class="card-body">
-      <div class="mb-3">
-        <h6>Oil Blend (per batch)</h6>
-        <div id="oilRows">
-          <div class="row g-2 align-items-end oil-row mb-2">
-            <div class="col-md-6">
-              <label class="form-label">Oil</label>
-              <div class="position-relative">
-                <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
-                <input type="hidden" class="oil-sap-koh">
-                <input type="hidden" class="oil-gi-id">
-                <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Weight (g)</label>
-              <input type="number" class="form-control oil-grams" min="0" step="0.1">
-            </div>
-            <div class="col-md-3 d-grid">
-              <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
-            </div>
+      <div class="row g-3 align-items-end mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Input mode</label>
+          <div class="btn-group w-100" role="group" aria-label="Oil input mode">
+            <input type="radio" class="btn-check" name="oil_input_mode" id="oilModeWeight" value="weight" checked>
+            <label class="btn btn-outline-secondary" for="oilModeWeight">By weight</label>
+            <input type="radio" class="btn-check" name="oil_input_mode" id="oilModePercent" value="percent">
+            <label class="btn btn-outline-secondary" for="oilModePercent">By %</label>
           </div>
         </div>
-        <button class="btn btn-sm btn-outline-primary" id="addOil">Add Oil</button>
-      </div>
-
-      <div class="accordion mb-3" id="soapExtrasAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapExtrasHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapExtrasCollapse">
-              Optional add-ons (ingredients, consumables, containers)
-            </button>
-          </h2>
-          <div id="soapExtrasCollapse" class="accordion-collapse collapse" data-bs-parent="#soapExtrasAccordion">
-            <div class="accordion-body">
-              <div class="mb-3">
-                <h6>Ingredients</h6>
-                <div id="tool-ingredients"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
-              </div>
-              <div class="mb-3">
-                <h6>Consumables</h6>
-                <div id="tool-consumables"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
-              </div>
-              <div class="mb-3">
-                <h6>Containers</h6>
-                <div id="tool-containers"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
-              </div>
-            </div>
-          </div>
+        <div class="col-md-4" id="oilTotalTargetWrap">
+          <label class="form-label">Total oils weight (g)</label>
+          <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" value="1000">
+          <div class="form-text">Used when entering oils by percent.</div>
         </div>
-      </div>
-      <form id="lyeForm" class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Computed total oils (g)</label>
-          <input type="number" class="form-control" name="oil_weight_g" min="0" step="0.1" required readonly>
+          <input type="number" class="form-control" id="oilTotalComputed" readonly>
         </div>
-        <div class="col-md-4">
+      </div>
+
+      <div id="oilRows">
+        <div class="row g-2 align-items-end oil-row mb-2">
+          <div class="col-md-5">
+            <label class="form-label">Oil</label>
+            <div class="position-relative">
+              <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
+              <input type="hidden" class="oil-sap-koh">
+              <input type="hidden" class="oil-iodine">
+              <input type="hidden" class="oil-fatty">
+              <input type="hidden" class="oil-gi-id">
+              <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
+            </div>
+            <div class="form-text small text-muted">SAP + iodine are pulled automatically when available.</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Weight (g)</label>
+            <input type="number" class="form-control oil-grams" min="0" step="0.1">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">%</label>
+            <input type="number" class="form-control oil-percent" min="0" step="0.1">
+          </div>
+          <div class="col-md-2 d-grid">
+            <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+        <button class="btn btn-sm btn-outline-primary" id="addOil">Add Oil</button>
+        <button class="btn btn-sm btn-outline-secondary" id="normalizeOils">Normalize to 100%</button>
+        <div class="small text-muted">Total %: <span id="oilPercentTotal">0</span>%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4" id="lyeSettingsCard">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between gap-2">
+      <div>
+        <strong>Step 2 — Lye & Water Settings</strong>
+        <div class="small text-muted">Defaults match common soap calculator assumptions.</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form id="lyeForm" class="row g-3">
+        <div class="col-md-3">
           <label class="form-label">Superfat (%)</label>
-          <input type="number" class="form-control" name="superfat" min="0" max="20" step="0.1" value="5" required>
+          <input type="number" class="form-control" name="superfat" min="0" max="20" step="0.1" value="5">
+          <div class="form-text">5% is a balanced default.</div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label">Lye type</label>
           <select class="form-select" name="lye_type">
             <option value="NaOH">NaOH (bar soap)</option>
             <option value="KOH">KOH (liquid soap)</option>
           </select>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Water as % of oils</label>
+        <div class="col-md-3">
+          <label class="form-label">Lye purity (%)</label>
+          <input type="number" class="form-control" name="lye_purity" min="90" max="100" step="0.1" value="100">
+          <div class="form-text">Most calculators assume 100%.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Water calculation</label>
+          <select class="form-select" name="water_method" id="waterMethod">
+            <option value="percent">Water as % of oils</option>
+            <option value="concentration">Lye concentration %</option>
+            <option value="ratio">Water : Lye ratio</option>
+          </select>
+        </div>
+        <div class="col-md-4 water-input" data-method="percent">
+          <label class="form-label">Water % of oils</label>
           <input type="number" class="form-control" name="water_pct" min="20" max="50" step="0.1" value="33">
+        </div>
+        <div class="col-md-4 water-input d-none" data-method="concentration">
+          <label class="form-label">Lye concentration %</label>
+          <input type="number" class="form-control" name="lye_concentration" min="20" max="50" step="0.1" value="33">
+        </div>
+        <div class="col-md-4 water-input d-none" data-method="ratio">
+          <label class="form-label">Water : Lye ratio</label>
+          <input type="number" class="form-control" name="water_ratio" min="1" max="4" step="0.05" value="2">
         </div>
         <div class="col-12">
           <button type="button" class="btn btn-primary" id="calcLyeBtn">Calculate</button>
         </div>
       </form>
-      <div class="mt-3" id="lyeResult" style="display:none;">
-        <div class="alert alert-info mb-2" id="lyeNumbers"></div>
-        <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-          <button class="btn btn-success" id="saveSoapTool">Push to Recipes</button>
-          <span class="small text-muted">Draft your recipe to finish in BatchTrack.</span>
+    </div>
+  </div>
+
+  <div class="card mb-4" id="resultsCard" style="display:none;">
+    <div class="card-header"><strong>Step 3 — Results</strong></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Lye needed (pure)</div>
+            <div class="fs-5" id="lyePureOutput">--</div>
+          </div>
         </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Lye with purity</div>
+            <div class="fs-5" id="lyeAdjustedOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Water</div>
+            <div class="fs-5" id="waterOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Batch yield</div>
+            <div class="fs-5" id="batchYieldOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Lye concentration</div>
+            <div class="fs-5" id="lyeConcentrationOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Water : Lye</div>
+            <div class="fs-5" id="waterRatioOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Total oils</div>
+            <div class="fs-5" id="totalOilsOutput">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Superfat</div>
+            <div class="fs-5" id="superfatOutput">--</div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-info mt-3 mb-2">
+        Always add lye to water (never water to lye) and wear protective gear.
+      </div>
+      <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
+        <button class="btn btn-success" id="saveSoapTool">Push to Recipes</button>
+        <span class="small text-muted">Draft your recipe to finish in BatchTrack.</span>
       </div>
     </div>
   </div>
 
-  <div class="accordion" id="soapUtilitiesAccordion">
+  <div class="accordion" id="soapAdvancedAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapQualitiesHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapQualitiesCollapse">
+          Soap qualities & fatty acids
+        </button>
+      </h2>
+      <div id="soapQualitiesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
+        <div class="accordion-body">
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Hardness</span>
+                  <span id="qualityHardnessValue">--</span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar" id="qualityHardnessBar" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Cleansing</span>
+                  <span id="qualityCleansingValue">--</span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar bg-warning" id="qualityCleansingBar" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Conditioning</span>
+                  <span id="qualityConditioningValue">--</span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar bg-success" id="qualityConditioningBar" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Bubbly</span>
+                  <span id="qualityBubblyValue">--</span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar bg-info" id="qualityBubblyBar" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Creamy</span>
+                  <span id="qualityCreamyValue">--</span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar bg-secondary" id="qualityCreamyBar" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="small text-muted" id="fattyCoverageNote">Fatty acid coverage: --</div>
+            </div>
+            <div class="col-lg-6">
+              <div class="row g-2">
+                <div class="col-6">
+                  <div class="border rounded p-2">
+                    <div class="small text-muted">Iodine</div>
+                    <div class="fw-semibold" id="iodineValue">--</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="border rounded p-2">
+                    <div class="small text-muted">INS</div>
+                    <div class="fw-semibold" id="insValue">--</div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="border rounded p-2">
+                    <div class="small text-muted">Avg SAP (KOH)</div>
+                    <div class="fw-semibold" id="sapAvgValue">--</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <h6>Fatty acid breakdown</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <tbody>
+                      <tr><td>Lauric</td><td class="text-end" id="fattyLauric">--</td></tr>
+                      <tr><td>Myristic</td><td class="text-end" id="fattyMyristic">--</td></tr>
+                      <tr><td>Palmitic</td><td class="text-end" id="fattyPalmitic">--</td></tr>
+                      <tr><td>Stearic</td><td class="text-end" id="fattyStearic">--</td></tr>
+                      <tr><td>Ricinoleic</td><td class="text-end" id="fattyRicinoleic">--</td></tr>
+                      <tr><td>Oleic</td><td class="text-end" id="fattyOleic">--</td></tr>
+                      <tr><td>Linoleic</td><td class="text-end" id="fattyLinoleic">--</td></tr>
+                      <tr><td>Linolenic</td><td class="text-end" id="fattyLinolenic">--</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="alert alert-warning mt-2 d-none" id="soapQualityWarnings"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapAdditivesHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapAdditivesCollapse">
+          Additives & fragrance helpers
+        </button>
+      </h2>
+      <div id="soapAdditivesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
+        <div class="accordion-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Fragrance/EO %</label>
+              <input type="number" class="form-control" id="additiveFragrancePct" min="0" max="6" step="0.1" value="3">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Sodium lactate %</label>
+              <input type="number" class="form-control" id="additiveLactatePct" min="0" max="5" step="0.1" value="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Sugar %</label>
+              <input type="number" class="form-control" id="additiveSugarPct" min="0" max="5" step="0.1" value="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Salt %</label>
+              <input type="number" class="form-control" id="additiveSaltPct" min="0" max="5" step="0.1" value="0.5">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Citric acid %</label>
+              <input type="number" class="form-control" id="additiveCitricPct" min="0" max="5" step="0.1" value="0">
+              <div class="form-text">Adds extra lye when used.</div>
+            </div>
+          </div>
+          <div class="row g-3 mt-3">
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Fragrance/EO</div>
+                <div class="fw-semibold" id="additiveFragranceOut">--</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Sodium lactate</div>
+                <div class="fw-semibold" id="additiveLactateOut">--</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Sugar</div>
+                <div class="fw-semibold" id="additiveSugarOut">--</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Salt</div>
+                <div class="fw-semibold" id="additiveSaltOut">--</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Citric acid</div>
+                <div class="fw-semibold" id="additiveCitricOut">--</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Extra lye for citric</div>
+                <div class="fw-semibold" id="additiveCitricLyeOut">--</div>
+              </div>
+            </div>
+          </div>
+          <div class="small text-muted mt-2">All additive grams are based on total oil weight.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapMoldHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapMoldCollapse">
+          Mold sizing & batch planning
+        </button>
+      </h2>
+      <div id="soapMoldCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
+        <div class="accordion-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Mold water weight (g)</label>
+              <input type="number" class="form-control" id="moldWaterWeight" min="0" step="1" placeholder="e.g., 1200">
+              <div class="form-text">Fill the mold with water and weigh it.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Oils % of mold</label>
+              <input type="number" class="form-control" id="moldOilPct" min="50" max="80" step="1" value="65">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Suggested oils weight</label>
+              <input type="text" class="form-control" id="moldSuggestedOils" readonly>
+            </div>
+          </div>
+          <div class="small text-muted mt-2">Adjust oils % depending on your water/lye preferences.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapRecipeLinesHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapRecipeLinesCollapse">
+          Recipe lines (ingredients, consumables, containers)
+        </button>
+      </h2>
+      <div id="soapRecipeLinesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
+        <div class="accordion-body">
+          <div class="mb-3">
+            <h6>Quick stubs</h6>
+            <div class="d-flex flex-wrap gap-2" id="ingredientStubButtons">
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Honey">Honey</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Goat Milk">Goat Milk</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Activated Charcoal">Activated Charcoal</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Kaolin Clay">Kaolin Clay</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Sodium Lactate">Sodium Lactate</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Fragrance Oil">Fragrance Oil</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="ingredient" data-stub-name="Essential Oil Blend">Essential Oil Blend</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <h6>Ingredients</h6>
+            <div id="tool-ingredients"></div>
+            <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
+          </div>
+          <div class="mb-3">
+            <h6>Consumables</h6>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="consumable" data-stub-name="Nitrile Gloves">Nitrile Gloves</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="consumable" data-stub-name="Safety Goggles">Safety Goggles</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="consumable" data-stub-name="Freezer Paper">Freezer Paper</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="consumable" data-stub-name="Paper Towels">Paper Towels</button>
+            </div>
+            <div id="tool-consumables"></div>
+            <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
+          </div>
+          <div class="mb-3">
+            <h6>Containers</h6>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="container" data-stub-name="Loaf Mold">Loaf Mold</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="container" data-stub-name="Silicone Cavity Mold">Silicone Cavity Mold</button>
+              <button class="btn btn-sm btn-outline-secondary stub-btn" data-stub-kind="container" data-stub-name="Wax Paper Lined Box">Wax Paper Lined Box</button>
+            </div>
+            <div id="tool-containers"></div>
+            <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapGlossaryHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapGlossaryCollapse">
+          Glossary, calculations, and ingredient categories
+        </button>
+      </h2>
+      <div id="soapGlossaryCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
+        <div class="accordion-body">
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <h6>Core terms</h6>
+              <dl class="small">
+                <dt>Saponification (SAP)</dt>
+                <dd>Reaction where oils + lye turn into soap + glycerin.</dd>
+                <dt>Superfat</dt>
+                <dd>Extra oils left unsaponified for gentler bars.</dd>
+                <dt>Lye concentration</dt>
+                <dd>Percent lye in your solution (higher = faster trace).</dd>
+                <dt>Trace</dt>
+                <dd>When batter thickens enough to leave a trail on the surface.</dd>
+                <dt>Cure</dt>
+                <dd>Resting time for hardness and mildness (4-6 weeks).</dd>
+              </dl>
+              <h6>Soap calculations included</h6>
+              <ul class="small">
+                <li>NaOH/KOH lye requirement with superfat and purity</li>
+                <li>Water by % of oils, lye concentration, or ratio</li>
+                <li>Soap qualities (hardness, cleansing, conditioning, bubbly, creamy)</li>
+                <li>Fatty acid breakdown and coverage</li>
+                <li>Iodine value and INS</li>
+                <li>Additive gram helpers and extra lye for citric acid</li>
+                <li>Mold capacity to suggested oils weight</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <h6>Ingredient categories</h6>
+              <ul class="small">
+                <li><strong>Hard oils/butters:</strong> Coconut, palm, cocoa butter, tallow, lard</li>
+                <li><strong>Conditioning hard:</strong> Shea, mango, kokum, sal butter</li>
+                <li><strong>Soft oils:</strong> Olive, avocado, sunflower, rice bran</li>
+                <li><strong>Luxury oils:</strong> Argan, jojoba, hemp seed, evening primrose</li>
+                <li><strong>Additives:</strong> Honey, milk, clays, charcoal, botanicals</li>
+              </ul>
+              <h6>Consumables & packaging</h6>
+              <ul class="small">
+                <li>Gloves, goggles, aprons, paper towels</li>
+                <li>Freezer paper, parchment, liner sheets</li>
+                <li>Labels, shrink wrap, boxes, belly bands</li>
+                <li>Loaf molds, silicone cavities, cutting guides</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="accordion-item">
       <h2 class="accordion-header" id="soapUtilitiesHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapUtilitiesCollapse">
-          Quick Unit Conversion
+          Quick unit conversion
         </button>
       </h2>
-      <div id="soapUtilitiesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapUtilitiesAccordion">
+      <div id="soapUtilitiesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
         <div class="accordion-body">
           <form id="convForm" class="row g-3">
             <div class="col-md-3">
@@ -137,13 +538,14 @@
         </div>
       </div>
     </div>
+
     <div class="accordion-item">
       <h2 class="accordion-header" id="soapExportsHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapExportsCollapse">
           Exports
         </button>
       </h2>
-      <div id="soapExportsCollapse" class="accordion-collapse collapse" data-bs-parent="#soapUtilitiesAccordion">
+      <div id="soapExportsCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
         <div class="accordion-body">
           <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">View INCI Summary</a>
         </div>
@@ -157,11 +559,52 @@
 <script src="{{ url_for('static', filename='js/components/tool_lines.js') }}"></script>
 <script>
 (function(){
-  function round(v){ return Math.round(v*1000)/1000 }
   const TOOL_UNIT_OPTIONS_HTML = `{% for unit in global_units %}<option value="{{ unit.name }}">{{ unit.name }}</option>{% endfor %}`;
+  const QUALITY_RANGES = {
+    hardness: [29, 54],
+    cleansing: [12, 22],
+    conditioning: [44, 69],
+    bubbly: [14, 46],
+    creamy: [16, 48],
+  };
+  const FATTY_DISPLAY_KEYS = [
+    'lauric',
+    'myristic',
+    'palmitic',
+    'stearic',
+    'ricinoleic',
+    'oleic',
+    'linoleic',
+    'linolenic',
+  ];
+  const state = { lastCalc: null };
+
+  function round(value, decimals = 3){
+    if (!isFinite(value)) return 0;
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
+  }
+
+  function toNumber(value){
+    const num = parseFloat(value);
+    return isFinite(num) ? num : 0;
+  }
+
+  function formatWeight(value){
+    if (!isFinite(value) || value <= 0) return '--';
+    return `${round(value, 2)} g`;
+  }
+
+  function formatPercent(value){
+    if (!isFinite(value)) return '--';
+    return `${round(value, 1)}%`;
+  }
+
   function attachOilTypeahead(row){
     const input = row.querySelector('.oil-typeahead');
     const hiddenSap = row.querySelector('.oil-sap-koh');
+    const hiddenIodine = row.querySelector('.oil-iodine');
+    const hiddenFatty = row.querySelector('.oil-fatty');
     const hiddenGi = row.querySelector('.oil-gi-id');
     const list = row.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
@@ -181,94 +624,514 @@
         if (hiddenSap) {
           hiddenSap.value = picked?.saponification_value || '';
         }
-      }
-    });
-    input.addEventListener('input', function(){
-      if (!this.value.trim() && hiddenSap) {
-        hiddenSap.value = '';
-      }
-      if (!this.value.trim() && hiddenGi) {
-        hiddenGi.value = '';
-      }
-    });
-  }
-
-  function computeTotalOils(){
-    let sum=0; document.querySelectorAll('#oilRows .oil-grams').forEach(i=>{ const v=parseFloat(i.value||'0'); if(v>0) sum+=v; });
-    document.querySelector('#lyeForm [name="oil_weight_g"]').value = round(sum);
-    return sum;
-  }
-  function computeLyeBySAP(lyeType, superfat){
-    // Sum oil grams * SAP factor per oil; saponification_value is mg KOH / g oil
-    // g KOH per g oil = SAP_KOH/1000; g NaOH per g = SAP_KOH * 0.713 / 1000
-    let lyeTotal=0; let totalG=0;
-    document.querySelectorAll('#oilRows .oil-row').forEach(row=>{
-      const g = parseFloat(row.querySelector('.oil-grams').value||'0');
-      const sapKOH = parseFloat(row.querySelector('.oil-sap-koh').value||'0');
-      if (g>0){
-        totalG += g;
-        if (sapKOH>0){
-          const perG = (lyeType==='KOH') ? (sapKOH/1000.0) : (sapKOH*0.713/1000.0);
-          lyeTotal += g * perG;
+        if (hiddenIodine) {
+          hiddenIodine.value = picked?.iodine_value || '';
+        }
+        if (hiddenFatty) {
+          hiddenFatty.value = picked?.fatty_acid_profile ? JSON.stringify(picked.fatty_acid_profile) : '';
         }
       }
     });
-    if (lyeTotal>0) return lyeTotal * (1 - (superfat/100));
-    // Fallback to average SAP if no per-oil values provided
-    const sapAvgNaOH = 0.138, sapAvgKOH = 0.194;
-    const sap = (lyeType==='KOH')? sapAvgKOH : sapAvgNaOH;
-    return totalG * sap * (1 - (superfat/100));
-  }
-
-  function collectOilLines(){
-    const oils = [];
-    document.querySelectorAll('#oilRows .oil-row').forEach(row => {
-      const name = row.querySelector('.oil-typeahead')?.value?.trim();
-      const gi = row.querySelector('.oil-gi-id')?.value || '';
-      const grams = parseFloat(row.querySelector('.oil-grams')?.value || '0');
-      if (!(grams > 0)) return;
-      if (!name && !gi) return;
-      oils.push({
-        name: name || undefined,
-        global_item_id: gi ? parseInt(gi) : undefined,
-        quantity: grams,
-        unit: 'gram'
-      });
+    input.addEventListener('input', function(){
+      if (!this.value.trim()) {
+        if (hiddenSap) hiddenSap.value = '';
+        if (hiddenIodine) hiddenIodine.value = '';
+        if (hiddenFatty) hiddenFatty.value = '';
+        if (hiddenGi) hiddenGi.value = '';
+      }
     });
-    return oils;
   }
 
-  document.getElementById('addOil').addEventListener('click', function(){
-    const container = document.getElementById('oilRows');
-    const row = document.createElement('div'); row.className='row g-2 align-items-end oil-row mb-2';
+  function buildOilRow(){
+    const row = document.createElement('div');
+    row.className = 'row g-2 align-items-end oil-row mb-2';
     row.innerHTML = `
-      <div class="col-md-6">
+      <div class="col-md-5">
         <label class="form-label">Oil</label>
         <div class="position-relative">
           <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
           <input type="hidden" class="oil-sap-koh">
+          <input type="hidden" class="oil-iodine">
+          <input type="hidden" class="oil-fatty">
           <input type="hidden" class="oil-gi-id">
           <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
         </div>
+        <div class="form-text small text-muted">SAP + iodine are pulled automatically when available.</div>
       </div>
       <div class="col-md-3">
         <label class="form-label">Weight (g)</label>
         <input type="number" class="form-control oil-grams" min="0" step="0.1">
       </div>
-      <div class="col-md-3 d-grid">
+      <div class="col-md-2">
+        <label class="form-label">%</label>
+        <input type="number" class="form-control oil-percent" min="0" step="0.1">
+      </div>
+      <div class="col-md-2 d-grid">
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
       </div>`;
-    container.appendChild(row);
     attachOilTypeahead(row);
-  });
-  document.getElementById('oilRows').addEventListener('input', function(e){ if(e.target.classList.contains('oil-grams')) computeTotalOils(); });
-  document.getElementById('oilRows').addEventListener('click', function(e){ if(e.target.classList.contains('remove-oil')){ e.target.closest('.oil-row').remove(); computeTotalOils(); }});
-  // attach for initial row
-  attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
+    return row;
+  }
+
+  function getInputMode(){
+    const checked = document.querySelector('input[name="oil_input_mode"]:checked');
+    return checked ? checked.value : 'weight';
+  }
+
+  function updateInputMode(){
+    const mode = getInputMode();
+    const isPercent = mode === 'percent';
+    const targetWrap = document.getElementById('oilTotalTargetWrap');
+    const targetInput = document.getElementById('oilTotalTarget');
+    targetWrap.classList.toggle('d-none', !isPercent);
+    if (isPercent) {
+      targetInput.setAttribute('required', 'required');
+    } else {
+      targetInput.removeAttribute('required');
+    }
+    document.querySelectorAll('.oil-grams').forEach(el => {
+      el.readOnly = isPercent;
+    });
+    document.querySelectorAll('.oil-percent').forEach(el => {
+      el.readOnly = !isPercent;
+    });
+    updateOilTotals();
+  }
+
+  function updateOilTotals(){
+    const mode = getInputMode();
+    const totalTarget = toNumber(document.getElementById('oilTotalTarget').value);
+    let totalWeight = 0;
+    let totalPct = 0;
+    const rows = document.querySelectorAll('#oilRows .oil-row');
+    rows.forEach(row => {
+      const gramsInput = row.querySelector('.oil-grams');
+      const pctInput = row.querySelector('.oil-percent');
+      const grams = toNumber(gramsInput.value);
+      const pct = toNumber(pctInput.value);
+      if (mode === 'percent') {
+        const computed = totalTarget > 0 ? (totalTarget * pct / 100) : 0;
+        gramsInput.value = computed > 0 ? round(computed, 2) : '';
+        totalPct += pct;
+      } else {
+        totalWeight += grams;
+      }
+    });
+    if (mode === 'weight') {
+      rows.forEach(row => {
+        const grams = toNumber(row.querySelector('.oil-grams').value);
+        const pctInput = row.querySelector('.oil-percent');
+        const pct = totalWeight > 0 ? (grams / totalWeight) * 100 : 0;
+        pctInput.value = grams > 0 ? round(pct, 2) : '';
+        totalPct += pct;
+      });
+    } else {
+      totalWeight = totalTarget;
+    }
+    document.getElementById('oilTotalComputed').value = totalWeight > 0 ? round(totalWeight, 2) : '';
+    document.getElementById('oilPercentTotal').textContent = round(totalPct, 2);
+    updateAdditivesOutput(totalWeight);
+    updateMoldSuggested();
+    return totalWeight;
+  }
+
+  function normalizeOils(){
+    const mode = getInputMode();
+    const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
+    if (!rows.length) return;
+    if (mode === 'percent') {
+      const totalPct = rows.reduce((sum, row) => sum + toNumber(row.querySelector('.oil-percent').value), 0);
+      if (totalPct <= 0) return;
+      rows.forEach(row => {
+        const pctInput = row.querySelector('.oil-percent');
+        const pct = toNumber(pctInput.value);
+        pctInput.value = round((pct / totalPct) * 100, 2);
+      });
+    }
+    updateOilTotals();
+  }
+
+  function collectOilData(){
+    const oils = [];
+    document.querySelectorAll('#oilRows .oil-row').forEach(row => {
+      const name = row.querySelector('.oil-typeahead')?.value?.trim();
+      const grams = toNumber(row.querySelector('.oil-grams')?.value);
+      const sapKoh = toNumber(row.querySelector('.oil-sap-koh')?.value);
+      const iodine = toNumber(row.querySelector('.oil-iodine')?.value);
+      const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
+      const gi = row.querySelector('.oil-gi-id')?.value || '';
+      let fattyProfile = null;
+      if (fattyRaw) {
+        try {
+          fattyProfile = JSON.parse(fattyRaw);
+        } catch (_) {
+          fattyProfile = null;
+        }
+      }
+      if (grams <= 0) return;
+      oils.push({
+        name: name || null,
+        grams,
+        sapKoh,
+        iodine,
+        fattyProfile,
+        global_item_id: gi ? parseInt(gi) : null,
+      });
+    });
+    return oils;
+  }
+
+  function computeLyeTotals(oils, lyeType){
+    let lyeTotal = 0;
+    let sapWeighted = 0;
+    let sapWeightG = 0;
+    let totalWeight = 0;
+    oils.forEach(oil => {
+      totalWeight += oil.grams;
+      if (oil.sapKoh > 0) {
+        const perG = lyeType === 'KOH'
+          ? (oil.sapKoh / 1000)
+          : (oil.sapKoh * 0.713 / 1000);
+        lyeTotal += oil.grams * perG;
+        sapWeighted += oil.sapKoh * oil.grams;
+        sapWeightG += oil.grams;
+      }
+    });
+    const sapAvg = sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
+    if (lyeTotal <= 0 && totalWeight > 0) {
+      const fallbackPerG = lyeType === 'KOH' ? 0.194 : 0.138;
+      lyeTotal = totalWeight * fallbackPerG;
+    }
+    return { lyeTotal, sapAvg };
+  }
+
+  function computeWater(lyeAdjusted, totalOils, method, waterPct, lyeConcentration, waterRatio){
+    let waterG = 0;
+    if (lyeAdjusted <= 0) {
+      return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
+    }
+    if (method === 'concentration') {
+      const conc = lyeConcentration > 0 ? lyeConcentration : 33;
+      waterG = lyeAdjusted * ((100 - conc) / conc);
+    } else if (method === 'ratio') {
+      const ratio = waterRatio > 0 ? waterRatio : 2;
+      waterG = lyeAdjusted * ratio;
+    } else {
+      const pct = waterPct > 0 ? waterPct : 33;
+      waterG = totalOils * (pct / 100);
+    }
+    const lyeConc = waterG + lyeAdjusted > 0 ? (lyeAdjusted / (lyeAdjusted + waterG)) * 100 : 0;
+    const ratio = lyeAdjusted > 0 ? (waterG / lyeAdjusted) : 0;
+    return { waterG, lyeConcentration: lyeConc, waterRatio: ratio };
+  }
+
+  function computeIodine(oils){
+    let totalWeight = 0;
+    let weighted = 0;
+    oils.forEach(oil => {
+      if (oil.iodine > 0) {
+        totalWeight += oil.grams;
+        weighted += oil.iodine * oil.grams;
+      }
+    });
+    return {
+      iodine: totalWeight > 0 ? weighted / totalWeight : 0,
+      coverageWeight: totalWeight,
+    };
+  }
+
+  function computeFattyAcids(oils){
+    const totals = {};
+    let coveredWeight = 0;
+    oils.forEach(oil => {
+      if (!oil.fattyProfile || typeof oil.fattyProfile !== 'object') {
+        return;
+      }
+      coveredWeight += oil.grams;
+      Object.entries(oil.fattyProfile).forEach(([key, pct]) => {
+        const value = toNumber(pct);
+        if (value > 0) {
+          totals[key] = (totals[key] || 0) + oil.grams * (value / 100);
+        }
+      });
+    });
+    const percent = {};
+    if (coveredWeight > 0) {
+      Object.entries(totals).forEach(([key, grams]) => {
+        percent[key] = (grams / coveredWeight) * 100;
+      });
+    }
+    return { percent, coveredWeight };
+  }
+
+  function computeQualities(fattyPercent){
+    const get = key => fattyPercent[key] || 0;
+    return {
+      hardness: get('lauric') + get('myristic') + get('palmitic') + get('stearic'),
+      cleansing: get('lauric') + get('myristic'),
+      conditioning: get('oleic') + get('linoleic') + get('linolenic') + get('ricinoleic'),
+      bubbly: get('lauric') + get('myristic') + get('ricinoleic'),
+      creamy: get('palmitic') + get('stearic') + get('ricinoleic'),
+    };
+  }
+
+  function setProgress(id, value){
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    if (!isFinite(value)) {
+      bar.style.width = '0%';
+      return;
+    }
+    const clamped = Math.max(0, Math.min(100, value));
+    bar.style.width = `${clamped}%`;
+  }
+
+  function updateQualitiesDisplay(data){
+    const {
+      qualities,
+      fattyPercent,
+      coveragePct,
+      iodine,
+      ins,
+      sapAvg,
+    } = data;
+
+    const hasCoverage = coveragePct > 0;
+
+    function setQuality(name, value){
+      const label = document.getElementById(`quality${name}Value`);
+      if (!label) return;
+      label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
+      setProgress(`quality${name}Bar`, hasCoverage ? value : 0);
+    }
+
+    setQuality('Hardness', qualities.hardness);
+    setQuality('Cleansing', qualities.cleansing);
+    setQuality('Conditioning', qualities.conditioning);
+    setQuality('Bubbly', qualities.bubbly);
+    setQuality('Creamy', qualities.creamy);
+
+    document.getElementById('fattyCoverageNote').textContent = coveragePct > 0
+      ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
+      : 'Fatty acid coverage: not enough data yet';
+
+    document.getElementById('iodineValue').textContent = iodine > 0 ? round(iodine, 1) : '--';
+    document.getElementById('insValue').textContent = ins > 0 ? round(ins, 1) : '--';
+    document.getElementById('sapAvgValue').textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
+
+    FATTY_DISPLAY_KEYS.forEach(key => {
+      const id = `fatty${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      const value = fattyPercent[key];
+      document.getElementById(id).textContent = hasCoverage && value ? `${round(value, 1)}%` : '--';
+    });
+
+    const warnings = [];
+    if (iodine > 70) warnings.push('High iodine value can mean softer bars or faster rancidity.');
+    if (hasCoverage && qualities.hardness && qualities.hardness < QUALITY_RANGES.hardness[0]) warnings.push('Hardness looks low; bars may be soft.');
+    if (hasCoverage && qualities.cleansing && qualities.cleansing > QUALITY_RANGES.cleansing[1]) warnings.push('Cleansing is high; consider more conditioning oils.');
+    const warningBox = document.getElementById('soapQualityWarnings');
+    if (warnings.length) {
+      warningBox.classList.remove('d-none');
+      warningBox.innerHTML = `<strong>Flags:</strong><ul class="mb-0">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`;
+    } else {
+      warningBox.classList.add('d-none');
+      warningBox.textContent = '';
+    }
+  }
+
+  function computeAdditives(totalOils, lyeType){
+    const fragrancePct = toNumber(document.getElementById('additiveFragrancePct').value);
+    const lactatePct = toNumber(document.getElementById('additiveLactatePct').value);
+    const sugarPct = toNumber(document.getElementById('additiveSugarPct').value);
+    const saltPct = toNumber(document.getElementById('additiveSaltPct').value);
+    const citricPct = toNumber(document.getElementById('additiveCitricPct').value);
+    const fragranceG = totalOils * (fragrancePct / 100);
+    const lactateG = totalOils * (lactatePct / 100);
+    const sugarG = totalOils * (sugarPct / 100);
+    const saltG = totalOils * (saltPct / 100);
+    const citricG = totalOils * (citricPct / 100);
+    const citricLyeFactor = lyeType === 'KOH' ? 0.719 : 0.624;
+    const citricLyeG = citricG * citricLyeFactor;
+    return {
+      fragranceG,
+      lactateG,
+      sugarG,
+      saltG,
+      citricG,
+      citricLyeG,
+    };
+  }
+
+  function updateAdditivesOutput(totalOils){
+    const lyeType = document.getElementById('lyeForm')?.lye_type?.value || 'NaOH';
+    const outputs = computeAdditives(totalOils || 0, lyeType);
+    document.getElementById('additiveFragranceOut').textContent = formatWeight(outputs.fragranceG);
+    document.getElementById('additiveLactateOut').textContent = formatWeight(outputs.lactateG);
+    document.getElementById('additiveSugarOut').textContent = formatWeight(outputs.sugarG);
+    document.getElementById('additiveSaltOut').textContent = formatWeight(outputs.saltG);
+    document.getElementById('additiveCitricOut').textContent = formatWeight(outputs.citricG);
+    document.getElementById('additiveCitricLyeOut').textContent = formatWeight(outputs.citricLyeG);
+    return outputs;
+  }
+
+  function updateMoldSuggested(){
+    const waterWeight = toNumber(document.getElementById('moldWaterWeight').value);
+    const oilPct = toNumber(document.getElementById('moldOilPct').value);
+    const suggested = waterWeight > 0 ? waterWeight * (oilPct / 100) : 0;
+    document.getElementById('moldSuggestedOils').value = suggested > 0 ? `${round(suggested, 1)} g` : '';
+  }
+
+  function setWaterMethod(){
+    const method = document.getElementById('waterMethod').value;
+    document.querySelectorAll('.water-input').forEach(el => {
+      el.classList.toggle('d-none', el.dataset.method !== method);
+    });
+  }
+
+  function calculateAll(){
+    const totalOils = updateOilTotals();
+    if (!(totalOils > 0)) {
+      alert('Add oils and weights before calculating.');
+      return null;
+    }
+    const form = document.getElementById('lyeForm');
+    const superfat = toNumber(form.superfat.value);
+    const lyeType = form.lye_type.value;
+    const purity = Math.min(100, Math.max(0, toNumber(form.lye_purity.value) || 100));
+    const waterMethod = form.water_method.value;
+    const waterPct = toNumber(form.water_pct.value);
+    const lyeConcentration = toNumber(form.lye_concentration.value);
+    const waterRatio = toNumber(form.water_ratio.value);
+
+    const oils = collectOilData();
+    const lyeTotals = computeLyeTotals(oils, lyeType);
+    const lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
+    const lyeAdjusted = purity > 0 ? lyePure / (purity / 100) : lyePure;
+    const waterData = computeWater(lyeAdjusted, totalOils, waterMethod, waterPct, lyeConcentration, waterRatio);
+    const additives = updateAdditivesOutput(totalOils);
+    const batchYield = totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG;
+
+    document.getElementById('resultsCard').style.display = 'block';
+    document.getElementById('lyePureOutput').textContent = formatWeight(lyePure);
+    document.getElementById('lyeAdjustedOutput').textContent = formatWeight(lyeAdjusted);
+    document.getElementById('waterOutput').textContent = formatWeight(waterData.waterG);
+    document.getElementById('batchYieldOutput').textContent = formatWeight(batchYield);
+    document.getElementById('lyeConcentrationOutput').textContent = formatPercent(waterData.lyeConcentration);
+    document.getElementById('waterRatioOutput').textContent = isFinite(waterData.waterRatio) && waterData.waterRatio > 0
+      ? round(waterData.waterRatio, 2).toString()
+      : '--';
+    document.getElementById('totalOilsOutput').textContent = formatWeight(totalOils);
+    document.getElementById('superfatOutput').textContent = formatPercent(superfat);
+
+    const iodineData = computeIodine(oils);
+    const fatty = computeFattyAcids(oils);
+    const qualities = computeQualities(fatty.percent);
+    const ins = (lyeTotals.sapAvg && iodineData.iodine) ? (lyeTotals.sapAvg - iodineData.iodine) : 0;
+    const coveragePct = totalOils > 0 ? (fatty.coveredWeight / totalOils) * 100 : 0;
+    updateQualitiesDisplay({
+      qualities,
+      fattyPercent: fatty.percent,
+      coveragePct,
+      iodine: iodineData.iodine,
+      ins,
+      sapAvg: lyeTotals.sapAvg,
+    });
+
+    state.lastCalc = {
+      totalOils,
+      oils,
+      lyeType,
+      superfat,
+      purity,
+      lyePure,
+      lyeAdjusted,
+      water: waterData.waterG,
+      waterMethod,
+      waterPct,
+      lyeConcentration: waterData.lyeConcentration,
+      waterRatio: waterData.waterRatio,
+      additives,
+      batchYield,
+    };
+    return state.lastCalc;
+  }
 
   function buildLineRow(kind){
     return buildToolLineRow(kind, { context: 'public', unitOptionsHtml: TOOL_UNIT_OPTIONS_HTML });
   }
+
+  function addStubLine(kind, name){
+    const row = buildLineRow(kind);
+    const input = row.querySelector('.tool-typeahead');
+    const qty = row.querySelector('.tool-qty');
+    if (input) {
+      input.value = name;
+    }
+    if (qty && kind === 'container') {
+      qty.value = 1;
+    }
+    if (kind === 'container') {
+      document.getElementById('tool-containers').appendChild(row);
+    } else if (kind === 'consumable') {
+      document.getElementById('tool-consumables').appendChild(row);
+    } else {
+      document.getElementById('tool-ingredients').appendChild(row);
+    }
+  }
+
+  document.getElementById('addOil').addEventListener('click', function(){
+    document.getElementById('oilRows').appendChild(buildOilRow());
+  });
+
+  document.getElementById('normalizeOils').addEventListener('click', function(){
+    normalizeOils();
+  });
+
+  document.getElementById('oilRows').addEventListener('input', function(e){
+    if (e.target.classList.contains('oil-grams') || e.target.classList.contains('oil-percent')) {
+      updateOilTotals();
+    }
+  });
+
+  document.getElementById('oilRows').addEventListener('click', function(e){
+    if (e.target.classList.contains('remove-oil')) {
+      e.target.closest('.oil-row').remove();
+      updateOilTotals();
+    }
+  });
+
+  document.querySelectorAll('input[name="oil_input_mode"]').forEach(el => {
+    el.addEventListener('change', updateInputMode);
+  });
+
+  document.getElementById('oilTotalTarget').addEventListener('input', updateOilTotals);
+
+  document.getElementById('waterMethod').addEventListener('change', function(){
+    setWaterMethod();
+  });
+
+  document.getElementById('lyeForm').addEventListener('input', function(e){
+    if (e.target.name === 'lye_type') {
+      updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+    }
+  });
+
+  ['additiveFragrancePct', 'additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value)));
+    });
+
+  document.getElementById('moldWaterWeight').addEventListener('input', updateMoldSuggested);
+  document.getElementById('moldOilPct').addEventListener('input', updateMoldSuggested);
+
+  document.querySelectorAll('.stub-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const kind = this.dataset.stubKind;
+      const name = this.dataset.stubName;
+      addStubLine(kind, name);
+    });
+  });
 
   document.getElementById('addToolIngredient').addEventListener('click', function(){
     document.getElementById('tool-ingredients').appendChild(buildLineRow('ingredient'));
@@ -280,20 +1143,8 @@
     document.getElementById('tool-containers').appendChild(buildLineRow('container'));
   });
 
-  document.getElementById('calcLyeBtn').addEventListener('click', async function(){
-    const f = document.getElementById('lyeForm');
-    const oilG = computeTotalOils();
-    const superfat = parseFloat(f.superfat.value||'0');
-    const lyeType = f.lye_type.value;
-    const waterPct = parseFloat(f.water_pct.value||'33');
-    if (!(oilG>0)) { alert('Enter oil weight in grams'); return; }
-
-    const lyeAfterSuperfat = computeLyeBySAP(lyeType, superfat);
-    const waterG = oilG * (waterPct/100);
-
-    const out = `Lye (${lyeType}): ${round(lyeAfterSuperfat)} g, Water: ${round(waterG)} g`;
-    document.getElementById('lyeNumbers').textContent = out;
-    document.getElementById('lyeResult').style.display = 'block';
+  document.getElementById('calcLyeBtn').addEventListener('click', function(){
+    calculateAll();
   });
 
   document.getElementById('convBtn').addEventListener('click', async function(){
@@ -317,21 +1168,36 @@
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
     let redirectTo = '/recipes/new';
     try {
-      const f = document.getElementById('lyeForm');
-      const oilG = parseFloat(f.oil_weight_g.value||'0');
-      const superfat = parseFloat(f.superfat.value||'0');
-      const lyeType = f.lye_type.value;
-      const waterPct = parseFloat(f.water_pct.value||'33');
-      const lyeAfterSuperfat = computeLyeBySAP(lyeType, superfat);
-      const waterG = oilG * (waterPct/100);
-      const oils = collectOilLines();
-      const lyeName = lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
-      const baseIngredients = [...oils];
-      if (lyeAfterSuperfat > 0) {
-        baseIngredients.push({ name: lyeName, quantity: round(lyeAfterSuperfat), unit: 'gram' });
+      const calc = state.lastCalc || calculateAll();
+      if (!calc) return;
+      const baseIngredients = calc.oils.map(oil => ({
+        name: oil.name || undefined,
+        global_item_id: oil.global_item_id || undefined,
+        quantity: oil.grams,
+        unit: 'gram',
+      }));
+      const lyeName = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+      if (calc.lyeAdjusted > 0) {
+        baseIngredients.push({ name: lyeName, quantity: round(calc.lyeAdjusted, 2), unit: 'gram' });
       }
-      if (waterG > 0) {
-        baseIngredients.push({ name: 'Distilled Water', quantity: round(waterG), unit: 'gram' });
+      if (calc.water > 0) {
+        baseIngredients.push({ name: 'Distilled Water', quantity: round(calc.water, 2), unit: 'gram' });
+      }
+      if (calc.additives.fragranceG > 0) {
+        baseIngredients.push({ name: 'Fragrance/Essential Oils', quantity: round(calc.additives.fragranceG, 2), unit: 'gram' });
+      }
+      if (calc.additives.lactateG > 0) {
+        baseIngredients.push({ name: 'Sodium Lactate', quantity: round(calc.additives.lactateG, 2), unit: 'gram' });
+      }
+      if (calc.additives.sugarG > 0) {
+        baseIngredients.push({ name: 'Sugar', quantity: round(calc.additives.sugarG, 2), unit: 'gram' });
+      }
+      if (calc.additives.saltG > 0) {
+        baseIngredients.push({ name: 'Salt', quantity: round(calc.additives.saltG, 2), unit: 'gram' });
+      }
+      if (calc.additives.citricG > 0) {
+        baseIngredients.push({ name: 'Citric Acid', quantity: round(calc.additives.citricG, 2), unit: 'gram' });
+        baseIngredients.push({ name: 'Extra Lye for Citric Acid', quantity: round(calc.additives.citricLyeG, 2), unit: 'gram' });
       }
       // Collect selected lines for draft persistence
       function collectLines(wrapperId, kind){
@@ -355,13 +1221,20 @@
       const payload = {
         name: 'Soap (Draft)',
         instructions: 'Draft from Soap Tools',
-        predicted_yield: Math.round((oilG + waterG + lyeAfterSuperfat)*100)/100,
+        predicted_yield: Math.round((calc.batchYield || 0) * 100) / 100,
         predicted_yield_unit: 'gram',
         category_name: 'Soaps',
         category_data: {
-          soap_superfat: superfat,
-          soap_water_pct: waterPct,
-          soap_lye_type: lyeType
+          soap_superfat: calc.superfat,
+          soap_lye_type: calc.lyeType,
+          soap_lye_purity: calc.purity,
+          soap_water_method: calc.waterMethod,
+          soap_water_pct: calc.waterPct,
+          soap_lye_concentration: calc.lyeConcentration,
+          soap_water_ratio: calc.waterRatio,
+          soap_oils_total_g: calc.totalOils,
+          soap_lye_g: calc.lyeAdjusted,
+          soap_water_g: calc.water
         },
         ingredients: baseIngredients.concat(collectLines('tool-ingredients', 'ingredient')),
         consumables: collectLines('tool-consumables', 'consumable'),
@@ -375,6 +1248,10 @@
     } catch(_) {}
     window.location.assign(redirectTo);
   });
+  attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
+  updateInputMode();
+  setWaterMethod();
+  updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
 })();
 </script>
 {% endblock %}
