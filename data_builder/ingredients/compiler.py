@@ -634,8 +634,13 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
         LOGGER.info("Stage 1: no clusters pending term completion.")
         return
     priority_map = database_manager.build_cluster_priority_map()
+    # Count already-done items to get starting rank
+    with database_manager.get_session() as session:
+        done_count = session.query(database_manager.CompiledClusterRecord).filter(
+            database_manager.CompiledClusterRecord.term_status == "done"
+        ).count()
     ok = 0
-    for cid in ids:
+    for idx, cid in enumerate(ids):
         try:
             _mirror_cluster_into_compiled(cid)
             priority = int(priority_map.get(cid, database_manager.DEFAULT_PRIORITY))
@@ -755,7 +760,8 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                     ).first()
                     if tq is not None:
                         tq.priority = final_priority
-            LOGGER.info("Stage 1 done: term=%s | common_name=%s | priority=%s", final_term, final_common_name, final_priority)
+            rank = done_count + idx + 1
+            LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s", rank, final_term, final_common_name, final_priority)
             ok += 1
         except Exception as exc:  # pylint: disable=broad-except
             with database_manager.get_session() as session:
