@@ -1767,6 +1767,129 @@
     showSoapAlert('info', 'Blend nudged toward selected targets. Re-check results and adjust as needed.', { dismissible: true, timeoutMs: 6000 });
   }
 
+  function buildSoapNotesBlob(calc){
+    const iodineData = computeIodine(calc.oils || []);
+    const fatty = computeFattyAcids(calc.oils || []);
+    const qualities = computeQualities(fatty.percent || {});
+    const lyeTotals = computeLyeTotals(calc.oils || [], calc.lyeType);
+    const ins = (lyeTotals.sapAvg && iodineData.iodine) ? (lyeTotals.sapAvg - iodineData.iodine) : 0;
+    const mold = getMoldSettings();
+    return {
+      source: 'soap_tool',
+      schema_version: 1,
+      unit_display: currentUnit,
+      input_mode: getInputMode(),
+      quality_preset: document.getElementById('qualityPreset')?.value || 'balanced',
+      quality_focus: Array.from(document.querySelectorAll('.quality-focus:checked')).map(el => el.id),
+      mold,
+      oils: (calc.oils || []).map(oil => ({
+        name: oil.name || null,
+        grams: round(oil.grams || 0, 2),
+        iodine: oil.iodine || null,
+        sap_koh: oil.sapKoh || null,
+        fatty_profile: oil.fattyProfile || null,
+        global_item_id: oil.global_item_id || null,
+      })),
+      totals: {
+        total_oils_g: round(calc.totalOils || 0, 2),
+        batch_yield_g: round(calc.batchYield || 0, 2),
+        lye_pure_g: round(calc.lyePure || 0, 2),
+        lye_adjusted_g: round(calc.lyeAdjusted || 0, 2),
+        water_g: round(calc.water || 0, 2),
+      },
+      lye: {
+        lye_type: calc.lyeType,
+        superfat: calc.superfat,
+        purity: calc.purity,
+        water_method: calc.waterMethod,
+        water_pct: calc.waterPct,
+        lye_concentration: calc.lyeConcentration,
+        water_ratio: calc.waterRatio,
+      },
+      additives: {
+        fragrance_pct: calc.additives?.fragrancePct || 0,
+        lactate_pct: calc.additives?.lactatePct || 0,
+        sugar_pct: calc.additives?.sugarPct || 0,
+        salt_pct: calc.additives?.saltPct || 0,
+        citric_pct: calc.additives?.citricPct || 0,
+        fragrance_g: round(calc.additives?.fragranceG || 0, 2),
+        lactate_g: round(calc.additives?.lactateG || 0, 2),
+        sugar_g: round(calc.additives?.sugarG || 0, 2),
+        salt_g: round(calc.additives?.saltG || 0, 2),
+        citric_g: round(calc.additives?.citricG || 0, 2),
+        citric_lye_g: round(calc.additives?.citricLyeG || 0, 2),
+      },
+      qualities: {
+        hardness: round(qualities.hardness || 0, 1),
+        cleansing: round(qualities.cleansing || 0, 1),
+        conditioning: round(qualities.conditioning || 0, 1),
+        bubbly: round(qualities.bubbly || 0, 1),
+        creamy: round(qualities.creamy || 0, 1),
+        iodine: round(iodineData.iodine || 0, 1),
+        ins: round(ins || 0, 1),
+        sap_avg: round(lyeTotals.sapAvg || 0, 1),
+      },
+      fatty_acids: fatty.percent || {},
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  function buildSoapRecipePayload(calc){
+    const notesBlob = buildSoapNotesBlob(calc);
+    const baseIngredients = (calc.oils || []).map(oil => ({
+      name: oil.name || undefined,
+      global_item_id: oil.global_item_id || undefined,
+      quantity: oil.grams,
+      unit: 'gram',
+    }));
+    const lyeName = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+    if (calc.lyeAdjusted > 0) {
+      baseIngredients.push({ name: lyeName, quantity: round(calc.lyeAdjusted, 2), unit: 'gram' });
+    }
+    if (calc.water > 0) {
+      baseIngredients.push({ name: 'Distilled Water', quantity: round(calc.water, 2), unit: 'gram' });
+    }
+    if (calc.additives?.fragranceG > 0) {
+      baseIngredients.push({ name: 'Fragrance/Essential Oils', quantity: round(calc.additives.fragranceG, 2), unit: 'gram' });
+    }
+    if (calc.additives?.lactateG > 0) {
+      baseIngredients.push({ name: 'Sodium Lactate', quantity: round(calc.additives.lactateG, 2), unit: 'gram' });
+    }
+    if (calc.additives?.sugarG > 0) {
+      baseIngredients.push({ name: 'Sugar', quantity: round(calc.additives.sugarG, 2), unit: 'gram' });
+    }
+    if (calc.additives?.saltG > 0) {
+      baseIngredients.push({ name: 'Salt', quantity: round(calc.additives.saltG, 2), unit: 'gram' });
+    }
+    if (calc.additives?.citricG > 0) {
+      baseIngredients.push({ name: 'Citric Acid', quantity: round(calc.additives.citricG, 2), unit: 'gram' });
+      baseIngredients.push({ name: 'Extra Lye for Citric Acid', quantity: round(calc.additives.citricLyeG, 2), unit: 'gram' });
+    }
+    return {
+      name: 'Soap (Draft)',
+      instructions: 'Draft from Soap Tools',
+      predicted_yield: Math.round((calc.batchYield || 0) * 100) / 100,
+      predicted_yield_unit: 'gram',
+      category_name: 'Soaps',
+      category_data: {
+        soap_superfat: calc.superfat,
+        soap_lye_type: calc.lyeType,
+        soap_lye_purity: calc.purity,
+        soap_water_method: calc.waterMethod,
+        soap_water_pct: calc.waterPct,
+        soap_lye_concentration: calc.lyeConcentration,
+        soap_water_ratio: calc.waterRatio,
+        soap_oils_total_g: calc.totalOils,
+        soap_lye_g: calc.lyeAdjusted,
+        soap_water_g: calc.water,
+      },
+      ingredients: baseIngredients.concat(collectDraftLines('tool-ingredients', 'ingredient')),
+      consumables: collectDraftLines('tool-consumables', 'consumable'),
+      containers: collectDraftLines('tool-containers', 'container'),
+      notes: JSON.stringify(notesBlob),
+    };
+  }
+
   function applySectionOrder(order){
     const container = document.getElementById('soapAdvancedAccordion');
     if (!container || !Array.isArray(order)) return;
@@ -1809,6 +1932,24 @@
     container.addEventListener('drop', () => {
       queueStateSave();
     });
+  }
+
+  function collectDraftLines(wrapperId, kind){
+    const out = [];
+    document.querySelectorAll(`#${wrapperId} .row`).forEach(function(row){
+      const name = row.querySelector('.tool-typeahead')?.value?.trim();
+      const gi = row.querySelector('.tool-gi-id')?.value || '';
+      const qtyEl = row.querySelector('.tool-qty');
+      const unitEl = row.querySelector('.tool-unit');
+      const hasQty = qtyEl && qtyEl.value !== '';
+      if (!name && !gi) return;
+      if (kind === 'container'){
+        out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 1 });
+      } else {
+        out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 0, unit: (unitEl?.value || '').trim() || 'gram' });
+      }
+    });
+    return out;
   }
 
   function updateQualitiesDisplay(data){
@@ -2878,8 +3019,6 @@
   });
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
-    let redirectTo = '/recipes/new';
-    let shouldRedirect = true;
     try {
       if (CALC_LIMIT && !canConsumeCalcQuota()) {
         return;
@@ -2891,93 +3030,18 @@
         const remaining = getCalcRemaining();
         maybeShowSignupModal(remaining);
       }
-      const baseIngredients = calc.oils.map(oil => ({
-        name: oil.name || undefined,
-        global_item_id: oil.global_item_id || undefined,
-        quantity: oil.grams,
-        unit: 'gram',
-      }));
-      const lyeName = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
-      if (calc.lyeAdjusted > 0) {
-        baseIngredients.push({ name: lyeName, quantity: round(calc.lyeAdjusted, 2), unit: 'gram' });
-      }
-      if (calc.water > 0) {
-        baseIngredients.push({ name: 'Distilled Water', quantity: round(calc.water, 2), unit: 'gram' });
-      }
-      if (calc.additives.fragranceG > 0) {
-        baseIngredients.push({ name: 'Fragrance/Essential Oils', quantity: round(calc.additives.fragranceG, 2), unit: 'gram' });
-      }
-      if (calc.additives.lactateG > 0) {
-        baseIngredients.push({ name: 'Sodium Lactate', quantity: round(calc.additives.lactateG, 2), unit: 'gram' });
-      }
-      if (calc.additives.sugarG > 0) {
-        baseIngredients.push({ name: 'Sugar', quantity: round(calc.additives.sugarG, 2), unit: 'gram' });
-      }
-      if (calc.additives.saltG > 0) {
-        baseIngredients.push({ name: 'Salt', quantity: round(calc.additives.saltG, 2), unit: 'gram' });
-      }
-      if (calc.additives.citricG > 0) {
-        baseIngredients.push({ name: 'Citric Acid', quantity: round(calc.additives.citricG, 2), unit: 'gram' });
-        baseIngredients.push({ name: 'Extra Lye for Citric Acid', quantity: round(calc.additives.citricLyeG, 2), unit: 'gram' });
-      }
-      // Collect selected lines for draft persistence
-      function collectLines(wrapperId, kind){
-        const out = [];
-        document.querySelectorAll(`#${wrapperId} .row`).forEach(function(row){
-          const name = row.querySelector('.tool-typeahead')?.value?.trim();
-          const gi = row.querySelector('.tool-gi-id')?.value || '';
-          const qtyEl = row.querySelector('.tool-qty');
-          const unitEl = row.querySelector('.tool-unit');
-          const hasQty = qtyEl && qtyEl.value !== '';
-          if (!name && !gi) return;
-          if (kind === 'container'){
-            out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 1 });
-          } else {
-            out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 0, unit: (unitEl?.value || '').trim() || 'gram' });
-          }
-        });
-        return out;
-      }
-
-      const payload = {
-        name: 'Soap (Draft)',
-        instructions: 'Draft from Soap Tools',
-        predicted_yield: Math.round((calc.batchYield || 0) * 100) / 100,
-        predicted_yield_unit: 'gram',
-        category_name: 'Soaps',
-        category_data: {
-          soap_superfat: calc.superfat,
-          soap_lye_type: calc.lyeType,
-          soap_lye_purity: calc.purity,
-          soap_water_method: calc.waterMethod,
-          soap_water_pct: calc.waterPct,
-          soap_lye_concentration: calc.lyeConcentration,
-          soap_water_ratio: calc.waterRatio,
-          soap_oils_total_g: calc.totalOils,
-          soap_lye_g: calc.lyeAdjusted,
-          soap_water_g: calc.water
-        },
-        ingredients: baseIngredients.concat(collectLines('tool-ingredients', 'ingredient')),
-        consumables: collectLines('tool-consumables', 'consumable'),
-        containers: collectLines('tool-containers', 'container')
-      };
-      const response = await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-      const data = await response.json();
-      if (!response.ok || !data || data.success === false) {
-        const msg = (data && (data.error || data.message)) || 'Unable to save this draft right now.';
-        showSoapAlert('danger', msg, { dismissible: true, persist: true });
-        shouldRedirect = false;
-        return;
-      }
-      if (data && data.redirect) {
-        redirectTo = data.redirect;
-      }
+      const payload = buildSoapRecipePayload(calc);
+      state.lastRecipePayload = payload;
+      try {
+        const storage = getStorage();
+        if (storage) {
+          storage.setItem('soap_recipe_payload', JSON.stringify(payload));
+        }
+      } catch (_) {}
+      window.SOAP_RECIPE_DTO = payload;
+      showSoapAlert('info', 'Recipe payload is ready. Push is stubbed for now; no data has been sent.', { dismissible: true, timeoutMs: 7000 });
     } catch(_) {
-      showSoapAlert('danger', 'Network error while saving. Please try again.', { dismissible: true, persist: true });
-      shouldRedirect = false;
-    }
-    if (shouldRedirect) {
-      window.location.assign(redirectTo);
+      showSoapAlert('danger', 'Unable to prepare the recipe payload. Please try again.', { dismissible: true, persist: true });
     }
   });
   const initialOilRow = document.querySelector('#oilRows .oil-row');
