@@ -170,7 +170,8 @@
           </div>
         </div>
         <div class="col-12">
-          <button type="button" class="btn btn-primary" id="calcLyeBtn">Calculate</button>
+          <div class="form-text mb-2">Auto-updates as you type. Use Recalculate to show warnings.</div>
+          <button type="button" class="btn btn-outline-primary" id="calcLyeBtn">Recalculate (optional)</button>
         </div>
       </form>
     </div>
@@ -405,25 +406,25 @@
                   <div class="d-flex justify-content-between small text-muted">
                     <span>Soft</span><span>Hard</span>
                   </div>
-                  <input type="range" class="form-range" min="0" max="100" id="feelHardness" disabled>
+                  <input type="range" class="form-range" min="0" max="100" id="feelHardness" disabled aria-label="Hardness feel slider">
                 </div>
                 <div class="mb-2">
                   <div class="d-flex justify-content-between small text-muted">
                     <span>Low lather</span><span>Bubbly</span>
                   </div>
-                  <input type="range" class="form-range" min="0" max="100" id="feelBubbly" disabled>
+                  <input type="range" class="form-range" min="0" max="100" id="feelBubbly" disabled aria-label="Bubbly feel slider">
                 </div>
                 <div class="mb-2">
                   <div class="d-flex justify-content-between small text-muted">
                     <span>Drying</span><span>Conditioning</span>
                   </div>
-                  <input type="range" class="form-range" min="0" max="100" id="feelConditioning" disabled>
+                  <input type="range" class="form-range" min="0" max="100" id="feelConditioning" disabled aria-label="Conditioning feel slider">
                 </div>
                 <div class="mb-2">
                   <div class="d-flex justify-content-between small text-muted">
                     <span>Not greasy</span><span>Greasy</span>
                   </div>
-                  <input type="range" class="form-range" min="0" max="100" id="feelGreasy" disabled>
+                  <input type="range" class="form-range" min="0" max="100" id="feelGreasy" disabled aria-label="Greasy feel slider">
                 </div>
               </div>
             </div>
@@ -780,6 +781,24 @@
       <div id="soapExportsCollapse" class="accordion-collapse collapse" data-bs-parent="#soapAdvancedAccordion">
         <div class="accordion-body">
           <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">View INCI Summary</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="soapSignupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Keep your recipes saved</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          You are almost at the free calculation limit. Create a free account to save recipes and keep calculating.
+        </div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.quick_signup') }}">Create free account</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Sign in</a>
         </div>
       </div>
     </div>
@@ -1469,7 +1488,7 @@
     };
   }
 
-  function setProgress(id, value){
+  function setProgress(id, value, label){
     const bar = document.getElementById(id);
     if (!bar) return;
     if (!isFinite(value)) {
@@ -1478,6 +1497,12 @@
     }
     const clamped = Math.max(0, Math.min(100, value));
     bar.style.width = `${clamped}%`;
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', '100');
+    bar.setAttribute('aria-valuenow', clamped.toFixed(1));
+    if (label) {
+      bar.setAttribute('aria-label', label);
+    }
   }
 
   function setQualityRangeBars(){
@@ -1513,13 +1538,19 @@
     }
   }
 
-  function setScaledBar(id, value, range, max){
+  function setScaledBar(id, value, range, max, label){
     const bar = document.getElementById(id);
     if (!bar) return;
     const safeValue = isFinite(value) ? value : 0;
     const clamped = Math.max(0, Math.min(max, safeValue));
     const width = max > 0 ? (clamped / max) * 100 : 0;
     bar.style.width = `${width}%`;
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(max));
+    bar.setAttribute('aria-valuenow', clamped.toFixed(1));
+    if (label) {
+      bar.setAttribute('aria-label', label);
+    }
     setQualityBarColor(bar, safeValue, range);
   }
 
@@ -1606,9 +1637,12 @@
       const clamped = clamp(value, 0, scaleMax);
       marker.classList.remove('d-none');
       marker.style.left = `${(clamped / scaleMax) * 100}%`;
-      marker.style.width = '2px';
-      marker.style.backgroundColor = '#0d6efd';
+      marker.style.width = '8px';
+      marker.style.marginLeft = '-4px';
+      marker.style.borderLeft = '2px dashed #198754';
+      marker.style.backgroundColor = 'transparent';
       marker.style.cursor = 'pointer';
+      marker.setAttribute('aria-label', `Apply ${key} target`);
       marker.title = `Target ${key}: ${round(value, 1)}`;
     });
   }
@@ -1800,7 +1834,7 @@
       const hintEl = document.getElementById(`quality${name}Hint`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
-      setProgress(`quality${name}Bar`, hasCoverage ? value : 0);
+      setProgress(`quality${name}Bar`, hasCoverage ? value : 0, name);
       const rangeKey = name.toLowerCase();
       const range = QUALITY_RANGES[rangeKey];
       if (bar && range) {
@@ -1837,8 +1871,8 @@
     document.getElementById('iodineValue').textContent = iodine > 0 ? round(iodine, 1) : '--';
     document.getElementById('insValue').textContent = ins > 0 ? round(ins, 1) : '--';
     document.getElementById('sapAvgValue').textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
-    setScaledBar('iodineBar', iodine, IODINE_RANGE, IODINE_SCALE_MAX);
-    setScaledBar('insBar', ins, INS_RANGE, INS_SCALE_MAX);
+    setScaledBar('iodineBar', iodine, IODINE_RANGE, IODINE_SCALE_MAX, 'Iodine');
+    setScaledBar('insBar', ins, INS_RANGE, INS_SCALE_MAX, 'INS');
 
     FATTY_DISPLAY_KEYS.forEach(key => {
       const id = `fatty${key.charAt(0).toUpperCase()}${key.slice(1)}`;
@@ -2125,6 +2159,24 @@
     const remaining = Math.max(0, CALC_LIMIT - nextCount);
     if (remaining <= 1) {
       showSoapAlert('info', `You have ${remaining} calculation${remaining === 1 ? '' : 's'} left on the ${CALC_LIMIT_TIER} tier today.`, { dismissible: true, timeoutMs: 6000 });
+    }
+  }
+
+  function getCalcRemaining(){
+    if (!CALC_LIMIT) return null;
+    const usage = readCalcUsage();
+    return Math.max(0, CALC_LIMIT - usage.count);
+  }
+
+  function maybeShowSignupModal(remaining){
+    if (!CALC_LIMIT || remaining === null || remaining > 1) return;
+    const modalEl = document.getElementById('soapSignupModal');
+    if (!modalEl) return;
+    if (window.bootstrap && window.bootstrap.Modal) {
+      const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+    } else {
+      showSoapAlert('info', 'You are almost at the free limit. Create a free account to keep saving your work.', { dismissible: true, timeoutMs: 7000 });
     }
   }
 
@@ -2724,10 +2776,12 @@
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     updateMoldSuggested();
     queueStateSave();
+    queueAutoCalc();
   });
   document.getElementById('moldOilPct').addEventListener('input', function(){
     updateMoldSuggested();
     queueStateSave();
+    queueAutoCalc();
   });
   const moldShape = document.getElementById('moldShape');
   if (moldShape) {
@@ -2747,6 +2801,7 @@
     moldCylinderCorrection.addEventListener('change', function(){
       updateMoldSuggested();
       queueStateSave();
+      queueAutoCalc();
     });
   }
   const moldCylinderFactor = document.getElementById('moldCylinderFactor');
@@ -2754,6 +2809,7 @@
     moldCylinderFactor.addEventListener('input', function(){
       updateMoldSuggested();
       queueStateSave();
+      queueAutoCalc();
     });
   }
 
@@ -2832,6 +2888,8 @@
       if (!calc) return;
       if (CALC_LIMIT) {
         consumeCalcQuota();
+        const remaining = getCalcRemaining();
+        maybeShowSignupModal(remaining);
       }
       const baseIngredients = calc.oils.map(oil => ({
         name: oil.name || undefined,
