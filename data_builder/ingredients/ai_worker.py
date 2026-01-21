@@ -509,10 +509,13 @@ REQUIRED (use training knowledge - these are documented for most ingredients):
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
 - odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
 SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
-- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05)
-- SAP: oils 180-260, EO 5-20 mg KOH/g
-- Iodine: oils have known values (Coconut 7-10, Olive 75-94)
-- Solubility, pH("N/A" for oils)
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05), liquids(0.9-1.1), powders(0.4-0.8)
+- SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
+- Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
+- flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
+- solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
+- pH: "N/A" for oils/waxes/butters (non-aqueous)
 "Not Found" ONLY if truly obscure.
 Core:{core_blob}
 Context:{base_blob}
@@ -537,10 +540,13 @@ REQUIRED (use training knowledge - these are documented for most ingredients):
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
 - odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
 SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
-- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05)
-- SAP: oils 180-260, EO 5-20 mg KOH/g
-- Iodine: oils have known values (Coconut 7-10, Olive 75-94)
-- Solubility, pH("N/A" for oils)
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05), liquids(0.9-1.1), powders(0.4-0.8)
+- SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
+- Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
+- flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
+- solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
+- pH: "N/A" for oils/waxes/butters (non-aqueous)
 "Not Found" ONLY if truly obscure.
 Core:{core_blob}
 Context+Seeds:{base_blob}
