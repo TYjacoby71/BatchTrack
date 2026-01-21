@@ -70,272 +70,135 @@ SYSTEM_PROMPT = (
 )
 
 JSON_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed, booleans only true/false, lists sorted alphabetically):
 {
   "ingredient": {
-    "common_name": "string (required)",
-    "category": "one of the approved ingredient categories",
+    "common_name": "string",
+    "category": "ingredient category",
     "botanical_name": "string",
     "inci_name": "string",
     "cas_number": "string",
     "short_description": "string",
     "detailed_description": "string",
-    "origin": {
-      "regions": ["string"],
-      "source_material": "string",
-      "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
-    },
-    "primary_functions": ["Emollient", "Humectant", "Bulking", ...],
-    "regulatory_notes": ["IFRA safe", "Food grade", ...],
-    "items": [
-      {
-        "item_name": "Shea Butter (Refined)",
-        "variation": "string (e.g., Refined, Unrefined, Cold Pressed, 2%, Filtered, Essential Oil, CO2 Extract, Tincture, 50% Solution; empty string if none)",
-        "physical_form": "short noun for physical state (e.g., Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate)",
-        "synonyms": ["aka", ...],
-        "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
-        "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
-        "safety_tags": ["Dermal Limit 3%", "Photosensitizer", ...],
-          "shelf_life_days": 30-3650,
-        "sds_hazards": ["Flammable", "Allergen"],
-        "storage": {
-          "temperature_celsius": {"min": 5, "max": 25},
-          "humidity_percent": {"max": 60},
-          "special_instructions": "Keep out of light"
-        },
-        "specifications": {
-          "sap_naoh": 0.128,
-          "sap_koh": 0.18,
-          "iodine_value": 10,
-          "melting_point_celsius": {"min": 30, "max": 35},
-          "flash_point_celsius": 200,
-          "ph_range": {"min": 5, "max": 7}
-        },
-        "sourcing": {
-          "common_origins": ["Ghana", "Ivory Coast"],
-          "certifications": ["Organic", "Fair Trade"],
-          "supply_risks": ["Seasonal Harvest"],
-          "sustainability_notes": "Tree nut resource"
-        },
-        "form_bypass": true | false,  // when true, display should use item_name alone (e.g., Water, Ice)
-        "variation_bypass": true | false  // when true, UI can omit displaying variation (useful when variation is implicit)
-      }
-    ],
-    "taxonomy": {
-      "scent_profile": ["Fruity", "Nutty"],
-      "color_profile": ["Ivory", "Translucent"],
-      "texture_profile": ["Brittle", "Soft"],
-      "compatible_processes": ["Cold Process Soap", "Hot Process", "Sugar Confectionery", "Emulsion", "Anhydrous Balm", "Pressed Powder", "Small Batch Brewing"],
-      "incompatible_processes": ["High-heat frying"]
-    },
-    "documentation": {
-      "references": [
-        {
-          "title": "USP Monograph",
-          "url": "https://example.com",
-          "notes": "Key regulatory reference"
-        }
-      ],
-      "last_verified": "ISO-8601 date"
-    }
+    "origin": {"regions": [], "source_material": "string", "processing_methods": []},
+    "primary_functions": [],
+    "regulatory_notes": [],
+    "items": [{
+      "item_name": "Name (Variation)",
+      "variation": "string",
+      "physical_form": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste",
+      "synonyms": [],
+      "applications": [],
+      "function_tags": [],
+      "safety_tags": [],
+      "shelf_life_days": 30-3650,
+      "sds_hazards": [],
+      "storage": {"temperature_celsius": {"min": 5, "max": 25}, "humidity_percent": {"max": 60}, "special_instructions": "string"},
+      "specifications": {"sap_naoh": 0.128, "sap_koh": 0.18, "iodine_value": 10, "melting_point_celsius": {"min": 30, "max": 35}, "flash_point_celsius": 200, "ph_range": {"min": 5, "max": 7}},
+      "sourcing": {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "string"},
+      "form_bypass": false,
+      "variation_bypass": false
+    }],
+    "taxonomy": {"scent_profile": [], "color_profile": [], "texture_profile": [], "compatible_processes": [], "incompatible_processes": []},
+    "documentation": {"references": [], "last_verified": "ISO-8601 date"}
   },
-  "data_quality": {
-    "confidence": 0-1 float,
-    "caveats": ["string"]
-  }
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
 """
 
 ERROR_OBJECT = {"error": "Unable to return ingredient payload"}
 
 PROMPT_TEMPLATE = """
-You are an expert ingredient data compiler.
+TASK: Build ingredient dossier for: "{ingredient}".
 
-TASK: Build the complete ingredient dossier for: "{ingredient}".
+RULES:
+- RAW INGREDIENTS ONLY (no packaging/containers)
+- Create items for each purchasable variation/form
+- Unknown="Not Found", Not applicable="N/A"
+- Metric units, shelf_life in DAYS, temp in Celsius
+- variation=processing type (Refined, Cold Pressed, Essential Oil)
+- physical_form=state noun (Oil, Liquid, Powder, Butter, Wax)
+- Categories: {categories}
 
-CONTEXT:
-- Audience: artisanal formulators in soap, confections, cosmetics, herbalism, fermentation, aromatherapy, and small-batch baking.
-- Scope: RAW INGREDIENTS ONLY. Never include packaging, containers, utensils, or finished consumer goods.
-- Item model: An ITEM is the combination of BASE INGREDIENT + VARIATION.
-  - VARIATION is the purchasable/spec distinction (e.g., Refined vs Unrefined, 2% vs Whole, Filtered vs Unfiltered, Organic, Deodorized, 50% Solution).
-  - PHYSICAL FORM is still required and must remain a short noun (e.g., Powder, Oil, Liquid, Granules). Do not encode variations into physical_form.
-  - Do NOT generate a final display name; the system will derive item_name in code from (base + variation + physical_form + bypass flags).
-  - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and specify variation/form fields appropriately.
-- Create a dedicated `items` entry for each common purchasable variation and/or physical form used in craft production.
-- Populate every attribute in the schema. Use "Not Found" when data is missing, and "N/A" when not applicable.
-- Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
-- Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
-- All string values must be clear, sentence case, and free of marketing fluff.
-- Return strictly valid JSON (UTF-8, double quotes, no trailing commas). If you are uncertain, respond with {{"error": "explanation"}}.
-
-CONTROLLED VOCAB REMINDERS:
-- physical_form must be a short noun (e.g., "Powder", "Chips", "Pellets", "Whole", "Puree", "Pressed Cake").
-- function_tags should draw from: Emollient, Humectant, Surfactant, Emulsifier, Preservative, Antioxidant, Colorant, Fragrance, Exfoliant, Thickener, Binder, Fuel, Hardener, Stabilizer, Plasticizer, Chelator, Buffer, Flavor, Sweetener, Bittering Agent, Fermentation Nutrient.
-- applications should be chosen from: Cold Process Soap, Hot Process Soap, Melt & Pour Soap, Lotion, Cream, Balm, Serum, Scrub, Perfume, Candle, Wax Melt, Lip Balm, Chocolate, Confection, Baked Good, Beverage, Fermented Beverage, Herbal Tincture, Hydro-distillation, Bath Bomb, Shower Steamer, Haircare, Skincare, Deodorant, Cleaner, Detergent, Paint, Dye Bath.
-- ingredient.category must be one of: {categories}
-
-FORM & SOLUTION GUIDANCE:
-- Always include common dairy *variations* (e.g., whole milk, 2% milk, skim milk, skim milk powder) as distinct items.
-- Include buffered/stock solutions (e.g., 50% Sodium Hydroxide Solution, 20% Potassium Carbonate Solution) as distinct items; encode the %/strength in item_name.
-- Essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, macerations, and infusions should be represented as distinct forms under the parent ingredient.
-- When an ingredient should display without a suffix (Water, Ice, Steam), set `form_bypass`=true so the interface shows just "Water" or "Ice" while still recording the underlying physical_form.
-- More generally, if the best default item is identical to the base common_name (e.g., "Water", "Apples"), set `item_name` exactly to the common_name and set `form_bypass`=true so the UI shows the base without a redundant suffix.
-- When no better industry name exists, use a concise solution label such as "Potassium Carbonate Solution (20%)" or simply "Brine Solution".
-
-VARIATION vs PHYSICAL_FORM (IMPORTANT):
-- Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
-- Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
-- `item_name` should generally be: "{common_name} (variation)" when variation is non-empty.
-- Do NOT emit `item_name` as a source-of-truth; code will derive it. If `variation` is empty, set `variation_bypass`=true.
-
-SCHEMA (required):
+SCHEMA:
 {schema}
 
-OUTPUT CONTRACT:
-- Respond with a single JSON object adhering to the schema.
-- If ingredient is out of scope or data unavailable, return {error_object} with a precise message.
+Return valid JSON. If out of scope: {error_object}
 """
 
 CORE_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed):
 {
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
-    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
-    "category": "one of the approved ingredient categories",
-    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca', 'Helianthus annuus')",
-    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
-    "cas_number": "string (REQUIRED if known - CAS registry number)",
+    "origin": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived",
+    "ingredient_category": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars",
+    "refinement_level": "Raw/Unprocessed|Minimally Processed|Extracted/Distilled|Milled/Ground|Fermented|Synthesized",
+    "derived_from": "string",
+    "category": "ingredient category",
+    "botanical_name": "Latin binomial",
+    "inci_name": "INCI name",
+    "cas_number": "CAS number",
     "short_description": "string",
     "detailed_description": "string",
     "usage_restrictions": "string",
-    "prohibited_flag": true | false,
-    "gras_status": true | false,
+    "prohibited_flag": false,
+    "gras_status": false,
     "ifra_category": "string",
-    "allergen_flag": true | false,
-    "colorant_flag": true | false,
-    "origin_details": {
-      "regions": ["string"],
-      "source_material": "string",
-      "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
-    },
-    "primary_functions": ["Emollient", "Humectant", ...],
-    "regulatory_notes": ["string"],
-    "documentation": {
-      "references": [{"title": "string", "url": "string", "notes": "string"}],
-      "last_verified": "ISO-8601 date"
-    }
+    "allergen_flag": false,
+    "colorant_flag": false,
+    "origin_details": {"regions": [], "source_material": "string", "processing_methods": []},
+    "primary_functions": [],
+    "regulatory_notes": [],
+    "documentation": {"references": [], "last_verified": "ISO-8601 date"}
   },
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
 """
 
 CLUSTER_TERM_SCHEMA_SPEC = r"""
-Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
-For each field, you MUST provide a value OR explicitly state "not_found" or "not_applicable".
 {
-  "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
-  "common_name": "string (REQUIRED) - TRUE common/vernacular name that DIFFERS from botanical name when possible (e.g., 'Silver Fir' not 'Abies Alba', 'White Forsythia' not 'Abeliophyllum distichum', 'Sweet Almond' not 'Prunus dulcis'). Use the name regular people use, not the Latin scientific name. Only use botanical name if no common name exists.",
+  "term": "canonical base term",
+  "common_name": "TRUE vernacular name (e.g., Silver Fir not Abies Alba)",
   "ingredient_core": {
-    "origin": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
-    "ingredient_category": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
-    "base_refinement": {"value": "one of: Raw/Whole, Minimally Processed, Fermented, Synthesized", "status": "found", "reason": null},
-    "derived_from": {"value": "string (natural source if derived)", "status": "found|not_applicable", "reason": "string"},
-    "botanical_name": {"value": "Latin binomial e.g. 'Prunus armeniaca'", "status": "found|not_found|not_applicable", "reason": "string"},
-    "inci_name": {"value": "INCI nomenclature", "status": "found|not_found", "reason": "string if not found"},
-    "cas_number": {"value": "CAS registry number", "status": "found|not_found", "reason": "string if not found"},
-    "short_description": "string (one sentence summary)",
-    "detailed_description": "string (2-3 sentences)"
+    "origin": {"value": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived", "status": "found|not_found|not_applicable"},
+    "ingredient_category": {"value": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars", "status": "found|not_found"},
+    "base_refinement": {"value": "Raw/Whole|Minimally Processed|Fermented|Synthesized", "status": "found"},
+    "derived_from": {"value": "string", "status": "found|not_applicable"},
+    "botanical_name": {"value": "Latin binomial", "status": "found|not_found|not_applicable"},
+    "inci_name": {"value": "INCI name", "status": "found|not_found"},
+    "cas_number": {"value": "CAS number", "status": "found|not_found"},
+    "short_description": "one sentence",
+    "detailed_description": "2-3 sentences"
   },
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
-
-FIELD RULES:
-- origin: REQUIRED. One of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived
-- ingredient_category: REQUIRED. One of: Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids, or Synthetic-* categories
-- base_refinement: REQUIRED. Describes what the BASE TERM is in its natural/common state:
-  * "Raw/Whole" = unprocessed base (Apricot fruit, Sunflower seeds, Lavender flowers)
-  * "Minimally Processed" = dried, cleaned, or simple preparation
-  * "Fermented" = base is a fermentation product (vinegar, kombucha SCOBY)
-  * "Synthesized" = fully synthetic compound
-  * NOTE: Processing like extraction, distillation, refining belongs at ITEM level, not term level!
-- botanical_name: REQUIRED for Plant-Derived. Latin binomial. Use "not_applicable" for synthetics/minerals.
-- inci_name: REQUIRED. The base INCI name. Use "not_found" only if genuinely unknown.
-- cas_number: Provide if known. Use "not_found" with reason if unable to determine.
 """
 
 ITEMS_SCHEMA_SPEC = r"""
-Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
 {
-  "items": [
-    {
-      "variation": {"value": "string (e.g., Refined, Cold Pressed, Essential Oil, 2%)", "status": "found|not_applicable"},
-      "description": "string (REQUIRED) - 1-2 sentence description of what this item is and its primary use. Example: 'A fragrant essential oil steam distilled from Silver Fir needles, prized for its fresh, forest-like aroma in aromatherapy and perfumery.'",
-      "physical_form": {"value": "one of: Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Flakes, Chunks", "status": "found"},
-      "processing_method": {"value": "one of: Unprocessed, Cold Pressed, Expeller Pressed, Solvent Extracted, Steam Distilled, CO2 Extracted, Refined, Bleached, Deodorized, Hydrogenated, Fractionated, Filtered, Milled, Dried, Freeze-Dried, Fermented, Synthesized", "status": "found"},
-      "color": "string (REQUIRED) - typical color of this item. Examples: 'Pale yellow', 'Creamy white', 'Dark amber', 'Colorless', 'Green'. Use 'Variable' if color varies significantly.",
-      "odor_profile": "string (REQUIRED) - scent characteristics. Examples: 'Fresh, balsamic, woody with pine notes', 'Sweet, floral, honey-like', 'Earthy, herbaceous'. Use 'Odorless' or 'Mild/Neutral' if applicable.",
-      "flavor_profile": "string - taste characteristics for edible items. Examples: 'Sweet, nutty with hints of vanilla', 'Bitter, earthy'. Use 'Not edible' for non-food items, 'Neutral/Bland' if tasteless.",
-      "synonyms": ["aka", ...],
-      "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
-      "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
-      "safety_tags": ["string"],
-      "shelf_life_days": 30-3650,
-      "sds_hazards": ["string"],
-      "storage": {
-        "temperature_celsius": {"min": 5, "max": 25},
-        "humidity_percent": {"max": 60},
-        "special_instructions": "string"
-      },
-      "specifications": {
-        "sap_naoh": 0.128,
-        "sap_koh": 0.18,
-        "iodine_value": 10,
-        "melting_point_celsius": {"min": 30, "max": 35},
-        "flash_point_celsius": 200,
-        "ph_range": {"min": 5, "max": 7},
-      "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15},
-      "density_g_ml": 0.91
-      // If unknown, use "Not Found". If not applicable, use "N/A".
-        // "viscosity_cps": 1200,
-        // "refractive_index": 1.44,
-        // "molecular_formula": "C3H8O3",
-        // "molecular_weight": 92.09,
-        // "boiling_point_celsius": 290,
-        // "solubility": {"in_water": "string", "in_oil": "string"},
-        // "miscible_with": ["string"],
-        // "emulsification": {"hlb": 15.0, "oil_in_water": true, "water_in_oil": false}
-      },
-      "sourcing": {
-        "common_origins": ["string"],
-        "certifications": ["string"],
-        "supply_risks": ["string"],
-        "sustainability_notes": "string"
-      },
-      "default_unit": "string (REQUIRED) - the most common unit this item is measured/purchased in. MUST be one of the valid units listed below.",
-      "form_bypass": true | false,
-      "variation_bypass": true | false
-    }
-  ],
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "items": [{
+    "variation": {"value": "string", "status": "found|not_applicable"},
+    "description": "1-2 sentence description",
+    "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
+    "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
+    "color": "typical color",
+    "odor_profile": "scent characteristics (or Odorless)",
+    "flavor_profile": "taste (or Not edible)",
+    "synonyms": [],
+    "applications": [],
+    "function_tags": [],
+    "safety_tags": [],
+    "shelf_life_days": 30-3650,
+    "sds_hazards": [],
+    "storage": {"temperature_celsius": {"min": 5, "max": 25}, "humidity_percent": {"max": 60}, "special_instructions": "string"},
+    "specifications": {"sap_naoh": 0.128, "sap_koh": 0.18, "iodine_value": 10, "melting_point_celsius": {"min": 30, "max": 35}, "flash_point_celsius": 200, "ph_range": {"min": 5, "max": 7}, "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}, "density_g_ml": 0.91},
+    "sourcing": {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "string"},
+    "default_unit": "gram|kg|oz|lb|ml|liter|floz|count",
+    "form_bypass": false,
+    "variation_bypass": false
+  }],
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
-
-VALID UNITS (you MUST use one of these exact values for default_unit):
-Weight: gram, kg, mg, oz, lb, ton
-Volume: ml, liter, tsp, tbsp, cup, pint, quart, gallon, floz, drop, dram
-Count: count, pack, dozen, unit, batch, pair, Piece, Bar, Slice, Bottle, Jar, Tablet, Capsule, Bomb, Loaf
-
-DEFAULT UNIT RULES:
-- Essential Oils: use "ml" (commonly sold in 5ml, 10ml, 15ml bottles; drops are used in recipes but ml is the purchase unit)
-- Carrier Oils (olive, coconut, etc.): use "ml" or "floz" for small quantities, "liter" or "gallon" for bulk
-- Butters (shea, cocoa, mango): use "oz" or "lb" (sold by weight)
-- Waxes: use "oz" or "lb" (sold by weight)
-- Powders/Granules/Crystals: use "gram" or "oz" (sold by weight)
-- Whole items (herbs, flowers, fruits): use "gram" or "oz" for dried, "count" for fresh whole items
-- Liquids (hydrosols, extracts, tinctures): use "ml" or "floz"
-- Resins: use "gram" or "oz"
+RULES: Unknown="Not Found", Not applicable="N/A". Use training knowledge for specs (density, SAP, etc).
+UNITS: Oils/Liquids→ml, Butters/Waxes/Powders→oz or gram, Whole→count.
 """
 
 TAXONOMY_SCHEMA_SPEC = r"""
