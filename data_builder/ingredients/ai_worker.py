@@ -23,7 +23,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; ai_worker will fail until configured.")
 
-MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o")
+MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
 RETRY_BACKOFF_SECONDS = float(os.getenv("AI_RETRY_BACKOFF", "3"))
