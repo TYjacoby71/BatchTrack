@@ -858,6 +858,176 @@
         "linoleic": { "raw": "70", "min": 70, "max": 70, "value": 70 },
         "linolenic": { "raw": "10", "min": 10, "max": 10, "value": 10 }
       }
+    },
+    {
+      "name": "Sesame Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.192", "min": 0.192, "max": 0.192, "value": 0.192 },
+      "iodine": { "raw": "110", "min": 110, "max": 110, "value": 110 },
+      "ins": { "raw": "90", "min": 90, "max": 90, "value": 90 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "9", "min": 9, "max": 9, "value": 9 },
+        "stearic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "40", "min": 40, "max": 40, "value": 40 },
+        "linoleic": { "raw": "45", "min": 45, "max": 45, "value": 45 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Cottonseed Oil",
+      "sap_naoh": { "raw": "0.139", "min": 0.139, "max": 0.139, "value": 0.139 },
+      "sap_koh": { "raw": "0.195", "min": 0.195, "max": 0.195, "value": 0.195 },
+      "iodine": { "raw": "105", "min": 105, "max": 105, "value": 105 },
+      "ins": { "raw": "95", "min": 95, "max": 95, "value": 95 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "1", "min": 1, "max": 1, "value": 1 },
+        "palmitic": { "raw": "22", "min": 22, "max": 22, "value": 22 },
+        "stearic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "19", "min": 19, "max": 19, "value": 19 },
+        "linoleic": { "raw": "54", "min": 54, "max": 54, "value": 54 },
+        "linolenic": { "raw": "1", "min": 1, "max": 1, "value": 1 }
+      }
+    },
+    {
+      "name": "Corn Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "120", "min": 120, "max": 120, "value": 120 },
+      "ins": { "raw": "85", "min": 85, "max": 85, "value": 85 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "1", "min": 1, "max": 1, "value": 1 },
+        "palmitic": { "raw": "12", "min": 12, "max": 12, "value": 12 },
+        "stearic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "ricinoleic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "oleic": { "raw": "28", "min": 28, "max": 28, "value": 28 },
+        "linoleic": { "raw": "58", "min": 58, "max": 58, "value": 58 },
+        "linolenic": { "raw": "1", "min": 1, "max": 1, "value": 1 }
+      }
+    },
+    {
+      "name": "Hazelnut Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "90", "min": 90, "max": 90, "value": 90 },
+      "ins": { "raw": "105", "min": 105, "max": 105, "value": 105 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+        "linoleic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Walnut Oil",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "150", "min": 150, "max": 150, "value": 150 },
+      "ins": { "raw": "60", "min": 60, "max": 60, "value": 60 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "15", "min": 15, "max": 15, "value": 15 },
+        "linoleic": { "raw": "60", "min": 60, "max": 60, "value": 60 },
+        "linolenic": { "raw": "12", "min": 12, "max": 12, "value": 12 }
+      }
+    },
+    {
+      "name": "Wheat Germ Oil",
+      "sap_naoh": { "raw": "0.132", "min": 0.132, "max": 0.132, "value": 0.132 },
+      "sap_koh": { "raw": "0.186", "min": 0.186, "max": 0.186, "value": 0.186 },
+      "iodine": { "raw": "130", "min": 130, "max": 130, "value": 130 },
+      "ins": { "raw": "75", "min": 75, "max": 75, "value": 75 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "17", "min": 17, "max": 17, "value": 17 },
+        "stearic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "15", "min": 15, "max": 15, "value": 15 },
+        "linoleic": { "raw": "55", "min": 55, "max": 55, "value": 55 },
+        "linolenic": { "raw": "7", "min": 7, "max": 7, "value": 7 }
+      }
+    },
+    {
+      "name": "Pracaxi Oil",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "60", "min": 60, "max": 60, "value": 60 },
+      "ins": { "raw": "130", "min": 130, "max": 130, "value": 130 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "palmitic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "stearic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Camellia Oil (Tea Seed)",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+      "ins": { "raw": "115", "min": 115, "max": 115, "value": 115 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "stearic": { "raw": "4", "min": 4, "max": 4, "value": 4 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+        "linoleic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Arnica Oil (infused)",
+      "sap_naoh": { "raw": "~0.135", "min": 0.135, "max": 0.135, "value": 0.135, "qualifier": "approx" },
+      "sap_koh": { "raw": "~0.189", "min": 0.189, "max": 0.189, "value": 0.189, "qualifier": "approx" },
+      "iodine": { "raw": "100+", "min": 100, "max": null, "value": 100, "qualifier": "plus" },
+      "ins": { "raw": "Low", "qualitative": "low" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "stearic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "30", "min": 30, "max": 30, "value": 30 },
+        "linoleic": { "raw": "50", "min": 50, "max": 50, "value": 50 },
+        "linolenic": { "raw": "5", "min": 5, "max": 5, "value": 5 }
+      }
+    },
+    {
+      "name": "Illipe Butter",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "35", "min": 35, "max": 35, "value": 35 },
+      "ins": { "raw": "155", "min": 155, "max": 155, "value": 155 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
+        "stearic": { "raw": "40", "min": 40, "max": 40, "value": 40 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "35", "min": 35, "max": 35, "value": 35 },
+        "linoleic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
     }
   ]
 }
