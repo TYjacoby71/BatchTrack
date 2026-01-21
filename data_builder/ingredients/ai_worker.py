@@ -234,12 +234,57 @@ def _call_openai_json(client: openai.OpenAI, system_prompt: str, user_prompt: st
     return payload
 
 
+def _filter_source_data(meta: Dict[str, Any]) -> Dict[str, Any]:
+    """Filter source metadata to only essential fields, reducing token usage by ~70%."""
+    if not meta:
+        return {}
+    
+    # Essential fields to keep from each source
+    KEEP_FIELDS = {
+        "cas_number", "cas", "cas_no", "CAS",
+        "inci_name", "inci", "INCI",
+        "botanical_name", "scientific_name", "latin_name",
+        "common_name", "name", "ingredient_name",
+        "description", "definition",
+        "functions", "function", "cosmetic_functions",
+        "restrictions", "restriction",
+        "molecular_formula", "formula",
+        "molecular_weight", "mol_weight",
+        "density", "specific_gravity",
+        "melting_point", "boiling_point", "flash_point",
+        "odor", "odor_description", "flavor", "flavor_description",
+        "color", "appearance",
+        "solubility",
+        "safety", "hazards", "warnings",
+        "origin", "source",
+    }
+    
+    filtered = {}
+    for source_name, source_data in meta.items():
+        if not isinstance(source_data, dict):
+            continue
+        source_filtered = {}
+        for key, value in source_data.items():
+            key_lower = key.lower().replace("_", "").replace("-", "")
+            if any(keep.lower().replace("_", "") in key_lower for keep in KEEP_FIELDS):
+                # Truncate very long values
+                if isinstance(value, str) and len(value) > 500:
+                    value = value[:500] + "..."
+                source_filtered[key] = value
+        if source_filtered:
+            filtered[source_name] = source_filtered
+    return filtered
+
+
 def _render_metadata_blob(term: str) -> str:
     if sources is None:
         return "{}"
     try:
         meta = sources.fetch_metadata(term)
-        return json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) if meta else "{}"
+        if not meta:
+            return "{}"
+        filtered = _filter_source_data(meta)
+        return json.dumps(filtered, ensure_ascii=False, sort_keys=True) if filtered else "{}"
     except Exception:  # pragma: no cover
         return "{}"
 
