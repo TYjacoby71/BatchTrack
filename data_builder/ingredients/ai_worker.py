@@ -180,17 +180,27 @@ ITEMS_SCHEMA_SPEC = r"""
     "description": "1-2 sentence description",
     "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
     "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
-    "color": "typical color",
-    "odor_profile": "scent characteristics (or Odorless)",
-    "flavor_profile": "taste (or Not edible)",
+    "color": "typical color (or Not Found)",
+    "odor_profile": "scent characteristics (or Odorless or Not Found)",
+    "flavor_profile": "taste (or Not edible or Not Found)",
     "synonyms": [],
-    "applications": [],
-    "function_tags": [],
+    "applications": ["3-5 uses: Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, etc"],
+    "function_tags": ["3-5 functions: Emollient, Moisturizing, Cleansing, Fragrance, etc"],
     "safety_tags": [],
     "shelf_life_days": 30-3650,
     "sds_hazards": [],
     "storage": {"temperature_celsius": {"min": 5, "max": 25}, "humidity_percent": {"max": 60}, "special_instructions": "string"},
-    "specifications": {"sap_naoh": 0.128, "sap_koh": 0.18, "iodine_value": 10, "melting_point_celsius": {"min": 30, "max": 35}, "flash_point_celsius": 200, "ph_range": {"min": 5, "max": 7}, "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}, "density_g_ml": 0.91},
+    "specifications": {
+      "sap_naoh": "number or N/A or Not Found",
+      "sap_koh": "number or N/A or Not Found",
+      "iodine_value": "number or N/A or Not Found",
+      "melting_point_celsius": {"min": "number or N/A", "max": "number or N/A"},
+      "flash_point_celsius": "number or N/A or Not Found",
+      "ph_range": {"min": "number or N/A", "max": "number or N/A"},
+      "usage_rate_percent": {"leave_on_max": "number or N/A", "rinse_off_max": "number or N/A"},
+      "density_g_ml": "number or N/A or Not Found",
+      "solubility": "description (e.g., 'Soluble in oil, insoluble in water') or N/A or Not Found"
+    },
     "sourcing": {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "string"},
     "default_unit": "gram|kg|oz|lb|ml|liter|floz|count",
     "form_bypass": false,
@@ -198,7 +208,11 @@ ITEMS_SCHEMA_SPEC = r"""
   }],
   "data_quality": {"confidence": 0-1, "caveats": []}
 }
-RULES: Unknown="Not Found", Not applicable="N/A". Use training knowledge for specs (density, SAP, etc).
+MANDATORY RULES - EVERY FIELD MUST HAVE AN EXPLICIT ANSWER:
+- If you have data → provide the value
+- If not applicable (e.g., pH for oils, SAP for non-lipids) → "N/A"
+- If unknown/obscure → "Not Found"
+- NEVER leave a field empty or omit it. Every field in the schema must appear with an answer.
 UNITS: Oils/Liquids→ml, Butters/Waxes/Powders→oz or gram, Whole→count.
 """
 
