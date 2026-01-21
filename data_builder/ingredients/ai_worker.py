@@ -63,14 +63,8 @@ INGREDIENT_CATEGORIES = [
 ]
 
 SYSTEM_PROMPT = (
-    "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
-    "manufacturing. You only output JSON that conforms to the provided schema. "
-    "CRITICAL: For well-documented ingredient properties (SAP values, iodine values, density, "
-    "solubility for common oils/fats/butters/waxes), USE YOUR TRAINING KNOWLEDGE to provide values. "
-    "These properties ARE well-documented and you should provide them. "
-    "Only use \"Not Found\" for truly obscure ingredients where you genuinely have no data. "
-    "Use \"N/A\" when a field is not applicable (e.g., pH for oils). "
-    "EVERY field in the schema must have an explicit answer - never omit fields."
+    "IngredientCompilerGPT. JSON only. Use training knowledge for common specs (SAP, iodine, density). "
+    "\"N/A\"=not applicable. \"Not Found\"=truly unknown. All fields required."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -505,44 +499,14 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
-    return f"""
-You are Stage 2B (Compilation — Items). Create purchasable ITEM variants for base ingredient: "{term}".
-
-CRITICAL - EVERY FIELD MUST BE ANSWERED:
-- You MUST provide an explicit answer for EVERY field in the schema. No exceptions.
-- For each field: provide the VALUE if known, "N/A" if not applicable, or "Not Found" if unknown.
-- Empty fields or omitted fields are UNACCEPTABLE and will cause errors.
-
-Rules:
-- ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
-- physical_form must be one of: {forms}
-- variation should usually be chosen from this curated list when applicable: {variations}
-- applications: Provide 3-5 relevant uses (Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, Perfumery, etc.)
-- function_tags: Provide 3-5 relevant functions (Emollient, Moisturizing, Cleansing, Fragrance, Antioxidant, etc.)
-- If variation is empty, set variation_bypass=true.
-- Return multiple items when common (at least 1).
-
-SPECIFICATIONS - USE YOUR TRAINING KNOWLEDGE:
-- You have extensive knowledge of cosmetic/food ingredient specifications. USE IT.
-- SAP values: Carrier oils/fats typically 180-260 mg KOH/g (Olive ~190, Coconut ~258, Shea ~180). Essential oils typically 5-20 mg KOH/g. PROVIDE these values - they are well-documented!
-- Iodine values: Coconut 7-10, Olive 75-94, Sunflower 125-140. PROVIDE for oils/fats.
-- Density: Most oils 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL. PROVIDE as number.
-- Solubility: Describe what it dissolves in (e.g., "Soluble in oil, insoluble in water").
-- pH: Use "N/A" for oils (they don't have pH). Provide range for water-based items.
-- Only use "Not Found" for truly OBSCURE ingredients you have no data on.
-
-Ingredient core (context):
-{core_blob}
-
-Normalized base context (context):
-{base_blob}
-
-External metadata (may be empty):
-{meta}
-
-SCHEMA:
-{ITEMS_SCHEMA_SPEC}
-"""
+    return f"""Stage 2B: Create item variants for "{term}".
+EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. applications/function_tags: 3-5. Empty variation→variation_bypass=true. Min 1 item.
+SPECS (use training knowledge): SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility, pH("N/A" for oils). "Not Found" only if truly obscure.
+Core:{core_blob}
+Context:{base_blob}
+Meta:{meta}
+SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
 def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
@@ -552,48 +516,15 @@ def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], 
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
-    return f"""
-You are Stage 2B (Compilation — Items COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
-
-CRITICAL - EVERY FIELD MUST BE ANSWERED:
-- You MUST provide an explicit answer for EVERY field in the schema. No exceptions.
-- For each field: provide the VALUE if known, "N/A" if not applicable, or "Not Found" if unknown.
-- Empty fields or omitted fields are UNACCEPTABLE and will cause errors.
-
-Identity Rules (DO NOT VIOLATE):
-- DO NOT add items.
-- DO NOT remove items.
-- DO NOT reorder items.
-- DO NOT change identity fields: variation, physical_form, form_bypass, variation_bypass.
-- Your job is ONLY to fill missing schema fields.
-
-Fill Rules:
-- physical_form must be one of: {forms}
-- variation should usually be chosen from this curated list when applicable: {variations}
-- applications: Provide 3-5 relevant uses (Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, Perfumery, etc.)
-- function_tags: Provide 3-5 relevant functions (Emollient, Moisturizing, Cleansing, Fragrance, Antioxidant, etc.)
-
-SPECIFICATIONS - USE YOUR TRAINING KNOWLEDGE:
-- You have extensive knowledge of cosmetic/food ingredient specifications. USE IT.
-- SAP values: Carrier oils/fats typically 180-260 mg KOH/g (Olive ~190, Coconut ~258, Shea ~180). Essential oils typically 5-20 mg KOH/g. PROVIDE these values - they are well-documented!
-- Iodine values: Coconut 7-10, Olive 75-94, Sunflower 125-140. PROVIDE for oils/fats.
-- Density: Most oils 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL. PROVIDE as number.
-- Solubility: Describe what it dissolves in (e.g., "Soluble in oil, insoluble in water").
-- pH: Use "N/A" for oils (they don't have pH). Provide range for water-based items.
-- Only use "Not Found" for truly OBSCURE ingredients you have no data on.
-
-Ingredient core (context):
-{core_blob}
-
-Normalized base context (includes seed items to complete; do not contradict):
-{base_blob}
-
-External metadata (may be empty):
-{meta}
-
-SCHEMA:
-{ITEMS_SCHEMA_SPEC}
-"""
+    return f"""Stage 2B COMPLETION: Fill missing fields for "{term}" items.
+EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
+IDENTITY (DO NOT CHANGE): variation, physical_form, form_bypass, variation_bypass. No add/remove/reorder items.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. applications/function_tags: 3-5.
+SPECS (use training knowledge): SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility, pH("N/A" for oils). "Not Found" only if truly obscure.
+Core:{core_blob}
+Context+Seeds:{base_blob}
+Meta:{meta}
+SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
 def _merge_fill_only(base: Any, patch: Any) -> Any:
