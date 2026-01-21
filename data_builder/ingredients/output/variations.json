@@ -7,6 +7,7 @@
   "Callus Culture",
   "Cell Culture",
   "Concrete",
+  "Conditioned Media",
   "Essential Oil",
   "Extract",
   "Flower",
@@ -23,6 +24,8 @@
   "Leaf Extract",
   "Leaf Oil",
   "Leaf Powder",
+  "Lysate",
+  "Meristem Cell",
   "Meristem Cell Culture",
   "Needle Extract",
   "Needle Oil",
@@ -48,9 +51,11 @@
   "Seed",
   "Seed Extract",
   "Seed Oil",
+  "Starch",
   "Stem",
   "Stem Extract",
   "Stem Oil",
   "Tincture",
+  "Vesicles",
   "Wax"
 ]
