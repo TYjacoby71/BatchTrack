@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
-<div class="py-1">
+<div class="py-1" id="soapToolPage">
   <h2 class="mb-3 d-flex align-items-center gap-2">
     Soap Maker Tools
     {% if not tool_enabled %}
@@ -14,8 +14,22 @@
     Public drafting is in preview—feel free to explore the layout while we finish the live calculators.
   </div>
   {% endif %}
-  <script>window.RECIPE_CATEGORY_NAME = 'Soaps';</script>
+  <script>
+    window.RECIPE_CATEGORY_NAME = 'Soaps';
+    window.SOAP_CALC_LIMIT = {{ calc_limit|tojson if calc_limit is defined else 'null' }};
+    window.SOAP_CALC_TIER = {{ calc_tier|tojson if calc_tier is defined else '"guest"' }};
+  </script>
   <p class="text-muted">One door in, one door out: formulate here, then push to Recipes. Most extras stay tucked away until you need them.</p>
+  <div id="soapAlertStack" class="mb-3"></div>
+  <div class="alert alert-light border d-flex gap-2 align-items-start small">
+    <i class="fas fa-shield-alt mt-1 text-muted"></i>
+    <div>
+      <strong>No ads, no downtime.</strong> This calculator auto-saves on this device and lets you control lye purity, water method, and SoapCalc-style defaults so your numbers stay consistent.
+      {% if calc_limit %}
+      <div class="mt-1 text-muted">Preview mode includes {{ calc_limit }} calculations or saves per day—free accounts unlock full access.</div>
+      {% endif %}
+    </div>
+  </div>
 
   <div class="card mb-4" id="oilBlendCard">
     <div class="card-header d-flex flex-column flex-md-row justify-content-between gap-2">
@@ -386,12 +400,12 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Mold water weight (g)</label>
-              <input type="number" class="form-control" id="moldWaterWeight" min="0" step="1" placeholder="e.g., 1200">
+              <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
               <div class="form-text">Fill the mold with water and weigh it.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">Oils % of mold</label>
-              <input type="number" class="form-control" id="moldOilPct" min="50" max="80" step="1" value="65">
+              <input type="number" class="form-control" id="moldOilPct" min="50" max="80" step="0.1" value="65">
             </div>
             <div class="col-md-4">
               <label class="form-label">Suggested oils weight</label>
@@ -578,6 +592,43 @@
     'linolenic',
   ];
   const state = { lastCalc: null };
+  const alertStack = document.getElementById('soapAlertStack');
+  const STATE_STORAGE_KEY = 'soap_tool_state_v1';
+  const CALC_LIMIT = Number.isFinite(window.SOAP_CALC_LIMIT) ? window.SOAP_CALC_LIMIT : null;
+  const CALC_LIMIT_TIER = window.SOAP_CALC_TIER || 'guest';
+
+  const ALERT_ICONS = {
+    info: 'fa-info-circle',
+    warning: 'fa-exclamation-triangle',
+    danger: 'fa-times-circle',
+    success: 'fa-check-circle'
+  };
+
+  function showSoapAlert(type, message, options = {}){
+    if (!alertStack) return;
+    const icon = ALERT_ICONS[type] || ALERT_ICONS.info;
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} d-flex align-items-start gap-2`;
+    alert.innerHTML = `
+      <i class="fas ${icon} mt-1"></i>
+      <div class="flex-grow-1">${message}</div>
+      ${options.dismissible ? '<button type="button" class="btn-close" data-role="dismiss"></button>' : ''}
+    `;
+    if (options.dismissible) {
+      alert.querySelector('[data-role="dismiss"]')?.addEventListener('click', () => alert.remove());
+    }
+    alertStack.prepend(alert);
+    if (!options.persist) {
+      setTimeout(() => {
+        if (alert.parentNode) alert.remove();
+      }, options.timeoutMs || 4500);
+    }
+  }
+
+  function clearSoapAlerts(){
+    if (!alertStack) return;
+    alertStack.querySelectorAll('.alert').forEach(el => el.remove());
+  }
 
   function round(value, decimals = 3){
     if (!isFinite(value)) return 0;
@@ -732,7 +783,7 @@
     document.getElementById('oilPercentTotal').textContent = round(totalPct, 2);
     updateAdditivesOutput(totalWeight);
     updateMoldSuggested();
-    return totalWeight;
+    return { totalWeight, totalPct };
   }
 
   function normalizeOils(){
@@ -798,11 +849,12 @@
       }
     });
     const sapAvg = sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
-    if (lyeTotal <= 0 && totalWeight > 0) {
+    const usedFallback = lyeTotal <= 0 && totalWeight > 0;
+    if (usedFallback) {
       const fallbackPerG = lyeType === 'KOH' ? 0.194 : 0.138;
       lyeTotal = totalWeight * fallbackPerG;
     }
-    return { lyeTotal, sapAvg };
+    return { lyeTotal, sapAvg, usedFallback };
   }
 
   function computeWater(lyeAdjusted, totalOils, method, waterPct, lyeConcentration, waterRatio){
@@ -988,22 +1040,144 @@
     });
   }
 
-  function calculateAll(){
-    const totalOils = updateOilTotals();
-    if (!(totalOils > 0)) {
-      alert('Add oils and weights before calculating.');
+  function getStorage(){
+    try {
+      return window.localStorage;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readCalcUsage(){
+    if (!CALC_LIMIT) return { count: 0, date: null };
+    const storage = getStorage();
+    if (!storage) return { count: 0, date: null };
+    try {
+      const raw = storage.getItem('soap_calc_usage');
+      const today = new Date().toISOString().slice(0, 10);
+      if (!raw) return { count: 0, date: today };
+      const data = JSON.parse(raw);
+      if (!data || data.date !== today) {
+        return { count: 0, date: today };
+      }
+      return { count: Number(data.count) || 0, date: today };
+    } catch (_) {
+      return { count: 0, date: null };
+    }
+  }
+
+  function writeCalcUsage(count){
+    if (!CALC_LIMIT) return;
+    const storage = getStorage();
+    if (!storage) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      storage.setItem('soap_calc_usage', JSON.stringify({ count, date: today }));
+    } catch (_) {}
+  }
+
+  function canConsumeCalcQuota(){
+    if (!CALC_LIMIT) return true;
+    const usage = readCalcUsage();
+    if (usage.count >= CALC_LIMIT) {
+      showSoapAlert('warning', `You have reached the ${CALC_LIMIT} calculation limit for ${CALC_LIMIT_TIER} accounts. Create a free account or upgrade to keep calculating.`, { dismissible: true });
+      return false;
+    }
+    return true;
+  }
+
+  function consumeCalcQuota(){
+    if (!CALC_LIMIT) return;
+    const usage = readCalcUsage();
+    const nextCount = usage.count + 1;
+    writeCalcUsage(nextCount);
+    const remaining = Math.max(0, CALC_LIMIT - nextCount);
+    if (remaining <= 1) {
+      showSoapAlert('info', `You have ${remaining} calculation${remaining === 1 ? '' : 's'} left on the ${CALC_LIMIT_TIER} tier today.`, { dismissible: true, timeoutMs: 6000 });
+    }
+  }
+
+  function validateCalculation(){
+    const mode = getInputMode();
+    const totals = updateOilTotals();
+    const totalOils = totals.totalWeight;
+    const totalPct = totals.totalPct;
+    const errors = [];
+    const totalTarget = toNumber(document.getElementById('oilTotalTarget').value);
+    const oils = collectOilData();
+
+    if (mode === 'percent' && totalTarget <= 0) {
+      errors.push('Enter a total oils weight when using % mode.');
+    }
+    if (!oils.length || totalOils <= 0) {
+      errors.push('Add at least one oil with a weight or percent.');
+    }
+    if (mode === 'percent' && totalPct > 0 && Math.abs(totalPct - 100) > 0.5) {
+      errors.push('Oil percentages should total 100% (use Normalize to fix).');
+    }
+    return { ok: errors.length === 0, errors, totals, oils };
+  }
+
+  function sanitizeLyeInputs(form){
+    let purity = toNumber(form.lye_purity.value);
+    if (!purity || purity <= 0) {
+      purity = 100;
+    }
+    purity = Math.min(100, Math.max(90, purity));
+    form.lye_purity.value = round(purity, 1);
+
+    const waterMethod = form.water_method.value || 'percent';
+    let waterPct = toNumber(form.water_pct.value);
+    let lyeConcentration = toNumber(form.lye_concentration.value);
+    let waterRatio = toNumber(form.water_ratio.value);
+
+    if (waterMethod === 'percent' && (!waterPct || waterPct <= 0)) {
+      waterPct = 33;
+      form.water_pct.value = waterPct;
+    }
+    if (waterMethod === 'concentration' && (!lyeConcentration || lyeConcentration <= 0)) {
+      lyeConcentration = 33;
+      form.lye_concentration.value = lyeConcentration;
+    }
+    if (waterMethod === 'ratio' && (!waterRatio || waterRatio <= 0)) {
+      waterRatio = 2;
+      form.water_ratio.value = waterRatio;
+    }
+
+    return { purity, waterMethod, waterPct, lyeConcentration, waterRatio };
+  }
+
+  function calculateAll(options = {}){
+    const settings = {
+      consumeQuota: false,
+      showAlerts: true,
+      ...options
+    };
+    if (settings.showAlerts) {
+      clearSoapAlerts();
+    }
+    const validation = validateCalculation();
+    if (!validation.ok) {
+      if (settings.showAlerts) {
+        showSoapAlert('warning', `<strong>Missing info:</strong><ul class="mb-0">${validation.errors.map(err => `<li>${err}</li>`).join('')}</ul>`, { dismissible: true, persist: true });
+      }
+      return null;
+    }
+    if (settings.consumeQuota && !canConsumeCalcQuota()) {
       return null;
     }
     const form = document.getElementById('lyeForm');
-    const superfat = toNumber(form.superfat.value);
-    const lyeType = form.lye_type.value;
-    const purity = Math.min(100, Math.max(0, toNumber(form.lye_purity.value) || 100));
-    const waterMethod = form.water_method.value;
-    const waterPct = toNumber(form.water_pct.value);
-    const lyeConcentration = toNumber(form.lye_concentration.value);
-    const waterRatio = toNumber(form.water_ratio.value);
+    const superfat = toNumber(form.superfat.value) || 5;
+    const lyeType = form.lye_type.value || 'NaOH';
+    const sanitized = sanitizeLyeInputs(form);
+    const purity = sanitized.purity;
+    const waterMethod = sanitized.waterMethod;
+    const waterPct = sanitized.waterPct;
+    const lyeConcentration = sanitized.lyeConcentration;
+    const waterRatio = sanitized.waterRatio;
 
-    const oils = collectOilData();
+    const oils = validation.oils;
+    const totalOils = validation.totals.totalWeight;
     const lyeTotals = computeLyeTotals(oils, lyeType);
     const lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
     const lyeAdjusted = purity > 0 ? lyePure / (purity / 100) : lyePure;
@@ -1037,6 +1211,18 @@
       sapAvg: lyeTotals.sapAvg,
     });
 
+    if (settings.showAlerts) {
+      if (lyeTotals.usedFallback) {
+        showSoapAlert('info', 'Some oils are missing SAP values, so an average SAP was used. Select oils with SAP data for the most accurate lye calculation.', { dismissible: true, timeoutMs: 7000 });
+      }
+      if (purity < 100) {
+        showSoapAlert('info', `Lye purity is set to ${round(purity, 1)}%. Adjusting lye to match your real-world purity.`, { dismissible: true, timeoutMs: 6000 });
+      }
+      if (waterData.lyeConcentration < 25 || waterData.lyeConcentration > 45) {
+        showSoapAlert('warning', 'Your lye concentration is outside the common 25–45% range. Expect slower or faster trace.', { dismissible: true, timeoutMs: 7000 });
+      }
+    }
+
     state.lastCalc = {
       totalOils,
       oils,
@@ -1053,6 +1239,9 @@
       additives,
       batchYield,
     };
+    if (settings.consumeQuota) {
+      consumeCalcQuota();
+    }
     return state.lastCalc;
   }
 
@@ -1079,17 +1268,217 @@
     }
   }
 
+  function serializeLines(wrapperId, kind){
+    const out = [];
+    const rows = document.querySelectorAll(`#${wrapperId} .row`);
+    rows.forEach(row => {
+      const name = row.querySelector('.tool-typeahead')?.value?.trim();
+      const gi = row.querySelector('.tool-gi-id')?.value || '';
+      const qtyEl = row.querySelector('.tool-qty');
+      const unitEl = row.querySelector('.tool-unit');
+      const qty = qtyEl && qtyEl.value !== '' ? toNumber(qtyEl.value) : null;
+      if (!name && !gi) return;
+      if (kind === 'container') {
+        out.push({
+          name: name || '',
+          global_item_id: gi ? parseInt(gi) : null,
+          quantity: qty && qty > 0 ? qty : 1,
+        });
+      } else {
+        out.push({
+          name: name || '',
+          global_item_id: gi ? parseInt(gi) : null,
+          quantity: qty && qty >= 0 ? qty : 0,
+          unit: unitEl?.value || 'gram',
+        });
+      }
+    });
+    return out;
+  }
+
+  function serializeOils(){
+    const oils = [];
+    document.querySelectorAll('#oilRows .oil-row').forEach(row => {
+      const name = row.querySelector('.oil-typeahead')?.value?.trim() || '';
+      const grams = row.querySelector('.oil-grams')?.value || '';
+      const percent = row.querySelector('.oil-percent')?.value || '';
+      const sap = row.querySelector('.oil-sap-koh')?.value || '';
+      const iodine = row.querySelector('.oil-iodine')?.value || '';
+      const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
+      const gi = row.querySelector('.oil-gi-id')?.value || '';
+      if (!name && !grams && !percent && !gi) return;
+      oils.push({
+        name,
+        grams,
+        percent,
+        sap,
+        iodine,
+        fattyRaw,
+        gi,
+      });
+    });
+    return oils;
+  }
+
+  function saveState(){
+    const storage = getStorage();
+    if (!storage) return;
+    const form = document.getElementById('lyeForm');
+    const payload = {
+      version: 1,
+      input_mode: getInputMode(),
+      oil_total_target: document.getElementById('oilTotalTarget').value || '',
+      oils: serializeOils(),
+      lye_form: {
+        superfat: form.superfat.value || '5',
+        lye_type: form.lye_type.value || 'NaOH',
+        lye_purity: form.lye_purity.value || '100',
+        water_method: form.water_method.value || 'percent',
+        water_pct: form.water_pct.value || '33',
+        lye_concentration: form.lye_concentration.value || '33',
+        water_ratio: form.water_ratio.value || '2',
+      },
+      additives: {
+        fragrance_pct: document.getElementById('additiveFragrancePct').value || '3',
+        lactate_pct: document.getElementById('additiveLactatePct').value || '1',
+        sugar_pct: document.getElementById('additiveSugarPct').value || '1',
+        salt_pct: document.getElementById('additiveSaltPct').value || '0.5',
+        citric_pct: document.getElementById('additiveCitricPct').value || '0',
+      },
+      mold: {
+        water_weight: document.getElementById('moldWaterWeight').value || '',
+        oil_pct: document.getElementById('moldOilPct').value || '65',
+      },
+      lines: {
+        ingredients: serializeLines('tool-ingredients', 'ingredient'),
+        consumables: serializeLines('tool-consumables', 'consumable'),
+        containers: serializeLines('tool-containers', 'container'),
+      },
+      updated_at: Date.now(),
+    };
+    try {
+      storage.setItem(STATE_STORAGE_KEY, JSON.stringify(payload));
+    } catch (_) {}
+  }
+
+  function restoreState(){
+    const storage = getStorage();
+    if (!storage) return;
+    const raw = storage.getItem(STATE_STORAGE_KEY);
+    if (!raw) return;
+    let data = null;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      return;
+    }
+    if (!data || typeof data !== 'object') return;
+
+    if (data.input_mode) {
+      const modeInput = document.querySelector(`input[name="oil_input_mode"][value="${data.input_mode}"]`);
+      if (modeInput) modeInput.checked = true;
+    }
+    if (data.oil_total_target !== undefined) {
+      document.getElementById('oilTotalTarget').value = data.oil_total_target;
+    }
+
+    const oilRows = document.getElementById('oilRows');
+    if (oilRows) {
+      oilRows.innerHTML = '';
+      const oils = Array.isArray(data.oils) && data.oils.length ? data.oils : [{}];
+      oils.forEach(oil => {
+        const row = buildOilRow();
+        row.querySelector('.oil-typeahead').value = oil.name || '';
+        row.querySelector('.oil-grams').value = oil.grams || '';
+        row.querySelector('.oil-percent').value = oil.percent || '';
+        row.querySelector('.oil-sap-koh').value = oil.sap || '';
+        row.querySelector('.oil-iodine').value = oil.iodine || '';
+        row.querySelector('.oil-fatty').value = oil.fattyRaw || '';
+        row.querySelector('.oil-gi-id').value = oil.gi || '';
+        oilRows.appendChild(row);
+      });
+    }
+
+    const form = document.getElementById('lyeForm');
+    if (data.lye_form && form) {
+      form.superfat.value = data.lye_form.superfat || '5';
+      form.lye_type.value = data.lye_form.lye_type || 'NaOH';
+      form.lye_purity.value = data.lye_form.lye_purity || '100';
+      form.water_method.value = data.lye_form.water_method || 'percent';
+      form.water_pct.value = data.lye_form.water_pct || '33';
+      form.lye_concentration.value = data.lye_form.lye_concentration || '33';
+      form.water_ratio.value = data.lye_form.water_ratio || '2';
+    }
+
+    if (data.additives) {
+      document.getElementById('additiveFragrancePct').value = data.additives.fragrance_pct || '3';
+      document.getElementById('additiveLactatePct').value = data.additives.lactate_pct || '1';
+      document.getElementById('additiveSugarPct').value = data.additives.sugar_pct || '1';
+      document.getElementById('additiveSaltPct').value = data.additives.salt_pct || '0.5';
+      document.getElementById('additiveCitricPct').value = data.additives.citric_pct || '0';
+    }
+
+    if (data.mold) {
+      document.getElementById('moldWaterWeight').value = data.mold.water_weight || '';
+      document.getElementById('moldOilPct').value = data.mold.oil_pct || '65';
+    }
+
+    function restoreLines(wrapperId, items, kind){
+      const wrapper = document.getElementById(wrapperId);
+      if (!wrapper) return;
+      wrapper.innerHTML = '';
+      (items || []).forEach(item => {
+        const row = buildLineRow(kind);
+        const input = row.querySelector('.tool-typeahead');
+        const giHidden = row.querySelector('.tool-gi-id');
+        const qtyEl = row.querySelector('.tool-qty');
+        const unitEl = row.querySelector('.tool-unit');
+        if (input) input.value = item.name || '';
+        if (giHidden) giHidden.value = item.global_item_id || '';
+        if (qtyEl && item.quantity !== undefined && item.quantity !== null) qtyEl.value = item.quantity;
+        if (unitEl && item.unit) {
+          const option = Array.from(unitEl.options).find(opt => opt.value === item.unit);
+          if (option) unitEl.value = item.unit;
+        }
+        wrapper.appendChild(row);
+      });
+    }
+
+    if (data.lines) {
+      restoreLines('tool-ingredients', data.lines.ingredients, 'ingredient');
+      restoreLines('tool-consumables', data.lines.consumables, 'consumable');
+      restoreLines('tool-containers', data.lines.containers, 'container');
+    }
+
+    updateInputMode();
+    setWaterMethod();
+    updateOilTotals();
+    updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+    updateMoldSuggested();
+    calculateAll({ consumeQuota: false, showAlerts: false });
+    showSoapAlert('info', 'Restored your last soap tool session from this device.', { dismissible: true, timeoutMs: 5000 });
+  }
+
+  let saveStateTimer = null;
+  function queueStateSave(){
+    if (saveStateTimer) clearTimeout(saveStateTimer);
+    saveStateTimer = setTimeout(saveState, 350);
+  }
+
   document.getElementById('addOil').addEventListener('click', function(){
     document.getElementById('oilRows').appendChild(buildOilRow());
+    queueStateSave();
   });
 
   document.getElementById('normalizeOils').addEventListener('click', function(){
     normalizeOils();
+    queueStateSave();
   });
 
   document.getElementById('oilRows').addEventListener('input', function(e){
     if (e.target.classList.contains('oil-grams') || e.target.classList.contains('oil-percent')) {
       updateOilTotals();
+      queueStateSave();
     }
   });
 
@@ -1097,54 +1486,96 @@
     if (e.target.classList.contains('remove-oil')) {
       e.target.closest('.oil-row').remove();
       updateOilTotals();
+      queueStateSave();
     }
   });
 
   document.querySelectorAll('input[name="oil_input_mode"]').forEach(el => {
-    el.addEventListener('change', updateInputMode);
+    el.addEventListener('change', function(){
+      updateInputMode();
+      queueStateSave();
+    });
   });
 
-  document.getElementById('oilTotalTarget').addEventListener('input', updateOilTotals);
+  document.getElementById('oilTotalTarget').addEventListener('input', function(){
+    updateOilTotals();
+    queueStateSave();
+  });
 
   document.getElementById('waterMethod').addEventListener('change', function(){
     setWaterMethod();
+    queueStateSave();
   });
 
   document.getElementById('lyeForm').addEventListener('input', function(e){
     if (e.target.name === 'lye_type') {
       updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
     }
+    queueStateSave();
   });
 
   ['additiveFragrancePct', 'additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
     .forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value)));
+      if (el) el.addEventListener('input', () => {
+        updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+        queueStateSave();
+      });
     });
 
-  document.getElementById('moldWaterWeight').addEventListener('input', updateMoldSuggested);
-  document.getElementById('moldOilPct').addEventListener('input', updateMoldSuggested);
+  document.getElementById('moldWaterWeight').addEventListener('input', function(){
+    updateMoldSuggested();
+    queueStateSave();
+  });
+  document.getElementById('moldOilPct').addEventListener('input', function(){
+    updateMoldSuggested();
+    queueStateSave();
+  });
 
   document.querySelectorAll('.stub-btn').forEach(btn => {
     btn.addEventListener('click', function(){
       const kind = this.dataset.stubKind;
       const name = this.dataset.stubName;
       addStubLine(kind, name);
+      queueStateSave();
     });
   });
 
+  const soapRoot = document.getElementById('soapToolPage');
+  if (soapRoot) {
+    soapRoot.addEventListener('click', function(e){
+      if (e.target.classList.contains('tool-remove')) {
+        queueStateSave();
+      }
+    });
+    soapRoot.addEventListener('input', function(e){
+      if (e.target.matches('input, select, textarea')) {
+        queueStateSave();
+      }
+    });
+    soapRoot.addEventListener('change', function(e){
+      if (e.target.matches('input, select, textarea')) {
+        queueStateSave();
+      }
+    });
+  }
+
   document.getElementById('addToolIngredient').addEventListener('click', function(){
     document.getElementById('tool-ingredients').appendChild(buildLineRow('ingredient'));
+    queueStateSave();
   });
   document.getElementById('addToolConsumable').addEventListener('click', function(){
     document.getElementById('tool-consumables').appendChild(buildLineRow('consumable'));
+    queueStateSave();
   });
   document.getElementById('addToolContainer').addEventListener('click', function(){
     document.getElementById('tool-containers').appendChild(buildLineRow('container'));
+    queueStateSave();
   });
 
   document.getElementById('calcLyeBtn').addEventListener('click', function(){
-    calculateAll();
+    calculateAll({ consumeQuota: true, showAlerts: true });
+    queueStateSave();
   });
 
   document.getElementById('convBtn').addEventListener('click', async function(){
@@ -1167,9 +1598,16 @@
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
     let redirectTo = '/recipes/new';
+    let shouldRedirect = true;
     try {
-      const calc = state.lastCalc || calculateAll();
+      if (CALC_LIMIT && !canConsumeCalcQuota()) {
+        return;
+      }
+      const calc = state.lastCalc || calculateAll({ consumeQuota: false, showAlerts: true });
       if (!calc) return;
+      if (CALC_LIMIT) {
+        consumeCalcQuota();
+      }
       const baseIngredients = calc.oils.map(oil => ({
         name: oil.name || undefined,
         global_item_id: oil.global_item_id || undefined,
@@ -1242,16 +1680,31 @@
       };
       const response = await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
       const data = await response.json();
+      if (!response.ok || !data || data.success === false) {
+        const msg = (data && (data.error || data.message)) || 'Unable to save this draft right now.';
+        showSoapAlert('danger', msg, { dismissible: true, persist: true });
+        shouldRedirect = false;
+        return;
+      }
       if (data && data.redirect) {
         redirectTo = data.redirect;
       }
-    } catch(_) {}
-    window.location.assign(redirectTo);
+    } catch(_) {
+      showSoapAlert('danger', 'Network error while saving. Please try again.', { dismissible: true, persist: true });
+      shouldRedirect = false;
+    }
+    if (shouldRedirect) {
+      window.location.assign(redirectTo);
+    }
   });
-  attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
+  const initialOilRow = document.querySelector('#oilRows .oil-row');
+  if (initialOilRow) {
+    attachOilTypeahead(initialOilRow);
+  }
   updateInputMode();
   setWaterMethod();
   updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+  restoreState();
 })();
 </script>
 {% endblock %}
