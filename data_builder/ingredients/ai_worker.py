@@ -500,18 +500,28 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     return f"""
 You are Stage 2B (Compilation — Items). Create purchasable ITEM variants for base ingredient: "{term}".
 
+CRITICAL - EVERY FIELD MUST BE ANSWERED:
+- You MUST provide an explicit answer for EVERY field in the schema. No exceptions.
+- For each field: provide the VALUE if known, "N/A" if not applicable, or "Not Found" if unknown.
+- Empty fields or omitted fields are UNACCEPTABLE and will cause errors.
+
 Rules:
 - ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value (use ["Not Found"] if needed).
+- applications: Provide 3-5 relevant uses (Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, Perfumery, etc.)
+- function_tags: Provide 3-5 relevant functions (Emollient, Moisturizing, Cleansing, Fragrance, Antioxidant, etc.)
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
-- Missing data policy: Always include all fields. Use "Not Found" ONLY when you genuinely have no knowledge, and "N/A" when not applicable.
-- Numeric/spec policy: USE YOUR KNOWLEDGE to provide numeric values (density, flash point, SAP values, iodine value, etc.) when you have reliable data. These values are well-documented for most carrier oils, essential oils, butters, and waxes. Only use "Not Found" if you truly have no knowledge of the value. For essential oils, SAP values are typically low (8-20 mg KOH/g). For carrier oils/fats, SAP values are higher (180-250 mg KOH/g).
-- Density policy: Provide density_g_ml as a NUMBER in g/mL for liquids/oils/syrups. Most oils are 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL, water-based 0.98-1.05 g/mL.
-- SAP/Iodine policy: For carrier oils, fats, butters, waxes used in soapmaking/cosmetics, ALWAYS provide sap_naoh and sap_koh values - these are well-documented! Examples: Olive Oil (sap_koh ~190), Coconut Oil (~258), Shea Butter (~180). For essential oils (distilled/extracted), SAP is typically 5-20 mg KOH/g (not triglycerides). Only use "Not Found" for truly obscure ingredients.
-- Iodine policy: Provide iodine values for oils/fats. Higher = more unsaturated. Examples: Coconut (7-10), Olive (75-94), Sunflower (125-140).
+
+SPECIFICATIONS - USE YOUR TRAINING KNOWLEDGE:
+- You have extensive knowledge of cosmetic/food ingredient specifications. USE IT.
+- SAP values: Carrier oils/fats typically 180-260 mg KOH/g (Olive ~190, Coconut ~258, Shea ~180). Essential oils typically 5-20 mg KOH/g. PROVIDE these values - they are well-documented!
+- Iodine values: Coconut 7-10, Olive 75-94, Sunflower 125-140. PROVIDE for oils/fats.
+- Density: Most oils 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL. PROVIDE as number.
+- Solubility: Describe what it dissolves in (e.g., "Soluble in oil, insoluble in water").
+- pH: Use "N/A" for oils (they don't have pH). Provide range for water-based items.
+- Only use "Not Found" for truly OBSCURE ingredients you have no data on.
 
 Ingredient core (context):
 {core_blob}
@@ -537,20 +547,32 @@ def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], 
     return f"""
 You are Stage 2B (Compilation — Items COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
 
-Rules (CRITICAL):
+CRITICAL - EVERY FIELD MUST BE ANSWERED:
+- You MUST provide an explicit answer for EVERY field in the schema. No exceptions.
+- For each field: provide the VALUE if known, "N/A" if not applicable, or "Not Found" if unknown.
+- Empty fields or omitted fields are UNACCEPTABLE and will cause errors.
+
+Identity Rules (DO NOT VIOLATE):
 - DO NOT add items.
 - DO NOT remove items.
 - DO NOT reorder items.
-- DO NOT change identity fields for any item: variation, physical_form, form_bypass, variation_bypass.
-- Your job is ONLY to fill missing schema fields (applications, function_tags, safety_tags, storage, specifications, sourcing, etc.).
+- DO NOT change identity fields: variation, physical_form, form_bypass, variation_bypass.
+- Your job is ONLY to fill missing schema fields.
+
+Fill Rules:
 - physical_form must be one of: {forms}
 - variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value (use ["Not Found"] only if you truly cannot infer anything).
-- Missing data policy: Always include all fields. Use "Not Found" ONLY when you genuinely have no knowledge, and "N/A" when not applicable.
-- Numeric/spec policy: USE YOUR KNOWLEDGE to provide numeric values (density, flash point, SAP values, iodine value, etc.) when you have reliable data. These values are well-documented for most carrier oils, essential oils, butters, and waxes. Only use "Not Found" if you truly have no knowledge. For essential oils, SAP values are typically low (8-20 mg KOH/g). For carrier oils/fats, SAP values are higher (180-250 mg KOH/g).
-- Density policy: Provide density_g_ml as a NUMBER in g/mL for liquids/oils/syrups. Most oils are 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL, water-based 0.98-1.05 g/mL.
-- SAP/Iodine policy: For carrier oils, fats, butters, waxes used in soapmaking/cosmetics, ALWAYS provide sap_naoh and sap_koh values - these are well-documented! Examples: Olive Oil (sap_koh ~190), Coconut Oil (~258), Shea Butter (~180). For essential oils (distilled/extracted), SAP is typically 5-20 mg KOH/g (not triglycerides). Only use "Not Found" for truly obscure ingredients.
-- Iodine policy: Provide iodine values for oils/fats. Higher = more unsaturated. Examples: Coconut (7-10), Olive (75-94), Sunflower (125-140).
+- applications: Provide 3-5 relevant uses (Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, Perfumery, etc.)
+- function_tags: Provide 3-5 relevant functions (Emollient, Moisturizing, Cleansing, Fragrance, Antioxidant, etc.)
+
+SPECIFICATIONS - USE YOUR TRAINING KNOWLEDGE:
+- You have extensive knowledge of cosmetic/food ingredient specifications. USE IT.
+- SAP values: Carrier oils/fats typically 180-260 mg KOH/g (Olive ~190, Coconut ~258, Shea ~180). Essential oils typically 5-20 mg KOH/g. PROVIDE these values - they are well-documented!
+- Iodine values: Coconut 7-10, Olive 75-94, Sunflower 125-140. PROVIDE for oils/fats.
+- Density: Most oils 0.85-0.95 g/mL, essential oils 0.85-1.05 g/mL. PROVIDE as number.
+- Solubility: Describe what it dissolves in (e.g., "Soluble in oil, insoluble in water").
+- pH: Use "N/A" for oils (they don't have pH). Provide range for water-based items.
+- Only use "Not Found" for truly OBSCURE ingredients you have no data on.
 
 Ingredient core (context):
 {core_blob}
