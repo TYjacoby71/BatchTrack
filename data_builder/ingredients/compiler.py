@@ -20,6 +20,24 @@ from sqlalchemy import func
 _worker_stats = threading.local()
 DEFAULT_WORKERS = int(os.getenv("COMPILER_WORKERS", "1"))
 
+
+class AtomicCounter:
+    """Thread-safe counter for tracking compilation order across workers."""
+    def __init__(self, start: int = 0):
+        self._value = start
+        self._lock = threading.Lock()
+    
+    def increment(self) -> int:
+        """Increment and return the new value (atomically)."""
+        with self._lock:
+            self._value += 1
+            return self._value
+    
+    @property
+    def value(self) -> int:
+        with self._lock:
+            return self._value
+
 try:  # pragma: no cover - fallback for direct script execution
     from . import ai_worker, database_manager
 except ImportError:  # pragma: no cover
@@ -636,8 +654,7 @@ def _build_cluster_context(cluster_id: str) -> dict[str, Any]:
 def _process_stage1_cluster(
     cid: str,
     priority_map: dict[str, int],
-    done_count: int,
-    idx: int,
+    rank_counter: AtomicCounter,
     sleep_seconds: float,
 ) -> tuple[bool, str | None, str | None]:
     """Process a single cluster for Stage 1 (term normalization). Returns (success, term, error)."""
@@ -703,6 +720,8 @@ def _process_stage1_cluster(
                 rec.term_compiled_at = getattr(ingredient, "compiled_at", None) or now
                 rec.term_error = None
                 rec.updated_at = now
+                rank = rank_counter.increment()
+                LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s (seeded)", rank, rec.compiled_term, legacy_common, priority)
                 return (True, rec.compiled_term, None)
 
             rec.term_status = "processing"
@@ -759,7 +778,7 @@ def _process_stage1_cluster(
                 ).first()
                 if tq is not None:
                     tq.priority = final_priority
-        rank = done_count + idx + 1
+        rank = rank_counter.increment()
         LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s", rank, final_term, final_common_name, final_priority)
         return (True, final_term, None)
     except Exception as exc:
@@ -788,14 +807,17 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
             database_manager.CompiledClusterRecord.term_status == "done"
         ).count()
     
+    # Create atomic counter starting at done_count so ranks continue from where we left off
+    rank_counter = AtomicCounter(start=done_count)
+    
     workers = max(1, min(workers, 10))  # Cap at 10 workers
-    LOGGER.info("Stage 1: processing %d clusters with %d worker(s)", len(ids), workers)
+    LOGGER.info("Stage 1: processing %d clusters with %d worker(s), starting from rank %d", len(ids), workers, done_count + 1)
     
     if workers == 1:
         # Sequential processing (original behavior)
         ok = 0
-        for idx, cid in enumerate(ids):
-            success, term, error = _process_stage1_cluster(cid, priority_map, done_count, idx, sleep_seconds)
+        for cid in ids:
+            success, term, error = _process_stage1_cluster(cid, priority_map, rank_counter, sleep_seconds)
             if success:
                 ok += 1
         LOGGER.info("Stage 1 finished: ok=%s total=%s", ok, len(ids))
@@ -805,12 +827,11 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
     ok = 0
     lock = threading.Lock()
     
-    def worker_task(args: tuple[int, str]) -> tuple[bool, str | None, str | None]:
-        idx, cid = args
-        return _process_stage1_cluster(cid, priority_map, done_count, idx, sleep_seconds)
+    def worker_task(cid: str) -> tuple[bool, str | None, str | None]:
+        return _process_stage1_cluster(cid, priority_map, rank_counter, sleep_seconds)
     
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(worker_task, (idx, cid)): cid for idx, cid in enumerate(ids)}
+        futures = {executor.submit(worker_task, cid): cid for cid in ids}
         for future in as_completed(futures):
             cid = futures[future]
             try:
