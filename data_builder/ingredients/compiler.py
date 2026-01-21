@@ -710,6 +710,8 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
             term = _clean(result.get("term"))
             core = result.get("ingredient_core") if isinstance(result.get("ingredient_core"), dict) else {}
             dq = result.get("data_quality") if isinstance(result.get("data_quality"), dict) else {}
+            final_priority = None
+            final_term = None
 
             with database_manager.get_session() as session:
                 rec = session.get(database_manager.CompiledClusterRecord, cid)
@@ -724,7 +726,14 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                 rec.inci_name = _extract_stage1_field(core.get("inci_name")) or None
                 rec.cas_number = _extract_stage1_field(core.get("cas_number")) or None
                 rec.seed_category = None
-                rec.priority = priority
+                ai_priority = result.get("maker_priority")
+                if ai_priority is not None:
+                    try:
+                        rec.priority = max(1, min(10, int(ai_priority)))
+                    except (TypeError, ValueError):
+                        rec.priority = priority
+                else:
+                    rec.priority = priority
                 common_name = result.get("common_name") or rec.compiled_term
                 rec.payload_json = json.dumps(
                     {"stage1": {"term": rec.compiled_term, "common_name": common_name, "ingredient_core": core, "data_quality": dq}},
@@ -735,6 +744,15 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                 rec.term_compiled_at = datetime.now(timezone.utc)
                 rec.term_error = None
                 rec.updated_at = datetime.now(timezone.utc)
+                final_priority = rec.priority
+                final_term = rec.compiled_term
+            if final_term and final_priority is not None:
+                with database_manager.get_session() as session:
+                    tq = session.query(database_manager.TaskQueue).filter(
+                        database_manager.TaskQueue.term == final_term
+                    ).first()
+                    if tq is not None:
+                        tq.priority = final_priority
             ok += 1
         except Exception as exc:  # pylint: disable=broad-except
             with database_manager.get_session() as session:

@@ -157,6 +157,7 @@ CLUSTER_TERM_SCHEMA_SPEC = r"""
 {
   "term": "canonical base term",
   "common_name": "TRUE vernacular name (e.g., Silver Fir not Abies Alba)",
+  "maker_priority": 1-10,
   "ingredient_core": {
     "origin": {"value": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived", "status": "found|not_found|not_applicable"},
     "ingredient_category": {"value": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars", "status": "found|not_found"},
@@ -330,6 +331,19 @@ You are Stage 1 (Term Completion / Normalization).
 TASK:
 - Given one RAW ingestion cluster, determine the single canonical BASE ingredient term for the entire cluster.
 - Complete the core identity fields for that term using the cluster evidence.
+- Assign a maker_priority score (1-10) based on how commonly this ingredient is used by artisan makers.
+
+MAKER PRIORITY SCORING (1-10):
+10 = Essential staples (coconut oil, olive oil, shea butter, lye, beeswax, soy wax)
+9 = Very common oils/butters (castor oil, sweet almond, cocoa butter, palm oil)
+8 = Popular essential oils (lavender, tea tree, peppermint, eucalyptus, lemon)
+7 = Common specialty oils/butters (jojoba, argan, mango butter, avocado oil)
+6 = Popular additives (vitamin E, honey, oatmeal, clays, activated charcoal)
+5 = Specialty essential oils (ylang ylang, frankincense, patchouli, geranium)
+4 = Less common botanicals/extracts (neem, tamanu, sea buckthorn)
+3 = Specialty/rare ingredients (exotic butters, uncommon carrier oils)
+2 = Industrial/niche cosmetic chemicals
+1 = Rare/obscure ingredients with limited maker use
 
 CRITICAL RULES:
 - Every cluster must map to ONE base term.
