@@ -1236,6 +1236,221 @@
         "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
         "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
       }
+    },
+    {
+      "name": "Sweet Almond Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "95", "min": 95, "max": 95, "value": 95 },
+      "ins": { "raw": "95", "min": 95, "max": 95, "value": 95 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "65", "min": 65, "max": 65, "value": 65 },
+        "linoleic": { "raw": "25", "min": 25, "max": 25, "value": 25 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of Almond Oil sweet."]
+    },
+    {
+      "name": "Sunflower Oil high oleic",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "85", "min": 85, "max": 85, "value": 85 },
+      "ins": { "raw": "110", "min": 110, "max": 110, "value": 110 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "4", "min": 4, "max": 4, "value": 4 },
+        "stearic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "82", "min": 82, "max": 82, "value": 82 },
+        "linoleic": { "raw": "9", "min": 9, "max": 9, "value": 9 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of Sunflower Oil High Oleic."]
+    },
+    {
+      "name": "Lard",
+      "sap_naoh": { "raw": "0.138", "min": 0.138, "max": 0.138, "value": 0.138 },
+      "sap_koh": { "raw": "0.194", "min": 0.194, "max": 0.194, "value": 0.194 },
+      "iodine": { "raw": "55", "min": 55, "max": 55, "value": 55 },
+      "ins": { "raw": "140", "min": 140, "max": 140, "value": 140 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "palmitic": { "raw": "27", "min": 27, "max": 27, "value": 27 },
+        "stearic": { "raw": "18", "min": 18, "max": 18, "value": 18 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "44", "min": 44, "max": 44, "value": 44 },
+        "linoleic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "linolenic": { "raw": "1", "min": 1, "max": 1, "value": 1 }
+      },
+      "notes": ["Alias of Lard (Pig)."]
+    },
+    {
+      "name": "Beef Tallow",
+      "sap_naoh": { "raw": "0.141", "min": 0.141, "max": 0.141, "value": 0.141 },
+      "sap_koh": { "raw": "0.198", "min": 0.198, "max": 0.198, "value": 0.198 },
+      "iodine": { "raw": "45", "min": 45, "max": 45, "value": 45 },
+      "ins": { "raw": "155", "min": 155, "max": 155, "value": 155 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "palmitic": { "raw": "28", "min": 28, "max": 28, "value": 28 },
+        "stearic": { "raw": "23", "min": 23, "max": 23, "value": 23 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "41", "min": 41, "max": 41, "value": 41 },
+        "linoleic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "linolenic": { "raw": "1", "min": 1, "max": 1, "value": 1 }
+      },
+      "notes": ["Alias of Tallow Beef."]
+    },
+    {
+      "name": "Safflower Oil high oleic",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.190", "min": 0.19, "max": 0.19, "value": 0.19 },
+      "iodine": { "raw": "85", "min": 85, "max": 85, "value": 85 },
+      "ins": { "raw": "110", "min": 110, "max": 110, "value": 110 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "75", "min": 75, "max": 75, "value": 75 },
+        "linoleic": { "raw": "15", "min": 15, "max": 15, "value": 15 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of Safflower Oil High Oleic."]
+    },
+    {
+      "name": "Camellia Oil Tea Seed",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+      "ins": { "raw": "115", "min": 115, "max": 115, "value": 115 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "stearic": { "raw": "4", "min": 4, "max": 4, "value": 4 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+        "linoleic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of Camellia Oil (Tea Seed)."]
+    },
+    {
+      "name": "MCT Oil Caprylic Capric",
+      "sap_naoh": { "raw": "0.237", "min": 0.237, "max": 0.237, "value": 0.237 },
+      "sap_koh": { "raw": "0.334", "min": 0.334, "max": 0.334, "value": 0.334 },
+      "iodine": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "100 medium chain", "qualitative": "medium_chain" },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "stearic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of MCT Oil (Caprylic/Capric)."]
+    },
+    {
+      "name": "Stearic Acid additive",
+      "sap_naoh": { "raw": "0.148", "min": 0.148, "max": 0.148, "value": 0.148 },
+      "sap_koh": { "raw": "0.208", "min": 0.208, "max": 0.208, "value": 0.208 },
+      "iodine": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "stearic": { "raw": "100", "min": 100, "max": 100, "value": 100 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Alias of Stearic Acid (additive)."]
+    },
+    {
+      "name": "Abyssinian Seed Oil",
+      "sap_naoh": { "raw": "0.120", "min": 0.12, "max": 0.12, "value": 0.12 },
+      "sap_koh": { "raw": "0.168", "min": 0.168, "max": 0.168, "value": 0.168 },
+      "iodine": { "raw": "98", "min": 98, "max": 98, "value": 98 },
+      "ins": { "raw": "70", "min": 70, "max": 70, "value": 70 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "18", "min": 18, "max": 18, "value": 18 },
+        "linoleic": { "raw": "11", "min": 11, "max": 11, "value": 11 },
+        "linolenic": { "raw": "4", "min": 4, "max": 4, "value": 4 }
+      },
+      "notes": ["Alias of Abyssinian Oil."]
+    },
+    {
+      "name": "Aloe Butter",
+      "sap_naoh": { "raw": "0.143", "min": 0.143, "max": 0.143, "value": 0.143 },
+      "sap_koh": { "raw": "0.200", "min": 0.2, "max": 0.2, "value": 0.2 },
+      "iodine": { "raw": "80-100", "min": 80, "max": 100, "value": 90 },
+      "ins": { "raw": "90-110", "min": 90, "max": 110, "value": 100 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7-10", "min": 7, "max": 10, "value": 8.5 },
+        "stearic": { "raw": "2-5", "min": 2, "max": 5, "value": 3.5 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "60-70", "min": 60, "max": 70, "value": 65 },
+        "linoleic": { "raw": "15-25", "min": 15, "max": 25, "value": 20 },
+        "linolenic": { "raw": "0-1", "min": 0, "max": 1, "value": 0.5 }
+      }
+    },
+    {
+      "name": "Sea Buckthorn Pulp Oil",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+      "ins": { "raw": "110", "min": 110, "max": 110, "value": 110 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "25", "min": 25, "max": 25, "value": 25 },
+        "stearic": { "raw": "4", "min": 4, "max": 4, "value": 4 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "25", "min": 25, "max": 25, "value": 25 },
+        "linoleic": { "raw": "35", "min": 35, "max": 35, "value": 35 },
+        "linolenic": { "raw": "7", "min": 7, "max": 7, "value": 7 }
+      },
+      "notes": ["Alias of Sea Buckthorn Oil (pulp/berry)."]
+    },
+    {
+      "name": "Sea Buckthorn Seed Oil",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "150", "min": 150, "max": 150, "value": 150 },
+      "ins": { "raw": "Low", "qualitative": "low" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
+        "linoleic": { "raw": "35", "min": 35, "max": 35, "value": 35 },
+        "linolenic": { "raw": "30", "min": 30, "max": 30, "value": 30 }
+      },
+      "notes": ["Alias of Sea Buckthorn Oil (seed)."]
     }
   ]
 }
