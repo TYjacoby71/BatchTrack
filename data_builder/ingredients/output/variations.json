@@ -1,5 +1,6 @@
 [
   "Absolute",
+  "Acid",
   "Bark Extract",
   "Bark Powder",
   "CO2 Extract",
@@ -10,6 +11,7 @@
   "Conditioned Media",
   "Essential Oil",
   "Extract",
+  "Flour",
   "Flower",
   "Flower Extract",
   "Flower Oil",
@@ -56,6 +58,7 @@
   "Stem Extract",
   "Stem Oil",
   "Tincture",
+  "Unsaponifiables",
   "Vesicles",
   "Wax"
 ]

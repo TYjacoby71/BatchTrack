@@ -219,6 +219,7 @@ def _call_openai_json(client: openai.OpenAI, system_prompt: str, user_prompt: st
     response = client.chat.completions.create(
         model=MODEL_NAME,
         temperature=TEMPERATURE,
+        max_tokens=4096,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},
@@ -434,13 +435,32 @@ def complete_item_stubs(
     ingredient_core: Dict[str, Any],
     base_context: Dict[str, Any] | None,
     item_stubs: list[dict],
+    batch_size: int = 5,
 ) -> list[dict]:
-    """Complete schema fields for an authoritative list of item stubs (identity fields are stable)."""
-    ctx = dict(base_context or {})
-    ctx["seed_items"] = [it for it in item_stubs if isinstance(it, dict)]
-    payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
-    items = payload.get("items") if isinstance(payload.get("items"), list) else []
-    return [it for it in items if isinstance(it, dict)]
+    """Complete schema fields for an authoritative list of item stubs (identity fields are stable).
+    
+    For large clusters (>batch_size items), processes in batches to avoid token limits.
+    """
+    stubs = [it for it in item_stubs if isinstance(it, dict)]
+    
+    # For small clusters, process all at once
+    if len(stubs) <= batch_size:
+        ctx = dict(base_context or {})
+        ctx["seed_items"] = stubs
+        payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        return [it for it in items if isinstance(it, dict)]
+    
+    # For large clusters, batch to avoid token limit
+    all_items = []
+    for i in range(0, len(stubs), batch_size):
+        batch = stubs[i:i + batch_size]
+        ctx = dict(base_context or {})
+        ctx["seed_items"] = batch
+        payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        all_items.extend([it for it in items if isinstance(it, dict)])
+    return all_items
 
 
 def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
