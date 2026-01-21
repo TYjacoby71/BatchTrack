@@ -1028,6 +1028,214 @@
         "linoleic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
         "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
       }
+    },
+    {
+      "name": "Cupuacu Butter",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "35-45", "min": 35, "max": 45, "value": 40 },
+      "ins": { "raw": "150+", "min": 150, "max": null, "value": 150, "qualifier": "plus" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "38", "min": 38, "max": 38, "value": 38 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "45", "min": 45, "max": 45, "value": 45 },
+        "linoleic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Brazil Nut Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "100", "min": 100, "max": 100, "value": 100 },
+      "ins": { "raw": "95", "min": 95, "max": 95, "value": 95 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "15", "min": 15, "max": 15, "value": 15 },
+        "stearic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "30", "min": 30, "max": 30, "value": 30 },
+        "linoleic": { "raw": "45", "min": 45, "max": 45, "value": 45 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Source row was compacted; values interpreted as 0,0,15,5,0,30,45,0."]
+    },
+    {
+      "name": "Pumpkin Seed Oil",
+      "sap_naoh": { "raw": "0.132", "min": 0.132, "max": 0.132, "value": 0.132 },
+      "sap_koh": { "raw": "0.186", "min": 0.186, "max": 0.186, "value": 0.186 },
+      "iodine": { "raw": "120", "min": 120, "max": 120, "value": 120 },
+      "ins": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "13", "min": 13, "max": 13, "value": 13 },
+        "stearic": { "raw": "6", "min": 6, "max": 6, "value": 6 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "30", "min": 30, "max": 30, "value": 30 },
+        "linoleic": { "raw": "45", "min": 45, "max": 45, "value": 45 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Chia Seed Oil",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.190", "min": 0.19, "max": 0.19, "value": 0.19 },
+      "iodine": { "raw": "190+", "min": 190, "max": null, "value": 190, "qualifier": "plus" },
+      "ins": { "raw": "Low", "qualitative": "low" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "linoleic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
+        "linolenic": { "raw": "60", "min": 60, "max": 60, "value": 60 }
+      }
+    },
+    {
+      "name": "Sea Buckthorn Oil (pulp/berry)",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "70-90", "min": 70, "max": 90, "value": 80 },
+      "ins": { "raw": "110", "min": 110, "max": 110, "value": 110 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "20-30", "min": 20, "max": 30, "value": 25 },
+        "palmitic": { "raw": "2-5", "min": 2, "max": 5, "value": 3.5 },
+        "stearic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "ricinoleic": { "raw": "20-30", "min": 20, "max": 30, "value": 25 },
+        "oleic": { "raw": "30-40", "min": 30, "max": 40, "value": 35 },
+        "linoleic": { "raw": "5-10", "min": 5, "max": 10, "value": 7.5 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Source row was compacted; linolenic value not specified and set to 0."]
+    },
+    {
+      "name": "Sea Buckthorn Oil (seed)",
+      "sap_naoh": { "raw": "0.135", "min": 0.135, "max": 0.135, "value": 0.135 },
+      "sap_koh": { "raw": "0.189", "min": 0.189, "max": 0.189, "value": 0.189 },
+      "iodine": { "raw": "150+", "min": 150, "max": null, "value": 150, "qualifier": "plus" },
+      "ins": { "raw": "Low", "qualitative": "low" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "20", "min": 20, "max": 20, "value": 20 },
+        "linoleic": { "raw": "35", "min": 35, "max": 35, "value": 35 },
+        "linolenic": { "raw": "30", "min": 30, "max": 30, "value": 30 }
+      },
+      "notes": ["Source row was compacted; values interpreted as 0,0,8,2,0,20,35,30."]
+    },
+    {
+      "name": "Meadowfoam Seed Oil",
+      "sap_naoh": { "raw": "0.120", "min": 0.12, "max": 0.12, "value": 0.12 },
+      "sap_koh": { "raw": "0.169", "min": 0.169, "max": 0.169, "value": 0.169 },
+      "iodine": { "raw": "90-100", "min": 90, "max": 100, "value": 95 },
+      "ins": { "raw": "80", "min": 80, "max": 80, "value": 80 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "stearic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "ricinoleic": { "raw": "6", "min": 6, "max": 6, "value": 6 },
+        "oleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linoleic": { "raw": "5", "min": 5, "max": 5, "value": 5 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      },
+      "notes": ["Source row was compacted; values interpreted as 0,0,3,10,6,0,5,0."]
+    },
+    {
+      "name": "Candelilla Wax",
+      "sap_naoh": { "raw": "0.039", "min": 0.039, "max": 0.039, "value": 0.039 },
+      "sap_koh": { "raw": "0.054", "min": 0.054, "max": 0.054, "value": 0.054 },
+      "iodine": { "raw": "Low", "qualitative": "low" },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "High sat", "qualitative": "high_saturated" },
+        "myristic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "palmitic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "stearic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "Low", "qualitative": "low" },
+        "linoleic": { "raw": "Low", "qualitative": "low" },
+        "linolenic": { "raw": "Low", "qualitative": "low" }
+      }
+    },
+    {
+      "name": "Carnauba Wax",
+      "sap_naoh": { "raw": "0.062", "min": 0.062, "max": 0.062, "value": 0.062 },
+      "sap_koh": { "raw": "0.087", "min": 0.087, "max": 0.087, "value": 0.087 },
+      "iodine": { "raw": "Low", "qualitative": "low" },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "High sat", "qualitative": "high_saturated" },
+        "myristic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "palmitic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "stearic": { "raw": "High sat", "qualitative": "high_saturated" },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "Low", "qualitative": "low" },
+        "linoleic": { "raw": "Low", "qualitative": "low" },
+        "linolenic": { "raw": "Low", "qualitative": "low" }
+      }
+    },
+    {
+      "name": "Bayberry Wax",
+      "sap_naoh": { "raw": "0.148", "min": 0.148, "max": 0.148, "value": 0.148 },
+      "sap_koh": { "raw": "0.207", "min": 0.207, "max": 0.207, "value": 0.207 },
+      "iodine": { "raw": "Low", "qualitative": "low" },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "Variable sat", "qualitative": "variable_saturated" },
+        "myristic": { "raw": "Variable", "qualitative": "variable" },
+        "palmitic": { "raw": "Variable", "qualitative": "variable" },
+        "stearic": { "raw": "Variable", "qualitative": "variable" },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "Medium", "qualitative": "medium" },
+        "linoleic": { "raw": "Low", "qualitative": "low" },
+        "linolenic": { "raw": "Low", "qualitative": "low" }
+      }
+    },
+    {
+      "name": "MCT Oil (Caprylic/Capric)",
+      "sap_naoh": { "raw": "0.237", "min": 0.237, "max": 0.237, "value": 0.237 },
+      "sap_koh": { "raw": "0.334", "min": 0.334, "max": 0.334, "value": 0.334 },
+      "iodine": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "100% medium chain", "qualitative": "medium_chain" },
+        "myristic": { "raw": "---", "qualitative": "unknown" },
+        "palmitic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "stearic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Stearic Acid (additive)",
+      "sap_naoh": { "raw": "0.148", "min": 0.148, "max": 0.148, "value": 0.148 },
+      "sap_koh": { "raw": "0.208", "min": 0.208, "max": 0.208, "value": 0.208 },
+      "iodine": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+      "ins": { "raw": "High", "qualitative": "high" },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "stearic": { "raw": "100", "min": 100, "max": 100, "value": 100 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
     }
   ]
 }
