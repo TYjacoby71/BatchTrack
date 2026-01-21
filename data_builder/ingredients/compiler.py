@@ -754,7 +754,7 @@ def _process_stage1_cluster(
             ai_priority = result.get("maker_priority")
             if ai_priority is not None:
                 try:
-                    rec.priority = max(1, min(10, int(ai_priority)))
+                    rec.priority = max(1, min(100, int(ai_priority)))
                 except (TypeError, ValueError):
                     rec.priority = priority
             else:

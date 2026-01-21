@@ -218,7 +218,7 @@ Return JSON only:
   "terms": [
     {
       "name": "string",
-      "priority_score": 1-10 integer
+      "priority_score": 1-100 integer
     }
   ]
 }
