@@ -218,6 +218,9 @@
             default_is_perishable: form.default_is_perishable ?? item.default_is_perishable,
             recommended_shelf_life_days: form.recommended_shelf_life_days ?? item.recommended_shelf_life_days,
             saponification_value: form.saponification_value ?? item.saponification_value ?? null,
+            iodine_value: form.iodine_value ?? item.iodine_value ?? null,
+            fatty_acid_profile: form.fatty_acid_profile ?? item.fatty_acid_profile ?? null,
+            melting_point_c: form.melting_point_c ?? item.melting_point_c ?? null,
           });
         });
       } else if (item) {
@@ -241,6 +244,9 @@
           default_is_perishable: item.default_is_perishable,
           recommended_shelf_life_days: item.recommended_shelf_life_days,
           saponification_value: item.saponification_value || null,
+          iodine_value: item.iodine_value || null,
+          fatty_acid_profile: item.fatty_acid_profile || null,
+          melting_point_c: item.melting_point_c || null,
         });
       }
     });
@@ -345,7 +351,8 @@
       const params = new URLSearchParams({ q });
       if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
       if (effectiveSearchType === 'ingredient' && useIngredientFirst) params.set('group', 'ingredient');
-      return `/api/ingredients/global-items/search?${params.toString()}`;
+      const base = mode === 'public' ? '/api/public/global-items/search' : '/api/ingredients/global-items/search';
+      return `${base}?${params.toString()}`;
     }
 
     const doSearch = debounce(function(){

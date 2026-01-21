@@ -5,6 +5,19 @@
   <a href="{{ url_for('global_library_bp.global_library') }}" class="text-decoration-none text-muted">&larr; Back to Global Library</a>
 </div>
 
+{% if preview_remaining is not none %}
+<div class="alert alert-light border d-flex flex-column flex-md-row align-items-md-center gap-3 small">
+  <div class="flex-grow-1">
+    <strong>Preview mode:</strong>
+    You have {{ preview_remaining }} item view{{ '' if preview_remaining == 1 else 's' }} remaining before a free account is required.
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-sm btn-primary" href="{{ url_for('auth.quick_signup', next=request.path, global_item_id=item.id) }}">Create free account</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('auth.login', next=request.path) }}">Log in</a>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
   <div class="col-lg-8">
     <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
