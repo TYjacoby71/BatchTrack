@@ -508,9 +508,12 @@ REQUIRED (use training knowledge - these are documented for most ingredients):
 - function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
 - odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
-- SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility
-- pH: "N/A" for oils/fats. Provide range for aqueous items.
-"Not Found" ONLY if truly obscure ingredient with no documentation.
+SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05)
+- SAP: oils 180-260, EO 5-20 mg KOH/g
+- Iodine: oils have known values (Coconut 7-10, Olive 75-94)
+- Solubility, pH("N/A" for oils)
+"Not Found" ONLY if truly obscure.
 Core:{core_blob}
 Context:{base_blob}
 Meta:{meta}
@@ -533,9 +536,12 @@ REQUIRED (use training knowledge - these are documented for most ingredients):
 - function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
 - odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
-- SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility
-- pH: "N/A" for oils/fats. Provide range for aqueous items.
-"Not Found" ONLY if truly obscure ingredient with no documentation.
+SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05)
+- SAP: oils 180-260, EO 5-20 mg KOH/g
+- Iodine: oils have known values (Coconut 7-10, Olive 75-94)
+- Solubility, pH("N/A" for oils)
+"Not Found" ONLY if truly obscure.
 Core:{core_blob}
 Context+Seeds:{base_blob}
 Meta:{meta}

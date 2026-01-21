@@ -213,6 +213,14 @@ HTML_TEMPLATE = """
                     <button class="venn-btn" data-cluster="single" onclick="setClusterSize('single')" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;">Single-Item</button>
                 </div>
             </div>
+            <div class="filter-section" id="status-filters" style="display:none;">
+                <div class="filter-label">Compilation Status</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+                    <button class="venn-btn" data-filter="pending" onclick="setFilter('pending')" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">Pending</button>
+                    <button class="venn-btn" data-filter="done" onclick="setFilter('done')" style="background:#dcfce7;color:#166534;border-color:#86efac;">Done</button>
+                </div>
+            </div>
             <div class="filter-section">
                 <div class="filter-label">Primary Category</div>
                 <select id="category-filter" onchange="setCategoryFilter(this.value)" style="padding:10px 14px; border:2px solid #d1d5db; border-radius:8px; font-size:14px; min-width:200px; background:#fff;">
@@ -348,7 +356,9 @@ HTML_TEMPLATE = """
                 btn.classList.toggle('active', btn.dataset.dataset === dataset);
             });
 
-            // Compiled dataset uses separate tables; disable raw-source venn filters.
+            // Compiled dataset uses separate tables; swap filter sections.
+            const sourceFilters = document.querySelector('.filter-section:has([data-filter="cosing"])');
+            const statusFilters = document.getElementById('status-filters');
             if (currentDataset === 'compiled') {
                 currentFilter = 'all';
                 document.querySelectorAll('.venn-btn').forEach(btn => {
@@ -359,6 +369,13 @@ HTML_TEMPLATE = """
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.view === currentView);
                 });
+                // Show status filter, hide source filter for compiled view
+                if (sourceFilters) sourceFilters.style.display = 'none';
+                if (statusFilters) statusFilters.style.display = 'block';
+            } else {
+                // Show source filter, hide status filter for raw view
+                if (sourceFilters) sourceFilters.style.display = 'block';
+                if (statusFilters) statusFilters.style.display = 'none';
             }
             updateFilterInfo();
             updateTableHeaders();
@@ -1642,6 +1659,7 @@ def api_compiled_items():
 def api_compiled_clusters():
     page = int(request.args.get("page", 1))
     search = (request.args.get("search") or "").strip()
+    filter_type = (request.args.get("filter") or "all").strip().lower()
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -1653,13 +1671,17 @@ def api_compiled_clusters():
 
     where_clauses = []
     params = []
+    if filter_type == "pending":
+        where_clauses.append("c.term_status = 'pending'")
+    elif filter_type == "done":
+        where_clauses.append("c.term_status = 'done'")
     if search:
-        where_clauses.append("(cluster_id LIKE ? OR compiled_term LIKE ? OR raw_canonical_term LIKE ?)")
+        where_clauses.append("(c.cluster_id LIKE ? OR c.compiled_term LIKE ? OR c.raw_canonical_term LIKE ?)")
         s = f"%{search}%"
         params.extend([s, s, s])
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-    cur.execute(f"SELECT COUNT(*) FROM compiled_clusters {where_sql}", params)
+    cur.execute(f"SELECT COUNT(*) FROM compiled_clusters c {where_sql}", params)
     total = cur.fetchone()[0]
 
     cur.execute(
