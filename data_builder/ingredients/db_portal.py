@@ -400,7 +400,7 @@ HTML_TEMPLATE = """
             const thead = document.getElementById('table-head');
             if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
-                    thead.innerHTML = '<tr><th>Cluster ID</th><th>Compiled Term</th><th>Common Name</th><th>Items</th><th>Term Status</th><th>Priority</th><th>Items Compiled</th></tr>';
+                    thead.innerHTML = '<tr><th>#</th><th>Cluster ID</th><th>Common Name</th><th>Items</th><th>Term Status</th><th>Priority</th><th>Items Compiled</th></tr>';
                 } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
                 } else {
@@ -493,16 +493,16 @@ HTML_TEMPLATE = """
 
         function renderCompiledClustersView(clusters) {
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = (clusters || []).map(row => {
+            tbody.innerHTML = (clusters || []).map((row, idx) => {
                 const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
-                const compiledTerm = row.compiled_term || row.raw_canonical_term || '-';
-                const commonName = row.common_name || '-';
+                const rank = row.rank || (idx + 1);
+                const commonName = row.common_name || row.compiled_term || row.raw_canonical_term || '-';
                 const priority = row.priority || 0;
                 const priorityColor = priority >= 8 ? '#22c55e' : priority >= 5 ? '#eab308' : '#6b7280';
                 return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
+                    <td style="font-weight:bold; color:#6366f1;">${rank}</td>
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>
-                    <td><strong>${compiledTerm}</strong></td>
-                    <td style="color:#6366f1; font-style:italic;">${commonName}</td>
+                    <td><strong>${commonName}</strong></td>
                     <td>${row.total_items || 0}</td>
                     <td>${row.term_status || '-'}</td>
                     <td style="color:${priorityColor}; font-weight:bold;">${priority}</td>
@@ -1662,7 +1662,8 @@ def api_compiled_clusters():
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
                json_extract(c.payload_json, '$.stage1.common_name') as common_name,
-               c.priority
+               c.priority,
+               ROW_NUMBER() OVER (ORDER BY c.priority DESC, c.cluster_id) as rank
         FROM compiled_clusters c
         {where_sql}
         ORDER BY c.priority DESC, c.cluster_id
@@ -1680,6 +1681,7 @@ def api_compiled_clusters():
             "items_done": int(r[5] or 0),
             "common_name": r[6] or None,
             "priority": int(r[7] or 0),
+            "rank": int(r[8] or 0),
         }
         for r in cur.fetchall()
     ]
