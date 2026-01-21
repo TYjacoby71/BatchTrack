@@ -442,12 +442,16 @@ def compile_items(
     if seed_items:
         payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(t, ingredient_core, base_context))
         items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        payload["items"] = _merge_seed_items(
+        merged_items = _merge_seed_items(
             seed_items=[it for it in seed_items if isinstance(it, dict)],
             ai_items=[it for it in items if isinstance(it, dict)],
         )
+        payload["items"] = [_ensure_item_fields(it) for it in merged_items]
         return payload
-    return _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+    payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    payload["items"] = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
+    return payload
 
 
 def compile_taxonomy(term: str, *, ingredient_core: Dict[str, Any], items: list[dict]) -> Dict[str, Any]:
@@ -671,10 +675,9 @@ def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict
     return out
 
 
-REQUIRED_SPEC_FIELDS = {
-    "sap_naoh", "sap_koh", "iodine_value", "melting_point_celsius",
-    "flash_point_celsius", "ph_range", "usage_rate_percent", "density_g_ml", "solubility"
-}
+REQUIRED_SPEC_FIELDS_SCALAR = {"sap_naoh", "sap_koh", "iodine_value", "flash_point_celsius", "density_g_ml", "solubility"}
+REQUIRED_SPEC_FIELDS_RANGE = {"melting_point_celsius", "ph_range"}
+REQUIRED_SPEC_FIELDS_USAGE = {"usage_rate_percent"}
 
 REQUIRED_ITEM_FIELDS = {
     "variation", "description", "physical_form", "processing_method", "color",
@@ -688,24 +691,60 @@ def _ensure_item_fields(item: dict) -> dict:
     """Ensure all required fields are present with at least a placeholder value."""
     for field in REQUIRED_ITEM_FIELDS:
         if field not in item:
-            if field in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
+            if field in ("synonyms", "sds_hazards"):
                 item[field] = []
-            elif field in ("specifications", "storage", "sourcing"):
+            elif field in ("applications", "function_tags", "safety_tags"):
+                item[field] = ["Not Found"]
+            elif field in ("specifications",):
                 item[field] = {}
+            elif field == "storage":
+                item[field] = {"temperature_celsius": {"min": "N/A", "max": "N/A"}, "humidity_percent": {"max": "N/A"}, "special_instructions": "Not Found"}
+            elif field == "sourcing":
+                item[field] = {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "Not Found"}
             elif field in ("form_bypass", "variation_bypass"):
                 item[field] = False
             else:
                 item[field] = "Not Found"
     
-    # Ensure spec fields
+    # Ensure applications/functions have at least one entry
+    for list_field in ("applications", "function_tags", "safety_tags"):
+        val = item.get(list_field)
+        if not val or (isinstance(val, list) and len(val) == 0):
+            item[list_field] = ["Not Found"]
+    
+    # Ensure spec fields with proper types
     specs = item.get("specifications", {})
     if not isinstance(specs, dict):
         specs = {}
-    for spec_field in REQUIRED_SPEC_FIELDS:
+    
+    # Scalar fields
+    for spec_field in REQUIRED_SPEC_FIELDS_SCALAR:
         if spec_field not in specs:
             specs[spec_field] = "Not Found"
-    item["specifications"] = specs
     
+    # Range fields (min/max structure)
+    for spec_field in REQUIRED_SPEC_FIELDS_RANGE:
+        if spec_field not in specs or not isinstance(specs.get(spec_field), dict):
+            specs[spec_field] = {"min": "N/A", "max": "N/A"}
+        else:
+            rng = specs[spec_field]
+            if "min" not in rng:
+                rng["min"] = "N/A"
+            if "max" not in rng:
+                rng["max"] = "N/A"
+    
+    # Usage rate (leave_on_max/rinse_off_max structure)
+    for spec_field in REQUIRED_SPEC_FIELDS_USAGE:
+        if spec_field not in specs or not isinstance(specs.get(spec_field), dict):
+            specs[spec_field] = {"leave_on_max": "N/A", "rinse_off_max": "N/A"}
+        else:
+            usage = specs[spec_field]
+            if "leave_on_max" not in usage:
+                usage["leave_on_max"] = "N/A"
+            if "rinse_off_max" not in usage:
+                usage["rinse_off_max"] = "N/A"
+    
+    item["specifications"] = specs
     return item
 
 
@@ -770,6 +809,8 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
             if seed_items:
                 items = _merge_seed_items(seed_items=[it for it in seed_items if isinstance(it, dict)], ai_items=[it for it in items if isinstance(it, dict)])
+            # Apply field validation to all items
+            items = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
 
             # Stage 2C: taxonomy
             taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))
