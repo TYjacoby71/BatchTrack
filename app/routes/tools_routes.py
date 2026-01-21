@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
 from app.models import FeatureFlag
@@ -25,9 +26,54 @@ def _is_enabled(key: str, default: bool = True) -> bool:
         return default
 
 
-def _render_tool(template_name: str, flag_key: str):
+def _render_tool(template_name: str, flag_key: str, **context):
     enabled = _is_enabled(flag_key, True)
-    return render_template(template_name, tool_enabled=enabled)
+    return render_template(template_name, tool_enabled=enabled, **context)
+
+
+def _soap_calc_limit():
+    if not getattr(current_user, "is_authenticated", False):
+        return 5, "guest"
+    org = getattr(current_user, "organization", None)
+    tier = getattr(org, "tier", None) if org else None
+    tier_name = (tier.name if tier else "") or ""
+    if tier_name.lower().startswith("free"):
+        return 5, "free"
+    return None, tier_name or "paid"
+
+
+def _consume_tool_quota(category_name: str | None):
+    """Track draft submissions for free/guest tiers (daily rolling window)."""
+    normalized = (category_name or "").strip().lower()
+    if normalized != "soaps":
+        return None
+    limit, tier = _soap_calc_limit()
+    if not limit:
+        return None
+    from flask import session
+    from datetime import datetime, timezone, timedelta
+
+    key = "soap_tool_quota"
+    now = datetime.now(timezone.utc)
+    record = session.get(key) or {}
+    try:
+        last_ts = record.get("timestamp")
+        if last_ts:
+            last_dt = datetime.fromisoformat(last_ts)
+            if now - last_dt > timedelta(hours=24):
+                record = {}
+    except Exception:
+        record = {}
+
+    count = int(record.get("count") or 0)
+    if count >= limit:
+        return {"ok": False, "limit": limit, "tier": tier, "remaining": 0}
+
+    count += 1
+    record["count"] = count
+    record["timestamp"] = now.isoformat()
+    session[key] = record
+    return {"ok": True, "limit": limit, "tier": tier, "remaining": max(0, limit - count)}
 
 
 @tools_bp.route('/')
@@ -48,7 +94,8 @@ def tools_index():
 
 @tools_bp.route('/soap')
 def tools_soap():
-    return _render_tool('tools/soap.html', 'TOOLS_SOAP')
+    calc_limit, calc_tier = _soap_calc_limit()
+    return _render_tool('tools/soap.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
 
 @tools_bp.route('/candles')
 def tools_candles():
@@ -75,6 +122,13 @@ def tools_draft():
     """
     from flask import session
     data = request.get_json() or {}
+    quota = _consume_tool_quota(data.get("category_name"))
+    if quota and not quota.get("ok"):
+        msg = (
+            f"Free tools allow {quota['limit']} submissions per day. "
+            "Create a free account or upgrade to keep saving drafts."
+        )
+        return jsonify({"success": False, "error": msg, "limit_reached": True}), 429
     # Normalize line arrays if provided
     def _norm_lines(lines, kind):
         out = []

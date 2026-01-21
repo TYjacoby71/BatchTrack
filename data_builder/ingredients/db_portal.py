@@ -213,6 +213,14 @@ HTML_TEMPLATE = """
                     <button class="venn-btn" data-cluster="single" onclick="setClusterSize('single')" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;">Single-Item</button>
                 </div>
             </div>
+            <div class="filter-section" id="status-filters" style="display:none;">
+                <div class="filter-label">Compilation Status</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+                    <button class="venn-btn" data-filter="pending" onclick="setFilter('pending')" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">Pending</button>
+                    <button class="venn-btn" data-filter="done" onclick="setFilter('done')" style="background:#dcfce7;color:#166534;border-color:#86efac;">Done</button>
+                </div>
+            </div>
             <div class="filter-section">
                 <div class="filter-label">Primary Category</div>
                 <select id="category-filter" onchange="setCategoryFilter(this.value)" style="padding:10px 14px; border:2px solid #d1d5db; border-radius:8px; font-size:14px; min-width:200px; background:#fff;">
@@ -289,12 +297,20 @@ HTML_TEMPLATE = """
         let currentDataset = 'raw'; // raw | compiled
         let searchTimeout = null;
         let expandedTerms = new Set();
+        let sortField = 'rank';  // rank | name | priority
+        let sortOrder = 'asc';   // asc | desc
         
         function loadCategories() {
-            fetch('/api/categories')
+            fetch(`/api/categories?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(data => {
                     const select = document.getElementById('category-filter');
+                    // Clear existing options except the first "All Categories"
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    select.value = '';
+                    currentCategory = '';
                     data.categories.forEach(cat => {
                         const opt = document.createElement('option');
                         opt.value = cat.name;
@@ -342,7 +358,9 @@ HTML_TEMPLATE = """
                 btn.classList.toggle('active', btn.dataset.dataset === dataset);
             });
 
-            // Compiled dataset uses separate tables; disable raw-source venn filters.
+            // Compiled dataset uses separate tables; swap filter sections.
+            const sourceFilters = document.querySelector('.filter-section:has([data-filter="cosing"])');
+            const statusFilters = document.getElementById('status-filters');
             if (currentDataset === 'compiled') {
                 currentFilter = 'all';
                 document.querySelectorAll('.venn-btn').forEach(btn => {
@@ -353,6 +371,13 @@ HTML_TEMPLATE = """
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.view === currentView);
                 });
+                // Show status filter, hide source filter for compiled view
+                if (sourceFilters) sourceFilters.style.display = 'none';
+                if (statusFilters) statusFilters.style.display = 'block';
+            } else {
+                // Show source filter, hide status filter for raw view
+                if (sourceFilters) sourceFilters.style.display = 'block';
+                if (statusFilters) statusFilters.style.display = 'none';
             }
             updateFilterInfo();
             updateTableHeaders();
@@ -396,11 +421,36 @@ HTML_TEMPLATE = """
             loadData();
         }
         
+        function getSortIndicator(field) {
+            if (sortField !== field) return '';
+            return sortOrder === 'asc' ? ' ▲' : ' ▼';
+        }
+        
+        function toggleSort(field) {
+            if (sortField === field) {
+                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortOrder = field === 'priority' ? 'desc' : 'asc';  // Priority defaults to desc (high first)
+            }
+            currentPage = 1;
+            updateTableHeaders();
+            loadData();
+        }
+        
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
             if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
-                    thead.innerHTML = '<tr><th>Cluster ID</th><th>Compiled Term</th><th>Items</th><th>Term Status</th><th>Items Compiled</th></tr>';
+                    thead.innerHTML = `<tr>
+                        <th class="sortable" onclick="toggleSort('rank')" style="cursor:pointer;">#${getSortIndicator('rank')}</th>
+                        <th>Cluster ID</th>
+                        <th class="sortable" onclick="toggleSort('name')" style="cursor:pointer;">Common Name${getSortIndicator('name')}</th>
+                        <th>Items</th>
+                        <th>Term Status</th>
+                        <th class="sortable" onclick="toggleSort('priority')" style="cursor:pointer;">Priority${getSortIndicator('priority')}</th>
+                        <th>Items Compiled</th>
+                    </tr>`;
                 } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
                 } else {
@@ -449,7 +499,9 @@ HTML_TEMPLATE = """
                 }
             }
             
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}`)
+            const sortParams = currentDataset === 'compiled' && currentView === 'clusters' 
+                ? `&sort=${sortField}&order=${sortOrder}` : '';
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -493,13 +545,19 @@ HTML_TEMPLATE = """
 
         function renderCompiledClustersView(clusters) {
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = (clusters || []).map(row => {
+            tbody.innerHTML = (clusters || []).map((row, idx) => {
                 const itemsCompiled = `${row.items_done || 0}/${row.total_items || 0}`;
+                const rank = row.rank !== null && row.rank !== undefined ? row.rank : '-';
+                const commonName = row.common_name || row.compiled_term || row.raw_canonical_term || '-';
+                const priority = row.priority || 0;
+                const priorityColor = priority >= 8 ? '#22c55e' : priority >= 5 ? '#eab308' : '#6b7280';
                 return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
+                    <td style="font-weight:bold; color:#6366f1;">${rank}</td>
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>
-                    <td><strong>${row.compiled_term || row.raw_canonical_term || '-'}</strong></td>
+                    <td><strong>${commonName}</strong></td>
                     <td>${row.total_items || 0}</td>
                     <td>${row.term_status || '-'}</td>
+                    <td style="color:${priorityColor}; font-weight:bold;">${priority}</td>
                     <td>${itemsCompiled}</td>
                 </tr>`;
             }).join('');
@@ -810,8 +868,20 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(tc.botanical_key, null)}</div>`;
                     html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Master Category</div><div class="detail-value"><span class="badge badge-compiled">${data.master_category || '-'}</span></div>`;
+                    
+                    // Refinement flags - patterns identified for future batch processing
+                    const flags = data.refinement_flags || [];
+                    if (flags.length > 0) {
+                        html += `<div class="detail-label">Refinement Flags</div><div class="detail-value">`;
+                        flags.forEach(f => {
+                            html += `<span class="badge" style="background:#f59e0b;color:#000;margin-right:4px;">${f}</span>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
-                    html += `<div class="detail-label">Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
+                    html += `<div class="detail-label">Term Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
                     html += '</div></div>';
                     
                     const specs = data.merged_specs || {};
@@ -847,13 +917,34 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Match Confidence</div><div class="detail-value">${pubchem.confidence ? pubchem.confidence + '%' : '-'}</div>`;
                     html += `<div class="detail-label">Matched By</div><div class="detail-value">${fmt(pubchem.matched_by)}</div>`;
                     
+                    // Show TGSC-specific fields prominently
+                    if (otherSpecs.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${fmt(otherSpecs.odor_description)}</div>`;
+                    if (otherSpecs.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${fmt(otherSpecs.flavor_description)}</div>`;
+                    if (otherSpecs.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${fmt(otherSpecs.safety_notes)}</div>`;
+                    if (otherSpecs.cas_number) html += `<div class="detail-label">CAS (TGSC)</div><div class="detail-value" style="font-family:monospace;">${fmt(otherSpecs.cas_number)}</div>`;
+                    if (otherSpecs.fema_number) html += `<div class="detail-label">FEMA Number</div><div class="detail-value">${fmt(otherSpecs.fema_number)}</div>`;
+                    
+                    // Show remaining other specs
+                    const shownKeys = ['odor_description', 'flavor_description', 'safety_notes', 'cas_number', 'fema_number'];
                     for (const [key, val] of Object.entries(otherSpecs)) {
-                        if (!pubchemOverlap.includes(key)) {
+                        if (!pubchemOverlap.includes(key) && !shownKeys.includes(key)) {
                             html += `<div class="detail-label">${key}</div><div class="detail-value">${fmt(val)}</div>`;
                         }
                     }
                     
                     html += '</div></div>';
+                    
+                    // Descriptors section
+                    const descs = data.merged_descriptors || {};
+                    if (Object.keys(descs).length > 0) {
+                        html += '<div class="detail-section"><h3>Descriptors</h3><div class="detail-grid">';
+                        if (descs.category) html += `<div class="detail-label">Category</div><div class="detail-value">${fmt(descs.category)}</div>`;
+                        if (descs.url) html += `<div class="detail-label">TGSC Link</div><div class="detail-value"><a href="${descs.url}" target="_blank" style="color:#3b82f6;">View on TGSC</a></div>`;
+                        if (descs.synonyms && descs.synonyms.length) html += `<div class="detail-label">Synonyms</div><div class="detail-value">${descs.synonyms.join(', ')}</div>`;
+                        if (descs.natural_occurrence && descs.natural_occurrence.length) html += `<div class="detail-label">Natural Occurrence</div><div class="detail-value">${descs.natural_occurrence.join(', ')}</div>`;
+                        if (descs.botanical_name) html += `<div class="detail-label">Botanical Name</div><div class="detail-value" style="font-style:italic;">${descs.botanical_name}</div>`;
+                        html += '</div></div>';
+                    }
                     
                     html += '<div class="detail-section"><h3>Source Records</h3>';
                     html += '<p style="font-size:12px;color:#666;margin-bottom:10px;">Click to view pre-merge source data</p>';
@@ -955,27 +1046,34 @@ HTML_TEMPLATE = """
                     }
                     document.getElementById('detail-title').textContent = data.compiled_term || data.raw_canonical_term || clusterId;
                     document.getElementById('detail-subtitle').textContent = `Compiled cluster | term: ${data.term_status || '-'} | items: ${(data.items_done || 0)}/${(data.total_items || 0)}`;
-                    let html = '<div class="detail-section"><h3>Compiled Cluster</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.compiled_term || '-'}</strong></div>`;
-                    html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '-'}</em></div>`;
-                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '-'}</div>`;
-                    html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '-'}</div>`;
-                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '-'}</div>`;
-                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '-'}</div>`;
-                    html += `<div class="detail-label">Refinement</div><div class="detail-value">${data.refinement_level || '-'}</div>`;
-                    if (data.derived_from) {
-                        html += `<div class="detail-label">Derived From</div><div class="detail-value">${data.derived_from}</div>`;
-                    }
+                    
+                    // Identity section
+                    let html = '<div class="detail-section"><h3>Identity</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Common Name</div><div class="detail-value"><strong style="font-size:16px;">${data.common_name || data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</strong></div>`;
+                    html += `<div class="detail-label">Botanical Name</div><div class="detail-value"><em>${data.botanical_name || '<span style="color:#ef4444;">MISSING</span>'}</em></div>`;
+                    html += `<div class="detail-label">INCI Name</div><div class="detail-value">${data.inci_name || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${data.cas_number || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += '</div></div>';
+                    
+                    // Classification section
+                    html += '<div class="detail-section"><h3>Classification</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Origin</div><div class="detail-value">${data.origin || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Category</div><div class="detail-value">${data.ingredient_category || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Base Refinement</div><div class="detail-value">${data.refinement_level || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Derived From</div><div class="detail-value">${data.derived_from || '<span style="color:#9ca3af;">N/A</span>'}</div>`;
+                    html += '</div></div>';
+                    
+                    // Descriptions section
+                    html += '<div class="detail-section"><h3>Descriptions</h3>';
+                    html += `<div class="detail-grid"><div class="detail-label">Short Description</div><div class="detail-value">${data.short_description || '<span style="color:#ef4444;">MISSING</span>'}</div></div>`;
+                    html += `<div class="detail-grid"><div class="detail-label">Detailed Description</div><div class="detail-value">${data.detailed_description || '<span style="color:#ef4444;">MISSING</span>'}</div></div>`;
                     html += '</div>';
-                    if (data.short_description) {
-                        html += `<p style="margin:10px 0;color:#374151;font-size:13px;">${data.short_description}</p>`;
-                    }
-                    if (data.detailed_description) {
-                        html += `<p style="margin:10px 0;color:#6b7280;font-size:12px;">${data.detailed_description}</p>`;
-                    }
-                    html += `<div class="detail-grid" style="margin-top:10px;">`;
+                    
+                    // Metadata section
+                    html += '<div class="detail-section"><h3>Metadata</h3><div class="detail-grid">';
                     html += `<div class="detail-label">Cluster ID</div><div class="detail-value" style="font-size:10px;word-break:break-all;">${data.cluster_id || clusterId}</div>`;
                     html += `<div class="detail-label">Raw Source Term</div><div class="detail-value">${data.raw_canonical_term || '-'}</div>`;
+                    html += `<div class="detail-label">Term Status</div><div class="detail-value">${data.term_status || '-'}</div>`;
                     html += '</div></div>';
                     if (data.items && data.items.length) {
                         html += `<div class="detail-section"><h3>Items (${data.items.length})</h3>`;
@@ -1016,37 +1114,152 @@ HTML_TEMPLATE = """
                     document.getElementById('source-detail-title').textContent = `${data.derived_variation || data.derived_term} • ${data.derived_physical_form || ''}`;
                     document.getElementById('source-detail-subtitle').textContent = `MIF ID: ${mifId} | Status: ${data.item_status || '-'}`;
                     
-                    let html = '<div class="detail-section"><h3>Item Info</h3><div class="detail-grid">';
-                    html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '-'}</div>`;
-                    html += `<div class="detail-label">Derived Term</div><div class="detail-value">${data.derived_term || '-'}</div>`;
-                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
-                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    let html = '<div class="detail-section"><h3>Item Identity</h3><div class="detail-grid">';
+                    html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Master Category</div><div class="detail-value"><span class="badge badge-compiled">${data.master_category || '-'}</span></div>`;
                     html += `<div class="detail-label">Status</div><div class="detail-value">${data.item_status || '-'}</div>`;
+                    
+                    // Refinement flags - patterns identified for future batch processing
+                    const flags = data.refinement_flags || [];
+                    if (flags.length > 0) {
+                        html += `<div class="detail-label">Refinement Flags</div><div class="detail-value">`;
+                        flags.forEach(f => {
+                            html += `<span class="badge" style="background:#f59e0b;color:#000;margin-right:4px;">${f}</span>`;
+                        });
+                        html += `</div>`;
+                    }
                     html += '</div></div>';
                     
+                    // Source Data
                     if (data.source_data && Object.keys(data.source_data).length) {
-                        html += '<div class="detail-section"><h3>Source Data (from merged_item_forms)</h3><div class="detail-grid">';
+                        html += '<div class="detail-section"><h3>Source Data</h3><div class="detail-grid">';
                         if (data.source_data.cas_numbers && data.source_data.cas_numbers.length) {
-                            html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${data.source_data.cas_numbers.join(', ')}</div>`;
+                            html += `<div class="detail-label">CAS Numbers</div><div class="detail-value" style="font-family:monospace;">${data.source_data.cas_numbers.join(', ')}</div>`;
                         }
                         html += `<div class="detail-label">Has CosIng</div><div class="detail-value">${data.source_data.has_cosing ? 'Yes' : 'No'}</div>`;
                         html += `<div class="detail-label">Has TGSC</div><div class="detail-value">${data.source_data.has_tgsc ? 'Yes' : 'No'}</div>`;
                         html += `<div class="detail-label">Has Seed</div><div class="detail-value">${data.source_data.has_seed ? 'Yes' : 'No'}</div>`;
+                        // Show merged_specs as attributes
+                        const specs = data.source_data.merged_specs || {};
+                        if (specs.cas_number) html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${specs.cas_number}</div>`;
+                        if (specs.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${specs.odor_description}</div>`;
+                        if (specs.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${specs.flavor_description}</div>`;
+                        if (specs.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${specs.safety_notes}</div>`;
+                        if (specs.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${specs.solubility}</div>`;
+                        if (specs.boiling_point_c) html += `<div class="detail-label">Boiling Point</div><div class="detail-value">${specs.boiling_point_c}°C</div>`;
+                        if (specs.melting_point_c) html += `<div class="detail-label">Melting Point</div><div class="detail-value">${specs.melting_point_c}°C</div>`;
+                        if (specs.density) html += `<div class="detail-label">Density</div><div class="detail-value">${specs.density}</div>`;
+                        if (specs.molecular_weight) html += `<div class="detail-label">Molecular Weight</div><div class="detail-value">${specs.molecular_weight}</div>`;
+                        if (specs.molecular_formula) html += `<div class="detail-label">Molecular Formula</div><div class="detail-value" style="font-family:monospace;">${specs.molecular_formula}</div>`;
+                        html += '</div></div>';
+                    }
+                    
+                    // Compiled Item Data (AI-generated) - show as attributes
+                    const cj = data.item_json || {};
+                    if (Object.keys(cj).length) {
+                        html += '<div class="detail-section"><h3>AI-Compiled Data</h3>';
+                        // Description at the top
+                        if (cj.description) html += `<div style="margin-bottom:12px;font-style:italic;color:#374151;">${cj.description}</div>`;
+                        html += '<div class="detail-grid">';
+                        if (cj.physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${cj.physical_form}</div>`;
+                        if (cj.processing_method) {
+                            const pm = typeof cj.processing_method === 'object' ? (cj.processing_method.value || 'N/A') : cj.processing_method;
+                            html += `<div class="detail-label">Processing Method</div><div class="detail-value">${pm}</div>`;
+                        }
+                        if (cj.color) html += `<div class="detail-label">Color</div><div class="detail-value">${cj.color}</div>`;
+                        if (cj.odor_profile) html += `<div class="detail-label">Odor Profile</div><div class="detail-value">${cj.odor_profile}</div>`;
+                        if (cj.flavor_profile) html += `<div class="detail-label">Flavor Profile</div><div class="detail-value">${cj.flavor_profile}</div>`;
+                        if (cj.default_unit) html += `<div class="detail-label">Default Unit</div><div class="detail-value"><strong style="color:#059669;">${cj.default_unit}</strong></div>`;
+                        if (cj.shelf_life_days) html += `<div class="detail-label">Shelf Life</div><div class="detail-value">${cj.shelf_life_days} days</div>`;
                         html += '</div>';
-                        if (data.source_data.merged_specs && Object.keys(data.source_data.merged_specs).length) {
-                            html += '<div class="json-block"><pre>' + JSON.stringify(data.source_data.merged_specs, null, 2) + '</pre></div>';
+                        // Applications
+                        if (cj.applications && cj.applications.length) {
+                            html += `<div style="margin:8px 0;"><strong>Applications:</strong> ${cj.applications.map(a => '<span class="badge" style="background:#dbeafe;color:#1e40af;margin:2px;">' + a + '</span>').join(' ')}</div>`;
+                        }
+                        // Function Tags
+                        if (cj.function_tags && cj.function_tags.length) {
+                            html += `<div style="margin:8px 0;"><strong>Functions:</strong> ${cj.function_tags.map(t => '<span class="badge" style="background:#fef3c7;color:#92400e;margin:2px;">' + t + '</span>').join(' ')}</div>`;
+                        }
+                        // Safety Tags
+                        if (cj.safety_tags && cj.safety_tags.length) {
+                            html += `<div style="margin:8px 0;"><strong>Safety:</strong> ${cj.safety_tags.map(t => '<span class="badge" style="background:#fee2e2;color:#991b1b;margin:2px;">' + t + '</span>').join(' ')}</div>`;
+                        }
+                        // Storage
+                        if (cj.storage) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            if (cj.storage.temperature_celsius) {
+                                const temp = cj.storage.temperature_celsius;
+                                html += `<div class="detail-label">Storage Temp</div><div class="detail-value">${temp.min || '?'}°C - ${temp.max || '?'}°C</div>`;
+                            }
+                            if (cj.storage.humidity_percent && cj.storage.humidity_percent.max) {
+                                html += `<div class="detail-label">Max Humidity</div><div class="detail-value">${cj.storage.humidity_percent.max}%</div>`;
+                            }
+                            if (cj.storage.special_instructions) {
+                                html += `<div class="detail-label">Storage Notes</div><div class="detail-value">${cj.storage.special_instructions}</div>`;
+                            }
+                            html += '</div>';
+                        }
+                        // Specifications - show ALL fields regardless of value
+                        if (cj.specifications) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            const sp = cj.specifications;
+                            html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${sp.sap_naoh ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${sp.sap_koh ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${sp.iodine_value ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Density</div><div class="detail-value">${sp.density_g_ml ?? 'N/A'}${sp.density_g_ml && sp.density_g_ml !== 'N/A' && sp.density_g_ml !== 'Not Found' ? ' g/mL' : ''}</div>`;
+                            html += `<div class="detail-label">Flash Point</div><div class="detail-value">${sp.flash_point_celsius ?? 'N/A'}${typeof sp.flash_point_celsius === 'number' ? '°C' : ''}</div>`;
+                            const mp = sp.melting_point_celsius || {};
+                            html += `<div class="detail-label">Melting Point</div><div class="detail-value">${mp.min ?? '?'}°C - ${mp.max ?? '?'}°C</div>`;
+                            const ph = sp.ph_range || {};
+                            html += `<div class="detail-label">pH Range</div><div class="detail-value">${ph.min ?? '?'} - ${ph.max ?? '?'}</div>`;
+                            html += `<div class="detail-label">Solubility</div><div class="detail-value">${sp.solubility ?? 'N/A'}</div>`;
+                            html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${sp.safety_notes ?? 'N/A'}</div>`;
+                            const ur = sp.usage_rate_percent || {};
+                            html += `<div class="detail-label">Leave-on Max</div><div class="detail-value">${ur.leave_on_max ?? 'N/A'}${typeof ur.leave_on_max === 'number' ? '%' : ''}</div>`;
+                            html += `<div class="detail-label">Rinse-off Max</div><div class="detail-value">${ur.rinse_off_max ?? 'N/A'}${typeof ur.rinse_off_max === 'number' ? '%' : ''}</div>`;
+                            html += '</div>';
+                        }
+                        // Sourcing
+                        if (cj.sourcing) {
+                            html += '<div class="detail-grid" style="margin-top:8px;">';
+                            if (cj.sourcing.common_origins && cj.sourcing.common_origins.length) {
+                                html += `<div class="detail-label">Common Origins</div><div class="detail-value">${cj.sourcing.common_origins.join(', ')}</div>`;
+                            }
+                            if (cj.sourcing.certifications && cj.sourcing.certifications.length) {
+                                html += `<div class="detail-label">Certifications</div><div class="detail-value">${cj.sourcing.certifications.join(', ')}</div>`;
+                            }
+                            if (cj.sourcing.sustainability_notes) {
+                                html += `<div class="detail-label">Sustainability</div><div class="detail-value">${cj.sourcing.sustainability_notes}</div>`;
+                            }
+                            html += '</div>';
                         }
                         html += '</div>';
                     }
                     
-                    if (data.item_json && Object.keys(data.item_json).length) {
-                        html += '<div class="detail-section"><h3>Compiled Item JSON (AI-generated)</h3>';
-                        html += '<div class="json-block"><pre>' + JSON.stringify(data.item_json, null, 2) + '</pre></div></div>';
-                    }
-                    
-                    if (data.raw_item_json && Object.keys(data.raw_item_json).length) {
-                        html += '<div class="detail-section"><h3>Raw Item JSON (pre-compilation)</h3>';
-                        html += '<div class="json-block"><pre>' + JSON.stringify(data.raw_item_json, null, 2) + '</pre></div></div>';
+                    // Raw pre-compilation data - show as attributes
+                    const rj = data.raw_item_json || {};
+                    if (Object.keys(rj).length) {
+                        html += '<div class="detail-section"><h3>Pre-Compilation Data</h3><div class="detail-grid">';
+                        if (rj.derived_term) html += `<div class="detail-label">Derived Term</div><div class="detail-value">${rj.derived_term}</div>`;
+                        if (rj.derived_variation) html += `<div class="detail-label">Variation</div><div class="detail-value">${rj.derived_variation}</div>`;
+                        if (rj.derived_physical_form) html += `<div class="detail-label">Physical Form</div><div class="detail-value">${rj.derived_physical_form}</div>`;
+                        if (rj.cas_numbers && rj.cas_numbers.length) html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${rj.cas_numbers.join(', ')}</div>`;
+                        if (rj.derived_parts && rj.derived_parts.length) html += `<div class="detail-label">Parts</div><div class="detail-value">${rj.derived_parts.join(', ')}</div>`;
+                        // Merged specs
+                        const ms = rj.merged_specs || {};
+                        if (ms.cas_number) html += `<div class="detail-label">CAS Number</div><div class="detail-value" style="font-family:monospace;">${ms.cas_number}</div>`;
+                        if (ms.odor_description) html += `<div class="detail-label">Odor</div><div class="detail-value">${ms.odor_description}</div>`;
+                        if (ms.flavor_description) html += `<div class="detail-label">Flavor</div><div class="detail-value">${ms.flavor_description}</div>`;
+                        if (ms.safety_notes) html += `<div class="detail-label">Safety Notes</div><div class="detail-value">${ms.safety_notes}</div>`;
+                        if (ms.solubility) html += `<div class="detail-label">Solubility</div><div class="detail-value">${ms.solubility}</div>`;
+                        if (ms.boiling_point_c) html += `<div class="detail-label">Boiling Point</div><div class="detail-value">${ms.boiling_point_c}°C</div>`;
+                        if (ms.melting_point_c) html += `<div class="detail-label">Melting Point</div><div class="detail-value">${ms.melting_point_c}°C</div>`;
+                        if (ms.density) html += `<div class="detail-label">Density</div><div class="detail-value">${ms.density}</div>`;
+                        if (ms.molecular_weight) html += `<div class="detail-label">Molecular Weight</div><div class="detail-value">${ms.molecular_weight}</div>`;
+                        if (ms.molecular_formula) html += `<div class="detail-label">Molecular Formula</div><div class="detail-value" style="font-family:monospace;">${ms.molecular_formula}</div>`;
+                        html += '</div></div>';
                     }
                     
                     document.getElementById('source-detail-body').innerHTML = html;
@@ -1498,6 +1711,9 @@ def api_compiled_items():
 def api_compiled_clusters():
     page = int(request.args.get("page", 1))
     search = (request.args.get("search") or "").strip()
+    filter_type = (request.args.get("filter") or "all").strip().lower()
+    sort_field = (request.args.get("sort") or "rank").strip().lower()
+    sort_order = (request.args.get("order") or "asc").strip().lower()
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -1509,23 +1725,40 @@ def api_compiled_clusters():
 
     where_clauses = []
     params = []
+    if filter_type == "pending":
+        where_clauses.append("c.term_status = 'pending'")
+    elif filter_type == "done":
+        where_clauses.append("c.term_status = 'done'")
     if search:
-        where_clauses.append("(cluster_id LIKE ? OR compiled_term LIKE ? OR raw_canonical_term LIKE ?)")
+        where_clauses.append("(c.cluster_id LIKE ? OR c.compiled_term LIKE ? OR c.raw_canonical_term LIKE ?)")
         s = f"%{search}%"
         params.extend([s, s, s])
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-    cur.execute(f"SELECT COUNT(*) FROM compiled_clusters {where_sql}", params)
+    cur.execute(f"SELECT COUNT(*) FROM compiled_clusters c {where_sql}", params)
     total = cur.fetchone()[0]
+
+    # Build dynamic ORDER BY based on sort parameters
+    order_dir = "DESC" if sort_order == "desc" else "ASC"
+    if sort_field == "name":
+        order_sql = f"COALESCE(json_extract(c.payload_json, '$.stage1.common_name'), c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
+    elif sort_field == "priority":
+        order_sql = f"c.priority {order_dir}, c.cluster_id"
+    else:  # rank (default)
+        null_order = "999999" if sort_order == "asc" else "0"
+        order_sql = f"COALESCE(c.compilation_rank, {null_order}) {order_dir}, c.priority DESC, c.cluster_id"
 
     cur.execute(
         f"""
         SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
-               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done
+               (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
+               json_extract(c.payload_json, '$.stage1.common_name') as common_name,
+               c.priority,
+               c.compilation_rank
         FROM compiled_clusters c
         {where_sql}
-        ORDER BY c.cluster_id
+        ORDER BY {order_sql}
         LIMIT ? OFFSET ?
         """,
         params + [per_page, offset],
@@ -1538,6 +1771,9 @@ def api_compiled_clusters():
             "term_status": r[3],
             "total_items": int(r[4] or 0),
             "items_done": int(r[5] or 0),
+            "common_name": r[6] or None,
+            "priority": int(r[7] or 0),
+            "rank": int(r[8]) if r[8] is not None else None,
         }
         for r in cur.fetchall()
     ]
@@ -1569,8 +1805,10 @@ def api_compiled_cluster_detail(cluster_id: str):
 
     payload = parse_json(row[11]) if row[11] else {}
     stage1_core = {}
+    common_name = None
     if payload and isinstance(payload.get("stage1"), dict):
         stage1_core = payload["stage1"].get("ingredient_core", {})
+        common_name = payload["stage1"].get("common_name")
 
     cur.execute(
         """
@@ -1609,6 +1847,7 @@ def api_compiled_cluster_detail(cluster_id: str):
             "cluster_id": row[0],
             "raw_canonical_term": row[1],
             "compiled_term": row[2],
+            "common_name": common_name,
             "term_status": row[3],
             "origin": row[4],
             "ingredient_category": row[5],
@@ -1721,7 +1960,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
         """
         SELECT cci.cluster_id, cci.merged_item_form_id, cci.derived_term, cci.derived_variation, 
                cci.derived_physical_form, cci.item_status, cci.raw_item_json, cci.item_json,
-               cc.compiled_term
+               cc.compiled_term, cci.refinement_flags
         FROM compiled_cluster_items cci
         LEFT JOIN compiled_clusters cc ON cc.cluster_id = cci.cluster_id
         WHERE cci.cluster_id = ? AND cci.merged_item_form_id = ?
@@ -1766,7 +2005,9 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
             "raw_item_json": parse_json(row[6]) if row[6] else {},
             "item_json": parse_json(row[7]) if row[7] else {},
             "compiled_term": row[8],
+            "refinement_flags": row[9].split(",") if row[9] else [],
             "source_data": mif_data,
+            "master_category": (parse_json(row[7]) or {}).get("master_category", ""),
         }
     )
 
@@ -2217,7 +2458,7 @@ def api_merged_item_detail(item_id):
                derived_parts_json, cas_numbers_json, member_source_item_keys_json,
                sources_json, merged_specs_json, merged_specs_sources_json,
                merged_specs_notes_json, source_row_count, has_cosing, has_tgsc,
-               created_at, compiled_specs_json, app_seed_specs_json
+               created_at, compiled_specs_json, app_seed_specs_json, merged_descriptors_json
         FROM merged_item_forms WHERE id = ?
     """, (item_id,))
     
@@ -2317,6 +2558,7 @@ def api_merged_item_detail(item_id):
         'created_at': row[14],
         'compiled_specs': parse_json(row[15]),
         'app_seed_specs': parse_json(row[16]),
+        'merged_descriptors': parse_json(row[17]) if len(row) > 17 else {},
         'source_items': source_items,
         'term_data': term_data,
         'term_cluster': {

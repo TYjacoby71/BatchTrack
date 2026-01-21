@@ -2,6 +2,10 @@
 
 This directory is the curated reference library for every master document that explains how BatchTrack works. Start here to understand the architecture, domain concepts, operational runbooks, and developer workflows.
 
+## Product Overview
+
+- **[APP_MASTER_DESCRIPTION.md](APP_MASTER_DESCRIPTION.md)** – Master product description and prompt-ready summary
+
 ## Architecture & Core Services
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** – System architecture, service patterns, data flow

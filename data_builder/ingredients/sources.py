@@ -200,6 +200,37 @@ class IngredientSourceBroker:
             return None
 
     def _fetch_tgsc(self, term: str) -> Optional[SourcePayload]:
+        def _clean_blurb(value: Any) -> str | None:
+            text = (str(value).strip() if value is not None else "")
+            if not text:
+                return None
+            lowered = text.lower()
+            garbage = (
+                "googleanalyticsobject",
+                "information:",
+                "descriptions from others",
+                "supplier sponsors",
+                "articles:",
+                "organoleptic properties",
+                "(i,s,o,g,r,a,m)",
+            )
+            if any(token in lowered for token in garbage):
+                return None
+            if len(text) < 4:
+                return None
+            return text
+
+        def _clean_tgsc_payload(payload: dict) -> dict:
+            cleaned = dict(payload)
+            for key in ("odor_description", "flavor_description"):
+                if key in cleaned:
+                    value = _clean_blurb(cleaned.get(key))
+                    if value:
+                        cleaned[key] = value
+                    else:
+                        cleaned.pop(key, None)
+            return cleaned
+
         if TGSC_API_KEY:
             url = "https://www.thegoodscentscompany.com/api/ingredient"
             try:
@@ -207,7 +238,10 @@ class IngredientSourceBroker:
                 response.raise_for_status()
                 blob = response.json()
                 if blob:
-                    return SourcePayload(source="tgsc", data=blob[0] if isinstance(blob, list) else blob)
+                    data = blob[0] if isinstance(blob, list) else blob
+                    if isinstance(data, dict):
+                        data = _clean_tgsc_payload(data)
+                    return SourcePayload(source="tgsc", data=data if isinstance(data, dict) else {})
             except Exception as exc:
                 LOGGER.debug("TGSC API lookup failed for %s: %s", term, exc)
         if TGSC_CSV_PATH.exists():
@@ -216,7 +250,7 @@ class IngredientSourceBroker:
                     reader = csv.DictReader(handle)
                     for row in reader:
                         if (row.get("name") or "").strip().lower() == term.lower():
-                            return SourcePayload(source="tgsc", data=row)
+                            return SourcePayload(source="tgsc", data=_clean_tgsc_payload(row))
             except Exception as exc:
                 LOGGER.debug("TGSC CSV lookup failed for %s: %s", term, exc)
         return None

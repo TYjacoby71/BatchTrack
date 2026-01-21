@@ -42,6 +42,29 @@ def _clean_text(value: Any) -> str:
     return text
 
 
+_TGSC_GARBAGE_TOKENS = (
+    "googleanalyticsobject",
+    "information:",
+    "descriptions from others",
+    "supplier sponsors",
+    "articles:",
+    "organoleptic properties",
+    "(i,s,o,g,r,a,m)",
+)
+
+
+def _clean_tgsc_blurb(value: Any) -> str:
+    text = _clean_text(value)
+    if not text:
+        return ""
+    lowered = text.lower()
+    if any(token in lowered for token in _TGSC_GARBAGE_TOKENS):
+        return ""
+    if len(text) < 4:
+        return ""
+    return text
+
+
 def _first_cas(value: str) -> str:
     v = _clean_text(value)
     if not v or v in {"-", "—"}:
@@ -337,8 +360,8 @@ def build_catalog(
                 item.tgsc_boiling_point = item.tgsc_boiling_point or _clean_text(row.get("boiling_point") or "") or None
                 item.tgsc_melting_point = item.tgsc_melting_point or _clean_text(row.get("melting_point") or "") or None
                 item.tgsc_density = item.tgsc_density or _clean_text(row.get("density") or "") or None
-                item.tgsc_odor_description = item.tgsc_odor_description or _clean_text(row.get("odor_description") or "") or None
-                item.tgsc_flavor_description = item.tgsc_flavor_description or _clean_text(row.get("flavor_description") or "") or None
+                item.tgsc_odor_description = item.tgsc_odor_description or _clean_tgsc_blurb(row.get("odor_description")) or None
+                item.tgsc_flavor_description = item.tgsc_flavor_description or _clean_tgsc_blurb(row.get("flavor_description")) or None
                 item.tgsc_description = item.tgsc_description or _clean_text(row.get("description") or "") or None
                 item.tgsc_uses = item.tgsc_uses or _clean_text(row.get("uses") or "") or None
                 item.tgsc_safety_notes = item.tgsc_safety_notes or _clean_text(row.get("safety_notes") or "") or None

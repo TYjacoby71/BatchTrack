@@ -23,7 +23,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; ai_worker will fail until configured.")
 
-MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
 RETRY_BACKOFF_SECONDS = float(os.getenv("AI_RETRY_BACKOFF", "3"))
@@ -63,258 +63,157 @@ INGREDIENT_CATEGORIES = [
 ]
 
 SYSTEM_PROMPT = (
-    "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
-    "manufacturing. You only output JSON that conforms to the provided schema. "
-    "CRITICAL: Do not fabricate facts or numeric properties; omit unknown optional fields "
-    "(or use null) instead of placeholder strings like 'unknown'/'n/a'."
+    "IngredientCompilerGPT. JSON only. Use training knowledge liberally - most cosmetic/food ingredients "
+    "are well-documented. Provide values for color, odor, applications, functions, specs. "
+    "\"N/A\"=not applicable. \"Not Found\"=only for truly obscure items. All fields required."
 )
 
 JSON_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed, booleans only true/false, lists sorted alphabetically):
 {
   "ingredient": {
-    "common_name": "string (required)",
-    "category": "one of the approved ingredient categories",
+    "common_name": "string",
+    "category": "ingredient category",
     "botanical_name": "string",
     "inci_name": "string",
     "cas_number": "string",
     "short_description": "string",
     "detailed_description": "string",
-    "origin": {
-      "regions": ["string"],
-      "source_material": "string",
-      "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
-    },
-    "primary_functions": ["Emollient", "Humectant", "Bulking", ...],
-    "regulatory_notes": ["IFRA safe", "Food grade", ...],
-    "items": [
-      {
-        "item_name": "Shea Butter (Refined)",
-        "variation": "string (e.g., Refined, Unrefined, Cold Pressed, 2%, Filtered, Essential Oil, CO2 Extract, Tincture, 50% Solution; empty string if none)",
-        "physical_form": "short noun for physical state (e.g., Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate)",
-        "synonyms": ["aka", ...],
-        "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
-        "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
-        "safety_tags": ["Dermal Limit 3%", "Photosensitizer", ...],
-          "shelf_life_days": 30-3650,
-        "sds_hazards": ["Flammable", "Allergen"],
-        "storage": {
-          "temperature_celsius": {"min": 5, "max": 25},
-          "humidity_percent": {"max": 60},
-          "special_instructions": "Keep out of light"
-        },
-        "specifications": {
-          "sap_naoh": 0.128,
-          "sap_koh": 0.18,
-          "iodine_value": 10,
-          "melting_point_celsius": {"min": 30, "max": 35},
-          "flash_point_celsius": 200,
-          "ph_range": {"min": 5, "max": 7}
-        },
-        "sourcing": {
-          "common_origins": ["Ghana", "Ivory Coast"],
-          "certifications": ["Organic", "Fair Trade"],
-          "supply_risks": ["Seasonal Harvest"],
-          "sustainability_notes": "Tree nut resource"
-        },
-        "form_bypass": true | false,  // when true, display should use item_name alone (e.g., Water, Ice)
-        "variation_bypass": true | false  // when true, UI can omit displaying variation (useful when variation is implicit)
-      }
-    ],
-    "taxonomy": {
-      "scent_profile": ["Fruity", "Nutty"],
-      "color_profile": ["Ivory", "Translucent"],
-      "texture_profile": ["Brittle", "Soft"],
-      "compatible_processes": ["Cold Process Soap", "Hot Process", "Sugar Confectionery", "Emulsion", "Anhydrous Balm", "Pressed Powder", "Small Batch Brewing"],
-      "incompatible_processes": ["High-heat frying"]
-    },
-    "documentation": {
-      "references": [
-        {
-          "title": "USP Monograph",
-          "url": "https://example.com",
-          "notes": "Key regulatory reference"
-        }
-      ],
-      "last_verified": "ISO-8601 date"
-    }
+    "origin": {"regions": [], "source_material": "string", "processing_methods": []},
+    "primary_functions": [],
+    "regulatory_notes": [],
+    "items": [{
+      "item_name": "Name (Variation)",
+      "variation": "string",
+      "physical_form": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste",
+      "synonyms": [],
+      "applications": [],
+      "function_tags": [],
+      "safety_tags": [],
+      "shelf_life_days": 30-3650,
+      "sds_hazards": [],
+      "storage": {"temperature_celsius": {"min": 5, "max": 25}, "humidity_percent": {"max": 60}, "special_instructions": "string"},
+      "specifications": {"sap_naoh": 0.128, "sap_koh": 0.18, "iodine_value": 10, "melting_point_celsius": {"min": 30, "max": 35}, "flash_point_celsius": 200, "ph_range": {"min": 5, "max": 7}},
+      "sourcing": {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "string"},
+      "form_bypass": false,
+      "variation_bypass": false
+    }],
+    "taxonomy": {"scent_profile": [], "color_profile": [], "texture_profile": [], "compatible_processes": [], "incompatible_processes": []},
+    "documentation": {"references": [], "last_verified": "ISO-8601 date"}
   },
-  "data_quality": {
-    "confidence": 0-1 float,
-    "caveats": ["string"]
-  }
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
 """
 
 ERROR_OBJECT = {"error": "Unable to return ingredient payload"}
 
 PROMPT_TEMPLATE = """
-You are an expert ingredient data compiler.
+TASK: Build ingredient dossier for: "{ingredient}".
 
-TASK: Build the complete ingredient dossier for: "{ingredient}".
+RULES:
+- RAW INGREDIENTS ONLY (no packaging/containers)
+- Create items for each purchasable variation/form
+- Unknown="Not Found", Not applicable="N/A"
+- Metric units, shelf_life in DAYS, temp in Celsius
+- variation=processing type (Refined, Cold Pressed, Essential Oil)
+- physical_form=state noun (Oil, Liquid, Powder, Butter, Wax)
+- Categories: {categories}
 
-CONTEXT:
-- Audience: artisanal formulators in soap, confections, cosmetics, herbalism, fermentation, aromatherapy, and small-batch baking.
-- Scope: RAW INGREDIENTS ONLY. Never include packaging, containers, utensils, or finished consumer goods.
-- Item model: An ITEM is the combination of BASE INGREDIENT + VARIATION.
-  - VARIATION is the purchasable/spec distinction (e.g., Refined vs Unrefined, 2% vs Whole, Filtered vs Unfiltered, Organic, Deodorized, 50% Solution).
-  - PHYSICAL FORM is still required and must remain a short noun (e.g., Powder, Oil, Liquid, Granules). Do not encode variations into physical_form.
-  - Do NOT generate a final display name; the system will derive item_name in code from (base + variation + physical_form + bypass flags).
-  - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and specify variation/form fields appropriately.
-- Create a dedicated `items` entry for each common purchasable variation and/or physical form used in craft production.
-- Populate every applicable attribute in the schema. Use "unknown" only when absolutely no data exists.
-- Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
-- Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
-- All string values must be clear, sentence case, and free of marketing fluff.
-- Return strictly valid JSON (UTF-8, double quotes, no trailing commas). If you are uncertain, respond with {{"error": "explanation"}}.
-
-CONTROLLED VOCAB REMINDERS:
-- physical_form must be a short noun (e.g., "Powder", "Chips", "Pellets", "Whole", "Puree", "Pressed Cake").
-- function_tags should draw from: Emollient, Humectant, Surfactant, Emulsifier, Preservative, Antioxidant, Colorant, Fragrance, Exfoliant, Thickener, Binder, Fuel, Hardener, Stabilizer, Plasticizer, Chelator, Buffer, Flavor, Sweetener, Bittering Agent, Fermentation Nutrient.
-- applications should be chosen from: Cold Process Soap, Hot Process Soap, Melt & Pour Soap, Lotion, Cream, Balm, Serum, Scrub, Perfume, Candle, Wax Melt, Lip Balm, Chocolate, Confection, Baked Good, Beverage, Fermented Beverage, Herbal Tincture, Hydro-distillation, Bath Bomb, Shower Steamer, Haircare, Skincare, Deodorant, Cleaner, Detergent, Paint, Dye Bath.
-- ingredient.category must be one of: {categories}
-
-FORM & SOLUTION GUIDANCE:
-- Always include common dairy *variations* (e.g., whole milk, 2% milk, skim milk, skim milk powder) as distinct items.
-- Include buffered/stock solutions (e.g., 50% Sodium Hydroxide Solution, 20% Potassium Carbonate Solution) as distinct items; encode the %/strength in item_name.
-- Essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, macerations, and infusions should be represented as distinct forms under the parent ingredient.
-- When an ingredient should display without a suffix (Water, Ice, Steam), set `form_bypass`=true so the interface shows just "Water" or "Ice" while still recording the underlying physical_form.
-- More generally, if the best default item is identical to the base common_name (e.g., "Water", "Apples"), set `item_name` exactly to the common_name and set `form_bypass`=true so the UI shows the base without a redundant suffix.
-- When no better industry name exists, use a concise solution label such as "Potassium Carbonate Solution (20%)" or simply "Brine Solution".
-
-VARIATION vs PHYSICAL_FORM (IMPORTANT):
-- Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
-- Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
-- `item_name` should generally be: "{common_name} (variation)" when variation is non-empty.
-- Do NOT emit `item_name` as a source-of-truth; code will derive it. If `variation` is empty, set `variation_bypass`=true.
-
-SCHEMA (required):
+SCHEMA:
 {schema}
 
-OUTPUT CONTRACT:
-- Respond with a single JSON object adhering to the schema.
-- If ingredient is out of scope or data unavailable, return {error_object} with a precise message.
+Return valid JSON. If out of scope: {error_object}
 """
 
 CORE_SCHEMA_SPEC = r"""
-Return JSON using this schema (all strings trimmed):
 {
   "ingredient_core": {
-    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived (REQUIRED)",
-    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids (REQUIRED)",
-    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Other (REQUIRED - use Extracted/Distilled for oils, butters, extracts)",
-    "derived_from": "string (optional; natural source if base is derived from another plant/material)",
-    "category": "one of the approved ingredient categories",
-    "botanical_name": "string (REQUIRED for Plant-Derived - Latin binomial e.g. 'Prunus armeniaca', 'Helianthus annuus')",
-    "inci_name": "string (REQUIRED - INCI nomenclature from CosIng/PCPC)",
-    "cas_number": "string (REQUIRED if known - CAS registry number)",
+    "origin": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived",
+    "ingredient_category": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars",
+    "refinement_level": "Raw/Unprocessed|Minimally Processed|Extracted/Distilled|Milled/Ground|Fermented|Synthesized",
+    "derived_from": "string",
+    "category": "ingredient category",
+    "botanical_name": "Latin binomial",
+    "inci_name": "INCI name",
+    "cas_number": "CAS number",
     "short_description": "string",
     "detailed_description": "string",
     "usage_restrictions": "string",
-    "prohibited_flag": true | false,
-    "gras_status": true | false,
+    "prohibited_flag": false,
+    "gras_status": false,
     "ifra_category": "string",
-    "allergen_flag": true | false,
-    "colorant_flag": true | false,
-    "origin_details": {
-      "regions": ["string"],
-      "source_material": "string",
-      "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
-    },
-    "primary_functions": ["Emollient", "Humectant", ...],
-    "regulatory_notes": ["string"],
-    "documentation": {
-      "references": [{"title": "string", "url": "string", "notes": "string"}],
-      "last_verified": "ISO-8601 date"
-    }
+    "allergen_flag": false,
+    "colorant_flag": false,
+    "origin_details": {"regions": [], "source_material": "string", "processing_methods": []},
+    "primary_functions": [],
+    "regulatory_notes": [],
+    "documentation": {"references": [], "last_verified": "ISO-8601 date"}
   },
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
 """
 
 CLUSTER_TERM_SCHEMA_SPEC = r"""
-Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
-For each field, you MUST provide a value OR explicitly state "not_found" or "not_applicable".
 {
-  "term": "string (REQUIRED) - canonical base ingredient term (no form/variation words)",
+  "term": "canonical base term",
+  "common_name": "TRUE vernacular name (e.g., Silver Fir not Abies Alba)",
+  "maker_priority": 1-10,
   "ingredient_core": {
-    "origin": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
-    "ingredient_category": {"value": "string", "status": "found|not_found|not_applicable", "reason": "string if not found/not applicable"},
-    "base_refinement": {"value": "one of: Raw/Whole, Minimally Processed, Fermented, Synthesized", "status": "found", "reason": null},
-    "derived_from": {"value": "string (natural source if derived)", "status": "found|not_applicable", "reason": "string"},
-    "botanical_name": {"value": "Latin binomial e.g. 'Prunus armeniaca'", "status": "found|not_found|not_applicable", "reason": "string"},
-    "inci_name": {"value": "INCI nomenclature", "status": "found|not_found", "reason": "string if not found"},
-    "cas_number": {"value": "CAS registry number", "status": "found|not_found", "reason": "string if not found"},
-    "short_description": {"value": "one sentence summary", "status": "found"},
-    "detailed_description": {"value": "2-3 sentences", "status": "found"}
+    "origin": {"value": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived", "status": "found|not_found|not_applicable"},
+    "ingredient_category": {"value": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars", "status": "found|not_found"},
+    "base_refinement": {"value": "Raw/Whole|Minimally Processed|Fermented|Synthesized", "status": "found"},
+    "derived_from": {"value": "string", "status": "found|not_applicable"},
+    "botanical_name": {"value": "Latin binomial", "status": "found|not_found|not_applicable"},
+    "inci_name": {"value": "INCI name", "status": "found|not_found"},
+    "cas_number": {"value": "CAS number", "status": "found|not_found"},
+    "short_description": "one sentence",
+    "detailed_description": "2-3 sentences"
   },
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
-
-FIELD RULES:
-- origin: REQUIRED. One of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived
-- ingredient_category: REQUIRED. One of: Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids, or Synthetic-* categories
-- base_refinement: REQUIRED. Describes what the BASE TERM is in its natural/common state:
-  * "Raw/Whole" = unprocessed base (Apricot fruit, Sunflower seeds, Lavender flowers)
-  * "Minimally Processed" = dried, cleaned, or simple preparation
-  * "Fermented" = base is a fermentation product (vinegar, kombucha SCOBY)
-  * "Synthesized" = fully synthetic compound
-  * NOTE: Processing like extraction, distillation, refining belongs at ITEM level, not term level!
-- botanical_name: REQUIRED for Plant-Derived. Latin binomial. Use "not_applicable" for synthetics/minerals.
-- inci_name: REQUIRED. The base INCI name. Use "not_found" only if genuinely unknown.
-- cas_number: Provide if known. Use "not_found" with reason if unable to determine.
 """
 
 ITEMS_SCHEMA_SPEC = r"""
-Return JSON using this schema. ALL fields are REQUIRED - no silent bypasses allowed.
 {
-  "items": [
-    {
-      "variation": {"value": "string (e.g., Refined, Cold Pressed, Essential Oil, 2%)", "status": "found|not_applicable"},
-      "physical_form": {"value": "one of: Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Flakes, Chunks", "status": "found"},
-      "processing_method": {"value": "one of: Unprocessed, Cold Pressed, Expeller Pressed, Solvent Extracted, Steam Distilled, CO2 Extracted, Refined, Bleached, Deodorized, Hydrogenated, Fractionated, Filtered, Milled, Dried, Freeze-Dried, Fermented, Synthesized", "status": "found"},
-      "synonyms": ["aka", ...],
-      "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
-      "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
-      "safety_tags": ["string"],
-      "shelf_life_days": 30-3650,
-      "sds_hazards": ["string"],
-      "storage": {
-        "temperature_celsius": {"min": 5, "max": 25},
-        "humidity_percent": {"max": 60},
-        "special_instructions": "string"
-      },
-      "specifications": {
-        "sap_naoh": 0.128,
-        "sap_koh": 0.18,
-        "iodine_value": 10,
-        "melting_point_celsius": {"min": 30, "max": 35},
-        "flash_point_celsius": 200,
-        "ph_range": {"min": 5, "max": 7},
-        "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
-        // Optional physchem (when known; OK to omit):
-        // "density_g_ml": 0.91,  // numeric only; g/mL; include ONLY when known (do not guess)
-        // "viscosity_cps": 1200,
-        // "refractive_index": 1.44,
-        // "molecular_formula": "C3H8O3",
-        // "molecular_weight": 92.09,
-        // "boiling_point_celsius": 290,
-        // "solubility": {"in_water": "string", "in_oil": "string"},
-        // "miscible_with": ["string"],
-        // "emulsification": {"hlb": 15.0, "oil_in_water": true, "water_in_oil": false}
-      },
-      "sourcing": {
-        "common_origins": ["string"],
-        "certifications": ["string"],
-        "supply_risks": ["string"],
-        "sustainability_notes": "string"
-      },
-      "form_bypass": true | false,
-      "variation_bypass": true | false
-    }
-  ],
-  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+  "items": [{
+    "variation": {"value": "string", "status": "found|not_applicable"},
+    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters",
+    "description": "1-2 sentence description",
+    "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
+    "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
+    "color": "typical color (or Not Found)",
+    "odor_profile": "scent characteristics (or Odorless or Not Found)",
+    "flavor_profile": "taste (or Not edible or Not Found)",
+    "synonyms": [],
+    "applications": ["3-5 uses: Soapmaking, Skincare, Haircare, Aromatherapy, Culinary, etc"],
+    "function_tags": ["3-5 functions: Emollient, Moisturizing, Cleansing, Fragrance, etc"],
+    "safety_tags": [],
+    "shelf_life_days": 30-3650,
+    "sds_hazards": [],
+    "storage": {"temperature_celsius": {"min": 5, "max": 25}, "humidity_percent": {"max": 60}, "special_instructions": "string"},
+    "specifications": {
+      "sap_naoh": "number or N/A or Not Found",
+      "sap_koh": "number or N/A or Not Found",
+      "iodine_value": "number or N/A or Not Found",
+      "melting_point_celsius": {"min": "number or N/A", "max": "number or N/A"},
+      "flash_point_celsius": "number or N/A or Not Found",
+      "ph_range": {"min": "number or N/A", "max": "number or N/A"},
+      "usage_rate_percent": {"leave_on_max": "number or N/A", "rinse_off_max": "number or N/A"},
+      "density_g_ml": "number or N/A or Not Found",
+      "solubility": "description (e.g., 'Soluble in oil, insoluble in water') or N/A or Not Found"
+    },
+    "sourcing": {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "string"},
+    "default_unit": "gram|kg|oz|lb|ml|liter|floz|count",
+    "form_bypass": false,
+    "variation_bypass": false
+  }],
+  "data_quality": {"confidence": 0-1, "caveats": []}
 }
+MANDATORY RULES - EVERY FIELD MUST HAVE AN EXPLICIT ANSWER:
+- If you have data → provide the value
+- If not applicable (e.g., pH for oils, SAP for non-lipids) → "N/A"
+- If unknown/obscure → "Not Found"
+- NEVER leave a field empty or omit it. Every field in the schema must appear with an answer.
+UNITS: Oils/Liquids→ml, Butters/Waxes/Powders→oz or gram, Whole→count.
 """
 
 TAXONOMY_SCHEMA_SPEC = r"""
@@ -335,6 +234,7 @@ def _call_openai_json(client: openai.OpenAI, system_prompt: str, user_prompt: st
     response = client.chat.completions.create(
         model=MODEL_NAME,
         temperature=TEMPERATURE,
+        max_tokens=4096,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},
@@ -350,12 +250,57 @@ def _call_openai_json(client: openai.OpenAI, system_prompt: str, user_prompt: st
     return payload
 
 
+def _filter_source_data(meta: Dict[str, Any]) -> Dict[str, Any]:
+    """Filter source metadata to only essential fields, reducing token usage by ~70%."""
+    if not meta:
+        return {}
+    
+    # Essential fields to keep from each source
+    KEEP_FIELDS = {
+        "cas_number", "cas", "cas_no", "CAS",
+        "inci_name", "inci", "INCI",
+        "botanical_name", "scientific_name", "latin_name",
+        "common_name", "name", "ingredient_name",
+        "description", "definition",
+        "functions", "function", "cosmetic_functions",
+        "restrictions", "restriction",
+        "molecular_formula", "formula",
+        "molecular_weight", "mol_weight",
+        "density", "specific_gravity",
+        "melting_point", "boiling_point", "flash_point",
+        "odor", "odor_description", "flavor", "flavor_description",
+        "color", "appearance",
+        "solubility",
+        "safety", "hazards", "warnings",
+        "origin", "source",
+    }
+    
+    filtered = {}
+    for source_name, source_data in meta.items():
+        if not isinstance(source_data, dict):
+            continue
+        source_filtered = {}
+        for key, value in source_data.items():
+            key_lower = key.lower().replace("_", "").replace("-", "")
+            if any(keep.lower().replace("_", "") in key_lower for keep in KEEP_FIELDS):
+                # Truncate very long values
+                if isinstance(value, str) and len(value) > 500:
+                    value = value[:500] + "..."
+                source_filtered[key] = value
+        if source_filtered:
+            filtered[source_name] = source_filtered
+    return filtered
+
+
 def _render_metadata_blob(term: str) -> str:
     if sources is None:
         return "{}"
     try:
         meta = sources.fetch_metadata(term)
-        return json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) if meta else "{}"
+        if not meta:
+            return "{}"
+        filtered = _filter_source_data(meta)
+        return json.dumps(filtered, ensure_ascii=False, sort_keys=True) if filtered else "{}"
     except Exception:  # pragma: no cover
         return "{}"
 
@@ -400,6 +345,19 @@ You are Stage 1 (Term Completion / Normalization).
 TASK:
 - Given one RAW ingestion cluster, determine the single canonical BASE ingredient term for the entire cluster.
 - Complete the core identity fields for that term using the cluster evidence.
+- Assign a maker_priority score (1-10) based on how commonly this ingredient is used by artisan makers.
+
+MAKER PRIORITY SCORING (1-10):
+10 = Essential staples (coconut oil, olive oil, shea butter, lye, beeswax, soy wax)
+9 = Very common oils/butters (castor oil, sweet almond, cocoa butter, palm oil)
+8 = Popular essential oils (lavender, tea tree, peppermint, eucalyptus, lemon)
+7 = Common specialty oils/butters (jojoba, argan, mango butter, avocado oil)
+6 = Popular additives (vitamin E, honey, oatmeal, clays, activated charcoal)
+5 = Specialty essential oils (ylang ylang, frankincense, patchouli, geranium)
+4 = Less common botanicals/extracts (neem, tamanu, sea buckthorn)
+3 = Specialty/rare ingredients (exotic butters, uncommon carrier oils)
+2 = Industrial/niche cosmetic chemicals
+1 = Rare/obscure ingredients with limited maker use
 
 CRITICAL RULES:
 - Every cluster must map to ONE base term.
@@ -414,7 +372,7 @@ CRITICAL RULES:
 - Use INCI/CAS/botanical evidence from the cluster when available. Do not invent identifiers.
 
 NO SILENT BYPASS - EVERY FIELD MUST BE EXPLICITLY HANDLED:
-Every field in ingredient_core must return: {"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}
+Every field in ingredient_core must return: {{"value": <data>, "status": "found|not_found|not_applicable", "reason": <string if not found/not applicable>}}
 
 TERM-LEVEL vs ITEM-LEVEL DISTINCTION (CRITICAL):
 - base_refinement at TERM level describes the natural state of the base ingredient:
@@ -480,12 +438,16 @@ def compile_items(
     if seed_items:
         payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_completion_prompt(t, ingredient_core, base_context))
         items = payload.get("items") if isinstance(payload.get("items"), list) else []
-        payload["items"] = _merge_seed_items(
+        merged_items = _merge_seed_items(
             seed_items=[it for it in seed_items if isinstance(it, dict)],
             ai_items=[it for it in items if isinstance(it, dict)],
         )
+        payload["items"] = [_ensure_item_fields(it) for it in merged_items]
         return payload
-    return _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+    payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(t, ingredient_core, base_context))
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    payload["items"] = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
+    return payload
 
 
 def compile_taxonomy(term: str, *, ingredient_core: Dict[str, Any], items: list[dict]) -> Dict[str, Any]:
@@ -505,13 +467,32 @@ def complete_item_stubs(
     ingredient_core: Dict[str, Any],
     base_context: Dict[str, Any] | None,
     item_stubs: list[dict],
+    batch_size: int = 5,
 ) -> list[dict]:
-    """Complete schema fields for an authoritative list of item stubs (identity fields are stable)."""
-    ctx = dict(base_context or {})
-    ctx["seed_items"] = [it for it in item_stubs if isinstance(it, dict)]
-    payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
-    items = payload.get("items") if isinstance(payload.get("items"), list) else []
-    return [it for it in items if isinstance(it, dict)]
+    """Complete schema fields for an authoritative list of item stubs (identity fields are stable).
+    
+    For large clusters (>batch_size items), processes in batches to avoid token limits.
+    """
+    stubs = [it for it in item_stubs if isinstance(it, dict)]
+    
+    # For small clusters, process all at once
+    if len(stubs) <= batch_size:
+        ctx = dict(base_context or {})
+        ctx["seed_items"] = stubs
+        payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        return [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
+    
+    # For large clusters, batch to avoid token limit
+    all_items = []
+    for i in range(0, len(stubs), batch_size):
+        batch = stubs[i:i + batch_size]
+        ctx = dict(base_context or {})
+        ctx["seed_items"] = batch
+        payload = compile_items(term, ingredient_core=ingredient_core, base_context=ctx)
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        all_items.extend([_ensure_item_fields(it) for it in items if isinstance(it, dict)])
+    return all_items
 
 
 def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
@@ -520,32 +501,42 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
-    return f"""
-You are Stage 2B (Compilation — Items). Create purchasable ITEM variants for base ingredient: "{term}".
-
-Rules:
-- ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
-- physical_form must be one of: {forms}
-- variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value.
-- If variation is empty, set variation_bypass=true.
-- Return multiple items when common (at least 1).
-- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
-- Numeric/spec policy: NEVER guess numeric values (e.g., density, flash point, melting point, pH). Only include numeric specs when you are confident they are real; otherwise omit them.
-- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
-
-Ingredient core (context):
-{core_blob}
-
-Normalized base context (context):
-{base_blob}
-
-External metadata (may be empty):
-{meta}
-
-SCHEMA:
-{ITEMS_SCHEMA_SPEC}
-"""
+    return f"""Stage 2B: Create item variants for "{term}".
+EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. Empty variation→variation_bypass=true. Min 1 item.
+REQUIRED (use training knowledge - these are documented for most ingredients):
+- master_category: UX grouping for filtering. MUST assign based on variation/physical_form:
+  - Essential Oil/Steam-Distilled → "Essential Oils"
+  - Carrier oils (cold/expeller pressed oils) → "Carrier Oils"
+  - physical_form=Butter → "Butters"
+  - physical_form=Wax → "Waxes"
+  - physical_form=Hydrosol → "Hydrosols"
+  - CO2 Extract/Extract → "Extracts"
+  - Absolute → "Absolutes"
+  - Concrete → "Concretes"
+  - physical_form=Resin → "Resins & Gums"
+  - Flower/Leaf/Herb variations → "Herbs" or "Flowers"
+  - Root variations → "Roots"
+  - Seed variations → "Seeds"
+  - Bark variations → "Barks"
+- applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
+- function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
+- color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
+- odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
+SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05), liquids(0.9-1.1), powders(0.4-0.8)
+- SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
+- Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
+- flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- melting_point_celsius: VALIDATE RANGE! butters 25-45°C, waxes 45-85°C; "N/A" for liquid oils/hydrosols/extracts. REJECT SOURCE VALUES OUTSIDE -50 to 200°C (likely CAS number confusion)
+- flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
+- solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
+- pH: "N/A" for oils/waxes/butters (non-aqueous)
+"Not Found" ONLY if truly obscure. NEVER copy obviously wrong source values (e.g., melting point -24945°C is invalid).
+Core:{core_blob}
+Context:{base_blob}
+Meta:{meta}
+SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
 def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
@@ -555,57 +546,96 @@ def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], 
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
-    return f"""
-You are Stage 2B (Compilation — Items COMPLETION). You are given the authoritative list of items derived deterministically from ingestion for base ingredient: "{term}".
-
-Rules (CRITICAL):
-- DO NOT add items.
-- DO NOT remove items.
-- DO NOT reorder items.
-- DO NOT change identity fields for any item: variation, physical_form, form_bypass, variation_bypass.
-- Your job is ONLY to fill missing schema fields (applications, function_tags, safety_tags, storage, specifications, sourcing, etc.).
-- physical_form must be one of: {forms}
-- variation should usually be chosen from this curated list when applicable: {variations}
-- applications must include at least 1 value (use ["Unknown"] only if you truly cannot infer anything).
-- Missing data policy: NEVER use placeholder strings like "unknown" or "n/a". For unknown optional fields, omit the field or set it to null.
-- Numeric/spec policy: NEVER guess numeric values (density, SAP, iodine, pH, flash point, melting point). Only include numeric specs when you are confident they are real; otherwise omit them.
-- Density policy: If you provide density, use specifications.density_g_ml as a NUMBER in g/mL (no unit strings), and only when it makes sense for the physical_form (liquids/oils/syrups).
-
-Ingredient core (context):
-{core_blob}
-
-Normalized base context (includes seed items to complete; do not contradict):
-{base_blob}
-
-External metadata (may be empty):
-{meta}
-
-SCHEMA:
-{ITEMS_SCHEMA_SPEC}
-"""
+    return f"""Stage 2B COMPLETION: Fill missing fields for "{term}" items.
+EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
+IDENTITY (DO NOT CHANGE): variation, physical_form, form_bypass, variation_bypass. No add/remove/reorder items.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}.
+REQUIRED (use training knowledge - these are documented for most ingredients):
+- master_category: UX grouping for filtering. MUST assign based on variation/physical_form:
+  - Essential Oil/Steam-Distilled → "Essential Oils"
+  - Carrier oils (cold/expeller pressed oils) → "Carrier Oils"
+  - physical_form=Butter → "Butters"
+  - physical_form=Wax → "Waxes"
+  - physical_form=Hydrosol → "Hydrosols"
+  - CO2 Extract/Extract → "Extracts"
+  - Absolute → "Absolutes"
+  - Concrete → "Concretes"
+  - physical_form=Resin → "Resins & Gums"
+  - Flower/Leaf/Herb variations → "Herbs" or "Flowers"
+  - Root variations → "Roots"
+  - Seed variations → "Seeds"
+  - Bark variations → "Barks"
+- applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
+- function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
+- color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
+- odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
+SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
+- density_g_ml: MUST provide for oils(0.85-0.95), butters(0.86-0.92), waxes(0.95-0.98), EO(0.85-1.05), liquids(0.9-1.1), powders(0.4-0.8)
+- SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
+- Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
+- flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- melting_point_celsius: VALIDATE RANGE! butters 25-45°C, waxes 45-85°C; "N/A" for liquid oils/hydrosols/extracts. REJECT SOURCE VALUES OUTSIDE -50 to 200°C (likely CAS number confusion)
+- flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
+- solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
+- pH: "N/A" for oils/waxes/butters (non-aqueous)
+"Not Found" ONLY if truly obscure. NEVER copy obviously wrong source values (e.g., melting point -24945°C is invalid).
+Core:{core_blob}
+Context+Seeds:{base_blob}
+Meta:{meta}
+SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
 def _merge_fill_only(base: Any, patch: Any) -> Any:
     """Fill-only merge used to prevent overwriting ingestion-derived fields."""
-    if isinstance(patch, str) and patch.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
-        patch = ""
+
+    def _normalize_missing(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        lowered = cleaned.lower()
+        if lowered in {"n/a", "na", "not applicable", "not_applicable"}:
+            return "N/A"
+        if lowered in {"unknown", "not found", "not_found", "none", "null", "nil", "tbd"}:
+            return "Not Found"
+        return cleaned
+
+    def _is_placeholder(value: Any) -> bool:
+        if not isinstance(value, str):
+            return False
+        lowered = value.strip().lower()
+        return lowered in {
+            "unknown",
+            "not found",
+            "not_found",
+            "n/a",
+            "na",
+            "not applicable",
+            "not_applicable",
+            "none",
+            "null",
+            "nil",
+            "tbd",
+        }
+
+    if isinstance(patch, str):
+        patch = _normalize_missing(patch)
     if isinstance(base, dict) and isinstance(patch, dict):
         out = dict(base)
         for k, v in patch.items():
-            if k in out and out.get(k) not in (None, "", [], {}, "unknown"):
+            existing = out.get(k)
+            if existing not in (None, "", [], {}) and not _is_placeholder(existing):
                 continue
-            if v in (None, "", [], {}, "unknown") or (isinstance(v, str) and v.strip().lower() in {"unknown", "n/a", "na", "none", "null"}):
+            if v in (None, "", [], {}):
                 continue
-            out[k] = v
+            out[k] = _normalize_missing(v)
         return out
     if isinstance(base, list) and isinstance(patch, list):
-        # If base is empty or a placeholder Unknown, accept patch.
-        if not base or base == ["Unknown"]:
+        if not base or all(_is_placeholder(v) for v in base if isinstance(v, str)):
             return patch
         return base
-    if isinstance(base, str) and base.strip().lower() in {"unknown", "n/a", "na", "none", "null"}:
+    if isinstance(base, str) and _is_placeholder(base):
         base = ""
-    return base if base not in (None, "", "unknown") else patch
+    return base if base not in (None, "") else patch
 
 
 def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict]:
@@ -632,6 +662,79 @@ def _merge_seed_items(seed_items: list[dict], ai_items: list[dict]) -> list[dict
 
         out.append(merged)
     return out
+
+
+REQUIRED_SPEC_FIELDS_SCALAR = {"sap_naoh", "sap_koh", "iodine_value", "flash_point_celsius", "density_g_ml", "solubility"}
+REQUIRED_SPEC_FIELDS_RANGE = {"melting_point_celsius", "ph_range"}
+REQUIRED_SPEC_FIELDS_USAGE = {"usage_rate_percent"}
+
+REQUIRED_ITEM_FIELDS = {
+    "variation", "description", "physical_form", "processing_method", "color",
+    "odor_profile", "flavor_profile", "synonyms", "applications", "function_tags",
+    "safety_tags", "shelf_life_days", "sds_hazards", "storage", "specifications",
+    "sourcing", "default_unit", "form_bypass", "variation_bypass"
+}
+
+
+def _ensure_item_fields(item: dict) -> dict:
+    """Ensure all required fields are present with at least a placeholder value."""
+    for field in REQUIRED_ITEM_FIELDS:
+        if field not in item:
+            if field in ("synonyms", "sds_hazards"):
+                item[field] = []
+            elif field in ("applications", "function_tags", "safety_tags"):
+                item[field] = ["Not Found"]
+            elif field in ("specifications",):
+                item[field] = {}
+            elif field == "storage":
+                item[field] = {"temperature_celsius": {"min": "N/A", "max": "N/A"}, "humidity_percent": {"max": "N/A"}, "special_instructions": "Not Found"}
+            elif field == "sourcing":
+                item[field] = {"common_origins": [], "certifications": [], "supply_risks": [], "sustainability_notes": "Not Found"}
+            elif field in ("form_bypass", "variation_bypass"):
+                item[field] = False
+            else:
+                item[field] = "Not Found"
+    
+    # Ensure applications/functions have at least one entry
+    for list_field in ("applications", "function_tags", "safety_tags"):
+        val = item.get(list_field)
+        if not val or (isinstance(val, list) and len(val) == 0):
+            item[list_field] = ["Not Found"]
+    
+    # Ensure spec fields with proper types
+    specs = item.get("specifications", {})
+    if not isinstance(specs, dict):
+        specs = {}
+    
+    # Scalar fields
+    for spec_field in REQUIRED_SPEC_FIELDS_SCALAR:
+        if spec_field not in specs:
+            specs[spec_field] = "Not Found"
+    
+    # Range fields (min/max structure)
+    for spec_field in REQUIRED_SPEC_FIELDS_RANGE:
+        if spec_field not in specs or not isinstance(specs.get(spec_field), dict):
+            specs[spec_field] = {"min": "N/A", "max": "N/A"}
+        else:
+            rng = specs[spec_field]
+            if "min" not in rng:
+                rng["min"] = "N/A"
+            if "max" not in rng:
+                rng["max"] = "N/A"
+    
+    # Usage rate (leave_on_max/rinse_off_max structure)
+    for spec_field in REQUIRED_SPEC_FIELDS_USAGE:
+        if spec_field not in specs or not isinstance(specs.get(spec_field), dict):
+            specs[spec_field] = {"leave_on_max": "N/A", "rinse_off_max": "N/A"}
+        else:
+            usage = specs[spec_field]
+            if "leave_on_max" not in usage:
+                usage["leave_on_max"] = "N/A"
+            if "rinse_off_max" not in usage:
+                usage["rinse_off_max"] = "N/A"
+    
+    item["specifications"] = specs
+    return item
 
 
 def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
@@ -695,6 +798,8 @@ def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | Non
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
             if seed_items:
                 items = _merge_seed_items(seed_items=[it for it in seed_items if isinstance(it, dict)], ai_items=[it for it in items if isinstance(it, dict)])
+            # Apply field validation to all items
+            items = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
 
             # Stage 2C: taxonomy
             taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))

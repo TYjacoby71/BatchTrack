@@ -255,6 +255,7 @@ class IngredientRecord(Base):
 
     term = Column(String, primary_key=True)
     seed_category = Column(String, nullable=True, default=None)
+    priority = Column(Integer, nullable=True, default=None)
 
     # Primary ingredient category (single-select from curated Ingredient Categories).
     ingredient_category = Column(String, nullable=True, default=None)
@@ -319,10 +320,12 @@ class CompiledClusterRecord(Base):
     botanical_name = Column(String, nullable=True, default=None)
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
+    priority = Column(Integer, nullable=True, default=None)
 
     term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
     term_compiled_at = Column(DateTime, nullable=True, default=None)
     term_error = Column(Text, nullable=True, default=None)
+    compilation_rank = Column(Integer, nullable=True, default=None)  # Order in which this term was compiled
 
     # JSON payload (auditable) for stage1/stage2 use.
     payload_json = Column(Text, nullable=False, default="{}")
@@ -353,6 +356,10 @@ class CompiledClusterItemRecord(Base):
     # Raw snapshot + compiled fields (auditable)
     raw_item_json = Column(Text, nullable=False, default="{}")
     item_json = Column(Text, nullable=False, default="{}")
+
+    # Post-compilation refinement flags (comma-separated rule identifiers)
+    # e.g. "kernel_to_seed,fixed_to_carrier" - patterns detected for future batch processing
+    refinement_flags = Column(Text, nullable=True, default=None)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -789,43 +796,145 @@ VALID_STATUSES = {"pending", "processing", "completed", "error"}
 # ---------------------------------------------------------------------------
 # Storage normalization: missing/null + spec pruning
 # ---------------------------------------------------------------------------
-_PLACEHOLDER_STRINGS = {"unknown", "n/a", "na", "none", "null", "nil", "tbd"}
+NOT_FOUND = "Not Found"
+NOT_APPLICABLE = "N/A"
+_PLACEHOLDER_NOT_FOUND = {"unknown", "not found", "not_found", "tbd", "none", "null", "nil"}
+_PLACEHOLDER_NOT_APPLICABLE = {"n/a", "na", "not applicable", "not_applicable"}
 _RE_FLOAT = re.compile(r"(-?\d+(?:\.\d+)?)")
 
 
-def _normalize_placeholder(value: Any) -> Any:
-    """Normalize placeholder/missing values to None.
-
-    Contract:
-    - Do not persist placeholder strings like "unknown"/"n/a" into JSON blobs.
-    - Prefer omitting keys or storing null (None) for unknown optional fields.
-    """
+def _normalize_text_value(value: Any, *, default: str = NOT_FOUND) -> str:
+    """Normalize text fields to a non-empty sentinel when missing."""
     if value is None:
-        return None
+        return default
     if isinstance(value, str):
         cleaned = value.strip()
         if not cleaned:
-            return None
-        if cleaned.lower() in _PLACEHOLDER_STRINGS:
-            return None
+            return default
+        lowered = cleaned.lower()
+        if lowered in _PLACEHOLDER_NOT_APPLICABLE:
+            return NOT_APPLICABLE
+        if lowered in _PLACEHOLDER_NOT_FOUND:
+            return NOT_FOUND
         return cleaned
+    return str(value).strip() or default
+
+
+def _normalize_list_values(value: Any, *, default: str = NOT_FOUND) -> list[str]:
+    """Normalize list fields and ensure at least one value."""
     if isinstance(value, list):
-        out = []
-        for v in value:
-            nv = _normalize_placeholder(v)
-            if nv is None:
-                continue
-            out.append(nv)
-        return out or None
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for k, v in value.items():
-            nv = _normalize_placeholder(v)
-            if nv is None:
-                continue
-            out[str(k)] = nv
-        return out or None
-    return value
+        values = value
+    elif isinstance(value, str):
+        values = [value]
+    else:
+        values = []
+    out: list[str] = []
+    for item in values:
+        if not isinstance(item, str):
+            continue
+        out.append(_normalize_text_value(item, default=default))
+    return out if out else [default]
+
+
+def _normalize_numeric_or_placeholder(value: Any, *, default: str) -> float | str:
+    """Return numeric value when parseable; otherwise a sentinel string."""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return default
+        lowered = cleaned.lower()
+        if lowered in _PLACEHOLDER_NOT_APPLICABLE:
+            return NOT_APPLICABLE
+        if lowered in _PLACEHOLDER_NOT_FOUND:
+            return NOT_FOUND
+        match = _RE_FLOAT.search(cleaned)
+        if match:
+            try:
+                return float(match.group(1))
+            except Exception:
+                return default
+    return default
+
+
+def _normalize_range(value: Any, *, default: str) -> dict[str, float | str]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "min": _normalize_numeric_or_placeholder(base.get("min"), default=default),
+        "max": _normalize_numeric_or_placeholder(base.get("max"), default=default),
+    }
+
+
+def _normalize_usage_range(value: Any, *, default: str) -> dict[str, float | str]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "leave_on_max": _normalize_numeric_or_placeholder(base.get("leave_on_max"), default=default),
+        "rinse_off_max": _normalize_numeric_or_placeholder(base.get("rinse_off_max"), default=default),
+    }
+
+
+def _normalize_storage(value: Any) -> dict[str, Any]:
+    base = value if isinstance(value, dict) else {}
+    temp = base.get("temperature_celsius") if isinstance(base.get("temperature_celsius"), dict) else {}
+    humidity = base.get("humidity_percent") if isinstance(base.get("humidity_percent"), dict) else {}
+    return {
+        "temperature_celsius": {
+            "min": _normalize_numeric_or_placeholder(temp.get("min"), default=NOT_FOUND),
+            "max": _normalize_numeric_or_placeholder(temp.get("max"), default=NOT_FOUND),
+        },
+        "humidity_percent": {
+            "max": _normalize_numeric_or_placeholder(humidity.get("max"), default=NOT_FOUND),
+        },
+        "special_instructions": _normalize_text_value(base.get("special_instructions"), default=NOT_FOUND),
+    }
+
+
+def _normalize_sourcing(value: Any) -> dict[str, Any]:
+    base = value if isinstance(value, dict) else {}
+    return {
+        "common_origins": _normalize_list_values(base.get("common_origins"), default=NOT_FOUND),
+        "certifications": _normalize_list_values(base.get("certifications"), default=NOT_FOUND),
+        "supply_risks": _normalize_list_values(base.get("supply_risks"), default=NOT_FOUND),
+        "sustainability_notes": _normalize_text_value(base.get("sustainability_notes"), default=NOT_FOUND),
+    }
+
+
+def _is_placeholder_value(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    lowered = value.strip().lower()
+    return lowered in _PLACEHOLDER_NOT_FOUND or lowered in _PLACEHOLDER_NOT_APPLICABLE or lowered in {"not found", "n/a"}
+
+
+def _coerce_numeric_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if _is_placeholder_value(value):
+            return None
+        match = _RE_FLOAT.search(value)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _apply_required_item_fields(item: dict[str, Any], physical_form: str) -> dict[str, Any]:
+    item["synonyms"] = _normalize_list_values(item.get("synonyms"), default=NOT_FOUND)
+    item["applications"] = _normalize_list_values(item.get("applications"), default=NOT_FOUND)
+    item["function_tags"] = _normalize_list_values(item.get("function_tags"), default=NOT_FOUND)
+    item["safety_tags"] = _normalize_list_values(item.get("safety_tags"), default=NOT_FOUND)
+    item["sds_hazards"] = _normalize_list_values(item.get("sds_hazards"), default=NOT_FOUND)
+    item["shelf_life_days"] = _normalize_numeric_or_placeholder(item.get("shelf_life_days"), default=NOT_FOUND)
+    item["storage"] = _normalize_storage(item.get("storage"))
+    item["sourcing"] = _normalize_sourcing(item.get("sourcing"))
+    specs_raw = item.get("specifications") if isinstance(item.get("specifications"), dict) else {}
+    item["specifications"] = _prune_specifications_for_form(specs_raw, physical_form)
+    return item
 
 
 _DENSITY_FORMS = {
@@ -872,65 +981,54 @@ def _coerce_density_g_ml(value: Any) -> float | None:
 
 
 def _prune_specifications_for_form(specs: dict[str, Any], physical_form: str) -> dict[str, Any]:
-    """Drop irrelevant or invalid spec fields based on physical_form.
-
-    Goal: avoid persisting nonsense (e.g., SAP values on powders) and enforce a tight density contract.
-    """
-    if not specs:
-        return {}
+    """Normalize spec fields with explicit placeholders for missing/not applicable."""
+    base = specs if isinstance(specs, dict) else {}
     form = (physical_form or "").strip()
+
+    def applicability(in_set: set[str]) -> str | None:
+        if not form:
+            return None
+        return "applicable" if form in in_set else "not_applicable"
+
     out: dict[str, Any] = {}
 
-    # Always allow usage rates when present (policy data, not physicochemical).
-    if isinstance(specs.get("usage_rate_percent"), dict):
-        usage = _normalize_placeholder(specs.get("usage_rate_percent"))
-        if isinstance(usage, dict) and usage:
-            out["usage_rate_percent"] = usage
+    # Usage rate (policy data, not physicochemical).
+    out["usage_rate_percent"] = _normalize_usage_range(base.get("usage_rate_percent"), default=NOT_FOUND)
 
     # pH only makes sense for aqueous/liquid systems in this taxonomy.
-    if form in _AQUEOUS_FORMS and isinstance(specs.get("ph_range"), dict):
-        ph = _normalize_placeholder(specs.get("ph_range"))
-        if isinstance(ph, dict) and ph:
-            out["ph_range"] = ph
+    ph_app = applicability(_AQUEOUS_FORMS)
+    out["ph_range"] = _normalize_range(
+        base.get("ph_range"),
+        default=NOT_FOUND if ph_app is None or ph_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Melting point: solids/fats/waxes/resins.
-    if form in _SOLID_FORMS and isinstance(specs.get("melting_point_celsius"), dict):
-        mp = _normalize_placeholder(specs.get("melting_point_celsius"))
-        if isinstance(mp, dict) and mp:
-            out["melting_point_celsius"] = mp
+    mp_app = applicability(_SOLID_FORMS)
+    out["melting_point_celsius"] = _normalize_range(
+        base.get("melting_point_celsius"),
+        default=NOT_FOUND if mp_app is None or mp_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Flash point: typically oils/solvents; keep it limited to oils/fats for now.
-    if form in _OIL_FAT_FORMS:
-        fp = _normalize_placeholder(specs.get("flash_point_celsius"))
-        if isinstance(fp, (int, float)):
-            out["flash_point_celsius"] = float(fp)
-        elif isinstance(fp, str):
-            m = _RE_FLOAT.search(fp)
-            if m:
-                try:
-                    out["flash_point_celsius"] = float(m.group(1))
-                except Exception:
-                    pass
+    fp_app = applicability(_OIL_FAT_FORMS)
+    out["flash_point_celsius"] = _normalize_numeric_or_placeholder(
+        base.get("flash_point_celsius"),
+        default=NOT_FOUND if fp_app is None or fp_app == "applicable" else NOT_APPLICABLE,
+    )
 
     # Soapmaking SAP/iodine only for oils/fats/waxes.
-    if form in _OIL_FAT_FORMS:
-        for k in ("sap_naoh", "sap_koh", "iodine_value"):
-            v = _normalize_placeholder(specs.get(k))
-            if isinstance(v, (int, float)):
-                out[k] = float(v)
-            elif isinstance(v, str):
-                m = _RE_FLOAT.search(v)
-                if m:
-                    try:
-                        out[k] = float(m.group(1))
-                    except Exception:
-                        pass
+    sap_app = applicability(_OIL_FAT_FORMS)
+    sap_default = NOT_FOUND if sap_app is None or sap_app == "applicable" else NOT_APPLICABLE
+    out["sap_naoh"] = _normalize_numeric_or_placeholder(base.get("sap_naoh"), default=sap_default)
+    out["sap_koh"] = _normalize_numeric_or_placeholder(base.get("sap_koh"), default=sap_default)
+    out["iodine_value"] = _normalize_numeric_or_placeholder(base.get("iodine_value"), default=sap_default)
 
-    # Density is *tightened*: numeric density_g_ml only, only for liquid-like forms.
-    if form in _DENSITY_FORMS:
-        dens = _coerce_density_g_ml(specs.get("density_g_ml"))
-        if dens is not None:
-            out["density_g_ml"] = dens
+    # Density (liquid-like forms only).
+    dens_app = applicability(_DENSITY_FORMS)
+    out["density_g_ml"] = _normalize_numeric_or_placeholder(
+        base.get("density_g_ml"),
+        default=NOT_FOUND if dens_app is None or dens_app == "applicable" else NOT_APPLICABLE,
+    )
 
     return out
 
@@ -952,6 +1050,7 @@ def ensure_tables_exist() -> None:
     _ensure_source_catalog_indexes()
     _ensure_pubchem_indexes()
     _ensure_pubchem_columns()
+    _ensure_compiled_cluster_columns()
     _ensure_compiled_cluster_indexes()
 
 
@@ -961,8 +1060,22 @@ def _ensure_compiled_cluster_indexes() -> None:
         with engine.connect() as conn:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term_status ON compiled_clusters(term_status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term ON compiled_clusters(compiled_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_priority ON compiled_clusters(priority)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_cluster_items_status ON compiled_cluster_items(item_status)"))
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_compiled_cluster_items_cluster_mif ON compiled_cluster_items(cluster_id, merged_item_form_id)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_compiled_cluster_columns() -> None:
+    """Add priority/metadata columns to compiled_clusters if missing."""
+    try:
+        with engine.connect() as conn:
+            columns = conn.execute(text("PRAGMA table_info(compiled_clusters)")).fetchall()
+            column_names = {row[1] for row in columns}
+            if "priority" not in column_names:
+                conn.execute(text("ALTER TABLE compiled_clusters ADD COLUMN priority INTEGER"))
+                LOGGER.info("Added priority column to compiled_clusters")
     except Exception:  # pragma: no cover
         return
 
@@ -1182,6 +1295,7 @@ def _ensure_ingredient_columns() -> None:
         columns = conn.execute(text("PRAGMA table_info(ingredients)")).fetchall()
         column_names = {row[1] for row in columns}
         additions = [
+            ("priority", "INTEGER"),
             ("ingredient_category", "TEXT"),
             ("origin", "TEXT"),
             ("refinement_level", "TEXT"),
@@ -1340,6 +1454,60 @@ def derive_item_display_name(
         physical_form=physical_form,
         form_bypass=form_bypass,
     )
+
+
+_FORM_BYPASS_VARIATION_TOKENS = {
+    "essential oil",
+    "co2 extract",
+    "absolute",
+    "hydrosol",
+    "tincture",
+    "glycerite",
+    "infusion",
+    "decoction",
+    "extract",
+    "oleoresin",
+    "distillate",
+    "seed oil",
+}
+_GENERIC_FORMS = {"oil", "liquid", "water"}
+
+
+def derive_item_bypass_flags(
+    *,
+    base_term: str,
+    variation: str,
+    physical_form: str,
+    form_bypass: bool | None = None,
+    variation_bypass: bool | None = None,
+) -> tuple[bool, bool]:
+    """Derive bypass flags to keep item names deterministic."""
+    base_clean = (base_term or "").strip()
+    var_clean = (variation or "").strip()
+    form_clean = (physical_form or "").strip()
+
+    vb = bool(variation_bypass) if variation_bypass is not None else False
+    fb = bool(form_bypass) if form_bypass is not None else False
+
+    if not var_clean:
+        vb = True
+    if base_clean and var_clean and base_clean.casefold() == var_clean.casefold():
+        vb = True
+    if not form_clean:
+        fb = True
+
+    if var_clean and form_clean:
+        v_cf = var_clean.casefold()
+        f_cf = form_clean.casefold()
+        if f_cf in v_cf or v_cf in f_cf:
+            fb = True
+        if f_cf in _GENERIC_FORMS:
+            for token in _FORM_BYPASS_VARIATION_TOKENS:
+                if token in v_cf:
+                    fb = True
+                    break
+
+    return fb, vb
 
 
 @contextmanager
@@ -1528,26 +1696,58 @@ def build_term_priority_map() -> dict[str, int]:
         t = (str(term) if term is not None else "").strip()
         if not t:
             continue
-        try:
-            item_forms_i = int(item_forms or 0)
-        except Exception:
-            item_forms_i = 0
-        try:
-            source_rows_i = int(source_rows or 0)
-        except Exception:
-            source_rows_i = 0
-        seed_boost = 2 if int(has_seed or 0) > 0 else 0
-        # Smooth/log-scale: many terms are long-tailed.
-        # Base score ~1..10.
-        raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
-        # Add log growth.
-        if item_forms_i > 0:
-            raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
-        if source_rows_i > 0:
-            raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
-        raw += seed_boost
-        score = max(1, min(10, int(round(raw))))
-        out[t] = score
+        out[t] = _priority_from_counts(item_forms, source_rows, has_seed)
+    return out
+
+
+def _priority_from_counts(item_forms: Any, source_rows: Any, has_seed: Any) -> int:
+    """Convert counts into a bounded 1..10 priority score."""
+    try:
+        item_forms_i = int(item_forms or 0)
+    except Exception:
+        item_forms_i = 0
+    try:
+        source_rows_i = int(source_rows or 0)
+    except Exception:
+        source_rows_i = 0
+    seed_boost = 2 if int(has_seed or 0) > 0 else 0
+    # Smooth/log-scale: many terms are long-tailed.
+    # Base score ~1..10.
+    raw = (2.2 * (1 + (item_forms_i > 0)) + 1.6 * (1 + (source_rows_i > 0)))
+    # Add log growth.
+    if item_forms_i > 0:
+        raw += min(4.0, 1.5 * (math.log10(item_forms_i + 1)))
+    if source_rows_i > 0:
+        raw += min(4.0, 1.5 * (math.log10(source_rows_i + 1)))
+    raw += seed_boost
+    return max(1, min(10, int(round(raw))))
+
+
+def build_cluster_priority_map() -> dict[str, int]:
+    """Compute 1-10 priority per definition cluster (source_items.definition_cluster_id)."""
+    ensure_tables_exist()
+    out: dict[str, int] = {}
+    with get_session() as session:
+        rows = session.execute(
+            text(
+                """
+                SELECT
+                  si.definition_cluster_id AS cluster_id,
+                  COUNT(DISTINCT mif.id) AS item_forms,
+                  COUNT(*) AS source_rows,
+                  COALESCE(MAX(mif.has_seed), 0) AS has_seed
+                FROM source_items si
+                LEFT JOIN merged_item_forms mif ON si.merged_item_id = mif.id
+                WHERE si.definition_cluster_id IS NOT NULL
+                GROUP BY si.definition_cluster_id
+                """
+            )
+        ).fetchall()
+    for cluster_id, item_forms, source_rows, has_seed in rows:
+        cid = (str(cluster_id) if cluster_id is not None else "").strip()
+        if not cid:
+            continue
+        out[cid] = _priority_from_counts(item_forms, source_rows, has_seed)
     return out
 
 
@@ -1787,7 +1987,13 @@ def update_task_status(term: str, status: str) -> None:
         task.last_updated = datetime.utcnow()
 
 
-def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str | None = None) -> None:
+def upsert_compiled_ingredient(
+    term: str,
+    payload: dict,
+    *,
+    seed_category: str | None = None,
+    priority: int | None = None,
+) -> None:
     """Persist the compiled ingredient + items into the DB (replaces JSON files)."""
     ensure_tables_exist()
     cleaned = (term or "").strip()
@@ -1843,6 +2049,11 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             session.add(record)
 
         record.seed_category = cleaned_category
+        if priority is not None:
+            try:
+                record.priority = int(priority)
+            except (TypeError, ValueError):
+                record.priority = record.priority
         record.category = category
         record.botanical_name = botanical_name
         record.inci_name = inci_name
@@ -1907,7 +2118,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     "variation_bypass": True,
                     "form_bypass": True,
                     # keep minimal SOP list fields so the portal doesn't show empty lists
-                    "applications": ["Unknown"],
+                    "applications": [NOT_FOUND],
                 }
             ]
             ingredient["items"] = items
@@ -1936,6 +2147,13 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     session.add(VariationTerm(name=variation, approved=(variation in VARIATIONS_CURATED)))
             form_bypass = _coerce_bool(raw_item.get("form_bypass"), default=False)
             variation_bypass = _coerce_bool(raw_item.get("variation_bypass"), default=False)
+            form_bypass, variation_bypass = derive_item_bypass_flags(
+                base_term=cleaned,
+                variation=variation,
+                physical_form=physical_form,
+                form_bypass=form_bypass,
+                variation_bypass=variation_bypass,
+            )
 
             derived_item_name = _derive_item_display_name(
                 base_term=cleaned,
@@ -1951,6 +2169,8 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
+            cleaned_item["form_bypass"] = form_bypass
+            cleaned_item["variation_bypass"] = variation_bypass
 
             # Provenance marker: allow upstream pipeline (enumeration) to tag new items.
             source_stage = (cleaned_item.get("item_source") or cleaned_item.get("source_stage") or "").strip().lower()
@@ -1959,38 +2179,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["source_stage"] = source_stage
             cleaned_item["item_source"] = source_stage  # backward/forward compatible key
 
-            # Normalize placeholder/missing values early to avoid persisting "unknown"/"n/a" strings.
-            for k in ("synonyms", "applications", "function_tags", "safety_tags", "sds_hazards"):
-                normalized = _normalize_placeholder(cleaned_item.get(k))
-                if normalized is None:
-                    cleaned_item.pop(k, None)
-                else:
-                    cleaned_item[k] = normalized
-
-            storage_norm = _normalize_placeholder(cleaned_item.get("storage"))
-            if isinstance(storage_norm, dict):
-                cleaned_item["storage"] = storage_norm
-            else:
-                cleaned_item.pop("storage", None)
-
-            sourcing_norm = _normalize_placeholder(cleaned_item.get("sourcing"))
-            if isinstance(sourcing_norm, dict):
-                cleaned_item["sourcing"] = sourcing_norm
-            else:
-                cleaned_item.pop("sourcing", None)
-
-            specs_raw = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
-            specs_norm = _normalize_placeholder(specs_raw)
-            specs_norm = specs_norm if isinstance(specs_norm, dict) else {}
-            cleaned_item["specifications"] = _prune_specifications_for_form(specs_norm, physical_form)
-            if not cleaned_item["specifications"]:
-                cleaned_item.pop("specifications", None)
-
-            # Normalize scalar placeholders.
-            for k in ("shelf_life_days",):
-                v = cleaned_item.get(k)
-                if isinstance(v, str) and v.strip().lower() in _PLACEHOLDER_STRINGS:
-                    cleaned_item.pop(k, None)
+            cleaned_item = _apply_required_item_fields(cleaned_item, physical_form)
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
             # Promote common scalar/range fields.
@@ -2045,16 +2234,16 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 storage_temp_c_min=st_min,
                 storage_temp_c_max=st_max,
                 storage_humidity_max=hm,
-                sap_naoh=str(specs.get("sap_naoh")) if specs.get("sap_naoh") not in (None, "") else None,
-                sap_koh=str(specs.get("sap_koh")) if specs.get("sap_koh") not in (None, "") else None,
-                iodine_value=str(specs.get("iodine_value")) if specs.get("iodine_value") not in (None, "") else None,
-                flash_point_c=str(specs.get("flash_point_celsius")) if specs.get("flash_point_celsius") not in (None, "") else None,
-                melting_point_c_min=str(mp.get("min")) if mp.get("min") not in (None, "") else None,
-                melting_point_c_max=str(mp.get("max")) if mp.get("max") not in (None, "") else None,
-                ph_min=str(ph.get("min")) if ph.get("min") not in (None, "") else None,
-                ph_max=str(ph.get("max")) if ph.get("max") not in (None, "") else None,
-                usage_leave_on_max=str(usage.get("leave_on_max")) if usage.get("leave_on_max") not in (None, "") else None,
-                usage_rinse_off_max=str(usage.get("rinse_off_max")) if usage.get("rinse_off_max") not in (None, "") else None,
+                sap_naoh=_coerce_numeric_text(specs.get("sap_naoh")),
+                sap_koh=_coerce_numeric_text(specs.get("sap_koh")),
+                iodine_value=_coerce_numeric_text(specs.get("iodine_value")),
+                flash_point_c=_coerce_numeric_text(specs.get("flash_point_celsius")),
+                melting_point_c_min=_coerce_numeric_text(mp.get("min")),
+                melting_point_c_max=_coerce_numeric_text(mp.get("max")),
+                ph_min=_coerce_numeric_text(ph.get("min")),
+                ph_max=_coerce_numeric_text(ph.get("max")),
+                usage_leave_on_max=_coerce_numeric_text(usage.get("leave_on_max")),
+                usage_rinse_off_max=_coerce_numeric_text(usage.get("rinse_off_max")),
             )
             session.add(item_row)
             session.flush()  # obtain item_row.id for child values
@@ -2070,17 +2259,12 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     return
                 for v in vals:
                     vv = v.strip()
-                    if not vv:
+                    if not vv or _is_placeholder_value(vv):
                         continue
                     session.add(IngredientItemValue(item_id=item_row.id, field=field, value=vv))
 
             _add_values("synonyms", cleaned_item.get("synonyms"))
-            # SOP: applications must have at least 1. If missing, store Unknown.
-            applications = cleaned_item.get("applications")
-            if not applications:
-                applications = ["Unknown"]
-                cleaned_item["applications"] = applications
-            _add_values("applications", applications)
+            _add_values("applications", cleaned_item.get("applications"))
             _add_values("function_tags", cleaned_item.get("function_tags"))
             _add_values("safety_tags", cleaned_item.get("safety_tags"))
             _add_values("sds_hazards", cleaned_item.get("sds_hazards"))
@@ -2347,3 +2531,206 @@ def delete_source_items_by_source(source: str) -> int:
         deleted = session.query(SourceItem).filter(SourceItem.source == source).delete()
         session.commit()
         return deleted
+
+
+# =============================================================================
+# POST-COMPILATION REFINEMENT FLAGS
+# =============================================================================
+# These rules identify patterns in compiled data that can be batch-processed later.
+# No data is changed here - we only flag items for future refinement scripts.
+
+REFINEMENT_RULES = {
+    # Oil terminology normalization (all Plant-Derived oils)
+    "kernel_to_seed": {
+        "description": "Kernel Oil is botanically equivalent to Seed Oil (kernel is inner part of seed)",
+        "match_variation": ["Kernel Oil"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Normalize 'Kernel Oil' → 'Seed Oil' in variation field",
+    },
+    "fixed_to_carrier": {
+        "description": "Fixed Oil is the INCI/technical term for Carrier Oil (non-volatile)",
+        "match_variation": ["Fixed Oil"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Set master_category to 'Carrier Oils', consider normalizing variation",
+    },
+    # Extract consolidation patterns
+    "generic_extract": {
+        "description": "Generic 'Extract' may need plant-part specification",
+        "match_variation": ["Extract"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Review if plant part can be inferred from source data or term",
+    },
+    # Duplicate scientific/common name detection
+    "scientific_common_duplicate": {
+        "description": "Term appears to have both scientific and common name clusters",
+        "match_terms_pattern": None,  # Handled by special logic
+        "future_action": "Review for potential cluster merge or synonym linking",
+    },
+    # Bad melting point data
+    "bad_melting_point": {
+        "description": "Melting point value outside valid range (-50 to 200°C)",
+        "check_specs": True,  # Special handling - check specifications field
+        "future_action": "Fix melting point data - likely AI confusion with CAS numbers or other IDs",
+    },
+}
+
+
+def _extract_melting_point_value(mp_data) -> float | None:
+    """Extract a numeric melting point value from various formats."""
+    if mp_data is None:
+        return None
+    if isinstance(mp_data, (int, float)):
+        return float(mp_data)
+    if isinstance(mp_data, str):
+        if mp_data in ("N/A", "Not Found", ""):
+            return None
+        # Handle malformed strings like "-024945"
+        try:
+            return float(mp_data)
+        except ValueError:
+            return None
+    if isinstance(mp_data, dict):
+        # Try min or max
+        for key in ("min", "max"):
+            val = mp_data.get(key)
+            if val is not None and val not in ("N/A", "Not Found"):
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    pass
+    return None
+
+
+def detect_refinement_flags(
+    variation: str | None,
+    origin: str | None,
+    item_json: dict | None = None,
+) -> list[str]:
+    """Detect which refinement rules apply to an item based on its fields.
+    
+    Returns list of rule keys that match.
+    """
+    flags: list[str] = []
+    var = (variation or "").strip()
+    orig = (origin or "").strip()
+    
+    for rule_key, rule in REFINEMENT_RULES.items():
+        # Skip rules that require special logic
+        if rule.get("match_terms_pattern") is not None:
+            continue
+        
+        # Skip spec checks - handled separately
+        if rule.get("check_specs"):
+            continue
+            
+        match_vars = rule.get("match_variation", [])
+        applies_origins = rule.get("applies_to_origin", [])
+        
+        # Check variation match
+        if match_vars and var in match_vars:
+            # Check origin constraint if specified
+            if not applies_origins or orig in applies_origins:
+                flags.append(rule_key)
+    
+    # Check specifications-based rules
+    if item_json:
+        specs = item_json.get("specifications", {})
+        if specs:
+            # Check melting point range (valid range: -50 to 200°C)
+            mp_value = _extract_melting_point_value(specs.get("melting_point_celsius"))
+            if mp_value is not None:
+                if mp_value < -50 or mp_value > 200:
+                    flags.append("bad_melting_point")
+    
+    return flags
+
+
+def apply_refinement_flags_to_all_items() -> dict[str, int]:
+    """Scan all compiled items and set refinement_flags based on detected patterns.
+    
+    Returns dict of {flag_name: count} for all flags applied.
+    """
+    ensure_tables_exist()
+    flag_counts: dict[str, int] = {}
+    
+    with get_session() as session:
+        # Join items with their clusters to get origin
+        items_with_clusters = session.query(
+            CompiledClusterItemRecord, CompiledClusterRecord.origin
+        ).join(
+            CompiledClusterRecord,
+            CompiledClusterItemRecord.cluster_id == CompiledClusterRecord.cluster_id
+        ).filter(
+            CompiledClusterItemRecord.item_status == "done"
+        ).all()
+        
+        for item, cluster_origin in items_with_clusters:
+            # Parse item_json for additional context
+            try:
+                item_data = json.loads(item.item_json) if item.item_json else {}
+            except:
+                item_data = {}
+            
+            # Use cluster origin (authoritative)
+            origin = cluster_origin or ""
+            
+            # Detect flags
+            flags = detect_refinement_flags(
+                variation=item.derived_variation,
+                origin=origin,
+                item_json=item_data,
+            )
+            
+            if flags:
+                # Set flags (comma-separated)
+                item.refinement_flags = ",".join(flags)
+                item.updated_at = datetime.utcnow()
+                
+                for f in flags:
+                    flag_counts[f] = flag_counts.get(f, 0) + 1
+        
+        session.commit()
+    
+    return flag_counts
+
+
+def get_refinement_flag_summary() -> dict[str, int]:
+    """Get counts of items by refinement flag."""
+    ensure_tables_exist()
+    counts: dict[str, int] = {}
+    
+    with get_session() as session:
+        items = session.query(CompiledClusterItemRecord.refinement_flags).filter(
+            CompiledClusterItemRecord.refinement_flags.isnot(None)
+        ).all()
+        
+        for (flags_str,) in items:
+            if flags_str:
+                for flag in flags_str.split(","):
+                    flag = flag.strip()
+                    if flag:
+                        counts[flag] = counts.get(flag, 0) + 1
+    
+    return counts
+
+
+def get_items_by_refinement_flag(flag: str) -> list[dict]:
+    """Get all items with a specific refinement flag."""
+    ensure_tables_exist()
+    results: list[dict] = []
+    
+    with get_session() as session:
+        items = session.query(CompiledClusterItemRecord).filter(
+            CompiledClusterItemRecord.refinement_flags.contains(flag)
+        ).all()
+        
+        for item in items:
+            results.append({
+                "id": item.id,
+                "cluster_id": item.cluster_id,
+                "derived_term": item.derived_term,
+                "derived_variation": item.derived_variation,
+                "refinement_flags": item.refinement_flags,
+            })
+    
+    return results

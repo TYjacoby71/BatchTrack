@@ -3,7 +3,7 @@
 This is the ONLY stage allowed to propose NEW items/variations for an ingredient after Stage 2 compilation.
 
 Workflow (Stage 3):
-- select compiled ingredients (task_queue.status='completed')
+- select compiled ingredients (ingredients.compiled_at is set)
 - skip those with ingredients.enumeration_status == 'done'
 - ask AI to propose additional item identities (variation + physical_form + bypass flags)
 - ask AI to complete schemas for those new items
@@ -21,6 +21,8 @@ import sys
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import func
 
 from . import ai_worker, database_manager
 
@@ -58,13 +60,21 @@ def _select_next_terms(limit: int | None) -> list[str]:
     terms: list[str] = []
     with database_manager.get_session() as session:
         q = (
-            session.query(database_manager.TaskQueue.term)
-            .filter(database_manager.TaskQueue.status == "completed")
-            .order_by(database_manager.TaskQueue.priority.desc(), database_manager.TaskQueue.term.asc())
+            session.query(database_manager.IngredientRecord.term, database_manager.IngredientRecord.priority)
+            .filter(database_manager.IngredientRecord.compiled_at.isnot(None))
+            .filter(
+                (database_manager.IngredientRecord.enumeration_status.is_(None))
+                | (database_manager.IngredientRecord.enumeration_status != "done")
+            )
+            .order_by(
+                func.coalesce(database_manager.IngredientRecord.priority, 0).desc(),
+                database_manager.IngredientRecord.compiled_at.desc(),
+                database_manager.IngredientRecord.term.asc(),
+            )
         )
         if limit:
             q = q.limit(int(limit))
-        for (t,) in q.all():
+        for (t, _) in q.all():
             terms.append(str(t))
     return terms
 
@@ -193,56 +203,23 @@ SCHEMA:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run enumeration over compiled ingredients")
-    p.add_argument(
-        "--mode",
-        choices=["items", "terms", "full"],
-        default=os.getenv("ENUMERATION_MODE", "items"),
-        help="items=enumerate new items for compiled terms; terms=create/enqueue new terms; full=do both (terms first).",
-    )
     p.add_argument("--limit", type=int, default=int(os.getenv("ENUMERATION_LIMIT", "50")))
-    p.add_argument(
-        "--term-count",
-        type=int,
-        default=int(os.getenv("ENUMERATION_TERM_COUNT", "0")),
-        help="When mode includes 'terms', enqueue up to this many new terms (0 disables).",
-    )
-    p.add_argument(
-        "--seed-category",
-        action="append",
-        default=[],
-        help="When mode includes 'terms', restrict term creation to this primary seed_category (repeatable).",
-    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=os.getenv("COMPILER_LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     args = parse_args(argv or sys.argv[1:])
-    mode = str(getattr(args, "mode", "items") or "items").strip().lower()
-
-    # Term creation/enqueue (this is the ONLY place we generate new terms post-compilation).
-    if mode in {"terms", "full"} and int(getattr(args, "term_count", 0) or 0) > 0:
-        try:
-            from .term_collector import TermCollector
-
-            tc = TermCollector()
-            inserted = tc.seed_next_terms_to_db(count=int(args.term_count), seed_categories=list(args.seed_category or []))
-            LOGGER.info("Stage 3 term enumeration: enqueued_terms=%s", inserted)
-        except Exception as exc:  # pylint: disable=broad-except
-            LOGGER.exception("Stage 3 term enumeration failed: %s", exc)
-
-    # Item enumeration (adds items to already-compiled terms).
-    if mode in {"items", "full"}:
-        terms = _select_next_terms(int(args.limit) if int(args.limit or 0) > 0 else None)
-        if not terms:
-            LOGGER.info("No completed terms to enumerate.")
-            return
-        ok = 0
-        for term in terms:
-            if enumerate_term(term):
-                ok += 1
-            time.sleep(SLEEP_SECONDS)
-        LOGGER.info("Enumeration finished: ok=%s total=%s", ok, len(terms))
+    terms = _select_next_terms(int(args.limit) if int(args.limit or 0) > 0 else None)
+    if not terms:
+        LOGGER.info("No completed terms to enumerate.")
+        return
+    ok = 0
+    for term in terms:
+        if enumerate_term(term):
+            ok += 1
+        time.sleep(SLEEP_SECONDS)
+    LOGGER.info("Enumeration finished: ok=%s total=%s", ok, len(terms))
 
 
 if __name__ == "__main__":

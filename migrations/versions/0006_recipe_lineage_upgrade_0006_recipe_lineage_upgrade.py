@@ -164,21 +164,64 @@ def _restore_lineage_from_backup(bind):
 
     lineage_payload = snapshot.get('lineage') or []
     if lineage_payload and lineage_table is not None:
-        bind.execute(
-            lineage_table.insert(),
-            [
+        # Sanitize lineage rows to avoid FK violations on restore.
+        recipe_ids = set(
+            bind.execute(sa.select(recipe_table.c.id)).scalars().all()
+        )
+
+        organization_ids: set[int] = set()
+        if table_exists('organization'):
+            org_metadata = sa.MetaData()
+            org_metadata.reflect(bind=bind, only=['organization'])
+            org_table = org_metadata.tables['organization']
+            organization_ids = set(
+                bind.execute(sa.select(org_table.c.id)).scalars().all()
+            )
+
+        user_ids: set[int] = set()
+        if table_exists('user'):
+            user_metadata = sa.MetaData()
+            user_metadata.reflect(bind=bind, only=['user'])
+            user_table = user_metadata.tables['user']
+            user_ids = set(
+                bind.execute(sa.select(user_table.c.id)).scalars().all()
+            )
+
+        sanitized_payload = []
+        for item in lineage_payload:
+            recipe_id = item.get('recipe_id')
+            if recipe_id is None or recipe_id not in recipe_ids:
+                continue
+
+            source_recipe_id = item.get('source_recipe_id')
+            if source_recipe_id is not None and source_recipe_id not in recipe_ids:
+                source_recipe_id = None
+
+            organization_id = item.get('organization_id')
+            if organization_id is not None and organization_id not in organization_ids:
+                organization_id = None
+
+            user_id = item.get('user_id')
+            if user_id is not None and user_id not in user_ids:
+                user_id = None
+
+            sanitized_payload.append(
                 {
-                    'recipe_id': item.get('recipe_id'),
-                    'source_recipe_id': item.get('source_recipe_id'),
+                    'recipe_id': recipe_id,
+                    'source_recipe_id': source_recipe_id,
                     'event_type': item.get('event_type'),
-                    'user_id': item.get('user_id'),
+                    'user_id': user_id,
                     'notes': item.get('notes'),
-                    'organization_id': item.get('organization_id'),
+                    'organization_id': organization_id,
                     'created_at': item.get('created_at'),
                 }
-                for item in lineage_payload
-            ]
-        )
+            )
+
+        if sanitized_payload:
+            bind.execute(
+                lineage_table.insert(),
+                sanitized_payload
+            )
 
     # Remove the consumed backup row and table to keep schema tidy when on 0006+
     bind.execute(backup_table.delete().where(backup_table.c.id == latest.id))

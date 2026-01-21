@@ -1,7 +1,8 @@
 import json
 from typing import Optional
+from datetime import datetime, timezone, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash, session
 from flask_login import current_user
 from app.models import GlobalItem, InventoryItem
 from app.services.statistics import AnalyticsDataService
@@ -20,9 +21,55 @@ from app.services.global_item_listing_service import (
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
+PUBLIC_LIBRARY_SEARCH_LIMIT = 10
+PUBLIC_LIBRARY_DETAIL_LIMIT = 10
+PUBLIC_LIBRARY_WINDOW_HOURS = 24
+
+
+def _global_library_rate_limit() -> str:
+    if current_user.is_authenticated:
+        return "6000/hour;300/minute"
+    return "600/hour;60/minute"
+
+
+def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
+    """Advance a session counter and return (allowed, remaining)."""
+    record = session.get(key) or {}
+    now = datetime.now(timezone.utc)
+    try:
+        last_ts = record.get("timestamp")
+        if last_ts:
+            last_dt = datetime.fromisoformat(last_ts)
+            if now - last_dt > timedelta(hours=PUBLIC_LIBRARY_WINDOW_HOURS):
+                record = {}
+    except Exception:
+        record = {}
+    count = int(record.get("count") or 0)
+    if count >= limit:
+        return False, 0
+    count += 1
+    record["count"] = count
+    record["timestamp"] = now.isoformat()
+    session[key] = record
+    return True, max(0, limit - count)
+
+
+def _remaining_public_counter(key: str, limit: int) -> int:
+    record = session.get(key) or {}
+    try:
+        last_ts = record.get("timestamp")
+        if last_ts:
+            last_dt = datetime.fromisoformat(last_ts)
+            if datetime.now(timezone.utc) - last_dt > timedelta(hours=PUBLIC_LIBRARY_WINDOW_HOURS):
+                return limit
+    except Exception:
+        return limit
+    count = int(record.get("count") or 0)
+    return max(0, limit - count)
+
 
 @global_library_bp.route('/global-items')
-@limiter.limit("60000/hour;5000/minute")
+@limiter.limit(_global_library_rate_limit)
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.
@@ -50,6 +97,18 @@ def global_library():
         normalized_scope = GLOBAL_LIBRARY_DEFAULT_SCOPE
     category_key = raw_category if normalized_scope == "ingredient" else ""
 
+    preview_remaining = None
+    search_remaining = None
+    if not current_user.is_authenticated:
+        preview_remaining = _remaining_public_counter("global_library_detail_views", PUBLIC_LIBRARY_DETAIL_LIMIT)
+        search_remaining = _remaining_public_counter("global_library_search_views", PUBLIC_LIBRARY_SEARCH_LIMIT)
+        if search_query:
+            allowed, remaining = _advance_public_counter("global_library_search_views", PUBLIC_LIBRARY_SEARCH_LIMIT)
+            if not allowed:
+                flash("Create a free account to keep searching the global library. You've reached the preview limit.")
+                return redirect(url_for('auth.quick_signup', next=request.full_path))
+            search_remaining = remaining
+
     cache_payload = {
         "scope": normalized_scope,
         "category": category_key,
@@ -60,7 +119,7 @@ def global_library():
     raw_cache_key = stable_cache_key("global_library", cache_payload)
     cache_key = global_library_cache_key(raw_cache_key)
 
-    bypass_cache = should_bypass_cache()
+    bypass_cache = should_bypass_cache() or not current_user.is_authenticated
     if bypass_cache:
         cache.delete(cache_key)
     else:
@@ -140,6 +199,8 @@ def global_library():
         is_public_view=True,
         slugify=slugify_value,
         developer_link_base=url_for('developer.global_item_detail', item_id=0)[:-1] if can_manage else None,
+        preview_remaining=preview_remaining,
+        search_remaining=search_remaining,
         page_title="Global Item Library — BatchTrack",
         page_description=" ".join(description_bits),
         canonical_url=canonical_url,
@@ -152,12 +213,22 @@ def global_library():
 
 @global_library_bp.route('/global-items/<int:item_id>')
 @global_library_bp.route('/global-items/<int:item_id>-<slug>')
+@limiter.limit(_global_library_rate_limit)
 def global_item_detail(item_id: int, slug: Optional[str] = None):
     """Public detail page for a specific Global Item."""
     gi = GlobalItem.query.filter(
         GlobalItem.is_archived != True,
         GlobalItem.id == item_id,
     ).first_or_404()
+
+    preview_remaining = None
+    if not current_user.is_authenticated:
+        allowed, preview_remaining = _advance_public_counter(
+            "global_library_detail_views", PUBLIC_LIBRARY_DETAIL_LIMIT
+        )
+        if not allowed:
+            flash("Create a free account to keep exploring the global library. You've reached the 10-item preview limit.")
+            return redirect(url_for('auth.quick_signup', next=request.path, global_item_id=item_id))
 
     canonical_slug = slugify_value(gi.name)
     if slug != canonical_slug:
@@ -239,6 +310,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         canonical_url=canonical_url,
         page_og_image=metadata.get('hero_image'),
         slugify=slugify_value,
+        preview_remaining=preview_remaining,
     )
 
 
@@ -297,7 +369,7 @@ def save_global_item_to_inventory(item_id: int):
 @global_library_bp.route('/global-items/<int:item_id>/stats')
 def global_library_item_stats(item_id: int):
     """Public stats endpoint for a GlobalItem, including cost distribution, rollup,
-    basic item details, and category-based visibility flags when applicable.
+    and basic item details.
     """
     import logging
     logger = logging.getLogger(__name__)

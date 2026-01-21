@@ -17,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    from migrations.postgres_helpers import is_postgresql, is_sqlite, safe_add_column
+    from migrations.postgres_helpers import is_postgresql, is_sqlite, safe_add_column, safe_drop_column
 
     bind = op.get_bind()
 
@@ -92,19 +92,18 @@ def upgrade():
                type_=sa.String(length=64),
                existing_nullable=True)
 
-    # Remove category-level attribute toggles
-    with op.batch_alter_table('ingredient_category') as batch_op:
-        for col in [
-            'show_saponification_value',
-            'show_iodine_value',
-            'show_melting_point',
-            'show_flash_point',
-            'show_ph_value',
-            'show_moisture_content',
-            'show_shelf_life_days',
-            'show_comedogenic_rating',
-        ]:
-            batch_op.drop_column(col)
+    # Remove category-level attribute toggles (safe if missing)
+    for col in [
+        'show_saponification_value',
+        'show_iodine_value',
+        'show_melting_point',
+        'show_flash_point',
+        'show_ph_value',
+        'show_moisture_content',
+        'show_shelf_life_days',
+        'show_comedogenic_rating',
+    ]:
+        safe_drop_column('ingredient_category', col, verbose=False)
 
     # PostgreSQL-specific performance indexes
     if is_postgresql():

@@ -8,9 +8,35 @@ import os
 import re
 import sys
 import time
+import threading
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, MutableMapping, Set
+from sqlalchemy import func
+
+# Thread-local storage for worker stats
+_worker_stats = threading.local()
+DEFAULT_WORKERS = int(os.getenv("COMPILER_WORKERS", "1"))
+
+
+class AtomicCounter:
+    """Thread-safe counter for tracking compilation order across workers."""
+    def __init__(self, start: int = 0):
+        self._value = start
+        self._lock = threading.Lock()
+    
+    def increment(self) -> int:
+        """Increment and return the new value (atomically)."""
+        with self._lock:
+            self._value += 1
+            return self._value
+    
+    @property
+    def value(self) -> int:
+        with self._lock:
+            return self._value
 
 try:  # pragma: no cover - fallback for direct script execution
     from . import ai_worker, database_manager
@@ -25,7 +51,6 @@ INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
 VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
 TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
-DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
 WRITE_INGREDIENT_FILES = os.getenv("COMPILER_WRITE_INGREDIENT_FILES", "0").strip() in {"1", "true", "True"}
 
@@ -77,6 +102,37 @@ def _write_taxonomy_map(values: MutableMapping[str, Set[str]]) -> None:
     serialized = {key: sorted(list(val_set)) for key, val_set in values.items() if val_set}
     TAXONOMY_FILE.parent.mkdir(parents=True, exist_ok=True)
     TAXONOMY_FILE.write_text(json.dumps(serialized, indent=2), encoding="utf-8")
+
+
+SPEC_FIELD_MAPPING = {
+    "density": "density_g_ml",
+    "flash_point": "flash_point_celsius",
+    "melting_point": "melting_point_celsius",
+    "boiling_point": "boiling_point_celsius",
+    "iodine": "iodine_value",
+    "sap_naoh": "sap_naoh",
+    "sap_koh": "sap_koh",
+    "molecular_weight": "molecular_weight",
+    "molecular_formula": "molecular_formula",
+    "refractive_index": "refractive_index",
+    "viscosity": "viscosity_cps",
+    "ph": "ph_range",
+}
+
+
+def _normalize_specs_for_ai(specs: Dict[str, Any]) -> Dict[str, Any]:
+    """Map source spec field names to schema-expected names for AI context."""
+    if not specs:
+        return {}
+    normalized = {}
+    for key, val in specs.items():
+        if key == "pubchem":
+            normalized[key] = val
+            continue
+        mapped_key = SPEC_FIELD_MAPPING.get(key, key)
+        if val is not None and val != "" and val != "Not Found":
+            normalized[mapped_key] = val
+    return normalized
 
 
 def validate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,15 +233,209 @@ def _safe_json_dict(text: str | None) -> dict[str, Any]:
         return {}
 
 
-def _fetch_existing_compiled_payload(term: str) -> dict[str, Any] | None:
+def _cluster_term_from_id(cluster_id: str) -> str:
+    cid = (cluster_id or "").strip()
+    if cid.startswith("term:"):
+        return cid[len("term:") :].strip()
+    return ""
+
+
+def _extract_stage1_field(field_data: Any) -> str | None:
+    """Extract value from stage-1 field wrapper or return plain value."""
+    if isinstance(field_data, dict) and "value" in field_data:
+        status = field_data.get("status", "")
+        if status in ("found", ""):
+            return _clean(field_data.get("value"))
+        return None
+    return _clean(field_data) or None
+
+
+def _find_ingredient_by_terms(session: Any, terms: Iterable[str]) -> database_manager.IngredientRecord | None:
+    cleaned = [t.strip() for t in terms if isinstance(t, str) and t.strip()]
+    if not cleaned:
+        return None
+    lowered = {t.lower() for t in cleaned}
+    rows = (
+        session.query(database_manager.IngredientRecord)
+        .filter(func.lower(database_manager.IngredientRecord.term).in_(lowered))
+        .all()
+    )
+    if not rows:
+        return None
+    for term in cleaned:
+        for row in rows:
+            if row.term == term:
+                return row
+    return rows[0]
+
+
+def _stage1_core_from_ingredient(record: database_manager.IngredientRecord) -> dict[str, Any]:
+    return {
+        "origin": getattr(record, "origin", None),
+        "ingredient_category": getattr(record, "ingredient_category", None),
+        "refinement_level": getattr(record, "refinement_level", None),
+        "derived_from": getattr(record, "derived_from", None),
+        "category": getattr(record, "category", None),
+        "botanical_name": getattr(record, "botanical_name", None),
+        "inci_name": getattr(record, "inci_name", None),
+        "cas_number": getattr(record, "cas_number", None),
+        "short_description": getattr(record, "short_description", None),
+        "detailed_description": getattr(record, "detailed_description", None),
+    }
+
+
+def _item_identity_key(payload: dict[str, Any]) -> tuple[str, str]:
+    variation = _clean(payload.get("variation") or "").lower()
+    physical_form = _clean(payload.get("physical_form") or "").lower()
+    return variation, physical_form
+
+
+def _stage1_snapshot(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any], str | None]:
+    payload = _safe_json_dict(getattr(rec, "payload_json", None))
+    stage1 = payload.get("stage1") if isinstance(payload.get("stage1"), dict) else {}
+    core = stage1.get("ingredient_core") if isinstance(stage1.get("ingredient_core"), dict) else {}
+    dq = stage1.get("data_quality") if isinstance(stage1.get("data_quality"), dict) else {}
+    common_name = stage1.get("common_name") if isinstance(stage1.get("common_name"), str) else None
+    return core, dq, common_name
+
+
+def _build_cluster_core(rec: database_manager.CompiledClusterRecord) -> tuple[dict[str, Any], dict[str, Any], str | None]:
+    core_raw, dq, common_name = _stage1_snapshot(rec)
+    ingredient_core = {
+        "origin": _extract_stage1_field(core_raw.get("origin")) or getattr(rec, "origin", None),
+        "ingredient_category": _extract_stage1_field(core_raw.get("ingredient_category")) or getattr(rec, "ingredient_category", None),
+        "refinement_level": _extract_stage1_field(core_raw.get("base_refinement"))
+        or _extract_stage1_field(core_raw.get("refinement_level"))
+        or getattr(rec, "refinement_level", None),
+        "derived_from": _extract_stage1_field(core_raw.get("derived_from")) or getattr(rec, "derived_from", None),
+        "category": _extract_stage1_field(core_raw.get("category"))
+        or _extract_stage1_field(core_raw.get("ingredient_category"))
+        or getattr(rec, "ingredient_category", None),
+        "botanical_name": _extract_stage1_field(core_raw.get("botanical_name")) or getattr(rec, "botanical_name", None),
+        "inci_name": _extract_stage1_field(core_raw.get("inci_name")) or getattr(rec, "inci_name", None),
+        "cas_number": _extract_stage1_field(core_raw.get("cas_number")) or getattr(rec, "cas_number", None),
+        "short_description": _extract_stage1_field(core_raw.get("short_description")),
+        "detailed_description": _extract_stage1_field(core_raw.get("detailed_description")),
+    }
+    return ingredient_core, dq, common_name
+
+
+def _backfill_cluster_items_from_ingredient(
+    session: Any, cluster_id: str, ingredient: database_manager.IngredientRecord
+) -> int:
+    payload = _safe_json_dict(getattr(ingredient, "payload_json", None))
+    ingredient_blob = payload.get("ingredient") if isinstance(payload.get("ingredient"), dict) else {}
+    items = ingredient_blob.get("items") if isinstance(ingredient_blob.get("items"), list) else []
+    items_by_key: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        items_by_key[_item_identity_key(item)].append(item)
+
+    rows = (
+        session.query(database_manager.CompiledClusterItemRecord)
+        .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+        .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+        .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+        .all()
+    )
+    updated = 0
+    now = datetime.now(timezone.utc)
+    compiled_at = getattr(ingredient, "compiled_at", None) or now
+    for row in rows:
+        key = (
+            _clean(getattr(row, "derived_variation", "")).lower(),
+            _clean(getattr(row, "derived_physical_form", "")).lower(),
+        )
+        candidates = items_by_key.get(key) or []
+        if not candidates:
+            continue
+        item_payload = candidates.pop(0)
+        row.item_json = json.dumps(item_payload, ensure_ascii=False, sort_keys=True)
+        row.item_status = "done"
+        row.item_compiled_at = compiled_at
+        row.item_error = None
+        row.updated_at = now
+        updated += 1
+    return updated
+
+
+def _assemble_cluster_payload(
+    *,
+    term: str,
+    rec: database_manager.CompiledClusterRecord,
+    items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    ingredient_core, dq, common_name = _build_cluster_core(rec)
+    ingredient: dict[str, Any] = dict(ingredient_core)
+    ingredient["common_name"] = common_name if common_name else term
+    ingredient["items"] = items
+    if "documentation" not in ingredient:
+        ingredient["documentation"] = {"references": [], "last_verified": None}
+    confidence = dq.get("confidence") if isinstance(dq, dict) else None
+    caveats = dq.get("caveats") if isinstance(dq, dict) else []
+    if not isinstance(confidence, (int, float)):
+        confidence = 0.7
+    caveats = caveats if isinstance(caveats, list) else []
+    return {
+        "ingredient": ingredient,
+        "data_quality": {"confidence": float(confidence), "caveats": caveats},
+    }
+
+
+def _finalize_cluster_if_complete(cluster_id: str) -> bool:
+    """Persist a compiled ingredient when all cluster items are done."""
     database_manager.ensure_tables_exist()
     with database_manager.get_session() as session:
-        row = session.get(database_manager.IngredientRecord, term)
-        if row is None:
-            return None
-        blob = getattr(row, "payload_json", None)
-        payload = _safe_json_dict(blob if isinstance(blob, str) else "{}")
-        return payload or None
+        rec = session.get(database_manager.CompiledClusterRecord, cluster_id)
+        if rec is None:
+            return False
+        term = _clean(getattr(rec, "compiled_term", None)) or _clean(getattr(rec, "raw_canonical_term", None)) or _cluster_term_from_id(cluster_id) or cluster_id
+        if not term:
+            return False
+        if _find_ingredient_by_terms(session, [term]) is not None:
+            return True
+        pending = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+            .first()
+        )
+        if pending is not None:
+            return False
+        item_rows = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+            .all()
+        )
+        items: list[dict[str, Any]] = []
+        for row in item_rows:
+            payload = _safe_json_dict(getattr(row, "item_json", None))
+            if isinstance(payload, dict) and payload:
+                items.append(payload)
+    payload = _assemble_cluster_payload(term=term, rec=rec, items=items)
+    ingredient_core = dict(payload.get("ingredient") or {})
+    ingredient_core.pop("items", None)
+    ingredient_core.pop("taxonomy", None)
+    try:
+        taxonomy_payload = ai_worker.compile_taxonomy(term, ingredient_core=ingredient_core, items=items)
+        taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
+    except Exception as exc:  # pylint: disable=broad-except
+        LOGGER.warning("Stage 2 taxonomy failed for %s: %s", term, exc)
+        taxonomy = {}
+    payload["ingredient"]["taxonomy"] = taxonomy
+    database_manager.upsert_compiled_ingredient(
+        term,
+        payload,
+        seed_category=getattr(rec, "seed_category", None),
+        priority=getattr(rec, "priority", None),
+    )
+    if WRITE_INGREDIENT_FILES:
+        slug = slugify(term)
+        save_payload(payload, slug)
+    update_lookup_files(payload)
+    return True
 
 
 def _select_stage1_cluster_ids(*, limit: int | None, cluster_id: str | None) -> list[str]:
@@ -205,9 +455,19 @@ def _select_stage1_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
             | (database_manager.CompiledClusterRecord.term_status != "done")
         )
         q = q.order_by(database_manager.SourceDefinition.cluster_id.asc())
-        if limit:
-            q = q.limit(int(limit))
-        return [str(r[0]) for r in q.all() if r and r[0]]
+        ids = [str(r[0]) for r in q.all() if r and r[0]]
+        if not ids:
+            return []
+    priority_map = database_manager.build_cluster_priority_map()
+    ids.sort(
+        key=lambda cluster_id: (
+            -int(priority_map.get(cluster_id, database_manager.DEFAULT_PRIORITY)),
+            cluster_id,
+        )
+    )
+    if limit:
+        ids = ids[: int(limit)]
+    return ids
 
 
 def _select_stage2_cluster_ids(*, limit: int | None, cluster_id: str | None) -> list[str]:
@@ -216,7 +476,10 @@ def _select_stage2_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
     cid = (cluster_id or "").strip() or None
     with database_manager.get_session() as session:
         q = (
-            session.query(database_manager.CompiledClusterRecord.cluster_id)
+            session.query(
+                database_manager.CompiledClusterRecord.cluster_id,
+                database_manager.CompiledClusterRecord.priority,
+            )
             .join(
                 database_manager.CompiledClusterItemRecord,
                 database_manager.CompiledClusterItemRecord.cluster_id == database_manager.CompiledClusterRecord.cluster_id,
@@ -226,10 +489,25 @@ def _select_stage2_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
         )
         if cid:
             q = q.filter(database_manager.CompiledClusterRecord.cluster_id == cid)
-        q = q.distinct().order_by(database_manager.CompiledClusterRecord.cluster_id.asc())
-        if limit:
-            q = q.limit(int(limit))
-        return [str(r[0]) for r in q.all() if r and r[0]]
+        rows = q.distinct().all()
+    if not rows:
+        return []
+    priority_map = database_manager.build_cluster_priority_map()
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            -int(
+                row[1]
+                if row[1] is not None
+                else priority_map.get(str(row[0]), database_manager.DEFAULT_PRIORITY)
+            ),
+            str(row[0]),
+        ),
+    )
+    ids = [str(row[0]) for row in ordered if row and row[0]]
+    if limit:
+        ids = ids[: int(limit)]
+    return ids
 
 
 def _mirror_cluster_into_compiled(cluster_id: str) -> None:
@@ -283,7 +561,7 @@ def _mirror_cluster_into_compiled(cluster_id: str) -> None:
                 "derived_parts": _safe_json_list(getattr(mif, "derived_parts_json", None)),
                 "cas_numbers": _safe_json_list(getattr(mif, "cas_numbers_json", None)),
                 "sources": _safe_json_dict(getattr(mif, "sources_json", None)),
-                "merged_specs": _safe_json_dict(getattr(mif, "merged_specs_json", None)),
+                "merged_specs": _normalize_specs_for_ai(_safe_json_dict(getattr(mif, "merged_specs_json", None))),
                 "merged_specs_sources": _safe_json_dict(getattr(mif, "merged_specs_sources_json", None)),
                 "source_row_count": int(getattr(mif, "source_row_count", 0) or 0),
                 "has_cosing": bool(getattr(mif, "has_cosing", False)),
@@ -350,7 +628,7 @@ def _build_cluster_context(cluster_id: str) -> dict[str, Any]:
                     "derived_variation": getattr(mif, "derived_variation", "") or "",
                     "derived_physical_form": getattr(mif, "derived_physical_form", "") or "",
                     "cas_numbers": _safe_json_list(getattr(mif, "cas_numbers_json", None)),
-                    "merged_specs": _safe_json_dict(getattr(mif, "merged_specs_json", None)),
+                    "merged_specs": _normalize_specs_for_ai(_safe_json_dict(getattr(mif, "merged_specs_json", None))),
                 }
             )
 
@@ -373,122 +651,272 @@ def _build_cluster_context(cluster_id: str) -> dict[str, Any]:
         }
 
 
-def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sleep_seconds: float) -> None:
+def _process_stage1_cluster(
+    cid: str,
+    priority_map: dict[str, int],
+    rank_counter: AtomicCounter,
+    sleep_seconds: float,
+) -> tuple[bool, str | None, str | None]:
+    """Process a single cluster for Stage 1 (term normalization). Returns (success, term, error)."""
+    try:
+        _mirror_cluster_into_compiled(cid)
+        priority = int(priority_map.get(cid, database_manager.DEFAULT_PRIORITY))
+        with database_manager.get_session() as session:
+            rec = session.get(database_manager.CompiledClusterRecord, cid)
+            if rec is None:
+                return (False, None, "Record not found")
+            rec.priority = priority
+            raw_def = session.get(database_manager.SourceDefinition, cid)
+
+            candidate_terms = [
+                _clean(getattr(rec, "compiled_term", None)),
+                _clean(getattr(raw_def, "reconciled_term", None)) if raw_def is not None else "",
+                _clean(getattr(raw_def, "canonical_term", None)) if raw_def is not None else "",
+            ]
+            derived_term = _cluster_term_from_id(cid)
+            if derived_term:
+                candidate_terms.append(derived_term)
+            ingredient = _find_ingredient_by_terms(session, candidate_terms)
+            if ingredient is not None:
+                core = _stage1_core_from_ingredient(ingredient)
+                now = datetime.now(timezone.utc)
+                try:
+                    ingredient.priority = int(priority)
+                except (TypeError, ValueError):
+                    ingredient.priority = ingredient.priority
+                rec.compiled_term = ingredient.term
+                rec.seed_category = (ingredient.seed_category or "").strip() or None
+                rec.origin = core.get("origin") or rec.raw_origin
+                rec.ingredient_category = core.get("ingredient_category") or rec.raw_ingredient_category
+                rec.refinement_level = core.get("refinement_level") or None
+                rec.derived_from = core.get("derived_from") or None
+                rec.botanical_name = core.get("botanical_name") or None
+                rec.inci_name = core.get("inci_name") or None
+                rec.cas_number = core.get("cas_number") or None
+                legacy_common = getattr(ingredient, "common_name", None) or ""
+                botanical = core.get("botanical_name") or ""
+                compiled = ingredient.term or ""
+                if legacy_common.lower().strip() in (botanical.lower().strip(), compiled.lower().strip(), "") or botanical.lower().strip() == legacy_common.lower().strip():
+                    try:
+                        context = _build_cluster_context(cid)
+                        ai_result = ai_worker.normalize_cluster_term(cid, context)
+                        legacy_common = ai_result.get("common_name") or legacy_common or compiled
+                    except Exception:
+                        legacy_common = legacy_common or compiled
+                rec.payload_json = json.dumps(
+                    {
+                        "stage1": {
+                            "term": rec.compiled_term,
+                            "common_name": legacy_common or rec.compiled_term,
+                            "ingredient_core": core,
+                            "data_quality": {"confidence": None, "caveats": []},
+                            "seeded_from_legacy": True,
+                        }
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                rec.term_status = "done"
+                rec.term_compiled_at = getattr(ingredient, "compiled_at", None) or now
+                rec.term_error = None
+                rec.updated_at = now
+                rank = rank_counter.increment()
+                rec.compilation_rank = rank
+                LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s (seeded)", rank, rec.compiled_term, legacy_common, priority)
+                return (True, rec.compiled_term, None)
+
+            rec.term_status = "processing"
+            rec.term_error = None
+            rec.updated_at = datetime.now(timezone.utc)
+
+        context = _build_cluster_context(cid)
+        result = ai_worker.normalize_cluster_term(cid, context)
+        term = _clean(result.get("term"))
+        core = result.get("ingredient_core") if isinstance(result.get("ingredient_core"), dict) else {}
+        dq = result.get("data_quality") if isinstance(result.get("data_quality"), dict) else {}
+        final_priority = None
+        final_term = None
+        final_common_name = None
+
+        with database_manager.get_session() as session:
+            rec = session.get(database_manager.CompiledClusterRecord, cid)
+            if rec is None:
+                return (False, None, "Record disappeared")
+            rec.compiled_term = term or rec.raw_canonical_term or cid
+            rec.origin = _extract_stage1_field(core.get("origin")) or rec.raw_origin
+            rec.ingredient_category = _extract_stage1_field(core.get("ingredient_category")) or rec.raw_ingredient_category
+            rec.refinement_level = _extract_stage1_field(core.get("base_refinement")) or _extract_stage1_field(core.get("refinement_level")) or None
+            rec.derived_from = _extract_stage1_field(core.get("derived_from")) or None
+            rec.botanical_name = _extract_stage1_field(core.get("botanical_name")) or None
+            rec.inci_name = _extract_stage1_field(core.get("inci_name")) or None
+            rec.cas_number = _extract_stage1_field(core.get("cas_number")) or None
+            rec.seed_category = None
+            ai_priority = result.get("maker_priority")
+            if ai_priority is not None:
+                try:
+                    rec.priority = max(1, min(10, int(ai_priority)))
+                except (TypeError, ValueError):
+                    rec.priority = priority
+            else:
+                rec.priority = priority
+            common_name = result.get("common_name") or rec.compiled_term
+            rec.payload_json = json.dumps(
+                {"stage1": {"term": rec.compiled_term, "common_name": common_name, "ingredient_core": core, "data_quality": dq}},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            rec.term_status = "done"
+            rec.term_compiled_at = datetime.now(timezone.utc)
+            rec.term_error = None
+            rec.updated_at = datetime.now(timezone.utc)
+            rank = rank_counter.increment()
+            rec.compilation_rank = rank
+            final_priority = rec.priority
+            final_term = rec.compiled_term
+            final_common_name = common_name
+        if final_term and final_priority is not None:
+            with database_manager.get_session() as session:
+                tq = session.query(database_manager.TaskQueue).filter(
+                    database_manager.TaskQueue.term == final_term
+                ).first()
+                if tq is not None:
+                    tq.priority = final_priority
+        LOGGER.info("Stage 1 done: #%d | term=%s | common_name=%s | priority=%s", rank, final_term, final_common_name, final_priority)
+        return (True, final_term, None)
+    except Exception as exc:
+        with database_manager.get_session() as session:
+            rec = session.get(database_manager.CompiledClusterRecord, cid)
+            if rec is not None:
+                rec.term_status = "error"
+                rec.term_error = str(exc)
+                rec.updated_at = datetime.now(timezone.utc)
+        LOGGER.exception("Stage 1 failed for cluster %s: %s", cid, exc)
+        return (False, None, str(exc))
+    finally:
+        if sleep_seconds > 0:
+            time.sleep(float(sleep_seconds))
+
+
+def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sleep_seconds: float, workers: int = 1) -> None:
     """Stage 1: complete + normalize the term for each raw cluster."""
     ids = _select_stage1_cluster_ids(limit=limit, cluster_id=cluster_id)
     if not ids:
         LOGGER.info("Stage 1: no clusters pending term completion.")
         return
-    ok = 0
-    for cid in ids:
-        try:
-            _mirror_cluster_into_compiled(cid)
-            context = _build_cluster_context(cid)
-            with database_manager.get_session() as session:
-                rec = session.get(database_manager.CompiledClusterRecord, cid)
-                if rec is None:
-                    continue
-                rec.term_status = "processing"
-                rec.term_error = None
-                rec.updated_at = datetime.now(timezone.utc)
-            result = ai_worker.normalize_cluster_term(cid, context)
-            term = _clean(result.get("term"))
-            core = result.get("ingredient_core") if isinstance(result.get("ingredient_core"), dict) else {}
-            dq = result.get("data_quality") if isinstance(result.get("data_quality"), dict) else {}
-
-            def extract_field(field_data):
-                """Extract value from field status wrapper or plain value."""
-                if isinstance(field_data, dict) and "value" in field_data:
-                    status = field_data.get("status", "")
-                    if status in ("found", ""):
-                        return _clean(field_data.get("value"))
-                    return None  # not_found or not_applicable
-                return _clean(field_data)  # plain value fallback
-
-            with database_manager.get_session() as session:
-                rec = session.get(database_manager.CompiledClusterRecord, cid)
-                if rec is None:
-                    continue
-                rec.compiled_term = term or rec.raw_canonical_term or cid
-                rec.origin = extract_field(core.get("origin")) or rec.raw_origin
-                rec.ingredient_category = extract_field(core.get("ingredient_category")) or rec.raw_ingredient_category
-                rec.refinement_level = extract_field(core.get("base_refinement")) or extract_field(core.get("refinement_level")) or None
-                rec.derived_from = extract_field(core.get("derived_from")) or None
-                rec.botanical_name = extract_field(core.get("botanical_name")) or None
-                rec.inci_name = extract_field(core.get("inci_name")) or None
-                rec.cas_number = extract_field(core.get("cas_number")) or None
-                rec.seed_category = None
-                rec.payload_json = json.dumps(
-                    {"stage1": {"term": rec.compiled_term, "ingredient_core": core, "data_quality": dq}},
-                    ensure_ascii=False,
-                    sort_keys=True,
-                )
-                rec.term_status = "done"
-                rec.term_compiled_at = datetime.now(timezone.utc)
-                rec.term_error = None
-                rec.updated_at = datetime.now(timezone.utc)
-            ok += 1
-        except Exception as exc:  # pylint: disable=broad-except
-            with database_manager.get_session() as session:
-                rec = session.get(database_manager.CompiledClusterRecord, cid)
-                if rec is not None:
-                    rec.term_status = "error"
-                    rec.term_error = str(exc)
-                    rec.updated_at = datetime.now(timezone.utc)
-            LOGGER.exception("Stage 1 failed for cluster %s: %s", cid, exc)
-        time.sleep(float(sleep_seconds or 0))
-    LOGGER.info("Stage 1 finished: ok=%s total=%s", ok, len(ids))
-
-
-def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sleep_seconds: float) -> None:
-    """Stage 2: compile/enrich items for clusters whose term is already normalized."""
-    ids = _select_stage2_cluster_ids(limit=limit, cluster_id=cluster_id)
-    if not ids:
-        LOGGER.info("Stage 2: no clusters pending item compilation.")
+    priority_map = database_manager.build_cluster_priority_map()
+    with database_manager.get_session() as session:
+        done_count = session.query(database_manager.CompiledClusterRecord).filter(
+            database_manager.CompiledClusterRecord.term_status == "done"
+        ).count()
+    
+    # Create atomic counter starting at done_count so ranks continue from where we left off
+    rank_counter = AtomicCounter(start=done_count)
+    
+    workers = max(1, min(workers, 10))  # Cap at 10 workers
+    LOGGER.info("Stage 1: processing %d clusters with %d worker(s), starting from rank %d", len(ids), workers, done_count + 1)
+    
+    if workers == 1:
+        # Sequential processing (original behavior)
+        ok = 0
+        for cid in ids:
+            success, term, error = _process_stage1_cluster(cid, priority_map, rank_counter, sleep_seconds)
+            if success:
+                ok += 1
+        LOGGER.info("Stage 1 finished: ok=%s total=%s", ok, len(ids))
         return
+    
+    # Parallel processing with multiple workers
     ok = 0
-    for cid in ids:
-        try:
-            _mirror_cluster_into_compiled(cid)
-            with database_manager.get_session() as session:
-                rec = session.get(database_manager.CompiledClusterRecord, cid)
-                if rec is None or rec.term_status != "done":
-                    continue
-                term = _clean(getattr(rec, "compiled_term", None)) or _clean(getattr(rec, "raw_canonical_term", None)) or cid
-                ingredient_core = {
-                    "origin": getattr(rec, "origin", None),
-                    "ingredient_category": getattr(rec, "ingredient_category", None),
-                    "refinement_level": getattr(rec, "refinement_level", None),
-                    "derived_from": getattr(rec, "derived_from", None),
-                    "category": getattr(rec, "ingredient_category", None),
-                    "botanical_name": getattr(rec, "botanical_name", None),
-                    "inci_name": getattr(rec, "inci_name", None),
-                    "cas_number": getattr(rec, "cas_number", None),
-                    "short_description": None,
-                    "detailed_description": None,
-                    "documentation": {"references": [], "last_verified": None},
-                }
-                item_rows = (
-                    session.query(database_manager.CompiledClusterItemRecord)
-                    .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
-                    .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
-                    .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
-                    .limit(25)
-                    .all()
-                )
-                stubs: list[dict[str, Any]] = []
+    lock = threading.Lock()
+    
+    def worker_task(cid: str) -> tuple[bool, str | None, str | None]:
+        return _process_stage1_cluster(cid, priority_map, rank_counter, sleep_seconds)
+    
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(worker_task, cid): cid for cid in ids}
+        for future in as_completed(futures):
+            cid = futures[future]
+            try:
+                success, term, error = future.result()
+                if success:
+                    with lock:
+                        ok += 1
+            except Exception as exc:
+                LOGGER.exception("Stage 1 worker exception for %s: %s", cid, exc)
+    
+    LOGGER.info("Stage 1 finished: ok=%s total=%s (parallel, %d workers)", ok, len(ids), workers)
+
+
+def _process_stage2_cluster(
+    cid: str,
+    priority_map: dict[str, int],
+    sleep_seconds: float,
+) -> tuple[bool, str | None, str | None]:
+    """Process a single cluster for Stage 2 (item compilation). Returns (success, term, error)."""
+    try:
+        _mirror_cluster_into_compiled(cid)
+        ingredient_core: dict[str, Any] = {}
+        term = ""
+        ingredient_exists = False
+        skip_ai = False
+        stubs: list[dict[str, Any]] = []
+        with database_manager.get_session() as session:
+            rec = session.get(database_manager.CompiledClusterRecord, cid)
+            if rec is None or rec.term_status != "done":
+                return (False, None, "Record not ready")
+            if rec.priority is None:
+                rec.priority = int(priority_map.get(cid, database_manager.DEFAULT_PRIORITY))
+            term = (
+                _clean(getattr(rec, "compiled_term", None))
+                or _clean(getattr(rec, "raw_canonical_term", None))
+                or _cluster_term_from_id(cid)
+                or cid
+            )
+            ingredient_core, _, _ = _build_cluster_core(rec)
+            ingredient_core["documentation"] = {"references": [], "last_verified": None}
+            ingredient = _find_ingredient_by_terms(session, [term])
+            if ingredient is not None:
+                ingredient_exists = True
+                _backfill_cluster_items_from_ingredient(session, cid, ingredient)
+
+            item_rows = (
+                session.query(database_manager.CompiledClusterItemRecord)
+                .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
+                .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+                .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+                .limit(25)
+                .all()
+            )
+            if not item_rows:
+                skip_ai = True
+            else:
                 for it in item_rows:
                     raw = _safe_json_dict(getattr(it, "raw_item_json", None))
                     variation = _clean(raw.get("derived_variation") or getattr(it, "derived_variation", ""))
                     physical_form = _clean(raw.get("derived_physical_form") or getattr(it, "derived_physical_form", ""))
                     specs = raw.get("merged_specs") if isinstance(raw.get("merged_specs"), dict) else {}
+                    form_bypass, variation_bypass = database_manager.derive_item_bypass_flags(
+                        base_term=term,
+                        variation=variation,
+                        physical_form=physical_form,
+                        form_bypass=(not bool(physical_form)),
+                        variation_bypass=(not bool(variation)),
+                    )
+                    item_name = database_manager.derive_item_display_name(
+                        base_term=term,
+                        variation=variation,
+                        variation_bypass=variation_bypass,
+                        physical_form=physical_form,
+                        form_bypass=form_bypass,
+                    )
                     stubs.append(
                         {
                             "variation": variation,
                             "physical_form": physical_form,
-                            "form_bypass": (not bool(physical_form)),
-                            "variation_bypass": (not bool(variation)),
-                            "applications": ["Unknown"],
+                            "form_bypass": form_bypass,
+                            "variation_bypass": variation_bypass,
+                            "item_name": item_name,
+                            "applications": ["Not Found"],
                             "specifications": specs,
                         }
                     )
@@ -500,214 +928,131 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                     it.item_error = None
                     it.updated_at = now
 
-            completed = ai_worker.complete_item_stubs(term, ingredient_core=ingredient_core, base_context={"term": term}, item_stubs=stubs)
-            with database_manager.get_session() as session:
-                item_rows2 = (
-                    session.query(database_manager.CompiledClusterItemRecord)
-                    .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
-                    .filter(database_manager.CompiledClusterItemRecord.item_status == "processing")
-                    .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
-                    .limit(len(completed))
-                    .all()
-                )
-                now2 = datetime.now(timezone.utc)
-                for idx, it in enumerate(item_rows2):
-                    payload = completed[idx] if idx < len(completed) else {}
-                    it.item_json = json.dumps(payload, ensure_ascii=False, sort_keys=True) if isinstance(payload, dict) else "{}"
-                    it.item_status = "done"
-                    it.item_compiled_at = now2
-                    it.item_error = None
-                    it.updated_at = now2
-            ok += 1
-        except Exception as exc:  # pylint: disable=broad-except
-            with database_manager.get_session() as session:
-                rows = (
-                    session.query(database_manager.CompiledClusterItemRecord)
-                    .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
-                    .filter(database_manager.CompiledClusterItemRecord.item_status == "processing")
-                    .all()
-                )
-                now = datetime.now(timezone.utc)
-                for r in rows:
-                    r.item_status = "error"
-                    r.item_error = str(exc)
-                    r.updated_at = now
-            LOGGER.exception("Stage 2 failed for cluster %s: %s", cid, exc)
-        time.sleep(float(sleep_seconds or 0))
-    LOGGER.info("Stage 2 finished: ok=%s clusters=%s", ok, len(ids))
+        if skip_ai:
+            if not ingredient_exists:
+                _finalize_cluster_if_complete(cid)
+            return (True, term, None)
 
-
-def process_next_term(*, sleep_seconds: float, min_priority: int, phase: str, seed_category: str | None) -> bool:
-    """Process a single pending task honoring the priority floor. Returns False when queue is empty."""
-
-    task = database_manager.get_next_pending_task(min_priority=min_priority, seed_category=seed_category)
-    if not task:
-        LOGGER.info("No pending tasks found at priority >= %s; compiler is finished.", min_priority)
-        return False
-
-    term, priority, seed_category = task
-    LOGGER.info("Processing term: %s (priority %s)", term, priority)
-    database_manager.update_task_status(term, "processing")
-
-    try:
-        normalized = database_manager.get_normalized_term(term) or {}
-        phase_clean = (phase or "full").strip().lower()
-
-        # Deterministic seed items from ingestion: compiler should complete these, not invent them.
+        if not term:
+            return (False, None, "No term")
+        
+        completed = ai_worker.complete_item_stubs(term, ingredient_core=ingredient_core, base_context={"term": term}, item_stubs=stubs)
+        compiled_item_names = []
         with database_manager.get_session() as session:
-            seed_rows = (
-                session.query(database_manager.MergedItemForm)
-                .filter(database_manager.MergedItemForm.derived_term == term)
-                .order_by(database_manager.MergedItemForm.id.asc())
+            item_rows2 = (
+                session.query(database_manager.CompiledClusterItemRecord)
+                .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
+                .filter(database_manager.CompiledClusterItemRecord.item_status == "processing")
+                .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+                .limit(len(completed))
                 .all()
             )
-        seed_items: list[dict[str, Any]] = []
-        for r in seed_rows:
-            try:
-                specs = json.loads(r.merged_specs_json or "{}")
-                if not isinstance(specs, dict):
-                    specs = {}
-            except Exception:
-                specs = {}
-            variation = (r.derived_variation or "").strip()
-            physical_form = (r.derived_physical_form or "").strip()
-            seed_items.append(
-                {
-                    "variation": variation,
-                    "physical_form": physical_form,
-                    # Inventory: if the ingestor didn't provide a form, treat as identity/bypass to avoid quarantine.
-                    "form_bypass": (not bool(physical_form)),
-                    "variation_bypass": (not bool(variation)),
-                    "applications": ["Unknown"],
-                    "specifications": specs,
-                }
+            now2 = datetime.now(timezone.utc)
+            for idx, it in enumerate(item_rows2):
+                payload = completed[idx] if idx < len(completed) else {}
+                it.item_json = json.dumps(payload, ensure_ascii=False, sort_keys=True) if isinstance(payload, dict) else "{}"
+                it.item_status = "done"
+                it.item_compiled_at = now2
+                it.item_error = None
+                it.updated_at = now2
+                item_name = payload.get("item_name") or payload.get("variation") or f"item-{idx+1}"
+                compiled_item_names.append(item_name)
+        
+        for item_name in compiled_item_names:
+            LOGGER.info("Stage 2 item: %s -> %s", term, item_name)
+
+        if not ingredient_exists:
+            _finalize_cluster_if_complete(cid)
+        return (True, term, None)
+    except Exception as exc:
+        with database_manager.get_session() as session:
+            rows = (
+                session.query(database_manager.CompiledClusterItemRecord)
+                .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
+                .filter(database_manager.CompiledClusterItemRecord.item_status == "processing")
+                .all()
             )
-        if seed_items:
-            normalized["seed_items"] = seed_items
-
-        if phase_clean == "core":
-            core_payload = ai_worker.compile_core(term, base_context=normalized)
-            ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
-            confidence = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else 0.7
-            caveats = core_payload.get("data_quality", {}).get("caveats") if isinstance(core_payload.get("data_quality"), dict) else []
-            payload = {
-                "ingredient": {
-                    **ingredient_core,
-                    "common_name": term,
-                    # Allow DB writer to seed a deterministic base item.
-                    "items": [],
-                    # Keep stable fields even if AI omitted them.
-                    "documentation": ingredient_core.get("documentation") or {"references": [], "last_verified": None},
-                },
-                "data_quality": {"confidence": float(confidence) if isinstance(confidence, (int, float)) else 0.7, "caveats": caveats if isinstance(caveats, list) else []},
-            }
-        else:
-            existing_payload = _fetch_existing_compiled_payload(term) if phase_clean == "items" else None
-            existing_ingredient = existing_payload.get("ingredient") if isinstance((existing_payload or {}).get("ingredient"), dict) else {}
-
-            # Term completion (core) happens first unless we're strictly in "items" mode with an existing core.
-            if phase_clean == "items" and existing_ingredient:
-                ingredient_core = dict(existing_ingredient)
-                core_conf = (existing_payload.get("data_quality", {}) or {}).get("confidence") if isinstance(existing_payload.get("data_quality"), dict) else None
-                core_caveats = (existing_payload.get("data_quality", {}) or {}).get("caveats") if isinstance(existing_payload.get("data_quality"), dict) else []
-            else:
-                core_payload = ai_worker.compile_core(term, base_context=normalized)
-                ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
-                core_conf = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else None
-                core_caveats = core_payload.get("data_quality", {}).get("caveats") if isinstance(core_payload.get("data_quality"), dict) else []
-
-            items_payload = ai_worker.compile_items(term, ingredient_core=ingredient_core, base_context=normalized)
-            items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
-            taxonomy_payload = ai_worker.compile_taxonomy(term, ingredient_core=ingredient_core, items=[it for it in items if isinstance(it, dict)])
-            taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
-
-            # Assemble final payload matching the DB writer expectations.
-            ingredient: Dict[str, Any] = dict(ingredient_core)
-            ingredient["common_name"] = term
-            ingredient["items"] = items
-            ingredient["taxonomy"] = taxonomy
-            if "documentation" not in ingredient:
-                ingredient["documentation"] = {"references": [], "last_verified": None}
-
-            caveats: list[str] = []
-            for blob in (core_caveats, items_payload.get("data_quality", {}).get("caveats") if isinstance(items_payload.get("data_quality"), dict) else []):
-                if isinstance(blob, list):
-                    for c in blob:
-                        if isinstance(c, str) and c.strip():
-                            caveats.append(c.strip())
-
-            confidence = core_conf if isinstance(core_conf, (int, float)) else 0.7
-            payload = {"ingredient": ingredient, "data_quality": {"confidence": float(confidence), "caveats": sorted(set(caveats))}}
-
-        # Persist compiled payload into the DB (source of truth).
-        database_manager.upsert_compiled_ingredient(term, payload, seed_category=seed_category)
-
-        # Optional legacy artifact: write one JSON file per ingredient (disabled by default).
-        if WRITE_INGREDIENT_FILES:
-            slug = slugify(term)
-            save_payload(payload, slug)
-        update_lookup_files(payload)
-        database_manager.update_task_status(term, "completed")
-        LOGGER.info("Successfully compiled %s", term)
-    except Exception as exc:  # pylint: disable=broad-except
-        database_manager.update_task_status(term, "error")
-        LOGGER.exception("Failed to process %s: %s", term, exc)
-
-    time.sleep(sleep_seconds)
-    return True
+            now = datetime.now(timezone.utc)
+            for r in rows:
+                r.item_status = "error"
+                r.item_error = str(exc)
+                r.updated_at = now
+        LOGGER.exception("Stage 2 failed for cluster %s: %s", cid, exc)
+        return (False, None, str(exc))
+    finally:
+        if sleep_seconds > 0:
+            time.sleep(float(sleep_seconds))
 
 
-def run_compiler(*, sleep_seconds: float, max_ingredients: int | None, min_priority: int, phase: str, seed_category: str | None) -> None:
-    ensure_output_dirs()
-    iterations = 0
-    while True:
-        if max_ingredients and iterations >= max_ingredients:
-            LOGGER.info("Reached ingredient cap (%s); stopping.", max_ingredients)
-            break
-        if not process_next_term(sleep_seconds=sleep_seconds, min_priority=min_priority, phase=phase, seed_category=seed_category):
-            break
-        iterations += 1
+def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sleep_seconds: float, workers: int = 1) -> None:
+    """Stage 2: compile/enrich items for clusters whose term is already normalized."""
+    ids = _select_stage2_cluster_ids(limit=limit, cluster_id=cluster_id)
+    if not ids:
+        LOGGER.info("Stage 2: no clusters pending item compilation.")
+        return
+    priority_map = database_manager.build_cluster_priority_map()
+    
+    workers = max(1, min(workers, 10))  # Cap at 10 workers
+    LOGGER.info("Stage 2: processing %d clusters with %d worker(s)", len(ids), workers)
+    
+    if workers == 1:
+        # Sequential processing (original behavior)
+        ok = 0
+        for cid in ids:
+            success, term, error = _process_stage2_cluster(cid, priority_map, sleep_seconds)
+            if success:
+                ok += 1
+        LOGGER.info("Stage 2 finished: ok=%s clusters=%s", ok, len(ids))
+        return
+    
+    # Parallel processing with multiple workers
+    ok = 0
+    lock = threading.Lock()
+    
+    def worker_task(cid: str) -> tuple[bool, str | None, str | None]:
+        return _process_stage2_cluster(cid, priority_map, sleep_seconds)
+    
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(worker_task, cid): cid for cid in ids}
+        for future in as_completed(futures):
+            cid = futures[future]
+            try:
+                success, term, error = future.result()
+                if success:
+                    with lock:
+                        ok += 1
+            except Exception as exc:
+                LOGGER.exception("Stage 2 worker exception for %s: %s", cid, exc)
+    
+    LOGGER.info("Stage 2 finished: ok=%s clusters=%s (parallel, %d workers)", ok, len(ids), workers)
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compile cluster terms (stage 1) and items (stage 2) via OpenAI")
-    parser.add_argument(
-        "--mode",
-        choices=["cluster", "legacy"],
-        default=os.getenv("COMPILER_MODE", "cluster"),
-        help="cluster=cluster-based stage runner (recommended); legacy=term-queue compiler (old).",
-    )
+    parser = argparse.ArgumentParser(description="Compile clustered terms (stage 1) and items (stage 2) via OpenAI")
     parser.add_argument(
         "--stage",
         choices=["1", "2"],
         default=os.getenv("COMPILER_STAGE", "1"),
-        help="cluster mode only: 1=term completion/normalization, 2=item compilation/enrichment.",
+        help="1=term completion/normalization, 2=item compilation/enrichment.",
     )
     parser.add_argument(
         "--cluster-id",
         default=os.getenv("COMPILER_CLUSTER_ID", ""),
-        help="cluster mode only: exact cluster_id to process (optional).",
+        help="Exact cluster_id to process (optional).",
     )
     parser.add_argument(
         "--limit",
         type=int,
         default=int(os.getenv("COMPILER_LIMIT", str(DEFAULT_CLUSTER_LIMIT))),
-        help="cluster mode only: max clusters to process in this run.",
+        help="Max clusters to process in this run.",
     )
-    parser.add_argument("--terms-file", default=str(DEFAULT_TERMS_FILE), help="Seed term file (JSON array of {term, priority})")
-    parser.add_argument("--sleep-seconds", type=float, default=DEFAULT_SLEEP_SECONDS, help="Delay between API calls")
-    parser.add_argument("--max-ingredients", type=int, default=0, help="Optional cap for number of processed ingredients in this run")
-    parser.add_argument("--min-priority", type=int, default=database_manager.MIN_PRIORITY, help="Minimum priority (1-10) required to process a queued ingredient")
+    parser.add_argument("--sleep-seconds", type=float, default=DEFAULT_SLEEP_SECONDS, help="Delay between API calls (per worker)")
     parser.add_argument(
-        "--phase",
-        choices=["core", "items", "full"],
-        default=os.getenv("COMPILER_PHASE", "full"),
-        help="Compiler phase: core=complete term core only; items=compile/complete items for existing cores; full=core+items+taxonomy (default).",
-    )
-    parser.add_argument(
-        "--seed-category",
-        default=os.getenv("COMPILER_SEED_CATEGORY", ""),
-        help="Optional exact-match filter to only process queued tasks for this primary seed_category.",
+        "--workers",
+        "-w",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help="Number of parallel workers (1-10). For gpt-4o-mini with 2M TPM limit, use 3-5 workers. Default: 1",
     )
     return parser.parse_args(argv)
 
@@ -719,34 +1064,15 @@ def main(argv: List[str] | None = None) -> None:
     )
 
     args = parse_args(argv or sys.argv[1:])
-
-    mode = str(getattr(args, "mode", "cluster") or "cluster").strip().lower()
-    if mode == "cluster":
-        stage = str(getattr(args, "stage", "1") or "1").strip()
-        cid = str(getattr(args, "cluster_id", "") or "").strip() or None
-        limit = int(getattr(args, "limit", 0) or 0)
-        limit = limit if limit > 0 else None
-        if stage == "1":
-            run_stage1_term_completion(cluster_id=cid, limit=limit, sleep_seconds=float(args.sleep_seconds or 0))
-            return
-        run_stage2_item_compilation(cluster_id=cid, limit=limit, sleep_seconds=float(args.sleep_seconds or 0))
+    stage = str(getattr(args, "stage", "1") or "1").strip()
+    cid = str(getattr(args, "cluster_id", "") or "").strip() or None
+    limit = int(getattr(args, "limit", 0) or 0)
+    limit = limit if limit > 0 else None
+    workers = int(getattr(args, "workers", 1) or 1)
+    if stage == "1":
+        run_stage1_term_completion(cluster_id=cid, limit=limit, sleep_seconds=float(args.sleep_seconds or 0), workers=workers)
         return
-
-    # Optional legacy queue seeding from a terms.json file.
-    # Preferred flow: term_collector seeds compiler_state.db directly.
-    try:
-        if args.terms_file and Path(args.terms_file).exists():
-            database_manager.initialize_queue(args.terms_file)
-    except FileNotFoundError:
-        LOGGER.warning("Terms file %s not found; queue will only use existing entries.", args.terms_file)
-
-    run_compiler(
-        sleep_seconds=args.sleep_seconds,
-        max_ingredients=args.max_ingredients or None,
-        min_priority=max(database_manager.MIN_PRIORITY, min(args.min_priority, database_manager.MAX_PRIORITY)),
-        phase=str(args.phase or "full").strip().lower(),
-        seed_category=(str(args.seed_category).strip() or None),
-    )
+    run_stage2_item_compilation(cluster_id=cid, limit=limit, sleep_seconds=float(args.sleep_seconds or 0), workers=workers)
 
 
 if __name__ == "__main__":

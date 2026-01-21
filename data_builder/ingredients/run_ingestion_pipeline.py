@@ -25,7 +25,6 @@ from . import (
     bundle_source_items,
     database_manager,
     derive_terms_from_catalog,
-    enqueue_normalized,
     ingest_source_items,
     merge_source_catalog,
     merge_source_items,
@@ -39,10 +38,8 @@ def _reset_ingestion_tables() -> None:
     """Clear ingestion-stage tables for a clean one-shot run."""
     database_manager.ensure_tables_exist()
     with database_manager.get_session() as session:
-        # Compilation staging (queue) is part of the deterministic pre-AI pipeline.
         # IMPORTANT: compiled output tables (`ingredients`, `ingredient_items`, etc.) are intentionally
         # NOT cleared here so "compiled" can remain a separate, removable/exportable dataset.
-        session.query(database_manager.TaskQueue).delete()
 
         # Raw ingestion + derived staging
         session.query(database_manager.SourceItem).delete()
@@ -123,10 +120,6 @@ def run() -> None:
         no_db=False,
     )
     LOGGER.info("normalized_terms: %s", stats)
-
-    # 6) Seed compiler queue from normalized_terms (DB->DB). This is the bridge into the AI compiler.
-    inserted_queue = enqueue_normalized._seed_from_db(limit=None)  # intentionally one-way, no CSV
-    LOGGER.info("task_queue seeded from normalized_terms: inserted=%s", inserted_queue)
 
 
 def main() -> None:
