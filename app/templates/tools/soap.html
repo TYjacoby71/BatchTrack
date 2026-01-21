@@ -637,8 +637,19 @@
   }
 
   function toNumber(value){
-    const num = parseFloat(value);
+    let cleaned = value;
+    if (typeof cleaned === 'string') {
+      cleaned = cleaned.replace(/,/g, '').trim();
+    }
+    const num = parseFloat(cleaned);
     return isFinite(num) ? num : 0;
+  }
+
+  function clamp(value, min, max){
+    if (!isFinite(value)) return min;
+    if (value < min) return min;
+    if (max !== undefined && max !== null && value > max) return max;
+    return value;
   }
 
   function formatWeight(value){
@@ -751,15 +762,15 @@
 
   function updateOilTotals(){
     const mode = getInputMode();
-    const totalTarget = toNumber(document.getElementById('oilTotalTarget').value);
+    const totalTarget = clamp(toNumber(document.getElementById('oilTotalTarget').value), 0);
     let totalWeight = 0;
     let totalPct = 0;
     const rows = document.querySelectorAll('#oilRows .oil-row');
     rows.forEach(row => {
       const gramsInput = row.querySelector('.oil-grams');
       const pctInput = row.querySelector('.oil-percent');
-      const grams = toNumber(gramsInput.value);
-      const pct = toNumber(pctInput.value);
+      const grams = clamp(toNumber(gramsInput.value), 0);
+      const pct = clamp(toNumber(pctInput.value), 0);
       if (mode === 'percent') {
         const computed = totalTarget > 0 ? (totalTarget * pct / 100) : 0;
         gramsInput.value = computed > 0 ? round(computed, 2) : '';
@@ -770,7 +781,7 @@
     });
     if (mode === 'weight') {
       rows.forEach(row => {
-        const grams = toNumber(row.querySelector('.oil-grams').value);
+        const grams = clamp(toNumber(row.querySelector('.oil-grams').value), 0);
         const pctInput = row.querySelector('.oil-percent');
         const pct = totalWeight > 0 ? (grams / totalWeight) * 100 : 0;
         pctInput.value = grams > 0 ? round(pct, 2) : '';
@@ -791,11 +802,11 @@
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
     if (!rows.length) return;
     if (mode === 'percent') {
-      const totalPct = rows.reduce((sum, row) => sum + toNumber(row.querySelector('.oil-percent').value), 0);
+      const totalPct = rows.reduce((sum, row) => sum + clamp(toNumber(row.querySelector('.oil-percent').value), 0), 0);
       if (totalPct <= 0) return;
       rows.forEach(row => {
         const pctInput = row.querySelector('.oil-percent');
-        const pct = toNumber(pctInput.value);
+        const pct = clamp(toNumber(pctInput.value), 0);
         pctInput.value = round((pct / totalPct) * 100, 2);
       });
     }
@@ -806,7 +817,7 @@
     const oils = [];
     document.querySelectorAll('#oilRows .oil-row').forEach(row => {
       const name = row.querySelector('.oil-typeahead')?.value?.trim();
-      const grams = toNumber(row.querySelector('.oil-grams')?.value);
+      const grams = clamp(toNumber(row.querySelector('.oil-grams')?.value), 0);
       const sapKoh = toNumber(row.querySelector('.oil-sap-koh')?.value);
       const iodine = toNumber(row.querySelector('.oil-iodine')?.value);
       const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
@@ -992,16 +1003,17 @@
   }
 
   function computeAdditives(totalOils, lyeType){
-    const fragrancePct = toNumber(document.getElementById('additiveFragrancePct').value);
-    const lactatePct = toNumber(document.getElementById('additiveLactatePct').value);
-    const sugarPct = toNumber(document.getElementById('additiveSugarPct').value);
-    const saltPct = toNumber(document.getElementById('additiveSaltPct').value);
-    const citricPct = toNumber(document.getElementById('additiveCitricPct').value);
-    const fragranceG = totalOils * (fragrancePct / 100);
-    const lactateG = totalOils * (lactatePct / 100);
-    const sugarG = totalOils * (sugarPct / 100);
-    const saltG = totalOils * (saltPct / 100);
-    const citricG = totalOils * (citricPct / 100);
+    const baseOils = clamp(totalOils, 0);
+    const fragrancePct = clamp(toNumber(document.getElementById('additiveFragrancePct').value), 0, 100);
+    const lactatePct = clamp(toNumber(document.getElementById('additiveLactatePct').value), 0, 100);
+    const sugarPct = clamp(toNumber(document.getElementById('additiveSugarPct').value), 0, 100);
+    const saltPct = clamp(toNumber(document.getElementById('additiveSaltPct').value), 0, 100);
+    const citricPct = clamp(toNumber(document.getElementById('additiveCitricPct').value), 0, 100);
+    const fragranceG = baseOils * (fragrancePct / 100);
+    const lactateG = baseOils * (lactatePct / 100);
+    const sugarG = baseOils * (sugarPct / 100);
+    const saltG = baseOils * (saltPct / 100);
+    const citricG = baseOils * (citricPct / 100);
     const citricLyeFactor = lyeType === 'KOH' ? 0.719 : 0.624;
     const citricLyeG = citricG * citricLyeFactor;
     return {
@@ -1027,8 +1039,8 @@
   }
 
   function updateMoldSuggested(){
-    const waterWeight = toNumber(document.getElementById('moldWaterWeight').value);
-    const oilPct = toNumber(document.getElementById('moldOilPct').value);
+    const waterWeight = clamp(toNumber(document.getElementById('moldWaterWeight').value), 0);
+    const oilPct = clamp(toNumber(document.getElementById('moldOilPct').value), 0, 100);
     const suggested = waterWeight > 0 ? waterWeight * (oilPct / 100) : 0;
     document.getElementById('moldSuggestedOils').value = suggested > 0 ? `${round(suggested, 1)} g` : '';
   }
@@ -1103,7 +1115,7 @@
     const totalOils = totals.totalWeight;
     const totalPct = totals.totalPct;
     const errors = [];
-    const totalTarget = toNumber(document.getElementById('oilTotalTarget').value);
+    const totalTarget = clamp(toNumber(document.getElementById('oilTotalTarget').value), 0);
     const oils = collectOilData();
 
     if (mode === 'percent' && totalTarget <= 0) {
@@ -1131,17 +1143,26 @@
     let lyeConcentration = toNumber(form.lye_concentration.value);
     let waterRatio = toNumber(form.water_ratio.value);
 
-    if (waterMethod === 'percent' && (!waterPct || waterPct <= 0)) {
-      waterPct = 33;
-      form.water_pct.value = waterPct;
+    if (waterMethod === 'percent') {
+      if (!waterPct || waterPct <= 0) {
+        waterPct = 33;
+      }
+      waterPct = clamp(waterPct, 20, 50);
+      form.water_pct.value = round(waterPct, 1);
     }
-    if (waterMethod === 'concentration' && (!lyeConcentration || lyeConcentration <= 0)) {
-      lyeConcentration = 33;
-      form.lye_concentration.value = lyeConcentration;
+    if (waterMethod === 'concentration') {
+      if (!lyeConcentration || lyeConcentration <= 0) {
+        lyeConcentration = 33;
+      }
+      lyeConcentration = clamp(lyeConcentration, 20, 50);
+      form.lye_concentration.value = round(lyeConcentration, 1);
     }
-    if (waterMethod === 'ratio' && (!waterRatio || waterRatio <= 0)) {
-      waterRatio = 2;
-      form.water_ratio.value = waterRatio;
+    if (waterMethod === 'ratio') {
+      if (!waterRatio || waterRatio <= 0) {
+        waterRatio = 2;
+      }
+      waterRatio = clamp(waterRatio, 1, 4);
+      form.water_ratio.value = round(waterRatio, 2);
     }
 
     return { purity, waterMethod, waterPct, lyeConcentration, waterRatio };
@@ -1167,7 +1188,13 @@
       return null;
     }
     const form = document.getElementById('lyeForm');
-    const superfat = toNumber(form.superfat.value) || 5;
+    const superfatRaw = form.superfat.value;
+    let superfat = toNumber(superfatRaw);
+    if (superfatRaw === '' || superfatRaw === null || superfatRaw === undefined) {
+      superfat = 5;
+    }
+    superfat = clamp(superfat, 0, 20);
+    form.superfat.value = round(superfat, 1);
     const lyeType = form.lye_type.value || 'NaOH';
     const sanitized = sanitizeLyeInputs(form);
     const purity = sanitized.purity;
