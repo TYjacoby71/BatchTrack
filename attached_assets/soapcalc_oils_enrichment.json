@@ -790,6 +790,74 @@
         "linolenic": { "raw": "Low", "qualitative": "low" }
       },
       "notes": ["Fatty acids reported qualitatively in source table."]
+    },
+    {
+      "name": "Coconut Oil 92 deg",
+      "sap_naoh": { "raw": "0.181", "min": 0.181, "max": 0.181, "value": 0.181 },
+      "sap_koh": { "raw": "0.254", "min": 0.254, "max": 0.254, "value": 0.254 },
+      "iodine": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+      "ins": { "raw": "255", "min": 255, "max": 255, "value": 255 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "52", "min": 52, "max": 52, "value": 52 },
+        "myristic": { "raw": "18", "min": 18, "max": 18, "value": 18 },
+        "palmitic": { "raw": "8", "min": 8, "max": 8, "value": 8 },
+        "stearic": { "raw": "3", "min": 3, "max": 3, "value": 3 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "6", "min": 6, "max": 6, "value": 6 },
+        "linoleic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "linolenic": { "raw": "0", "min": 0, "max": 0, "value": 0 }
+      }
+    },
+    {
+      "name": "Grapeseed Oil",
+      "sap_naoh": { "raw": "0.133", "min": 0.133, "max": 0.133, "value": 0.133 },
+      "sap_koh": { "raw": "0.187", "min": 0.187, "max": 0.187, "value": 0.187 },
+      "iodine": { "raw": "130", "min": 130, "max": 130, "value": 130 },
+      "ins": { "raw": "75", "min": 75, "max": 75, "value": 75 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "4", "min": 4, "max": 4, "value": 4 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "18", "min": 18, "max": 18, "value": 18 },
+        "linoleic": { "raw": "70", "min": 70, "max": 70, "value": 70 },
+        "linolenic": { "raw": "1", "min": 1, "max": 1, "value": 1 }
+      }
+    },
+    {
+      "name": "Hemp Seed Oil",
+      "sap_naoh": { "raw": "0.136", "min": 0.136, "max": 0.136, "value": 0.136 },
+      "sap_koh": { "raw": "0.191", "min": 0.191, "max": 0.191, "value": 0.191 },
+      "iodine": { "raw": "165", "min": 165, "max": 165, "value": 165 },
+      "ins": { "raw": "50", "min": 50, "max": 50, "value": 50 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "6", "min": 6, "max": 6, "value": 6 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "12", "min": 12, "max": 12, "value": 12 },
+        "linoleic": { "raw": "55", "min": 55, "max": 55, "value": 55 },
+        "linolenic": { "raw": "20", "min": 20, "max": 20, "value": 20 }
+      }
+    },
+    {
+      "name": "Evening Primrose Oil",
+      "sap_naoh": { "raw": "0.134", "min": 0.134, "max": 0.134, "value": 0.134 },
+      "sap_koh": { "raw": "0.188", "min": 0.188, "max": 0.188, "value": 0.188 },
+      "iodine": { "raw": "165", "min": 165, "max": 165, "value": 165 },
+      "ins": { "raw": "50", "min": 50, "max": 50, "value": 50 },
+      "fatty_acid_profile": {
+        "lauric": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "myristic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "palmitic": { "raw": "7", "min": 7, "max": 7, "value": 7 },
+        "stearic": { "raw": "2", "min": 2, "max": 2, "value": 2 },
+        "ricinoleic": { "raw": "0", "min": 0, "max": 0, "value": 0 },
+        "oleic": { "raw": "10", "min": 10, "max": 10, "value": 10 },
+        "linoleic": { "raw": "70", "min": 70, "max": 70, "value": 70 },
+        "linolenic": { "raw": "10", "min": 10, "max": 10, "value": 10 }
+      }
     }
   ]
 }
