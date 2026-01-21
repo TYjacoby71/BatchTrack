@@ -291,10 +291,16 @@ HTML_TEMPLATE = """
         let expandedTerms = new Set();
         
         function loadCategories() {
-            fetch('/api/categories')
+            fetch(`/api/categories?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(data => {
                     const select = document.getElementById('category-filter');
+                    // Clear existing options except the first "All Categories"
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    select.value = '';
+                    currentCategory = '';
                     data.categories.forEach(cat => {
                         const opt = document.createElement('option');
                         opt.value = cat.name;
