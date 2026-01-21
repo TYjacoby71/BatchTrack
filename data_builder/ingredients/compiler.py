@@ -712,6 +712,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
             dq = result.get("data_quality") if isinstance(result.get("data_quality"), dict) else {}
             final_priority = None
             final_term = None
+            final_common_name = None
 
             with database_manager.get_session() as session:
                 rec = session.get(database_manager.CompiledClusterRecord, cid)
@@ -746,6 +747,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                 rec.updated_at = datetime.now(timezone.utc)
                 final_priority = rec.priority
                 final_term = rec.compiled_term
+                final_common_name = common_name
             if final_term and final_priority is not None:
                 with database_manager.get_session() as session:
                     tq = session.query(database_manager.TaskQueue).filter(
@@ -753,6 +755,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
                     ).first()
                     if tq is not None:
                         tq.priority = final_priority
+            LOGGER.info("Stage 1 done: term=%s | common_name=%s | priority=%s", final_term, final_common_name, final_priority)
             ok += 1
         except Exception as exc:  # pylint: disable=broad-except
             with database_manager.get_session() as session:
