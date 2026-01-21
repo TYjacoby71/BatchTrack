@@ -143,6 +143,11 @@
           <input type="number" class="form-control" name="water_ratio" min="1" max="4" step="0.05" value="2">
         </div>
         <div class="col-12">
+          <div class="form-text">
+            Water settings change batch yield and cure time. For fixed molds, adjust total oils or use Mold sizing to keep volume consistent.
+          </div>
+        </div>
+        <div class="col-12">
           <button type="button" class="btn btn-primary" id="calcLyeBtn">Calculate</button>
         </div>
       </form>
@@ -204,6 +209,10 @@
       </div>
       <div class="alert alert-info mt-3 mb-2">
         Always add lye to water (never water to lye) and wear protective gear.
+      </div>
+      <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
+      <div class="small text-muted">
+        Batch yield includes water and additives; expect weight loss during cure. For fixed molds, set a total oils target or use Mold sizing.
       </div>
       <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
         <button class="btn btn-success" id="saveSoapTool">Push to Recipes</button>
@@ -308,7 +317,6 @@
                   </table>
                 </div>
               </div>
-              <div class="alert alert-warning mt-2 d-none" id="soapQualityWarnings"></div>
             </div>
           </div>
         </div>
@@ -327,6 +335,7 @@
             <div class="col-md-3">
               <label class="form-label">Fragrance/EO %</label>
               <input type="number" class="form-control" id="additiveFragrancePct" min="0" max="6" step="0.1" value="3">
+              <div class="form-text">Above 3% can accelerate trace.</div>
             </div>
             <div class="col-md-3">
               <label class="form-label">Sodium lactate %</label>
@@ -957,6 +966,11 @@
       iodine,
       ins,
       sapAvg,
+      superfat,
+      waterData,
+      additives,
+      oils,
+      totalOils,
     } = data;
 
     const hasCoverage = coveragePct > 0;
@@ -989,13 +1003,36 @@
     });
 
     const warnings = [];
+    const pufa = (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
+    const lauricMyristic = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0);
+    const concentration = waterData?.lyeConcentration || 0;
+
     if (iodine > 70) warnings.push('High iodine value can mean softer bars or faster rancidity.');
-    if (hasCoverage && qualities.hardness && qualities.hardness < QUALITY_RANGES.hardness[0]) warnings.push('Hardness looks low; bars may be soft.');
-    if (hasCoverage && qualities.cleansing && qualities.cleansing > QUALITY_RANGES.cleansing[1]) warnings.push('Cleansing is high; consider more conditioning oils.');
+    if (ins > 0 && ins < 136) warnings.push('INS is low (below 136); bars may be soft or have shorter shelf life.');
+    if (ins > 170) warnings.push('INS is high; bars may be brittle or overly cleansing.');
+    if (hasCoverage && pufa > 15) warnings.push('High linoleic/linolenic (PUFA) increases DOS risk; consider antioxidant or more stable oils.');
+    if (hasCoverage && isFinite(qualities.hardness) && qualities.hardness < QUALITY_RANGES.hardness[0]) warnings.push('Hardness looks low; bars may be soft or slow to unmold.');
+    if (hasCoverage && isFinite(qualities.cleansing) && qualities.cleansing > QUALITY_RANGES.cleansing[1]) warnings.push('Cleansing is high; consider more conditioning oils.');
+    if (hasCoverage && isFinite(qualities.bubbly) && qualities.bubbly < QUALITY_RANGES.bubbly[0]) warnings.push('Bubbly lather is low; add 5-10% castor or coconut for more foam.');
+    if (hasCoverage && lauricMyristic > 35) warnings.push('High lauric/myristic (coconut/palm kernel/babassu) can be drying or crumbly; cut warm and keep superfat at least 5%.');
+    if (superfat !== undefined && superfat >= 15) warnings.push('Superfat is high (15%+); bars can be softer/greasy and may have shorter shelf life.');
+    if (concentration > 0 && concentration < 27) warnings.push('Very high water: slower trace and more shrinkage/ash. Consider a higher lye concentration for a firmer bar sooner.');
+    if (concentration > 40) warnings.push('Low water: faster trace and more heat. Work quickly and avoid overheating.');
+    if (additives?.fragrancePct > 3) warnings.push('Fragrance load above 3% can accelerate trace; follow supplier usage rates.');
+    if (additives?.citricPct > 0) warnings.push('Citric acid consumes lye; extra lye has been added. Recheck if you also use vinegar or other acids.');
+    if (Array.isArray(oils) && totalOils > 0) {
+      const positiveOils = oils.filter(oil => oil.grams > 0);
+      if (positiveOils.length === 1) {
+        warnings.push('Single-oil recipe; consider blending for balanced hardness, cleansing, and longevity.');
+      } else if (positiveOils.length > 1) {
+        const maxShare = Math.max(...positiveOils.map(oil => (oil.grams / totalOils) * 100));
+        if (maxShare >= 90) warnings.push('One oil is over 90% of the formula; consider blending for balance.');
+      }
+    }
     const warningBox = document.getElementById('soapQualityWarnings');
     if (warnings.length) {
       warningBox.classList.remove('d-none');
-      warningBox.innerHTML = `<strong>Flags:</strong><ul class="mb-0">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`;
+      warningBox.innerHTML = `<strong>Guidance & flags:</strong><ul class="mb-0">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`;
     } else {
       warningBox.classList.add('d-none');
       warningBox.textContent = '';
@@ -1017,6 +1054,11 @@
     const citricLyeFactor = lyeType === 'KOH' ? 0.719 : 0.624;
     const citricLyeG = citricG * citricLyeFactor;
     return {
+      fragrancePct,
+      lactatePct,
+      sugarPct,
+      saltPct,
+      citricPct,
       fragranceG,
       lactateG,
       sugarG,
@@ -1236,6 +1278,11 @@
       iodine: iodineData.iodine,
       ins,
       sapAvg: lyeTotals.sapAvg,
+      superfat,
+      waterData,
+      additives,
+      oils,
+      totalOils,
     });
 
     if (settings.showAlerts) {
