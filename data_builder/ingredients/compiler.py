@@ -878,6 +878,7 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                     .all()
                 )
                 now2 = datetime.now(timezone.utc)
+                compiled_item_names = []
                 for idx, it in enumerate(item_rows2):
                     payload = completed[idx] if idx < len(completed) else {}
                     it.item_json = json.dumps(payload, ensure_ascii=False, sort_keys=True) if isinstance(payload, dict) else "{}"
@@ -885,6 +886,12 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
                     it.item_compiled_at = now2
                     it.item_error = None
                     it.updated_at = now2
+                    # Extract item name for logging
+                    item_name = payload.get("item_name") or payload.get("variation") or f"item-{idx+1}"
+                    compiled_item_names.append(item_name)
+                # Log each compiled item
+                for item_name in compiled_item_names:
+                    LOGGER.info("Stage 2 item: %s -> %s", term, item_name)
 
             if not ingredient_exists:
                 _finalize_cluster_if_complete(cid)
