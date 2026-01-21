@@ -433,12 +433,22 @@
                   <div class="border rounded p-2">
                     <div class="small text-muted">Iodine</div>
                     <div class="fw-semibold" id="iodineValue">--</div>
+                    <div class="progress position-relative mt-1" style="height: 6px;">
+                      <div class="progress-bar" id="iodineBar" role="progressbar"></div>
+                      <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="iodineTarget" role="button" tabindex="0" aria-label="Apply iodine target"></span>
+                    </div>
+                    <div class="small text-muted">Ideal range: 41-70</div>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="border rounded p-2">
                     <div class="small text-muted">INS</div>
                     <div class="fw-semibold" id="insValue">--</div>
+                    <div class="progress position-relative mt-1" style="height: 6px;">
+                      <div class="progress-bar" id="insBar" role="progressbar"></div>
+                      <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="insTarget" role="button" tabindex="0" aria-label="Apply INS target"></span>
+                    </div>
+                    <div class="small text-muted">Ideal range: 136-170</div>
                   </div>
                 </div>
                 <div class="col-12">
@@ -823,6 +833,10 @@
       high: 'Dense creamy lather.',
     },
   };
+  const IODINE_RANGE = [41, 70];
+  const IODINE_SCALE_MAX = 100;
+  const INS_RANGE = [136, 170];
+  const INS_SCALE_MAX = 250;
   const QUALITY_BASE = {
     hardness: (QUALITY_RANGES.hardness[0] + QUALITY_RANGES.hardness[1]) / 2,
     cleansing: (QUALITY_RANGES.cleansing[0] + QUALITY_RANGES.cleansing[1]) / 2,
@@ -1499,6 +1513,16 @@
     }
   }
 
+  function setScaledBar(id, value, range, max){
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    const safeValue = isFinite(value) ? value : 0;
+    const clamped = Math.max(0, Math.min(max, safeValue));
+    const width = max > 0 ? (clamped / max) * 100 : 0;
+    bar.style.width = `${width}%`;
+    setQualityBarColor(bar, safeValue, range);
+  }
+
   function toggleQualitySliders(){
     const wrap = document.getElementById('qualitySliderWrap');
     const toggle = document.getElementById('qualitySliderToggle');
@@ -1564,6 +1588,8 @@
       conditioning: document.getElementById('qualityConditioningTarget'),
       bubbly: document.getElementById('qualityBubblyTarget'),
       creamy: document.getElementById('qualityCreamyTarget'),
+      iodine: document.getElementById('iodineTarget'),
+      ins: document.getElementById('insTarget'),
     };
     Object.entries(markers).forEach(([key, marker]) => {
       if (!marker) return;
@@ -1571,9 +1597,15 @@
         marker.classList.add('d-none');
         return;
       }
-      const value = clamp(toNumber(targets[key]), 0, 100);
+      const value = toNumber(targets[key]);
+      if (!isFinite(value)) {
+        marker.classList.add('d-none');
+        return;
+      }
+      const scaleMax = key === 'iodine' ? IODINE_SCALE_MAX : (key === 'ins' ? INS_SCALE_MAX : 100);
+      const clamped = clamp(value, 0, scaleMax);
       marker.classList.remove('d-none');
-      marker.style.left = `${value}%`;
+      marker.style.left = `${(clamped / scaleMax) * 100}%`;
       marker.style.width = '2px';
       marker.style.backgroundColor = '#0d6efd';
       marker.style.cursor = 'pointer';
@@ -1805,6 +1837,8 @@
     document.getElementById('iodineValue').textContent = iodine > 0 ? round(iodine, 1) : '--';
     document.getElementById('insValue').textContent = ins > 0 ? round(ins, 1) : '--';
     document.getElementById('sapAvgValue').textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
+    setScaledBar('iodineBar', iodine, IODINE_RANGE, IODINE_SCALE_MAX);
+    setScaledBar('insBar', ins, INS_RANGE, INS_SCALE_MAX);
 
     FATTY_DISPLAY_KEYS.forEach(key => {
       const id = `fatty${key.charAt(0).toUpperCase()}${key.slice(1)}`;
