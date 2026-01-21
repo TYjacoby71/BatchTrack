@@ -528,10 +528,11 @@ SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
 - SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
 - Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
 - flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- melting_point_celsius: VALIDATE RANGE! butters 25-45°C, waxes 45-85°C; "N/A" for liquid oils/hydrosols/extracts. REJECT SOURCE VALUES OUTSIDE -50 to 200°C (likely CAS number confusion)
 - flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
 - solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
 - pH: "N/A" for oils/waxes/butters (non-aqueous)
-"Not Found" ONLY if truly obscure.
+"Not Found" ONLY if truly obscure. NEVER copy obviously wrong source values (e.g., melting point -24945°C is invalid).
 Core:{core_blob}
 Context:{base_blob}
 Meta:{meta}
@@ -573,10 +574,11 @@ SPECIFICATIONS (MANDATORY for oils/butters/waxes - these ARE documented):
 - SAP: oils/butters/waxes 180-260 mg KOH/g, EO 5-20; "N/A" for powders/hydrosols/extracts
 - Iodine: oils/butters/waxes ONLY (Coconut 7-10, Olive 75-94, Shea 52-66); "N/A" for all non-lipids
 - flash_point: oils/waxes 200-300°C, EO 45-100°C; "N/A" for water-based(hydrosols/extracts)/powders/whole
+- melting_point_celsius: VALIDATE RANGE! butters 25-45°C, waxes 45-85°C; "N/A" for liquid oils/hydrosols/extracts. REJECT SOURCE VALUES OUTSIDE -50 to 200°C (likely CAS number confusion)
 - flavor_profile: "Not edible" for cosmetic-only items, actual flavor for food-grade
 - solubility: oils="Oil-soluble, insoluble in water"; hydrosols/extracts="Water-soluble"; powders="Dispersible in water"
 - pH: "N/A" for oils/waxes/butters (non-aqueous)
-"Not Found" ONLY if truly obscure.
+"Not Found" ONLY if truly obscure. NEVER copy obviously wrong source values (e.g., melting point -24945°C is invalid).
 Core:{core_blob}
 Context+Seeds:{base_blob}
 Meta:{meta}

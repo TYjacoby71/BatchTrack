@@ -1089,7 +1089,18 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Compiled Term</div><div class="detail-value">${data.compiled_term || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
                     html += `<div class="detail-label">Variation</div><div class="detail-value">${data.derived_variation || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '<span style="color:#ef4444;">MISSING</span>'}</div>`;
+                    html += `<div class="detail-label">Master Category</div><div class="detail-value"><span class="badge badge-compiled">${data.master_category || '-'}</span></div>`;
                     html += `<div class="detail-label">Status</div><div class="detail-value">${data.item_status || '-'}</div>`;
+                    
+                    // Refinement flags - patterns identified for future batch processing
+                    const flags = data.refinement_flags || [];
+                    if (flags.length > 0) {
+                        html += `<div class="detail-label">Refinement Flags</div><div class="detail-value">`;
+                        flags.forEach(f => {
+                            html += `<span class="badge" style="background:#f59e0b;color:#000;margin-right:4px;">${f}</span>`;
+                        });
+                        html += `</div>`;
+                    }
                     html += '</div></div>';
                     
                     // Source Data

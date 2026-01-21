@@ -2565,7 +2565,39 @@ REFINEMENT_RULES = {
         "match_terms_pattern": None,  # Handled by special logic
         "future_action": "Review for potential cluster merge or synonym linking",
     },
+    # Bad melting point data
+    "bad_melting_point": {
+        "description": "Melting point value outside valid range (-50 to 200°C)",
+        "check_specs": True,  # Special handling - check specifications field
+        "future_action": "Fix melting point data - likely AI confusion with CAS numbers or other IDs",
+    },
 }
+
+
+def _extract_melting_point_value(mp_data) -> float | None:
+    """Extract a numeric melting point value from various formats."""
+    if mp_data is None:
+        return None
+    if isinstance(mp_data, (int, float)):
+        return float(mp_data)
+    if isinstance(mp_data, str):
+        if mp_data in ("N/A", "Not Found", ""):
+            return None
+        # Handle malformed strings like "-024945"
+        try:
+            return float(mp_data)
+        except ValueError:
+            return None
+    if isinstance(mp_data, dict):
+        # Try min or max
+        for key in ("min", "max"):
+            val = mp_data.get(key)
+            if val is not None and val not in ("N/A", "Not Found"):
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    pass
+    return None
 
 
 def detect_refinement_flags(
@@ -2585,6 +2617,10 @@ def detect_refinement_flags(
         # Skip rules that require special logic
         if rule.get("match_terms_pattern") is not None:
             continue
+        
+        # Skip spec checks - handled separately
+        if rule.get("check_specs"):
+            continue
             
         match_vars = rule.get("match_variation", [])
         applies_origins = rule.get("applies_to_origin", [])
@@ -2594,6 +2630,16 @@ def detect_refinement_flags(
             # Check origin constraint if specified
             if not applies_origins or orig in applies_origins:
                 flags.append(rule_key)
+    
+    # Check specifications-based rules
+    if item_json:
+        specs = item_json.get("specifications", {})
+        if specs:
+            # Check melting point range (valid range: -50 to 200°C)
+            mp_value = _extract_melting_point_value(specs.get("melting_point_celsius"))
+            if mp_value is not None:
+                if mp_value < -50 or mp_value > 200:
+                    flags.append("bad_melting_point")
     
     return flags
 
