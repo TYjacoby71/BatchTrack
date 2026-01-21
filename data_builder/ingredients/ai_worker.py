@@ -63,8 +63,9 @@ INGREDIENT_CATEGORIES = [
 ]
 
 SYSTEM_PROMPT = (
-    "IngredientCompilerGPT. JSON only. Use training knowledge for common specs (SAP, iodine, density). "
-    "\"N/A\"=not applicable. \"Not Found\"=truly unknown. All fields required."
+    "IngredientCompilerGPT. JSON only. Use training knowledge liberally - most cosmetic/food ingredients "
+    "are well-documented. Provide values for color, odor, applications, functions, specs. "
+    "\"N/A\"=not applicable. \"Not Found\"=only for truly obscure items. All fields required."
 )
 
 JSON_SCHEMA_SPEC = r"""
@@ -501,8 +502,15 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
     variations = ", ".join(VARIATIONS_CURATED)
     return f"""Stage 2B: Create item variants for "{term}".
 EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
-Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. applications/function_tags: 3-5. Empty variation→variation_bypass=true. Min 1 item.
-SPECS (use training knowledge): SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility, pH("N/A" for oils). "Not Found" only if truly obscure.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. Empty variation→variation_bypass=true. Min 1 item.
+REQUIRED (use training knowledge - these are documented for most ingredients):
+- applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
+- function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
+- color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
+- odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
+- SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility
+- pH: "N/A" for oils/fats. Provide range for aqueous items.
+"Not Found" ONLY if truly obscure ingredient with no documentation.
 Core:{core_blob}
 Context:{base_blob}
 Meta:{meta}
@@ -519,8 +527,15 @@ def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], 
     return f"""Stage 2B COMPLETION: Fill missing fields for "{term}" items.
 EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
 IDENTITY (DO NOT CHANGE): variation, physical_form, form_bypass, variation_bypass. No add/remove/reorder items.
-Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. applications/function_tags: 3-5.
-SPECS (use training knowledge): SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility, pH("N/A" for oils). "Not Found" only if truly obscure.
+Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}.
+REQUIRED (use training knowledge - these are documented for most ingredients):
+- applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
+- function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
+- color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
+- odor_profile: scent description (woody/floral/herbaceous/spicy/warm/etc)
+- SAP(oils 180-260, EO 5-20), Iodine, Density(oils 0.85-0.95), Solubility
+- pH: "N/A" for oils/fats. Provide range for aqueous items.
+"Not Found" ONLY if truly obscure ingredient with no documentation.
 Core:{core_blob}
 Context+Seeds:{base_blob}
 Meta:{meta}
