@@ -272,12 +272,16 @@
                     <label class="form-label mb-1">Quality targets (optional)</label>
                     <select class="form-select form-select-sm" id="qualityPreset">
                       <option value="none">No targets</option>
-                      <option value="balanced" selected>Balanced</option>
-                      <option value="hard">Hard & long-lasting</option>
-                      <option value="gentle">Gentle & conditioning</option>
-                      <option value="bubbly">High bubbly</option>
-                      <option value="creamy">Creamy lather</option>
-                      <option value="lowCleansing">Low cleansing</option>
+                      <option value="balanced" selected>Balanced All-Purpose</option>
+                      <option value="bubbly">Bubbly Lather</option>
+                      <option value="creamy">Creamy Conditioning</option>
+                      <option value="hard">Hard / Durable</option>
+                      <option value="gentle">Gentle / Moisturizing</option>
+                      <option value="castile">Castile-Style</option>
+                      <option value="shampoo">Shampoo Bar</option>
+                      <option value="utility">Utility / Laundry</option>
+                      <option value="luxury">Luxury Butter-Rich</option>
+                      <option value="palmFree">Palm-Free Vegan</option>
                     </select>
                   </div>
                   <button class="btn btn-sm btn-outline-primary" type="button" id="applyQualityTargets">Nudge blend toward targets</button>
@@ -827,12 +831,96 @@
     creamy: (QUALITY_RANGES.creamy[0] + QUALITY_RANGES.creamy[1]) / 2,
   };
   const QUALITY_PRESETS = {
-    balanced: { ...QUALITY_BASE },
-    hard: { ...QUALITY_BASE, hardness: 54, creamy: 40 },
-    gentle: { ...QUALITY_BASE, cleansing: 12, conditioning: 65 },
-    bubbly: { ...QUALITY_BASE, bubbly: 42, cleansing: 20 },
-    creamy: { ...QUALITY_BASE, creamy: 42, conditioning: 58 },
-    lowCleansing: { ...QUALITY_BASE, cleansing: 10, conditioning: 60 },
+    balanced: {
+      hardness: 40,
+      cleansing: 15,
+      conditioning: 55,
+      bubbly: 25,
+      creamy: 25,
+      iodine: 55,
+      ins: 160,
+    },
+    bubbly: {
+      hardness: 35,
+      cleansing: 20,
+      conditioning: 50,
+      bubbly: 35,
+      creamy: 25,
+      iodine: 60,
+      ins: 150,
+    },
+    creamy: {
+      hardness: 45,
+      cleansing: 12,
+      conditioning: 60,
+      bubbly: 20,
+      creamy: 35,
+      iodine: 50,
+      ins: 155,
+    },
+    hard: {
+      hardness: 50,
+      cleansing: 18,
+      conditioning: 48,
+      bubbly: 22,
+      creamy: 28,
+      iodine: 45,
+      ins: 165,
+    },
+    gentle: {
+      hardness: 35,
+      cleansing: 10,
+      conditioning: 65,
+      bubbly: 15,
+      creamy: 20,
+      iodine: 65,
+      ins: 140,
+    },
+    castile: {
+      hardness: 20,
+      cleansing: 5,
+      conditioning: 75,
+      bubbly: 10,
+      creamy: 15,
+      iodine: 80,
+      ins: 110,
+    },
+    shampoo: {
+      hardness: 30,
+      cleansing: 22,
+      conditioning: 50,
+      bubbly: 30,
+      creamy: 25,
+      iodine: 60,
+      ins: 145,
+    },
+    utility: {
+      hardness: 70,
+      cleansing: 50,
+      conditioning: 20,
+      bubbly: 50,
+      creamy: 20,
+      iodine: 10,
+      ins: 250,
+    },
+    luxury: {
+      hardness: 55,
+      cleansing: 10,
+      conditioning: 55,
+      bubbly: 15,
+      creamy: 40,
+      iodine: 50,
+      ins: 150,
+    },
+    palmFree: {
+      hardness: 42,
+      cleansing: 16,
+      conditioning: 58,
+      bubbly: 22,
+      creamy: 28,
+      iodine: 55,
+      ins: 155,
+    },
   };
   const FATTY_BAR_COLORS = {
     lauric: '#0d6efd',
@@ -2415,7 +2503,11 @@
     }
     if (data.quality) {
       const preset = document.getElementById('qualityPreset');
-      if (preset) preset.value = data.quality.preset || 'balanced';
+      if (preset) {
+        const desired = data.quality.preset || 'balanced';
+        const option = Array.from(preset.options).find(opt => opt.value === desired);
+        preset.value = option ? desired : 'balanced';
+      }
       document.querySelectorAll('.quality-focus').forEach(el => {
         el.checked = Array.isArray(data.quality.focus) && data.quality.focus.includes(el.id);
       });
