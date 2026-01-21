@@ -839,8 +839,9 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(tc.botanical_key, null)}</div>`;
                     html += `<div class="detail-label">Derived Variation</div><div class="detail-value">${data.derived_variation || '-'}</div>`;
                     html += `<div class="detail-label">Physical Form</div><div class="detail-value">${data.derived_physical_form || '-'}</div>`;
+                    html += `<div class="detail-label">Master Category</div><div class="detail-value"><span class="badge badge-compiled">${data.master_category || '-'}</span></div>`;
                     html += `<div class="detail-label">CAS Numbers</div><div class="detail-value">${(data.cas_numbers || []).join(', ') || '-'}</div>`;
-                    html += `<div class="detail-label">Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
+                    html += `<div class="detail-label">Term Master Categories</div><div class="detail-value">${(td.master_categories || []).join(', ') || '-'}</div>`;
                     html += '</div></div>';
                     
                     const specs = data.merged_specs || {};
@@ -1942,6 +1943,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
             "item_json": parse_json(row[7]) if row[7] else {},
             "compiled_term": row[8],
             "source_data": mif_data,
+            "master_category": (parse_json(row[7]) or {}).get("master_category", ""),
         }
     )
 

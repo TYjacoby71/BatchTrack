@@ -176,6 +176,7 @@ ITEMS_SCHEMA_SPEC = r"""
 {
   "items": [{
     "variation": {"value": "string", "status": "found|not_applicable"},
+    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters",
     "description": "1-2 sentence description",
     "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
     "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
@@ -504,6 +505,20 @@ def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_contex
 EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
 Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}. Empty variation→variation_bypass=true. Min 1 item.
 REQUIRED (use training knowledge - these are documented for most ingredients):
+- master_category: UX grouping for filtering. MUST assign based on variation/physical_form:
+  - Essential Oil/Steam-Distilled → "Essential Oils"
+  - Carrier oils (cold/expeller pressed oils) → "Carrier Oils"
+  - physical_form=Butter → "Butters"
+  - physical_form=Wax → "Waxes"
+  - physical_form=Hydrosol → "Hydrosols"
+  - CO2 Extract/Extract → "Extracts"
+  - Absolute → "Absolutes"
+  - Concrete → "Concretes"
+  - physical_form=Resin → "Resins & Gums"
+  - Flower/Leaf/Herb variations → "Herbs" or "Flowers"
+  - Root variations → "Roots"
+  - Seed variations → "Seeds"
+  - Bark variations → "Barks"
 - applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
 - function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
@@ -535,6 +550,20 @@ EVERY FIELD: VALUE, "N/A", or "Not Found". No empty/omitted.
 IDENTITY (DO NOT CHANGE): variation, physical_form, form_bypass, variation_bypass. No add/remove/reorder items.
 Rules: physical_form∈{{{forms}}}. variation∈{{{variations}}}.
 REQUIRED (use training knowledge - these are documented for most ingredients):
+- master_category: UX grouping for filtering. MUST assign based on variation/physical_form:
+  - Essential Oil/Steam-Distilled → "Essential Oils"
+  - Carrier oils (cold/expeller pressed oils) → "Carrier Oils"
+  - physical_form=Butter → "Butters"
+  - physical_form=Wax → "Waxes"
+  - physical_form=Hydrosol → "Hydrosols"
+  - CO2 Extract/Extract → "Extracts"
+  - Absolute → "Absolutes"
+  - Concrete → "Concretes"
+  - physical_form=Resin → "Resins & Gums"
+  - Flower/Leaf/Herb variations → "Herbs" or "Flowers"
+  - Root variations → "Roots"
+  - Seed variations → "Seeds"
+  - Bark variations → "Barks"
 - applications: 3-5 uses (Soapmaking/Skincare/Haircare/Aromatherapy/Culinary/Perfumery/Massage/Pain Relief/etc)
 - function_tags: 3-5 functions (Emollient/Moisturizing/Fragrance/Antimicrobial/Antioxidant/Astringent/Soothing/etc)
 - color: visual appearance (pale yellow/amber/brown/colorless/white/etc)
