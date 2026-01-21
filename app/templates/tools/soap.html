@@ -29,6 +29,7 @@
               <div class="position-relative">
                 <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
                 <input type="hidden" class="oil-sap-koh">
+                <input type="hidden" class="oil-gi-id">
                 <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
               </div>
             </div>
@@ -44,20 +45,33 @@
         <button class="btn btn-sm btn-outline-primary" id="addOil">Add Oil</button>
       </div>
 
-      <div class="mb-3">
-        <h6>Ingredients</h6>
-        <div id="tool-ingredients"></div>
-        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
-      </div>
-      <div class="mb-3">
-        <h6>Consumables</h6>
-        <div id="tool-consumables"></div>
-        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
-      </div>
-      <div class="mb-3">
-        <h6>Containers</h6>
-        <div id="tool-containers"></div>
-        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
+      <div class="accordion mb-3" id="soapExtrasAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="soapExtrasHeading">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapExtrasCollapse">
+              Optional add-ons (ingredients, consumables, containers)
+            </button>
+          </h2>
+          <div id="soapExtrasCollapse" class="accordion-collapse collapse" data-bs-parent="#soapExtrasAccordion">
+            <div class="accordion-body">
+              <div class="mb-3">
+                <h6>Ingredients</h6>
+                <div id="tool-ingredients"></div>
+                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
+              </div>
+              <div class="mb-3">
+                <h6>Consumables</h6>
+                <div id="tool-consumables"></div>
+                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
+              </div>
+              <div class="mb-3">
+                <h6>Containers</h6>
+                <div id="tool-containers"></div>
+                <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <form id="lyeForm" class="row g-3">
         <div class="col-md-4">
@@ -85,39 +99,55 @@
       </form>
       <div class="mt-3" id="lyeResult" style="display:none;">
         <div class="alert alert-info mb-2" id="lyeNumbers"></div>
-        <button class="btn btn-success" id="saveSoapTool">Save to BatchTrack</button>
+        <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
+          <button class="btn btn-success" id="saveSoapTool">Push to Recipes</button>
+          <span class="small text-muted">Draft your recipe to finish in BatchTrack.</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">Quick Unit Conversion</div>
-    <div class="card-body">
-      <form id="convForm" class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">Amount</label>
-          <input type="number" class="form-control" name="amount" step="0.001" min="0">
+  <div class="accordion" id="soapUtilitiesAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapUtilitiesHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapUtilitiesCollapse">
+          Quick Unit Conversion
+        </button>
+      </h2>
+      <div id="soapUtilitiesCollapse" class="accordion-collapse collapse" data-bs-parent="#soapUtilitiesAccordion">
+        <div class="accordion-body">
+          <form id="convForm" class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Amount</label>
+              <input type="number" class="form-control" name="amount" step="0.001" min="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">From</label>
+              <input type="text" class="form-control" name="from" placeholder="g, ml, oz">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">To</label>
+              <input type="text" class="form-control" name="to" placeholder="g, ml, oz">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button type="button" class="btn btn-outline-secondary w-100" id="convBtn">Convert</button>
+            </div>
+          </form>
+          <div class="mt-2 small text-muted" id="convResult"></div>
         </div>
-        <div class="col-md-3">
-          <label class="form-label">From</label>
-          <input type="text" class="form-control" name="from" placeholder="g, ml, oz">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">To</label>
-          <input type="text" class="form-control" name="to" placeholder="g, ml, oz">
-        </div>
-        <div class="col-md-3 d-flex align-items-end">
-          <button type="button" class="btn btn-outline-secondary w-100" id="convBtn">Convert</button>
-        </div>
-      </form>
-      <div class="mt-2 small text-muted" id="convResult"></div>
+      </div>
     </div>
-  </div>
-
-  <div class="card mt-4">
-    <div class="card-header">Exports</div>
-    <div class="card-body">
-      <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">View INCI Summary</a>
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="soapExportsHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapExportsCollapse">
+          Exports
+        </button>
+      </h2>
+      <div id="soapExportsCollapse" class="accordion-collapse collapse" data-bs-parent="#soapUtilitiesAccordion">
+        <div class="accordion-body">
+          <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">View INCI Summary</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -132,6 +162,7 @@
   function attachOilTypeahead(row){
     const input = row.querySelector('.oil-typeahead');
     const hiddenSap = row.querySelector('.oil-sap-koh');
+    const hiddenGi = row.querySelector('.oil-gi-id');
     const list = row.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
       return;
@@ -139,7 +170,8 @@
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
-      giHiddenEl: null,
+      mode: 'public',
+      giHiddenEl: hiddenGi,
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: true,
@@ -154,6 +186,9 @@
     input.addEventListener('input', function(){
       if (!this.value.trim() && hiddenSap) {
         hiddenSap.value = '';
+      }
+      if (!this.value.trim() && hiddenGi) {
+        hiddenGi.value = '';
       }
     });
   }
@@ -185,6 +220,24 @@
     return totalG * sap * (1 - (superfat/100));
   }
 
+  function collectOilLines(){
+    const oils = [];
+    document.querySelectorAll('#oilRows .oil-row').forEach(row => {
+      const name = row.querySelector('.oil-typeahead')?.value?.trim();
+      const gi = row.querySelector('.oil-gi-id')?.value || '';
+      const grams = parseFloat(row.querySelector('.oil-grams')?.value || '0');
+      if (!(grams > 0)) return;
+      if (!name && !gi) return;
+      oils.push({
+        name: name || undefined,
+        global_item_id: gi ? parseInt(gi) : undefined,
+        quantity: grams,
+        unit: 'gram'
+      });
+    });
+    return oils;
+  }
+
   document.getElementById('addOil').addEventListener('click', function(){
     const container = document.getElementById('oilRows');
     const row = document.createElement('div'); row.className='row g-2 align-items-end oil-row mb-2';
@@ -194,6 +247,7 @@
         <div class="position-relative">
           <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
           <input type="hidden" class="oil-sap-koh">
+          <input type="hidden" class="oil-gi-id">
           <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
         </div>
       </div>
@@ -261,17 +315,24 @@
   });
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
-    // Save draft for prefill
+    let redirectTo = '/recipes/new';
     try {
       const f = document.getElementById('lyeForm');
       const oilG = parseFloat(f.oil_weight_g.value||'0');
       const superfat = parseFloat(f.superfat.value||'0');
       const lyeType = f.lye_type.value;
       const waterPct = parseFloat(f.water_pct.value||'33');
-      const lyeAfterSuperfat = (function(){
-        try { return parseFloat((document.getElementById('lyeNumbers').textContent.match(/Lye \(.*\): ([0-9.]+)/)||[])[1]||'0'); } catch(_) { return 0; }
-      })();
+      const lyeAfterSuperfat = computeLyeBySAP(lyeType, superfat);
       const waterG = oilG * (waterPct/100);
+      const oils = collectOilLines();
+      const lyeName = lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+      const baseIngredients = [...oils];
+      if (lyeAfterSuperfat > 0) {
+        baseIngredients.push({ name: lyeName, quantity: round(lyeAfterSuperfat), unit: 'gram' });
+      }
+      if (waterG > 0) {
+        baseIngredients.push({ name: 'Distilled Water', quantity: round(waterG), unit: 'gram' });
+      }
       // Collect selected lines for draft persistence
       function collectLines(wrapperId, kind){
         const out = [];
@@ -297,30 +358,22 @@
         predicted_yield: Math.round((oilG + waterG + lyeAfterSuperfat)*100)/100,
         predicted_yield_unit: 'gram',
         category_name: 'Soaps',
-        ingredients: collectLines('tool-ingredients', 'ingredient'),
+        category_data: {
+          soap_superfat: superfat,
+          soap_water_pct: waterPct,
+          soap_lye_type: lyeType
+        },
+        ingredients: baseIngredients.concat(collectLines('tool-ingredients', 'ingredient')),
         consumables: collectLines('tool-consumables', 'consumable'),
         containers: collectLines('tool-containers', 'container')
       };
-      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      const response = await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      const data = await response.json();
+      if (data && data.redirect) {
+        redirectTo = data.redirect;
+      }
     } catch(_) {}
-    // Prompt unauthenticated users to login/signup
-    const modalHtml = `
-      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <p>Create a free account to store this calculation as a recipe and reuse it.</p>
-        </div>
-        <div class="modal-footer">
-          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
-          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
-        </div>
-      </div></div></div>`;
-    const div = document.createElement('div');
-    div.innerHTML = modalHtml;
-    document.body.appendChild(div.firstChild);
-    const modal = new bootstrap.Modal(document.getElementById('savePrompt'));
-    modal.show();
+    window.location.assign(redirectTo);
   });
 })();
 </script>
