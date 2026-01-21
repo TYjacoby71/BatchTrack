@@ -297,6 +297,8 @@ HTML_TEMPLATE = """
         let currentDataset = 'raw'; // raw | compiled
         let searchTimeout = null;
         let expandedTerms = new Set();
+        let sortField = 'rank';  // rank | name | priority
+        let sortOrder = 'asc';   // asc | desc
         
         function loadCategories() {
             fetch(`/api/categories?dataset=${currentDataset}`)
@@ -419,11 +421,36 @@ HTML_TEMPLATE = """
             loadData();
         }
         
+        function getSortIndicator(field) {
+            if (sortField !== field) return '';
+            return sortOrder === 'asc' ? ' ▲' : ' ▼';
+        }
+        
+        function toggleSort(field) {
+            if (sortField === field) {
+                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortOrder = field === 'priority' ? 'desc' : 'asc';  // Priority defaults to desc (high first)
+            }
+            currentPage = 1;
+            updateTableHeaders();
+            loadData();
+        }
+        
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
             if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
-                    thead.innerHTML = '<tr><th>#</th><th>Cluster ID</th><th>Common Name</th><th>Items</th><th>Term Status</th><th>Priority</th><th>Items Compiled</th></tr>';
+                    thead.innerHTML = `<tr>
+                        <th class="sortable" onclick="toggleSort('rank')" style="cursor:pointer;">#${getSortIndicator('rank')}</th>
+                        <th>Cluster ID</th>
+                        <th class="sortable" onclick="toggleSort('name')" style="cursor:pointer;">Common Name${getSortIndicator('name')}</th>
+                        <th>Items</th>
+                        <th>Term Status</th>
+                        <th class="sortable" onclick="toggleSort('priority')" style="cursor:pointer;">Priority${getSortIndicator('priority')}</th>
+                        <th>Items Compiled</th>
+                    </tr>`;
                 } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
                 } else {
@@ -472,7 +499,9 @@ HTML_TEMPLATE = """
                 }
             }
             
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}`)
+            const sortParams = currentDataset === 'compiled' && currentView === 'clusters' 
+                ? `&sort=${sortField}&order=${sortOrder}` : '';
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -1683,6 +1712,8 @@ def api_compiled_clusters():
     page = int(request.args.get("page", 1))
     search = (request.args.get("search") or "").strip()
     filter_type = (request.args.get("filter") or "all").strip().lower()
+    sort_field = (request.args.get("sort") or "rank").strip().lower()
+    sort_order = (request.args.get("order") or "asc").strip().lower()
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -1707,6 +1738,16 @@ def api_compiled_clusters():
     cur.execute(f"SELECT COUNT(*) FROM compiled_clusters c {where_sql}", params)
     total = cur.fetchone()[0]
 
+    # Build dynamic ORDER BY based on sort parameters
+    order_dir = "DESC" if sort_order == "desc" else "ASC"
+    if sort_field == "name":
+        order_sql = f"COALESCE(json_extract(c.payload_json, '$.stage1.common_name'), c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
+    elif sort_field == "priority":
+        order_sql = f"c.priority {order_dir}, c.cluster_id"
+    else:  # rank (default)
+        null_order = "999999" if sort_order == "asc" else "0"
+        order_sql = f"COALESCE(c.compilation_rank, {null_order}) {order_dir}, c.priority DESC, c.cluster_id"
+
     cur.execute(
         f"""
         SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
@@ -1717,7 +1758,7 @@ def api_compiled_clusters():
                c.compilation_rank
         FROM compiled_clusters c
         {where_sql}
-        ORDER BY COALESCE(c.compilation_rank, 999999) ASC, c.priority DESC, c.cluster_id
+        ORDER BY {order_sql}
         LIMIT ? OFFSET ?
         """,
         params + [per_page, offset],
