@@ -252,6 +252,12 @@
                 <div class="progress">
                   <div class="progress-bar" id="qualityHardnessBar" role="progressbar"></div>
                 </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityHardnessRangeStart"></div>
+                  <div class="progress-bar bg-success" id="qualityHardnessRangeIdeal"></div>
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityHardnessRangeEnd"></div>
+                </div>
+                <div class="small text-muted">Ideal range: 29-54</div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
@@ -259,8 +265,14 @@
                   <span id="qualityCleansingValue">--</span>
                 </div>
                 <div class="progress">
-                  <div class="progress-bar bg-warning" id="qualityCleansingBar" role="progressbar"></div>
+                  <div class="progress-bar" id="qualityCleansingBar" role="progressbar"></div>
                 </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityCleansingRangeStart"></div>
+                  <div class="progress-bar bg-success" id="qualityCleansingRangeIdeal"></div>
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityCleansingRangeEnd"></div>
+                </div>
+                <div class="small text-muted">Ideal range: 12-22</div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
@@ -268,8 +280,14 @@
                   <span id="qualityConditioningValue">--</span>
                 </div>
                 <div class="progress">
-                  <div class="progress-bar bg-success" id="qualityConditioningBar" role="progressbar"></div>
+                  <div class="progress-bar" id="qualityConditioningBar" role="progressbar"></div>
                 </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityConditioningRangeStart"></div>
+                  <div class="progress-bar bg-success" id="qualityConditioningRangeIdeal"></div>
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityConditioningRangeEnd"></div>
+                </div>
+                <div class="small text-muted">Ideal range: 44-69</div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
@@ -277,8 +295,14 @@
                   <span id="qualityBubblyValue">--</span>
                 </div>
                 <div class="progress">
-                  <div class="progress-bar bg-info" id="qualityBubblyBar" role="progressbar"></div>
+                  <div class="progress-bar" id="qualityBubblyBar" role="progressbar"></div>
                 </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityBubblyRangeStart"></div>
+                  <div class="progress-bar bg-success" id="qualityBubblyRangeIdeal"></div>
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityBubblyRangeEnd"></div>
+                </div>
+                <div class="small text-muted">Ideal range: 14-46</div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
@@ -286,10 +310,46 @@
                   <span id="qualityCreamyValue">--</span>
                 </div>
                 <div class="progress">
-                  <div class="progress-bar bg-secondary" id="qualityCreamyBar" role="progressbar"></div>
+                  <div class="progress-bar" id="qualityCreamyBar" role="progressbar"></div>
                 </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityCreamyRangeStart"></div>
+                  <div class="progress-bar bg-success" id="qualityCreamyRangeIdeal"></div>
+                  <div class="progress-bar bg-secondary opacity-25" id="qualityCreamyRangeEnd"></div>
+                </div>
+                <div class="small text-muted">Ideal range: 16-48</div>
               </div>
               <div class="small text-muted" id="fattyCoverageNote">Fatty acid coverage: --</div>
+              <div class="form-check form-switch mt-3">
+                <input class="form-check-input" type="checkbox" id="qualitySliderToggle">
+                <label class="form-check-label" for="qualitySliderToggle">Show feel sliders</label>
+              </div>
+              <div class="mt-2 d-none" id="qualitySliderWrap">
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between small text-muted">
+                    <span>Soft</span><span>Hard</span>
+                  </div>
+                  <input type="range" class="form-range" min="0" max="100" id="feelHardness" disabled>
+                </div>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between small text-muted">
+                    <span>Low lather</span><span>Bubbly</span>
+                  </div>
+                  <input type="range" class="form-range" min="0" max="100" id="feelBubbly" disabled>
+                </div>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between small text-muted">
+                    <span>Drying</span><span>Conditioning</span>
+                  </div>
+                  <input type="range" class="form-range" min="0" max="100" id="feelConditioning" disabled>
+                </div>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between small text-muted">
+                    <span>Not greasy</span><span>Greasy</span>
+                  </div>
+                  <input type="range" class="form-range" min="0" max="100" id="feelGreasy" disabled>
+                </div>
+              </div>
             </div>
             <div class="col-lg-6">
               <div class="row g-2">
@@ -314,6 +374,22 @@
               </div>
               <div class="mt-3">
                 <h6>Fatty acid breakdown</h6>
+                <button class="btn btn-sm btn-outline-secondary mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#fattyVisualCollapse">
+                  Show fatty acid bar
+                </button>
+                <div class="collapse mb-2" id="fattyVisualCollapse">
+                  <div class="progress" style="height: 14px;">
+                    <div class="progress-bar" id="fattyBarLauric"></div>
+                    <div class="progress-bar" id="fattyBarMyristic"></div>
+                    <div class="progress-bar" id="fattyBarPalmitic"></div>
+                    <div class="progress-bar" id="fattyBarStearic"></div>
+                    <div class="progress-bar" id="fattyBarRicinoleic"></div>
+                    <div class="progress-bar" id="fattyBarOleic"></div>
+                    <div class="progress-bar" id="fattyBarLinoleic"></div>
+                    <div class="progress-bar" id="fattyBarLinolenic"></div>
+                  </div>
+                  <div class="small text-muted mt-1">Stacked by % of oils with fatty acid data.</div>
+                </div>
                 <div class="table-responsive">
                   <table class="table table-sm">
                     <tbody>
@@ -636,6 +712,23 @@
     conditioning: [44, 69],
     bubbly: [14, 46],
     creamy: [16, 48],
+  };
+  const QUALITY_HINTS = {
+    hardness: 'Durable bar that resists mush.',
+    cleansing: 'Higher values feel more stripping.',
+    conditioning: 'Silky, moisturizing feel.',
+    bubbly: 'Fluffy lather and big bubbles.',
+    creamy: 'Stable, creamy lather.',
+  };
+  const FATTY_BAR_COLORS = {
+    lauric: '#0d6efd',
+    myristic: '#6f42c1',
+    palmitic: '#ffc107',
+    stearic: '#adb5bd',
+    ricinoleic: '#20c997',
+    oleic: '#198754',
+    linoleic: '#fd7e14',
+    linolenic: '#dc3545',
   };
   const FATTY_DISPLAY_KEYS = [
     'lauric',
@@ -1067,6 +1160,79 @@
     bar.style.width = `${clamped}%`;
   }
 
+  function setQualityRangeBars(){
+    Object.entries(QUALITY_RANGES).forEach(([key, range]) => {
+      const [min, max] = range;
+      const name = key.charAt(0).toUpperCase() + key.slice(1);
+      const start = document.getElementById(`quality${name}RangeStart`);
+      const ideal = document.getElementById(`quality${name}RangeIdeal`);
+      const end = document.getElementById(`quality${name}RangeEnd`);
+      if (!start || !ideal || !end) return;
+      const startPct = Math.max(0, Math.min(100, min));
+      const idealPct = Math.max(0, Math.min(100, max - min));
+      const endPct = Math.max(0, 100 - max);
+      start.style.width = `${startPct}%`;
+      ideal.style.width = `${idealPct}%`;
+      end.style.width = `${endPct}%`;
+    });
+  }
+
+  function setQualityBarColor(bar, value, range){
+    if (!bar || !range) return;
+    bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-secondary');
+    if (!isFinite(value)) {
+      bar.classList.add('bg-secondary');
+      return;
+    }
+    if (value < range[0]) {
+      bar.classList.add('bg-warning');
+    } else if (value > range[1]) {
+      bar.classList.add('bg-danger');
+    } else {
+      bar.classList.add('bg-success');
+    }
+  }
+
+  function toggleQualitySliders(){
+    const wrap = document.getElementById('qualitySliderWrap');
+    const toggle = document.getElementById('qualitySliderToggle');
+    if (!wrap || !toggle) return;
+    wrap.classList.toggle('d-none', !toggle.checked);
+  }
+
+  function updateQualitySliders(qualities, superfat){
+    const hardness = clamp(qualities.hardness || 0, 0, 100);
+    const bubbly = clamp(qualities.bubbly || 0, 0, 100);
+    const conditioning = clamp(qualities.conditioning || 0, 0, 100);
+    const greasyScore = clamp(conditioning + (superfat || 0) * 3, 0, 100);
+    const hardEl = document.getElementById('feelHardness');
+    const bubblyEl = document.getElementById('feelBubbly');
+    const conditioningEl = document.getElementById('feelConditioning');
+    const greasyEl = document.getElementById('feelGreasy');
+    if (hardEl) hardEl.value = round(hardness, 1);
+    if (bubblyEl) bubblyEl.value = round(bubbly, 1);
+    if (conditioningEl) conditioningEl.value = round(conditioning, 1);
+    if (greasyEl) greasyEl.value = round(greasyScore, 1);
+  }
+
+  function updateFattyBar(fattyPercent){
+    const totals = {};
+    let total = 0;
+    FATTY_DISPLAY_KEYS.forEach(key => {
+      const value = clamp(toNumber(fattyPercent[key]), 0, 100);
+      totals[key] = value;
+      total += value;
+    });
+    FATTY_DISPLAY_KEYS.forEach(key => {
+      const el = document.getElementById(`fattyBar${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+      if (!el) return;
+      const width = total > 0 ? (totals[key] / total) * 100 : 0;
+      el.style.width = `${width}%`;
+      el.style.backgroundColor = FATTY_BAR_COLORS[key] || '#6c757d';
+      el.title = `${key.charAt(0).toUpperCase()}${key.slice(1)}: ${round(totals[key], 1)}%`;
+    });
+  }
+
   function updateQualitiesDisplay(data){
     const {
       qualities,
@@ -1086,9 +1252,20 @@
 
     function setQuality(name, value){
       const label = document.getElementById(`quality${name}Value`);
+      const bar = document.getElementById(`quality${name}Bar`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
       setProgress(`quality${name}Bar`, hasCoverage ? value : 0);
+      const rangeKey = name.toLowerCase();
+      const range = QUALITY_RANGES[rangeKey];
+      if (bar && range) {
+        setQualityBarColor(bar, value, range);
+        if (hasCoverage && isFinite(value)) {
+          bar.title = `${name}: ${round(value, 1)} (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
+        } else {
+          bar.title = `${name}: -- (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
+        }
+      }
     }
 
     setQuality('Hardness', qualities.hardness);
@@ -1110,6 +1287,8 @@
       const value = fattyPercent[key];
       document.getElementById(id).textContent = hasCoverage && value ? `${round(value, 1)}%` : '--';
     });
+    updateQualitySliders(qualities, superfat || 0);
+    updateFattyBar(fattyPercent);
 
     const warnings = [];
     const pufa = (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
@@ -1553,7 +1732,11 @@
         showSoapAlert('info', `Lye purity is set to ${round(purity, 1)}%. Adjusting lye to match your real-world purity.`, { dismissible: true, timeoutMs: 6000 });
       }
       if (waterData.lyeConcentration < 25 || waterData.lyeConcentration > 45) {
-        showSoapAlert('warning', 'Your lye concentration is outside the common 25–45% range. Expect slower or faster trace.', { dismissible: true, timeoutMs: 7000 });
+        showSoapAlert('warning', 'Your lye concentration is outside the common 25-45% range. Expect slower or faster trace.', { dismissible: true, timeoutMs: 7000 });
+      }
+      const mold = getMoldSettings();
+      if (mold.shape === 'cylinder' && mold.waterWeight > 0 && !mold.useCylinder) {
+        showSoapAlert('info', 'Cylinder mold selected. Enable the cylinder correction if you want to leave headspace or reduce spill risk.', { dismissible: true, timeoutMs: 7000 });
       }
     }
 
@@ -1687,6 +1870,9 @@
         cylinder_correction: !!document.getElementById('moldCylinderCorrection')?.checked,
         cylinder_factor: document.getElementById('moldCylinderFactor')?.value || '0.85',
       },
+      visuals: {
+        quality_slider: !!document.getElementById('qualitySliderToggle')?.checked,
+      },
       lines: {
         ingredients: serializeLines('tool-ingredients', 'ingredient'),
         consumables: serializeLines('tool-consumables', 'consumable'),
@@ -1768,6 +1954,10 @@
       const cylFactor = document.getElementById('moldCylinderFactor');
       if (cylFactor) cylFactor.value = data.mold.cylinder_factor || '0.85';
     }
+    if (data.visuals) {
+      const qualityToggle = document.getElementById('qualitySliderToggle');
+      if (qualityToggle) qualityToggle.checked = !!data.visuals.quality_slider;
+    }
 
     function restoreLines(wrapperId, items, kind){
       const wrapper = document.getElementById(wrapperId);
@@ -1799,6 +1989,7 @@
     updateInputMode();
     setWaterMethod();
     updateMoldShapeUI();
+    toggleQualitySliders();
     updateOilTotals();
     updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
     updateMoldSuggested();
@@ -1871,6 +2062,14 @@
         queueStateSave();
       });
     });
+
+  const qualitySliderToggle = document.getElementById('qualitySliderToggle');
+  if (qualitySliderToggle) {
+    qualitySliderToggle.addEventListener('change', function(){
+      toggleQualitySliders();
+      queueStateSave();
+    });
+  }
 
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     updateMoldSuggested();
@@ -2079,6 +2278,9 @@
   }
   updateInputMode();
   setWaterMethod();
+  updateMoldShapeUI();
+  setQualityRangeBars();
+  toggleQualitySliders();
   updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
   restoreState();
 })();
