@@ -356,6 +356,10 @@ class CompiledClusterItemRecord(Base):
     raw_item_json = Column(Text, nullable=False, default="{}")
     item_json = Column(Text, nullable=False, default="{}")
 
+    # Post-compilation refinement flags (comma-separated rule identifiers)
+    # e.g. "kernel_to_seed,fixed_to_carrier" - patterns detected for future batch processing
+    refinement_flags = Column(Text, nullable=True, default=None)
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
@@ -2526,3 +2530,160 @@ def delete_source_items_by_source(source: str) -> int:
         deleted = session.query(SourceItem).filter(SourceItem.source == source).delete()
         session.commit()
         return deleted
+
+
+# =============================================================================
+# POST-COMPILATION REFINEMENT FLAGS
+# =============================================================================
+# These rules identify patterns in compiled data that can be batch-processed later.
+# No data is changed here - we only flag items for future refinement scripts.
+
+REFINEMENT_RULES = {
+    # Oil terminology normalization (all Plant-Derived oils)
+    "kernel_to_seed": {
+        "description": "Kernel Oil is botanically equivalent to Seed Oil (kernel is inner part of seed)",
+        "match_variation": ["Kernel Oil"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Normalize 'Kernel Oil' → 'Seed Oil' in variation field",
+    },
+    "fixed_to_carrier": {
+        "description": "Fixed Oil is the INCI/technical term for Carrier Oil (non-volatile)",
+        "match_variation": ["Fixed Oil"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Set master_category to 'Carrier Oils', consider normalizing variation",
+    },
+    # Extract consolidation patterns
+    "generic_extract": {
+        "description": "Generic 'Extract' may need plant-part specification",
+        "match_variation": ["Extract"],
+        "applies_to_origin": ["Plant-Derived"],
+        "future_action": "Review if plant part can be inferred from source data or term",
+    },
+    # Duplicate scientific/common name detection
+    "scientific_common_duplicate": {
+        "description": "Term appears to have both scientific and common name clusters",
+        "match_terms_pattern": None,  # Handled by special logic
+        "future_action": "Review for potential cluster merge or synonym linking",
+    },
+}
+
+
+def detect_refinement_flags(
+    variation: str | None,
+    origin: str | None,
+    item_json: dict | None = None,
+) -> list[str]:
+    """Detect which refinement rules apply to an item based on its fields.
+    
+    Returns list of rule keys that match.
+    """
+    flags: list[str] = []
+    var = (variation or "").strip()
+    orig = (origin or "").strip()
+    
+    for rule_key, rule in REFINEMENT_RULES.items():
+        # Skip rules that require special logic
+        if rule.get("match_terms_pattern") is not None:
+            continue
+            
+        match_vars = rule.get("match_variation", [])
+        applies_origins = rule.get("applies_to_origin", [])
+        
+        # Check variation match
+        if match_vars and var in match_vars:
+            # Check origin constraint if specified
+            if not applies_origins or orig in applies_origins:
+                flags.append(rule_key)
+    
+    return flags
+
+
+def apply_refinement_flags_to_all_items() -> dict[str, int]:
+    """Scan all compiled items and set refinement_flags based on detected patterns.
+    
+    Returns dict of {flag_name: count} for all flags applied.
+    """
+    ensure_tables_exist()
+    flag_counts: dict[str, int] = {}
+    
+    with get_session() as session:
+        # Join items with their clusters to get origin
+        items_with_clusters = session.query(
+            CompiledClusterItemRecord, CompiledClusterRecord.origin
+        ).join(
+            CompiledClusterRecord,
+            CompiledClusterItemRecord.cluster_id == CompiledClusterRecord.cluster_id
+        ).filter(
+            CompiledClusterItemRecord.item_status == "done"
+        ).all()
+        
+        for item, cluster_origin in items_with_clusters:
+            # Parse item_json for additional context
+            try:
+                item_data = json.loads(item.item_json) if item.item_json else {}
+            except:
+                item_data = {}
+            
+            # Use cluster origin (authoritative)
+            origin = cluster_origin or ""
+            
+            # Detect flags
+            flags = detect_refinement_flags(
+                variation=item.derived_variation,
+                origin=origin,
+                item_json=item_data,
+            )
+            
+            if flags:
+                # Set flags (comma-separated)
+                item.refinement_flags = ",".join(flags)
+                item.updated_at = datetime.utcnow()
+                
+                for f in flags:
+                    flag_counts[f] = flag_counts.get(f, 0) + 1
+        
+        session.commit()
+    
+    return flag_counts
+
+
+def get_refinement_flag_summary() -> dict[str, int]:
+    """Get counts of items by refinement flag."""
+    ensure_tables_exist()
+    counts: dict[str, int] = {}
+    
+    with get_session() as session:
+        items = session.query(CompiledClusterItemRecord.refinement_flags).filter(
+            CompiledClusterItemRecord.refinement_flags.isnot(None)
+        ).all()
+        
+        for (flags_str,) in items:
+            if flags_str:
+                for flag in flags_str.split(","):
+                    flag = flag.strip()
+                    if flag:
+                        counts[flag] = counts.get(flag, 0) + 1
+    
+    return counts
+
+
+def get_items_by_refinement_flag(flag: str) -> list[dict]:
+    """Get all items with a specific refinement flag."""
+    ensure_tables_exist()
+    results: list[dict] = []
+    
+    with get_session() as session:
+        items = session.query(CompiledClusterItemRecord).filter(
+            CompiledClusterItemRecord.refinement_flags.contains(flag)
+        ).all()
+        
+        for item in items:
+            results.append({
+                "id": item.id,
+                "cluster_id": item.cluster_id,
+                "derived_term": item.derived_term,
+                "derived_variation": item.derived_variation,
+                "refinement_flags": item.refinement_flags,
+            })
+    
+    return results
