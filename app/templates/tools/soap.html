@@ -41,7 +41,7 @@
     </div>
     <div class="card-body">
       <div class="row g-3 align-items-end mb-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label">Input mode</label>
           <div class="btn-group w-100" role="group" aria-label="Oil input mode">
             <input type="radio" class="btn-check" name="oil_input_mode" id="oilModeWeight" value="weight" checked>
@@ -50,14 +50,35 @@
             <label class="btn btn-outline-secondary" for="oilModePercent">By %</label>
           </div>
         </div>
-        <div class="col-md-4" id="oilTotalTargetWrap">
-          <label class="form-label">Total oils weight (g)</label>
+        <div class="col-md-3">
+          <label class="form-label">Units</label>
+          <div class="btn-group w-100" role="group" aria-label="Weight units">
+            <input type="radio" class="btn-check" name="weight_unit" id="unitGrams" value="g" checked>
+            <label class="btn btn-outline-secondary" for="unitGrams">g</label>
+            <input type="radio" class="btn-check" name="weight_unit" id="unitOunces" value="oz">
+            <label class="btn btn-outline-secondary" for="unitOunces">oz</label>
+          </div>
+        </div>
+        <div class="col-md-3" id="oilTotalTargetWrap">
+          <label class="form-label">Total oils weight (<span class="unit-label">g</span>)</label>
           <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" value="1000">
           <div class="form-text">Used when entering oils by percent.</div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Computed total oils (g)</label>
+        <div class="col-md-3">
+          <label class="form-label">Computed total oils (<span class="unit-label">g</span>)</label>
           <input type="number" class="form-control" id="oilTotalComputed" readonly>
+        </div>
+      </div>
+      <div class="row g-3 align-items-end mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Batch size preset</label>
+          <select class="form-select" id="batchPresetSelect">
+            <option value="">Choose a preset...</option>
+          </select>
+          <div class="form-text">Scales oils to match the preset total.</div>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-outline-primary mt-4" type="button" id="applyBatchPreset">Apply preset</button>
         </div>
       </div>
 
@@ -76,7 +97,7 @@
             <div class="form-text small text-muted">SAP + iodine are pulled automatically when available.</div>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Weight (g)</label>
+            <label class="form-label">Weight (<span class="unit-label">g</span>)</label>
             <input type="number" class="form-control oil-grams" min="0" step="0.1">
           </div>
           <div class="col-md-2">
@@ -234,7 +255,8 @@
   </div>
 
   <div class="accordion" id="soapAdvancedAccordion">
-    <div class="accordion-item">
+    <div class="small text-muted mb-2">Drag section headers to reorder optional panels.</div>
+    <div class="accordion-item" data-section="qualities">
       <h2 class="accordion-header" id="soapQualitiesHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapQualitiesCollapse">
           Soap qualities & fatty acids
@@ -244,13 +266,54 @@
         <div class="accordion-body">
           <div class="row g-3">
             <div class="col-lg-6">
+              <div class="border rounded p-2 mb-3">
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
+                  <div class="flex-grow-1">
+                    <label class="form-label mb-1">Quality targets (optional)</label>
+                    <select class="form-select form-select-sm" id="qualityPreset">
+                      <option value="none">No targets</option>
+                      <option value="balanced" selected>Balanced</option>
+                      <option value="hard">Hard & long-lasting</option>
+                      <option value="gentle">Gentle & conditioning</option>
+                      <option value="bubbly">High bubbly</option>
+                      <option value="creamy">Creamy lather</option>
+                      <option value="lowCleansing">Low cleansing</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary" type="button" id="applyQualityTargets">Nudge blend toward targets</button>
+                </div>
+                <div class="small text-muted mt-2">Click a target line or use the button to adjust oils in proportion.</div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input quality-focus" type="checkbox" id="focusHard" data-attr="hardness" data-direction="high">
+                    <label class="form-check-label" for="focusHard">Hard</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input quality-focus" type="checkbox" id="focusBubbly" data-attr="bubbly" data-direction="high">
+                    <label class="form-check-label" for="focusBubbly">Bubbly</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input quality-focus" type="checkbox" id="focusCreamy" data-attr="creamy" data-direction="high">
+                    <label class="form-check-label" for="focusCreamy">Creamy</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input quality-focus" type="checkbox" id="focusConditioning" data-attr="conditioning" data-direction="high">
+                    <label class="form-check-label" for="focusConditioning">Conditioning</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input quality-focus" type="checkbox" id="focusLowCleansing" data-attr="cleansing" data-direction="low">
+                    <label class="form-check-label" for="focusLowCleansing">Low cleansing</label>
+                  </div>
+                </div>
+              </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
-                  <span>Hardness</span>
+                  <span><i class="fas fa-square text-muted me-1"></i>Hardness</span>
                   <span id="qualityHardnessValue">--</span>
                 </div>
-                <div class="progress">
+                <div class="progress position-relative">
                   <div class="progress-bar" id="qualityHardnessBar" role="progressbar"></div>
+                  <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="qualityHardnessTarget" role="button" tabindex="0" aria-label="Apply hardness target"></span>
                 </div>
                 <div class="progress mt-1" style="height: 6px;">
                   <div class="progress-bar bg-secondary opacity-25" id="qualityHardnessRangeStart"></div>
@@ -258,14 +321,16 @@
                   <div class="progress-bar bg-secondary opacity-25" id="qualityHardnessRangeEnd"></div>
                 </div>
                 <div class="small text-muted">Ideal range: 29-54</div>
+                <div class="small text-muted" id="qualityHardnessHint"></div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
-                  <span>Cleansing</span>
+                  <span><i class="fas fa-bolt text-muted me-1"></i>Cleansing</span>
                   <span id="qualityCleansingValue">--</span>
                 </div>
-                <div class="progress">
+                <div class="progress position-relative">
                   <div class="progress-bar" id="qualityCleansingBar" role="progressbar"></div>
+                  <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="qualityCleansingTarget" role="button" tabindex="0" aria-label="Apply cleansing target"></span>
                 </div>
                 <div class="progress mt-1" style="height: 6px;">
                   <div class="progress-bar bg-secondary opacity-25" id="qualityCleansingRangeStart"></div>
@@ -273,14 +338,16 @@
                   <div class="progress-bar bg-secondary opacity-25" id="qualityCleansingRangeEnd"></div>
                 </div>
                 <div class="small text-muted">Ideal range: 12-22</div>
+                <div class="small text-muted" id="qualityCleansingHint"></div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
-                  <span>Conditioning</span>
+                  <span><i class="fas fa-heart text-muted me-1"></i>Conditioning</span>
                   <span id="qualityConditioningValue">--</span>
                 </div>
-                <div class="progress">
+                <div class="progress position-relative">
                   <div class="progress-bar" id="qualityConditioningBar" role="progressbar"></div>
+                  <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="qualityConditioningTarget" role="button" tabindex="0" aria-label="Apply conditioning target"></span>
                 </div>
                 <div class="progress mt-1" style="height: 6px;">
                   <div class="progress-bar bg-secondary opacity-25" id="qualityConditioningRangeStart"></div>
@@ -288,14 +355,16 @@
                   <div class="progress-bar bg-secondary opacity-25" id="qualityConditioningRangeEnd"></div>
                 </div>
                 <div class="small text-muted">Ideal range: 44-69</div>
+                <div class="small text-muted" id="qualityConditioningHint"></div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
-                  <span>Bubbly</span>
+                  <span><i class="fas fa-circle text-muted me-1"></i>Bubbly</span>
                   <span id="qualityBubblyValue">--</span>
                 </div>
-                <div class="progress">
+                <div class="progress position-relative">
                   <div class="progress-bar" id="qualityBubblyBar" role="progressbar"></div>
+                  <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="qualityBubblyTarget" role="button" tabindex="0" aria-label="Apply bubbly target"></span>
                 </div>
                 <div class="progress mt-1" style="height: 6px;">
                   <div class="progress-bar bg-secondary opacity-25" id="qualityBubblyRangeStart"></div>
@@ -303,14 +372,16 @@
                   <div class="progress-bar bg-secondary opacity-25" id="qualityBubblyRangeEnd"></div>
                 </div>
                 <div class="small text-muted">Ideal range: 14-46</div>
+                <div class="small text-muted" id="qualityBubblyHint"></div>
               </div>
               <div class="mb-3">
                 <div class="d-flex justify-content-between">
-                  <span>Creamy</span>
+                  <span><i class="fas fa-cloud text-muted me-1"></i>Creamy</span>
                   <span id="qualityCreamyValue">--</span>
                 </div>
-                <div class="progress">
+                <div class="progress position-relative">
                   <div class="progress-bar" id="qualityCreamyBar" role="progressbar"></div>
+                  <span class="quality-target-marker position-absolute top-0 bottom-0 d-none" id="qualityCreamyTarget" role="button" tabindex="0" aria-label="Apply creamy target"></span>
                 </div>
                 <div class="progress mt-1" style="height: 6px;">
                   <div class="progress-bar bg-secondary opacity-25" id="qualityCreamyRangeStart"></div>
@@ -318,6 +389,7 @@
                   <div class="progress-bar bg-secondary opacity-25" id="qualityCreamyRangeEnd"></div>
                 </div>
                 <div class="small text-muted">Ideal range: 16-48</div>
+                <div class="small text-muted" id="qualityCreamyHint"></div>
               </div>
               <div class="small text-muted" id="fattyCoverageNote">Fatty acid coverage: --</div>
               <div class="form-check form-switch mt-3">
@@ -411,7 +483,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="additives">
       <h2 class="accordion-header" id="soapAdditivesHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapAdditivesCollapse">
           Additives & fragrance helpers
@@ -486,7 +558,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="mold">
       <h2 class="accordion-header" id="soapMoldHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapMoldCollapse">
           Mold sizing & batch planning
@@ -496,7 +568,7 @@
         <div class="accordion-body">
           <div class="row g-3">
             <div class="col-md-4">
-              <label class="form-label">Mold water weight (g)</label>
+              <label class="form-label">Mold water weight (<span class="unit-label">g</span>)</label>
               <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
               <div class="form-text">Fill the mold with water and weigh it.</div>
             </div>
@@ -549,7 +621,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="lines">
       <h2 class="accordion-header" id="soapRecipeLinesHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapRecipeLinesCollapse">
           Recipe lines (ingredients, consumables, containers)
@@ -599,7 +671,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="glossary">
       <h2 class="accordion-header" id="soapGlossaryHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapGlossaryCollapse">
           Glossary, calculations, and ingredient categories
@@ -655,7 +727,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="conversion">
       <h2 class="accordion-header" id="soapUtilitiesHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapUtilitiesCollapse">
           Quick unit conversion
@@ -685,7 +757,7 @@
       </div>
     </div>
 
-    <div class="accordion-item">
+    <div class="accordion-item" data-section="exports">
       <h2 class="accordion-header" id="soapExportsHeading">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapExportsCollapse">
           Exports
@@ -720,6 +792,48 @@
     bubbly: 'Fluffy lather and big bubbles.',
     creamy: 'Stable, creamy lather.',
   };
+  const QUALITY_FEEL_HINTS = {
+    hardness: {
+      low: 'Soft bar, slower unmold.',
+      ok: 'Balanced hardness for daily use.',
+      high: 'Very hard bar, can feel brittle.',
+    },
+    cleansing: {
+      low: 'Very mild cleansing.',
+      ok: 'Balanced cleansing.',
+      high: 'Strong cleansing, can be drying.',
+    },
+    conditioning: {
+      low: 'Less conditioning feel.',
+      ok: 'Smooth and conditioning.',
+      high: 'Very conditioning, may feel oily.',
+    },
+    bubbly: {
+      low: 'Low bubbly lather.',
+      ok: 'Balanced bubbly lather.',
+      high: 'Very bubbly, big foam.',
+    },
+    creamy: {
+      low: 'Light creamy lather.',
+      ok: 'Creamy and stable.',
+      high: 'Dense creamy lather.',
+    },
+  };
+  const QUALITY_BASE = {
+    hardness: (QUALITY_RANGES.hardness[0] + QUALITY_RANGES.hardness[1]) / 2,
+    cleansing: (QUALITY_RANGES.cleansing[0] + QUALITY_RANGES.cleansing[1]) / 2,
+    conditioning: (QUALITY_RANGES.conditioning[0] + QUALITY_RANGES.conditioning[1]) / 2,
+    bubbly: (QUALITY_RANGES.bubbly[0] + QUALITY_RANGES.bubbly[1]) / 2,
+    creamy: (QUALITY_RANGES.creamy[0] + QUALITY_RANGES.creamy[1]) / 2,
+  };
+  const QUALITY_PRESETS = {
+    balanced: { ...QUALITY_BASE },
+    hard: { ...QUALITY_BASE, hardness: 54, creamy: 40 },
+    gentle: { ...QUALITY_BASE, cleansing: 12, conditioning: 65 },
+    bubbly: { ...QUALITY_BASE, bubbly: 42, cleansing: 20 },
+    creamy: { ...QUALITY_BASE, creamy: 42, conditioning: 58 },
+    lowCleansing: { ...QUALITY_BASE, cleansing: 10, conditioning: 60 },
+  };
   const FATTY_BAR_COLORS = {
     lauric: '#0d6efd',
     myristic: '#6f42c1',
@@ -753,6 +867,9 @@
   const STATE_STORAGE_KEY = 'soap_tool_state_v1';
   const CALC_LIMIT = Number.isFinite(window.SOAP_CALC_LIMIT) ? window.SOAP_CALC_LIMIT : null;
   const CALC_LIMIT_TIER = window.SOAP_CALC_TIER || 'guest';
+  const UNIT_FACTORS = { g: 1, oz: 28.3495 };
+  const BATCH_PRESETS_GRAMS = [250, 500, 1000, 1500, 2000];
+  let currentUnit = 'g';
 
   const ALERT_ICONS = {
     info: 'fa-info-circle',
@@ -809,9 +926,103 @@
     return value;
   }
 
+  function toGrams(value){
+    return clamp(toNumber(value), 0) * (UNIT_FACTORS[currentUnit] || 1);
+  }
+
+  function fromGrams(value){
+    const grams = clamp(value, 0);
+    return currentUnit === 'oz' ? grams / UNIT_FACTORS.oz : grams;
+  }
+
+  function updateUnitLabels(){
+    document.querySelectorAll('.unit-label').forEach(el => {
+      el.textContent = currentUnit;
+    });
+  }
+
+  function updateBatchPresetOptions(){
+    const select = document.getElementById('batchPresetSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">Choose a preset...</option>';
+    BATCH_PRESETS_GRAMS.forEach(grams => {
+      const display = currentUnit === 'oz'
+        ? round(grams / UNIT_FACTORS.oz, 1)
+        : grams;
+      const option = document.createElement('option');
+      option.value = display;
+      option.dataset.grams = grams;
+      option.textContent = `${display} ${currentUnit}`;
+      select.appendChild(option);
+    });
+  }
+
+  function applyBatchPreset(){
+    const select = document.getElementById('batchPresetSelect');
+    if (!select || !select.value) return;
+    const option = select.selectedOptions[0];
+    const grams = clamp(toNumber(option?.dataset?.grams), 0);
+    if (!grams) return;
+    if (getInputMode() === 'percent') {
+      const oilTarget = document.getElementById('oilTotalTarget');
+      if (oilTarget) {
+        oilTarget.value = round(fromGrams(grams), 2);
+      }
+      updateOilTotals();
+    } else {
+      const scaled = scaleOilsToTarget(grams);
+      if (!scaled.adjusted) {
+        showSoapAlert('warning', 'Add oil weights before applying a batch preset.', { dismissible: true, timeoutMs: 5000 });
+      }
+    }
+    queueStateSave();
+    queueAutoCalc();
+  }
+
+  function setUnit(unit, options = {}){
+    if (!unit) return;
+    if (unit === currentUnit) {
+      updateUnitLabels();
+      updateBatchPresetOptions();
+      return;
+    }
+    const prevUnit = currentUnit;
+    currentUnit = unit;
+    updateUnitLabels();
+    updateBatchPresetOptions();
+    if (options.skipConvert) return;
+    const ratio = prevUnit === 'g' && unit === 'oz'
+      ? 1 / UNIT_FACTORS.oz
+      : UNIT_FACTORS.oz;
+    document.querySelectorAll('.oil-grams').forEach(input => {
+      const value = toNumber(input.value);
+      if (value > 0) input.value = round(value * ratio, 2);
+    });
+    const oilTarget = document.getElementById('oilTotalTarget');
+    if (oilTarget && oilTarget.value) {
+      const value = toNumber(oilTarget.value);
+      if (value > 0) oilTarget.value = round(value * ratio, 2);
+    }
+    const moldWater = document.getElementById('moldWaterWeight');
+    if (moldWater && moldWater.value) {
+      const value = toNumber(moldWater.value);
+      if (value > 0) moldWater.value = round(value * ratio, 2);
+    }
+    updateOilTotals();
+    updateMoldSuggested();
+    updateAdditivesOutput(getTotalOilsGrams());
+    if (!options.skipAutoCalc) {
+      calculateAll({ consumeQuota: false, showAlerts: false, autoFit: false });
+    }
+  }
+
   function formatWeight(value){
     if (!isFinite(value) || value <= 0) return '--';
-    return `${round(value, 2)} g`;
+    return `${round(fromGrams(value), 2)} ${currentUnit}`;
+  }
+
+  function getTotalOilsGrams(){
+    return state.totalOilsGrams || 0;
   }
 
   function formatPercent(value){
@@ -849,6 +1060,9 @@
         if (hiddenFatty) {
           hiddenFatty.value = picked?.fatty_acid_profile ? JSON.stringify(picked.fatty_acid_profile) : '';
         }
+        updateOilTotals();
+        queueStateSave();
+        queueAutoCalc();
       }
     });
     input.addEventListener('input', function(){
@@ -878,7 +1092,7 @@
         <div class="form-text small text-muted">SAP + iodine are pulled automatically when available.</div>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Weight (g)</label>
+        <label class="form-label">Weight (<span class="unit-label">g</span>)</label>
         <input type="number" class="form-control oil-grams" min="0" step="0.1">
       </div>
       <div class="col-md-2">
@@ -889,6 +1103,9 @@
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
       </div>`;
     attachOilTypeahead(row);
+    row.querySelectorAll('.unit-label').forEach(el => {
+      el.textContent = currentUnit;
+    });
     return row;
   }
 
@@ -919,18 +1136,18 @@
 
   function updateOilTotals(){
     const mode = getInputMode();
-    const totalTarget = clamp(toNumber(document.getElementById('oilTotalTarget').value), 0);
+    const totalTarget = toGrams(document.getElementById('oilTotalTarget').value);
     let totalWeight = 0;
     let totalPct = 0;
     const rows = document.querySelectorAll('#oilRows .oil-row');
     rows.forEach(row => {
       const gramsInput = row.querySelector('.oil-grams');
       const pctInput = row.querySelector('.oil-percent');
-      const grams = clamp(toNumber(gramsInput.value), 0);
+      const grams = toGrams(gramsInput.value);
       const pct = clamp(toNumber(pctInput.value), 0);
       if (mode === 'percent') {
         const computed = totalTarget > 0 ? (totalTarget * pct / 100) : 0;
-        gramsInput.value = computed > 0 ? round(computed, 2) : '';
+        gramsInput.value = computed > 0 ? round(fromGrams(computed), 2) : '';
         totalPct += pct;
       } else {
         totalWeight += grams;
@@ -938,7 +1155,7 @@
     });
     if (mode === 'weight') {
       rows.forEach(row => {
-        const grams = clamp(toNumber(row.querySelector('.oil-grams').value), 0);
+        const grams = toGrams(row.querySelector('.oil-grams').value);
         const pctInput = row.querySelector('.oil-percent');
         const pct = totalWeight > 0 ? (grams / totalWeight) * 100 : 0;
         pctInput.value = grams > 0 ? round(pct, 2) : '';
@@ -947,7 +1164,8 @@
     } else {
       totalWeight = totalTarget;
     }
-    document.getElementById('oilTotalComputed').value = totalWeight > 0 ? round(totalWeight, 2) : '';
+    state.totalOilsGrams = totalWeight;
+    document.getElementById('oilTotalComputed').value = totalWeight > 0 ? round(fromGrams(totalWeight), 2) : '';
     document.getElementById('oilPercentTotal').textContent = round(totalPct, 2);
     updateAdditivesOutput(totalWeight);
     updateMoldSuggested();
@@ -975,7 +1193,7 @@
     const oils = [];
     document.querySelectorAll('#oilRows .oil-row').forEach(row => {
       const name = row.querySelector('.oil-typeahead')?.value?.trim();
-      const grams = clamp(toNumber(row.querySelector('.oil-grams')?.value), 0);
+      const grams = toGrams(row.querySelector('.oil-grams')?.value);
       const sapKoh = toNumber(row.querySelector('.oil-sap-koh')?.value);
       const iodine = toNumber(row.querySelector('.oil-iodine')?.value);
       const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
@@ -1233,6 +1451,212 @@
     });
   }
 
+  function getQualityTargets(){
+    const preset = document.getElementById('qualityPreset')?.value || 'balanced';
+    const focusEls = Array.from(document.querySelectorAll('.quality-focus:checked'));
+    if (preset === 'none' && !focusEls.length) return null;
+    const base = preset === 'none'
+      ? { ...QUALITY_BASE }
+      : (QUALITY_PRESETS[preset] ? { ...QUALITY_PRESETS[preset] } : { ...QUALITY_BASE });
+    focusEls.forEach(el => {
+      const attr = el.dataset.attr;
+      const direction = el.dataset.direction;
+      const range = QUALITY_RANGES[attr];
+      if (!range) return;
+      base[attr] = direction === 'low' ? range[0] : range[1];
+    });
+    return base;
+  }
+
+  function updateQualityTargets(){
+    const targets = getQualityTargets();
+    const markers = {
+      hardness: document.getElementById('qualityHardnessTarget'),
+      cleansing: document.getElementById('qualityCleansingTarget'),
+      conditioning: document.getElementById('qualityConditioningTarget'),
+      bubbly: document.getElementById('qualityBubblyTarget'),
+      creamy: document.getElementById('qualityCreamyTarget'),
+    };
+    Object.entries(markers).forEach(([key, marker]) => {
+      if (!marker) return;
+      if (!targets) {
+        marker.classList.add('d-none');
+        return;
+      }
+      const value = clamp(toNumber(targets[key]), 0, 100);
+      marker.classList.remove('d-none');
+      marker.style.left = `${value}%`;
+      marker.style.width = '2px';
+      marker.style.backgroundColor = '#0d6efd';
+      marker.style.cursor = 'pointer';
+      marker.title = `Target ${key}: ${round(value, 1)}`;
+    });
+  }
+
+  function computeOilQualityScores(fattyProfile){
+    if (!fattyProfile || typeof fattyProfile !== 'object') {
+      return {
+        hardness: 0,
+        cleansing: 0,
+        conditioning: 0,
+        bubbly: 0,
+        creamy: 0,
+      };
+    }
+    const profile = {
+      lauric: toNumber(fattyProfile.lauric),
+      myristic: toNumber(fattyProfile.myristic),
+      palmitic: toNumber(fattyProfile.palmitic),
+      stearic: toNumber(fattyProfile.stearic),
+      ricinoleic: toNumber(fattyProfile.ricinoleic),
+      oleic: toNumber(fattyProfile.oleic),
+      linoleic: toNumber(fattyProfile.linoleic),
+      linolenic: toNumber(fattyProfile.linolenic),
+    };
+    const qualities = computeQualities(profile);
+    return {
+      hardness: (qualities.hardness || 0) / 100,
+      cleansing: (qualities.cleansing || 0) / 100,
+      conditioning: (qualities.conditioning || 0) / 100,
+      bubbly: (qualities.bubbly || 0) / 100,
+      creamy: (qualities.creamy || 0) / 100,
+    };
+  }
+
+  function applyQualityTargets(){
+    const targets = getQualityTargets();
+    if (!targets) {
+      showSoapAlert('info', 'Select a quality target to nudge the blend.', { dismissible: true, timeoutMs: 5000 });
+      return;
+    }
+    const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
+    const oils = rows.map(row => {
+      const grams = toGrams(row.querySelector('.oil-grams')?.value);
+      const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
+      let fattyProfile = null;
+      if (fattyRaw) {
+        try {
+          fattyProfile = JSON.parse(fattyRaw);
+        } catch (_) {
+          fattyProfile = null;
+        }
+      }
+      return { row, grams, fattyProfile };
+    }).filter(item => item.grams > 0);
+
+    if (!oils.length) {
+      showSoapAlert('warning', 'Add oils before nudging toward a target.', { dismissible: true, timeoutMs: 5000 });
+      return;
+    }
+
+    const fatty = computeFattyAcids(oils.map(oil => ({
+      grams: oil.grams,
+      fattyProfile: oil.fattyProfile,
+    })));
+    const currentQualities = computeQualities(fatty.percent);
+    const deltas = {
+      hardness: clamp((targets.hardness - currentQualities.hardness) / 100, -1, 1),
+      cleansing: clamp((targets.cleansing - currentQualities.cleansing) / 100, -1, 1),
+      conditioning: clamp((targets.conditioning - currentQualities.conditioning) / 100, -1, 1),
+      bubbly: clamp((targets.bubbly - currentQualities.bubbly) / 100, -1, 1),
+      creamy: clamp((targets.creamy - currentQualities.creamy) / 100, -1, 1),
+    };
+
+    const totalOils = oils.reduce((sum, oil) => sum + oil.grams, 0);
+    const adjusted = [];
+    let totalAdjusted = 0;
+    const strength = 0.8;
+    const missingFatty = oils.filter(oil => !oil.fattyProfile || typeof oil.fattyProfile !== 'object').length;
+    if (missingFatty === oils.length) {
+      showSoapAlert('warning', 'None of the selected oils have fatty acid data, so targets cannot be applied.', { dismissible: true, timeoutMs: 6000 });
+      return;
+    }
+    if (missingFatty) {
+      showSoapAlert('info', 'Some oils are missing fatty acid data. The nudge will only use oils with profiles.', { dismissible: true, timeoutMs: 5000 });
+    }
+
+    oils.forEach(oil => {
+      const scores = computeOilQualityScores(oil.fattyProfile);
+      const adjustment = (deltas.hardness * scores.hardness)
+        + (deltas.cleansing * scores.cleansing)
+        + (deltas.conditioning * scores.conditioning)
+        + (deltas.bubbly * scores.bubbly)
+        + (deltas.creamy * scores.creamy);
+      const factor = clamp(1 + adjustment * strength, 0.2, 1.8);
+      const next = oil.grams * factor;
+      adjusted.push({ row: oil.row, grams: next });
+      totalAdjusted += next;
+    });
+
+    if (totalAdjusted <= 0) {
+      showSoapAlert('warning', 'Unable to adjust blend with current data.', { dismissible: true, timeoutMs: 5000 });
+      return;
+    }
+
+    const scale = totalOils / totalAdjusted;
+    const mode = getInputMode();
+    adjusted.forEach(item => {
+      const grams = item.grams * scale;
+      if (mode === 'percent') {
+        const percent = totalOils > 0 ? (grams / totalOils) * 100 : 0;
+        const pctInput = item.row.querySelector('.oil-percent');
+        if (pctInput) pctInput.value = percent > 0 ? round(percent, 2) : '';
+      } else {
+        const gramsInput = item.row.querySelector('.oil-grams');
+        if (gramsInput) gramsInput.value = grams > 0 ? round(fromGrams(grams), 2) : '';
+      }
+    });
+
+    updateOilTotals();
+    queueStateSave();
+    queueAutoCalc();
+    showSoapAlert('info', 'Blend nudged toward selected targets. Re-check results and adjust as needed.', { dismissible: true, timeoutMs: 6000 });
+  }
+
+  function applySectionOrder(order){
+    const container = document.getElementById('soapAdvancedAccordion');
+    if (!container || !Array.isArray(order)) return;
+    const items = Array.from(container.querySelectorAll('.accordion-item'));
+    const map = new Map(items.map(item => [item.dataset.section, item]));
+    order.forEach(key => {
+      const item = map.get(key);
+      if (item) container.appendChild(item);
+    });
+    items.forEach(item => {
+      if (!order.includes(item.dataset.section)) {
+        container.appendChild(item);
+      }
+    });
+  }
+
+  function enableAccordionReorder(){
+    const container = document.getElementById('soapAdvancedAccordion');
+    if (!container) return;
+    let dragged = null;
+    container.querySelectorAll('.accordion-header').forEach(header => {
+      header.setAttribute('draggable', 'true');
+      header.style.cursor = 'grab';
+      header.addEventListener('dragstart', event => {
+        dragged = header.closest('.accordion-item');
+        event.dataTransfer.effectAllowed = 'move';
+      });
+      header.addEventListener('dragend', () => {
+        dragged = null;
+      });
+    });
+    container.addEventListener('dragover', event => {
+      event.preventDefault();
+      const targetItem = event.target.closest('.accordion-item');
+      if (!dragged || !targetItem || targetItem === dragged) return;
+      const rect = targetItem.getBoundingClientRect();
+      const after = (event.clientY - rect.top) > rect.height / 2;
+      container.insertBefore(dragged, after ? targetItem.nextSibling : targetItem);
+    });
+    container.addEventListener('drop', () => {
+      queueStateSave();
+    });
+  }
+
   function updateQualitiesDisplay(data){
     const {
       qualities,
@@ -1253,6 +1677,7 @@
     function setQuality(name, value){
       const label = document.getElementById(`quality${name}Value`);
       const bar = document.getElementById(`quality${name}Bar`);
+      const hintEl = document.getElementById(`quality${name}Hint`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
       setProgress(`quality${name}Bar`, hasCoverage ? value : 0);
@@ -1264,6 +1689,17 @@
           bar.title = `${name}: ${round(value, 1)} (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
         } else {
           bar.title = `${name}: -- (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
+        }
+      }
+      if (hintEl && range) {
+        if (!hasCoverage || !isFinite(value)) {
+          hintEl.textContent = 'Add oils to preview feel.';
+        } else if (value < range[0]) {
+          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.low || '';
+        } else if (value > range[1]) {
+          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.high || '';
+        } else {
+          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.ok || '';
         }
       }
     }
@@ -1289,6 +1725,7 @@
     });
     updateQualitySliders(qualities, superfat || 0);
     updateFattyBar(fattyPercent);
+    updateQualityTargets();
 
     const warnings = [];
     const pufa = (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
@@ -1404,7 +1841,8 @@
     const suggested = settings.effectiveCapacity > 0
       ? settings.effectiveCapacity * (settings.oilPct / 100)
       : 0;
-    document.getElementById('moldSuggestedOils').value = suggested > 0 ? `${round(suggested, 1)} g` : '';
+    const suggestedDisplay = formatWeight(suggested);
+    document.getElementById('moldSuggestedOils').value = suggestedDisplay === '--' ? '' : suggestedDisplay;
     const note = document.getElementById('moldSuggestionNote');
     if (note) {
       let message = 'Adjust oils % depending on your water/lye preferences.';
@@ -1420,7 +1858,7 @@
   }
 
   function getMoldSettings(){
-    const waterWeight = clamp(toNumber(document.getElementById('moldWaterWeight').value), 0);
+    const waterWeight = toGrams(document.getElementById('moldWaterWeight').value);
     const oilPct = clamp(toNumber(document.getElementById('moldOilPct').value), 50, 80);
     const shape = document.getElementById('moldShape')?.value || 'loaf';
     const useCylinder = !!document.getElementById('moldCylinderCorrection')?.checked;
@@ -1456,13 +1894,13 @@
     }
     const scale = targetTotalOils / currentTotal;
     if (mode === 'percent') {
-      document.getElementById('oilTotalTarget').value = round(targetTotalOils, 1);
+      document.getElementById('oilTotalTarget').value = round(fromGrams(targetTotalOils), 1);
     } else {
       document.querySelectorAll('#oilRows .oil-row').forEach(row => {
         const gramsInput = row.querySelector('.oil-grams');
-        const grams = clamp(toNumber(gramsInput.value), 0);
+        const grams = toGrams(gramsInput.value);
         if (grams > 0) {
-          gramsInput.value = round(grams * scale, 2);
+          gramsInput.value = round(fromGrams(grams * scale), 2);
         }
       });
     }
@@ -1574,7 +2012,7 @@
     const totalOils = totals.totalWeight;
     const totalPct = totals.totalPct;
     const errors = [];
-    const totalTarget = clamp(toNumber(document.getElementById('oilTotalTarget').value), 0);
+    const totalTarget = toGrams(document.getElementById('oilTotalTarget').value);
     const oils = collectOilData();
 
     if (mode === 'percent' && totalTarget <= 0) {
@@ -1631,6 +2069,7 @@
     const settings = {
       consumeQuota: false,
       showAlerts: true,
+      autoFit: true,
       ...options
     };
     if (settings.showAlerts) {
@@ -1664,22 +2103,24 @@
 
     let oils = validation.oils;
     let totalOils = validation.totals.totalWeight;
-    const moldAdjust = applyMoldAutoAdjust({
-      oils,
-      totalOils,
-      lyeType,
-      superfat,
-      purity,
-      waterMethod,
-      waterPct,
-      lyeConcentration,
-      waterRatio,
-      notify: settings.showAlerts,
-    });
-    if (moldAdjust.adjusted) {
-      oils = moldAdjust.oils;
-      totalOils = moldAdjust.totalOils;
-      queueStateSave();
+    if (settings.autoFit) {
+      const moldAdjust = applyMoldAutoAdjust({
+        oils,
+        totalOils,
+        lyeType,
+        superfat,
+        purity,
+        waterMethod,
+        waterPct,
+        lyeConcentration,
+        waterRatio,
+        notify: settings.showAlerts,
+      });
+      if (moldAdjust.adjusted) {
+        oils = moldAdjust.oils;
+        totalOils = moldAdjust.totalOils;
+        queueStateSave();
+      }
     }
     const lyeTotals = computeLyeTotals(oils, lyeType);
     const lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
@@ -1843,6 +2284,7 @@
     const form = document.getElementById('lyeForm');
     const payload = {
       version: 1,
+      unit: currentUnit,
       input_mode: getInputMode(),
       oil_total_target: document.getElementById('oilTotalTarget').value || '',
       oils: serializeOils(),
@@ -1873,6 +2315,13 @@
       visuals: {
         quality_slider: !!document.getElementById('qualitySliderToggle')?.checked,
       },
+      quality: {
+        preset: document.getElementById('qualityPreset')?.value || 'balanced',
+        focus: Array.from(document.querySelectorAll('.quality-focus:checked')).map(el => el.id),
+      },
+      ui: {
+        section_order: Array.from(document.querySelectorAll('#soapAdvancedAccordion .accordion-item')).map(el => el.dataset.section).filter(Boolean),
+      },
       lines: {
         ingredients: serializeLines('tool-ingredients', 'ingredient'),
         consumables: serializeLines('tool-consumables', 'consumable'),
@@ -1897,6 +2346,12 @@
       return;
     }
     if (!data || typeof data !== 'object') return;
+
+    if (data.unit) {
+      const unitInput = document.querySelector(`input[name="weight_unit"][value="${data.unit}"]`);
+      if (unitInput) unitInput.checked = true;
+      setUnit(data.unit, { skipConvert: true, skipAutoCalc: true });
+    }
 
     if (data.input_mode) {
       const modeInput = document.querySelector(`input[name="oil_input_mode"][value="${data.input_mode}"]`);
@@ -1958,6 +2413,16 @@
       const qualityToggle = document.getElementById('qualitySliderToggle');
       if (qualityToggle) qualityToggle.checked = !!data.visuals.quality_slider;
     }
+    if (data.quality) {
+      const preset = document.getElementById('qualityPreset');
+      if (preset) preset.value = data.quality.preset || 'balanced';
+      document.querySelectorAll('.quality-focus').forEach(el => {
+        el.checked = Array.isArray(data.quality.focus) && data.quality.focus.includes(el.id);
+      });
+    }
+    if (data.ui && Array.isArray(data.ui.section_order)) {
+      applySectionOrder(data.ui.section_order);
+    }
 
     function restoreLines(wrapperId, items, kind){
       const wrapper = document.getElementById(wrapperId);
@@ -1990,8 +2455,9 @@
     setWaterMethod();
     updateMoldShapeUI();
     toggleQualitySliders();
+    updateQualityTargets();
     updateOilTotals();
-    updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+    updateAdditivesOutput(getTotalOilsGrams());
     updateMoldSuggested();
     calculateAll({ consumeQuota: false, showAlerts: false });
     showSoapAlert('info', 'Restored your last soap tool session from this device.', { dismissible: true, timeoutMs: 5000 });
@@ -2003,6 +2469,14 @@
     saveStateTimer = setTimeout(saveState, 350);
   }
 
+  let autoCalcTimer = null;
+  function queueAutoCalc(){
+    if (autoCalcTimer) clearTimeout(autoCalcTimer);
+    autoCalcTimer = setTimeout(() => {
+      calculateAll({ consumeQuota: false, showAlerts: false, autoFit: false });
+    }, 350);
+  }
+
   document.getElementById('addOil').addEventListener('click', function(){
     document.getElementById('oilRows').appendChild(buildOilRow());
     queueStateSave();
@@ -2011,6 +2485,7 @@
   document.getElementById('normalizeOils').addEventListener('click', function(){
     normalizeOils();
     queueStateSave();
+    queueAutoCalc();
   });
 
   document.getElementById('oilRows').addEventListener('input', function(e){
@@ -2019,6 +2494,7 @@
       || e.target.classList.contains('oil-typeahead')) {
       updateOilTotals();
       queueStateSave();
+      queueAutoCalc();
     }
   });
 
@@ -2034,32 +2510,51 @@
     el.addEventListener('change', function(){
       updateInputMode();
       queueStateSave();
+      queueAutoCalc();
     });
   });
+
+  document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
+    el.addEventListener('change', function(){
+      setUnit(this.value);
+      queueStateSave();
+    });
+  });
+
+  const applyPresetBtn = document.getElementById('applyBatchPreset');
+  if (applyPresetBtn) {
+    applyPresetBtn.addEventListener('click', function(){
+      applyBatchPreset();
+    });
+  }
 
   document.getElementById('oilTotalTarget').addEventListener('input', function(){
     updateOilTotals();
     queueStateSave();
+    queueAutoCalc();
   });
 
   document.getElementById('waterMethod').addEventListener('change', function(){
     setWaterMethod();
     queueStateSave();
+    queueAutoCalc();
   });
 
   document.getElementById('lyeForm').addEventListener('input', function(e){
     if (e.target.name === 'lye_type') {
-      updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+      updateAdditivesOutput(getTotalOilsGrams());
     }
     queueStateSave();
+    queueAutoCalc();
   });
 
   ['additiveFragrancePct', 'additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => {
-        updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+        updateAdditivesOutput(getTotalOilsGrams());
         queueStateSave();
+        queueAutoCalc();
       });
     });
 
@@ -2070,6 +2565,35 @@
       queueStateSave();
     });
   }
+
+  const qualityPreset = document.getElementById('qualityPreset');
+  if (qualityPreset) {
+    qualityPreset.addEventListener('change', function(){
+      updateQualityTargets();
+      queueStateSave();
+    });
+  }
+  document.querySelectorAll('.quality-focus').forEach(el => {
+    el.addEventListener('change', function(){
+      updateQualityTargets();
+      queueStateSave();
+    });
+  });
+  const applyQualityBtn = document.getElementById('applyQualityTargets');
+  if (applyQualityBtn) {
+    applyQualityBtn.addEventListener('click', function(){
+      applyQualityTargets();
+    });
+  }
+  document.querySelectorAll('.quality-target-marker').forEach(marker => {
+    marker.addEventListener('click', () => applyQualityTargets());
+    marker.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        applyQualityTargets();
+      }
+    });
+  });
 
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     updateMoldSuggested();
@@ -2281,7 +2805,11 @@
   updateMoldShapeUI();
   setQualityRangeBars();
   toggleQualitySliders();
-  updateAdditivesOutput(toNumber(document.getElementById('oilTotalComputed').value));
+  updateUnitLabels();
+  updateBatchPresetOptions();
+  updateQualityTargets();
+  enableAccordionReorder();
+    updateAdditivesOutput(getTotalOilsGrams());
   restoreState();
 })();
 </script>
