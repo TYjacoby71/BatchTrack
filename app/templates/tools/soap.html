@@ -30,7 +30,7 @@
     }
     #soapToolPage .soap-stage-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 1rem;
       align-items: start;
     }
@@ -74,13 +74,15 @@
       box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
     }
     @media (max-width: 991px) {
-      #soapToolPage .soap-stage-layout {
-        grid-template-columns: 1fr;
-      }
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
         max-width: 100%;
+      }
+    }
+    @media (max-width: 767px) {
+      #soapToolPage .soap-stage-layout {
+        grid-template-columns: 1fr;
       }
     }
   </style>
