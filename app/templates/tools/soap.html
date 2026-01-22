@@ -3024,9 +3024,11 @@
   ['lyeSuperfat', 'lyePurity', 'waterPct', 'lyeConcentration', 'waterRatio'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', () => {
-      queueStateSave();
-      queueAutoCalc();
+    ['input', 'change'].forEach(eventName => {
+      el.addEventListener(eventName, () => {
+        queueStateSave();
+        queueAutoCalc();
+      });
     });
   });
 
