@@ -28,6 +28,12 @@
       gap: 0.75rem;
       align-items: center;
     }
+    #soapToolPage .soap-stage-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: 1rem;
+      align-items: start;
+    }
     #soapToolPage .soap-quality-row .progress { height: 10px; }
     #soapToolPage .quality-target-marker {
       position: absolute;
@@ -62,6 +68,9 @@
       box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
     }
     @media (max-width: 991px) {
+      #soapToolPage .soap-stage-layout {
+        grid-template-columns: 1fr;
+      }
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
@@ -112,8 +121,8 @@
     </div>
   </div>
 
-  <div class="row g-3 align-items-start">
-    <div class="col-lg-7">
+  <div class="soap-stage-layout">
+    <div class="soap-stage-column">
       <div class="accordion" id="soapStageAccordion">
         <div class="accordion-item">
           <h2 class="accordion-header" id="soapStage1Heading">
@@ -522,7 +531,7 @@
       </div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="soap-sidebar-column">
       <div class="soap-data-sticky">
         <div class="card" id="soapQualityCard">
           <div class="card-header">
@@ -1258,7 +1267,9 @@
   }
 
   function updateOilTotals(options = {}){
-    state.wasCapped = false;
+    if (!options.skipEnforce) {
+      state.wasCapped = false;
+    }
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
     const mold = getMoldSettings();
     let target = getOilTargetGrams();
@@ -2944,18 +2955,29 @@
   });
 
   document.getElementById('oilRows').addEventListener('focusin', function(e){
-    if (e.target.classList.contains('oil-grams')
-      || e.target.classList.contains('oil-percent')
-      || e.target.classList.contains('oil-typeahead')) {
+    if (e.target.classList.contains('oil-typeahead')) {
       setSelectedOilProfileFromRow(e.target.closest('.oil-row'));
     }
   });
 
+  document.getElementById('oilRows').addEventListener('focusout', function(e){
+    if (e.target.classList.contains('oil-typeahead')) {
+      clearSelectedOilProfile();
+    }
+  });
+
   document.getElementById('oilRows').addEventListener('mouseover', function(e){
+    if (!e.target.classList.contains('oil-typeahead')) return;
     const row = e.target.closest('.oil-row');
     if (!row || row === state.lastPreviewRow) return;
     state.lastPreviewRow = row;
     setSelectedOilProfileFromRow(row);
+  });
+
+  document.getElementById('oilRows').addEventListener('mouseout', function(e){
+    if (e.target.classList.contains('oil-typeahead')) {
+      clearSelectedOilProfile();
+    }
   });
 
   document.getElementById('oilRows').addEventListener('click', function(e){
@@ -3002,9 +3024,11 @@
   ['lyeSuperfat', 'lyePurity', 'waterPct', 'lyeConcentration', 'waterRatio'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', () => {
-      queueStateSave();
-      queueAutoCalc();
+    ['input', 'change'].forEach(eventName => {
+      el.addEventListener(eventName, () => {
+        queueStateSave();
+        queueAutoCalc();
+      });
     });
   });
 
