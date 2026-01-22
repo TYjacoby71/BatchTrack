@@ -77,6 +77,26 @@
           "name": "recipes.plan_production",
           "display_name": "Production Planning",
           "description": "Plan production runs and check ingredient availability"
+        },
+        {
+          "name": "recipes.create_variations",
+          "display_name": "Create Recipe Variations",
+          "description": "Create recipe variations from an existing parent recipe"
+        },
+        {
+          "name": "recipes.sharing_controls",
+          "display_name": "Recipe Sharing Controls",
+          "description": "Manage public/private sharing controls for recipe listings"
+        },
+        {
+          "name": "recipes.purchase_options",
+          "display_name": "Recipe Purchase Options",
+          "description": "Enable paid recipe listings and purchase links"
+        },
+        {
+          "name": "recipes.marketplace_dashboard",
+          "display_name": "Organization Marketplace Access",
+          "description": "Access the organization marketplace dashboard and links"
         }
       ]
     },
@@ -454,6 +474,26 @@
           "name": "app.recipes.plan_production",
           "display_name": "[App] Production Planning",
           "description": "Developer access to production planning"
+        },
+        {
+          "name": "app.recipes.create_variations",
+          "display_name": "[App] Create Recipe Variations",
+          "description": "Developer access to recipe variation creation"
+        },
+        {
+          "name": "app.recipes.sharing_controls",
+          "display_name": "[App] Recipe Sharing Controls",
+          "description": "Developer access to recipe sharing controls"
+        },
+        {
+          "name": "app.recipes.purchase_options",
+          "display_name": "[App] Recipe Purchase Options",
+          "description": "Developer access to recipe purchase options"
+        },
+        {
+          "name": "app.recipes.marketplace_dashboard",
+          "display_name": "[App] Organization Marketplace Access",
+          "description": "Developer access to organization marketplace dashboard"
         },
         {
           "name": "app.batches.view",

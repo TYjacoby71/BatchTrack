@@ -5,6 +5,7 @@
     {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
     {'label': recipe.name, 'url': None}
 ] %}
+{% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 
 {% block content %}
 
@@ -265,9 +266,11 @@
               </button>
             </form>
           {% else %}
-            <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
-              <i class="fas fa-code-branch"></i> New Variation
-            </a>
+            {% if can_create_variations %}
+              <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
+                <i class="fas fa-code-branch"></i> New Variation
+              </a>
+            {% endif %}
           {% endif %}
           <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
             <i class="fas fa-copy"></i> Clone Recipe
@@ -325,7 +328,7 @@
                     <a href="{{ url_for('recipe_library_bp.recipe_library', organization=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
                       View public listings
                     </a>
-                    {% if is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD') %}
+                    {% if show_origin_marketplace %}
                       <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-2">
                         Marketplace dashboard
                       </a>

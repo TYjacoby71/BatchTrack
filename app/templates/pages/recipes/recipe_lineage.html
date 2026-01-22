@@ -4,6 +4,7 @@
     {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
     {'label': 'Lineage', 'url': None}
 ] %}
+{% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 
 {% macro draw_node(node, lineage_path) -%}
 <div class="d-flex flex-wrap align-items-center gap-2">
@@ -51,9 +52,11 @@
                         <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left"></i> Back to recipe
                         </a>
+                        {% if can_create_variations %}
                         <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
                             <i class="fas fa-code-branch"></i> New variation
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -94,7 +97,7 @@
                                             <a href="{{ url_for('recipe_library_bp.recipe_library', organization=origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
                                                 Browse this creator
                                             </a>
-                                            {% if org_marketplace_enabled %}
+                                            {% if show_origin_marketplace %}
                                                 <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=origin_source_org.id) }}" class="btn btn-link btn-sm px-0 ms-3">
                                                     Marketplace dashboard
                                                 </a>

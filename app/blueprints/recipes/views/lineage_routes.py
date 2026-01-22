@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import get_recipe_details
-from app.utils.settings import is_feature_enabled
+from app.utils.permissions import _org_tier_includes_permission, has_permission
 
 from .. import recipes_bp
 from ..lineage_utils import build_lineage_path, serialize_lineage_tree
@@ -67,7 +67,14 @@ def recipe_lineage(recipe_id):
     if recipe.org_origin_purchased and recipe.org_origin_source_org:
         origin_source_org = recipe.org_origin_source_org
 
-    org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
+    origin_marketplace_enabled = False
+    if origin_source_org:
+        origin_marketplace_enabled = _org_tier_includes_permission(
+            origin_source_org, "recipes.marketplace_dashboard"
+        )
+    show_origin_marketplace = origin_marketplace_enabled and has_permission(
+        current_user, "recipes.marketplace_dashboard"
+    )
 
     return render_template(
         'pages/recipes/recipe_lineage.html',
@@ -76,5 +83,5 @@ def recipe_lineage(recipe_id):
         lineage_tree=lineage_tree,
         lineage_path=lineage_path,
         lineage_events=events,
-        org_marketplace_enabled=org_marketplace_enabled,
+        show_origin_marketplace=show_origin_marketplace,
     )
