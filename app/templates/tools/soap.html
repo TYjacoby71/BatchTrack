@@ -1258,7 +1258,9 @@
   }
 
   function updateOilTotals(options = {}){
-    state.wasCapped = false;
+    if (!options.skipEnforce) {
+      state.wasCapped = false;
+    }
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
     const mold = getMoldSettings();
     let target = getOilTargetGrams();
