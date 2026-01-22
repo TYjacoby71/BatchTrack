@@ -15,13 +15,7 @@ from ..routes import developer_bp
 @developer_bp.route("/inventory-analytics")
 @login_required
 def inventory_analytics_stub():
-    """Developer inventory analytics (feature-flagged)."""
-    from flask import current_app
-
-    enabled = current_app.config.get("FEATURE_INVENTORY_ANALYTICS", False)
-    if not enabled:
-        flash("Inventory analytics is not enabled for this environment.", "info")
-        return redirect(url_for("developer.dashboard"))
+    """Developer inventory analytics."""
     return render_template(
         "developer/inventory_analytics.html",
         breadcrumb_items=[

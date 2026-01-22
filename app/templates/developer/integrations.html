@@ -118,6 +118,25 @@
   </div>
 
   <div class="card shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Automation Toggles</h4>
+      <p class="text-muted small mb-0">Stubbed switches for post-launch automation.</p>
+    </div>
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="autoBackupToggle"
+                 {% if auto_backup_enabled %}checked{% endif %}>
+          <label class="form-check-label fw-semibold" for="autoBackupToggle">Auto Backup System</label>
+        </div>
+        <span class="badge bg-secondary">Stub</span>
+      </div>
+      <p class="text-muted small mt-2 mb-0">Nightly exports of core tables and settings.</p>
+      <div id="autoBackupStatus" class="small text-muted mt-2" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
     <div class="card-body">
       <h6>Domain Event Dispatcher</h6>
       <p class="small text-muted mb-2">
@@ -191,6 +210,42 @@ async function checkWebhook() {
   } catch (e) {
     document.getElementById('webhookCheck').textContent = 'Error checking webhook';
   }
+}
+
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+const autoBackupToggle = document.getElementById('autoBackupToggle');
+const autoBackupStatus = document.getElementById('autoBackupStatus');
+if (autoBackupToggle) {
+  autoBackupToggle.addEventListener('change', async () => {
+    if (!autoBackupStatus) return;
+    autoBackupStatus.style.display = 'block';
+    autoBackupStatus.textContent = 'Saving...';
+    try {
+      const resp = await fetch('{{ url_for('developer.integrations_set_auto_backup') }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({ enabled: autoBackupToggle.checked })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        autoBackupStatus.textContent = 'Auto backup updated.';
+      } else {
+        autoBackupStatus.textContent = data.error || 'Failed to update auto backup.';
+      }
+    } catch (e) {
+      autoBackupStatus.textContent = 'Failed to update auto backup.';
+    }
+    setTimeout(() => {
+      autoBackupStatus.style.display = 'none';
+    }, 3000);
+  });
 }
 </script>
 {% endblock %}

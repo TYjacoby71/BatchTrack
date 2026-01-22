@@ -17,8 +17,10 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             {
                 "key": "FEATURE_FIFO_TRACKING",
                 "label": "FIFO Inventory Tracking",
-                "status": "wired",
-                "description": "First-in-first-out inventory tracking via the inventory adjustment service.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "description": "Standard FIFO behavior baked into inventory adjustments (always on).",
             },
             {
                 "key": "FEATURE_BARCODE_SCANNING",
@@ -29,32 +31,34 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             {
                 "key": "FEATURE_PRODUCT_VARIANTS",
                 "label": "Product Variants System",
-                "status": "wired",
-                "description": "Manage SKUs with variants powered by ProductService.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "description": "Variant-ready product catalog (always on).",
             },
             {
                 "key": "FEATURE_AUTO_SKU_GENERATION",
                 "label": "Auto-generate SKUs",
-                "status": "wired",
-                "description": "Automatically create SKU codes when products are saved.",
-            },
-            {
-                "key": "FEATURE_RECIPE_VARIATIONS",
-                "label": "Recipe Variations",
-                "status": "wired",
-                "description": "Support parent/child recipe relationships.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "description": "SKU generation is part of product creation (always on).",
             },
             {
                 "key": "FEATURE_COST_TRACKING",
                 "label": "Cost Tracking & Profit Margins",
-                "status": "wired",
-                "description": "Costing engine + FIFO/average cost calculations.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "description": "Core costing engine and margin calculations (always on).",
             },
             {
                 "key": "FEATURE_EXPIRATION_TRACKING",
                 "label": "Expiration Date Tracking",
-                "status": "wired",
-                "description": "Lot-based expiration alerts and services.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "description": "Lot-based expiration handling (always on).",
             },
             {
                 "key": "FEATURE_BULK_OPERATIONS",
@@ -68,24 +72,6 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "title": "Developer & advanced features",
         "description": "Capabilities intended for internal tooling or staging environments.",
         "flags": [
-            {
-                "key": "FEATURE_INVENTORY_ANALYTICS",
-                "label": "Inventory Analytics (Developer)",
-                "status": "wired",
-                "description": "Developer-only analytics dashboard and APIs.",
-            },
-            {
-                "key": "FEATURE_DEBUG_MODE",
-                "label": "Debug Mode",
-                "status": "stub",
-                "description": "Verbose logging & unsafe diagnostics.",
-            },
-            {
-                "key": "FEATURE_AUTO_BACKUP",
-                "label": "Auto-backup System",
-                "status": "stub",
-                "description": "Nightly exports of core tables.",
-            },
             {
                 "key": "FEATURE_CSV_EXPORT",
                 "label": "CSV Export",
@@ -111,28 +97,10 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "description": "Controls for sharing recipes publicly and exposing the marketplace surface.",
         "flags": [
             {
-                "key": "FEATURE_RECIPE_SHARING_CONTROLS",
-                "label": "Recipe Sharing Controls",
-                "status": "wired",
-                "description": "Enable private/public/free/sale selectors on recipe forms.",
-            },
-            {
                 "key": "FEATURE_RECIPE_LIBRARY_NAV",
                 "label": "Recipe Library Navigation",
                 "status": "wired",
                 "description": "Expose the public recipe library link in customer menus.",
-            },
-            {
-                "key": "FEATURE_RECIPE_PURCHASE_OPTIONS",
-                "label": "Public Purchase Buttons",
-                "status": "wired",
-                "description": "Show Shopify purchase links inside the public recipe library.",
-            },
-            {
-                "key": "FEATURE_ORG_MARKETPLACE_DASHBOARD",
-                "label": "Organization Marketplace",
-                "status": "wired",
-                "description": "Enable the organization-specific public marketplace dashboard and related links.",
             },
         ],
     },
@@ -143,8 +111,8 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             {
                 "key": "FEATURE_EMAIL_NOTIFICATIONS",
                 "label": "Email Notifications",
-                "status": "wired",
-                "description": "Transactional + lifecycle email delivery.",
+                "status": "stub",
+                "description": "Stubbed placeholder for transactional email delivery.",
             },
             {
                 "key": "FEATURE_BROWSER_NOTIFICATIONS",
@@ -157,6 +125,12 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "label": "Shopify Integration",
                 "status": "stub",
                 "description": "Future e-commerce sync pipeline.",
+            },
+            {
+                "key": "FEATURE_ETSY_INTEGRATION",
+                "label": "Etsy Integration",
+                "status": "stub",
+                "description": "Future Etsy marketplace sync.",
             },
             {
                 "key": "FEATURE_API_ACCESS",
@@ -586,6 +560,15 @@ class DeveloperDashboardService:
     @staticmethod
     def get_feature_flag_sections() -> List[Dict[str, Any]]:
         return FEATURE_FLAG_SECTIONS
+
+    @staticmethod
+    def get_toggleable_feature_keys() -> set[str]:
+        toggleable: set[str] = set()
+        for section in FEATURE_FLAG_SECTIONS:
+            for flag in section.get("flags", []):
+                if flag.get("toggle", True):
+                    toggleable.add(flag["key"])
+        return toggleable
 
     @staticmethod
     def get_waitlist_statistics(force_refresh: bool = False) -> Dict[str, Any]:

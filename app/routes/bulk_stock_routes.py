@@ -1,18 +1,28 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from flask_login import login_required
+from flask_login import login_required, current_user
 from ..models import db, Recipe, InventoryItem
 from ..services.unit_conversion import ConversionEngine
 from sqlalchemy.exc import SQLAlchemyError
 import io
 import csv
 from flask import make_response
+from app.utils.settings import is_feature_enabled
 
 bulk_stock_bp = Blueprint('bulk_stock', __name__)
+
+
+def _bulk_ops_enabled() -> bool:
+    if current_user.is_authenticated and getattr(current_user, "user_type", "") == "developer":
+        return True
+    return is_feature_enabled("FEATURE_BULK_OPERATIONS")
 
 @bulk_stock_bp.route('/bulk-check', methods=['GET', 'POST'])
 @login_required
 def bulk_stock_check():
     try:
+        if not _bulk_ops_enabled():
+            flash("Bulk inventory operations are not enabled for your plan.", "warning")
+            return redirect(url_for('app_routes.dashboard'))
         recipes = Recipe.scoped().all()
         summary = {}
         selected_ids = []
@@ -87,6 +97,9 @@ def bulk_stock_check():
 @login_required
 def export_shopping_list_csv():
     try:
+        if not _bulk_ops_enabled():
+            flash("Bulk inventory operations are not enabled for your plan.", "warning")
+            return redirect(url_for('app_routes.dashboard'))
         summary = session.get('bulk_summary', [])
         if not summary:
             flash('No stock check results available')

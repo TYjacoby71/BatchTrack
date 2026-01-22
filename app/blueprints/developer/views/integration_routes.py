@@ -8,6 +8,8 @@ from flask_login import current_user, login_required
 
 from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
+from app.services.developer.dashboard_service import DeveloperDashboardService
+from app.utils.json_store import read_json_file, write_json_file
 
 from ..routes import developer_bp
 
@@ -541,6 +543,10 @@ def integrations_checklist():
         "notes": "POS/Shopify integration is stubbed. Enable later via a dedicated adapter.",
     }
 
+    settings_payload = read_json_file("settings.json", default={}) or {}
+    system_settings = settings_payload.get("system") or {}
+    auto_backup_enabled = bool(system_settings.get("auto_backup", False))
+
     # Create config matrix from launch_env_sections for the table
     config_matrix = []
     for section in launch_env_sections:
@@ -557,6 +563,7 @@ def integrations_checklist():
         feature_flags=feature_flags,
         logging_status=logging_status,
         shopify_status=shopify_status,
+        auto_backup_enabled=auto_backup_enabled,
         env_core=env_core,
         db_info=db_info,
         cache_info=cache_info,
@@ -650,7 +657,10 @@ def integrations_set_feature_flags():
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
 
+        toggleable_keys = DeveloperDashboardService.get_toggleable_feature_keys()
         for flag_key, enabled in data.items():
+            if flag_key not in toggleable_keys:
+                continue
             feature_flag = FeatureFlag.query.filter_by(key=flag_key).first()
             if feature_flag:
                 feature_flag.enabled = bool(enabled)
@@ -667,6 +677,23 @@ def integrations_set_feature_flags():
 
     except Exception as exc:
         db.session.rollback()
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@developer_bp.route("/integrations/auto-backup", methods=["POST"])
+@login_required
+def integrations_set_auto_backup():
+    """Persist the auto-backup toggle (stubbed)."""
+    try:
+        data = request.get_json() or {}
+        enabled = bool(data.get("enabled"))
+        settings_payload = read_json_file("settings.json", default={}) or {}
+        system_settings = settings_payload.get("system") or {}
+        system_settings["auto_backup"] = enabled
+        settings_payload["system"] = system_settings
+        write_json_file("settings.json", settings_payload)
+        return jsonify({"success": True, "enabled": enabled})
+    except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
