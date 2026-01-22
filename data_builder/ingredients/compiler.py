@@ -40,10 +40,11 @@ def retry_on_db_lock(func: Callable[..., T]) -> Callable[..., T]:
             try:
                 return func(*args, **kwargs)
             except OperationalError as e:
-                if "database is locked" in str(e).lower():
+                err_str = str(e).lower()
+                if "database is locked" in err_str or "database is busy" in err_str:
                     last_error = e
                     delay = min(BASE_DELAY * (2 ** attempt) + random.uniform(0, 0.1), MAX_DELAY)
-                    LOGGER.warning(f"Database locked, retry {attempt + 1}/{MAX_RETRIES} after {delay:.2f}s")
+                    LOGGER.warning(f"Database locked/busy, retry {attempt + 1}/{MAX_RETRIES} after {delay:.2f}s")
                     time.sleep(delay)
                 else:
                     raise
@@ -415,6 +416,7 @@ def _assemble_cluster_payload(
     }
 
 
+@retry_on_db_lock
 def _finalize_cluster_if_complete(cluster_id: str) -> bool:
     """Persist a compiled ingredient when all cluster items are done."""
     database_manager.ensure_tables_exist()
@@ -881,6 +883,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
     LOGGER.info("Stage 1 finished: ok=%s total=%s (parallel, %d workers)", ok, len(ids), workers)
 
 
+@retry_on_db_lock
 def _process_stage2_cluster(
     cid: str,
     priority_map: dict[str, int],
