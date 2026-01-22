@@ -118,6 +118,13 @@
       z-index: 1040;
       box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
     }
+    @media (min-width: 992px) {
+      #soapToolPage #soapStageQualityRow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+    }
     @media (max-width: 991px) {
       #soapToolPage .oil-profile-float {
         position: static;
@@ -177,7 +184,7 @@
     </div>
   </div>
 
-  <div class="row g-3">
+  <div class="row mt-4 g-4" id="soapStageQualityRow">
     <div class="col-lg-8">
       <div class="accordion" id="soapStageAccordion">
         <div class="accordion-item">
@@ -719,10 +726,12 @@
       </div>
     </div>
 
-    <div class="card mb-4" id="resultsCard" style="display:none;">
-      <div class="card-header"><strong>Results</strong></div>
-      <div class="card-body">
-        <div class="row g-3">
+  </div>
+
+  <div class="card mt-4 mb-4" id="resultsCard" style="display:none;">
+    <div class="card-header"><strong>Results</strong></div>
+    <div class="card-body">
+      <div class="row g-3">
           <div class="col-md-3">
             <div class="border rounded p-2 h-100">
               <div class="small text-muted">Lye with purity</div>
