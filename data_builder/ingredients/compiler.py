@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import logging
 import os
+import random
 import re
 import sys
 import time
@@ -13,12 +15,42 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, MutableMapping, Set
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Set, TypeVar
 from sqlalchemy import func
+from sqlalchemy.exc import OperationalError
 
 # Thread-local storage for worker stats
 _worker_stats = threading.local()
 DEFAULT_WORKERS = int(os.getenv("COMPILER_WORKERS", "1"))
+
+# Retry configuration for database locks
+MAX_RETRIES = 5
+BASE_DELAY = 0.1  # 100ms base delay
+MAX_DELAY = 5.0   # 5 second max delay
+
+T = TypeVar("T")
+
+
+def retry_on_db_lock(func: Callable[..., T]) -> Callable[..., T]:
+    """Decorator that retries a function on SQLite database lock errors with exponential backoff."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> T:
+        last_error = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                return func(*args, **kwargs)
+            except OperationalError as e:
+                if "database is locked" in str(e).lower():
+                    last_error = e
+                    delay = min(BASE_DELAY * (2 ** attempt) + random.uniform(0, 0.1), MAX_DELAY)
+                    LOGGER.warning(f"Database locked, retry {attempt + 1}/{MAX_RETRIES} after {delay:.2f}s")
+                    time.sleep(delay)
+                else:
+                    raise
+            except Exception:
+                raise
+        raise last_error if last_error else RuntimeError("Retry exhausted")
+    return wrapper
 
 
 class AtomicCounter:
@@ -510,6 +542,7 @@ def _select_stage2_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
     return ids
 
 
+@retry_on_db_lock
 def _mirror_cluster_into_compiled(cluster_id: str) -> None:
     """Ensure compiled mirror rows exist for cluster + its merged_item_forms."""
     database_manager.ensure_tables_exist()
@@ -651,6 +684,7 @@ def _build_cluster_context(cluster_id: str) -> dict[str, Any]:
         }
 
 
+@retry_on_db_lock
 def _process_stage1_cluster(
     cid: str,
     priority_map: dict[str, int],
@@ -812,7 +846,7 @@ def run_stage1_term_completion(*, cluster_id: str | None, limit: int | None, sle
     # Create atomic counter starting at done_count so ranks continue from where we left off
     rank_counter = AtomicCounter(start=done_count)
     
-    workers = max(1, min(workers, 10))  # Cap at 10 workers
+    workers = max(1, workers)  # No upper cap - let user control based on API limits
     LOGGER.info("Stage 1: processing %d clusters with %d worker(s), starting from rank %d", len(ids), workers, done_count + 1)
     
     if workers == 1:
@@ -992,7 +1026,7 @@ def run_stage2_item_compilation(*, cluster_id: str | None, limit: int | None, sl
         return
     priority_map = database_manager.build_cluster_priority_map()
     
-    workers = max(1, min(workers, 10))  # Cap at 10 workers
+    workers = max(1, workers)  # No upper cap - let user control based on API limits
     LOGGER.info("Stage 2: processing %d clusters with %d worker(s)", len(ids), workers)
     
     if workers == 1:
@@ -1052,7 +1086,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "-w",
         type=int,
         default=DEFAULT_WORKERS,
-        help="Number of parallel workers (1-10). For gpt-4o-mini with 2M TPM limit, use 3-5 workers. Default: 1",
+        help="Number of parallel workers. For gpt-4o-mini use 5-15 workers. Database locks are handled with retry logic. Default: 1",
     )
     return parser.parse_args(argv)
 
