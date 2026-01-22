@@ -65,7 +65,7 @@ def _get_stage1_pending_clusters(limit: int | None = None) -> list[tuple[str, di
         q = q.filter(database_manager.SourceDefinition.cluster_id.isnot(None))
         q = q.filter(
             (database_manager.CompiledClusterRecord.cluster_id.is_(None))
-            | (database_manager.CompiledClusterRecord.term_status != "done")
+            | (database_manager.CompiledClusterRecord.term_status.notin_(["done", "batch_pending"]))
         )
         q = q.order_by(database_manager.SourceDefinition.cluster_id.asc())
         ids = [str(r[0]) for r in q.all() if r and r[0]]
@@ -107,7 +107,7 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
                 database_manager.CompiledClusterItemRecord.cluster_id == database_manager.CompiledClusterRecord.cluster_id,
             )
             .filter(database_manager.CompiledClusterRecord.term_status == "done")
-            .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+            .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
         )
         rows = q.distinct().all()
     
@@ -190,7 +190,37 @@ def export_stage1_batch(limit: int | None = None) -> Path:
     
     file_size_kb = filepath.stat().st_size / 1024
     LOGGER.info(f"Exported {len(clusters)} Stage 1 clusters to {filepath} ({file_size_kb:.1f} KB)")
+    
+    # Mark exported clusters as batch_pending so real-time compiler skips them
+    _mark_clusters_batch_pending([cid for cid, _ in clusters], stage=1)
+    
     return filepath
+
+
+def _mark_clusters_batch_pending(cluster_ids: list[str], stage: int) -> None:
+    """Mark clusters as batch_pending to prevent real-time compiler from processing them."""
+    with database_manager.get_session() as session:
+        for cid in cluster_ids:
+            if stage == 1:
+                # Check if record exists, create minimal one if not
+                rec = session.query(database_manager.CompiledClusterRecord).filter_by(cluster_id=cid).first()
+                if rec:
+                    rec.term_status = "batch_pending"
+                else:
+                    new_rec = database_manager.CompiledClusterRecord(
+                        cluster_id=cid,
+                        term_status="batch_pending",
+                        priority=50
+                    )
+                    session.add(new_rec)
+            elif stage == 2:
+                # For stage 2, update item_status on items
+                items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cid).all()
+                for item in items:
+                    if item.item_status != "done":
+                        item.item_status = "batch_pending"
+        session.commit()
+    LOGGER.info(f"Marked {len(cluster_ids)} clusters as batch_pending for Stage {stage}")
 
 
 def export_stage2_batch(limit: int | None = None) -> Path:
@@ -230,6 +260,10 @@ def export_stage2_batch(limit: int | None = None) -> Path:
     
     file_size_kb = filepath.stat().st_size / 1024
     LOGGER.info(f"Exported {len(clusters)} Stage 2 clusters to {filepath} ({file_size_kb:.1f} KB)")
+    
+    # Mark exported clusters as batch_pending so real-time compiler skips them
+    _mark_clusters_batch_pending([cid for cid, _, _, _, _ in clusters], stage=2)
+    
     return filepath
 
 

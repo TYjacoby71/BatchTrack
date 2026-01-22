@@ -486,7 +486,7 @@ def _select_stage1_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
             q = q.filter(database_manager.SourceDefinition.cluster_id == cid)
         q = q.filter(
             (database_manager.CompiledClusterRecord.cluster_id.is_(None))
-            | (database_manager.CompiledClusterRecord.term_status != "done")
+            | (database_manager.CompiledClusterRecord.term_status.notin_(["done", "batch_pending"]))
         )
         q = q.order_by(database_manager.SourceDefinition.cluster_id.asc())
         ids = [str(r[0]) for r in q.all() if r and r[0]]
@@ -519,7 +519,7 @@ def _select_stage2_cluster_ids(*, limit: int | None, cluster_id: str | None) -> 
                 database_manager.CompiledClusterItemRecord.cluster_id == database_manager.CompiledClusterRecord.cluster_id,
             )
             .filter(database_manager.CompiledClusterRecord.term_status == "done")
-            .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+            .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
         )
         if cid:
             q = q.filter(database_manager.CompiledClusterRecord.cluster_id == cid)
