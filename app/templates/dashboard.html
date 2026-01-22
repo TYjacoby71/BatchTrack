@@ -29,6 +29,7 @@
       <h5 class="card-title mb-0 text-center">Start New Batch</h5>
     </div>
     <div class="card-body" style="max-height: 80vh; overflow-y: auto;">
+      {% if is_feature_enabled('FEATURE_PRODUCTION_QUEUE') %}
       <div class="mb-4" id="queueSection">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h6 class="text-uppercase text-muted mb-0">Queued Batches</h6>
@@ -46,6 +47,7 @@
       </div>
 
       <hr class="my-3">
+      {% endif %}
 
       <div id="recipeLoadingState" class="alert alert-info d-flex align-items-center mb-3">
         <i class="fas fa-spinner fa-spin me-2"></i>
@@ -124,7 +126,8 @@
   const queueStartForm = document.getElementById('queueStartForm');
   const continueButton = document.getElementById('startFlowContinueButton');
   const bootstrapRecipesUrl = "{{ url_for('api.bootstrap_recipes') }}";
-  const queueListUrl = "{{ url_for('production_planning.queue_list') }}";
+  const queueFeatureEnabled = {{ 'true' if is_feature_enabled('FEATURE_PRODUCTION_QUEUE') else 'false' }};
+  const queueListUrl = queueFeatureEnabled ? "{{ url_for('production_planning.queue_list') }}" : '';
   let recipesCache = null;
   let recipeFetchPromise = null;
   let queueFetchPromise = null;
@@ -194,6 +197,9 @@
   }
 
   function fetchQueueItems() {
+    if (!queueFeatureEnabled || !queueListUrl) {
+      return Promise.resolve([]);
+    }
     if (queueFetchPromise) {
       return queueFetchPromise;
     }
@@ -287,6 +293,9 @@
   }
 
   function ensureQueueLoaded() {
+    if (!queueFeatureEnabled || !queueListUrl || !queueLoadingState) {
+      return;
+    }
     queueLoadingState.classList.remove('d-none');
     queueErrorState.classList.add('d-none');
     queueEmptyState.classList.add('d-none');
@@ -337,8 +346,8 @@
   };
 
   window.goToPlanProduction = function() {
-    const selectedQueue = queueList?.querySelector('input[name="queue_item_id"]:checked');
-    if (selectedQueue && selectedQueue.value) {
+    const selectedQueue = queueFeatureEnabled ? queueList?.querySelector('input[name="queue_item_id"]:checked') : null;
+    if (queueFeatureEnabled && selectedQueue && selectedQueue.value) {
       const queueId = selectedQueue.value;
       queueStartForm.action = `/production-planning/queue/${queueId}/start`;
       queueStartForm.submit();

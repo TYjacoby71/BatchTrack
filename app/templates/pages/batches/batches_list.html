@@ -6,9 +6,11 @@
     <li class="nav-item">
         <a class="nav-link active" href="{{ url_for('batches.list_batches') }}">Batches</a>
     </li>
+    {% if is_feature_enabled('FEATURE_PRODUCTION_QUEUE') %}
     <li class="nav-item">
         <a class="nav-link" href="{{ url_for('production_planning.view_queue') }}">Queue</a>
     </li>
+    {% endif %}
 </ul>
 
 {% if not batches %}

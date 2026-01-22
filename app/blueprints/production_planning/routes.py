@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from . import production_planning_bp
 from app.extensions import db
@@ -7,6 +7,7 @@ from app.models.batch_queue import BatchQueueItem
 from app.services.production_planning.queue_service import BatchQueueService
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.permissions import require_permission
+from app.utils.settings import is_feature_enabled
 
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
@@ -14,6 +15,11 @@ from app.services.recipe_service import get_recipe_details
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_queue_enabled():
+    if not is_feature_enabled('FEATURE_PRODUCTION_QUEUE'):
+        abort(404)
 
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
@@ -70,6 +76,7 @@ def plan_production_route(recipe_id):
 @require_permission('recipes.plan_production')
 def view_queue():
     """View the planned production queue."""
+    _ensure_queue_enabled()
     BatchQueueService.expire_stale_queue_items(current_user.organization_id)
     queue_items = BatchQueueItem.query.filter_by(
         organization_id=current_user.organization_id,
@@ -89,6 +96,7 @@ def view_queue():
 @require_permission('recipes.plan_production')
 def queue_list():
     """Return queued batches for modal selection."""
+    _ensure_queue_enabled()
     BatchQueueService.expire_stale_queue_items(current_user.organization_id)
     queue_items = BatchQueueItem.query.filter_by(
         organization_id=current_user.organization_id,
@@ -118,6 +126,7 @@ def queue_list():
 @require_permission('recipes.plan_production')
 def enqueue_batch():
     """Add a planned batch to the queue and reserve inventory."""
+    _ensure_queue_enabled()
     data = request.get_json() or {}
     recipe_id = data.get('recipe_id')
     if not recipe_id:
@@ -155,6 +164,7 @@ def enqueue_batch():
 @login_required
 @require_permission('recipes.plan_production')
 def start_queue_item(queue_id):
+    _ensure_queue_enabled()
     queue_item = BatchQueueItem.query.filter_by(
         id=queue_id,
         organization_id=current_user.organization_id
@@ -173,6 +183,7 @@ def start_queue_item(queue_id):
 @login_required
 @require_permission('recipes.plan_production')
 def cancel_queue_item(queue_id):
+    _ensure_queue_enabled()
     queue_item = BatchQueueItem.query.filter_by(
         id=queue_id,
         organization_id=current_user.organization_id
