@@ -22,6 +22,7 @@
     ingredientFirst: false,
     displayVariant: null,
     showSourceBadge: true,
+    resultFilter: null,
   };
 
   function debounce(fn, wait){
@@ -194,6 +195,11 @@
     (items || []).forEach(item => {
       if (item && Array.isArray(item.forms) && item.forms.length){
         const baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+        const categoryName = (item.ingredient && item.ingredient.ingredient_category_name)
+          || item.ingredient_category_name
+          || (item.ingredient_category && item.ingredient_category.name)
+          || null;
+        const categoryTags = item.category_tags || [];
         item.forms.forEach(form => {
           const physical = form.physical_form || {};
           const display = form.display_name || form.text || form.name || (baseIngredientName && form.physical_form_name ? `${baseIngredientName}, ${form.physical_form_name}` : (item.display_name || item.text || item.name || ''));
@@ -208,6 +214,8 @@
             ingredient_name: form.ingredient_name || baseIngredientName,
             physical_form_id: form.physical_form_id || (physical && physical.id) || null,
             physical_form_name: form.physical_form_name || (physical && physical.name) || null,
+            ingredient_category_name: categoryName,
+            category_tags: categoryTags,
             density: form.density || item.density || null,
             capacity: form.capacity || item.capacity || null,
             capacity_unit: form.capacity_unit || item.capacity_unit || null,
@@ -225,6 +233,10 @@
         });
       } else if (item) {
         const displayName = item.display_name || item.text || item.name || '';
+        const categoryName = (item.ingredient && item.ingredient.ingredient_category_name)
+          || item.ingredient_category_name
+          || (item.ingredient_category && item.ingredient_category.name)
+          || null;
         expanded.push({
           id: item.id,
           text: displayName,
@@ -232,6 +244,8 @@
           item_type: item.item_type,
           global_item_id: item.id,
           ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || item.name,
+          ingredient_category_name: categoryName,
+          category_tags: item.category_tags || [],
           physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
           default_unit: item.default_unit || item.unit || null,
           density: item.density || null,
@@ -330,6 +344,7 @@
     const includeGlobalOption = opts.includeGlobal;
     const ingredientFirstOption = opts.ingredientFirst;
     const displayVariant = opts.displayVariant;
+    const resultFilter = typeof opts.resultFilter === 'function' ? opts.resultFilter : null;
     const onSelection = typeof opts.onSelection === 'function' ? opts.onSelection : null;
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || (!giHiddenEl && opts.requireHidden !== false)) return;
@@ -395,14 +410,22 @@
         : Promise.resolve({ results: [] });
 
       Promise.all([inventoryPromise, globalPromise]).then(results => {
-        const inventory = (results[0] && results[0].results) || [];
+        const inventoryRaw = (results[0] && results[0].results) || [];
         const globalRaw = (results[1] && results[1].results) || [];
+        const inventory = resultFilter
+          ? inventoryRaw.filter(item => resultFilter(item, 'inventory'))
+          : inventoryRaw;
+        const filteredGlobalRaw = resultFilter
+          ? globalRaw.filter(item => resultFilter(item, 'global'))
+          : globalRaw;
         const seenGlobalIds = buildGlobalIdSet(inventory);
-        const globalExpanded = expandGlobalItems(globalRaw).filter(item => !item.global_item_id || !seenGlobalIds.has(String(item.global_item_id)));
+        const globalExpanded = expandGlobalItems(filteredGlobalRaw)
+          .filter(item => !item.global_item_id || !seenGlobalIds.has(String(item.global_item_id)))
+          .filter(item => (resultFilter ? resultFilter(item, 'global') : true));
 
         if (ingredientFirst) {
           const inventoryGroups = groupInventoryByIngredient(inventory);
-          const globalGroups = groupGlobalByIngredient(globalRaw, seenGlobalIds);
+          const globalGroups = groupGlobalByIngredient(filteredGlobalRaw, seenGlobalIds);
           const ingredientGroups = [];
           if (inventoryGroups.length) {
             ingredientGroups.push({ title: 'Your Inventory', source: 'inventory', ingredients: inventoryGroups });

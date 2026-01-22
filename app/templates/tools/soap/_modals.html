@@ -1,0 +1,53 @@
+<div class="modal fade" id="soapDownloadPreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Download preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="small text-muted mb-1">Batch summary</div>
+            <ul class="list-group list-group-flush small" id="soapDownloadSummaryList">
+              <li class="list-group-item d-flex justify-content-between"><span>Total oils</span><span id="downloadSummaryOils">--</span></li>
+              <li class="list-group-item d-flex justify-content-between"><span>Lye</span><span id="downloadSummaryLye">--</span></li>
+              <li class="list-group-item d-flex justify-content-between"><span>Water</span><span id="downloadSummaryWater">--</span></li>
+              <li class="list-group-item d-flex justify-content-between"><span>Yield</span><span id="downloadSummaryYield">--</span></li>
+              <li class="list-group-item d-flex justify-content-between"><span>Superfat</span><span id="downloadSummarySuperfat">--</span></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted mb-1">INCI order preview</div>
+            <ol class="small mb-0" id="soapDownloadInciList"></ol>
+          </div>
+        </div>
+        <div class="alert alert-light border small mt-3 d-none" id="soapDownloadPreviewEmpty">
+          Run a calculation to preview download details.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Download INCI</a>
+        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="soapSignupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Keep your recipes saved</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        You are almost at the free calculation limit. Create a free account to save recipes and keep calculating.
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary" href="{{ url_for('auth.quick_signup') }}">Create free account</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -159,6 +159,7 @@ def create_tier():
                 return redirect(url_for('.create_tier'))
 
         # Database Insertion
+        is_customer_facing = 'is_customer_facing' in request.form
         tier = SubscriptionTier(
             name=name,
             description=description,
@@ -174,7 +175,8 @@ def create_tier():
             retention_notice_days=retention_notice_days,
             billing_provider=billing_provider,
             stripe_lookup_key=stripe_key if stripe_key else None,
-            whop_product_key=whop_key if whop_key else None
+            whop_product_key=whop_key if whop_key else None,
+            is_customer_facing=is_customer_facing
         )
 
         # Add permissions
@@ -244,6 +246,7 @@ def edit_tier(tier_id):
         try:
             tier.name = request.form.get('name', tier.name)
             tier.description = request.form.get('description', tier.description)
+            tier.is_customer_facing = 'is_customer_facing' in request.form
             # Allow -1 for unlimited
             try:
                 tier.user_limit = int(request.form.get('user_limit', tier.user_limit))

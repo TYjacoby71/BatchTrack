@@ -4,6 +4,7 @@
   function buildToolLineRow(kind, options){
     var context = (options && options.context) || 'public';
     var unitOptionsHtml = (options && options.unitOptionsHtml) || '';
+    var mode = (options && options.mode) || (context === 'public' ? 'public' : 'recipe');
 
     var row = document.createElement('div');
     row.className = 'row g-2 align-items-end mb-2';
@@ -46,7 +47,7 @@
         inputEl: input,
         giHiddenEl: giHidden,
         listEl: list,
-        mode: 'recipe',
+        mode: mode,
         context: context,
         ingredientFirst: kind === 'ingredient',
         searchType,

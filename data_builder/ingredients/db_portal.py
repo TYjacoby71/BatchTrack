@@ -550,7 +550,7 @@ HTML_TEMPLATE = """
                 const rank = row.rank !== null && row.rank !== undefined ? row.rank : '-';
                 const commonName = row.common_name || row.compiled_term || row.raw_canonical_term || '-';
                 const priority = row.priority || 0;
-                const priorityColor = priority >= 8 ? '#22c55e' : priority >= 5 ? '#eab308' : '#6b7280';
+                const priorityColor = priority >= 80 ? '#22c55e' : priority >= 50 ? '#eab308' : '#6b7280';
                 return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
                     <td style="font-weight:bold; color:#6366f1;">${rank}</td>
                     <td style="font-size:11px; max-width:250px; overflow:hidden; text-overflow:ellipsis;" title="${row.cluster_id}">${row.cluster_id}</td>

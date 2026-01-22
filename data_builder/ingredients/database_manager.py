@@ -1,17 +1,21 @@
 """SQLite-backed task queue utilities for the iterative compiler."""
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import math
 import os
+import random
 import re
+import time
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, event, exists, func, select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
@@ -198,6 +202,36 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+# Retry configuration for database locks
+_MAX_RETRIES = 5
+_BASE_DELAY = 0.1  # 100ms base delay
+_MAX_DELAY = 5.0   # 5 second max delay
+
+_T = TypeVar("_T")
+
+
+def retry_on_db_lock(func: Callable[..., _T]) -> Callable[..., _T]:
+    """Decorator that retries a function on SQLite database lock errors with exponential backoff."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> _T:
+        last_error = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                return func(*args, **kwargs)
+            except OperationalError as e:
+                err_str = str(e).lower()
+                if "database is locked" in err_str or "database is busy" in err_str:
+                    last_error = e
+                    delay = min(_BASE_DELAY * (2 ** attempt) + random.uniform(0, 0.1), _MAX_DELAY)
+                    LOGGER.warning(f"Database locked/busy, retry {attempt + 1}/{_MAX_RETRIES} after {delay:.2f}s")
+                    time.sleep(delay)
+                else:
+                    raise
+            except Exception:
+                raise
+        raise last_error if last_error else RuntimeError("Retry exhausted")
+    return wrapper
 
 
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:  # pragma: no cover
@@ -1987,6 +2021,7 @@ def update_task_status(term: str, status: str) -> None:
         task.last_updated = datetime.utcnow()
 
 
+@retry_on_db_lock
 def upsert_compiled_ingredient(
     term: str,
     payload: dict,
