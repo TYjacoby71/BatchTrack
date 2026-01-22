@@ -1,0 +1,51 @@
+~/workspace$ COMPILER_DB_PATH="data_builder/ingredients/output/Final DB.db" python3 -m data_builder.ingredients.compiler --stage 1 --workers 5 --limit 2500
+2026-01-22 20:00:04,579 INFO [data_builder.ingredients.compiler] Stage 1: processing 2500 clusters with 5 worker(s), starting from rank 8128
+^C2026-01-22 20:00:11,269 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:11,284 INFO [data_builder.ingredients.compiler] Stage 1 done: #8128 | term=Diosmine | common_name=Diosmine | priority=45
+2026-01-22 20:00:11,557 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:11,566 INFO [data_builder.ingredients.compiler] Stage 1 done: #8129 | term=Diospyros | common_name=Persimmon | priority=35
+2026-01-22 20:00:11,726 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:11,734 INFO [data_builder.ingredients.compiler] Stage 1 done: #8130 | term=Diosmetin | common_name=N/A | priority=55
+2026-01-22 20:00:12,197 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:12,210 INFO [data_builder.ingredients.compiler] Stage 1 done: #8131 | term=Diospyros ebenum | common_name=Ebony | priority=35
+2026-01-22 20:00:12,845 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:12,852 INFO [data_builder.ingredients.compiler] Stage 1 done: #8132 | term=Diosgenin | common_name=Diosgenin | priority=15
+2026-01-22 20:00:20,462 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:20,469 INFO [data_builder.ingredients.compiler] Stage 1 done: #8133 | term=Diospyros kaki | common_name=Persimmon | priority=65
+2026-01-22 20:00:21,344 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:21,352 INFO [data_builder.ingredients.compiler] Stage 1 done: #8134 | term=Diospyros | common_name=Persimmon | priority=45
+2026-01-22 20:00:21,830 INFO [httpx] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-22 20:00:21,846 INFO [data_builder.ingredients.compiler] Stage 1 done: #8135 | term=Diospyros | common_name=Lotus | priority=35
+^CTraceback (most recent call last):
+  File "/home/runner/workspace/data_builder/ingredients/compiler.py", line 873, in run_stage1_term_completion
+    for future in as_completed(futures):
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/_base.py", line 243, in as_completed
+    waiter.event.wait(wait_timeout)
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/threading.py", line 629, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/threading.py", line 327, in wait
+    waiter.acquire()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/workspace/data_builder/ingredients/compiler.py", line 1116, in <module>
+    main()
+  File "/home/runner/workspace/data_builder/ingredients/compiler.py", line 1110, in main
+    run_stage1_term_completion(cluster_id=cid, limit=limit, sleep_seconds=float(args.sleep_seconds or 0), workers=workers)
+  File "/home/runner/workspace/data_builder/ingredients/compiler.py", line 871, in run_stage1_term_completion
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/_base.py", line 647, in __exit__
+    self.shutdown(wait=True)
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/thread.py", line 235, in shutdown
+    t.join()
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/threading.py", line 1119, in join
+    self._wait_for_tstate_lock()
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/threading.py", line 1139, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
