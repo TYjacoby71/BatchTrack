@@ -31,6 +31,7 @@ EVENT_PREFIXES: Dict[str, str] = {
     "returned": "RTN",
     "refunded": "REF",
     "cost_override": "CST",
+    "planned": "PLN",
 }
 
 

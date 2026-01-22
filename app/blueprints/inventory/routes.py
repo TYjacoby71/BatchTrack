@@ -51,6 +51,23 @@ def _expired_quantity_map(item_ids):
     return {row[0]: float(row[1] or 0) for row in rows}
 
 
+def _extract_queue_code_from_notes(notes: str | None) -> str | None:
+    if not notes:
+        return None
+    tag_start = notes.find('[QUEUE:')
+    if tag_start == -1:
+        return None
+    tag_end = notes.find(']', tag_start)
+    if tag_end == -1:
+        return None
+    tag = notes[tag_start + 7:tag_end]
+    parts = [p.strip() for p in tag.split('|') if p.strip()]
+    for part in parts:
+        if part.startswith('CODE:'):
+            return part.split('CODE:', 1)[1]
+    return None
+
+
 def _serialize_inventory_items(items):
     from ...blueprints.expiration.services import ExpirationService
 
@@ -530,6 +547,9 @@ def view_inventory(id):
 
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    for entry in history:
+        if getattr(entry, 'change_type', None) == 'planned':
+            entry.queue_code = _extract_queue_code_from_notes(getattr(entry, 'notes', None))
     # When FIFO toggle is ON, show ALL lots (including depleted ones)
     # When FIFO toggle is OFF, show only active lots
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)

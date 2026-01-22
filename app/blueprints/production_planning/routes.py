@@ -3,6 +3,9 @@ from flask_login import login_required, current_user
 from . import production_planning_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
+from app.models.batch_queue import BatchQueueItem
+from app.services.production_planning.queue_service import BatchQueueService
+from app.utils.timezone_utils import TimezoneUtils
 from app.utils.permissions import require_permission
 
 from app.services.production_planning import plan_production_comprehensive
@@ -60,6 +63,98 @@ def plan_production_route(recipe_id):
         {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
         {'label': 'Plan Production'}
     ])
+
+
+@production_planning_bp.route('/queue', methods=['GET'])
+@login_required
+@require_permission('recipes.plan_production')
+def view_queue():
+    """View the planned production queue."""
+    BatchQueueService.expire_stale_queue_items(current_user.organization_id)
+    queue_items = BatchQueueItem.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='queued'
+    ).order_by(BatchQueueItem.queue_position.asc(), BatchQueueItem.created_at.asc()).all()
+    return render_template('pages/production_planning/queue.html',
+                           queue_items=queue_items,
+                           TimezoneUtils=TimezoneUtils,
+                           breadcrumb_items=[
+                               {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
+                               {'label': 'Production Queue'}
+                           ])
+
+
+@production_planning_bp.route('/queue', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def enqueue_batch():
+    """Add a planned batch to the queue and reserve inventory."""
+    data = request.get_json() or {}
+    recipe_id = data.get('recipe_id')
+    if not recipe_id:
+        return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
+
+    try:
+        scale = float(data.get('scale', 1.0))
+    except (TypeError, ValueError):
+        scale = 1.0
+    if scale <= 0:
+        return jsonify({'success': False, 'message': 'Scale must be greater than zero.'}), 400
+
+    batch_type = data.get('batch_type') or 'ingredient'
+    notes = data.get('notes', '')
+    containers = data.get('containers', []) or []
+
+    ok, error = BatchQueueService.verify_queue_stock(recipe_id, scale)
+    if not ok:
+        return jsonify({'success': False, 'message': error}), 400
+
+    queue_item, err = BatchQueueService.enqueue_batch(recipe_id, scale, batch_type, notes, containers)
+    if err:
+        return jsonify({'success': False, 'message': err}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Added to queue.',
+        'queue_id': queue_item.id,
+        'queue_code': queue_item.queue_code,
+        'queue_url': url_for('production_planning.view_queue')
+    })
+
+
+@production_planning_bp.route('/queue/<int:queue_id>/start', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def start_queue_item(queue_id):
+    queue_item = BatchQueueItem.query.filter_by(
+        id=queue_id,
+        organization_id=current_user.organization_id
+    ).first_or_404()
+
+    batch, err = BatchQueueService.start_queue_item(queue_item)
+    if err:
+        flash(err, 'error')
+        return redirect(url_for('production_planning.view_queue'))
+
+    flash('Batch started from queue.', 'success')
+    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
+
+@production_planning_bp.route('/queue/<int:queue_id>/cancel', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def cancel_queue_item(queue_id):
+    queue_item = BatchQueueItem.query.filter_by(
+        id=queue_id,
+        organization_id=current_user.organization_id
+    ).first_or_404()
+
+    success, message = BatchQueueService.cancel_queue_item(queue_item)
+    if success:
+        flash('Queue item cancelled and inventory released.', 'success')
+    else:
+        flash(message, 'error')
+    return redirect(url_for('production_planning.view_queue'))
 
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required

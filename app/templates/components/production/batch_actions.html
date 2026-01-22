@@ -8,13 +8,20 @@
     <div class="card-body">
         <p class="text-muted">Ready to start production?</p>
 
-        <!-- Start Batch Button -->
-        <button type="button" id="startBatchBtn" class="btn btn-secondary btn-lg w-100" disabled>
-            <i class="fas fa-play me-2"></i>Select batch type first
-        </button>
+        <div class="d-grid gap-2">
+            <!-- Start Batch Button -->
+            <button type="button" id="startBatchBtn" class="btn btn-secondary btn-lg w-100" disabled>
+                <i class="fas fa-play me-2"></i>Select batch type first
+            </button>
+
+            <!-- Add to Queue Button -->
+            <button type="button" id="queueBatchBtn" class="btn btn-secondary btn-lg w-100" disabled>
+                <i class="fas fa-list me-2"></i>Select batch type first
+            </button>
+        </div>
 
         <small class="text-muted mt-2 d-block">
-            Complete configuration and stock check to enable batch start.
+            Complete configuration and stock check to enable batch actions.
         </small>
     </div>
 </div>

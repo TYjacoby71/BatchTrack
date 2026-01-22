@@ -55,6 +55,26 @@ export class ValidationManager {
             }
         }
 
+        const queueBatchBtn = document.getElementById('queueBatchBtn');
+        if (queueBatchBtn) {
+            const queueIssues = [...issues];
+            if (this.main.stockChecked && !this.main.stockCheckPassed) {
+                queueIssues.push('Resolve stock shortages for queue');
+            }
+            const queueValid = queueIssues.length === 0;
+            queueBatchBtn.disabled = !queueValid;
+
+            if (queueValid) {
+                queueBatchBtn.innerHTML = '<i class="fas fa-list me-2"></i>Add to Queue';
+                queueBatchBtn.className = 'btn btn-outline-primary btn-lg w-100';
+                queueBatchBtn.title = '';
+            } else {
+                queueBatchBtn.innerHTML = '<i class="fas fa-list me-2"></i>' + queueIssues[0];
+                queueBatchBtn.className = 'btn btn-secondary btn-lg w-100';
+                queueBatchBtn.title = 'Issues: ' + queueIssues.join(', ');
+            }
+        }
+
         // Update validation message display
         const validationMsg = document.getElementById('validationMessage');
         if (validationMsg) {

@@ -12,7 +12,10 @@
             <h2><i class="fas fa-cogs me-2"></i>Plan Production: {{ recipe.name }}</h2>
             
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('production_planning.view_queue') }}" class="btn btn-outline-primary">
+                <i class="fas fa-layer-group"></i> View Queue
+            </a>
             <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Recipe
             </a>

@@ -26,6 +26,7 @@ from ._batch_preparation import (
     prepare_batch_data,
     generate_batch_plan
 )
+from .queue_service import BatchQueueService
 from .types import (
     ProductionPlan,
     ProductionRequest,
@@ -44,7 +45,8 @@ __all__ = [
     'ProductionPlan',
     'ProductionRequest', 
     'ContainerStrategy',
-    'CostBreakdown'
+    'CostBreakdown',
+    'BatchQueueService',
 ]
 
 # Legacy compatibility - keep existing interface working
