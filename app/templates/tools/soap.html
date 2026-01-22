@@ -21,25 +21,12 @@
   </script>
   <div id="soapAlertStack" class="mb-3"></div>
   <style>
-    #soapToolPage .soap-data-sticky { position: static; }
     #soapToolPage .soap-quality-row {
       display: grid;
       grid-template-columns: 90px 1fr;
       gap: 0.75rem;
       align-items: center;
     }
-    #soapToolPage .soap-stage-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 1rem;
-      align-items: start;
-    }
-    #soapToolPage .soap-sidebar-column {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    #soapToolPage #resultsCard { grid-column: 1 / -1; }
     #soapToolPage .soap-mobile-drawer {
       position: fixed;
       left: 0;
@@ -78,6 +65,10 @@
     }
     #soapToolPage .soap-mobile-drawer .drawer-content {
       padding: 0.75rem 1rem 1rem;
+    }
+    #soapToolPage .soap-mobile-drawer .sticky-top {
+      position: static !important;
+      top: auto !important;
     }
     #soapToolPage .soap-mobile-drawer .drawer-handle {
       background: #fff;
@@ -133,11 +124,10 @@
         width: 100%;
         max-width: 100%;
       }
-    }
-    @media (max-width: 767px) {
       #soapToolPage { padding-bottom: 4.75rem; }
-      #soapToolPage .soap-stage-layout {
-        grid-template-columns: 1fr;
+      #soapToolPage #soapQualityCard {
+        position: static !important;
+        top: auto !important;
       }
       #soapToolPage .soap-mobile-drawer {
         display: block;
@@ -187,8 +177,8 @@
     </div>
   </div>
 
-  <div class="soap-stage-layout">
-    <div class="soap-stage-column">
+  <div class="row g-3">
+    <div class="col-lg-8">
       <div class="accordion" id="soapStageAccordion">
         <div class="accordion-item">
           <h2 class="accordion-header" id="soapStage1Heading">
@@ -597,9 +587,8 @@
       </div>
     </div>
 
-    <div class="soap-sidebar-column">
-      <div class="soap-data-sticky">
-        <div class="card" id="soapQualityCard">
+    <div class="col-lg-4">
+      <div class="card sticky-top" id="soapQualityCard" style="top: 1rem; z-index: 1000;">
           <div class="card-header">
             <div class="d-flex flex-column gap-2">
               <div class="d-flex align-items-center justify-content-between">
@@ -794,7 +783,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <div class="soap-mobile-drawer" id="soapMobileDrawer" aria-live="polite">
     <div class="drawer-panel" id="soapMobileDrawerPanel">
@@ -3280,7 +3268,7 @@
     const placeholders = new Map();
     let currentTarget = null;
 
-    const isSmallScreen = () => window.matchMedia('(max-width: 767px)').matches;
+    const isSmallScreen = () => window.matchMedia('(max-width: 991px)').matches;
     const cardForTarget = (target) => (target === 'quality' ? qualityCard : resultsCard);
     const homeForTarget = (target) => (target === 'quality' ? qualityHome : resultsHome);
     const titleForTarget = (target) => (target === 'quality' ? 'Display' : 'Results');
