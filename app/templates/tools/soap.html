@@ -30,7 +30,7 @@
     }
     #soapToolPage .soap-stage-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 1rem;
       align-items: start;
     }
@@ -40,6 +40,60 @@
       justify-content: center;
     }
     #soapToolPage #resultsCard { grid-column: 1 / -1; }
+    #soapToolPage .soap-mobile-drawer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1080;
+      display: none;
+      pointer-events: none;
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-panel {
+      background: #fff;
+      border-top: 1px solid #dee2e6;
+      box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.12);
+      max-height: 70vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.2s ease;
+      pointer-events: auto;
+    }
+    #soapToolPage .soap-mobile-drawer.is-open .drawer-panel {
+      transform: translateY(0);
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem 0.5rem;
+      border-bottom: 1px solid #dee2e6;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-title {
+      font-weight: 600;
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-content {
+      padding: 0.75rem 1rem 1rem;
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-handle {
+      background: #fff;
+      border-top: 1px solid #dee2e6;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+      box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.08);
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
+    }
+    #soapToolPage .soap-mobile-drawer .drawer-empty {
+      margin: 0.75rem 1rem 1rem;
+    }
+    #soapToolPage .soap-card-placeholder { min-height: 1px; }
     #soapToolPage .soap-quality-row .progress { height: 10px; }
     #soapToolPage .quality-target-marker {
       position: absolute;
@@ -74,13 +128,19 @@
       box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
     }
     @media (max-width: 991px) {
-      #soapToolPage .soap-stage-layout {
-        grid-template-columns: 1fr;
-      }
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
         max-width: 100%;
+      }
+    }
+    @media (max-width: 767px) {
+      #soapToolPage { padding-bottom: 4.75rem; }
+      #soapToolPage .soap-stage-layout {
+        grid-template-columns: 1fr;
+      }
+      #soapToolPage .soap-mobile-drawer {
+        display: block;
       }
     }
   </style>
@@ -733,6 +793,23 @@
           <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="soap-mobile-drawer" id="soapMobileDrawer" aria-live="polite">
+    <div class="drawer-panel" id="soapMobileDrawerPanel">
+      <div class="drawer-header">
+        <div class="drawer-title" id="soapMobileDrawerTitle">Display</div>
+        <button class="btn btn-sm btn-outline-secondary" type="button" id="soapDrawerClose">Close</button>
+      </div>
+      <div class="drawer-content" id="soapMobileDrawerContent"></div>
+      <div class="alert alert-light border small d-none" id="soapDrawerEmpty">
+        No results yet. Run a calculation to see outputs.
+      </div>
+    </div>
+    <div class="drawer-handle">
+      <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-drawer-target="quality">Display</button>
+      <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-drawer-target="results">Results</button>
     </div>
   </div>
 
@@ -3187,6 +3264,109 @@
       showSoapAlert('danger', 'Unable to prepare the recipe payload. Please try again.', { dismissible: true, persist: true });
     }
   });
+
+  const setupMobileDrawer = () => {
+    const drawer = document.getElementById('soapMobileDrawer');
+    const drawerContent = document.getElementById('soapMobileDrawerContent');
+    const drawerTitle = document.getElementById('soapMobileDrawerTitle');
+    const drawerEmpty = document.getElementById('soapDrawerEmpty');
+    const closeBtn = document.getElementById('soapDrawerClose');
+    const qualityCard = document.getElementById('soapQualityCard');
+    const resultsCard = document.getElementById('resultsCard');
+    if (!drawer || !drawerContent || !drawerTitle || !qualityCard || !resultsCard) return;
+
+    const qualityHome = qualityCard.parentElement;
+    const resultsHome = resultsCard.parentElement;
+    const placeholders = new Map();
+    let currentTarget = null;
+
+    const isSmallScreen = () => window.matchMedia('(max-width: 767px)').matches;
+    const cardForTarget = (target) => (target === 'quality' ? qualityCard : resultsCard);
+    const homeForTarget = (target) => (target === 'quality' ? qualityHome : resultsHome);
+    const titleForTarget = (target) => (target === 'quality' ? 'Display' : 'Results');
+
+    const ensurePlaceholder = (card) => {
+      let placeholder = placeholders.get(card);
+      if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'soap-card-placeholder';
+        placeholders.set(card, placeholder);
+      }
+      placeholder.style.height = `${card.offsetHeight}px`;
+      if (card.parentElement && card.parentElement !== drawerContent && !placeholder.parentElement) {
+        card.parentElement.insertBefore(placeholder, card);
+      }
+    };
+
+    const moveCardToDrawer = (card) => {
+      if (!card) return;
+      ensurePlaceholder(card);
+      drawerContent.appendChild(card);
+    };
+
+    const restoreCard = (card, home) => {
+      const placeholder = placeholders.get(card);
+      if (placeholder && placeholder.parentElement) {
+        placeholder.replaceWith(card);
+      } else if (home && card.parentElement !== home) {
+        home.appendChild(card);
+      }
+    };
+
+    const updateDrawerEmpty = () => {
+      if (!drawerEmpty) return;
+      const isResults = currentTarget === 'results';
+      const resultsVisible = getComputedStyle(resultsCard).display !== 'none';
+      drawerEmpty.classList.toggle('d-none', !isResults || resultsVisible);
+    };
+
+    const openDrawer = (target) => {
+      if (!isSmallScreen()) return;
+      if (currentTarget && currentTarget !== target) {
+        restoreCard(cardForTarget(currentTarget), homeForTarget(currentTarget));
+      }
+      moveCardToDrawer(cardForTarget(target));
+      drawerTitle.textContent = titleForTarget(target);
+      currentTarget = target;
+      drawer.classList.add('is-open');
+      updateDrawerEmpty();
+    };
+
+    const closeDrawer = () => {
+      if (!currentTarget) return;
+      restoreCard(cardForTarget(currentTarget), homeForTarget(currentTarget));
+      currentTarget = null;
+      drawer.classList.remove('is-open');
+      updateDrawerEmpty();
+    };
+
+    drawer.querySelectorAll('[data-drawer-target]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.drawerTarget;
+        if (!target) return;
+        if (drawer.classList.contains('is-open') && currentTarget === target) {
+          closeDrawer();
+        } else {
+          openDrawer(target);
+        }
+      });
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeDrawer);
+    }
+
+    window.addEventListener('resize', () => {
+      if (!isSmallScreen() && currentTarget) {
+        closeDrawer();
+      }
+    });
+
+    const resultsObserver = new MutationObserver(() => updateDrawerEmpty());
+    resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
+  };
+  setupMobileDrawer();
+
   const initialOilRow = document.querySelector('#oilRows .oil-row');
   if (initialOilRow) {
     attachOilTypeahead(initialOilRow);
