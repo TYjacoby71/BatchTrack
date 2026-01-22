@@ -23,12 +23,30 @@
     </div>
 
 <!-- Recipe Selection Modal -->
-<div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 500px;">
+<div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 720px; max-height: 90vh;">
   <div class="card shadow-lg">
     <div class="card-header">
       <h5 class="card-title mb-0 text-center">Start New Batch</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="max-height: 80vh; overflow-y: auto;">
+      <div class="mb-4" id="queueSection">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-uppercase text-muted mb-0">Queued Batches</h6>
+          <span class="badge bg-light text-muted" id="queueCountBadge" hidden>0</span>
+        </div>
+        <div id="queueLoadingState" class="alert alert-info d-flex align-items-center mb-2">
+          <i class="fas fa-spinner fa-spin me-2"></i>
+          <div>Loading queued batches…</div>
+        </div>
+        <div id="queueErrorState" class="alert alert-danger d-none"></div>
+        <div class="text-muted small d-none" id="queueEmptyState">No queued batches yet.</div>
+        <div id="queueListContainer" class="d-none" style="max-height: 35vh; overflow-y: auto;">
+          <div id="queueList" class="list-group"></div>
+        </div>
+      </div>
+
+      <hr class="my-3">
+
       <div id="recipeLoadingState" class="alert alert-info d-flex align-items-center mb-3">
         <i class="fas fa-spinner fa-spin me-2"></i>
         <div>Loading your recipes…</div>
@@ -54,7 +72,7 @@
       <form id="recipeForm" method="get" action="#" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
-          <label for="recipe_id" class="form-label">Select Recipe:</label>
+          <label for="recipe_id" class="form-label">Select Recipe (new batch):</label>
           <select class="form-select" id="recipe_id" name="recipe_id" required disabled>
             <option value="">Choose a recipe...</option>
           </select>
@@ -71,8 +89,11 @@
 
         <div class="d-flex justify-content-between">
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="goToPlanProduction()">Start Planning</button>
+          <button type="button" class="btn btn-primary" id="startFlowContinueButton" onclick="goToPlanProduction()" disabled>Continue</button>
         </div>
+      </form>
+      <form id="queueStartForm" method="post" action="#">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       </form>
     </div>
   </div>
@@ -94,14 +115,33 @@
   const emptyState = document.getElementById('recipeEmptyState');
   const recipeCacheMeta = document.getElementById('recipeCacheMeta');
   const startBatchBtn = document.getElementById('openStartBatchButton');
+  const queueList = document.getElementById('queueList');
+  const queueListContainer = document.getElementById('queueListContainer');
+  const queueLoadingState = document.getElementById('queueLoadingState');
+  const queueErrorState = document.getElementById('queueErrorState');
+  const queueEmptyState = document.getElementById('queueEmptyState');
+  const queueCountBadge = document.getElementById('queueCountBadge');
+  const queueStartForm = document.getElementById('queueStartForm');
+  const continueButton = document.getElementById('startFlowContinueButton');
   const bootstrapRecipesUrl = "{{ url_for('api.bootstrap_recipes') }}";
+  const queueListUrl = "{{ url_for('production_planning.queue_list') }}";
   let recipesCache = null;
   let recipeFetchPromise = null;
+  let queueFetchPromise = null;
+  let selectedQueueId = null;
   const recipeVariantMap = new Map();
 
   function openModal() {
     modal.style.display = 'block';
     backdrop.style.display = 'block';
+    clearQueueSelection();
+    if (recipeSelect) {
+      recipeSelect.value = '';
+    }
+    if (variantSection) {
+      variantSection.style.display = 'none';
+    }
+    updateContinueState();
   }
 
   function fetchRecipes() {
@@ -153,6 +193,59 @@
     recipeSelect.disabled = recipes.length === 0;
   }
 
+  function fetchQueueItems() {
+    if (queueFetchPromise) {
+      return queueFetchPromise;
+    }
+    queueFetchPromise = fetch(queueListUrl, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load queue (${response.status})`);
+        }
+        return response.json();
+      })
+      .then(data => data.queue_items || [])
+      .finally(() => {
+        queueFetchPromise = null;
+      });
+    return queueFetchPromise;
+  }
+
+  function populateQueueList(queueItems) {
+    if (!queueList) return;
+    queueList.innerHTML = '';
+    if (queueCountBadge) {
+      queueCountBadge.textContent = queueItems.length;
+      queueCountBadge.hidden = queueItems.length === 0;
+    }
+    if (queueItems.length === 0) {
+      queueEmptyState.classList.remove('d-none');
+      queueListContainer.classList.add('d-none');
+      return;
+    }
+    queueEmptyState.classList.add('d-none');
+    queueListContainer.classList.remove('d-none');
+    queueItems.forEach(item => {
+      const label = document.createElement('label');
+      label.className = 'list-group-item list-group-item-action';
+      label.innerHTML = `
+        <div class="d-flex align-items-start gap-2">
+          <input class="form-check-input mt-1" type="radio" name="queue_item_id" value="${item.id}">
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${item.queue_code || 'Queue'} · ${item.recipe_name || 'Unknown recipe'}</div>
+            <div class="text-muted small">
+              Scale ${item.scale ?? 1} · ${item.projected_yield ?? 0} ${item.projected_yield_unit || ''}
+              ${item.created_at_display ? `· queued ${item.created_at_display}` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      queueList.appendChild(label);
+    });
+  }
+
   function updateVariantSection(recipeId) {
     const variants = recipeVariantMap.get(String(recipeId)) || [];
     if (variants.length === 0) {
@@ -170,6 +263,47 @@
     });
   }
 
+  function clearQueueSelection() {
+    selectedQueueId = null;
+    if (!queueList) return;
+    queueList.querySelectorAll('input[name="queue_item_id"]:checked').forEach(input => {
+      input.checked = false;
+    });
+  }
+
+  function updateContinueState() {
+    const hasRecipe = !!recipeSelect?.value;
+    const hasQueue = !!selectedQueueId;
+    if (continueButton) {
+      continueButton.disabled = !(hasRecipe || hasQueue);
+      if (hasQueue) {
+        continueButton.title = 'Start the selected queued batch';
+      } else if (hasRecipe) {
+        continueButton.title = 'Plan a new batch';
+      } else {
+        continueButton.title = '';
+      }
+    }
+  }
+
+  function ensureQueueLoaded() {
+    queueLoadingState.classList.remove('d-none');
+    queueErrorState.classList.add('d-none');
+    queueEmptyState.classList.add('d-none');
+    queueListContainer.classList.add('d-none');
+
+    fetchQueueItems()
+      .then(queueItems => {
+        queueLoadingState.classList.add('d-none');
+        populateQueueList(queueItems);
+      })
+      .catch(error => {
+        queueLoadingState.classList.add('d-none');
+        queueErrorState.textContent = error.message || 'Unable to load queued batches.';
+        queueErrorState.classList.remove('d-none');
+      });
+  }
+
   function ensureRecipesLoaded() {
     loadingState.classList.remove('d-none');
     errorState.classList.add('d-none');
@@ -185,31 +319,44 @@
           populateRecipeSelect(recipes);
           recipeForm.classList.remove('d-none');
         }
+        updateContinueState();
       })
       .catch(error => {
         loadingState.classList.add('d-none');
         errorState.textContent = error.message || 'Unable to load recipes. Please try again.';
         errorState.classList.remove('d-none');
+        updateContinueState();
       });
   }
 
   window.closeModal = function() {
     modal.style.display = 'none';
     backdrop.style.display = 'none';
+    clearQueueSelection();
+    updateContinueState();
   };
 
   window.goToPlanProduction = function() {
+    const selectedQueue = queueList?.querySelector('input[name="queue_item_id"]:checked');
+    if (selectedQueue && selectedQueue.value) {
+      const queueId = selectedQueue.value;
+      queueStartForm.action = `/production-planning/queue/${queueId}/start`;
+      queueStartForm.submit();
+      return;
+    }
+
     const selectedRecipeId = recipeSelect.value;
     if (selectedRecipeId) {
       window.location.href = `/production-planning/recipe/${selectedRecipeId}/plan`;
-    } else {
-      alert('Please select a recipe first.');
+      return;
     }
+    alert('Please select a queued batch or recipe first.');
   };
 
   if (startBatchBtn) {
     startBatchBtn.addEventListener('click', () => {
       openModal();
+      ensureQueueLoaded();
       ensureRecipesLoaded();
     });
   }
@@ -222,10 +369,26 @@
     recipeSelect.addEventListener('change', (event) => {
       const recipeId = event.target.value;
       if (recipeId) {
+        clearQueueSelection();
         updateVariantSection(recipeId);
       } else {
         variantSection.style.display = 'none';
         variantSelect.innerHTML = '<option value="">No variant</option>';
+      }
+      updateContinueState();
+    });
+  }
+
+  if (queueList) {
+    queueList.addEventListener('change', (event) => {
+      if (event.target && event.target.name === 'queue_item_id') {
+        selectedQueueId = event.target.value || null;
+        if (selectedQueueId && recipeSelect) {
+          recipeSelect.value = '';
+          variantSection.style.display = 'none';
+          variantSelect.innerHTML = '<option value="">No variant</option>';
+        }
+        updateContinueState();
       }
     });
   }

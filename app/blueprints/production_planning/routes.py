@@ -84,6 +84,35 @@ def view_queue():
                            ])
 
 
+@production_planning_bp.route('/queue/list', methods=['GET'])
+@login_required
+@require_permission('recipes.plan_production')
+def queue_list():
+    """Return queued batches for modal selection."""
+    BatchQueueService.expire_stale_queue_items(current_user.organization_id)
+    queue_items = BatchQueueItem.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='queued'
+    ).order_by(BatchQueueItem.queue_position.asc(), BatchQueueItem.created_at.asc()).all()
+
+    payload = []
+    for item in queue_items:
+        snapshot = item.plan_snapshot or {}
+        payload.append({
+            'id': item.id,
+            'queue_code': item.queue_code,
+            'recipe_id': item.recipe_id,
+            'recipe_name': item.recipe.name if item.recipe else None,
+            'batch_type': item.batch_type,
+            'scale': item.scale,
+            'projected_yield': item.projected_yield or snapshot.get('projected_yield') or 0,
+            'projected_yield_unit': item.projected_yield_unit or snapshot.get('projected_yield_unit') or '',
+            'created_at_display': TimezoneUtils.format_for_user(item.created_at, '%Y-%m-%d %H:%M'),
+        })
+
+    return jsonify({'success': True, 'queue_items': payload})
+
+
 @production_planning_bp.route('/queue', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
