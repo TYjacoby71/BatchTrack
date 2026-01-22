@@ -150,6 +150,9 @@
                     </li>
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
+                    {% if current_user.is_authenticated and has_permission(current_user, 'recipes.plan_production') %}
+                    <li><a class="dropdown-item" href="{{ url_for('production_planning.view_queue') }}">Production Queue</a></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('inventory.bulk_inventory_updates') }}">Bulk Inventory Updates</a></li>
                     <li><hr class="dropdown-divider"></li>
@@ -357,6 +360,9 @@
                     {% endif %}
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
+                    {% endif %}
+                    {% if current_user.is_authenticated and has_permission(current_user, 'recipes.plan_production') %}
+                    <li><a class="dropdown-item" href="{{ url_for('production_planning.view_queue') }}">Production Queue</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>

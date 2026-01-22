@@ -2,6 +2,14 @@
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <h2>Batches</h2>
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link active" href="{{ url_for('batches.list_batches') }}">Batches</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('production_planning.view_queue') }}">Queue</a>
+    </li>
+</ul>
 
 {% if not batches %}
 <!-- Empty State Message -->
