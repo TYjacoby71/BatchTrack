@@ -37,9 +37,9 @@
       pointer-events: none;
     }
     #soapToolPage .soap-mobile-drawer .drawer-panel {
-      background: #fff;
-      border-top: 1px solid #dee2e6;
-      box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.12);
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      box-shadow: var(--shadow-3);
       max-height: 70vh;
       overflow-y: auto;
       transform: translateY(100%);
@@ -54,10 +54,10 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 1rem 0.5rem;
-      border-bottom: 1px solid #dee2e6;
+      border-bottom: 1px solid var(--color-border);
       position: sticky;
       top: 0;
-      background: #fff;
+      background: var(--color-surface);
       z-index: 1;
     }
     #soapToolPage .soap-mobile-drawer .drawer-title {
@@ -71,12 +71,12 @@
       top: auto !important;
     }
     #soapToolPage .soap-mobile-drawer .drawer-handle {
-      background: #fff;
-      border-top: 1px solid #dee2e6;
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
       padding: 0.5rem 0.75rem;
       display: flex;
       gap: 0.5rem;
-      box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-2);
       pointer-events: auto;
       position: relative;
       z-index: 2;
@@ -90,7 +90,7 @@
       position: absolute;
       top: -6px;
       bottom: -6px;
-      border-left: 2px dashed #198754;
+      border-left: 2px dashed var(--color-success);
       width: 0;
     }
     #soapToolPage .quality-target-label {
@@ -99,8 +99,8 @@
       left: 0;
       transform: translateX(-50%);
       font-size: 0.7rem;
-      color: #198754;
-      background: #fff;
+      color: var(--color-success);
+      background: var(--color-surface);
       padding: 0 2px;
     }
     #soapToolPage .soap-oil-profile td {
@@ -116,7 +116,7 @@
       width: 260px;
       max-width: 45%;
       z-index: 1040;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-2);
     }
     @media (min-width: 992px) {
       #soapToolPage #soapStageQualityRow {
@@ -980,14 +980,14 @@
     },
   };
   const FATTY_BAR_COLORS = {
-    lauric: '#0d6efd',
-    myristic: '#6f42c1',
-    palmitic: '#ffc107',
-    stearic: '#adb5bd',
-    ricinoleic: '#20c997',
-    oleic: '#198754',
-    linoleic: '#fd7e14',
-    linolenic: '#dc3545',
+    lauric: 'var(--color-primary)',
+    myristic: 'var(--color-info)',
+    palmitic: 'var(--color-warning)',
+    stearic: 'var(--color-muted)',
+    ricinoleic: 'var(--color-info-hover)',
+    oleic: 'var(--color-success)',
+    linoleic: 'var(--color-primary-hover)',
+    linolenic: 'var(--color-danger)',
   };
   const FATTY_DISPLAY_KEYS = [
     'lauric',
@@ -1814,7 +1814,7 @@
       if (!el) return;
       const width = total > 0 ? (totals[key] / total) * 100 : 0;
       el.style.width = `${width}%`;
-      el.style.backgroundColor = FATTY_BAR_COLORS[key] || '#6c757d';
+      el.style.backgroundColor = FATTY_BAR_COLORS[key] || 'var(--color-muted)';
       el.title = `${key.charAt(0).toUpperCase()}${key.slice(1)}: ${round(totals[key], 1)}%`;
     });
   }
