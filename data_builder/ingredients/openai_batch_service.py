@@ -99,7 +99,13 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
             session.query(
                 database_manager.CompiledClusterRecord.cluster_id,
                 database_manager.CompiledClusterRecord.compiled_term,
-                database_manager.CompiledClusterRecord.compiled_payload,
+                database_manager.CompiledClusterRecord.origin,
+                database_manager.CompiledClusterRecord.ingredient_category,
+                database_manager.CompiledClusterRecord.refinement_level,
+                database_manager.CompiledClusterRecord.derived_from,
+                database_manager.CompiledClusterRecord.botanical_name,
+                database_manager.CompiledClusterRecord.inci_name,
+                database_manager.CompiledClusterRecord.cas_number,
                 database_manager.CompiledClusterRecord.priority,
             )
             .join(
@@ -118,7 +124,7 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
     ordered = sorted(
         rows,
         key=lambda row: (
-            -int(row[3] if row[3] is not None else priority_map.get(str(row[0]), database_manager.DEFAULT_PRIORITY)),
+            -int(row[9] if row[9] is not None else priority_map.get(str(row[0]), database_manager.DEFAULT_PRIORITY)),
             str(row[0]),
         ),
     )
@@ -130,10 +136,17 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
     for row in ordered:
         cid = str(row[0])
         term = row[1] or ""
-        payload = row[2] if isinstance(row[2], dict) else {}
         
-        stage1 = payload.get("stage1", {}) if isinstance(payload.get("stage1"), dict) else {}
-        ingredient_core = stage1.get("ingredient_core", {}) if isinstance(stage1.get("ingredient_core"), dict) else {}
+        # Build ingredient_core from columns (no JSON)
+        ingredient_core = {
+            "origin": row[2],
+            "ingredient_category": row[3],
+            "refinement_level": row[4],
+            "derived_from": row[5],
+            "botanical_name": row[6],
+            "inci_name": row[7],
+            "cas_number": row[8],
+        }
         
         with database_manager.get_session() as session:
             items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cid).all()
@@ -141,10 +154,8 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
             for item in items:
                 if item.item_status != "done":
                     item_data = {
-                        "variation": item.variation or "",
-                        "physical_form": item.physical_form or "",
-                        "form_bypass": item.form_bypass or False,
-                        "variation_bypass": item.variation_bypass or False,
+                        "variation": item.derived_variation or "",
+                        "physical_form": item.derived_physical_form or "",
                     }
                     seed_items.append(item_data)
         
