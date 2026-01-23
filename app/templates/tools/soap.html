@@ -232,7 +232,33 @@
     #soapToolPage .soap-stage-pane.is-height-synced .accordion {
       flex: 1 1 auto;
       min-height: 0;
-      overflow-y: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item {
+      margin: 0;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open {
+      flex: 1 1 auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open .accordion-body {
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-button {
+      padding: var(--space-3) var(--space-4);
     }
     #soapToolPage .soap-stage-pane .accordion {
       margin-bottom: 0;
@@ -679,6 +705,8 @@
     } else {
       target.classList.add('show');
     }
+    updateStageAccordionLayout();
+    scheduleStageHeightSync();
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -1453,6 +1481,16 @@
   const scheduleStageHeightSync = () => {
     window.requestAnimationFrame(syncStageHeight);
   };
+
+  function updateStageAccordionLayout(){
+    const stageAccordion = document.getElementById('soapStageAccordion');
+    if (!stageAccordion) return;
+    stageAccordion.querySelectorAll('.accordion-item').forEach(item => {
+      const collapse = item.querySelector('.accordion-collapse');
+      const isOpen = collapse ? collapse.classList.contains('show') : false;
+      item.classList.toggle('is-open', isOpen);
+    });
+  }
 
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
@@ -3060,8 +3098,14 @@
       if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') resetStage(index + 1);
     });
-    stageAccordion.addEventListener('shown.bs.collapse', scheduleStageHeightSync);
-    stageAccordion.addEventListener('hidden.bs.collapse', scheduleStageHeightSync);
+    stageAccordion.addEventListener('shown.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
+    stageAccordion.addEventListener('hidden.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -3396,6 +3440,7 @@
   updateAdditivesOutput(getTotalOilsGrams());
   updateStageStatuses();
   restoreState();
+  updateStageAccordionLayout();
   scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
