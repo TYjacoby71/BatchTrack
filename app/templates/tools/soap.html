@@ -209,16 +209,18 @@
     }
     #soapToolPage #soapStageQualityRow {
       display: flex !important;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: flex-start;
     }
     #soapToolPage #soapStageQualityRow > .soap-stage-col {
       flex: 0 0 66.6667%;
       max-width: 66.6667%;
+      min-width: 0;
     }
     #soapToolPage #soapStageQualityRow > .soap-quality-col {
       flex: 0 0 33.3333%;
       max-width: 33.3333%;
+      min-width: 0;
     }
     @media (max-width: 991px) {
       #soapToolPage .oil-profile-float {
@@ -226,8 +228,9 @@
         width: 100%;
         max-width: 100%;
       }
-    }
-    @media (max-width: 991px) {
+      #soapToolPage #soapStageQualityRow {
+        flex-wrap: wrap;
+      }
       #soapToolPage #soapStageQualityRow > .soap-stage-col,
       #soapToolPage #soapStageQualityRow > .soap-quality-col {
         flex: 0 0 100%;
