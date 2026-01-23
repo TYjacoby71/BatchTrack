@@ -213,13 +213,13 @@
       align-items: flex-start;
     }
     #soapToolPage #soapStageQualityRow > .soap-stage-col {
-      flex: 0 0 66.6667%;
-      max-width: 66.6667%;
+      flex: 0 0 50%;
+      max-width: 50%;
       min-width: 0;
     }
     #soapToolPage #soapStageQualityRow > .soap-quality-col {
-      flex: 0 0 33.3333%;
-      max-width: 33.3333%;
+      flex: 0 0 50%;
+      max-width: 50%;
       min-width: 0;
     }
     @media (max-width: 991px) {
@@ -256,11 +256,11 @@
   {% include 'tools/soap/_summary_strip.html' %}
 
   <div class="row mt-4 g-4" id="soapStageQualityRow">
-    <div class="col-lg-8 soap-stage-col">
+    <div class="col-lg-6 soap-stage-col">
       {% include 'tools/soap/_stages.html' %}
     </div>
 
-    <div class="col-lg-4 soap-quality-col">
+    <div class="col-lg-6 soap-quality-col">
       {% include 'tools/soap/_quality_card.html' %}
     </div>
 
@@ -2105,7 +2105,7 @@
       }
       if (hintEl && range) {
         if (!hasCoverage || !isFinite(value)) {
-          hintEl.textContent = 'Add oils to preview feel.';
+          hintEl.textContent = '';
         } else if (value < range[0]) {
           hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.low || '';
         } else if (value > range[1]) {
