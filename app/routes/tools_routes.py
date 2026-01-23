@@ -3,7 +3,6 @@ from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
 from app.models import FeatureFlag
-from app.utils.json_store import read_json_file
 from app.extensions import limiter
 
 # Public Tools blueprint
@@ -13,15 +12,10 @@ tools_bp = Blueprint('tools_bp', __name__)
 
 def _is_enabled(key: str, default: bool = True) -> bool:
     try:
-        # Check both database FeatureFlag and settings.json
         flag = FeatureFlag.query.filter_by(key=key).first()
         if flag is not None:
             return bool(flag.enabled)
-
-        # Fallback to settings.json
-        settings = read_json_file('settings.json', default={}) or {}
-        feature_flags = settings.get('feature_flags', {})
-        return feature_flags.get(key, default)
+        return default
     except Exception:
         return default
 

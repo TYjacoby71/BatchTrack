@@ -66,30 +66,5 @@
     "quiet_hours_start": "22:00",
     "quiet_hours_end": "08:00"
   },
-  "feature_flags": {
-    "TOOLS_SOAP": true,
-    "TOOLS_CANDLES": true,
-    "TOOLS_LOTIONS": true,
-    "TOOLS_HERBAL": true,
-    "TOOLS_BAKING": true,
-    "FEATURE_FIFO_TRACKING": true,
-    "FEATURE_BARCODE_SCANNING": false,
-    "FEATURE_PRODUCT_VARIANTS": true,
-    "FEATURE_AUTO_SKU_GENERATION": true,
-    "FEATURE_COST_TRACKING": true,
-    "FEATURE_EXPIRATION_TRACKING": true,
-    "FEATURE_BULK_OPERATIONS": true,
-    "FEATURE_CSV_EXPORT": true,
-    "FEATURE_ADVANCED_REPORTS": false,
-    "FEATURE_GLOBAL_ITEM_LIBRARY": true,
-    "FEATURE_EMAIL_NOTIFICATIONS": false,
-    "FEATURE_BROWSER_NOTIFICATIONS": false,
-    "FEATURE_SHOPIFY_INTEGRATION": false,
-    "FEATURE_ETSY_INTEGRATION": false,
-    "FEATURE_API_ACCESS": false,
-    "FEATURE_OAUTH_PROVIDERS": true,
-    "FEATURE_AI_RECIPE_OPTIMIZATION": false,
-    "FEATURE_AI_DEMAND_FORECASTING": false,
-    "FEATURE_AI_QUALITY_INSIGHTS": false
-  }
+  "feature_flags": {}
 }

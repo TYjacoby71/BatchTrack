@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
 from app.services.developer.dashboard_service import DeveloperDashboardService
+from app.services.integrations.registry import build_integration_categories
 from app.utils.json_store import read_json_file, write_json_file
 
 from ..routes import developer_bp
@@ -553,6 +554,10 @@ def integrations_checklist():
         for row in section.get('rows', []):
             config_matrix.append(row)
 
+    integration_categories = build_integration_categories(
+        auto_backup_enabled=auto_backup_enabled
+    )
+
     return render_template(
         "developer/integrations.html",
         email_provider=email_provider,
@@ -563,7 +568,7 @@ def integrations_checklist():
         feature_flags=feature_flags,
         logging_status=logging_status,
         shopify_status=shopify_status,
-        auto_backup_enabled=auto_backup_enabled,
+        integration_categories=integration_categories,
         env_core=env_core,
         db_info=db_info,
         cache_info=cache_info,

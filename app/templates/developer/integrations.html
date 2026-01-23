@@ -119,20 +119,67 @@
 
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-white border-0">
-      <h4 class="mb-1">Automation Toggles</h4>
-      <p class="text-muted small mb-0">Stubbed switches for post-launch automation.</p>
+      <h4 class="mb-1">Integrations Registry</h4>
+      <p class="text-muted small mb-0">Single source of truth for integration readiness, permissions, and toggles.</p>
     </div>
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-start">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" id="autoBackupToggle"
-                 {% if auto_backup_enabled %}checked{% endif %}>
-          <label class="form-check-label fw-semibold" for="autoBackupToggle">Auto Backup System</label>
+      {% for category in integration_categories %}
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-uppercase text-muted small mb-0">{{ category.title }}</h6>
         </div>
-        <span class="badge bg-secondary">Stub</span>
+        <div class="row g-3">
+          {% for integration in category.items %}
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="fw-semibold">{{ integration.label }}</div>
+                  <div class="small text-muted">{{ integration.description }}</div>
+                </div>
+                <span class="badge {% if integration.status == 'wired' %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ integration.status | capitalize }}
+                </span>
+              </div>
+              {% if integration.required_env %}
+              <div class="small text-muted mt-2">
+                Required env:
+                {% for key in integration.required_env %}
+                  <code>{{ key }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if integration.ready %}
+                  <span class="badge bg-success ms-1">Configured</span>
+                {% else %}
+                  <span class="badge bg-danger ms-1">Missing</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% if integration.permission %}
+              <div class="small text-muted mt-1">Permission: <code>{{ integration.permission }}</code></div>
+              {% endif %}
+              {% if integration.toggleable %}
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input integration-toggle" type="checkbox" role="switch"
+                         id="toggle_{{ integration.key }}"
+                         data-status-key="{{ integration.key }}"
+                         data-toggle-url="{{ url_for(integration.toggle_endpoint) }}"
+                         {% if integration.enabled %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold" for="toggle_{{ integration.key }}">Enabled</label>
+                </div>
+                <span class="badge bg-secondary">Stub</span>
+              </div>
+              <div class="small text-muted mt-2 integration-toggle-status" data-status-key="{{ integration.key }}" style="display:none;"></div>
+              {% endif %}
+              {% if integration.notes %}
+              <div class="small text-muted mt-2">{{ integration.notes }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
-      <p class="text-muted small mt-2 mb-0">Nightly exports of core tables and settings.</p>
-      <div id="autoBackupStatus" class="small text-muted mt-2" style="display:none;"></div>
+      {% endfor %}
     </div>
   </div>
 
@@ -217,35 +264,38 @@ function getCSRFToken() {
   return meta ? meta.getAttribute('content') : '';
 }
 
-const autoBackupToggle = document.getElementById('autoBackupToggle');
-const autoBackupStatus = document.getElementById('autoBackupStatus');
-if (autoBackupToggle) {
-  autoBackupToggle.addEventListener('change', async () => {
-    if (!autoBackupStatus) return;
-    autoBackupStatus.style.display = 'block';
-    autoBackupStatus.textContent = 'Saving...';
+document.querySelectorAll('.integration-toggle').forEach(toggle => {
+  toggle.addEventListener('change', async () => {
+    const statusKey = toggle.dataset.statusKey;
+    const statusEl = document.querySelector(`.integration-toggle-status[data-status-key="${statusKey}"]`);
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Saving...';
+    }
     try {
-      const resp = await fetch('{{ url_for('developer.integrations_set_auto_backup') }}', {
+      const resp = await fetch(toggle.dataset.toggleUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': getCSRFToken()
         },
-        body: JSON.stringify({ enabled: autoBackupToggle.checked })
+        body: JSON.stringify({ enabled: toggle.checked })
       });
       const data = await resp.json();
       if (resp.ok && data.success) {
-        autoBackupStatus.textContent = 'Auto backup updated.';
-      } else {
-        autoBackupStatus.textContent = data.error || 'Failed to update auto backup.';
+        if (statusEl) statusEl.textContent = 'Updated.';
+      } else if (statusEl) {
+        statusEl.textContent = data.error || 'Failed to update.';
       }
     } catch (e) {
-      autoBackupStatus.textContent = 'Failed to update auto backup.';
+      if (statusEl) statusEl.textContent = 'Failed to update.';
     }
-    setTimeout(() => {
-      autoBackupStatus.style.display = 'none';
-    }, 3000);
+    if (statusEl) {
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 3000);
+    }
   });
-}
+});
 </script>
 {% endblock %}

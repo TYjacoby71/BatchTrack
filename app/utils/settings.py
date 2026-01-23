@@ -90,7 +90,7 @@ def get_settings(*, settings_file: str = DEFAULT_SETTINGS_FILE) -> Dict[str, Any
 
 
 def is_feature_enabled(feature_key: str, *, settings_file: str = DEFAULT_SETTINGS_FILE) -> bool:
-    """Determine whether a feature flag is enabled."""
+    """Determine whether a feature flag is enabled (database only)."""
     from app.models.feature_flag import FeatureFlag
 
     try:
@@ -99,8 +99,4 @@ def is_feature_enabled(feature_key: str, *, settings_file: str = DEFAULT_SETTING
             return bool(flag.enabled)
     except Exception:
         pass
-
-    # Fallback to the JSON file when the database is unavailable (e.g., during CLI scripts).
-    settings = get_settings(settings_file=settings_file)
-    feature_flags = settings.get("feature_flags", {})
-    return bool(feature_flags.get(feature_key, False))
+    return False

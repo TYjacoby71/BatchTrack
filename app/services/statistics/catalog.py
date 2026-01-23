@@ -442,9 +442,9 @@ class AnalyticsCatalogService:
                 },
                 {
                     "model": "SystemSettings",
-                    "table": "settings.json",
+                    "table": "feature_flag",
                     "scope": "config",
-                    "notes": "Feature flags and analytics toggles persisted for runtime checks.",
+                    "notes": "Feature flag switches persisted in the database for runtime checks.",
                 },
             ],
             metrics=[
