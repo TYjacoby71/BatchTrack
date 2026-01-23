@@ -552,9 +552,9 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
     """Apply a Stage 2 AI result to the database.
     
-    This is the fast import path that uses _finalize_cluster_fast instead of
-    _finalize_cluster_if_complete. The fast version skips taxonomy API calls
-    but still creates the compiled ingredient records.
+    Uses the taxonomy from the batch payload directly (no additional API calls).
+    The batch export now includes taxonomy in the prompt, so it comes back
+    with items in one request.
     """
     from datetime import timezone
     
@@ -563,6 +563,10 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
         items = []
     
     items = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
+    
+    taxonomy = payload.get("taxonomy", {})
+    if not isinstance(taxonomy, dict):
+        taxonomy = {}
     
     with database_manager.get_session() as session:
         existing_items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cluster_id).all()
@@ -608,8 +612,8 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
         
         session.commit()
     
-    from .compiler import _finalize_cluster_fast
-    _finalize_cluster_fast(cluster_id)
+    from .compiler import _finalize_cluster_with_taxonomy
+    _finalize_cluster_with_taxonomy(cluster_id, taxonomy)
 
 
 def main():

@@ -416,11 +416,10 @@ def _assemble_cluster_payload(
     }
 
 
-def _finalize_cluster_fast(cluster_id: str) -> bool:
-    """Fast finalize: Persist compiled ingredient WITHOUT taxonomy API call.
+def _finalize_cluster_with_taxonomy(cluster_id: str, taxonomy: dict[str, Any] | None = None) -> bool:
+    """Finalize cluster with provided taxonomy (no API call needed).
     
-    Used for batch imports to avoid slow API calls. Taxonomy can be
-    populated later via a separate process if needed.
+    Used for batch imports where taxonomy is already included in the batch response.
     """
     database_manager.ensure_tables_exist()
     with database_manager.get_session() as session:
@@ -452,7 +451,7 @@ def _finalize_cluster_fast(cluster_id: str) -> bool:
             if isinstance(payload, dict) and payload:
                 items.append(payload)
     payload = _assemble_cluster_payload(term=term, rec=rec, items=items)
-    payload["ingredient"]["taxonomy"] = {}
+    payload["ingredient"]["taxonomy"] = taxonomy if isinstance(taxonomy, dict) else {}
     database_manager.upsert_compiled_ingredient(
         term,
         payload,

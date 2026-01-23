@@ -206,6 +206,13 @@ ITEMS_SCHEMA_SPEC = r"""
     "form_bypass": false,
     "variation_bypass": false
   }],
+  "taxonomy": {
+    "scent_profile": ["list of scent descriptors: floral, woody, herbaceous, citrus, spicy, etc"],
+    "color_profile": ["list of color descriptors: pale yellow, amber, brown, colorless, etc"],
+    "texture_profile": ["list of texture descriptors: smooth, grainy, waxy, viscous, etc"],
+    "compatible_processes": ["list of compatible processes: Cold Process Soap, Hot Process Soap, Melt & Pour, Lotion, Cream, etc"],
+    "incompatible_processes": ["list of incompatible processes if any"]
+  },
   "data_quality": {"confidence": 0-1, "caveats": []}
 }
 MANDATORY RULES - EVERY FIELD MUST HAVE AN EXPLICIT ANSWER:
