@@ -134,10 +134,18 @@ HTML_TEMPLATE = """
     <div class="stats">
         <div class="stats-grid">
             <div class="stat-box">
-                <h3 id="stat-total-terms">{{ stats.total_terms }}</h3>
-                <p>Terms</p>
+                <h3 id="stat-source-items">{{ stats.source_items }}</h3>
+                <p>Source Items</p>
             </div>
             <div class="stat-box">
+                <h3 id="stat-cosing-items">{{ stats.cosing_items }}</h3>
+                <p>CosIng Items</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="stat-tgsc-items">{{ stats.tgsc_items }}</h3>
+                <p>TGSC Items</p>
+            </div>
+            <div class="stat-box" style="border-left: 3px solid #7c3aed;">
                 <h3 id="stat-total-merged">{{ stats.total_merged }}</h3>
                 <p>Merged Items</p>
             </div>
@@ -153,17 +161,17 @@ HTML_TEMPLATE = """
                 <h3 id="stat-both-sources">{{ stats.both_sources }}</h3>
                 <p>Both Sources</p>
             </div>
-            <div class="stat-box">
-                <h3 id="stat-with-specs">{{ stats.with_specs }}</h3>
-                <p>With Specs</p>
+            <div class="stat-box" style="border-left: 3px solid #10b981;">
+                <h3 id="stat-pubchem-enriched">{{ stats.pubchem_enriched }}</h3>
+                <p>PubChem Enriched</p>
             </div>
-            <div class="stat-box">
+            <div class="stat-box" style="border-left: 3px solid #2563eb;">
                 <h3 id="stat-total-clusters">{{ stats.total_clusters }}</h3>
                 <p>Clusters</p>
             </div>
             <div class="stat-box">
-                <h3 id="stat-multi-item-clusters">{{ stats.multi_item_clusters }}</h3>
-                <p>Multi-Item Clusters</p>
+                <h3 id="stat-composites">{{ stats.composites }}</h3>
+                <p>Composites</p>
             </div>
         </div>
     </div>
@@ -1376,15 +1384,16 @@ HTML_TEMPLATE = """
             fetch(`/api/stats?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(stats => {
-                    // Raw stats box labels remain; compiled mode maps the first two boxes and zeros others.
-                    document.getElementById('stat-total-terms').textContent = stats.total_terms || 0;
+                    document.getElementById('stat-source-items').textContent = stats.source_items || 0;
+                    document.getElementById('stat-cosing-items').textContent = stats.cosing_items || 0;
+                    document.getElementById('stat-tgsc-items').textContent = stats.tgsc_items || 0;
                     document.getElementById('stat-total-merged').textContent = stats.total_merged || 0;
                     document.getElementById('stat-cosing-only').textContent = stats.cosing_only || 0;
                     document.getElementById('stat-tgsc-only').textContent = stats.tgsc_only || 0;
                     document.getElementById('stat-both-sources').textContent = stats.both_sources || 0;
-                    document.getElementById('stat-with-specs').textContent = stats.with_specs || 0;
+                    document.getElementById('stat-pubchem-enriched').textContent = stats.pubchem_enriched || 0;
                     document.getElementById('stat-total-clusters').textContent = stats.total_clusters || 0;
-                    document.getElementById('stat-multi-item-clusters').textContent = stats.multi_item_clusters || 0;
+                    document.getElementById('stat-composites').textContent = stats.composites || 0;
                 });
         }
 
@@ -1425,14 +1434,17 @@ def index():
     
     stats = {}
     
-    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms")
-    stats['total_terms'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items")
+    stats['source_items'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'cosing'")
+    stats['cosing_items'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'tgsc'")
+    stats['tgsc_items'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms")
     stats['total_merged'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
-    stats['both_sources'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 0")
     stats['cosing_only'] = cur.fetchone()[0]
@@ -1440,14 +1452,17 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1 AND has_cosing = 0")
     stats['tgsc_only'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
-    stats['with_specs'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
+    stats['both_sources'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
+    stats['pubchem_enriched'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM source_definitions")
     stats['total_clusters'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
-    stats['multi_item_clusters'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
+    stats['composites'] = cur.fetchone()[0]
     
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
@@ -1459,54 +1474,50 @@ def api_stats():
     conn = get_db('final')
     cur = conn.cursor()
     stats = {
-        "total_terms": 0,
+        "source_items": 0,
+        "cosing_items": 0,
+        "tgsc_items": 0,
         "total_merged": 0,
         "cosing_only": 0,
         "tgsc_only": 0,
         "both_sources": 0,
-        "with_specs": 0,
+        "pubchem_enriched": 0,
         "total_clusters": 0,
-        "multi_item_clusters": 0,
+        "composites": 0,
     }
 
     if dataset == "compiled":
         if _table_exists(conn, "compiled_clusters"):
             cur.execute("SELECT COUNT(*) FROM compiled_clusters")
             stats["total_clusters"] = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM compiled_clusters WHERE term_status = 'done'")
-            stats["total_terms"] = cur.fetchone()[0]
         if _table_exists(conn, "compiled_cluster_items"):
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
             stats["total_merged"] = cur.fetchone()[0]
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
-            stats["with_specs"] = cur.fetchone()[0]
-        # Legacy fallback
-        if stats["total_terms"] == 0 and _table_exists(conn, "ingredients"):
-            cur.execute("SELECT COUNT(*) FROM ingredients")
-            stats["total_terms"] = cur.fetchone()[0]
-        if stats["total_merged"] == 0 and _table_exists(conn, "ingredient_items"):
-            cur.execute("SELECT COUNT(*) FROM ingredient_items")
-            stats["total_merged"] = cur.fetchone()[0]
+            stats["pubchem_enriched"] = cur.fetchone()[0]
         conn.close()
         return jsonify(stats)
 
-    # raw (existing)
-    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms")
-    stats["total_terms"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items")
+    stats["source_items"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'cosing'")
+    stats["cosing_items"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'tgsc'")
+    stats["tgsc_items"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms")
     stats["total_merged"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
-    stats["both_sources"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 0")
     stats["cosing_only"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1 AND has_cosing = 0")
     stats["tgsc_only"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
-    stats["with_specs"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
+    stats["both_sources"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
+    stats["pubchem_enriched"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_definitions")
     stats["total_clusters"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
-    stats["multi_item_clusters"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
+    stats["composites"] = cur.fetchone()[0]
     conn.close()
     return jsonify(stats)
 
