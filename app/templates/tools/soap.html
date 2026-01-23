@@ -1,13 +1,9 @@
 {% extends 'layout.html' %}
-{% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
+{% set navbar_center_title = 'Soap Formulator' %}
+{% block content %}
 <div class="py-1" id="soapToolPage">
-  <h2 class="mb-3 d-flex align-items-center gap-2">
-    Soap Maker Tools
-    {% if not tool_enabled %}
-    <span class="badge bg-secondary">Coming Soon</span>
-    {% endif %}
-  </h2>
+  <h1 class="visually-hidden">Soap Formulator</h1>
   {% if not tool_enabled %}
   <div class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="fas fa-hourglass-half me-2"></i>
@@ -209,6 +205,23 @@
     #soapToolPage .soap-stage-note {
       font-size: 0.78rem;
     }
+    #soapToolPage .accordion-item {
+      border-radius: var(--radius-3);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button {
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button:focus {
+      box-shadow: none;
+    }
+    #soapToolPage .accordion-button:not(.collapsed) {
+      color: var(--color-text);
+      box-shadow: none;
+    }
     #soapToolPage .soap-stage-pane {
       display: flex;
       flex-direction: column;
@@ -219,7 +232,33 @@
     #soapToolPage .soap-stage-pane.is-height-synced .accordion {
       flex: 1 1 auto;
       min-height: 0;
-      overflow-y: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item {
+      margin: 0;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open {
+      flex: 1 1 auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open .accordion-body {
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-button {
+      padding: var(--space-3) var(--space-4);
     }
     #soapToolPage .soap-stage-pane .accordion {
       margin-bottom: 0;
@@ -263,7 +302,7 @@
       max-width: 50%;
       min-width: 0;
     }
-    @media (max-width: 991px) {
+    @media (max-width: 767px) {
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
@@ -666,6 +705,8 @@
     } else {
       target.classList.add('show');
     }
+    updateStageAccordionLayout();
+    scheduleStageHeightSync();
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -1421,7 +1462,7 @@
     const stagePane = document.getElementById('soapStagePane');
     const qualityCard = document.getElementById('soapQualityCard');
     if (!stagePane || !qualityCard) return;
-    const shouldSync = window.matchMedia('(min-width: 992px)').matches;
+    const shouldSync = window.matchMedia('(min-width: 768px)').matches;
     if (!shouldSync) {
       stagePane.classList.remove('is-height-synced');
       stagePane.style.removeProperty('--soap-stage-height');
@@ -1440,6 +1481,16 @@
   const scheduleStageHeightSync = () => {
     window.requestAnimationFrame(syncStageHeight);
   };
+
+  function updateStageAccordionLayout(){
+    const stageAccordion = document.getElementById('soapStageAccordion');
+    if (!stageAccordion) return;
+    stageAccordion.querySelectorAll('.accordion-item').forEach(item => {
+      const collapse = item.querySelector('.accordion-collapse');
+      const isOpen = collapse ? collapse.classList.contains('show') : false;
+      item.classList.toggle('is-open', isOpen);
+    });
+  }
 
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
@@ -3047,8 +3098,14 @@
       if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') resetStage(index + 1);
     });
-    stageAccordion.addEventListener('shown.bs.collapse', scheduleStageHeightSync);
-    stageAccordion.addEventListener('hidden.bs.collapse', scheduleStageHeightSync);
+    stageAccordion.addEventListener('shown.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
+    stageAccordion.addEventListener('hidden.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -3383,6 +3440,7 @@
   updateAdditivesOutput(getTotalOilsGrams());
   updateStageStatuses();
   restoreState();
+  updateStageAccordionLayout();
   scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
