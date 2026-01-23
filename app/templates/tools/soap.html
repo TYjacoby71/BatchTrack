@@ -302,7 +302,7 @@
       max-width: 50%;
       min-width: 0;
     }
-    @media (max-width: 991px) {
+    @media (max-width: 767px) {
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
@@ -1462,7 +1462,7 @@
     const stagePane = document.getElementById('soapStagePane');
     const qualityCard = document.getElementById('soapQualityCard');
     if (!stagePane || !qualityCard) return;
-    const shouldSync = window.matchMedia('(min-width: 992px)').matches;
+    const shouldSync = window.matchMedia('(min-width: 768px)').matches;
     if (!shouldSync) {
       stagePane.classList.remove('is-height-synced');
       stagePane.style.removeProperty('--soap-stage-height');
