@@ -369,6 +369,9 @@ class CompiledClusterRecord(Base):
     term_compiled_at = Column(DateTime, nullable=True, default=None)
     term_error = Column(Text, nullable=True, default=None)
     compilation_rank = Column(Integer, nullable=True, default=None)  # Order in which this term was compiled
+    
+    # Legacy payload_json column (kept for backwards compatibility, now nullable)
+    payload_json = Column(Text, nullable=True, default="{}")
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
