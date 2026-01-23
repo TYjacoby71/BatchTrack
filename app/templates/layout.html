@@ -118,7 +118,6 @@
             {% if session.get('dev_selected_org_id') %}
             <!-- Customer Menu (when developer is viewing as customer) -->
             {% if not has_nav_center %}
-            {% if not has_nav_center %}
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
@@ -301,6 +300,7 @@
             <!-- Customer Navigation -->
             <div class="navbar-nav me-auto">
             </div>
+            {% if not has_nav_center %}
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
