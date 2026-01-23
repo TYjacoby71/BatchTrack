@@ -6,10 +6,9 @@
       </div>
       <div class="d-flex flex-wrap gap-2 align-items-end">
         <div class="flex-grow-1">
-          <label class="form-label mb-1 small">Quality preset</label>
           <select class="form-select form-select-sm" id="qualityPreset">
-            <option value="none">No targets</option>
-            <option value="balanced" selected>Balanced All-Purpose</option>
+            <option value="none" selected>Quality preset</option>
+            <option value="balanced">Balanced All-Purpose</option>
             <option value="bubbly">Bubbly Lather</option>
             <option value="creamy">Creamy Conditioning</option>
             <option value="hard">Hard / Durable</option>
@@ -21,29 +20,12 @@
             <option value="palmFree">Palm-Free Vegan</option>
           </select>
         </div>
-        <button class="btn btn-sm btn-link text-decoration-none px-0" type="button" id="applyQualityTargets">Match preset</button>
       </div>
-      <div class="small text-muted">Use presets to align the qualities.</div>
     </div>
   </div>
   <div class="card-body">
     <div class="row g-3">
       <div class="col-md-6">
-        <div class="small text-muted mb-1">Fatty acids</div>
-        <div class="soap-fatty-bar" aria-hidden="true">
-          <span class="soap-fatty-segment" id="fattyBarLauric"></span>
-          <span class="soap-fatty-segment" id="fattyBarMyristic"></span>
-          <span class="soap-fatty-segment" id="fattyBarPalmitic"></span>
-          <span class="soap-fatty-segment" id="fattyBarStearic"></span>
-          <span class="soap-fatty-segment" id="fattyBarRicinoleic"></span>
-          <span class="soap-fatty-segment" id="fattyBarOleic"></span>
-          <span class="soap-fatty-segment" id="fattyBarLinoleic"></span>
-          <span class="soap-fatty-segment" id="fattyBarLinolenic"></span>
-        </div>
-        <div class="mt-2">
-          <div class="small text-muted">Avg SAP (KOH)</div>
-          <div class="fw-semibold" id="sapAvgValue">--</div>
-        </div>
         <div class="mt-3">
           <table class="table table-sm mb-0">
             <tbody>
@@ -57,6 +39,18 @@
               <tr><td>Linolenic</td><td class="text-end" id="fattyLinolenic">--</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="mt-3">
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="small text-muted">Avg SAP (KOH)</div>
+              <div class="fw-semibold" id="sapAvgValue">--</div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">Saturated:Unsaturated</div>
+              <div class="fw-semibold" id="fattySatRatio">--</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="col-md-6">
@@ -188,10 +182,6 @@
             <div class="progress-bar" id="insBar" role="progressbar"></div>
             <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>
           </div>
-        </div>
-        <div class="mt-3">
-          <div class="small text-muted">Saturated:Unsaturated</div>
-          <div class="fw-semibold" id="fattySatRatio">--</div>
         </div>
       </div>
     </div>
