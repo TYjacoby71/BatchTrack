@@ -220,9 +220,9 @@ HTML_TEMPLATE = """
                     <h3 id="cstat-stage2-done" style="color: #166534;">0</h3>
                     <p>Items Compiled</p>
                 </div>
-                <div class="stat-box" style="background: #fef3c7;">
-                    <h3 id="cstat-stage2-pending" style="color: #92400e;">0</h3>
-                    <p>Items Pending</p>
+                <div class="stat-box">
+                    <h3 id="cstat-stage2-total" style="color: #2563eb;">0</h3>
+                    <p>Total Items</p>
                 </div>
                 <div class="stat-box">
                     <h3 id="cstat-stage2-pct" style="color: #2563eb;">0%</h3>
@@ -1464,9 +1464,8 @@ HTML_TEMPLATE = """
                         const stage1Pct = stage1Total > 0 ? Math.round((stats.stage1_done || 0) / stage1Total * 100) : 0;
                         document.getElementById('cstat-stage1-pct').textContent = stage1Pct + '%';
                         document.getElementById('cstat-stage2-done').textContent = (stats.stage2_done || 0).toLocaleString();
-                        document.getElementById('cstat-stage2-pending').textContent = (stats.stage2_pending || 0).toLocaleString();
-                        const stage2Total = (stats.stage2_done || 0) + (stats.stage2_pending || 0);
-                        const stage2Pct = stage2Total > 0 ? Math.round((stats.stage2_done || 0) / stage2Total * 100) : 0;
+                        document.getElementById('cstat-stage2-total').textContent = (stats.queued_items || 0).toLocaleString();
+                        const stage2Pct = (stats.queued_items || 0) > 0 ? Math.round((stats.stage2_done || 0) / (stats.queued_items || 1) * 100) : 0;
                         document.getElementById('cstat-stage2-pct').textContent = stage2Pct + '%';
                         document.getElementById('cstat-zero-items').textContent = (stats.zero_items || 0).toLocaleString();
                         document.getElementById('cstat-single-item').textContent = (stats.single_item || 0).toLocaleString();
