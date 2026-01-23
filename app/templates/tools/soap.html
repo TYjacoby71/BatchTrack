@@ -1,13 +1,9 @@
 {% extends 'layout.html' %}
-{% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
+{% set navbar_center_title = 'Soap Formulator' %}
+{% block content %}
 <div class="py-1" id="soapToolPage">
-  <h2 class="mb-3 d-flex align-items-center gap-2">
-    Soap Maker Tools
-    {% if not tool_enabled %}
-    <span class="badge bg-secondary">Coming Soon</span>
-    {% endif %}
-  </h2>
+  <h1 class="visually-hidden">Soap Formulator</h1>
   {% if not tool_enabled %}
   <div class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="fas fa-hourglass-half me-2"></i>
