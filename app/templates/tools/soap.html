@@ -209,6 +209,18 @@
     #soapToolPage .soap-stage-note {
       font-size: 0.78rem;
     }
+    #soapToolPage .soap-stage-pane {
+      display: flex;
+      flex-direction: column;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced {
+      height: var(--soap-stage-height);
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+    }
     #soapToolPage .oil-profile-float {
       position: absolute;
       right: 0;
@@ -281,9 +293,11 @@
 
   {% include 'tools/soap/_config_card.html' %}
 
-  <div class="row mt-4 g-4" id="soapStageQualityRow">
+  <div class="row mt-3 g-3" id="soapStageQualityRow">
     <div class="col-lg-6 soap-stage-col">
-      {% include 'tools/soap/_stages.html' %}
+      <div class="soap-stage-pane" id="soapStagePane">
+        {% include 'tools/soap/_stages.html' %}
+      </div>
     </div>
 
     <div class="col-lg-6 soap-quality-col">
@@ -1400,6 +1414,30 @@
     updateSelectedOilProfileDisplay();
   }
 
+  function syncStageHeight(){
+    const stagePane = document.getElementById('soapStagePane');
+    const qualityCard = document.getElementById('soapQualityCard');
+    if (!stagePane || !qualityCard) return;
+    const shouldSync = window.matchMedia('(min-width: 992px)').matches;
+    if (!shouldSync) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    const qualityHeight = qualityCard.offsetHeight;
+    if (!qualityHeight) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    stagePane.style.setProperty('--soap-stage-height', `${qualityHeight}px`);
+    stagePane.classList.add('is-height-synced');
+  }
+
+  const scheduleStageHeightSync = () => {
+    window.requestAnimationFrame(syncStageHeight);
+  };
+
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
     if (!tipBox) return;
@@ -2159,6 +2197,7 @@
       warningBox.classList.add('d-none');
       warningBox.textContent = '';
     }
+    scheduleStageHeightSync();
   }
 
   function updateVisualGuidance(data){
@@ -3315,6 +3354,7 @@
     resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
   };
   setupMobileDrawer();
+  window.addEventListener('resize', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
   if (initialOilRow) {
@@ -3337,6 +3377,7 @@
   updateAdditivesOutput(getTotalOilsGrams());
   updateStageStatuses();
   restoreState();
+  scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
     downloadModal.addEventListener('show.bs.modal', updateDownloadPreview);
