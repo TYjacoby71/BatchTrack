@@ -205,6 +205,23 @@
     #soapToolPage .soap-stage-note {
       font-size: 0.78rem;
     }
+    #soapToolPage .accordion-item {
+      border-radius: var(--radius-3);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button {
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button:focus {
+      box-shadow: none;
+    }
+    #soapToolPage .accordion-button:not(.collapsed) {
+      color: var(--color-text);
+      box-shadow: none;
+    }
     #soapToolPage .soap-stage-pane {
       display: flex;
       flex-direction: column;
