@@ -200,11 +200,11 @@ HTML_TEMPLATE = """
             <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
                 <div class="stat-box" style="background: #dcfce7;">
                     <h3 id="cstat-stage1-done" style="color: #166534;">0</h3>
-                    <p>With Reconciled Term</p>
+                    <p>Normalized</p>
                 </div>
                 <div class="stat-box" style="background: #fef3c7;">
                     <h3 id="cstat-stage1-pending" style="color: #92400e;">0</h3>
-                    <p>Without Reconciled Term</p>
+                    <p>Pending</p>
                 </div>
                 <div class="stat-box">
                     <h3 id="cstat-stage1-pct" style="color: #2563eb;">0%</h3>
@@ -1608,10 +1608,10 @@ def api_stats():
             cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id LIKE 'composite:%'")
             compiled_stats["composites"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE reconciled_term IS NOT NULL AND reconciled_term != ''")
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE canonical_term IS NOT NULL AND canonical_term != ''")
             compiled_stats["stage1_done"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE reconciled_term IS NULL OR reconciled_term = ''")
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE canonical_term IS NULL OR canonical_term = ''")
             compiled_stats["stage1_pending"] = cur.fetchone()[0]
             
             cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 0")
