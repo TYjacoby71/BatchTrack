@@ -207,12 +207,20 @@
       z-index: 1040;
       box-shadow: var(--shadow-2);
     }
-    @media (min-width: 992px) {
-      #soapToolPage #soapStageQualityRow {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
-      }
+    #soapToolPage #soapStageQualityRow {
+      display: flex !important;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+    }
+    #soapToolPage #soapStageQualityRow > .soap-stage-col {
+      flex: 0 0 66.6667%;
+      max-width: 66.6667%;
+      min-width: 0;
+    }
+    #soapToolPage #soapStageQualityRow > .soap-quality-col {
+      flex: 0 0 33.3333%;
+      max-width: 33.3333%;
+      min-width: 0;
     }
     @media (max-width: 991px) {
       #soapToolPage .oil-profile-float {
@@ -220,6 +228,16 @@
         width: 100%;
         max-width: 100%;
       }
+      #soapToolPage #soapStageQualityRow {
+        flex-wrap: wrap;
+      }
+      #soapToolPage #soapStageQualityRow > .soap-stage-col,
+      #soapToolPage #soapStageQualityRow > .soap-quality-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+    @media (max-width: 767px) {
       #soapToolPage { padding-bottom: 4.75rem; }
       #soapToolPage #soapSummaryStrip {
         position: static;
@@ -236,14 +254,13 @@
 
   {% include 'tools/soap/_config_card.html' %}
   {% include 'tools/soap/_summary_strip.html' %}
-  {% include 'tools/soap/_stage_nav.html' %}
 
   <div class="row mt-4 g-4" id="soapStageQualityRow">
-    <div class="col-lg-8">
+    <div class="col-lg-8 soap-stage-col">
       {% include 'tools/soap/_stages.html' %}
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-lg-4 soap-quality-col">
       {% include 'tools/soap/_quality_card.html' %}
     </div>
 
@@ -642,25 +659,6 @@
     });
   }
 
-  function initStageNav(){
-    const nav = document.getElementById('soapStageQuickNav');
-    if (!nav) return;
-    nav.addEventListener('click', event => {
-      const btn = event.target.closest('[data-stage-target]');
-      if (!btn) return;
-      const targetId = btn.dataset.stageTarget;
-      const target = document.getElementById(targetId);
-      if (!target) return;
-      if (window.bootstrap?.Collapse) {
-        const instance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
-        instance.show();
-      } else {
-        target.classList.add('show');
-      }
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
   function flashStage(stageItem){
     if (!stageItem) return;
     stageItem.classList.add('soap-stage-highlight');
@@ -694,6 +692,15 @@
     if (!stage) return;
     const target = document.getElementById(stage.collapseId);
     if (!target) return;
+    const collapses = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-collapse'));
+    collapses.forEach(collapse => {
+      if (collapse === target) return;
+      if (window.bootstrap?.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).hide();
+      } else {
+        collapse.classList.remove('show');
+      }
+    });
     if (window.bootstrap?.Collapse) {
       bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
     } else {
@@ -3253,7 +3260,7 @@
     const placeholders = new Map();
     let currentTarget = null;
 
-    const isSmallScreen = () => window.matchMedia('(max-width: 991px)').matches;
+    const isSmallScreen = () => window.matchMedia('(max-width: 767px)').matches;
     const cardForTarget = (target) => (target === 'quality' ? qualityCard : resultsCard);
     const homeForTarget = (target) => (target === 'quality' ? qualityHome : resultsHome);
     const titleForTarget = (target) => (target === 'quality' ? 'Display' : 'Results');
@@ -3351,7 +3358,6 @@
   attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET);
   applyHelperVisibility();
   initQuickStart();
-  initStageNav();
   injectStageActions();
   initQualityTooltips();
   applyLyeSelection();
