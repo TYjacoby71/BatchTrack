@@ -85,13 +85,6 @@
       margin: 0.75rem 1rem 1rem;
     }
     #soapToolPage .soap-card-placeholder { min-height: 1px; }
-    #soapToolPage .soap-summary-item { min-width: 110px; }
-    #soapToolPage #soapSummaryStrip {
-      position: sticky;
-      top: 0.5rem;
-      z-index: 1020;
-      background: var(--color-surface);
-    }
     #soapToolPage .soap-unit-chip {
       font-size: 0.7rem;
       font-weight: 600;
@@ -213,13 +206,13 @@
       align-items: flex-start;
     }
     #soapToolPage #soapStageQualityRow > .soap-stage-col {
-      flex: 0 0 66.6667%;
-      max-width: 66.6667%;
+      flex: 0 0 50%;
+      max-width: 50%;
       min-width: 0;
     }
     #soapToolPage #soapStageQualityRow > .soap-quality-col {
-      flex: 0 0 33.3333%;
-      max-width: 33.3333%;
+      flex: 0 0 50%;
+      max-width: 50%;
       min-width: 0;
     }
     @media (max-width: 991px) {
@@ -239,9 +232,6 @@
     }
     @media (max-width: 767px) {
       #soapToolPage { padding-bottom: 4.75rem; }
-      #soapToolPage #soapSummaryStrip {
-        position: static;
-      }
       #soapToolPage #soapQualityCard {
         position: static !important;
         top: auto !important;
@@ -253,14 +243,13 @@
   </style>
 
   {% include 'tools/soap/_config_card.html' %}
-  {% include 'tools/soap/_summary_strip.html' %}
 
   <div class="row mt-4 g-4" id="soapStageQualityRow">
-    <div class="col-lg-8 soap-stage-col">
+    <div class="col-lg-6 soap-stage-col">
       {% include 'tools/soap/_stages.html' %}
     </div>
 
-    <div class="col-lg-4 soap-quality-col">
+    <div class="col-lg-6 soap-quality-col">
       {% include 'tools/soap/_quality_card.html' %}
     </div>
 
@@ -293,38 +282,6 @@
     conditioning: 'Silky, moisturizing feel.',
     bubbly: 'Fluffy lather and big bubbles.',
     creamy: 'Stable, creamy lather.',
-  };
-  const QUICK_START_PRESETS = {
-    balanced: {
-      label: 'Balanced trio',
-      oils: [
-        { name: 'Olive Oil', percent: 50 },
-        { name: 'Coconut Oil', percent: 25 },
-        { name: 'Shea Butter', percent: 25 },
-      ],
-    },
-    castile: {
-      label: 'Castile base',
-      oils: [
-        { name: 'Olive Oil', percent: 100 },
-      ],
-    },
-    bubbly: {
-      label: 'Bubbly bar',
-      oils: [
-        { name: 'Coconut Oil', percent: 35 },
-        { name: 'Olive Oil', percent: 45 },
-        { name: 'Castor Oil', percent: 20 },
-      ],
-    },
-    butter: {
-      label: 'Butter luxe',
-      oils: [
-        { name: 'Olive Oil', percent: 45 },
-        { name: 'Shea Butter', percent: 30 },
-        { name: 'Cocoa Butter', percent: 25 },
-      ],
-    },
   };
   const QUALITY_FEEL_HINTS = {
     hardness: {
@@ -554,33 +511,6 @@
     if (toast) toast.show();
   }
 
-  function updateSummaryStrip({ totalOils, lyeAdjusted, waterG, batchYield, superfat }){
-    const oilsEl = document.getElementById('summaryTotalOils');
-    const lyeEl = document.getElementById('summaryLye');
-    const waterEl = document.getElementById('summaryWater');
-    const yieldEl = document.getElementById('summaryYield');
-    const superfatEl = document.getElementById('summarySuperfat');
-    if (oilsEl) {
-      oilsEl.textContent = totalOils > 0 ? formatWeight(totalOils) : '--';
-      pulseValue(oilsEl);
-    }
-    if (lyeEl) {
-      lyeEl.textContent = lyeAdjusted > 0 ? formatWeight(lyeAdjusted) : '--';
-      pulseValue(lyeEl);
-    }
-    if (waterEl) {
-      waterEl.textContent = waterG > 0 ? formatWeight(waterG) : '--';
-      pulseValue(waterEl);
-    }
-    if (yieldEl) {
-      yieldEl.textContent = batchYield > 0 ? formatWeight(batchYield) : '--';
-      pulseValue(yieldEl);
-    }
-    if (superfatEl) {
-      superfatEl.textContent = formatPercent(superfat);
-      pulseValue(superfatEl);
-    }
-  }
 
   function updateResultsMeta(){
     const badge = document.getElementById('resultsReadyBadge');
@@ -634,30 +564,6 @@
     input.classList.toggle('is-invalid', !isFinite(value) || tooLow || tooHigh);
   }
 
-  function applyQuickStartPreset(key){
-    const preset = QUICK_START_PRESETS[key];
-    if (!preset) return;
-    const oilRows = document.getElementById('oilRows');
-    if (!oilRows) return;
-    oilRows.innerHTML = '';
-    preset.oils.forEach(oil => {
-      const row = buildOilRow();
-      row.querySelector('.oil-typeahead').value = oil.name;
-      row.querySelector('.oil-percent').value = oil.percent;
-      oilRows.appendChild(row);
-    });
-    updateOilTotals();
-    updateStageStatuses();
-    queueStateSave();
-    queueAutoCalc();
-    showSoapAlert('info', `${preset.label} loaded. Select each oil from the picker to load SAP data.`, { dismissible: true, timeoutMs: 6000 });
-  }
-
-  function initQuickStart(){
-    document.querySelectorAll('[data-quickstart]').forEach(btn => {
-      btn.addEventListener('click', () => applyQuickStartPreset(btn.dataset.quickstart));
-    });
-  }
 
   function flashStage(stageItem){
     if (!stageItem) return;
@@ -2105,7 +2011,7 @@
       }
       if (hintEl && range) {
         if (!hasCoverage || !isFinite(value)) {
-          hintEl.textContent = 'Add oils to preview feel.';
+          hintEl.textContent = '';
         } else if (value < range[0]) {
           hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.low || '';
         } else if (value > range[1]) {
@@ -2540,13 +2446,6 @@
 
     ['lyeAdjustedOutput', 'waterOutput', 'batchYieldOutput', 'lyeConcentrationOutput', 'waterRatioOutput', 'totalOilsOutput', 'superfatOutput']
       .forEach(id => pulseValue(document.getElementById(id)));
-    updateSummaryStrip({
-      totalOils,
-      lyeAdjusted,
-      waterG: waterData.waterG,
-      batchYield,
-      superfat,
-    });
     updateResultsWarnings(waterData);
     updateResultsMeta();
 
@@ -3357,7 +3256,6 @@
   attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET);
   attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET);
   applyHelperVisibility();
-  initQuickStart();
   injectStageActions();
   initQualityTooltips();
   applyLyeSelection();
