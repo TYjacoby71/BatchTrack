@@ -1616,12 +1616,13 @@ def api_stats():
             cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count > 1")
             compiled_stats["multi_item"] = cur.fetchone()[0]
         
+        # Stage 2: Count from compiled_cluster_items if exists, else from merged_item_forms
         if _table_exists(conn, "compiled_cluster_items"):
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'compiled'")
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
             compiled_stats["stage2_done"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'pending'")
-            compiled_stats["stage2_pending"] = cur.fetchone()[0]
+        else:
+            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND compiled_specs_json != '{}'")
+            compiled_stats["stage2_done"] = cur.fetchone()[0]
         
         conn.close()
         return jsonify(compiled_stats)
