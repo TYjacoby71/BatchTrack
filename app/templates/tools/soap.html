@@ -22,9 +22,99 @@
     }
     #soapToolPage .soap-quality-row {
       display: grid;
-      grid-template-columns: 90px 1fr;
-      gap: 0.75rem;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label hint"
+        "bar bar"
+        "note note";
+      row-gap: var(--space-2);
+      column-gap: var(--space-2);
       align-items: center;
+    }
+    #soapToolPage .soap-quality-label {
+      grid-area: label;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+    #soapToolPage .soap-quality-name {
+      font-size: 0.85rem;
+      color: var(--color-muted);
+    }
+    #soapToolPage .soap-quality-value {
+      font-variant-numeric: tabular-nums;
+    }
+    #soapToolPage .soap-quality-help {
+      grid-area: hint;
+      align-self: start;
+    }
+    #soapToolPage .soap-quality-help-placeholder {
+      grid-area: hint;
+      width: 1rem;
+      height: 1rem;
+    }
+    #soapToolPage .soap-quality-progress {
+      grid-area: bar;
+      position: relative;
+      height: var(--space-4);
+      border-radius: var(--radius-2);
+      background: var(--color-subtle-bg-2);
+      overflow: visible;
+    }
+    #soapToolPage .soap-quality-range {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      border-radius: inherit;
+      overflow: hidden;
+      z-index: 1;
+    }
+    #soapToolPage .soap-quality-range-start,
+    #soapToolPage .soap-quality-range-ideal,
+    #soapToolPage .soap-quality-range-end {
+      height: 100%;
+    }
+    #soapToolPage .soap-quality-progress .progress-bar {
+      height: 100%;
+      z-index: 2;
+      position: relative;
+    }
+    #soapToolPage .soap-quality-boundary {
+      position: absolute;
+      top: calc(-1 * var(--space-3));
+      font-size: 0.7rem;
+      color: var(--color-muted);
+    }
+    #soapToolPage .soap-quality-boundary-start {
+      left: 0;
+      transform: translateX(-10%);
+    }
+    #soapToolPage .soap-quality-boundary-end {
+      right: 0;
+      transform: translateX(10%);
+    }
+    #soapToolPage .soap-quality-section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+      color: var(--color-text);
+    }
+    #soapToolPage .soap-quality-legend {
+      margin-bottom: var(--space-3);
+    }
+    #soapToolPage .soap-fatty-table {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    #soapToolPage .soap-fatty-table td {
+      padding: var(--space-2) 0;
+      border: none;
+      font-size: 0.85rem;
+    }
+    #soapToolPage .soap-fatty-table tbody tr:not(:last-child) td {
+      border-bottom: 1px solid var(--color-border);
     }
     #soapToolPage #soapConfigCard,
     #soapToolPage #soapQualityCard,
@@ -192,13 +282,14 @@
       50% { transform: translateY(-2px); opacity: 1; }
       100% { transform: translateY(0); opacity: 1; }
     }
-    #soapToolPage .soap-quality-row .progress { height: 10px; }
+    #soapToolPage .soap-quality-row .progress { height: var(--space-4); }
     #soapToolPage .quality-target-marker {
       position: absolute;
-      top: -6px;
-      bottom: -6px;
-      border-left: 2px dashed var(--color-success);
+      top: -4px;
+      bottom: -4px;
+      border-left: 2px dashed var(--color-primary);
       width: 0;
+      z-index: 3;
     }
     #soapToolPage .quality-target-label {
       position: absolute;
@@ -206,9 +297,11 @@
       left: 0;
       transform: translateX(-50%);
       font-size: 0.7rem;
-      color: var(--color-success);
+      color: var(--color-primary);
       background: var(--color-surface);
-      padding: 0 2px;
+      padding: 0 4px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-1);
     }
     #soapToolPage .soap-oil-profile td {
       padding: 0.2rem 0.35rem;
@@ -1669,19 +1762,34 @@
   }
 
   function setQualityRangeBars(){
-    Object.entries(QUALITY_RANGES).forEach(([key, range]) => {
-      const [min, max] = range;
+    const rangeConfig = {
+      hardness: { range: QUALITY_RANGES.hardness, scale: 100 },
+      cleansing: { range: QUALITY_RANGES.cleansing, scale: 100 },
+      conditioning: { range: QUALITY_RANGES.conditioning, scale: 100 },
+      bubbly: { range: QUALITY_RANGES.bubbly, scale: 100 },
+      creamy: { range: QUALITY_RANGES.creamy, scale: 100 },
+      iodine: { range: IODINE_RANGE, scale: IODINE_SCALE_MAX },
+      ins: { range: INS_RANGE, scale: INS_SCALE_MAX },
+    };
+    Object.entries(rangeConfig).forEach(([key, config]) => {
+      const [min, max] = config.range;
+      const scale = config.scale;
       const name = key.charAt(0).toUpperCase() + key.slice(1);
       const start = document.getElementById(`quality${name}RangeStart`);
       const ideal = document.getElementById(`quality${name}RangeIdeal`);
       const end = document.getElementById(`quality${name}RangeEnd`);
-      if (!start || !ideal || !end) return;
-      const startPct = Math.max(0, Math.min(100, min));
-      const idealPct = Math.max(0, Math.min(100, max - min));
-      const endPct = Math.max(0, 100 - max);
-      start.style.width = `${startPct}%`;
-      ideal.style.width = `${idealPct}%`;
-      end.style.width = `${endPct}%`;
+      if (start && ideal && end) {
+        const startPct = Math.max(0, Math.min(100, (min / scale) * 100));
+        const idealPct = Math.max(0, Math.min(100, ((max - min) / scale) * 100));
+        const endPct = Math.max(0, Math.min(100, 100 - ((max / scale) * 100)));
+        start.style.width = `${startPct}%`;
+        ideal.style.width = `${idealPct}%`;
+        end.style.width = `${endPct}%`;
+      }
+      const minLabel = document.getElementById(`quality${name}RangeMin`);
+      const maxLabel = document.getElementById(`quality${name}RangeMax`);
+      if (minLabel) minLabel.textContent = round(min, 0);
+      if (maxLabel) maxLabel.textContent = round(max, 0);
     });
   }
 
