@@ -215,18 +215,22 @@ HTML_TEMPLATE = """
         
         <div style="margin-bottom: 15px;">
             <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Stage 2: Item Compilation</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="stat-box" style="background: #dcfce7;">
                     <h3 id="cstat-stage2-done" style="color: #166534;">0</h3>
-                    <p>Items Compiled</p>
+                    <p>Compiled</p>
                 </div>
-                <div class="stat-box">
-                    <h3 id="cstat-stage2-total" style="color: #2563eb;">0</h3>
-                    <p>Total Items</p>
+                <div class="stat-box" style="background: #fef3c7;">
+                    <h3 id="cstat-stage2-batch-pending" style="color: #92400e;">0</h3>
+                    <p>Batch Pending</p>
+                </div>
+                <div class="stat-box" style="background: #f3f4f6;">
+                    <h3 id="cstat-stage2-pending" style="color: #6b7280;">0</h3>
+                    <p>Pending</p>
                 </div>
                 <div class="stat-box">
                     <h3 id="cstat-stage2-pct" style="color: #2563eb;">0%</h3>
-                    <p>Stage 2 Progress</p>
+                    <p>Progress</p>
                 </div>
             </div>
         </div>
@@ -1464,8 +1468,10 @@ HTML_TEMPLATE = """
                         const stage1Pct = stage1Total > 0 ? Math.round((stats.stage1_done || 0) / stage1Total * 100) : 0;
                         document.getElementById('cstat-stage1-pct').textContent = stage1Pct + '%';
                         document.getElementById('cstat-stage2-done').textContent = (stats.stage2_done || 0).toLocaleString();
-                        document.getElementById('cstat-stage2-total').textContent = (stats.queued_items || 0).toLocaleString();
-                        const stage2Pct = (stats.queued_items || 0) > 0 ? Math.round((stats.stage2_done || 0) / (stats.queued_items || 1) * 100) : 0;
+                        document.getElementById('cstat-stage2-batch-pending').textContent = (stats.stage2_batch_pending || 0).toLocaleString();
+                        document.getElementById('cstat-stage2-pending').textContent = (stats.stage2_pending || 0).toLocaleString();
+                        const stage2Total = (stats.stage2_done || 0) + (stats.stage2_batch_pending || 0) + (stats.stage2_pending || 0);
+                        const stage2Pct = stage2Total > 0 ? Math.round((stats.stage2_done || 0) / stage2Total * 100) : 0;
                         document.getElementById('cstat-stage2-pct').textContent = stage2Pct + '%';
                         document.getElementById('cstat-zero-items').textContent = (stats.zero_items || 0).toLocaleString();
                         document.getElementById('cstat-single-item').textContent = (stats.single_item || 0).toLocaleString();
@@ -1620,9 +1626,16 @@ def api_stats():
         if _table_exists(conn, "compiled_cluster_items"):
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
             compiled_stats["stage2_done"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'batch_pending'")
+            compiled_stats["stage2_batch_pending"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'pending'")
+            compiled_stats["stage2_pending"] = cur.fetchone()[0]
         else:
             cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND compiled_specs_json != '{}'")
             compiled_stats["stage2_done"] = cur.fetchone()[0]
+            compiled_stats["stage2_batch_pending"] = 0
+            cur.execute("SELECT COUNT(*) FROM merged_item_forms")
+            compiled_stats["stage2_pending"] = cur.fetchone()[0] - compiled_stats["stage2_done"]
         
         conn.close()
         return jsonify(compiled_stats)
