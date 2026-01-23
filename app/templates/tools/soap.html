@@ -17,11 +17,22 @@
   </script>
   <div id="soapAlertStack" class="mb-3"></div>
   <style>
+    #soapToolPage {
+      margin-top: calc(-1 * var(--space-4));
+    }
     #soapToolPage .soap-quality-row {
       display: grid;
       grid-template-columns: 90px 1fr;
       gap: 0.75rem;
       align-items: center;
+    }
+    #soapToolPage #soapConfigCard,
+    #soapToolPage #soapQualityCard,
+    #soapToolPage #resultsCard {
+      margin-bottom: var(--space-2);
+    }
+    #soapToolPage #resultsCard {
+      margin-top: var(--space-2);
     }
     #soapToolPage .soap-mobile-drawer {
       position: fixed;
