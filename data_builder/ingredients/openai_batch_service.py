@@ -552,9 +552,9 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
     """Apply a Stage 2 AI result to the database.
     
-    This is the fast import path that does NOT call taxonomy generation or 
-    _finalize_cluster_if_complete (which makes additional OpenAI API calls).
-    Just stores the batch results directly.
+    This is the fast import path that uses _finalize_cluster_fast instead of
+    _finalize_cluster_if_complete. The fast version skips taxonomy API calls
+    but still creates the compiled ingredient records.
     """
     from datetime import timezone
     
@@ -607,9 +607,9 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
                 items_updated += 1
         
         session.commit()
-        
-        if items_updated > 0:
-            LOGGER.debug(f"Updated {items_updated} items for cluster {cluster_id}")
+    
+    from .compiler import _finalize_cluster_fast
+    _finalize_cluster_fast(cluster_id)
 
 
 def main():

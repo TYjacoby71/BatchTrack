@@ -416,6 +416,56 @@ def _assemble_cluster_payload(
     }
 
 
+def _finalize_cluster_fast(cluster_id: str) -> bool:
+    """Fast finalize: Persist compiled ingredient WITHOUT taxonomy API call.
+    
+    Used for batch imports to avoid slow API calls. Taxonomy can be
+    populated later via a separate process if needed.
+    """
+    database_manager.ensure_tables_exist()
+    with database_manager.get_session() as session:
+        rec = session.get(database_manager.CompiledClusterRecord, cluster_id)
+        if rec is None:
+            return False
+        term = _clean(getattr(rec, "compiled_term", None)) or _clean(getattr(rec, "raw_canonical_term", None)) or _cluster_term_from_id(cluster_id) or cluster_id
+        if not term:
+            return False
+        if _find_ingredient_by_terms(session, [term]) is not None:
+            return True
+        pending = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+            .first()
+        )
+        if pending is not None:
+            return False
+        item_rows = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+            .all()
+        )
+        items: list[dict[str, Any]] = []
+        for row in item_rows:
+            payload = _safe_json_dict(getattr(row, "item_json", None))
+            if isinstance(payload, dict) and payload:
+                items.append(payload)
+    payload = _assemble_cluster_payload(term=term, rec=rec, items=items)
+    payload["ingredient"]["taxonomy"] = {}
+    database_manager.upsert_compiled_ingredient(
+        term,
+        payload,
+        seed_category=getattr(rec, "seed_category", None),
+        priority=getattr(rec, "priority", None),
+    )
+    if WRITE_INGREDIENT_FILES:
+        slug = slugify(term)
+        save_payload(payload, slug)
+    update_lookup_files(payload)
+    return True
+
+
 @retry_on_db_lock
 def _finalize_cluster_if_complete(cluster_id: str) -> bool:
     """Persist a compiled ingredient when all cluster items are done."""
