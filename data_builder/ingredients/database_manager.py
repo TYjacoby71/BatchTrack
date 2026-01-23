@@ -355,14 +355,20 @@ class CompiledClusterRecord(Base):
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
     priority = Column(Integer, nullable=True, default=None)
+    
+    # Common name (user-friendly display name from AI normalization)
+    common_name = Column(Text, nullable=True, default=None)
+    
+    # Confidence score (0-100) from AI compilation
+    confidence_score = Column(Integer, nullable=True, default=None)
+    
+    # Data quality notes/caveats from AI compilation
+    data_quality_notes = Column(Text, nullable=True, default=None)
 
     term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
     term_compiled_at = Column(DateTime, nullable=True, default=None)
     term_error = Column(Text, nullable=True, default=None)
     compilation_rank = Column(Integer, nullable=True, default=None)  # Order in which this term was compiled
-
-    # JSON payload (auditable) for stage1/stage2 use.
-    payload_json = Column(Text, nullable=False, default="{}")
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)

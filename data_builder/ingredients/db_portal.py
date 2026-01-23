@@ -1741,7 +1741,7 @@ def api_compiled_clusters():
     # Build dynamic ORDER BY based on sort parameters
     order_dir = "DESC" if sort_order == "desc" else "ASC"
     if sort_field == "name":
-        order_sql = f"COALESCE(json_extract(c.payload_json, '$.stage1.common_name'), c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
+        order_sql = f"COALESCE(c.common_name, c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
     elif sort_field == "priority":
         order_sql = f"c.priority {order_dir}, c.cluster_id"
     else:  # rank (default)
@@ -1753,7 +1753,7 @@ def api_compiled_clusters():
         SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
-               json_extract(c.payload_json, '$.stage1.common_name') as common_name,
+               c.common_name,
                c.priority,
                c.compilation_rank
         FROM compiled_clusters c
@@ -1793,7 +1793,8 @@ def api_compiled_cluster_detail(cluster_id: str):
     cur.execute(
         """
         SELECT cluster_id, raw_canonical_term, compiled_term, term_status, origin, ingredient_category,
-               botanical_name, inci_name, cas_number, refinement_level, derived_from, payload_json
+               botanical_name, inci_name, cas_number, refinement_level, derived_from, 
+               common_name, confidence_score, data_quality_notes, priority
         FROM compiled_clusters WHERE cluster_id = ?
         """,
         (cluster_id,),
@@ -1803,12 +1804,10 @@ def api_compiled_cluster_detail(cluster_id: str):
         conn.close()
         return jsonify({"error": "Compiled cluster not found"})
 
-    payload = parse_json(row[11]) if row[11] else {}
-    stage1_core = {}
-    common_name = None
-    if payload and isinstance(payload.get("stage1"), dict):
-        stage1_core = payload["stage1"].get("ingredient_core", {})
-        common_name = payload["stage1"].get("common_name")
+    common_name = row[11]
+    confidence_score = row[12]
+    data_quality_notes = row[13]
+    priority = row[14]
 
     cur.execute(
         """
@@ -1856,8 +1855,9 @@ def api_compiled_cluster_detail(cluster_id: str):
             "cas_number": row[8],
             "refinement_level": row[9],
             "derived_from": row[10],
-            "short_description": stage1_core.get("short_description"),
-            "detailed_description": stage1_core.get("detailed_description"),
+            "priority": priority,
+            "confidence_score": confidence_score,
+            "data_quality_notes": data_quality_notes,
             "total_items": len(items),
             "items_done": done,
             "items": items,

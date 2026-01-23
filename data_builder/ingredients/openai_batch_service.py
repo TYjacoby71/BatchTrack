@@ -456,19 +456,20 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         rec.inci_name = _extract_stage1_field(core.get("inci_name"))
         rec.cas_number = _extract_stage1_field(core.get("cas_number"))
         
-        # Parse existing payload_json
-        try:
-            existing_payload = json.loads(rec.payload_json) if rec.payload_json else {}
-        except (json.JSONDecodeError, TypeError):
-            existing_payload = {}
+        # Store common_name and data quality in columns (no JSON blobs)
+        rec.common_name = common_name
         
-        existing_payload["stage1"] = {
-            "term": term,
-            "common_name": common_name,
-            "ingredient_core": core,
-            "data_quality": dq,
-        }
-        rec.payload_json = json.dumps(existing_payload, ensure_ascii=False)
+        # Extract confidence from data_quality if present
+        if isinstance(dq, dict):
+            confidence = dq.get("confidence")
+            if confidence is not None:
+                try:
+                    rec.confidence_score = int(confidence)
+                except (TypeError, ValueError):
+                    pass
+            caveats = dq.get("caveats", [])
+            if caveats:
+                rec.data_quality_notes = "; ".join(str(c) for c in caveats) if isinstance(caveats, list) else str(caveats)
         
         session.commit()
 

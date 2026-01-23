@@ -739,19 +739,10 @@ def _process_stage1_cluster(
                         legacy_common = ai_result.get("common_name") or legacy_common or compiled
                     except Exception:
                         legacy_common = legacy_common or compiled
-                rec.payload_json = json.dumps(
-                    {
-                        "stage1": {
-                            "term": rec.compiled_term,
-                            "common_name": legacy_common or rec.compiled_term,
-                            "ingredient_core": core,
-                            "data_quality": {"confidence": None, "caveats": []},
-                            "seeded_from_legacy": True,
-                        }
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                )
+                # Store common_name in column (no JSON blobs)
+                rec.common_name = legacy_common or rec.compiled_term
+                rec.confidence_score = None  # No AI confidence for seeded records
+                rec.data_quality_notes = "seeded_from_legacy"
                 rec.term_status = "done"
                 rec.term_compiled_at = getattr(ingredient, "compiled_at", None) or now
                 rec.term_error = None
@@ -796,11 +787,21 @@ def _process_stage1_cluster(
             else:
                 rec.priority = priority
             common_name = result.get("common_name") or rec.compiled_term
-            rec.payload_json = json.dumps(
-                {"stage1": {"term": rec.compiled_term, "common_name": common_name, "ingredient_core": core, "data_quality": dq}},
-                ensure_ascii=False,
-                sort_keys=True,
-            )
+            
+            # Store common_name and data quality in columns (no JSON blobs)
+            rec.common_name = common_name
+            
+            # Extract confidence from data_quality if present
+            if isinstance(dq, dict):
+                confidence = dq.get("confidence")
+                if confidence is not None:
+                    try:
+                        rec.confidence_score = int(confidence)
+                    except (TypeError, ValueError):
+                        pass
+                caveats = dq.get("caveats", [])
+                if caveats:
+                    rec.data_quality_notes = "; ".join(str(c) for c in caveats) if isinstance(caveats, list) else str(caveats)
             rec.term_status = "done"
             rec.term_compiled_at = datetime.now(timezone.utc)
             rec.term_error = None
