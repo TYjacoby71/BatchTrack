@@ -770,12 +770,6 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
                     html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(data.canonical_term, data.derived_term)}</div>`;
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(data.botanical_key, null)}</div>`;
-                    if (data.reconciled_term) {
-                        html += `<div class="detail-label">Reconciled Base</div><div class="detail-value"><span class="curated">${data.reconciled_term}</span></div>`;
-                    }
-                    if (data.reconciled_variation) {
-                        html += `<div class="detail-label">Reconciled Variation</div><div class="detail-value"><span class="curated">${data.reconciled_variation}</span></div>`;
-                    }
                     if (data.parent_cluster_id) {
                         html += `<div class="detail-label">Parent Cluster</div><div class="detail-value"><a href="#" onclick="event.preventDefault(); closeDetail(); showClusterDetail('${data.parent_cluster_id.replace(/'/g, "\\'")}')" style="color:#7c3aed;">${data.parent_cluster_id}</a></div>`;
                     }
@@ -1555,7 +1549,7 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
     stats['pubchem_enriched'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM source_definitions")
+    cur.execute("SELECT COUNT(*) FROM clusters")
     stats['total_clusters'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
@@ -1601,26 +1595,26 @@ def api_stats():
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
             compiled_stats["queued_items"] = cur.fetchone()[0]
         
-        if _table_exists(conn, "source_definitions"):
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%'")
+        if _table_exists(conn, "clusters"):
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%'")
             compiled_stats["clusters"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id LIKE 'composite:%'")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id LIKE 'composite:%'")
             compiled_stats["composites"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE canonical_term IS NOT NULL AND canonical_term != ''")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE canonical_term IS NOT NULL AND canonical_term != ''")
             compiled_stats["stage1_done"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE canonical_term IS NULL OR canonical_term = ''")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE canonical_term IS NULL OR canonical_term = ''")
             compiled_stats["stage1_pending"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 0")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 0")
             compiled_stats["zero_items"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 1")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 1")
             compiled_stats["single_item"] = cur.fetchone()[0]
             
-            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count > 1")
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count > 1")
             compiled_stats["multi_item"] = cur.fetchone()[0]
         
         if _table_exists(conn, "compiled_cluster_items"):
@@ -1649,7 +1643,7 @@ def api_stats():
     stats["both_sources"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
     stats["pubchem_enriched"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM source_definitions")
+    cur.execute("SELECT COUNT(*) FROM clusters")
     stats["total_clusters"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
     stats["composites"] = cur.fetchone()[0]
@@ -2159,7 +2153,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
 
 @app.route('/api/clusters')
 def api_clusters():
-    """Show raw cluster data from source_definitions - no overlays, no aggregation."""
+    """Show raw cluster data from clusters - no overlays, no aggregation."""
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
     cluster_size = request.args.get('cluster_size', 'all')
@@ -2177,8 +2171,8 @@ def api_clusters():
     
     if search:
         search_param = f"%{search}%"
-        where_clauses.append("(sd.canonical_term LIKE ? OR sd.cluster_id LIKE ? OR sd.reconciled_term LIKE ?)")
-        params.extend([search_param, search_param, search_param])
+        where_clauses.append("(sd.canonical_term LIKE ? OR sd.cluster_id LIKE ?)")
+        params.extend([search_param, search_param])
     
     if category:
         where_clauses.append("""EXISTS (
@@ -2206,7 +2200,7 @@ def api_clusters():
     
     having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
     
-    # Query raw cluster data from source_definitions with item counts by source type
+    # Query raw cluster data from clusters with item counts by source type
     # Items are counted from merged_item_forms: cosing_only, tgsc_only, or both (merged duplicates)
     cur.execute(f"""
         SELECT 
@@ -2224,7 +2218,7 @@ def api_clusters():
             (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
              JOIN source_items si ON si.merged_item_id = mif.id 
              WHERE si.definition_cluster_id = sd.cluster_id AND mif.has_cosing = 1 AND mif.has_tgsc = 1) as both_sources
-        FROM source_definitions sd
+        FROM clusters sd
         {where_sql}
         {having_sql}
         ORDER BY sd.canonical_term, sd.cluster_id
@@ -2249,7 +2243,7 @@ def api_clusters():
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id) as item_count,
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing') as cosing_count,
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc') as tgsc_count
-            FROM source_definitions sd
+            FROM clusters sd
             {where_sql}
             {having_sql}
         )
@@ -2363,29 +2357,27 @@ def api_cluster_detail(cluster_id):
         else:
             tgsc_only.append(item)
     
-    # Get cluster info from source_definitions
+    # Get cluster info from clusters
     cur.execute("""
-        SELECT reason, canonical_term, botanical_key, reconciled_term, reconciled_variation, parent_cluster_id 
-        FROM source_definitions WHERE cluster_id = ?
+        SELECT reason, canonical_term, botanical_key, parent_cluster_id 
+        FROM clusters WHERE cluster_id = ?
     """, (cluster_id,))
     def_row = cur.fetchone()
     reason = def_row[0] if def_row else None
     canonical_term = def_row[1] if def_row else None
     botanical_key = def_row[2] if def_row else None
-    reconciled_term = def_row[3] if def_row else None
-    reconciled_variation = def_row[4] if def_row else None
-    parent_cluster_id = def_row[5] if def_row else None
+    parent_cluster_id = def_row[3] if def_row else None
     
     # Get child derivatives (clusters that have this cluster as parent)
     # Also include siblings if this cluster itself has a parent
     cur.execute("""
-        SELECT cluster_id, canonical_term, reconciled_variation 
-        FROM source_definitions 
+        SELECT cluster_id, canonical_term 
+        FROM clusters 
         WHERE parent_cluster_id = ?
            OR (? IS NOT NULL AND parent_cluster_id = ?)
         ORDER BY canonical_term
     """, (cluster_id, parent_cluster_id, parent_cluster_id))
-    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1], 'variation': r[2]} for r in cur.fetchall() if r[0] != cluster_id]
+    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1]} for r in cur.fetchall() if r[0] != cluster_id]
     
     conn.close()
     return jsonify({
@@ -2394,8 +2386,6 @@ def api_cluster_detail(cluster_id):
         'derived_term': derived_term,
         'canonical_term': canonical_term,
         'botanical_key': botanical_key,
-        'reconciled_term': reconciled_term,
-        'reconciled_variation': reconciled_variation,
         'parent_cluster_id': parent_cluster_id,
         'child_derivatives': child_derivatives,
         'is_composite': False,
@@ -2672,10 +2662,10 @@ def api_merged_item_detail(item_id):
             # Keep the response small; UI will show truncated list if needed.
             cluster_terms = cluster_terms[:30]
             
-            # Get canonical_term and botanical_key from source_definitions
+            # Get canonical_term and botanical_key from clusters
             cur.execute(f"""
                 SELECT canonical_term, botanical_key 
-                FROM source_definitions 
+                FROM clusters 
                 WHERE cluster_id IN ({placeholders})
                 LIMIT 1
             """, cluster_ids)
@@ -2722,10 +2712,10 @@ def api_source_item_detail(key):
     
     cur.execute("""
         SELECT key, source, source_row_id, source_row_number, source_ref, content_hash,
-               is_composite, raw_name, inci_name, cas_number, cas_numbers_json,
+               is_composite, raw_name, inci_name, cas_number,
                derived_term, derived_variation, derived_physical_form, derived_part, derived_part_reason,
                origin, ingredient_category, refinement_level, status, needs_review_reason,
-               definition_display_name, item_display_name, derived_function_tags_json,
+               definition_display_name, item_display_name,
                derived_function_tag_entries_json, derived_master_categories_json,
                variation_bypass, variation_bypass_reason, definition_cluster_id,
                definition_cluster_confidence, definition_cluster_reason,
@@ -2740,8 +2730,19 @@ def api_source_item_detail(key):
     if not row:
         return jsonify({'error': 'Source item not found'})
     
+    key = row[0]
+    
+    # Get CAS numbers from relational table
+    cur2 = get_db('final').cursor()
+    cur2.execute("SELECT cas_number FROM item_cas_numbers WHERE source_item_key = ?", (key,))
+    cas_numbers = [r[0] for r in cur2.fetchall()]
+    
+    # Get function tags from relational table
+    cur2.execute("SELECT function_tag FROM item_functions WHERE source_item_key = ?", (key,))
+    function_tags = [r[0] for r in cur2.fetchall()]
+    
     return jsonify({
-        'key': row[0],
+        'key': key,
         'source': row[1],
         'source_row_id': row[2],
         'source_row_number': row[3],
@@ -2751,32 +2752,32 @@ def api_source_item_detail(key):
         'raw_name': row[7],
         'inci_name': row[8],
         'cas_number': row[9],
-        'cas_numbers': parse_json(row[10]) or [],
-        'derived_term': row[11],
-        'derived_variation': row[12],
-        'derived_physical_form': row[13],
-        'derived_part': row[14],
-        'derived_part_reason': row[15],
-        'origin': row[16],
-        'ingredient_category': row[17],
-        'refinement_level': row[18],
-        'status': row[19],
-        'needs_review_reason': row[20],
-        'definition_display_name': row[21],
-        'item_display_name': row[22],
-        'function_tags': parse_json(row[23]) or [],
-        'function_tag_entries': parse_json(row[24]) or [],
-        'master_categories': parse_json(row[25]) or [],
-        'variation_bypass': bool(row[26]),
-        'variation_bypass_reason': row[27],
-        'definition_cluster_id': row[28],
-        'definition_cluster_confidence': row[29],
-        'definition_cluster_reason': row[30],
-        'specs': parse_json(row[31]),
-        'specs_sources': parse_json(row[32]),
-        'specs_notes': parse_json(row[33]),
-        'merged_item_id': row[34],
-        'ingested_at': row[35]
+        'cas_numbers': cas_numbers,
+        'derived_term': row[10],
+        'derived_variation': row[11],
+        'derived_physical_form': row[12],
+        'derived_part': row[13],
+        'derived_part_reason': row[14],
+        'origin': row[15],
+        'ingredient_category': row[16],
+        'refinement_level': row[17],
+        'status': row[18],
+        'needs_review_reason': row[19],
+        'definition_display_name': row[20],
+        'item_display_name': row[21],
+        'function_tags': function_tags,
+        'function_tag_entries': parse_json(row[22]) or [],
+        'master_categories': parse_json(row[23]) or [],
+        'variation_bypass': bool(row[24]),
+        'variation_bypass_reason': row[25],
+        'definition_cluster_id': row[26],
+        'definition_cluster_confidence': row[27],
+        'definition_cluster_reason': row[28],
+        'specs': parse_json(row[29]),
+        'specs_sources': parse_json(row[30]),
+        'specs_notes': parse_json(row[31]),
+        'merged_item_id': row[32],
+        'ingested_at': row[33]
     })
 
 @app.route('/api/export-analysis')
