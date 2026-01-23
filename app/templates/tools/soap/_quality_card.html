@@ -1,0 +1,185 @@
+<div class="card sticky-top" id="soapQualityCard" style="top: 1rem; z-index: 1000;">
+  <div class="card-header">
+    <div class="d-flex flex-column gap-2">
+      <div class="d-flex align-items-center justify-content-between">
+        <strong>Soap qualities & fatty acids</strong>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-items-end">
+        <div class="flex-grow-1">
+          <select class="form-select form-select-sm" id="qualityPreset">
+            <option value="none" selected>Quality preset</option>
+            <option value="balanced">Balanced All-Purpose</option>
+            <option value="bubbly">Bubbly Lather</option>
+            <option value="creamy">Creamy Conditioning</option>
+            <option value="hard">Hard / Durable</option>
+            <option value="gentle">Gentle / Moisturizing</option>
+            <option value="castile">Castile-Style</option>
+            <option value="shampoo">Shampoo Bar</option>
+            <option value="utility">Utility / Laundry</option>
+            <option value="luxury">Luxury Butter-Rich</option>
+            <option value="palmFree">Palm-Free Vegan</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="mt-3">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><td>Lauric</td><td class="text-end" id="fattyLauric">--</td></tr>
+              <tr><td>Myristic</td><td class="text-end" id="fattyMyristic">--</td></tr>
+              <tr><td>Palmitic</td><td class="text-end" id="fattyPalmitic">--</td></tr>
+              <tr><td>Stearic</td><td class="text-end" id="fattyStearic">--</td></tr>
+              <tr><td>Ricinoleic</td><td class="text-end" id="fattyRicinoleic">--</td></tr>
+              <tr><td>Oleic</td><td class="text-end" id="fattyOleic">--</td></tr>
+              <tr><td>Linoleic</td><td class="text-end" id="fattyLinoleic">--</td></tr>
+              <tr><td>Linolenic</td><td class="text-end" id="fattyLinolenic">--</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3">
+          <div class="small text-muted">Avg SAP (KOH)</div>
+          <div class="fw-semibold" id="sapAvgValue">--</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="soap-quality-row mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Hardness</div>
+              <div class="fw-semibold soap-animate-number" id="qualityHardnessValue">--</div>
+            </div>
+            <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="hardness">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          <div class="progress position-relative soap-quality-progress">
+            <div class="soap-quality-range">
+              <span class="soap-quality-range-start" id="qualityHardnessRangeStart"></span>
+              <span class="soap-quality-range-ideal" id="qualityHardnessRangeIdeal"></span>
+              <span class="soap-quality-range-end" id="qualityHardnessRangeEnd"></span>
+            </div>
+            <div class="progress-bar" id="qualityHardnessBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="qualityHardnessTarget"><span class="quality-target-label" id="qualityHardnessTargetLabel"></span></span>
+          </div>
+          <div class="small text-muted mt-1" id="qualityHardnessHint"></div>
+        </div>
+        <div class="soap-quality-row mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Cleansing</div>
+              <div class="fw-semibold soap-animate-number" id="qualityCleansingValue">--</div>
+            </div>
+            <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="cleansing">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          <div class="progress position-relative soap-quality-progress">
+            <div class="soap-quality-range">
+              <span class="soap-quality-range-start" id="qualityCleansingRangeStart"></span>
+              <span class="soap-quality-range-ideal" id="qualityCleansingRangeIdeal"></span>
+              <span class="soap-quality-range-end" id="qualityCleansingRangeEnd"></span>
+            </div>
+            <div class="progress-bar" id="qualityCleansingBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="qualityCleansingTarget"><span class="quality-target-label" id="qualityCleansingTargetLabel"></span></span>
+          </div>
+          <div class="small text-muted mt-1" id="qualityCleansingHint"></div>
+        </div>
+        <div class="soap-quality-row mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Conditioning</div>
+              <div class="fw-semibold soap-animate-number" id="qualityConditioningValue">--</div>
+            </div>
+            <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="conditioning">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          <div class="progress position-relative soap-quality-progress">
+            <div class="soap-quality-range">
+              <span class="soap-quality-range-start" id="qualityConditioningRangeStart"></span>
+              <span class="soap-quality-range-ideal" id="qualityConditioningRangeIdeal"></span>
+              <span class="soap-quality-range-end" id="qualityConditioningRangeEnd"></span>
+            </div>
+            <div class="progress-bar" id="qualityConditioningBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="qualityConditioningTarget"><span class="quality-target-label" id="qualityConditioningTargetLabel"></span></span>
+          </div>
+          <div class="small text-muted mt-1" id="qualityConditioningHint"></div>
+        </div>
+        <div class="soap-quality-row mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Bubbly</div>
+              <div class="fw-semibold soap-animate-number" id="qualityBubblyValue">--</div>
+            </div>
+            <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="bubbly">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          <div class="progress position-relative soap-quality-progress">
+            <div class="soap-quality-range">
+              <span class="soap-quality-range-start" id="qualityBubblyRangeStart"></span>
+              <span class="soap-quality-range-ideal" id="qualityBubblyRangeIdeal"></span>
+              <span class="soap-quality-range-end" id="qualityBubblyRangeEnd"></span>
+            </div>
+            <div class="progress-bar" id="qualityBubblyBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="qualityBubblyTarget"><span class="quality-target-label" id="qualityBubblyTargetLabel"></span></span>
+          </div>
+          <div class="small text-muted mt-1" id="qualityBubblyHint"></div>
+        </div>
+        <div class="soap-quality-row mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Creamy</div>
+              <div class="fw-semibold soap-animate-number" id="qualityCreamyValue">--</div>
+            </div>
+            <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="creamy">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          <div class="progress position-relative soap-quality-progress">
+            <div class="soap-quality-range">
+              <span class="soap-quality-range-start" id="qualityCreamyRangeStart"></span>
+              <span class="soap-quality-range-ideal" id="qualityCreamyRangeIdeal"></span>
+              <span class="soap-quality-range-end" id="qualityCreamyRangeEnd"></span>
+            </div>
+            <div class="progress-bar" id="qualityCreamyBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="qualityCreamyTarget"><span class="quality-target-label" id="qualityCreamyTargetLabel"></span></span>
+          </div>
+          <div class="small text-muted mt-1" id="qualityCreamyHint"></div>
+        </div>
+        <div class="soap-quality-row mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">Iodine</div>
+              <div class="fw-semibold soap-animate-number" id="iodineValue">--</div>
+            </div>
+          </div>
+          <div class="progress position-relative">
+            <div class="progress-bar" id="iodineBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="iodineTarget"><span class="quality-target-label" id="iodineTargetLabel"></span></span>
+          </div>
+        </div>
+        <div class="soap-quality-row mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              <div class="small text-muted">INS</div>
+              <div class="fw-semibold soap-animate-number" id="insValue">--</div>
+            </div>
+          </div>
+          <div class="progress position-relative">
+            <div class="progress-bar" id="insBar" role="progressbar"></div>
+            <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="small text-muted">Saturated:Unsaturated</div>
+          <div class="fw-semibold" id="fattySatRatio">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

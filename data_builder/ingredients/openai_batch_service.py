@@ -42,7 +42,13 @@ from .ai_worker import (
     _render_items_completion_prompt,
     _ensure_item_fields,
 )
-from .compiler import _extract_stage1_field, _build_cluster_context
+from .compiler import (
+    _build_cluster_context,
+    _build_cluster_core,
+    _cluster_term_from_id,
+    _extract_stage1_field,
+    _select_stage2_cluster_ids,
+)
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -52,11 +58,34 @@ EXPORTS_DIR.mkdir(exist_ok=True)
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
+BATCH_EXPORT_INCLUDE_METADATA = os.getenv("BATCH_EXPORT_INCLUDE_METADATA", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+BATCH_STAGE2_CHUNK_SIZE = int(os.getenv("BATCH_STAGE2_CHUNK_SIZE", "25"))
+
+
+def _safe_json_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if value is None:
+        return {}
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
+def _clean(value: Any) -> str:
+    return ("" if value is None else str(value)).strip()
+
 
 def _get_stage1_pending_clusters(limit: int | None = None) -> list[tuple[str, dict[str, Any]]]:
     """Get Stage 1 pending clusters with their context."""
     database_manager.ensure_tables_exist()
-    
+
     with database_manager.get_session() as session:
         q = session.query(database_manager.SourceDefinition.cluster_id).outerjoin(
             database_manager.CompiledClusterRecord,
@@ -69,123 +98,124 @@ def _get_stage1_pending_clusters(limit: int | None = None) -> list[tuple[str, di
         )
         q = q.order_by(database_manager.SourceDefinition.cluster_id.asc())
         ids = [str(r[0]) for r in q.all() if r and r[0]]
-    
+
     if not ids:
         return []
-    
+
     priority_map = database_manager.build_cluster_priority_map()
     ids.sort(key=lambda cid: (-int(priority_map.get(cid, database_manager.DEFAULT_PRIORITY)), cid))
-    
+
     if limit:
         ids = ids[:int(limit)]
-    
+
     results = []
     for cid in ids:
         context = _build_cluster_context(cid)
         results.append((cid, context))
-    
+
     return results
 
 
-def _get_stage2_pending_clusters_and_mark(limit: int | None = None) -> list[tuple[str, str, dict[str, Any], dict[str, Any], bool]]:
-    """Get Stage 2 pending clusters and atomically mark their items as batch_pending.
-    
-    Returns list of (cluster_id, term, ingredient_core, base_context, has_seed_items)
-    
-    Uses single transaction to query and mark items atomically.
-    """
-    database_manager.ensure_tables_exist()
-    
-    from sqlalchemy import text
-    
-    limit_clause = f"LIMIT {int(limit)}" if limit else ""
-    
-    with database_manager.get_session() as session:
-        # Step 1: Find clusters with pending items, ordered by priority
-        cluster_sql = text(f"""
-            SELECT DISTINCT cc.cluster_id, cc.compiled_term, cc.origin, cc.ingredient_category,
-                   cc.refinement_level, cc.derived_from, cc.botanical_name, cc.inci_name, 
-                   cc.cas_number, COALESCE(cc.priority, {database_manager.DEFAULT_PRIORITY}) as priority
-            FROM compiled_clusters cc
-            INNER JOIN compiled_cluster_items cci ON cci.cluster_id = cc.cluster_id
-            WHERE cc.term_status = 'done'
-            AND cci.item_status NOT IN ('done', 'batch_pending')
-            ORDER BY priority DESC, cc.cluster_id
-            {limit_clause}
-        """)
-        
-        cluster_rows = session.execute(cluster_sql).fetchall()
-        
-        if not cluster_rows:
-            return []
-        
-        cluster_ids = [str(row[0]) for row in cluster_rows]
-        
-        # Step 2: Fetch pending items for these clusters
-        all_items = (
-            session.query(database_manager.CompiledClusterItemRecord)
-            .filter(database_manager.CompiledClusterItemRecord.cluster_id.in_(cluster_ids))
-            .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
-            .all()
+def _build_stage2_seed_items(
+    term: str,
+    rows: list[database_manager.CompiledClusterItemRecord],
+) -> list[dict[str, Any]]:
+    seed_items: list[dict[str, Any]] = []
+    for row in rows:
+        raw = _safe_json_dict(getattr(row, "raw_item_json", None))
+        variation = _clean(raw.get("derived_variation") or getattr(row, "derived_variation", "") or "")
+        physical_form = _clean(raw.get("derived_physical_form") or getattr(row, "derived_physical_form", "") or "")
+        specs = raw.get("merged_specs") if isinstance(raw.get("merged_specs"), dict) else {}
+        form_bypass, variation_bypass = database_manager.derive_item_bypass_flags(
+            base_term=term,
+            variation=variation,
+            physical_form=physical_form,
+            form_bypass=(not bool(physical_form)),
+            variation_bypass=(not bool(variation)),
         )
-        
-        # Step 3: Mark items as batch_pending in same transaction
-        items_marked = 0
-        for item in all_items:
-            item.item_status = "batch_pending"
-            items_marked += 1
-        
-        session.commit()
-        LOGGER.info(f"Marked {items_marked} items as batch_pending for {len(cluster_ids)} clusters")
-        
-        # Step 4: Group items by cluster_id for return
-        items_by_cluster: dict[str, list] = {}
-        for item in all_items:
-            cid = str(item.cluster_id)
-            if cid not in items_by_cluster:
-                items_by_cluster[cid] = []
-            items_by_cluster[cid].append({
-                "variation": item.derived_variation or "",
-                "physical_form": item.derived_physical_form or "",
-            })
-        
-        # Build results
-        results = []
-        for row in cluster_rows:
-            cid = str(row[0])
-            term = row[1] or ""
-            
-            ingredient_core = {
-                "origin": row[2],
-                "ingredient_category": row[3],
-                "refinement_level": row[4],
-                "derived_from": row[5],
-                "botanical_name": row[6],
-                "inci_name": row[7],
-                "cas_number": row[8],
+        item_name = database_manager.derive_item_display_name(
+            base_term=term,
+            variation=variation,
+            variation_bypass=variation_bypass,
+            physical_form=physical_form,
+            form_bypass=form_bypass,
+        )
+        seed_items.append(
+            {
+                "variation": variation,
+                "physical_form": physical_form,
+                "form_bypass": form_bypass,
+                "variation_bypass": variation_bypass,
+                "item_name": item_name,
+                "applications": ["Not Found"],
+                "specifications": specs,
             }
-            
-            seed_items = items_by_cluster.get(cid, [])
-            base_context = {"seed_items": seed_items} if seed_items else {}
-            has_seed_items = bool(seed_items)
-            
-            results.append((cid, term, ingredient_core, base_context, has_seed_items))
-        
-        return results
+        )
+    return seed_items
+
+
+def _get_stage2_pending_clusters(limit: int | None = None) -> list[dict[str, Any]]:
+    """Get Stage 2 pending clusters with their context."""
+    cluster_ids = _select_stage2_cluster_ids(limit=limit, cluster_id=None)
+    if not cluster_ids:
+        return []
+    chunk_size = max(1, int(BATCH_STAGE2_CHUNK_SIZE))
+    results: list[dict[str, Any]] = []
+    for cid in cluster_ids:
+        with database_manager.get_session() as session:
+            rec = session.get(database_manager.CompiledClusterRecord, cid)
+            if rec is None or rec.term_status != "done":
+                continue
+            term = (
+                _clean(getattr(rec, "compiled_term", None))
+                or _clean(getattr(rec, "raw_canonical_term", None))
+                or _cluster_term_from_id(cid)
+                or cid
+            )
+            ingredient_core, _, _ = _build_cluster_core(rec)
+            if "documentation" not in ingredient_core:
+                ingredient_core["documentation"] = {"references": [], "last_verified": None}
+            item_rows = (
+                session.query(database_manager.CompiledClusterItemRecord)
+                .filter(database_manager.CompiledClusterItemRecord.cluster_id == cid)
+                .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
+                .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+                .all()
+            )
+        if not item_rows:
+            continue
+        chunks = [item_rows[i : i + chunk_size] for i in range(0, len(item_rows), chunk_size)]
+        for idx, chunk in enumerate(chunks, start=1):
+            seed_items = _build_stage2_seed_items(term, chunk)
+            base_context: dict[str, Any] = {"term": term}
+            if seed_items:
+                base_context["seed_items"] = seed_items
+            results.append(
+                {
+                    "cluster_id": cid,
+                    "term": term,
+                    "ingredient_core": ingredient_core,
+                    "base_context": base_context,
+                    "has_seed_items": bool(seed_items),
+                    "chunk_index": idx,
+                    "chunk_total": len(chunks),
+                }
+            )
+    return results
 
 
 def export_stage1_batch(limit: int | None = None) -> Path:
     """Export Stage 1 pending clusters to JSONL for OpenAI Batch API."""
     clusters = _get_stage1_pending_clusters(limit=limit)
-    
+
     if not clusters:
         LOGGER.info("No Stage 1 pending clusters to export")
         return None
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"batch_stage1_{timestamp}.jsonl"
     filepath = EXPORTS_DIR / filename
-    
+
     with open(filepath, "w", encoding="utf-8") as f:
         for cid, context in clusters:
             prompt = _render_cluster_term_prompt(cid, context)
@@ -205,13 +235,13 @@ def export_stage1_batch(limit: int | None = None) -> Path:
                 },
             }
             f.write(json.dumps(request, ensure_ascii=False) + "\n")
-    
+
     file_size_kb = filepath.stat().st_size / 1024
     LOGGER.info(f"Exported {len(clusters)} Stage 1 clusters to {filepath} ({file_size_kb:.1f} KB)")
-    
+
     # Mark exported clusters as batch_pending so real-time compiler skips them
     _mark_clusters_batch_pending([cid for cid, _ in clusters], stage=1)
-    
+
     return filepath
 
 
@@ -241,30 +271,53 @@ def _mark_clusters_batch_pending(cluster_ids: list[str], stage: int) -> None:
     LOGGER.info(f"Marked {len(cluster_ids)} clusters as batch_pending for Stage {stage}")
 
 
+def _make_stage2_custom_id(cluster_id: str, chunk_index: int | None = None) -> str:
+    if chunk_index is None:
+        return f"stage2::{cluster_id}"
+    return f"stage2::{cluster_id}::{chunk_index}"
+
+
+def _parse_stage2_custom_id(custom_id: str) -> str | None:
+    if custom_id.startswith("stage2::"):
+        parts = custom_id.split("::")
+        if len(parts) >= 2 and parts[1]:
+            return parts[1]
+        return None
+    if custom_id.startswith("stage2_"):
+        return custom_id.replace("stage2_", "", 1) or None
+    return None
+
+
 def export_stage2_batch(limit: int | None = None) -> Path:
-    """Export Stage 2 pending clusters to JSONL for OpenAI Batch API.
-    
-    Items are atomically marked as batch_pending before writing the file.
-    """
-    # This function atomically marks items as batch_pending before returning
-    clusters = _get_stage2_pending_clusters_and_mark(limit=limit)
-    
+    """Export Stage 2 pending clusters to JSONL for OpenAI Batch API."""
+    clusters = _get_stage2_pending_clusters(limit=limit)
+
     if not clusters:
         LOGGER.info("No Stage 2 pending clusters to export")
         return None
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"batch_stage2_{timestamp}.jsonl"
     filepath = EXPORTS_DIR / filename
-    
+
+    metadata_blob = None if BATCH_EXPORT_INCLUDE_METADATA else "{}"
+    cluster_ids: set[str] = set()
     with open(filepath, "w", encoding="utf-8") as f:
-        for cid, term, ingredient_core, base_context, has_seed_items in clusters:
+        for entry in clusters:
+            cid = entry["cluster_id"]
+            term = entry["term"]
+            ingredient_core = entry["ingredient_core"]
+            base_context = entry["base_context"]
+            has_seed_items = entry["has_seed_items"]
+            chunk_index = entry["chunk_index"]
             if has_seed_items:
-                prompt = _render_items_completion_prompt(term, ingredient_core, base_context)
+                prompt = _render_items_completion_prompt(
+                    term, ingredient_core, base_context, metadata_blob=metadata_blob
+                )
             else:
-                prompt = _render_items_prompt(term, ingredient_core, base_context)
+                prompt = _render_items_prompt(term, ingredient_core, base_context, metadata_blob=metadata_blob)
             request = {
-                "custom_id": f"stage2_{cid}",
+                "custom_id": _make_stage2_custom_id(cid, chunk_index),
                 "method": "POST",
                 "url": "/v1/chat/completions",
                 "body": {
@@ -279,10 +332,20 @@ def export_stage2_batch(limit: int | None = None) -> Path:
                 },
             }
             f.write(json.dumps(request, ensure_ascii=False) + "\n")
-    
+            cluster_ids.add(cid)
+
     file_size_kb = filepath.stat().st_size / 1024
-    LOGGER.info(f"Exported {len(clusters)} Stage 2 clusters to {filepath} ({file_size_kb:.1f} KB)")
-    
+    LOGGER.info(
+        "Exported %d Stage 2 requests covering %d clusters to %s (%.1f KB)",
+        len(clusters),
+        len(cluster_ids),
+        filepath,
+        file_size_kb,
+    )
+
+    # Mark exported clusters as batch_pending so real-time compiler skips them
+    _mark_clusters_batch_pending(sorted(cluster_ids), stage=2)
+
     return filepath
 
 
@@ -290,29 +353,29 @@ def submit_batch(filepath: str | Path) -> str:
     """Submit a JSONL batch file to OpenAI and return the batch ID."""
     if not openai.api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
-    
+
     filepath = Path(filepath)
     if not filepath.exists():
         raise FileNotFoundError(f"Batch file not found: {filepath}")
-    
+
     client = openai.OpenAI(api_key=openai.api_key)
-    
+
     LOGGER.info(f"Uploading batch file: {filepath}")
     with open(filepath, "rb") as f:
         batch_input_file = client.files.create(file=f, purpose="batch")
-    
+
     LOGGER.info(f"File uploaded with ID: {batch_input_file.id}")
-    
+
     batch = client.batches.create(
         input_file_id=batch_input_file.id,
         endpoint="/v1/chat/completions",
         completion_window="24h",
         metadata={"source": "ingredient_compiler", "file": filepath.name},
     )
-    
+
     LOGGER.info(f"Batch created with ID: {batch.id}")
     LOGGER.info(f"Status: {batch.status}")
-    
+
     batch_info = {
         "batch_id": batch.id,
         "input_file_id": batch_input_file.id,
@@ -323,7 +386,7 @@ def submit_batch(filepath: str | Path) -> str:
     info_file = EXPORTS_DIR / f"{batch.id}_info.json"
     with open(info_file, "w") as f:
         json.dump(batch_info, f, indent=2)
-    
+
     return batch.id
 
 
@@ -331,10 +394,10 @@ def check_batch_status(batch_id: str) -> dict[str, Any]:
     """Check the status of a batch job."""
     if not openai.api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
-    
+
     client = openai.OpenAI(api_key=openai.api_key)
     batch = client.batches.retrieve(batch_id)
-    
+
     status_info = {
         "batch_id": batch.id,
         "status": batch.status,
@@ -349,13 +412,13 @@ def check_batch_status(batch_id: str) -> dict[str, Any]:
         "output_file_id": batch.output_file_id,
         "error_file_id": batch.error_file_id,
     }
-    
+
     LOGGER.info(f"Batch {batch_id}: {batch.status}")
     if batch.request_counts:
         LOGGER.info(f"  Completed: {batch.request_counts.completed}/{batch.request_counts.total}")
         if batch.request_counts.failed > 0:
             LOGGER.warning(f"  Failed: {batch.request_counts.failed}")
-    
+
     return status_info
 
 
@@ -363,24 +426,24 @@ def download_batch_results(batch_id: str) -> Path | None:
     """Download the results of a completed batch."""
     if not openai.api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
-    
+
     client = openai.OpenAI(api_key=openai.api_key)
     batch = client.batches.retrieve(batch_id)
-    
+
     if batch.status != "completed":
         LOGGER.warning(f"Batch {batch_id} is not completed yet (status: {batch.status})")
         return None
-    
+
     if not batch.output_file_id:
         LOGGER.error(f"Batch {batch_id} has no output file")
         return None
-    
+
     content = client.files.content(batch.output_file_id)
     output_path = EXPORTS_DIR / f"{batch_id}_results.jsonl"
-    
+
     with open(output_path, "wb") as f:
         f.write(content.read())
-    
+
     LOGGER.info(f"Downloaded results to: {output_path}")
     return output_path
 
@@ -390,53 +453,53 @@ def import_stage1_results(results_path: str | Path) -> dict[str, int]:
     results_path = Path(results_path)
     if not results_path.exists():
         raise FileNotFoundError(f"Results file not found: {results_path}")
-    
+
     stats = {"success": 0, "failed": 0, "skipped": 0}
-    
+
     with open(results_path, "r", encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
-            
+
             try:
                 result = json.loads(line)
                 custom_id = result.get("custom_id", "")
-                
+
                 if not custom_id.startswith("stage1_"):
                     stats["skipped"] += 1
                     continue
-                
+
                 cluster_id = custom_id.replace("stage1_", "")
-                
+
                 response = result.get("response", {})
                 if response.get("status_code") != 200:
                     LOGGER.error(f"Request failed for {cluster_id}: {response}")
                     stats["failed"] += 1
                     continue
-                
+
                 body = response.get("body", {})
                 choices = body.get("choices", [])
                 if not choices:
                     LOGGER.error(f"No choices in response for {cluster_id}")
                     stats["failed"] += 1
                     continue
-                
+
                 content = choices[0].get("message", {}).get("content", "")
                 if not content:
                     LOGGER.error(f"Empty content for {cluster_id}")
                     stats["failed"] += 1
                     continue
-                
+
                 payload = json.loads(content)
-                
+
                 _apply_stage1_result(cluster_id, payload)
                 stats["success"] += 1
                 LOGGER.info(f"Imported Stage 1 result for {cluster_id}")
-                
+
             except Exception as e:
                 LOGGER.exception(f"Error processing result: {e}")
                 stats["failed"] += 1
-    
+
     LOGGER.info(f"Stage 1 import complete: {stats}")
     return stats
 
@@ -444,52 +507,57 @@ def import_stage1_results(results_path: str | Path) -> dict[str, int]:
 def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
     """Apply a Stage 1 AI result to the database (matches compiler.py behavior)."""
     from datetime import timezone
+    from sqlalchemy import func
     from .compiler import _mirror_cluster_into_compiled
-    
+
     _mirror_cluster_into_compiled(cluster_id)
-    
-    term = payload.get("term") or ""
-    common_name = payload.get("common_name") or ""
+
+    term = _clean(payload.get("term")) or ""
+    common_name = _clean(payload.get("common_name")) or ""
     priority = payload.get("maker_priority")
     core = payload.get("ingredient_core", {})
     dq = payload.get("data_quality", {})
-    
+
     if priority is not None:
         priority = max(1, min(100, int(priority)))
-    
+
     with database_manager.get_session() as session:
         rec = session.query(database_manager.CompiledClusterRecord).filter_by(cluster_id=cluster_id).first()
         if not rec:
             rec = database_manager.CompiledClusterRecord(cluster_id=cluster_id)
             session.add(rec)
-        
-        rec.compiled_term = term
+
+        now = datetime.now(timezone.utc)
+        final_term = term or _clean(getattr(rec, "raw_canonical_term", None)) or cluster_id
+        rec.compiled_term = final_term
         rec.term_status = "done"
-        rec.priority = priority
-        
-        rec.origin = _extract_stage1_field(core.get("origin"))
-        rec.ingredient_category = _extract_stage1_field(core.get("ingredient_category"))
+        rec.term_compiled_at = now
+        rec.term_error = None
+        rec.updated_at = now
+        if priority is not None:
+            rec.priority = priority
+
+        rec.origin = _extract_stage1_field(core.get("origin")) or rec.raw_origin
+        rec.ingredient_category = _extract_stage1_field(core.get("ingredient_category")) or rec.raw_ingredient_category
         rec.refinement_level = _extract_stage1_field(core.get("base_refinement")) or _extract_stage1_field(core.get("refinement_level"))
         rec.derived_from = _extract_stage1_field(core.get("derived_from"))
         rec.botanical_name = _extract_stage1_field(core.get("botanical_name"))
         rec.inci_name = _extract_stage1_field(core.get("inci_name"))
         rec.cas_number = _extract_stage1_field(core.get("cas_number"))
-        
-        # Store common_name and data quality in columns (no JSON blobs)
-        rec.common_name = common_name
-        
-        # Extract confidence from data_quality if present
-        if isinstance(dq, dict):
-            confidence = dq.get("confidence")
-            if confidence is not None:
-                try:
-                    rec.confidence_score = int(confidence)
-                except (TypeError, ValueError):
-                    pass
-            caveats = dq.get("caveats", [])
-            if caveats:
-                rec.data_quality_notes = "; ".join(str(c) for c in caveats) if isinstance(caveats, list) else str(caveats)
-        
+
+        existing_payload = _safe_json_dict(rec.payload_json)
+        existing_payload["stage1"] = {
+            "term": final_term,
+            "common_name": common_name or final_term,
+            "ingredient_core": core,
+            "data_quality": dq,
+        }
+        rec.payload_json = json.dumps(existing_payload, ensure_ascii=False, sort_keys=True)
+
+        if rec.compilation_rank is None:
+            max_rank = session.query(func.max(database_manager.CompiledClusterRecord.compilation_rank)).scalar() or 0
+            rec.compilation_rank = int(max_rank) + 1
+
         session.commit()
 
 
@@ -498,148 +566,120 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
     results_path = Path(results_path)
     if not results_path.exists():
         raise FileNotFoundError(f"Results file not found: {results_path}")
-    
+
     stats = {"success": 0, "failed": 0, "skipped": 0}
-    
+
     with open(results_path, "r", encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
-            
+
             try:
                 result = json.loads(line)
                 custom_id = result.get("custom_id", "")
-                
-                if not custom_id.startswith("stage2_"):
+
+                cluster_id = _parse_stage2_custom_id(custom_id)
+                if not cluster_id:
                     stats["skipped"] += 1
                     continue
-                
-                cluster_id = custom_id.replace("stage2_", "")
-                
+
                 response = result.get("response", {})
                 if response.get("status_code") != 200:
                     LOGGER.error(f"Request failed for {cluster_id}: {response}")
                     stats["failed"] += 1
                     continue
-                
+
                 body = response.get("body", {})
                 choices = body.get("choices", [])
                 if not choices:
                     LOGGER.error(f"No choices in response for {cluster_id}")
                     stats["failed"] += 1
                     continue
-                
+
                 content = choices[0].get("message", {}).get("content", "")
                 if not content:
                     LOGGER.error(f"Empty content for {cluster_id}")
                     stats["failed"] += 1
                     continue
-                
+
                 payload = json.loads(content)
-                
+
                 _apply_stage2_result(cluster_id, payload)
                 stats["success"] += 1
                 LOGGER.info(f"Imported Stage 2 result for {cluster_id}")
-                
+
             except Exception as e:
                 LOGGER.exception(f"Error processing result: {e}")
                 stats["failed"] += 1
-    
+
     LOGGER.info(f"Stage 2 import complete: {stats}")
     return stats
 
 
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
-    """Apply a Stage 2 AI result to the database.
-    
-    Uses the taxonomy from the batch payload directly (no additional API calls).
-    The batch export now includes taxonomy in the prompt, so it comes back
-    with items in one request.
-    """
+    """Apply a Stage 2 AI result to the database (matches compiler.py behavior)."""
     from datetime import timezone
-    
+
     items = payload.get("items", [])
     if not isinstance(items, list):
         items = []
-    
+
     items = [_ensure_item_fields(it) for it in items if isinstance(it, dict)]
-    
-    taxonomy = payload.get("taxonomy", {})
-    if not isinstance(taxonomy, dict):
-        taxonomy = {}
-    
+
     with database_manager.get_session() as session:
         existing_items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cluster_id).all()
         now = datetime.now(timezone.utc)
-        
-        items_updated = 0
+        item_lookup = {
+            (_clean(item.derived_variation).lower(), _clean(item.derived_physical_form).lower()): item
+            for item in existing_items
+        }
+
         for ai_item in items:
             variation = ai_item.get("variation", {})
             if isinstance(variation, dict):
                 variation = variation.get("value", "")
-            variation = variation or ""
-            
             physical_form = ai_item.get("physical_form", {})
             if isinstance(physical_form, dict):
                 physical_form = physical_form.get("value", "")
-            physical_form = physical_form or ""
-            
-            matched_item = None
-            for item in existing_items:
-                if (item.derived_variation or "") == variation and (item.derived_physical_form or "") == physical_form:
-                    matched_item = item
-                    break
-            
+            key = (_clean(variation).lower(), _clean(physical_form).lower())
+            matched_item = item_lookup.get(key)
             if matched_item:
                 matched_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
                 matched_item.item_status = "done"
                 matched_item.item_compiled_at = now
                 matched_item.item_error = None
                 matched_item.updated_at = now
-                
-                matched_item.master_category = ai_item.get("master_category", "")
-                matched_item.description = ai_item.get("description", "")
-                matched_item.color = ai_item.get("color", "")
-                matched_item.odor_profile = ai_item.get("odor_profile", "")
-                matched_item.flavor_profile = ai_item.get("flavor_profile", "")
-                
-                processing_method = ai_item.get("processing_method", {})
-                if isinstance(processing_method, dict):
-                    matched_item.processing_method = processing_method.get("value", "")
-                else:
-                    matched_item.processing_method = processing_method or ""
-                items_updated += 1
-        
+
         session.commit()
-    
-    from .compiler import _finalize_cluster_with_taxonomy
-    _finalize_cluster_with_taxonomy(cluster_id, taxonomy)
+
+    from .compiler import _finalize_cluster_if_complete
+    _finalize_cluster_if_complete(cluster_id)
 
 
 def main():
     parser = argparse.ArgumentParser(description="OpenAI Batch API service for ingredient compilation")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     export_parser = subparsers.add_parser("export", help="Export pending terms to JSONL")
     export_parser.add_argument("--stage", type=int, required=True, choices=[1, 2], help="Stage to export (1 or 2)")
     export_parser.add_argument("--limit", type=int, default=None, help="Max clusters to export")
-    
+
     submit_parser = subparsers.add_parser("submit", help="Submit batch to OpenAI")
     submit_parser.add_argument("--file", type=str, required=True, help="JSONL file to submit")
-    
+
     status_parser = subparsers.add_parser("status", help="Check batch status")
     status_parser.add_argument("--batch-id", type=str, required=True, help="Batch ID to check")
-    
+
     import_parser = subparsers.add_parser("import", help="Import completed batch results")
     import_parser.add_argument("--batch-id", type=str, help="Batch ID to download and import")
     import_parser.add_argument("--file", type=str, help="Local results file to import (if already downloaded)")
     import_parser.add_argument("--stage", type=int, required=True, choices=[1, 2], help="Stage of the batch (1 or 2)")
-    
+
     download_parser = subparsers.add_parser("download", help="Download batch results without importing")
     download_parser.add_argument("--batch-id", type=str, required=True, help="Batch ID to download")
-    
+
     args = parser.parse_args()
-    
+
     if args.command == "export":
         if args.stage == 1:
             result = export_stage1_batch(limit=args.limit)
@@ -649,23 +689,23 @@ def main():
             print(f"Exported to: {result}")
         else:
             print("Nothing to export")
-    
+
     elif args.command == "submit":
         batch_id = submit_batch(args.file)
         print(f"Batch submitted: {batch_id}")
         print(f"Check status with: python -m data_builder.ingredients.openai_batch_service status --batch-id {batch_id}")
-    
+
     elif args.command == "status":
         status = check_batch_status(args.batch_id)
         print(json.dumps(status, indent=2, default=str))
-    
+
     elif args.command == "download":
         result = download_batch_results(args.batch_id)
         if result:
             print(f"Downloaded to: {result}")
         else:
             print("Batch not ready or no output file")
-    
+
     elif args.command == "import":
         if args.file:
             results_path = Path(args.file)
@@ -677,7 +717,7 @@ def main():
         else:
             print("Either --batch-id or --file is required")
             sys.exit(1)
-        
+
         if args.stage == 1:
             stats = import_stage1_results(results_path)
         else:

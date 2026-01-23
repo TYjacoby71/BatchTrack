@@ -1,0 +1,108 @@
+<div class="card mt-2 mb-2" id="resultsCard" style="display:none;">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Results</strong>
+    <span class="badge bg-success d-none" id="resultsReadyBadge">Updated</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-primary"><i class="fas fa-flask"></i></div>
+            <div>
+              <div class="small text-muted">Lye with purity</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="lyeAdjustedOutput">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-info"><i class="fas fa-tint"></i></div>
+            <div>
+              <div class="small text-muted">Water</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="waterOutput">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-success"><i class="fas fa-box"></i></div>
+            <div>
+              <div class="small text-muted">Batch yield</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="batchYieldOutput">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-warning"><i class="fas fa-percent"></i></div>
+            <div>
+              <div class="small text-muted">Lye concentration</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="lyeConcentrationOutput">--</div>
+              <div class="small text-warning d-none" id="lyeConcentrationWarning">High concentration</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-secondary"><i class="fas fa-balance-scale"></i></div>
+            <div>
+              <div class="small text-muted">Water : Lye</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="waterRatioOutput">--</div>
+              <div class="small text-warning d-none" id="waterRatioWarning">Low water</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-dark"><i class="fas fa-layer-group"></i></div>
+            <div>
+              <div class="small text-muted">Total oils</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="totalOilsOutput">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-danger"><i class="fas fa-seedling"></i></div>
+            <div>
+              <div class="small text-muted">Superfat</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="superfatOutput">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alert alert-info mt-3 mb-2">
+      Always add lye to water (never water to lye) and wear protective gear.
+    </div>
+    <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
+    <div class="border rounded p-2 mt-3">
+      <div class="small text-muted mb-1">Visual guidance</div>
+      <ul class="small mb-0" id="soapVisualGuidanceList"></ul>
+    </div>
+    <div class="small text-muted mt-2">
+      Batch yield includes water and additives; expect weight loss during cure.
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
+        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#soapDownloadPreviewModal">Preview download</button>
+      </div>
+      <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
+    </div>
+  </div>
+</div>

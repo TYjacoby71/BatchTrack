@@ -1,13 +1,9 @@
 {% extends 'layout.html' %}
-{% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
+{% set navbar_center_title = 'Soap Formulator' %}
+{% block content %}
 <div class="py-1" id="soapToolPage">
-  <h2 class="mb-3 d-flex align-items-center gap-2">
-    Soap Maker Tools
-    {% if not tool_enabled %}
-    <span class="badge bg-secondary">Coming Soon</span>
-    {% endif %}
-  </h2>
+  <h1 class="visually-hidden">Soap Formulator</h1>
   {% if not tool_enabled %}
   <div class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="fas fa-hourglass-half me-2"></i>
@@ -37,9 +33,9 @@
       pointer-events: none;
     }
     #soapToolPage .soap-mobile-drawer .drawer-panel {
-      background: #fff;
-      border-top: 1px solid #dee2e6;
-      box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.12);
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      box-shadow: var(--shadow-3);
       max-height: 70vh;
       overflow-y: auto;
       transform: translateY(100%);
@@ -54,10 +50,10 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 1rem 0.5rem;
-      border-bottom: 1px solid #dee2e6;
+      border-bottom: 1px solid var(--color-border);
       position: sticky;
       top: 0;
-      background: #fff;
+      background: var(--color-surface);
       z-index: 1;
     }
     #soapToolPage .soap-mobile-drawer .drawer-title {
@@ -71,12 +67,12 @@
       top: auto !important;
     }
     #soapToolPage .soap-mobile-drawer .drawer-handle {
-      background: #fff;
-      border-top: 1px solid #dee2e6;
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
       padding: 0.5rem 0.75rem;
       display: flex;
       gap: 0.5rem;
-      box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-2);
       pointer-events: auto;
       position: relative;
       z-index: 2;
@@ -85,12 +81,112 @@
       margin: 0.75rem 1rem 1rem;
     }
     #soapToolPage .soap-card-placeholder { min-height: 1px; }
+    #soapToolPage .soap-unit-chip {
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: var(--color-subtle-bg-2);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+    #soapToolPage .soap-metric-tile {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-2);
+      background: var(--color-surface);
+      padding: var(--space-3);
+      box-shadow: var(--shadow-1);
+      height: 100%;
+    }
+    #soapToolPage .soap-metric-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-subtle-bg-2);
+    }
+    #soapToolPage .soap-quality-progress {
+      overflow: hidden;
+    }
+    #soapToolPage .soap-quality-range {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    #soapToolPage .soap-quality-range-start {
+      background: var(--color-warning-bg);
+    }
+    #soapToolPage .soap-quality-range-ideal {
+      background: var(--overlay-primary-weak);
+    }
+    #soapToolPage .soap-quality-range-end {
+      background: var(--color-warning-bg);
+    }
+    #soapToolPage .soap-fatty-bar {
+      display: flex;
+      gap: 2px;
+      height: 8px;
+    }
+    #soapToolPage .soap-fatty-segment {
+      flex: 1;
+      border-radius: var(--radius-1);
+    }
+    #soapToolPage .soap-stage-highlight {
+      outline: 2px solid var(--color-primary);
+      box-shadow: var(--shadow-2);
+      transition: box-shadow 0.2s ease, outline 0.2s ease;
+    }
+    #soapToolPage .soap-stage-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: var(--space-4);
+    }
+    #soapToolPage .soap-config-row .form-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.25rem;
+    }
+    #soapToolPage .soap-config-row .form-control,
+    #soapToolPage .soap-config-row .form-select,
+    #soapToolPage .soap-config-row .btn-group .btn {
+      min-height: 38px;
+    }
+    #soapToolPage .accordion-body .form-label {
+      margin-bottom: 0.25rem;
+    }
+    #soapToolPage .soap-stage-form-row .form-control,
+    #soapToolPage .soap-stage-form-row .form-select {
+      min-height: 38px;
+    }
+    #soapToolPage .soap-field .form-text {
+      display: none;
+    }
+    #soapToolPage .soap-field:focus-within .form-text {
+      display: block;
+    }
+    #soapToolPage .soap-number-pulse {
+      animation: soapPulse 0.5s ease;
+    }
+    #soapToolPage .soap-toast {
+      background: var(--color-dark);
+      color: var(--color-on-primary);
+      box-shadow: var(--shadow-3);
+    }
+    @keyframes soapPulse {
+      0% { transform: translateY(0); opacity: 0.7; }
+      50% { transform: translateY(-2px); opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
     #soapToolPage .soap-quality-row .progress { height: 10px; }
     #soapToolPage .quality-target-marker {
       position: absolute;
       top: -6px;
       bottom: -6px;
-      border-left: 2px dashed #198754;
+      border-left: 2px dashed var(--color-success);
       width: 0;
     }
     #soapToolPage .quality-target-label {
@@ -99,8 +195,8 @@
       left: 0;
       transform: translateX(-50%);
       font-size: 0.7rem;
-      color: #198754;
-      background: #fff;
+      color: var(--color-success);
+      background: var(--color-surface);
       padding: 0 2px;
     }
     #soapToolPage .soap-oil-profile td {
@@ -109,6 +205,64 @@
     #soapToolPage .soap-stage-note {
       font-size: 0.78rem;
     }
+    #soapToolPage .accordion-item {
+      border-radius: var(--radius-3);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button {
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button:focus {
+      box-shadow: none;
+    }
+    #soapToolPage .accordion-button:not(.collapsed) {
+      color: var(--color-text);
+      box-shadow: none;
+    }
+    #soapToolPage .soap-stage-pane {
+      display: flex;
+      flex-direction: column;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced {
+      height: var(--soap-stage-height);
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item {
+      margin: 0;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open {
+      flex: 1 1 auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open .accordion-body {
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .accordion-button {
+      padding: var(--space-3) var(--space-4);
+    }
+    #soapToolPage .soap-stage-pane .accordion {
+      margin-bottom: 0;
+    }
     #soapToolPage .oil-profile-float {
       position: absolute;
       right: 0;
@@ -116,14 +270,58 @@
       width: 260px;
       max-width: 45%;
       z-index: 1040;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-2);
     }
-    @media (max-width: 991px) {
+    #soapToolPage .oil-profile-open {
+      display: none;
+    }
+    @media (min-width: 1760px) {
+      #soapToolPage .oil-profile-float {
+        position: fixed;
+        top: 120px;
+        right: auto;
+        left: calc((100vw - 1140px) / 2 - 280px - 24px);
+        width: 260px;
+        max-width: 260px;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+    }
+    #soapToolPage #soapStageQualityRow {
+      display: flex !important;
+      flex-wrap: nowrap;
+      align-items: stretch;
+    }
+    #soapToolPage #soapStageQualityRow > .soap-stage-col {
+      flex: 0 0 50%;
+      max-width: 50%;
+      min-width: 0;
+    }
+    #soapToolPage #soapStageQualityRow > .soap-quality-col {
+      flex: 0 0 50%;
+      max-width: 50%;
+      min-width: 0;
+    }
+    @media (max-width: 767px) {
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
         max-width: 100%;
+        display: none !important;
       }
+      #soapToolPage .oil-profile-open {
+        display: inline-flex;
+      }
+      #soapToolPage #soapStageQualityRow {
+        flex-wrap: wrap;
+      }
+      #soapToolPage #soapStageQualityRow > .soap-stage-col,
+      #soapToolPage #soapStageQualityRow > .soap-quality-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+    @media (max-width: 767px) {
       #soapToolPage { padding-bottom: 4.75rem; }
       #soapToolPage #soapQualityCard {
         position: static !important;
@@ -135,689 +333,27 @@
     }
   </style>
 
-  <div class="card mb-3" id="soapConfigCard">
-    <div class="card-body">
-      <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label"><span class="badge bg-secondary me-1">1</span>Lye type</label>
-          <div class="btn-group w-100" role="group" aria-label="Lye type">
-            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeNaoh" value="NaOH" checked>
-            <label class="btn btn-outline-secondary" for="lyeTypeNaoh">NaOH</label>
-            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeKoh" value="KOH">
-            <label class="btn btn-outline-secondary" for="lyeTypeKoh">KOH</label>
-            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeKoh90" value="KOH90">
-            <label class="btn btn-outline-secondary" for="lyeTypeKoh90">90% KOH</label>
-          </div>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label"><span class="badge bg-secondary me-1">2</span>Units</label>
-          <div class="btn-group w-100" role="group" aria-label="Weight units">
-            <input type="radio" class="btn-check" name="weight_unit" id="unitGrams" value="g" checked>
-            <label class="btn btn-outline-secondary" for="unitGrams">g</label>
-            <input type="radio" class="btn-check" name="weight_unit" id="unitOunces" value="oz">
-            <label class="btn btn-outline-secondary" for="unitOunces">oz</label>
-            <input type="radio" class="btn-check" name="weight_unit" id="unitPounds" value="lb">
-            <label class="btn btn-outline-secondary" for="unitPounds">lb</label>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label"><span class="badge bg-secondary me-1">3</span>Water method</label>
-          <select class="form-select" id="waterMethod" name="water_method">
-            <option value="percent">Water as % of oils</option>
-            <option value="concentration">Lye concentration %</option>
-            <option value="ratio">Water : Lye ratio</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label"><span class="badge bg-secondary me-1">4</span>Superfat (%)</label>
-          <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
-          <div class="form-text">5% is a balanced default.</div>
-        </div>
+  {% include 'tools/soap/_config_card.html' %}
+
+  <div class="row mt-2 g-2" id="soapStageQualityRow">
+    <div class="col-lg-6 soap-stage-col">
+      <div class="soap-stage-pane" id="soapStagePane">
+        {% include 'tools/soap/_stages.html' %}
       </div>
     </div>
+
+    <div class="col-lg-6 soap-quality-col">
+      {% include 'tools/soap/_quality_card.html' %}
+    </div>
+
   </div>
 
-  <div class="row g-3">
-    <div class="col-lg-8">
-      <div class="accordion" id="soapStageAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage1Heading">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage1Collapse">
-              Stage 1 — Mold sizing & batch target
-            </button>
-          </h2>
-          <div id="soapStage1Collapse" class="accordion-collapse collapse show">
-            <div class="accordion-body">
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">Mold water weight (<span class="unit-label">g</span>)</label>
-                  <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
-                  <div class="form-text">Fill the mold with water and weigh it.</div>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Oils % of mold</label>
-                  <input type="number" class="form-control" id="moldOilPct" min="0" max="100" step="0.1" value="65" title="Normal range is 50-80%.">
-                  <div class="form-text soap-stage-note">Normal range is 50-80%.</div>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Total oils target (<span class="unit-label">g</span>)</label>
-                  <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" placeholder="Auto from mold or enter manually">
-                  <div class="form-text soap-stage-note" id="oilTargetHint">Auto-fills when mold sizing is set.</div>
-                </div>
-              </div>
-              <div class="row g-3 mt-2">
-                <div class="col-md-4">
-                  <label class="form-label">Mold shape</label>
-                  <select class="form-select" id="moldShape">
-                    <option value="loaf">Loaf / rectangular</option>
-                    <option value="cylinder">Cylinder / pipe</option>
-                  </select>
-                </div>
-                <div class="col-md-8">
-                  <div class="mt-2 d-none" id="moldCylinderOptions">
-                    <div class="alert alert-warning small mb-2" id="moldCylinderAlert">
-                      Cylinder mold selected. Use a correction if you want headspace for pouring or overflow control.
-                    </div>
-                    <div class="row g-3">
-                      <div class="col-md-6">
-                        <div class="form-check">
-                          <input class="form-check-input" type="checkbox" id="moldCylinderCorrection">
-                          <label class="form-check-label" for="moldCylinderCorrection">Apply cylinder correction</label>
-                        </div>
-                        <div class="form-text soap-stage-note">Use this when you want to leave headspace or avoid spill risk.</div>
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label">Cylinder fill factor</label>
-                        <input type="number" class="form-control" id="moldCylinderFactor" min="0.5" max="1" step="0.05" value="0.85">
-                        <div class="form-text soap-stage-note">0.85 means fill to 85% of measured capacity.</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="small text-muted mt-2" id="moldSuggestionNote">Target oils are capped to the mold size above.</div>
-            </div>
-          </div>
-        </div>
+  {% include 'tools/soap/_results_card.html' %}
 
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage2Heading">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage2Collapse">
-              Stage 2 — Oils, fats & waxes
-            </button>
-          </h2>
-          <div id="soapStage2Collapse" class="accordion-collapse collapse show">
-            <div class="accordion-body">
-              <div class="position-relative">
-                <div class="row g-3">
-                  <div class="col-12">
-                    <div id="oilRows">
-                    <div class="row g-2 align-items-end oil-row mb-2">
-                      <div class="col-md-6">
-                        <label class="form-label">Oil, fat, or wax</label>
-                        <div class="position-relative">
-                          <input type="text" class="form-control oil-typeahead" placeholder="Search oils, butters, waxes...">
-                          <input type="hidden" class="oil-sap-koh">
-                          <input type="hidden" class="oil-iodine">
-                          <input type="hidden" class="oil-fatty">
-                          <input type="hidden" class="oil-gi-id">
-                          <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
-                        </div>
-                        <div class="form-text small text-muted">Filtered to oils, butters, and waxes.</div>
-                      </div>
-                      <div class="col-md-3">
-                        <label class="form-label">Weight (<span class="unit-label">g</span>)</label>
-                        <input type="number" class="form-control oil-grams" min="0" step="0.1">
-                      </div>
-                      <div class="col-md-2">
-                        <label class="form-label">%</label>
-                        <input type="number" class="form-control oil-percent" min="0" step="0.1">
-                      </div>
-                      <div class="col-md-1 d-grid">
-                        <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
-                    <button class="btn btn-sm btn-outline-primary" id="addOil" type="button">Add Oil</button>
-                    <button class="btn btn-sm btn-outline-secondary" id="normalizeOils" type="button">Normalize to 100%</button>
-                    <div class="small text-muted">Total %: <span id="oilPercentTotal">0</span>%</div>
-                    <div class="small text-muted">Current oils: <span id="oilTotalComputed">--</span></div>
-                  </div>
-                  <div class="alert alert-warning small mt-2 d-none" id="oilLimitWarning"></div>
-                  <div class="alert alert-light border small mt-3 d-none" id="oilBlendTips"></div>
-                  <div class="small text-muted mt-2">Select or hover an oil to preview its profile.</div>
-                </div>
-              </div>
-              <div class="card oil-profile-float d-none" id="oilProfileFloat">
-                <div class="card-body p-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                      <strong class="small">Selected oil profile</strong>
-                      <span class="small text-muted" id="selectedOilName">Pick an oil to preview</span>
-                    </div>
-                    <div class="small text-muted">SAP (KOH): <span id="selectedOilSap">--</span> · Iodine: <span id="selectedOilIodine">--</span></div>
-                    <div class="mt-2">
-                      <div class="small text-muted">Qualities</div>
-                      <div class="d-flex justify-content-between"><span>Hardness</span><span id="selectedOilHardness">--</span></div>
-                      <div class="d-flex justify-content-between"><span>Cleansing</span><span id="selectedOilCleansing">--</span></div>
-                      <div class="d-flex justify-content-between"><span>Conditioning</span><span id="selectedOilConditioning">--</span></div>
-                      <div class="d-flex justify-content-between"><span>Bubbly</span><span id="selectedOilBubbly">--</span></div>
-                      <div class="d-flex justify-content-between"><span>Creamy</span><span id="selectedOilCreamy">--</span></div>
-                    </div>
-                    <div class="mt-2">
-                      <div class="small text-muted">Fatty acids</div>
-                      <div class="table-responsive">
-                        <table class="table table-sm soap-oil-profile mb-0">
-                          <tbody>
-                            <tr><td>Lauric</td><td class="text-end" id="selectedOilLauric">--</td></tr>
-                            <tr><td>Myristic</td><td class="text-end" id="selectedOilMyristic">--</td></tr>
-                            <tr><td>Palmitic</td><td class="text-end" id="selectedOilPalmitic">--</td></tr>
-                            <tr><td>Stearic</td><td class="text-end" id="selectedOilStearic">--</td></tr>
-                            <tr><td>Ricinoleic</td><td class="text-end" id="selectedOilRicinoleic">--</td></tr>
-                            <tr><td>Oleic</td><td class="text-end" id="selectedOilOleic">--</td></tr>
-                            <tr><td>Linoleic</td><td class="text-end" id="selectedOilLinoleic">--</td></tr>
-                            <tr><td>Linolenic</td><td class="text-end" id="selectedOilLinolenic">--</td></tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  {% include 'tools/soap/_mobile_drawer.html' %}
 
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage3Heading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage3Collapse">
-              Stage 3 — Lye & water details
-            </button>
-          </h2>
-          <div id="soapStage3Collapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                  <label class="form-label">Lye purity (%)</label>
-                  <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
-                  <div class="form-text soap-stage-note" id="lyePurityHint">Most calculators assume 100%.</div>
-                </div>
-                <div class="col-md-4 water-input" data-method="percent">
-                  <label class="form-label">Water % of oils</label>
-                  <input type="number" class="form-control" id="waterPct" min="20" max="50" step="0.1" value="33">
-                </div>
-                <div class="col-md-4 water-input d-none" data-method="concentration">
-                  <label class="form-label">Lye concentration %</label>
-                  <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
-                </div>
-                <div class="col-md-4 water-input d-none" data-method="ratio">
-                  <label class="form-label">Water : Lye ratio</label>
-                  <input type="number" class="form-control" id="waterRatio" min="1" max="4" step="0.05" value="2">
-                </div>
-              </div>
-              <div class="form-text mt-2">
-                Water settings change batch yield and cure time. Auto-updates as you type.
-              </div>
-              <div class="mt-2">
-                <button type="button" class="btn btn-outline-primary btn-sm" id="calcLyeBtn">Recalculate (optional)</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage4Heading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage4Collapse">
-              Stage 4 — Additives & helpers
-            </button>
-          </h2>
-          <div id="soapStage4Collapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="row g-3">
-                <div class="col-md-3">
-                  <label class="form-label">Sodium lactate %</label>
-                  <input type="number" class="form-control" id="additiveLactatePct" min="0" max="5" step="0.1" value="1">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Sugar %</label>
-                  <input type="number" class="form-control" id="additiveSugarPct" min="0" max="5" step="0.1" value="1">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Salt %</label>
-                  <input type="number" class="form-control" id="additiveSaltPct" min="0" max="5" step="0.1" value="0.5">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Citric acid %</label>
-                  <input type="number" class="form-control" id="additiveCitricPct" min="0" max="5" step="0.1" value="0">
-                  <div class="form-text soap-stage-note">Adds extra lye when used.</div>
-                </div>
-              </div>
-              <div class="row g-3 mt-1">
-                <div class="col-md-6">
-                  <label class="form-label">Sodium lactate item</label>
-                  <div class="position-relative">
-                    <input type="text" class="form-control additive-typeahead" id="additiveLactateName" placeholder="Link sodium lactate (optional)">
-                    <input type="hidden" id="additiveLactateGi">
-                    <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Sugar item</label>
-                  <div class="position-relative">
-                    <input type="text" class="form-control additive-typeahead" id="additiveSugarName" placeholder="Link sugar (optional)">
-                    <input type="hidden" id="additiveSugarGi">
-                    <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Salt item</label>
-                  <div class="position-relative">
-                    <input type="text" class="form-control additive-typeahead" id="additiveSaltName" placeholder="Link salt (optional)">
-                    <input type="hidden" id="additiveSaltGi">
-                    <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Citric acid item</label>
-                  <div class="position-relative">
-                    <input type="text" class="form-control additive-typeahead" id="additiveCitricName" placeholder="Link citric acid (optional)">
-                    <input type="hidden" id="additiveCitricGi">
-                    <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="row g-3 mt-3">
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Sodium lactate</div>
-                    <div class="fw-semibold" id="additiveLactateOut">--</div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Sugar</div>
-                    <div class="fw-semibold" id="additiveSugarOut">--</div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Salt</div>
-                    <div class="fw-semibold" id="additiveSaltOut">--</div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Citric acid</div>
-                    <div class="fw-semibold" id="additiveCitricOut">--</div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Extra lye for citric</div>
-                    <div class="fw-semibold" id="additiveCitricLyeOut">--</div>
-                  </div>
-                </div>
-              </div>
-              <div class="small text-muted mt-2">All additive grams are based on total oil weight.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage5Heading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage5Collapse">
-              Stage 5 — Fragrance & essential oils
-            </button>
-          </h2>
-          <div id="soapStage5Collapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                  <label class="form-label">Fragrance/EO %</label>
-                  <input type="number" class="form-control" id="additiveFragrancePct" min="0" max="6" step="0.1" value="3">
-                  <div class="form-text soap-stage-note">Above 3% can accelerate trace.</div>
-                </div>
-                <div class="col-md-8">
-                  <label class="form-label">Fragrance/EO selection</label>
-                  <div class="position-relative">
-                    <input type="text" class="form-control additive-typeahead" id="additiveFragranceName" placeholder="Link fragrance or EO (optional)">
-                    <input type="hidden" id="additiveFragranceGi">
-                    <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="row g-3 mt-3">
-                <div class="col-md-4">
-                  <div class="border rounded p-2 h-100">
-                    <div class="small text-muted">Fragrance/EO</div>
-                    <div class="fw-semibold" id="additiveFragranceOut">--</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage6Heading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage6Collapse">
-              Stage 6 — Glossary & reference
-            </button>
-          </h2>
-          <div id="soapStage6Collapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="row g-3">
-                <div class="col-lg-6">
-                  <h6>Core terms</h6>
-                  <dl class="small">
-                    <dt>Saponification (SAP)</dt>
-                    <dd>Reaction where oils + lye turn into soap + glycerin.</dd>
-                    <dt>Superfat</dt>
-                    <dd>Extra oils left unsaponified for gentler bars.</dd>
-                    <dt>Lye concentration</dt>
-                    <dd>Percent lye in your solution (higher = faster trace).</dd>
-                    <dt>Trace</dt>
-                    <dd>When batter thickens enough to leave a trail on the surface.</dd>
-                    <dt>Cure</dt>
-                    <dd>Resting time for hardness and mildness (4-6 weeks).</dd>
-                  </dl>
-                </div>
-                <div class="col-lg-6">
-                  <h6>Ingredient categories</h6>
-                  <ul class="small">
-                    <li><strong>Hard oils/butters:</strong> Coconut, palm, cocoa butter, tallow, lard</li>
-                    <li><strong>Conditioning hard:</strong> Shea, mango, kokum, sal butter</li>
-                    <li><strong>Soft oils:</strong> Olive, avocado, sunflower, rice bran</li>
-                    <li><strong>Additives:</strong> Honey, milk, clays, charcoal, botanicals</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="soapStage7Heading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#soapStage7Collapse">
-              Stage 7 — Ingredients, consumables & containers
-            </button>
-          </h2>
-          <div id="soapStage7Collapse" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              <div class="mb-3">
-                <h6>Quick stubs</h6>
-                <div class="d-flex flex-wrap gap-2" id="ingredientStubButtons">
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Honey">Honey</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Goat Milk">Goat Milk</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Activated Charcoal">Activated Charcoal</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Kaolin Clay">Kaolin Clay</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Sodium Lactate">Sodium Lactate</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Fragrance Oil">Fragrance Oil</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="ingredient" data-stub-name="Essential Oil Blend">Essential Oil Blend</button>
-                </div>
-              </div>
-              <div class="mb-3">
-                <h6>Ingredients</h6>
-                <div id="tool-ingredients"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" type="button" id="addToolIngredient">Add Ingredient</button>
-              </div>
-              <div class="mb-3">
-                <h6>Consumables</h6>
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="consumable" data-stub-name="Nitrile Gloves">Nitrile Gloves</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="consumable" data-stub-name="Safety Goggles">Safety Goggles</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="consumable" data-stub-name="Freezer Paper">Freezer Paper</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="consumable" data-stub-name="Paper Towels">Paper Towels</button>
-                </div>
-                <div id="tool-consumables"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" type="button" id="addToolConsumable">Add Consumable</button>
-              </div>
-              <div class="mb-3">
-                <h6>Containers</h6>
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="container" data-stub-name="Loaf Mold">Loaf Mold</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="container" data-stub-name="Silicone Cavity Mold">Silicone Cavity Mold</button>
-                  <button class="btn btn-sm btn-outline-secondary stub-btn" type="button" data-stub-kind="container" data-stub-name="Wax Paper Lined Box">Wax Paper Lined Box</button>
-                </div>
-                <div id="tool-containers"></div>
-                <button class="btn btn-sm btn-outline-primary mt-2" type="button" id="addToolContainer">Add Container</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="card sticky-top" id="soapQualityCard" style="top: 1rem; z-index: 1000;">
-          <div class="card-header">
-            <div class="d-flex flex-column gap-2">
-              <div class="d-flex align-items-center justify-content-between">
-                <strong>Soap qualities & fatty acids</strong>
-              </div>
-              <div class="d-flex flex-wrap gap-2 align-items-end">
-                <div class="flex-grow-1">
-                  <label class="form-label mb-1 small">Quality preset</label>
-                  <select class="form-select form-select-sm" id="qualityPreset">
-                    <option value="none">No targets</option>
-                    <option value="balanced" selected>Balanced All-Purpose</option>
-                    <option value="bubbly">Bubbly Lather</option>
-                    <option value="creamy">Creamy Conditioning</option>
-                    <option value="hard">Hard / Durable</option>
-                    <option value="gentle">Gentle / Moisturizing</option>
-                    <option value="castile">Castile-Style</option>
-                    <option value="shampoo">Shampoo Bar</option>
-                    <option value="utility">Utility / Laundry</option>
-                    <option value="luxury">Luxury Butter-Rich</option>
-                    <option value="palmFree">Palm-Free Vegan</option>
-                  </select>
-                </div>
-                <button class="btn btn-sm btn-link text-decoration-none px-0" type="button" id="applyQualityTargets">Match preset</button>
-              </div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Hardness</div>
-                <div class="fw-semibold" id="qualityHardnessValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="qualityHardnessBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="qualityHardnessTarget"><span class="quality-target-label" id="qualityHardnessTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Cleansing</div>
-                <div class="fw-semibold" id="qualityCleansingValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="qualityCleansingBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="qualityCleansingTarget"><span class="quality-target-label" id="qualityCleansingTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Conditioning</div>
-                <div class="fw-semibold" id="qualityConditioningValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="qualityConditioningBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="qualityConditioningTarget"><span class="quality-target-label" id="qualityConditioningTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Bubbly</div>
-                <div class="fw-semibold" id="qualityBubblyValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="qualityBubblyBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="qualityBubblyTarget"><span class="quality-target-label" id="qualityBubblyTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Creamy</div>
-                <div class="fw-semibold" id="qualityCreamyValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="qualityCreamyBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="qualityCreamyTarget"><span class="quality-target-label" id="qualityCreamyTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">Iodine</div>
-                <div class="fw-semibold" id="iodineValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="iodineBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="iodineTarget"><span class="quality-target-label" id="iodineTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="soap-quality-row mb-2">
-              <div>
-                <div class="small text-muted">INS</div>
-                <div class="fw-semibold" id="insValue">--</div>
-              </div>
-              <div class="progress position-relative">
-                <div class="progress-bar" id="insBar" role="progressbar"></div>
-                <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>
-              </div>
-            </div>
-            <div class="small text-muted" id="fattyCoverageNote">Fatty acid coverage: --</div>
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div>
-                <div class="small text-muted">Saturated:Unsaturated</div>
-                <div class="fw-semibold" id="fattySatRatio">--</div>
-              </div>
-              <div>
-                <div class="small text-muted">Avg SAP (KOH)</div>
-                <div class="fw-semibold" id="sapAvgValue">--</div>
-              </div>
-            </div>
-            <div class="mt-3">
-              <div class="small text-muted mb-1">Fatty acid breakdown</div>
-              <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                  <tbody>
-                    <tr><td>Lauric</td><td class="text-end" id="fattyLauric">--</td></tr>
-                    <tr><td>Myristic</td><td class="text-end" id="fattyMyristic">--</td></tr>
-                    <tr><td>Palmitic</td><td class="text-end" id="fattyPalmitic">--</td></tr>
-                    <tr><td>Stearic</td><td class="text-end" id="fattyStearic">--</td></tr>
-                    <tr><td>Ricinoleic</td><td class="text-end" id="fattyRicinoleic">--</td></tr>
-                    <tr><td>Oleic</td><td class="text-end" id="fattyOleic">--</td></tr>
-                    <tr><td>Linoleic</td><td class="text-end" id="fattyLinoleic">--</td></tr>
-                    <tr><td>Linolenic</td><td class="text-end" id="fattyLinolenic">--</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card mb-4" id="resultsCard" style="display:none;">
-      <div class="card-header"><strong>Results</strong></div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Lye with purity</div>
-              <div class="fs-5" id="lyeAdjustedOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Water</div>
-              <div class="fs-5" id="waterOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Batch yield</div>
-              <div class="fs-5" id="batchYieldOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Lye concentration</div>
-              <div class="fs-5" id="lyeConcentrationOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Water : Lye</div>
-              <div class="fs-5" id="waterRatioOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Total oils</div>
-              <div class="fs-5" id="totalOilsOutput">--</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Superfat</div>
-              <div class="fs-5" id="superfatOutput">--</div>
-            </div>
-          </div>
-        </div>
-        <div class="alert alert-info mt-3 mb-2">
-          Always add lye to water (never water to lye) and wear protective gear.
-        </div>
-        <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
-        <div class="border rounded p-2 mt-3">
-          <div class="small text-muted mb-1">Visual guidance</div>
-          <ul class="small mb-0" id="soapVisualGuidanceList"></ul>
-        </div>
-        <div class="small text-muted mt-2">
-          Batch yield includes water and additives; expect weight loss during cure.
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-3 align-items-center">
-          <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
-          <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
-        </div>
-      </div>
-    </div>
-
-  <div class="soap-mobile-drawer" id="soapMobileDrawer" aria-live="polite">
-    <div class="drawer-panel" id="soapMobileDrawerPanel">
-      <div class="drawer-header">
-        <div class="drawer-title" id="soapMobileDrawerTitle">Display</div>
-        <button class="btn btn-sm btn-outline-secondary" type="button" id="soapDrawerClose">Close</button>
-      </div>
-      <div class="drawer-content" id="soapMobileDrawerContent"></div>
-      <div class="alert alert-light border small d-none" id="soapDrawerEmpty">
-        No results yet. Run a calculation to see outputs.
-      </div>
-    </div>
-    <div class="drawer-handle">
-      <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-drawer-target="quality">Display</button>
-      <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-drawer-target="results">Results</button>
-    </div>
-  </div>
-
-  <div class="modal fade" id="soapSignupModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Keep your recipes saved</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          You are almost at the free calculation limit. Create a free account to save recipes and keep calculating.
-        </div>
-        <div class="modal-footer">
-          <a class="btn btn-primary" href="{{ url_for('auth.quick_signup') }}">Create free account</a>
-          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Sign in</a>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% include 'tools/soap/_modals.html' %}
+  {% include 'tools/soap/_toasts.html' %}
 
 </div>
 
@@ -971,14 +507,14 @@
     },
   };
   const FATTY_BAR_COLORS = {
-    lauric: '#0d6efd',
-    myristic: '#6f42c1',
-    palmitic: '#ffc107',
-    stearic: '#adb5bd',
-    ricinoleic: '#20c997',
-    oleic: '#198754',
-    linoleic: '#fd7e14',
-    linolenic: '#dc3545',
+    lauric: 'var(--color-primary)',
+    myristic: 'var(--color-info)',
+    palmitic: 'var(--color-warning)',
+    stearic: 'var(--color-muted)',
+    ricinoleic: 'var(--color-info-hover)',
+    oleic: 'var(--color-success)',
+    linoleic: 'var(--color-primary-hover)',
+    linolenic: 'var(--color-danger)',
   };
   const FATTY_DISPLAY_KEYS = [
     'lauric',
@@ -998,7 +534,16 @@
     { match: /beeswax|candelilla|carnauba|wax/i, tip: 'Waxes harden fast and can seize; keep usage low and add hot.' },
     { match: /hemp|flax|linseed|evening primrose|borage|rosehip|black currant|chia|pomegranate/i, tip: 'High-PUFA oils shorten shelf life; keep low and add antioxidant.' },
   ];
-  const state = { lastCalc: null, lastOilEdit: null, selectedOilProfile: null, wasCapped: false, lastPreviewRow: null };
+  const state = {
+    lastCalc: null,
+    lastOilEdit: null,
+    selectedOilProfile: null,
+    wasCapped: false,
+    lastPreviewRow: null,
+    lastRemovedOil: null,
+    lastRemovedOilIndex: null,
+    lastSaveToastAt: 0,
+  };
   const alertStack = document.getElementById('soapAlertStack');
   const STATE_STORAGE_KEY = 'soap_tool_state_v2';
   const CALC_LIMIT = Number.isFinite(window.SOAP_CALC_LIMIT) ? window.SOAP_CALC_LIMIT : null;
@@ -1012,6 +557,342 @@
   const SUGAR_CATEGORY_SET = new Set(['Sugars & Syrups']);
   const SALT_CATEGORY_SET = new Set(['Salts & Minerals']);
   const CITRIC_CATEGORY_SET = new Set(['Preservatives & Additives', 'Salts & Minerals', 'Aqueous Solutions & Blends']);
+
+  const STAGE_CONFIGS = [
+    { id: 1, headingId: 'soapStage1Heading', collapseId: 'soapStage1Collapse', required: true },
+    { id: 2, headingId: 'soapStage2Heading', collapseId: 'soapStage2Collapse', required: true },
+    { id: 3, headingId: 'soapStage3Heading', collapseId: 'soapStage3Collapse', required: true },
+    { id: 4, headingId: 'soapStage4Heading', collapseId: 'soapStage4Collapse', required: false },
+    { id: 5, headingId: 'soapStage5Heading', collapseId: 'soapStage5Collapse', required: false },
+    { id: 6, headingId: 'soapStage6Heading', collapseId: 'soapStage6Collapse', required: false },
+    { id: 7, headingId: 'soapStage7Heading', collapseId: 'soapStage7Collapse', required: false },
+  ];
+
+  function formatTime(ts){
+    if (!ts) return 'Not saved yet';
+    const date = new Date(ts);
+    return `Saved ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  function pulseValue(el){
+    if (!el) return;
+    el.classList.remove('soap-number-pulse');
+    void el.offsetWidth;
+    el.classList.add('soap-number-pulse');
+  }
+
+  function getToastInstance(id){
+    const el = document.getElementById(id);
+    if (!el || !window.bootstrap?.Toast) return null;
+    return bootstrap.Toast.getOrCreateInstance(el);
+  }
+
+  function showAutosaveToast(){
+    const now = Date.now();
+    if (now - state.lastSaveToastAt < 3500) return;
+    state.lastSaveToastAt = now;
+    const toast = getToastInstance('soapAutosaveToast');
+    if (toast) toast.show();
+  }
+
+  function showUndoToast(message){
+    const toastEl = document.getElementById('soapUndoToast');
+    if (!toastEl) return;
+    const body = toastEl.querySelector('.toast-body');
+    if (body) body.textContent = message || 'Oil removed.';
+    const toast = getToastInstance('soapUndoToast');
+    if (toast) toast.show();
+  }
+
+
+  function updateResultsMeta(){
+    const badge = document.getElementById('resultsReadyBadge');
+    const updatedAt = document.getElementById('resultsUpdatedAt');
+    if (badge) badge.classList.remove('d-none');
+    if (updatedAt) {
+      updatedAt.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    }
+  }
+
+  function updateResultsWarnings(waterData){
+    const concentrationEl = document.getElementById('lyeConcentrationWarning');
+    const ratioEl = document.getElementById('waterRatioWarning');
+    if (concentrationEl) {
+      const concentration = waterData?.lyeConcentration || 0;
+      let message = '';
+      if (concentration > 40) message = 'High concentration';
+      if (concentration > 0 && concentration < 25) message = 'Low concentration';
+      concentrationEl.textContent = message;
+      concentrationEl.classList.toggle('d-none', !message);
+    }
+    if (ratioEl) {
+      const ratio = waterData?.waterRatio || 0;
+      let message = '';
+      if (ratio > 0 && ratio < 1.8) message = 'Low water';
+      if (ratio > 2.7) message = 'High water';
+      ratioEl.textContent = message;
+      ratioEl.classList.toggle('d-none', !message);
+    }
+  }
+
+  function applyHelperVisibility(){
+    document.querySelectorAll('#soapToolPage .form-text').forEach(text => {
+      const wrapper = text.closest('.col-md-2, .col-md-3, .col-md-4, .col-md-6, .col-md-8, .col-lg-6, .col-lg-4, .col-12');
+      if (wrapper) wrapper.classList.add('soap-field');
+    });
+  }
+
+  function validateNumericField(input){
+    if (!input || input.type !== 'number') return;
+    const raw = input.value;
+    if (raw === '') {
+      input.classList.remove('is-invalid');
+      return;
+    }
+    const value = parseFloat(raw);
+    const min = input.getAttribute('min');
+    const max = input.getAttribute('max');
+    const tooLow = min !== null && min !== '' && value < parseFloat(min);
+    const tooHigh = max !== null && max !== '' && value > parseFloat(max);
+    input.classList.toggle('is-invalid', !isFinite(value) || tooLow || tooHigh);
+  }
+
+
+  function flashStage(stageItem){
+    if (!stageItem) return;
+    stageItem.classList.add('soap-stage-highlight');
+    setTimeout(() => stageItem.classList.remove('soap-stage-highlight'), 900);
+  }
+
+  function injectStageActions(){
+    const items = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-item'));
+    items.forEach((item, index) => {
+      const body = item.querySelector('.accordion-body');
+      if (!body || body.querySelector('.soap-stage-actions')) return;
+      const actions = document.createElement('div');
+      actions.className = 'soap-stage-actions';
+      actions.innerHTML = `
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${index}">
+          <i class="fas fa-arrow-left me-1"></i>Back
+        </button>
+        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${index}">
+          Reset stage
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${index}">
+          Next<i class="fas fa-arrow-right ms-1"></i>
+        </button>
+      `;
+      body.appendChild(actions);
+    });
+  }
+
+  function openStageByIndex(index){
+    const stage = STAGE_CONFIGS[index];
+    if (!stage) return;
+    const target = document.getElementById(stage.collapseId);
+    if (!target) return;
+    const collapses = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-collapse'));
+    collapses.forEach(collapse => {
+      if (collapse === target) return;
+      if (window.bootstrap?.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).hide();
+      } else {
+        collapse.classList.remove('show');
+      }
+    });
+    if (window.bootstrap?.Collapse) {
+      bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
+    } else {
+      target.classList.add('show');
+    }
+    updateStageAccordionLayout();
+    scheduleStageHeightSync();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resetStage(stageId){
+    if (stageId === 1) {
+      document.getElementById('moldWaterWeight').value = '';
+      document.getElementById('moldOilPct').value = '65';
+      document.getElementById('oilTotalTarget').value = '';
+      document.getElementById('moldShape').value = 'loaf';
+      const correction = document.getElementById('moldCylinderCorrection');
+      if (correction) correction.checked = false;
+      document.getElementById('moldCylinderFactor').value = '0.85';
+      updateMoldSuggested();
+    }
+    if (stageId === 2) {
+      const oilRows = document.getElementById('oilRows');
+      if (oilRows) {
+        oilRows.innerHTML = '';
+        oilRows.appendChild(buildOilRow());
+      }
+      updateOilTotals();
+    }
+    if (stageId === 3) {
+      document.getElementById('lyePurity').value = '100';
+      document.getElementById('waterPct').value = '33';
+      document.getElementById('lyeConcentration').value = '33';
+      document.getElementById('waterRatio').value = '2';
+    }
+    if (stageId === 4) {
+      document.getElementById('additiveLactatePct').value = '1';
+      document.getElementById('additiveSugarPct').value = '1';
+      document.getElementById('additiveSaltPct').value = '0.5';
+      document.getElementById('additiveCitricPct').value = '0';
+      ['additiveLactateName', 'additiveSugarName', 'additiveSaltName', 'additiveCitricName']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['additiveLactateGi', 'additiveSugarGi', 'additiveSaltGi', 'additiveCitricGi']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      updateAdditivesOutput(getTotalOilsGrams());
+    }
+    if (stageId === 5) {
+      document.getElementById('additiveFragrancePct').value = '3';
+      const name = document.getElementById('additiveFragranceName');
+      if (name) name.value = '';
+      const gi = document.getElementById('additiveFragranceGi');
+      if (gi) gi.value = '';
+    }
+    if (stageId === 7) {
+      ['tool-ingredients', 'tool-consumables', 'tool-containers'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+    }
+    queueStateSave();
+    queueAutoCalc();
+    updateStageStatuses();
+  }
+
+  function getStageCompletion(stageId){
+    if (stageId === 1) {
+      const moldWeight = toNumber(document.getElementById('moldWaterWeight').value);
+      const oilTarget = toNumber(document.getElementById('oilTotalTarget').value);
+      const moldPct = toNumber(document.getElementById('moldOilPct').value);
+      const complete = (moldWeight > 0 || oilTarget > 0) && moldPct > 0;
+      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Complete' : 'Needs target' };
+    }
+    if (stageId === 2) {
+      const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
+      const hasOil = rows.some(row => {
+        const name = row.querySelector('.oil-typeahead')?.value?.trim();
+        const grams = toNumber(row.querySelector('.oil-grams')?.value);
+        const pct = toNumber(row.querySelector('.oil-percent')?.value);
+        return name && (grams > 0 || pct > 0);
+      });
+      return { state: hasOil ? 'complete' : 'incomplete', label: hasOil ? 'Oils added' : 'Add oils' };
+    }
+    if (stageId === 3) {
+      const purity = toNumber(document.getElementById('lyePurity').value);
+      const method = document.getElementById('waterMethod')?.value || 'percent';
+      const waterValue = method === 'percent'
+        ? toNumber(document.getElementById('waterPct').value)
+        : method === 'concentration'
+          ? toNumber(document.getElementById('lyeConcentration').value)
+          : toNumber(document.getElementById('waterRatio').value);
+      const complete = purity > 0 && waterValue > 0;
+      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set water' };
+    }
+    if (stageId === 4) {
+      const hasAdditive = ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
+        .some(id => toNumber(document.getElementById(id).value) > 0);
+      return { state: 'optional', label: hasAdditive ? 'Added' : 'Optional' };
+    }
+    if (stageId === 5) {
+      const pct = toNumber(document.getElementById('additiveFragrancePct').value);
+      const name = document.getElementById('additiveFragranceName')?.value?.trim();
+      const hasFragrance = pct > 0 || !!name;
+      return { state: 'optional', label: hasFragrance ? 'Added' : 'Optional' };
+    }
+    if (stageId === 6) {
+      return { state: 'info', label: 'Reference' };
+    }
+    if (stageId === 7) {
+      const hasLines = ['tool-ingredients', 'tool-consumables', 'tool-containers'].some(id => {
+        return document.querySelectorAll(`#${id} .row`).length > 0;
+      });
+      return { state: 'optional', label: hasLines ? 'Added' : 'Optional' };
+    }
+    return { state: 'incomplete', label: 'Incomplete' };
+  }
+
+  function updateStageStatuses(){
+    STAGE_CONFIGS.forEach(stage => {
+      const heading = document.getElementById(stage.headingId);
+      const button = heading?.querySelector('.accordion-button');
+      if (!button) return;
+      let badge = button.querySelector('.soap-stage-status');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge bg-secondary ms-2 soap-stage-status';
+        button.appendChild(badge);
+      }
+      const status = getStageCompletion(stage.id);
+      badge.textContent = status.label;
+      badge.classList.remove('bg-secondary', 'bg-success', 'bg-warning', 'bg-info');
+      if (status.state === 'complete') badge.classList.add('bg-success');
+      if (status.state === 'incomplete') badge.classList.add('bg-warning');
+      if (status.state === 'optional') badge.classList.add('bg-secondary');
+      if (status.state === 'info') badge.classList.add('bg-info');
+    });
+    const requiredStages = STAGE_CONFIGS.filter(stage => stage.required);
+    const completeCount = requiredStages.filter(stage => getStageCompletion(stage.id).state === 'complete').length;
+    const progress = document.getElementById('soapStageProgress');
+    if (progress) progress.textContent = `${completeCount}/${requiredStages.length} complete`;
+  }
+
+  function initQualityTooltips(){
+    document.querySelectorAll('.soap-quality-help').forEach(btn => {
+      const key = btn.dataset.quality;
+      if (QUALITY_HINTS[key]) {
+        btn.setAttribute('title', QUALITY_HINTS[key]);
+      }
+    });
+    if (window.bootstrap?.Tooltip) {
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+      });
+    }
+  }
+
+  function updateDownloadPreview(){
+    const summary = {
+      oils: document.getElementById('downloadSummaryOils'),
+      lye: document.getElementById('downloadSummaryLye'),
+      water: document.getElementById('downloadSummaryWater'),
+      yield: document.getElementById('downloadSummaryYield'),
+      superfat: document.getElementById('downloadSummarySuperfat'),
+    };
+    const list = document.getElementById('soapDownloadInciList');
+    const empty = document.getElementById('soapDownloadPreviewEmpty');
+    if (!list || !empty) return;
+    const calc = state.lastCalc || calculateAll({ consumeQuota: false, showAlerts: false });
+    if (!calc) {
+      empty.classList.remove('d-none');
+      list.innerHTML = '';
+      Object.values(summary).forEach(el => { if (el) el.textContent = '--'; });
+      return;
+    }
+    empty.classList.add('d-none');
+    const payload = buildSoapRecipePayload(calc);
+    list.innerHTML = '';
+    if (!payload.ingredients.length) {
+      const li = document.createElement('li');
+      li.textContent = 'Add oils to build an INCI list.';
+      list.appendChild(li);
+    } else {
+      payload.ingredients.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.name || 'Ingredient';
+        list.appendChild(li);
+      });
+    }
+    if (summary.oils) summary.oils.textContent = formatWeight(calc.totalOils || 0);
+    if (summary.lye) summary.lye.textContent = formatWeight(calc.lyeAdjusted || 0);
+    if (summary.water) summary.water.textContent = formatWeight(calc.water || 0);
+    if (summary.yield) summary.yield.textContent = formatWeight(calc.batchYield || 0);
+    if (summary.superfat) summary.superfat.textContent = formatPercent(calc.superfat || 0);
+  }
 
   const ALERT_ICONS = {
     info: 'fa-info-circle',
@@ -1260,7 +1141,7 @@
         <div class="form-text small text-muted">Filtered to oils, butters, and waxes.</div>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Weight (<span class="unit-label">g</span>)</label>
+        <label class="form-label">Weight <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
         <input type="number" class="form-control oil-grams" min="0" step="0.1">
       </div>
       <div class="col-md-2">
@@ -1270,6 +1151,14 @@
       <div class="col-md-1 d-grid">
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
       </div>`;
+    const mobileProfile = document.createElement('div');
+    mobileProfile.className = 'col-12 d-lg-none mt-2';
+    mobileProfile.innerHTML = '<button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>';
+    row.appendChild(mobileProfile);
+    row.querySelectorAll('.form-text').forEach(text => {
+      const wrapper = text.closest('.col-md-6, .col-md-3, .col-md-2');
+      if (wrapper) wrapper.classList.add('soap-field');
+    });
     attachOilTypeahead(row);
     row.querySelectorAll('.unit-label').forEach(el => {
       el.textContent = currentUnit;
@@ -1475,34 +1364,47 @@
 
   function updateSelectedOilProfileDisplay({ name, sapKoh, iodine, fattyProfile } = {}){
     const floatCard = document.getElementById('oilProfileFloat');
-    const nameEl = document.getElementById('selectedOilName');
-    if (nameEl) nameEl.textContent = name || 'Pick an oil to preview';
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    const nameLabel = name || 'Pick an oil to preview';
+    setText('selectedOilName', nameLabel);
+    setText('selectedOilModalName', nameLabel);
     if (floatCard) {
       floatCard.classList.toggle('d-none', !name);
     }
-    const sapEl = document.getElementById('selectedOilSap');
-    const iodineEl = document.getElementById('selectedOilIodine');
-    if (sapEl) sapEl.textContent = sapKoh > 0 ? round(sapKoh, 1) : '--';
-    if (iodineEl) iodineEl.textContent = iodine > 0 ? round(iodine, 1) : '--';
+    const sapValue = sapKoh > 0 ? round(sapKoh, 1) : '--';
+    const iodineValue = iodine > 0 ? round(iodine, 1) : '--';
+    setText('selectedOilSap', sapValue);
+    setText('selectedOilModalSap', sapValue);
+    setText('selectedOilIodine', iodineValue);
+    setText('selectedOilModalIodine', iodineValue);
 
     const qualities = fattyProfile ? computeQualities(fattyProfile) : {};
     const setValue = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      const safe = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      setText(id, safe);
     };
     setValue('selectedOilHardness', qualities.hardness);
+    setValue('selectedOilModalHardness', qualities.hardness);
     setValue('selectedOilCleansing', qualities.cleansing);
+    setValue('selectedOilModalCleansing', qualities.cleansing);
     setValue('selectedOilConditioning', qualities.conditioning);
+    setValue('selectedOilModalConditioning', qualities.conditioning);
     setValue('selectedOilBubbly', qualities.bubbly);
+    setValue('selectedOilModalBubbly', qualities.bubbly);
     setValue('selectedOilCreamy', qualities.creamy);
+    setValue('selectedOilModalCreamy', qualities.creamy);
 
     const fattyKeys = ['lauric', 'myristic', 'palmitic', 'stearic', 'ricinoleic', 'oleic', 'linoleic', 'linolenic'];
     fattyKeys.forEach(key => {
-      const el = document.getElementById(`selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`);
-      if (!el) return;
+      const baseId = `selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      const modalId = `selectedOilModal${key.charAt(0).toUpperCase()}${key.slice(1)}`;
       const value = fattyProfile ? toNumber(fattyProfile[key]) : 0;
-      el.textContent = value > 0 ? round(value, 1) : '--';
+      const safe = value > 0 ? round(value, 1) : '--';
+      setText(baseId, safe);
+      setText(modalId, safe);
     });
   }
 
@@ -1554,6 +1456,40 @@
     state.selectedOilProfile = null;
     state.lastPreviewRow = null;
     updateSelectedOilProfileDisplay();
+  }
+
+  function syncStageHeight(){
+    const stagePane = document.getElementById('soapStagePane');
+    const qualityCard = document.getElementById('soapQualityCard');
+    if (!stagePane || !qualityCard) return;
+    const shouldSync = window.matchMedia('(min-width: 768px)').matches;
+    if (!shouldSync) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    const qualityHeight = qualityCard.offsetHeight;
+    if (!qualityHeight) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    stagePane.style.setProperty('--soap-stage-height', `${qualityHeight}px`);
+    stagePane.classList.add('is-height-synced');
+  }
+
+  const scheduleStageHeightSync = () => {
+    window.requestAnimationFrame(syncStageHeight);
+  };
+
+  function updateStageAccordionLayout(){
+    const stageAccordion = document.getElementById('soapStageAccordion');
+    if (!stageAccordion) return;
+    stageAccordion.querySelectorAll('.accordion-item').forEach(item => {
+      const collapse = item.querySelector('.accordion-collapse');
+      const isOpen = collapse ? collapse.classList.contains('show') : false;
+      item.classList.toggle('is-open', isOpen);
+    });
   }
 
   function updateOilTips(){
@@ -1805,7 +1741,7 @@
       if (!el) return;
       const width = total > 0 ? (totals[key] / total) * 100 : 0;
       el.style.width = `${width}%`;
-      el.style.backgroundColor = FATTY_BAR_COLORS[key] || '#6c757d';
+      el.style.backgroundColor = FATTY_BAR_COLORS[key] || 'var(--color-muted)';
       el.title = `${key.charAt(0).toUpperCase()}${key.slice(1)}: ${round(totals[key], 1)}%`;
     });
   }
@@ -2207,6 +2143,7 @@
       const hintEl = document.getElementById(`quality${name}Hint`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
+      pulseValue(label);
       setProgress(`quality${name}Bar`, hasCoverage ? value : 0, name);
       const rangeKey = name.toLowerCase();
       const range = QUALITY_RANGES[rangeKey];
@@ -2220,7 +2157,7 @@
       }
       if (hintEl && range) {
         if (!hasCoverage || !isFinite(value)) {
-          hintEl.textContent = 'Add oils to preview feel.';
+          hintEl.textContent = '';
         } else if (value < range[0]) {
           hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.low || '';
         } else if (value > range[1]) {
@@ -2237,13 +2174,28 @@
     setQuality('Bubbly', qualities.bubbly);
     setQuality('Creamy', qualities.creamy);
 
-    document.getElementById('fattyCoverageNote').textContent = coveragePct > 0
-      ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
-      : 'Fatty acid coverage: not enough data yet';
+    const coverageNote = document.getElementById('fattyCoverageNote');
+    if (coverageNote) {
+      coverageNote.textContent = coveragePct > 0
+        ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
+        : 'Fatty acid coverage: not enough data yet';
+    }
 
-    document.getElementById('iodineValue').textContent = iodine > 0 ? round(iodine, 1) : '--';
-    document.getElementById('insValue').textContent = ins > 0 ? round(ins, 1) : '--';
-    document.getElementById('sapAvgValue').textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
+    const iodineEl = document.getElementById('iodineValue');
+    const insEl = document.getElementById('insValue');
+    const sapEl = document.getElementById('sapAvgValue');
+    if (iodineEl) {
+      iodineEl.textContent = iodine > 0 ? round(iodine, 1) : '--';
+      pulseValue(iodineEl);
+    }
+    if (insEl) {
+      insEl.textContent = ins > 0 ? round(ins, 1) : '--';
+      pulseValue(insEl);
+    }
+    if (sapEl) {
+      sapEl.textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
+      pulseValue(sapEl);
+    }
     setScaledBar('iodineBar', iodine, IODINE_RANGE, IODINE_SCALE_MAX, 'Iodine');
     setScaledBar('insBar', ins, INS_RANGE, INS_SCALE_MAX, 'INS');
 
@@ -2252,6 +2204,7 @@
     const ratioEl = document.getElementById('fattySatRatio');
     if (ratioEl) {
       ratioEl.textContent = (sat + unsat) > 0 ? `${round(sat, 0)}:${round(unsat, 0)}` : '--';
+      pulseValue(ratioEl);
     }
 
     FATTY_DISPLAY_KEYS.forEach(key => {
@@ -2298,6 +2251,7 @@
       warningBox.classList.add('d-none');
       warningBox.textContent = '';
     }
+    scheduleStageHeightSync();
   }
 
   function updateVisualGuidance(data){
@@ -2640,6 +2594,11 @@
     document.getElementById('totalOilsOutput').textContent = formatWeight(totalOils);
     document.getElementById('superfatOutput').textContent = formatPercent(superfat);
 
+    ['lyeAdjustedOutput', 'waterOutput', 'batchYieldOutput', 'lyeConcentrationOutput', 'waterRatioOutput', 'totalOilsOutput', 'superfatOutput']
+      .forEach(id => pulseValue(document.getElementById(id)));
+    updateResultsWarnings(waterData);
+    updateResultsMeta();
+
     const iodineData = computeIodine(oils);
     const fatty = computeFattyAcids(oils);
     const qualities = computeQualities(fatty.percent);
@@ -2663,6 +2622,7 @@
       waterData,
       additives,
     });
+    updateStageStatuses();
 
     if (settings.showAlerts) {
       if (lyeTotals.usedFallback) {
@@ -2779,6 +2739,39 @@
     return oils;
   }
 
+  function serializeOilRow(row){
+    if (!row) return null;
+    return {
+      name: row.querySelector('.oil-typeahead')?.value || '',
+      grams: row.querySelector('.oil-grams')?.value || '',
+      percent: row.querySelector('.oil-percent')?.value || '',
+      sap: row.querySelector('.oil-sap-koh')?.value || '',
+      iodine: row.querySelector('.oil-iodine')?.value || '',
+      fattyRaw: row.querySelector('.oil-fatty')?.value || '',
+      gi: row.querySelector('.oil-gi-id')?.value || '',
+    };
+  }
+
+  function restoreOilRow(data, index){
+    const oilRows = document.getElementById('oilRows');
+    if (!oilRows || !data) return;
+    const row = buildOilRow();
+    row.querySelector('.oil-typeahead').value = data.name || '';
+    row.querySelector('.oil-grams').value = data.grams || '';
+    row.querySelector('.oil-percent').value = data.percent || '';
+    row.querySelector('.oil-sap-koh').value = data.sap || '';
+    row.querySelector('.oil-iodine').value = data.iodine || '';
+    row.querySelector('.oil-fatty').value = data.fattyRaw || '';
+    row.querySelector('.oil-gi-id').value = data.gi || '';
+    const children = Array.from(oilRows.children);
+    if (index >= children.length) {
+      oilRows.appendChild(row);
+    } else {
+      oilRows.insertBefore(row, children[index]);
+    }
+    return row;
+  }
+
   function saveState(){
     const storage = getStorage();
     if (!storage) return;
@@ -2833,6 +2826,9 @@
     };
     try {
       storage.setItem(STATE_STORAGE_KEY, JSON.stringify(payload));
+      const lastSaved = document.getElementById('soapLastSaved');
+      if (lastSaved) lastSaved.textContent = formatTime(payload.updated_at);
+      showAutosaveToast();
     } catch (_) {}
   }
 
@@ -2978,6 +2974,11 @@
     updateAdditivesOutput(getTotalOilsGrams());
     updateMoldSuggested();
     calculateAll({ consumeQuota: false, showAlerts: false });
+    if (data.updated_at) {
+      const lastSaved = document.getElementById('soapLastSaved');
+      if (lastSaved) lastSaved.textContent = formatTime(data.updated_at);
+    }
+    updateStageStatuses();
     showSoapAlert('info', 'Restored your last soap tool session from this device.', { dismissible: true, timeoutMs: 5000 });
   }
 
@@ -2997,11 +2998,13 @@
 
   document.getElementById('addOil').addEventListener('click', function(){
     document.getElementById('oilRows').appendChild(buildOilRow());
+    updateStageStatuses();
     queueStateSave();
   });
 
   document.getElementById('normalizeOils').addEventListener('click', function(){
     normalizeOils();
+    updateStageStatuses();
     queueStateSave();
     queueAutoCalc();
   });
@@ -3052,17 +3055,58 @@
   });
 
   document.getElementById('oilRows').addEventListener('click', function(e){
+    const profileButton = e.target.closest('.oil-profile-open');
+    if (profileButton) {
+      const row = profileButton.closest('.oil-row');
+      if (row) {
+        setSelectedOilProfileFromRow(row);
+        const modalEl = document.getElementById('oilProfileModal');
+        if (modalEl && window.bootstrap) {
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+          modal.show();
+        }
+      }
+      return;
+    }
     if (e.target.classList.contains('remove-oil')) {
       const row = e.target.closest('.oil-row');
+      if (row) {
+        state.lastRemovedOil = serializeOilRow(row);
+        state.lastRemovedOilIndex = Array.from(row.parentElement.children).indexOf(row);
+        showUndoToast('Oil removed.');
+      }
       if (row && state.lastOilEdit && state.lastOilEdit.row === row) {
         state.lastOilEdit = null;
         clearSelectedOilProfile();
       }
       if (row) row.remove();
       updateOilTotals();
+      updateStageStatuses();
       queueStateSave();
     }
   });
+
+  const stageAccordion = document.getElementById('soapStageAccordion');
+  if (stageAccordion) {
+    stageAccordion.addEventListener('click', event => {
+      const actionBtn = event.target.closest('[data-stage-action]');
+      if (!actionBtn) return;
+      const action = actionBtn.dataset.stageAction;
+      const index = Number(actionBtn.dataset.stageIndex);
+      if (Number.isNaN(index)) return;
+      if (action === 'prev') openStageByIndex(Math.max(0, index - 1));
+      if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
+      if (action === 'reset') resetStage(index + 1);
+    });
+    stageAccordion.addEventListener('shown.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
+    stageAccordion.addEventListener('hidden.bs.collapse', () => {
+      updateStageAccordionLayout();
+      scheduleStageHeightSync();
+    });
+  }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
     el.addEventListener('change', function(){
@@ -3207,11 +3251,16 @@
     soapRoot.addEventListener('input', function(e){
       if (e.target.matches('input, select, textarea')) {
         queueStateSave();
+        validateNumericField(e.target);
+        updateStageStatuses();
+        flashStage(e.target.closest('.accordion-item'));
       }
     });
     soapRoot.addEventListener('change', function(e){
       if (e.target.matches('input, select, textarea')) {
         queueStateSave();
+        validateNumericField(e.target);
+        updateStageStatuses();
       }
     });
   }
@@ -3253,6 +3302,19 @@
     }
   });
 
+  const undoRemoveBtn = document.getElementById('soapUndoRemove');
+  if (undoRemoveBtn) {
+    undoRemoveBtn.addEventListener('click', () => {
+      if (!state.lastRemovedOil) return;
+      restoreOilRow(state.lastRemovedOil, state.lastRemovedOilIndex || 0);
+      state.lastRemovedOil = null;
+      state.lastRemovedOilIndex = null;
+      updateOilTotals();
+      queueStateSave();
+      queueAutoCalc();
+    });
+  }
+
   const setupMobileDrawer = () => {
     const drawer = document.getElementById('soapMobileDrawer');
     const drawerContent = document.getElementById('soapMobileDrawerContent');
@@ -3268,7 +3330,7 @@
     const placeholders = new Map();
     let currentTarget = null;
 
-    const isSmallScreen = () => window.matchMedia('(max-width: 991px)').matches;
+    const isSmallScreen = () => window.matchMedia('(max-width: 767px)').matches;
     const cardForTarget = (target) => (target === 'quality' ? qualityCard : resultsCard);
     const homeForTarget = (target) => (target === 'quality' ? qualityHome : resultsHome);
     const titleForTarget = (target) => (target === 'quality' ? 'Display' : 'Results');
@@ -3354,6 +3416,8 @@
     resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
   };
   setupMobileDrawer();
+  window.addEventListener('resize', scheduleStageHeightSync);
+  window.addEventListener('load', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
   if (initialOilRow) {
@@ -3364,6 +3428,9 @@
   attachAdditiveTypeahead('additiveSugarName', 'additiveSugarGi', SUGAR_CATEGORY_SET);
   attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET);
   attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET);
+  applyHelperVisibility();
+  injectStageActions();
+  initQualityTooltips();
   applyLyeSelection();
   setWaterMethod();
   updateMoldShapeUI();
@@ -3371,7 +3438,14 @@
   updateUnitLabels();
   updateQualityTargets();
   updateAdditivesOutput(getTotalOilsGrams());
+  updateStageStatuses();
   restoreState();
+  updateStageAccordionLayout();
+  scheduleStageHeightSync();
+  const downloadModal = document.getElementById('soapDownloadPreviewModal');
+  if (downloadModal) {
+    downloadModal.addEventListener('show.bs.modal', updateDownloadPreview);
+  }
 })();
 </script>
 {% endblock %}
