@@ -4,7 +4,17 @@ from typing import Dict, List
 
 from app.extensions import db
 from app.models import GlobalItem
-from app.utils.settings import get_setting, update_settings_value
+from app.utils.settings import get_settings, save_settings
+
+
+def read_json_file(*_args, **_kwargs):
+    """Backward-compatible shim for tests; reads from app settings DB."""
+    return get_settings()
+
+
+def write_json_file(_path, data):
+    """Backward-compatible shim for tests; writes to app settings DB."""
+    save_settings(data)
 
 
 class ReferenceDataService:
@@ -60,14 +70,17 @@ class ReferenceDataService:
 
     @staticmethod
     def load_curated_container_lists() -> Dict[str, List[str]]:
-        curated_lists = get_setting("container_management.curated_lists", {})
+        settings = read_json_file("settings.json", default={}) or {}
+        curated_lists = settings.get("container_management", {}).get("curated_lists", {})
         if curated_lists and all(key in curated_lists for key in ReferenceDataService.DEFAULTS.keys()):
             return curated_lists
         return ReferenceDataService._build_default_lists()
 
     @staticmethod
     def save_curated_container_lists(curated_lists: Dict[str, List[str]]) -> None:
-        update_settings_value("container_management", "curated_lists", curated_lists)
+        settings = read_json_file("settings.json", default={}) or {}
+        settings.setdefault("container_management", {})["curated_lists"] = curated_lists
+        write_json_file("settings.json", settings)
 
     @staticmethod
     def _build_default_lists() -> Dict[str, List[str]]:

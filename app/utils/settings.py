@@ -152,4 +152,18 @@ def is_feature_enabled(feature_key: str) -> bool:
             return bool(flag.enabled)
     except Exception:
         pass
+    try:
+        from app.services.developer.dashboard_service import FEATURE_FLAG_SECTIONS
+
+        for section in FEATURE_FLAG_SECTIONS:
+            for flag in section.get("flags", []):
+                if flag.get("key") == feature_key:
+                    return bool(
+                        flag.get(
+                            "default_enabled",
+                            flag.get("always_on", False),
+                        )
+                    )
+    except Exception:
+        pass
     return False

@@ -98,7 +98,7 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "key": "FEATURE_GLOBAL_ITEM_LIBRARY",
                 "label": "Global Item Library Access",
                 "status": "wired",
-                "default_enabled": False,
+                "default_enabled": True,
                 "description": "Org access to the shared global inventory library.",
             },
         ],
