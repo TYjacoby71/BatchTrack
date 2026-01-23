@@ -128,7 +128,7 @@ CORE_SCHEMA_SPEC = r"""
 {
   "ingredient_core": {
     "origin": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived",
-    "ingredient_category": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars",
+    "ingredient_category": "Fruits & Berries|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars|Seaweeds|Algae|Fish|Shellfish|Crustaceans|Marine - Other|Fermentation - Cultures|Proteins|Synthetic - Other|Synthetic - Surfactants|Synthetic - Colorants",
     "refinement_level": "Raw/Unprocessed|Minimally Processed|Extracted/Distilled|Milled/Ground|Fermented|Synthesized",
     "derived_from": "string",
     "category": "ingredient category",
@@ -176,7 +176,7 @@ ITEMS_SCHEMA_SPEC = r"""
 {
   "items": [{
     "variation": {"value": "string", "status": "found|not_applicable"},
-    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters",
+    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters|Seaweeds|Algae|Fish Oils|Shellfish|Crustaceans|Marine Extracts|Proteins",
     "description": "1-2 sentence description",
     "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
     "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
@@ -386,6 +386,22 @@ REQUIRED FIELD HANDLING:
 - botanical_name: ALWAYS provide Latin binomial for Plant-Derived (e.g., "Prunus armeniaca"). Use status="not_applicable" for synthetics/minerals.
 - inci_name: ALWAYS provide. Use status="not_found" with reason only if genuinely unknown.
 - cas_number: Provide if known. Use status="not_found" with reason if unable to determine.
+
+ORIGIN OVERRIDE RULES (apply strictly):
+- PEG/PPG derivatives (e.g., "PEG-8", "PPG-15", "jojoba oil peg-8 esters") → origin MUST be "Synthetic" regardless of source plant.
+- Ethoxylated or propoxylated compounds → origin MUST be "Synthetic".
+
+CATEGORY RULES FOR MARINE-DERIVED:
+- Seaweeds/kelps/edible sea vegetables → category = "Seaweeds"
+- Microalgae/phytoplankton → category = "Algae"
+- Fish-derived → category = "Fish"
+- Mollusks (abalone, oyster, mussel) → category = "Shellfish"
+- Shrimp/krill/crab → category = "Crustaceans"
+- Other marine (coral, sponges, starfish) → category = "Marine - Other"
+
+CATEGORY RULES FOR FERMENTATION:
+- Bacterial/yeast cultures → category = "Fermentation - Cultures"
+- Hydrolyzed proteins → category = "Proteins"
 
 Cluster ID: "{cluster_id}"
 

@@ -60,10 +60,17 @@ INGREDIENT_CATEGORIES_PRIMARY: list[str] = [
     "Animal - Fibers",
     "Animal - Dairy",
     "Animal - Other",
-    # Marine families (minimal)
-    "Marine - Botanicals",
-    "Marine - Minerals",
+    # Marine families (biome-appropriate)
+    "Seaweeds",
+    "Algae",
+    "Fish",
+    "Shellfish",
+    "Crustaceans",
     "Marine - Other",
+    # Fermentation families (minimal)
+    "Fermentation - Cultures",
+    # Cross-domain
+    "Proteins",
 ]
 
 # Master Categories (UX dropdown multi-select; curated group).
@@ -101,6 +108,15 @@ MASTER_CATEGORIES: list[str] = [
     "Sugars",
     "Liquid Sweeteners",
     "Acids & PH Adjusters",
+    # Marine biome categories
+    "Seaweeds",
+    "Algae",
+    "Fish Oils",
+    "Shellfish",
+    "Crustaceans",
+    "Marine Extracts",
+    # Cross-domain
+    "Proteins",
 ]
 
 ORIGINS: list[str] = [
@@ -170,13 +186,19 @@ ORIGIN_TO_INGREDIENT_CATEGORIES: dict[str, list[str]] = {
         "Fermentation - Polysaccharides",
         "Fermentation - Actives",
         "Fermentation - Other",
+        "Fermentation - Cultures",
         "Acids",
+        "Proteins",
     ],
     "Marine-Derived": [
-        "Marine - Botanicals",
-        "Marine - Minerals",
+        "Seaweeds",
+        "Algae",
+        "Fish",
+        "Shellfish",
+        "Crustaceans",
         "Marine - Other",
         "Salts",
+        "Proteins",
     ],
 }
 
@@ -399,5 +421,14 @@ MASTER_CATEGORY_RULE_SEED: list[tuple[str, str, str]] = [
     ("Emulsifiers & Stabilizers", "function_tag", "Emulsifier"),
     ("Emulsifiers & Stabilizers", "function_tag", "Stabilizer"),
     ("Thickeners & Gelling Agents", "function_tag", "Thickener"),
+    # Marine ingredient categories -> master categories
+    ("Seaweeds", "ingredient_category", "Seaweeds"),
+    ("Algae", "ingredient_category", "Algae"),
+    ("Fish Oils", "ingredient_category", "Fish"),
+    ("Shellfish", "ingredient_category", "Shellfish"),
+    ("Crustaceans", "ingredient_category", "Crustaceans"),
+    ("Marine Extracts", "ingredient_category", "Marine - Other"),
+    # Cross-domain
+    ("Proteins", "ingredient_category", "Proteins"),
 ]
 
