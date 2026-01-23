@@ -131,7 +131,7 @@ HTML_TEMPLATE = """
 <body>
     <h1>Final DB Portal</h1>
     
-    <div class="stats">
+    <div class="stats" id="raw-stats">
         <div class="stats-grid">
             <div class="stat-box">
                 <h3 id="stat-source-items">{{ stats.source_items }}</h3>
@@ -172,6 +172,80 @@ HTML_TEMPLATE = """
             <div class="stat-box">
                 <h3 id="stat-composites">{{ stats.composites }}</h3>
                 <p>Composites</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats" id="compiled-stats" style="display:none;">
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Queue Overview</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box" style="border-left: 3px solid #7c3aed;">
+                    <h3 id="cstat-queued-items">0</h3>
+                    <p>Total Queued Items</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #2563eb;">
+                    <h3 id="cstat-clusters">0</h3>
+                    <p>Clusters</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #f59e0b;">
+                    <h3 id="cstat-composites">0</h3>
+                    <p>Composites</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Stage 1: Term Normalization (Clusters)</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box" style="background: #dcfce7;">
+                    <h3 id="cstat-stage1-done" style="color: #166534;">0</h3>
+                    <p>With Reconciled Term</p>
+                </div>
+                <div class="stat-box" style="background: #fef3c7;">
+                    <h3 id="cstat-stage1-pending" style="color: #92400e;">0</h3>
+                    <p>Without Reconciled Term</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-stage1-pct" style="color: #2563eb;">0%</h3>
+                    <p>Stage 1 Progress</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Stage 2: Item Compilation</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box" style="background: #dcfce7;">
+                    <h3 id="cstat-stage2-done" style="color: #166534;">0</h3>
+                    <p>Items Compiled</p>
+                </div>
+                <div class="stat-box" style="background: #fef3c7;">
+                    <h3 id="cstat-stage2-pending" style="color: #92400e;">0</h3>
+                    <p>Items Pending</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-stage2-pct" style="color: #2563eb;">0%</h3>
+                    <p>Stage 2 Progress</p>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Cluster Distribution</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box">
+                    <h3 id="cstat-zero-items" style="color: #dc2626;">0</h3>
+                    <p>Zero Items</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-single-item" style="color: #059669;">0</h3>
+                    <p>Single Item</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-multi-item" style="color: #7c3aed;">0</h3>
+                    <p>Multi-Item</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1384,16 +1458,39 @@ HTML_TEMPLATE = """
             fetch(`/api/stats?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(stats => {
-                    document.getElementById('stat-source-items').textContent = stats.source_items || 0;
-                    document.getElementById('stat-cosing-items').textContent = stats.cosing_items || 0;
-                    document.getElementById('stat-tgsc-items').textContent = stats.tgsc_items || 0;
-                    document.getElementById('stat-total-merged').textContent = stats.total_merged || 0;
-                    document.getElementById('stat-cosing-only').textContent = stats.cosing_only || 0;
-                    document.getElementById('stat-tgsc-only').textContent = stats.tgsc_only || 0;
-                    document.getElementById('stat-both-sources').textContent = stats.both_sources || 0;
-                    document.getElementById('stat-pubchem-enriched').textContent = stats.pubchem_enriched || 0;
-                    document.getElementById('stat-total-clusters').textContent = stats.total_clusters || 0;
-                    document.getElementById('stat-composites').textContent = stats.composites || 0;
+                    if (currentDataset === 'compiled') {
+                        document.getElementById('raw-stats').style.display = 'none';
+                        document.getElementById('compiled-stats').style.display = 'block';
+                        document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
+                        document.getElementById('cstat-clusters').textContent = (stats.clusters || 0).toLocaleString();
+                        document.getElementById('cstat-composites').textContent = (stats.composites || 0).toLocaleString();
+                        document.getElementById('cstat-stage1-done').textContent = (stats.stage1_done || 0).toLocaleString();
+                        document.getElementById('cstat-stage1-pending').textContent = (stats.stage1_pending || 0).toLocaleString();
+                        const stage1Total = (stats.stage1_done || 0) + (stats.stage1_pending || 0);
+                        const stage1Pct = stage1Total > 0 ? Math.round((stats.stage1_done || 0) / stage1Total * 100) : 0;
+                        document.getElementById('cstat-stage1-pct').textContent = stage1Pct + '%';
+                        document.getElementById('cstat-stage2-done').textContent = (stats.stage2_done || 0).toLocaleString();
+                        document.getElementById('cstat-stage2-pending').textContent = (stats.stage2_pending || 0).toLocaleString();
+                        const stage2Total = (stats.stage2_done || 0) + (stats.stage2_pending || 0);
+                        const stage2Pct = stage2Total > 0 ? Math.round((stats.stage2_done || 0) / stage2Total * 100) : 0;
+                        document.getElementById('cstat-stage2-pct').textContent = stage2Pct + '%';
+                        document.getElementById('cstat-zero-items').textContent = (stats.zero_items || 0).toLocaleString();
+                        document.getElementById('cstat-single-item').textContent = (stats.single_item || 0).toLocaleString();
+                        document.getElementById('cstat-multi-item').textContent = (stats.multi_item || 0).toLocaleString();
+                    } else {
+                        document.getElementById('raw-stats').style.display = 'block';
+                        document.getElementById('compiled-stats').style.display = 'none';
+                        document.getElementById('stat-source-items').textContent = (stats.source_items || 0).toLocaleString();
+                        document.getElementById('stat-cosing-items').textContent = (stats.cosing_items || 0).toLocaleString();
+                        document.getElementById('stat-tgsc-items').textContent = (stats.tgsc_items || 0).toLocaleString();
+                        document.getElementById('stat-total-merged').textContent = (stats.total_merged || 0).toLocaleString();
+                        document.getElementById('stat-cosing-only').textContent = (stats.cosing_only || 0).toLocaleString();
+                        document.getElementById('stat-tgsc-only').textContent = (stats.tgsc_only || 0).toLocaleString();
+                        document.getElementById('stat-both-sources').textContent = (stats.both_sources || 0).toLocaleString();
+                        document.getElementById('stat-pubchem-enriched').textContent = (stats.pubchem_enriched || 0).toLocaleString();
+                        document.getElementById('stat-total-clusters').textContent = (stats.total_clusters || 0).toLocaleString();
+                        document.getElementById('stat-composites').textContent = (stats.composites || 0).toLocaleString();
+                    }
                 });
         }
 
@@ -1487,16 +1584,54 @@ def api_stats():
     }
 
     if dataset == "compiled":
-        if _table_exists(conn, "compiled_clusters"):
-            cur.execute("SELECT COUNT(*) FROM compiled_clusters")
-            stats["total_clusters"] = cur.fetchone()[0]
+        compiled_stats = {
+            "queued_items": 0,
+            "clusters": 0,
+            "composites": 0,
+            "stage1_done": 0,
+            "stage1_pending": 0,
+            "stage2_done": 0,
+            "stage2_pending": 0,
+            "zero_items": 0,
+            "single_item": 0,
+            "multi_item": 0,
+        }
+        
         if _table_exists(conn, "compiled_cluster_items"):
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
-            stats["total_merged"] = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
-            stats["pubchem_enriched"] = cur.fetchone()[0]
+            compiled_stats["queued_items"] = cur.fetchone()[0]
+        
+        if _table_exists(conn, "source_definitions"):
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%'")
+            compiled_stats["clusters"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id LIKE 'composite:%'")
+            compiled_stats["composites"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE reconciled_term IS NOT NULL AND reconciled_term != ''")
+            compiled_stats["stage1_done"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE reconciled_term IS NULL OR reconciled_term = ''")
+            compiled_stats["stage1_pending"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 0")
+            compiled_stats["zero_items"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 1")
+            compiled_stats["single_item"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM source_definitions WHERE cluster_id NOT LIKE 'composite:%' AND item_count > 1")
+            compiled_stats["multi_item"] = cur.fetchone()[0]
+        
+        if _table_exists(conn, "compiled_cluster_items"):
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'compiled'")
+            compiled_stats["stage2_done"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'pending'")
+            compiled_stats["stage2_pending"] = cur.fetchone()[0]
+        
         conn.close()
-        return jsonify(stats)
+        return jsonify(compiled_stats)
 
     cur.execute("SELECT COUNT(*) FROM source_items")
     stats["source_items"] = cur.fetchone()[0]
