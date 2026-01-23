@@ -87,87 +87,91 @@ def _get_stage1_pending_clusters(limit: int | None = None) -> list[tuple[str, di
     return results
 
 
-def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, str, dict[str, Any], dict[str, Any], bool]]:
-    """Get Stage 2 pending clusters with their context.
+def _get_stage2_pending_clusters_and_mark(limit: int | None = None) -> list[tuple[str, str, dict[str, Any], dict[str, Any], bool]]:
+    """Get Stage 2 pending clusters and atomically mark their items as batch_pending.
     
     Returns list of (cluster_id, term, ingredient_core, base_context, has_seed_items)
     
-    Optimized to use raw SQL for speed.
+    Uses single transaction to query and mark items atomically.
     """
     database_manager.ensure_tables_exist()
     
     from sqlalchemy import text
     
-    # Use raw SQL for optimal performance
     limit_clause = f"LIMIT {int(limit)}" if limit else ""
-    sql = text(f"""
-        SELECT cc.cluster_id, cc.compiled_term, cc.origin, cc.ingredient_category,
-               cc.refinement_level, cc.derived_from, cc.botanical_name, cc.inci_name, 
-               cc.cas_number, cc.priority
-        FROM compiled_clusters cc
-        WHERE cc.term_status = 'done'
-        AND EXISTS (
-            SELECT 1 FROM compiled_cluster_items cci 
-            WHERE cci.cluster_id = cc.cluster_id 
+    
+    with database_manager.get_session() as session:
+        # Step 1: Find clusters with pending items, ordered by priority
+        cluster_sql = text(f"""
+            SELECT DISTINCT cc.cluster_id, cc.compiled_term, cc.origin, cc.ingredient_category,
+                   cc.refinement_level, cc.derived_from, cc.botanical_name, cc.inci_name, 
+                   cc.cas_number, COALESCE(cc.priority, {database_manager.DEFAULT_PRIORITY}) as priority
+            FROM compiled_clusters cc
+            INNER JOIN compiled_cluster_items cci ON cci.cluster_id = cc.cluster_id
+            WHERE cc.term_status = 'done'
             AND cci.item_status NOT IN ('done', 'batch_pending')
-        )
-        ORDER BY COALESCE(cc.priority, {database_manager.DEFAULT_PRIORITY}) DESC, cc.cluster_id
-        {limit_clause}
-    """)
-    
-    with database_manager.get_session() as session:
-        result = session.execute(sql)
-        rows = result.fetchall()
-    
-    if not rows:
-        return []
-    
-    # Collect cluster_ids for batch item fetch
-    cluster_ids = [str(row[0]) for row in rows]
-    
-    # Batch fetch all items for these clusters in ONE query
-    with database_manager.get_session() as session:
+            ORDER BY priority DESC, cc.cluster_id
+            {limit_clause}
+        """)
+        
+        cluster_rows = session.execute(cluster_sql).fetchall()
+        
+        if not cluster_rows:
+            return []
+        
+        cluster_ids = [str(row[0]) for row in cluster_rows]
+        
+        # Step 2: Fetch pending items for these clusters
         all_items = (
             session.query(database_manager.CompiledClusterItemRecord)
             .filter(database_manager.CompiledClusterItemRecord.cluster_id.in_(cluster_ids))
             .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
             .all()
         )
-    
-    # Group items by cluster_id
-    items_by_cluster: dict[str, list] = {}
-    for item in all_items:
-        cid = str(item.cluster_id)
-        if cid not in items_by_cluster:
-            items_by_cluster[cid] = []
-        items_by_cluster[cid].append({
-            "variation": item.derived_variation or "",
-            "physical_form": item.derived_physical_form or "",
-        })
-    
-    # Build results
-    results = []
-    for row in rows:
-        cid = str(row[0])
-        term = row[1] or ""
         
-        ingredient_core = {
-            "origin": row[2],
-            "ingredient_category": row[3],
-            "refinement_level": row[4],
-            "derived_from": row[5],
-            "botanical_name": row[6],
-            "inci_name": row[7],
-            "cas_number": row[8],
-        }
+        # Step 3: Mark items as batch_pending in same transaction
+        items_marked = 0
+        for item in all_items:
+            item.item_status = "batch_pending"
+            items_marked += 1
         
-        seed_items = items_by_cluster.get(cid, [])
-        base_context = {"seed_items": seed_items} if seed_items else {}
-        has_seed_items = bool(seed_items)
+        session.commit()
+        LOGGER.info(f"Marked {items_marked} items as batch_pending for {len(cluster_ids)} clusters")
         
-        results.append((cid, term, ingredient_core, base_context, has_seed_items))
-    
-    return results
+        # Step 4: Group items by cluster_id for return
+        items_by_cluster: dict[str, list] = {}
+        for item in all_items:
+            cid = str(item.cluster_id)
+            if cid not in items_by_cluster:
+                items_by_cluster[cid] = []
+            items_by_cluster[cid].append({
+                "variation": item.derived_variation or "",
+                "physical_form": item.derived_physical_form or "",
+            })
+        
+        # Build results
+        results = []
+        for row in cluster_rows:
+            cid = str(row[0])
+            term = row[1] or ""
+            
+            ingredient_core = {
+                "origin": row[2],
+                "ingredient_category": row[3],
+                "refinement_level": row[4],
+                "derived_from": row[5],
+                "botanical_name": row[6],
+                "inci_name": row[7],
+                "cas_number": row[8],
+            }
+            
+            seed_items = items_by_cluster.get(cid, [])
+            base_context = {"seed_items": seed_items} if seed_items else {}
+            has_seed_items = bool(seed_items)
+            
+            results.append((cid, term, ingredient_core, base_context, has_seed_items))
+        
+        return results
 
 
 def export_stage1_batch(limit: int | None = None) -> Path:
@@ -238,8 +242,12 @@ def _mark_clusters_batch_pending(cluster_ids: list[str], stage: int) -> None:
 
 
 def export_stage2_batch(limit: int | None = None) -> Path:
-    """Export Stage 2 pending clusters to JSONL for OpenAI Batch API."""
-    clusters = _get_stage2_pending_clusters(limit=limit)
+    """Export Stage 2 pending clusters to JSONL for OpenAI Batch API.
+    
+    Items are atomically marked as batch_pending before writing the file.
+    """
+    # This function atomically marks items as batch_pending before returning
+    clusters = _get_stage2_pending_clusters_and_mark(limit=limit)
     
     if not clusters:
         LOGGER.info("No Stage 2 pending clusters to export")
@@ -274,9 +282,6 @@ def export_stage2_batch(limit: int | None = None) -> Path:
     
     file_size_kb = filepath.stat().st_size / 1024
     LOGGER.info(f"Exported {len(clusters)} Stage 2 clusters to {filepath} ({file_size_kb:.1f} KB)")
-    
-    # Mark exported clusters as batch_pending so real-time compiler skips them
-    _mark_clusters_batch_pending([cid for cid, _, _, _, _ in clusters], stage=2)
     
     return filepath
 
