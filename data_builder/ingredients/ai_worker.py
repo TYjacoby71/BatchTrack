@@ -495,8 +495,13 @@ def complete_item_stubs(
     return all_items
 
 
-def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
-    meta = _render_metadata_blob(term)
+def _render_items_prompt(
+    term: str,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any],
+    metadata_blob: str | None = None,
+) -> str:
+    meta = metadata_blob if metadata_blob is not None else _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
@@ -539,9 +544,14 @@ Meta:{meta}
 SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
-def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
+def _render_items_completion_prompt(
+    term: str,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any],
+    metadata_blob: str | None = None,
+) -> str:
     """Stage 2B variant: complete existing ingestion-derived items (do not invent new ones)."""
-    meta = _render_metadata_blob(term)
+    meta = metadata_blob if metadata_blob is not None else _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
