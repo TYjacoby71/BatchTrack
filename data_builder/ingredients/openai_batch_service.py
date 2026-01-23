@@ -456,14 +456,19 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         rec.inci_name = _extract_stage1_field(core.get("inci_name"))
         rec.cas_number = _extract_stage1_field(core.get("cas_number"))
         
-        existing_payload = rec.compiled_payload if isinstance(rec.compiled_payload, dict) else {}
+        # Parse existing payload_json
+        try:
+            existing_payload = json.loads(rec.payload_json) if rec.payload_json else {}
+        except (json.JSONDecodeError, TypeError):
+            existing_payload = {}
+        
         existing_payload["stage1"] = {
             "term": term,
             "common_name": common_name,
             "ingredient_core": core,
             "data_quality": dq,
         }
-        rec.compiled_payload = existing_payload
+        rec.payload_json = json.dumps(existing_payload, ensure_ascii=False)
         
         session.commit()
 
