@@ -53,8 +53,14 @@ def _derive_master_categories_from_rules(
     for it in items:
         if not isinstance(it, dict):
             continue
-        form = (it.get("physical_form") or "").strip()
-        var = (it.get("variation") or "").strip()
+        raw_form = it.get("physical_form") or ""
+        if isinstance(raw_form, dict):
+            raw_form = raw_form.get("value", "") or ""
+        form = str(raw_form).strip()
+        raw_var = it.get("variation") or ""
+        if isinstance(raw_var, dict):
+            raw_var = raw_var.get("value", "") or ""
+        var = str(raw_var).strip()
 
         for mc in rules.get(("physical_form", form), set()):
             out.add(mc)
@@ -2171,11 +2177,17 @@ def upsert_compiled_ingredient(
             if not isinstance(raw_item, dict):
                 continue
 
-            variation = (raw_item.get("variation") or "").strip()
+            raw_variation = raw_item.get("variation") or ""
+            if isinstance(raw_variation, dict):
+                raw_variation = raw_variation.get("value", "") or ""
+            variation = str(raw_variation).strip()
             if not variation:
                 variation = _extract_parenthetical_variation(str(raw_item.get("item_name") or ""), cleaned)
 
-            physical_form = (raw_item.get("physical_form") or "").strip()
+            raw_physical_form = raw_item.get("physical_form") or ""
+            if isinstance(raw_physical_form, dict):
+                raw_physical_form = raw_physical_form.get("value", "") or ""
+            physical_form = str(raw_physical_form).strip()
             # If the model put a variation into physical_form, fix it here.
             if physical_form in variation_forms and not variation:
                 variation = physical_form
