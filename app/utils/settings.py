@@ -1,32 +1,26 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+import copy
 
-from .json_store import read_json_file, write_json_file
-
-DEFAULT_SETTINGS_FILE = "settings.json"
+DEFAULT_SETTINGS_KEY = "settings"
 
 
 class SettingsService:
-    """Simple JSON-backed settings manager for operational toggles."""
+    """DB-backed settings manager for operational toggles."""
 
-    def __init__(self, settings_file: str = DEFAULT_SETTINGS_FILE):
-        self.settings_file = settings_file
+    def __init__(self):
         self._settings: Dict[str, Any] = {}
         self.load_settings()
 
     def load_settings(self) -> Dict[str, Any]:
-        """Load settings from disk into memory."""
-        self._settings = read_json_file(self.settings_file, default={}) or {}
+        """Load settings from the database into memory."""
+        self._settings = get_settings()
         return self._settings
 
     def save_settings(self) -> bool:
-        """Persist the in-memory settings to disk."""
-        try:
-            write_json_file(self.settings_file, self._settings)
-            return True
-        except OSError:
-            return False
+        """Persist the in-memory settings to the database."""
+        return save_settings(self._settings)
 
     def get(self, key: str, default: Any = None) -> Any:
         """Return the value for *key* if present, else *default*."""
@@ -58,8 +52,8 @@ class SettingsService:
 SettingsManager = SettingsService
 
 
-def _read_settings(settings_file: str = DEFAULT_SETTINGS_FILE) -> Dict[str, Any]:
-    return read_json_file(settings_file, default={}) or {}
+def _read_settings() -> Dict[str, Any]:
+    return get_settings()
 
 
 def _resolve_nested(settings: Dict[str, Any], dotted_key: str, default: Any = None) -> Any:
@@ -68,28 +62,87 @@ def _resolve_nested(settings: Dict[str, Any], dotted_key: str, default: Any = No
     parts = dotted_key.split(".")
     value: Any = settings
     for part in parts:
-        if not isinstance(value, Dict) or part not in value:
+        if not isinstance(value, dict) or part not in value:
             return default
         value = value[part]
     return value
 
 
-def get_setting(key: str, default: Any = None, *, settings_file: str = DEFAULT_SETTINGS_FILE) -> Any:
+def get_setting(key: str, default: Any = None) -> Any:
     """
-    Retrieve a setting from the JSON store.
+    Retrieve a setting from the database store.
 
     Supports dotted paths (e.g., ``alerts.expiration_warning_days``) for nested structures.
     """
-    settings = _read_settings(settings_file)
+    settings = _read_settings()
     return _resolve_nested(settings, key, default)
 
 
-def get_settings(*, settings_file: str = DEFAULT_SETTINGS_FILE) -> Dict[str, Any]:
+def get_settings() -> Dict[str, Any]:
     """Return the full settings payload."""
-    return _read_settings(settings_file)
+    return copy.deepcopy(get_app_setting(DEFAULT_SETTINGS_KEY, default={}) or {})
 
 
-def is_feature_enabled(feature_key: str, *, settings_file: str = DEFAULT_SETTINGS_FILE) -> bool:
+def save_settings(settings: Dict[str, Any]) -> bool:
+    """Persist the full settings payload."""
+    return set_app_setting(DEFAULT_SETTINGS_KEY, settings)
+
+
+def update_settings_payload(updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge updates into the persisted settings payload."""
+    settings = get_settings()
+    settings.update(updates)
+    save_settings(settings)
+    return settings
+
+
+def update_settings_value(section: str, key: str, value: Any) -> Dict[str, Any]:
+    """Update a single setting within a named section."""
+    settings = get_settings()
+    section_payload = settings.get(section)
+    if not isinstance(section_payload, dict):
+        section_payload = {}
+    section_payload[key] = value
+    settings[section] = section_payload
+    save_settings(settings)
+    return settings
+
+
+def get_app_setting(key: str, default: Any = None) -> Any:
+    """Fetch a raw setting by key."""
+    from app.models.app_setting import AppSetting
+
+    try:
+        entry = AppSetting.query.filter_by(key=key).first()
+        if entry is not None and entry.value is not None:
+            return copy.deepcopy(entry.value)
+    except Exception:
+        pass
+    return copy.deepcopy(default)
+
+
+def set_app_setting(key: str, value: Any, *, description: str | None = None) -> bool:
+    """Persist a raw setting by key."""
+    from app.extensions import db
+    from app.models.app_setting import AppSetting
+
+    try:
+        entry = AppSetting.query.filter_by(key=key).first()
+        if entry:
+            entry.value = value
+            if description is not None:
+                entry.description = description
+        else:
+            entry = AppSetting(key=key, value=value, description=description)
+            db.session.add(entry)
+        db.session.commit()
+        return True
+    except Exception:
+        db.session.rollback()
+        return False
+
+
+def is_feature_enabled(feature_key: str) -> bool:
     """Determine whether a feature flag is enabled (database only)."""
     from app.models.feature_flag import FeatureFlag
 

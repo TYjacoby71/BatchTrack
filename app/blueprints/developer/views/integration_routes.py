@@ -10,7 +10,7 @@ from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.integrations.registry import build_integration_categories
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.settings import get_setting, update_settings_value
 
 from ..routes import developer_bp
 
@@ -544,9 +544,7 @@ def integrations_checklist():
         "notes": "POS/Shopify integration is stubbed. Enable later via a dedicated adapter.",
     }
 
-    settings_payload = read_json_file("settings.json", default={}) or {}
-    system_settings = settings_payload.get("system") or {}
-    auto_backup_enabled = bool(system_settings.get("auto_backup", False))
+    auto_backup_enabled = bool(get_setting("system.auto_backup", False))
 
     # Create config matrix from launch_env_sections for the table
     config_matrix = []
@@ -692,11 +690,7 @@ def integrations_set_auto_backup():
     try:
         data = request.get_json() or {}
         enabled = bool(data.get("enabled"))
-        settings_payload = read_json_file("settings.json", default={}) or {}
-        system_settings = settings_payload.get("system") or {}
-        system_settings["auto_backup"] = enabled
-        settings_payload["system"] = system_settings
-        write_json_file("settings.json", settings_payload)
+        update_settings_value("system", "auto_backup", enabled)
         return jsonify({"success": True, "enabled": enabled})
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500

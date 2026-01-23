@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from app.extensions import db
 from app.models import GlobalItem
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.settings import get_setting, update_settings_value
 
 
 class ReferenceDataService:
@@ -60,17 +60,14 @@ class ReferenceDataService:
 
     @staticmethod
     def load_curated_container_lists() -> Dict[str, List[str]]:
-        settings = read_json_file("settings.json", default={}) or {}
-        curated_lists = settings.get("container_management", {}).get("curated_lists", {})
+        curated_lists = get_setting("container_management.curated_lists", {})
         if curated_lists and all(key in curated_lists for key in ReferenceDataService.DEFAULTS.keys()):
             return curated_lists
         return ReferenceDataService._build_default_lists()
 
     @staticmethod
     def save_curated_container_lists(curated_lists: Dict[str, List[str]]) -> None:
-        settings = read_json_file("settings.json", default={}) or {}
-        settings.setdefault("container_management", {})["curated_lists"] = curated_lists
-        write_json_file("settings.json", settings)
+        update_settings_value("container_management", "curated_lists", curated_lists)
 
     @staticmethod
     def _build_default_lists() -> Dict[str, List[str]]:

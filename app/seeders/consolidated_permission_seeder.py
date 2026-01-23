@@ -151,10 +151,6 @@ def seed_developer_roles():
             'dev.dashboard',
             'dev.debug_mode',
             'dev.access_logs',
-            'app.batches.view',
-            'app.batches.create',
-            'app.inventory.view',
-            'app.organization.view'
         ])
     ).all()
     developer_role.permissions = dev_permissions
@@ -172,7 +168,7 @@ def seed_developer_roles():
         db.session.flush()
 
     support_permissions = DeveloperPermission.query.filter(
-        DeveloperPermission.name.like('app.%.view')
+        DeveloperPermission.name.in_(['dev.dashboard', 'dev.access_logs'])
     ).all()
     support_role.permissions = support_permissions
 

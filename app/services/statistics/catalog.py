@@ -441,7 +441,13 @@ class AnalyticsCatalogService:
                     "notes": "DrawerProtocol events for open/continue/dismiss instrumentation.",
                 },
                 {
-                    "model": "SystemSettings",
+                    "model": "AppSetting",
+                    "table": "app_setting",
+                    "scope": "config",
+                    "notes": "Runtime settings payloads for alerts, marketing, and waitlists.",
+                },
+                {
+                    "model": "FeatureFlag",
                     "table": "feature_flag",
                     "scope": "config",
                     "notes": "Feature flag switches persisted in the database for runtime checks.",

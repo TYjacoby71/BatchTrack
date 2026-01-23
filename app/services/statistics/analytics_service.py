@@ -32,6 +32,7 @@ from ...models import (
 from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
 from ...models.statistics import RecipeStats
+from ...utils.settings import get_settings
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.json_store import read_json_file
 from ..dashboard_alerts import DashboardAlertService
@@ -128,7 +129,7 @@ class AnalyticsDataService:
 
     @classmethod
     def _waitlist_registry(cls) -> Dict[str, Dict[str, Any]]:
-        settings = read_json_file("settings.json", default={}) or {}
+        settings = get_settings()
         configured = settings.get("waitlists") if isinstance(settings.get("waitlists"), dict) else {}
 
         registry: Dict[str, Dict[str, Any]] = {}
@@ -935,7 +936,7 @@ class AnalyticsDataService:
 
         reviews = read_json_file("data/reviews.json", default=[]) or []
         spotlights = read_json_file("data/spotlights.json", default=[]) or []
-        settings = read_json_file("settings.json", default={}) or {}
+        settings = get_settings()
 
         payload = {
             "reviews": reviews,

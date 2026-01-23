@@ -201,7 +201,7 @@ def create_team_tier():
 
             # Assign all permissions except developer permissions for team tier
             team_permissions = Permission.query.filter(
-                ~Permission.name.like('developer.%')
+                ~Permission.name.like('dev.%')
             ).all()
             team_tier.permissions = team_permissions
 
@@ -246,7 +246,7 @@ def create_enterprise_tier():
 
             # Assign all permissions except developer permissions for enterprise tier
             enterprise_permissions = Permission.query.filter(
-                ~Permission.name.like('developer.%')
+                ~Permission.name.like('dev.%')
             ).all()
             enterprise_tier.permissions = enterprise_permissions
 

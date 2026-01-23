@@ -44,7 +44,7 @@
               {% else %}
               <span class="badge bg-danger">Missing</span>
               <div class="small text-muted">
-                Add via {{ 'environment or settings.json' if item.allow_config else 'environment variables' }}
+                Add via {{ 'environment or app config' if item.allow_config else 'environment variables' }}
               </div>
               {% endif %}
             </div>

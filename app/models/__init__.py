@@ -40,6 +40,7 @@ from .user_preferences import UserPreferences
 from .user_role_assignment import UserRoleAssignment
 from .developer_permission import DeveloperPermission
 from .developer_role import DeveloperRole
+from .app_setting import AppSetting
 
 # Core models (that definitely exist)
 from .product import Product, ProductSKU

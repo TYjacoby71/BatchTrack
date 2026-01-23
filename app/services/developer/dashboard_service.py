@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional
 
 from flask import current_app
 
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.json_store import write_json_file
+from app.utils.settings import get_settings, save_settings
 
 
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
@@ -431,7 +432,7 @@ class DeveloperDashboardService:
             key in payload
             for key in ("messages", "promo_codes", "demo_url", "demo_videos")
         ):
-            cfg = read_json_file("settings.json", default={}) or {}
+            cfg = get_settings()
             if "messages" in payload:
                 cfg["marketing_messages"] = payload["messages"]
             if "promo_codes" in payload:
@@ -440,7 +441,7 @@ class DeveloperDashboardService:
                 cfg["demo_url"] = payload["demo_url"]
             if "demo_videos" in payload:
                 cfg["demo_videos"] = payload["demo_videos"]
-            write_json_file("settings.json", cfg)
+            save_settings(cfg)
 
     @staticmethod
     def build_batchley_context() -> BatchleyContext:

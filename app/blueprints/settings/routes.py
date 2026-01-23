@@ -5,7 +5,13 @@ from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
-from ...utils.json_store import read_json_file, write_json_file
+from ...utils.settings import (
+    get_settings,
+    save_settings,
+    update_settings_payload,
+    update_settings_value,
+)
+from ...utils.settings_defaults import merge_settings_defaults
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
 
@@ -51,62 +57,8 @@ def index():
     # Get organization info for org owners
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
 
-    # Get system settings from file or use defaults
-    system_settings = read_json_file("settings.json", default={}) or {}
-
-    # Ensure all required sections exist with defaults
-    system_defaults = {
-        'batch_rules': {
-            'require_timer_completion': False,
-            'allow_intermediate_tags': True,
-            'require_finish_confirmation': True,
-            'stuck_batch_hours': 24
-        },
-        'recipe_builder': {
-            'enable_variations': True,
-            'enable_containers': True,
-            'auto_scale_recipes': False,
-            'show_cost_breakdown': True
-        },
-        'inventory': {
-            'enable_fifo_tracking': True,
-            'show_expiration_dates': True,
-            'auto_calculate_costs': True,
-            'enable_barcode_scanning': False,
-            'show_supplier_info': True,
-            'enable_bulk_operations': True
-        },
-        'products': {
-            'enable_variants': True,
-            'show_profit_margins': True,
-            'auto_generate_skus': False,
-            'enable_product_images': True,
-            'track_production_costs': True
-        },
-        'system': {
-            'auto_backup': False,
-            'log_level': 'INFO',
-            'per_page': 25,
-            'enable_csv_export': True,
-            'auto_save_forms': False
-        },
-        'notifications': {
-            'browser_notifications': True,
-            'email_alerts': False,
-            'alert_frequency': 'real_time',
-            'quiet_hours_start': '22:00',
-            'quiet_hours_end': '08:00'
-        }
-    }
-
-    # Merge defaults with existing settings
-    for section, section_settings in system_defaults.items():
-        if section not in system_settings:
-            system_settings[section] = section_settings
-        else:
-            for key, value in section_settings.items():
-                if key not in system_settings[section]:
-                    system_settings[section][key] = value
+    # Get system settings from database and apply defaults
+    system_settings = merge_settings_defaults(get_settings())
 
     # Get available timezones grouped by region
     # Pass current user's timezone to highlight it
@@ -199,14 +151,11 @@ def update_system_settings():
     try:
         data = request.get_json()
 
-        # Load existing settings
-        settings_data = read_json_file("settings.json", default={}) or {}
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid settings payload'}), 400
 
-        # Update the settings
-        settings_data.update(data)
-
-        # Save updated settings
-        write_json_file("settings.json", settings_data)
+        # Merge and persist the settings payload
+        update_settings_payload(data)
 
         return jsonify({'success': True, 'message': 'System settings updated successfully'})
     except Exception as e:
@@ -459,8 +408,7 @@ def update_system_setting():
             flash('Section and key are required', 'error')
             return jsonify({'error': 'Section and key are required'}), 400
 
-        # For now, just return success - implement actual system settings storage later
-        # This could be stored in a SystemSettings model or configuration file
+        update_settings_value(section, key, value)
         flash('System setting saved successfully', 'success')
         return jsonify({'success': True})
 

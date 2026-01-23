@@ -16,7 +16,7 @@ subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/s
 
 @subscription_tiers_bp.route('/')
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def manage_tiers():
     """Main page to view all tiers directly from the database."""
     all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
@@ -82,7 +82,7 @@ def manage_tiers():
 
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def create_tier():
     """Create a new SubscriptionTier record directly in the database."""
     if request.method == 'POST':
@@ -211,7 +211,7 @@ def create_tier():
 
 @subscription_tiers_bp.route('/edit/<int:tier_id>', methods=['GET', 'POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def edit_tier(tier_id):
     """Edit an existing tier by its database ID."""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -336,7 +336,7 @@ def edit_tier(tier_id):
 
 @subscription_tiers_bp.route('/delete/<int:tier_id>', methods=['POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def delete_tier(tier_id):
     """Delete a tier from the database, with safety checks."""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -371,7 +371,7 @@ def delete_tier(tier_id):
 
 @subscription_tiers_bp.route('/sync/<int:tier_id>', methods=['POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def sync_tier_with_stripe(tier_id):
     """Sync a specific tier with Stripe pricing"""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -411,7 +411,7 @@ def sync_tier_with_stripe(tier_id):
 
 @subscription_tiers_bp.route('/sync-whop/<int:tier_id>', methods=['POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def sync_tier_with_whop(tier_id):
     """Sync a specific tier with Whop"""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -435,7 +435,7 @@ def sync_tier_with_whop(tier_id):
 
 @subscription_tiers_bp.route('/api/tiers')
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def api_get_tiers():
     """API endpoint to get all tiers as JSON."""
     tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
