@@ -95,6 +95,9 @@
                 <div class="col-md-1 d-grid">
                   <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
                 </div>
+                <div class="col-12 d-lg-none mt-2">
+                  <button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>
+                </div>
                 </div>
               </div>
             </div>
@@ -106,7 +109,7 @@
             </div>
             <div class="alert alert-warning small mt-2 d-none" id="oilLimitWarning"></div>
             <div class="alert alert-light border small mt-3 d-none" id="oilBlendTips"></div>
-            <div class="small text-muted mt-2">Select or hover an oil to preview its profile.</div>
+            <div class="small text-muted mt-2">Select or hover an oil to preview its profile. On mobile, tap "View oil profile."</div>
           </div>
         </div>
         <div class="card oil-profile-float d-none" id="oilProfileFloat">
@@ -155,7 +158,7 @@
     </h2>
     <div id="soapStage3Collapse" class="accordion-collapse collapse" data-bs-parent="#soapStageAccordion">
       <div class="accordion-body">
-        <div class="row g-3 align-items-end">
+        <div class="row g-3 align-items-start soap-stage-form-row">
           <div class="col-md-4">
             <label class="form-label">Lye purity (%)</label>
             <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
@@ -290,7 +293,7 @@
     </h2>
     <div id="soapStage5Collapse" class="accordion-collapse collapse" data-bs-parent="#soapStageAccordion">
       <div class="accordion-body">
-        <div class="row g-3 align-items-end">
+        <div class="row g-3 align-items-start soap-stage-form-row">
           <div class="col-md-4">
             <label class="form-label">Fragrance/EO %</label>
             <input type="number" class="form-control" id="additiveFragrancePct" min="0" max="6" step="0.1" value="3">
