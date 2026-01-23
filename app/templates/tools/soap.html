@@ -2028,9 +2028,12 @@
     setQuality('Bubbly', qualities.bubbly);
     setQuality('Creamy', qualities.creamy);
 
-    document.getElementById('fattyCoverageNote').textContent = coveragePct > 0
-      ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
-      : 'Fatty acid coverage: not enough data yet';
+    const coverageNote = document.getElementById('fattyCoverageNote');
+    if (coverageNote) {
+      coverageNote.textContent = coveragePct > 0
+        ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
+        : 'Fatty acid coverage: not enough data yet';
+    }
 
     const iodineEl = document.getElementById('iodineValue');
     const insEl = document.getElementById('insValue');
