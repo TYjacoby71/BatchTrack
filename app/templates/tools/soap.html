@@ -221,6 +221,9 @@
       min-height: 0;
       overflow-y: auto;
     }
+    #soapToolPage .soap-stage-pane .accordion {
+      margin-bottom: 0;
+    }
     #soapToolPage .oil-profile-float {
       position: absolute;
       right: 0;
@@ -248,7 +251,7 @@
     #soapToolPage #soapStageQualityRow {
       display: flex !important;
       flex-wrap: nowrap;
-      align-items: flex-start;
+      align-items: stretch;
     }
     #soapToolPage #soapStageQualityRow > .soap-stage-col {
       flex: 0 0 50%;
@@ -293,7 +296,7 @@
 
   {% include 'tools/soap/_config_card.html' %}
 
-  <div class="row mt-3 g-3" id="soapStageQualityRow">
+  <div class="row mt-2 g-2" id="soapStageQualityRow">
     <div class="col-lg-6 soap-stage-col">
       <div class="soap-stage-pane" id="soapStagePane">
         {% include 'tools/soap/_stages.html' %}
@@ -3044,6 +3047,8 @@
       if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') resetStage(index + 1);
     });
+    stageAccordion.addEventListener('shown.bs.collapse', scheduleStageHeightSync);
+    stageAccordion.addEventListener('hidden.bs.collapse', scheduleStageHeightSync);
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -3355,6 +3360,7 @@
   };
   setupMobileDrawer();
   window.addEventListener('resize', scheduleStageHeightSync);
+  window.addEventListener('load', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
   if (initialOilRow) {
