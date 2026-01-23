@@ -91,53 +91,66 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
     """Get Stage 2 pending clusters with their context.
     
     Returns list of (cluster_id, term, ingredient_core, base_context, has_seed_items)
+    
+    Optimized to use raw SQL for speed.
     """
     database_manager.ensure_tables_exist()
     
-    with database_manager.get_session() as session:
-        q = (
-            session.query(
-                database_manager.CompiledClusterRecord.cluster_id,
-                database_manager.CompiledClusterRecord.compiled_term,
-                database_manager.CompiledClusterRecord.origin,
-                database_manager.CompiledClusterRecord.ingredient_category,
-                database_manager.CompiledClusterRecord.refinement_level,
-                database_manager.CompiledClusterRecord.derived_from,
-                database_manager.CompiledClusterRecord.botanical_name,
-                database_manager.CompiledClusterRecord.inci_name,
-                database_manager.CompiledClusterRecord.cas_number,
-                database_manager.CompiledClusterRecord.priority,
-            )
-            .join(
-                database_manager.CompiledClusterItemRecord,
-                database_manager.CompiledClusterItemRecord.cluster_id == database_manager.CompiledClusterRecord.cluster_id,
-            )
-            .filter(database_manager.CompiledClusterRecord.term_status == "done")
-            .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
+    from sqlalchemy import text
+    
+    # Use raw SQL for optimal performance
+    limit_clause = f"LIMIT {int(limit)}" if limit else ""
+    sql = text(f"""
+        SELECT cc.cluster_id, cc.compiled_term, cc.origin, cc.ingredient_category,
+               cc.refinement_level, cc.derived_from, cc.botanical_name, cc.inci_name, 
+               cc.cas_number, cc.priority
+        FROM compiled_clusters cc
+        WHERE cc.term_status = 'done'
+        AND EXISTS (
+            SELECT 1 FROM compiled_cluster_items cci 
+            WHERE cci.cluster_id = cc.cluster_id 
+            AND cci.item_status NOT IN ('done', 'batch_pending')
         )
-        rows = q.distinct().all()
+        ORDER BY COALESCE(cc.priority, {database_manager.DEFAULT_PRIORITY}) DESC, cc.cluster_id
+        {limit_clause}
+    """)
+    
+    with database_manager.get_session() as session:
+        result = session.execute(sql)
+        rows = result.fetchall()
     
     if not rows:
         return []
     
-    priority_map = database_manager.build_cluster_priority_map()
-    ordered = sorted(
-        rows,
-        key=lambda row: (
-            -int(row[9] if row[9] is not None else priority_map.get(str(row[0]), database_manager.DEFAULT_PRIORITY)),
-            str(row[0]),
-        ),
-    )
+    # Collect cluster_ids for batch item fetch
+    cluster_ids = [str(row[0]) for row in rows]
     
-    if limit:
-        ordered = ordered[:int(limit)]
+    # Batch fetch all items for these clusters in ONE query
+    with database_manager.get_session() as session:
+        all_items = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id.in_(cluster_ids))
+            .filter(database_manager.CompiledClusterItemRecord.item_status.notin_(["done", "batch_pending"]))
+            .all()
+        )
     
+    # Group items by cluster_id
+    items_by_cluster: dict[str, list] = {}
+    for item in all_items:
+        cid = str(item.cluster_id)
+        if cid not in items_by_cluster:
+            items_by_cluster[cid] = []
+        items_by_cluster[cid].append({
+            "variation": item.derived_variation or "",
+            "physical_form": item.derived_physical_form or "",
+        })
+    
+    # Build results
     results = []
-    for row in ordered:
+    for row in rows:
         cid = str(row[0])
         term = row[1] or ""
         
-        # Build ingredient_core from columns (no JSON)
         ingredient_core = {
             "origin": row[2],
             "ingredient_category": row[3],
@@ -148,17 +161,7 @@ def _get_stage2_pending_clusters(limit: int | None = None) -> list[tuple[str, st
             "cas_number": row[8],
         }
         
-        with database_manager.get_session() as session:
-            items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cid).all()
-            seed_items = []
-            for item in items:
-                if item.item_status != "done":
-                    item_data = {
-                        "variation": item.derived_variation or "",
-                        "physical_form": item.derived_physical_form or "",
-                    }
-                    seed_items.append(item_data)
-        
+        seed_items = items_by_cluster.get(cid, [])
         base_context = {"seed_items": seed_items} if seed_items else {}
         has_seed_items = bool(seed_items)
         
