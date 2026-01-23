@@ -568,7 +568,7 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
             
             matched_item = None
             for item in existing_items:
-                if (item.variation or "") == variation and (item.physical_form or "") == physical_form:
+                if (item.derived_variation or "") == variation and (item.derived_physical_form or "") == physical_form:
                     matched_item = item
                     break
             
