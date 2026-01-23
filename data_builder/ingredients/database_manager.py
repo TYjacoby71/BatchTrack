@@ -205,7 +205,7 @@ def _derive_master_categories(ingredient_category: str, items: list[dict]) -> li
     """Deprecated: use _derive_master_categories_from_rules within a DB session."""
     return []
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
+DEFAULT_DB_PATH = BASE_DIR / "output" / "Final DB.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
