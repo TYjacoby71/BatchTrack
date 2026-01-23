@@ -218,6 +218,21 @@
       z-index: 1040;
       box-shadow: var(--shadow-2);
     }
+    #soapToolPage .oil-profile-open {
+      display: none;
+    }
+    @media (min-width: 1760px) {
+      #soapToolPage .oil-profile-float {
+        position: fixed;
+        top: 120px;
+        right: auto;
+        left: calc((100vw - 1140px) / 2 - 280px - 24px);
+        width: 260px;
+        max-width: 260px;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+    }
     #soapToolPage #soapStageQualityRow {
       display: flex !important;
       flex-wrap: nowrap;
@@ -238,6 +253,10 @@
         position: static;
         width: 100%;
         max-width: 100%;
+        display: none !important;
+      }
+      #soapToolPage .oil-profile-open {
+        display: inline-flex;
       }
       #soapToolPage #soapStageQualityRow {
         flex-wrap: wrap;
@@ -1074,6 +1093,10 @@
       <div class="col-md-1 d-grid">
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
       </div>`;
+    const mobileProfile = document.createElement('div');
+    mobileProfile.className = 'col-12 d-lg-none mt-2';
+    mobileProfile.innerHTML = '<button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>';
+    row.appendChild(mobileProfile);
     row.querySelectorAll('.form-text').forEach(text => {
       const wrapper = text.closest('.col-md-6, .col-md-3, .col-md-2');
       if (wrapper) wrapper.classList.add('soap-field');
@@ -1283,34 +1306,47 @@
 
   function updateSelectedOilProfileDisplay({ name, sapKoh, iodine, fattyProfile } = {}){
     const floatCard = document.getElementById('oilProfileFloat');
-    const nameEl = document.getElementById('selectedOilName');
-    if (nameEl) nameEl.textContent = name || 'Pick an oil to preview';
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    const nameLabel = name || 'Pick an oil to preview';
+    setText('selectedOilName', nameLabel);
+    setText('selectedOilModalName', nameLabel);
     if (floatCard) {
       floatCard.classList.toggle('d-none', !name);
     }
-    const sapEl = document.getElementById('selectedOilSap');
-    const iodineEl = document.getElementById('selectedOilIodine');
-    if (sapEl) sapEl.textContent = sapKoh > 0 ? round(sapKoh, 1) : '--';
-    if (iodineEl) iodineEl.textContent = iodine > 0 ? round(iodine, 1) : '--';
+    const sapValue = sapKoh > 0 ? round(sapKoh, 1) : '--';
+    const iodineValue = iodine > 0 ? round(iodine, 1) : '--';
+    setText('selectedOilSap', sapValue);
+    setText('selectedOilModalSap', sapValue);
+    setText('selectedOilIodine', iodineValue);
+    setText('selectedOilModalIodine', iodineValue);
 
     const qualities = fattyProfile ? computeQualities(fattyProfile) : {};
     const setValue = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      const safe = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      setText(id, safe);
     };
     setValue('selectedOilHardness', qualities.hardness);
+    setValue('selectedOilModalHardness', qualities.hardness);
     setValue('selectedOilCleansing', qualities.cleansing);
+    setValue('selectedOilModalCleansing', qualities.cleansing);
     setValue('selectedOilConditioning', qualities.conditioning);
+    setValue('selectedOilModalConditioning', qualities.conditioning);
     setValue('selectedOilBubbly', qualities.bubbly);
+    setValue('selectedOilModalBubbly', qualities.bubbly);
     setValue('selectedOilCreamy', qualities.creamy);
+    setValue('selectedOilModalCreamy', qualities.creamy);
 
     const fattyKeys = ['lauric', 'myristic', 'palmitic', 'stearic', 'ricinoleic', 'oleic', 'linoleic', 'linolenic'];
     fattyKeys.forEach(key => {
-      const el = document.getElementById(`selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`);
-      if (!el) return;
+      const baseId = `selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      const modalId = `selectedOilModal${key.charAt(0).toUpperCase()}${key.slice(1)}`;
       const value = fattyProfile ? toNumber(fattyProfile[key]) : 0;
-      el.textContent = value > 0 ? round(value, 1) : '--';
+      const safe = value > 0 ? round(value, 1) : '--';
+      setText(baseId, safe);
+      setText(modalId, safe);
     });
   }
 
@@ -2926,6 +2962,19 @@
   });
 
   document.getElementById('oilRows').addEventListener('click', function(e){
+    const profileButton = e.target.closest('.oil-profile-open');
+    if (profileButton) {
+      const row = profileButton.closest('.oil-row');
+      if (row) {
+        setSelectedOilProfileFromRow(row);
+        const modalEl = document.getElementById('oilProfileModal');
+        if (modalEl && window.bootstrap) {
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+          modal.show();
+        }
+      }
+      return;
+    }
     if (e.target.classList.contains('remove-oil')) {
       const row = e.target.closest('.oil-row');
       if (row) {
