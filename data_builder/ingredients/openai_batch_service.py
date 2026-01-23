@@ -550,7 +550,12 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
 
 
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
-    """Apply a Stage 2 AI result to the database (matches compiler.py behavior)."""
+    """Apply a Stage 2 AI result to the database.
+    
+    This is the fast import path that does NOT call taxonomy generation or 
+    _finalize_cluster_if_complete (which makes additional OpenAI API calls).
+    Just stores the batch results directly.
+    """
     from datetime import timezone
     
     items = payload.get("items", [])
@@ -563,6 +568,7 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
         existing_items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cluster_id).all()
         now = datetime.now(timezone.utc)
         
+        items_updated = 0
         for ai_item in items:
             variation = ai_item.get("variation", {})
             if isinstance(variation, dict):
@@ -598,11 +604,12 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
                     matched_item.processing_method = processing_method.get("value", "")
                 else:
                     matched_item.processing_method = processing_method or ""
+                items_updated += 1
         
         session.commit()
-    
-    from .compiler import _finalize_cluster_if_complete
-    _finalize_cluster_if_complete(cluster_id)
+        
+        if items_updated > 0:
+            LOGGER.debug(f"Updated {items_updated} items for cluster {cluster_id}")
 
 
 def main():
