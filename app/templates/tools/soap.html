@@ -674,6 +674,15 @@
     if (!stage) return;
     const target = document.getElementById(stage.collapseId);
     if (!target) return;
+    const collapses = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-collapse'));
+    collapses.forEach(collapse => {
+      if (collapse === target) return;
+      if (window.bootstrap?.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).hide();
+      } else {
+        collapse.classList.remove('show');
+      }
+    });
     if (window.bootstrap?.Collapse) {
       bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
     } else {
