@@ -491,8 +491,13 @@ def _finalize_cluster_with_taxonomy(cluster_id: str, taxonomy: dict[str, Any] | 
 
 
 @retry_on_db_lock
-def _finalize_cluster_if_complete(cluster_id: str) -> bool:
-    """Persist a compiled ingredient when all cluster items are done."""
+def _finalize_cluster_if_complete(cluster_id: str, *, batch_taxonomy: dict[str, Any] | None = None) -> bool:
+    """Persist a compiled ingredient when all cluster items are done.
+    
+    Args:
+        cluster_id: The cluster ID to finalize
+        batch_taxonomy: Optional taxonomy from batch results (skips API call if provided)
+    """
     database_manager.ensure_tables_exist()
     with database_manager.get_session() as session:
         rec = session.get(database_manager.CompiledClusterRecord, cluster_id)
@@ -523,15 +528,18 @@ def _finalize_cluster_if_complete(cluster_id: str) -> bool:
             if isinstance(payload, dict) and payload:
                 items.append(payload)
     payload = _assemble_cluster_payload(term=term, rec=rec, items=items)
-    ingredient_core = dict(payload.get("ingredient") or {})
-    ingredient_core.pop("items", None)
-    ingredient_core.pop("taxonomy", None)
-    try:
-        taxonomy_payload = ai_worker.compile_taxonomy(term, ingredient_core=ingredient_core, items=items)
-        taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
-    except Exception as exc:  # pylint: disable=broad-except
-        LOGGER.warning("Stage 2 taxonomy failed for %s: %s", term, exc)
-        taxonomy = {}
+    if batch_taxonomy is not None:
+        taxonomy = batch_taxonomy if isinstance(batch_taxonomy, dict) else {}
+    else:
+        ingredient_core = dict(payload.get("ingredient") or {})
+        ingredient_core.pop("items", None)
+        ingredient_core.pop("taxonomy", None)
+        try:
+            taxonomy_payload = ai_worker.compile_taxonomy(term, ingredient_core=ingredient_core, items=items)
+            taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.warning("Stage 2 taxonomy failed for %s: %s", term, exc)
+            taxonomy = {}
     payload["ingredient"]["taxonomy"] = taxonomy
     database_manager.upsert_compiled_ingredient(
         term,

@@ -672,8 +672,11 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
 
         session.commit()
 
+    taxonomy = payload.get("taxonomy")
+    if not isinstance(taxonomy, dict):
+        taxonomy = None
     from .compiler import _finalize_cluster_if_complete
-    _finalize_cluster_if_complete(cluster_id)
+    _finalize_cluster_if_complete(cluster_id, batch_taxonomy=taxonomy)
 
 
 def main():
