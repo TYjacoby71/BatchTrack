@@ -350,6 +350,25 @@
     }
     #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open {
       flex: 1 1 auto;
+      order: -1;
+      z-index: 2;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open {
+      height: auto;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion {
+      display: block;
+      gap: 0;
+      overflow: visible;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item {
+      margin-bottom: var(--space-3);
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item:not(.is-open) {
+      display: none;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open {
+      order: 0;
     }
     #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
       flex: 1 1 auto;
@@ -1567,7 +1586,8 @@
     const qualityCard = document.getElementById('soapQualityCard');
     if (!stagePane || !qualityCard) return;
     const shouldSync = window.matchMedia('(min-width: 768px)').matches;
-    if (!shouldSync) {
+    const isOverlayOpen = stagePane.classList.contains('is-overlay-open');
+    if (!shouldSync || isOverlayOpen) {
       stagePane.classList.remove('is-height-synced');
       stagePane.style.removeProperty('--soap-stage-height');
       return;
@@ -1588,12 +1608,21 @@
 
   function updateStageAccordionLayout(){
     const stageAccordion = document.getElementById('soapStageAccordion');
+    const stagePane = document.getElementById('soapStagePane');
     if (!stageAccordion) return;
+    const allowOverlay = window.matchMedia('(min-width: 768px)').matches;
+    let hasOpen = false;
     stageAccordion.querySelectorAll('.accordion-item').forEach(item => {
       const collapse = item.querySelector('.accordion-collapse');
       const isOpen = collapse ? collapse.classList.contains('show') : false;
       item.classList.toggle('is-open', isOpen);
+      if (isOpen) {
+        hasOpen = true;
+      }
     });
+    if (stagePane) {
+      stagePane.classList.toggle('is-overlay-open', allowOverlay && hasOpen);
+    }
   }
 
   function updateOilTips(){
@@ -3535,7 +3564,10 @@
     resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
   };
   setupMobileDrawer();
-  window.addEventListener('resize', scheduleStageHeightSync);
+  window.addEventListener('resize', () => {
+    updateStageAccordionLayout();
+    scheduleStageHeightSync();
+  });
   window.addEventListener('load', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
