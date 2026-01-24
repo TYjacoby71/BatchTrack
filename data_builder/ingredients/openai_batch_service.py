@@ -653,6 +653,13 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
             (_clean(item.derived_variation).lower(), _clean(item.derived_physical_form).lower()): item
             for item in existing_items
         }
+        
+        empty_items = [
+            item for item in existing_items
+            if not _clean(item.derived_variation) and not _clean(item.derived_physical_form)
+            and item.item_status != "done"
+        ]
+        empty_idx = 0
 
         for ai_item in items:
             variation = ai_item.get("variation", {})
@@ -663,6 +670,13 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
                 physical_form = physical_form.get("value", "")
             key = (_clean(variation).lower(), _clean(physical_form).lower())
             matched_item = item_lookup.get(key)
+            
+            if not matched_item and empty_idx < len(empty_items):
+                matched_item = empty_items[empty_idx]
+                empty_idx += 1
+                matched_item.derived_variation = _clean(variation)
+                matched_item.derived_physical_form = _clean(physical_form)
+            
             if matched_item:
                 matched_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
                 matched_item.item_status = "done"
