@@ -537,6 +537,26 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         if priority is not None:
             rec.priority = priority
 
+        rec.common_name = common_name or final_term
+        if isinstance(dq, dict):
+            confidence = dq.get("confidence")
+            if confidence is not None:
+                try:
+                    conf_val = float(confidence)
+                    if 0 <= conf_val <= 1:
+                        rec.confidence_score = int(round(conf_val * 100))
+                    else:
+                        rec.confidence_score = int(round(conf_val))
+                except (TypeError, ValueError):
+                    pass
+            caveats = dq.get("caveats", [])
+            if caveats:
+                rec.data_quality_notes = "; ".join(str(c) for c in caveats) if isinstance(caveats, list) else str(caveats)
+            else:
+                rec.data_quality_notes = None
+        else:
+            rec.data_quality_notes = None
+
         rec.origin = _extract_stage1_field(core.get("origin")) or rec.raw_origin
         rec.ingredient_category = _extract_stage1_field(core.get("ingredient_category")) or rec.raw_ingredient_category
         rec.refinement_level = _extract_stage1_field(core.get("base_refinement")) or _extract_stage1_field(core.get("refinement_level"))
