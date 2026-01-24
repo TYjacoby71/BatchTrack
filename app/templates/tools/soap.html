@@ -69,6 +69,8 @@
       border-radius: inherit;
       overflow: hidden;
       z-index: 1;
+      opacity: 0.35;
+      pointer-events: none;
     }
     #soapToolPage .soap-quality-range-start,
     #soapToolPage .soap-quality-range-ideal,
@@ -205,16 +207,6 @@
       align-items: center;
       justify-content: center;
       background: var(--color-subtle-bg-2);
-    }
-    #soapToolPage .soap-quality-progress {
-      overflow: hidden;
-    }
-    #soapToolPage .soap-quality-range {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      opacity: 0.35;
-      pointer-events: none;
     }
     #soapToolPage .soap-quality-range-start {
       background: var(--color-warning-bg);
@@ -355,6 +347,7 @@
     }
     #soapToolPage .soap-stage-pane.is-overlay-open {
       height: auto;
+      overflow: visible;
     }
     #soapToolPage .soap-stage-pane.is-overlay-open .accordion {
       display: block;
@@ -1621,7 +1614,12 @@
       }
     });
     if (stagePane) {
-      stagePane.classList.toggle('is-overlay-open', allowOverlay && hasOpen);
+      const overlay = allowOverlay && hasOpen;
+      stagePane.classList.toggle('is-overlay-open', overlay);
+      if (overlay) {
+        stagePane.classList.remove('is-height-synced');
+        stagePane.style.removeProperty('--soap-stage-height');
+      }
     }
   }
 
