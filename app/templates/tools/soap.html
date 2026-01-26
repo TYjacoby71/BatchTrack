@@ -27,7 +27,7 @@
         "label hint"
         "bar bar"
         "note note";
-      row-gap: var(--space-2);
+      row-gap: var(--space-1);
       column-gap: var(--space-2);
       align-items: center;
     }
@@ -99,11 +99,17 @@
     #soapToolPage .soap-quality-section-title {
       font-size: 0.85rem;
       font-weight: 600;
-      margin-bottom: var(--space-2);
+      margin-bottom: var(--space-1);
       color: var(--color-text);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-2);
     }
     #soapToolPage .soap-quality-legend {
-      margin-bottom: var(--space-3);
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: var(--color-muted);
     }
     #soapToolPage .soap-fatty-table {
       background: transparent;
@@ -111,9 +117,12 @@
       box-shadow: none;
     }
     #soapToolPage .soap-fatty-table td {
-      padding: var(--space-2) 0;
+      padding: var(--space-1) 0;
       border: none;
       font-size: 0.85rem;
+    }
+    #soapToolPage .soap-quality-row .small.text-muted:empty {
+      display: none;
     }
     #soapToolPage .soap-fatty-table tbody tr:not(:last-child) td {
       border-bottom: 1px solid var(--color-border);
@@ -348,20 +357,37 @@
     #soapToolPage .soap-stage-pane.is-overlay-open {
       height: auto;
       overflow: visible;
+      position: relative;
+      min-height: var(--soap-stage-height);
     }
     #soapToolPage .soap-stage-pane.is-overlay-open .accordion {
       display: block;
       gap: 0;
       overflow: visible;
+      position: relative;
+      min-height: var(--soap-stage-height);
     }
     #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item {
-      margin-bottom: var(--space-3);
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item:not(.is-open) {
       display: none;
     }
     #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open {
-      order: 0;
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      min-height: var(--soap-stage-height);
+      z-index: 2;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open > .accordion-collapse {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open .accordion-body {
+      flex: 1 1 auto;
     }
     #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
       flex: 1 1 auto;
@@ -1579,8 +1605,7 @@
     const qualityCard = document.getElementById('soapQualityCard');
     if (!stagePane || !qualityCard) return;
     const shouldSync = window.matchMedia('(min-width: 768px)').matches;
-    const isOverlayOpen = stagePane.classList.contains('is-overlay-open');
-    if (!shouldSync || isOverlayOpen) {
+    if (!shouldSync) {
       stagePane.classList.remove('is-height-synced');
       stagePane.style.removeProperty('--soap-stage-height');
       return;
@@ -1592,6 +1617,10 @@
       return;
     }
     stagePane.style.setProperty('--soap-stage-height', `${qualityHeight}px`);
+    if (stagePane.classList.contains('is-overlay-open')) {
+      stagePane.classList.remove('is-height-synced');
+      return;
+    }
     stagePane.classList.add('is-height-synced');
   }
 
