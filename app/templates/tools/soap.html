@@ -58,13 +58,16 @@
       grid-area: bar;
       position: relative;
       height: var(--space-4);
+      padding-bottom: var(--space-4);
       border-radius: var(--radius-2);
       background: var(--color-subtle-bg-2);
+      background-clip: content-box;
       overflow: visible;
     }
     #soapToolPage .soap-quality-range {
       position: absolute;
-      inset: 0;
+      inset: 0 0 auto 0;
+      height: var(--space-4);
       display: flex;
       border-radius: inherit;
       overflow: hidden;
@@ -78,15 +81,16 @@
       height: 100%;
     }
     #soapToolPage .soap-quality-progress .progress-bar {
-      height: 100%;
+      height: var(--space-4);
       z-index: 2;
       position: relative;
     }
     #soapToolPage .soap-quality-boundary {
       position: absolute;
-      top: calc(-1 * var(--space-3));
+      top: calc(100% + var(--space-3));
       font-size: 0.7rem;
       color: var(--color-muted);
+      white-space: nowrap;
     }
     #soapToolPage .soap-quality-boundary-start {
       left: 0;
@@ -101,10 +105,6 @@
       font-weight: 600;
       margin-bottom: var(--space-1);
       color: var(--color-text);
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: var(--space-2);
     }
     #soapToolPage .soap-quality-legend {
       font-size: 0.7rem;
@@ -125,7 +125,7 @@
       display: none;
     }
     #soapToolPage .soap-fatty-table tbody tr:not(:last-child) td {
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: none;
     }
     #soapToolPage #soapConfigCard,
     #soapToolPage #soapQualityCard,
@@ -286,15 +286,15 @@
     #soapToolPage .soap-quality-row .progress { height: var(--space-4); }
     #soapToolPage .quality-target-marker {
       position: absolute;
-      top: -4px;
-      bottom: -4px;
+      top: 0;
+      bottom: var(--space-4);
       border-left: 2px dashed var(--color-primary);
       width: 0;
       z-index: 3;
     }
     #soapToolPage .quality-target-label {
       position: absolute;
-      top: -18px;
+      top: calc(100% + var(--space-1));
       left: 0;
       transform: translateX(-50%);
       font-size: 0.7rem;
@@ -334,76 +334,55 @@
     #soapToolPage .soap-stage-pane.is-height-synced {
       height: var(--soap-stage-height);
     }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow: hidden;
+    #soapToolPage .soap-stage-tabs {
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
     }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item {
-      margin: 0;
-      flex: 0 0 auto;
+    #soapToolPage .soap-stage-tabs .nav-tabs {
+      border-bottom: 1px solid var(--color-border);
+      gap: var(--space-1);
+      flex-wrap: wrap;
+    }
+    #soapToolPage .soap-stage-tabs .nav-link {
+      border: 1px solid var(--color-border);
+      border-bottom: none;
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      background: var(--color-subtle-bg-2);
+      color: var(--color-text);
+      padding: var(--space-2) var(--space-3);
+      font-weight: 500;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-tabs .nav-link.active {
+      background: var(--color-surface);
+      box-shadow: var(--shadow-1);
+    }
+    #soapToolPage .soap-stage-card {
+      margin-bottom: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-tabs {
+      flex: 1 1 auto;
       min-height: 0;
     }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open {
+    #soapToolPage .soap-stage-pane.is-height-synced .tab-content {
       flex: 1 1 auto;
-      order: -1;
-      z-index: 2;
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open {
-      height: auto;
-      overflow: visible;
-      position: relative;
-      min-height: var(--soap-stage-height);
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion {
-      display: block;
-      gap: 0;
-      overflow: visible;
-      position: relative;
-      min-height: var(--soap-stage-height);
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item {
-      display: none;
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open {
-      display: flex;
-      flex-direction: column;
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      min-height: var(--soap-stage-height);
-      z-index: 2;
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open > .accordion-collapse {
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: column;
       min-height: 0;
-    }
-    #soapToolPage .soap-stage-pane.is-overlay-open .accordion-item.is-open .accordion-body {
-      flex: 1 1 auto;
-    }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open > .accordion-collapse {
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion-item.is-open .accordion-body {
-      flex: 1 1 auto;
       overflow: auto;
     }
-    #soapToolPage .soap-stage-pane.is-height-synced .accordion-button {
-      padding: var(--space-3) var(--space-4);
+    #soapToolPage .soap-stage-pane.is-height-synced .tab-pane {
+      height: 100%;
     }
-    #soapToolPage .soap-stage-pane .accordion {
-      margin-bottom: 0;
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card .card-body {
+      flex: 1 1 auto;
+      overflow: auto;
     }
     #soapToolPage .oil-profile-float {
       position: absolute;
@@ -701,13 +680,13 @@
   const CITRIC_CATEGORY_SET = new Set(['Preservatives & Additives', 'Salts & Minerals', 'Aqueous Solutions & Blends']);
 
   const STAGE_CONFIGS = [
-    { id: 1, headingId: 'soapStage1Heading', collapseId: 'soapStage1Collapse', required: true },
-    { id: 2, headingId: 'soapStage2Heading', collapseId: 'soapStage2Collapse', required: true },
-    { id: 3, headingId: 'soapStage3Heading', collapseId: 'soapStage3Collapse', required: true },
-    { id: 4, headingId: 'soapStage4Heading', collapseId: 'soapStage4Collapse', required: false },
-    { id: 5, headingId: 'soapStage5Heading', collapseId: 'soapStage5Collapse', required: false },
-    { id: 6, headingId: 'soapStage6Heading', collapseId: 'soapStage6Collapse', required: false },
-    { id: 7, headingId: 'soapStage7Heading', collapseId: 'soapStage7Collapse', required: false },
+    { id: 1, tabId: 'soapStage1Tab', paneId: 'soapStage1Pane', required: true },
+    { id: 2, tabId: 'soapStage2Tab', paneId: 'soapStage2Pane', required: true },
+    { id: 3, tabId: 'soapStage3Tab', paneId: 'soapStage3Pane', required: true },
+    { id: 4, tabId: 'soapStage4Tab', paneId: 'soapStage4Pane', required: false },
+    { id: 5, tabId: 'soapStage5Tab', paneId: 'soapStage5Pane', required: false },
+    { id: 6, tabId: 'soapStage6Tab', paneId: 'soapStage6Pane', required: false },
+    { id: 7, tabId: 'soapStage7Tab', paneId: 'soapStage7Pane', required: false },
   ];
 
   function formatTime(ts){
@@ -802,25 +781,26 @@
 
   function flashStage(stageItem){
     if (!stageItem) return;
-    stageItem.classList.add('soap-stage-highlight');
-    setTimeout(() => stageItem.classList.remove('soap-stage-highlight'), 900);
+    const target = stageItem.querySelector?.('.soap-stage-card') || stageItem;
+    target.classList.add('soap-stage-highlight');
+    setTimeout(() => target.classList.remove('soap-stage-highlight'), 900);
   }
 
   function injectStageActions(){
-    const items = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-item'));
-    items.forEach((item, index) => {
-      const body = item.querySelector('.accordion-body');
+    const bodies = Array.from(document.querySelectorAll('#soapStageTabContent .soap-stage-body'));
+    bodies.forEach((body, index) => {
       if (!body || body.querySelector('.soap-stage-actions')) return;
+      const stageIndex = Number(body.dataset.stageIndex ?? index);
       const actions = document.createElement('div');
       actions.className = 'soap-stage-actions';
       actions.innerHTML = `
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${stageIndex}">
           <i class="fas fa-arrow-left me-1"></i>Back
         </button>
-        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${stageIndex}">
           Reset stage
         </button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${stageIndex}">
           Next<i class="fas fa-arrow-right ms-1"></i>
         </button>
       `;
@@ -831,25 +811,25 @@
   function openStageByIndex(index){
     const stage = STAGE_CONFIGS[index];
     if (!stage) return;
-    const target = document.getElementById(stage.collapseId);
-    if (!target) return;
-    const collapses = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-collapse'));
-    collapses.forEach(collapse => {
-      if (collapse === target) return;
-      if (window.bootstrap?.Collapse) {
-        bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).hide();
-      } else {
-        collapse.classList.remove('show');
-      }
-    });
-    if (window.bootstrap?.Collapse) {
-      bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
+    const tabButton = document.getElementById(stage.tabId);
+    if (!tabButton) return;
+    if (window.bootstrap?.Tab) {
+      bootstrap.Tab.getOrCreateInstance(tabButton).show();
     } else {
-      target.classList.add('show');
+      document.querySelectorAll('#soapStageTabList .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('#soapStageTabContent .tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+      });
+      tabButton.classList.add('active');
+      tabButton.setAttribute('aria-selected', 'true');
+      const pane = document.getElementById(stage.paneId);
+      if (pane) pane.classList.add('show', 'active');
     }
-    updateStageAccordionLayout();
     scheduleStageHeightSync();
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    tabButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
   function resetStage(stageId){
@@ -960,8 +940,7 @@
 
   function updateStageStatuses(){
     STAGE_CONFIGS.forEach(stage => {
-      const heading = document.getElementById(stage.headingId);
-      const button = heading?.querySelector('.accordion-button');
+      const button = document.getElementById(stage.tabId);
       if (!button) return;
       let badge = button.querySelector('.soap-stage-status');
       if (!badge) {
@@ -1617,40 +1596,12 @@
       return;
     }
     stagePane.style.setProperty('--soap-stage-height', `${qualityHeight}px`);
-    if (stagePane.classList.contains('is-overlay-open')) {
-      stagePane.classList.remove('is-height-synced');
-      return;
-    }
     stagePane.classList.add('is-height-synced');
   }
 
   const scheduleStageHeightSync = () => {
     window.requestAnimationFrame(syncStageHeight);
   };
-
-  function updateStageAccordionLayout(){
-    const stageAccordion = document.getElementById('soapStageAccordion');
-    const stagePane = document.getElementById('soapStagePane');
-    if (!stageAccordion) return;
-    const allowOverlay = window.matchMedia('(min-width: 768px)').matches;
-    let hasOpen = false;
-    stageAccordion.querySelectorAll('.accordion-item').forEach(item => {
-      const collapse = item.querySelector('.accordion-collapse');
-      const isOpen = collapse ? collapse.classList.contains('show') : false;
-      item.classList.toggle('is-open', isOpen);
-      if (isOpen) {
-        hasOpen = true;
-      }
-    });
-    if (stagePane) {
-      const overlay = allowOverlay && hasOpen;
-      stagePane.classList.toggle('is-overlay-open', overlay);
-      if (overlay) {
-        stagePane.classList.remove('is-height-synced');
-        stagePane.style.removeProperty('--soap-stage-height');
-      }
-    }
-  }
 
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
@@ -3261,11 +3212,16 @@
     }
   });
 
-  const stageAccordion = document.getElementById('soapStageAccordion');
-  if (stageAccordion) {
-    stageAccordion.addEventListener('click', event => {
+  const stageTabContent = document.getElementById('soapStageTabContent');
+  if (stageTabContent) {
+    stageTabContent.addEventListener('click', event => {
       const actionBtn = event.target.closest('[data-stage-action]');
       if (!actionBtn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       const action = actionBtn.dataset.stageAction;
       const index = Number(actionBtn.dataset.stageIndex);
       if (Number.isNaN(index)) return;
@@ -3273,14 +3229,10 @@
       if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') resetStage(index + 1);
     });
-    stageAccordion.addEventListener('shown.bs.collapse', () => {
-      updateStageAccordionLayout();
-      scheduleStageHeightSync();
-    });
-    stageAccordion.addEventListener('hidden.bs.collapse', () => {
-      updateStageAccordionLayout();
-      scheduleStageHeightSync();
-    });
+  }
+  const stageTabList = document.getElementById('soapStageTabList');
+  if (stageTabList) {
+    stageTabList.addEventListener('shown.bs.tab', scheduleStageHeightSync);
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -3428,7 +3380,7 @@
         queueStateSave();
         validateNumericField(e.target);
         updateStageStatuses();
-        flashStage(e.target.closest('.accordion-item'));
+        flashStage(e.target.closest('.soap-stage-card'));
       }
     });
     soapRoot.addEventListener('change', function(e){
@@ -3591,10 +3543,7 @@
     resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
   };
   setupMobileDrawer();
-  window.addEventListener('resize', () => {
-    updateStageAccordionLayout();
-    scheduleStageHeightSync();
-  });
+  window.addEventListener('resize', scheduleStageHeightSync);
   window.addEventListener('load', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
@@ -3618,7 +3567,6 @@
   updateAdditivesOutput(getTotalOilsGrams());
   updateStageStatuses();
   restoreState();
-  updateStageAccordionLayout();
   scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
