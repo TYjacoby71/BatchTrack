@@ -1,0 +1,68 @@
+{% extends 'layout.html' %}
+{% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
+{% set navbar_center_title = 'Soap Formulator' %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tools/soaps.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="py-1" id="soapToolPage">
+  <h1 class="visually-hidden">Soap Formulator</h1>
+  {% if not tool_enabled %}
+  <div class="alert alert-warning d-flex align-items-center" role="alert">
+    <i class="fas fa-hourglass-half me-2"></i>
+    Public drafting is in preview—feel free to explore the layout while we finish the live calculators.
+  </div>
+  {% endif %}
+  <script>
+    window.RECIPE_CATEGORY_NAME = 'Soaps';
+    window.SOAP_CALC_LIMIT = {{ calc_limit|tojson if calc_limit is defined else 'null' }};
+    window.SOAP_CALC_TIER = {{ calc_tier|tojson if calc_tier is defined else '"guest"' }};
+    window.soapToolConfig = {
+      unitOptionsHtml: `{% for unit in global_units %}<option value="{{ unit.name }}">{{ unit.name }}</option>{% endfor %}`
+    };
+  </script>
+  <div id="soapAlertStack" class="mb-3"></div>
+
+  {% include 'tools/soaps/_config_card.html' %}
+
+  <div class="row mt-2 g-2" id="soapStageQualityRow">
+    <div class="col-lg-6 soap-stage-col">
+      <div class="soap-stage-pane" id="soapStagePane">
+        {% include 'tools/soaps/_stages.html' %}
+      </div>
+    </div>
+
+    <div class="col-lg-6 soap-quality-col">
+      {% include 'tools/soaps/_quality_card.html' %}
+    </div>
+  </div>
+
+  {% include 'tools/soaps/_results_card.html' %}
+
+  {% include 'tools/soaps/_mobile_drawer.html' %}
+
+  {% include 'tools/soaps/_modals.html' %}
+  {% include 'tools/soaps/_toasts.html' %}
+
+</div>
+
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/tool_lines.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_constants.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_calc.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_units.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_layout.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_mold.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_oils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_additives.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_stages.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_quality.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_runner.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_storage.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools/soaps/soap_tool_events.js') }}"></script>
+{% endblock %}
