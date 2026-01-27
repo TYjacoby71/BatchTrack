@@ -160,7 +160,6 @@
     text-align: left;
   }
 }
-#soapToolPage #soapConfigCard,
 #soapToolPage #soapQualityCard,
 #soapToolPage #resultsCard {
   margin-bottom: var(--space-2);
