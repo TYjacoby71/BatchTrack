@@ -1,23 +1,41 @@
 #soapToolPage {
   margin-top: calc(-1 * var(--space-4));
 }
-#soapToolPage .soap-quality-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "label hint"
-    "bar bar"
-    "note note";
-  row-gap: var(--space-1);
-  column-gap: var(--space-2);
-  align-items: center;
+#soapToolPage .soap-quality-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
 }
-#soapToolPage .soap-quality-label {
-  grid-area: label;
+#soapToolPage .soap-quality-legend {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+#soapToolPage .soap-quality-section-header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: var(--space-2);
+}
+#soapToolPage .soap-quality-grid {
+  display: grid;
   gap: var(--space-3);
+}
+#soapToolPage .soap-quality-item {
+  display: grid;
+  gap: var(--space-1);
+}
+#soapToolPage .soap-quality-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+#soapToolPage .soap-quality-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 #soapToolPage .soap-quality-name {
   font-size: 0.85rem;
@@ -26,87 +44,116 @@
 #soapToolPage .soap-quality-value {
   font-variant-numeric: tabular-nums;
 }
-#soapToolPage .soap-quality-help {
-  grid-area: hint;
-  align-self: start;
-}
-#soapToolPage .soap-quality-help-placeholder {
-  grid-area: hint;
-  width: 1rem;
-  height: 1rem;
-}
-#soapToolPage .soap-quality-progress {
-  grid-area: bar;
+#soapToolPage .soap-quality-bar {
   position: relative;
-  height: var(--space-4);
-  padding-bottom: var(--space-4);
+  height: 20px;
   border-radius: var(--radius-2);
   background: var(--color-subtle-bg-2);
-  background-clip: content-box;
-  overflow: visible;
-}
-#soapToolPage .soap-quality-range {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: var(--space-4);
-  display: flex;
-  border-radius: inherit;
   overflow: hidden;
-  z-index: 1;
-  opacity: 0.35;
-  pointer-events: none;
 }
-#soapToolPage .soap-quality-range-start,
-#soapToolPage .soap-quality-range-ideal,
-#soapToolPage .soap-quality-range-end {
-  height: 100%;
-}
-#soapToolPage .soap-quality-progress .progress-bar {
-  height: var(--space-4);
-  z-index: 2;
-  position: relative;
-}
-#soapToolPage .soap-quality-boundary {
+#soapToolPage .soap-quality-safe {
   position: absolute;
-  top: calc(100% + var(--space-3));
+  top: 0;
+  bottom: 0;
+  background: var(--overlay-success-weak);
+  opacity: 0.6;
+  z-index: 1;
+}
+#soapToolPage .soap-quality-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  background: var(--color-primary);
+  z-index: 2;
+  transition: width 0.2s ease;
+}
+#soapToolPage .soap-quality-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35rem;
   font-size: 0.7rem;
   color: var(--color-muted);
-  white-space: nowrap;
 }
-#soapToolPage .soap-quality-boundary-start {
+#soapToolPage .soap-quality-hint {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+#soapToolPage .soap-quality-help {
+  padding: 0;
+  line-height: 1;
+}
+#soapToolPage .quality-target-marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-left: 2px dashed var(--color-primary);
+  width: 0;
+  z-index: 3;
+}
+#soapToolPage .quality-target-label {
+  position: absolute;
+  top: calc(100% + 2px);
   left: 0;
-  transform: translateX(-10%);
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
 }
-#soapToolPage .soap-quality-boundary-end {
-  right: 0;
-  transform: translateX(10%);
+#soapToolPage .soap-acid-grid {
+  display: grid;
+  gap: var(--space-2);
 }
-#soapToolPage .soap-quality-section-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: var(--space-1);
+#soapToolPage .soap-acid-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto minmax(120px, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+}
+#soapToolPage .soap-acid-label {
+  font-size: 0.82rem;
   color: var(--color-text);
 }
-#soapToolPage .soap-quality-legend {
-  font-size: 0.7rem;
-  font-weight: 400;
-  color: var(--color-muted);
+#soapToolPage .soap-acid-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  text-align: right;
 }
-#soapToolPage .soap-fatty-table {
-  background: transparent;
-  border: none;
-  box-shadow: none;
+#soapToolPage .soap-acid-bar {
+  position: relative;
+  height: 12px;
+  border-radius: var(--radius-2);
+  background: var(--color-subtle-bg-2);
+  overflow: hidden;
 }
-#soapToolPage .soap-fatty-table td {
-  padding: var(--space-1) 0;
-  border: none;
-  font-size: 0.85rem;
+#soapToolPage .soap-acid-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transition: width 0.2s ease;
 }
-#soapToolPage .soap-quality-row .small.text-muted:empty {
-  display: none;
+#soapToolPage .soap-quality-metrics {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
 }
-#soapToolPage .soap-fatty-table tbody tr:not(:last-child) td {
-  border-bottom: none;
+@media (max-width: 767px) {
+  #soapToolPage .soap-quality-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #soapToolPage .soap-acid-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+  #soapToolPage .soap-acid-value {
+    text-align: left;
+  }
 }
 #soapToolPage #soapConfigCard,
 #soapToolPage #soapQualityCard,
