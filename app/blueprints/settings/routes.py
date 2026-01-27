@@ -80,6 +80,7 @@ def index():
             'enable_variants': True,
             'show_profit_margins': True,
             'auto_generate_skus': False,
+            'auto_create_bulk_sku_on_variant': False,
             'enable_product_images': True,
             'track_production_costs': True
         },
@@ -459,8 +460,15 @@ def update_system_setting():
             flash('Section and key are required', 'error')
             return jsonify({'error': 'Section and key are required'}), 400
 
-        # For now, just return success - implement actual system settings storage later
-        # This could be stored in a SystemSettings model or configuration file
+        settings_data = read_json_file("settings.json", default={}) or {}
+        section_settings = settings_data.get(section)
+        if not isinstance(section_settings, dict):
+            section_settings = {}
+            settings_data[section] = section_settings
+
+        section_settings[key] = value
+        write_json_file("settings.json", settings_data)
+
         flash('System setting saved successfully', 'success')
         return jsonify({'success': True})
 
