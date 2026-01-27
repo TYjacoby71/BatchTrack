@@ -329,6 +329,31 @@ def _stage1_snapshot(rec: database_manager.CompiledClusterRecord) -> tuple[dict[
     core = stage1.get("ingredient_core") if isinstance(stage1.get("ingredient_core"), dict) else {}
     dq = stage1.get("data_quality") if isinstance(stage1.get("data_quality"), dict) else {}
     common_name = stage1.get("common_name") if isinstance(stage1.get("common_name"), str) else None
+    if not common_name:
+        common_name = getattr(rec, "common_name", None)
+
+    if not core:
+        core = {
+            "origin": getattr(rec, "origin", None),
+            "ingredient_category": getattr(rec, "ingredient_category", None),
+            "refinement_level": getattr(rec, "refinement_level", None),
+            "derived_from": getattr(rec, "derived_from", None),
+            "category": getattr(rec, "ingredient_category", None),
+            "botanical_name": getattr(rec, "botanical_name", None),
+            "inci_name": getattr(rec, "inci_name", None),
+            "cas_number": getattr(rec, "cas_number", None),
+        }
+
+    if not isinstance(dq, dict):
+        dq = {}
+    if dq.get("confidence") in (None, ""):
+        score = getattr(rec, "confidence_score", None)
+        if isinstance(score, (int, float)):
+            dq["confidence"] = max(0.0, min(1.0, float(score) / 100.0))
+    if "caveats" not in dq:
+        notes = getattr(rec, "data_quality_notes", None)
+        if isinstance(notes, str) and notes.strip():
+            dq["caveats"] = [part.strip() for part in notes.split(";") if part.strip()]
     return core, dq, common_name
 
 
@@ -414,6 +439,55 @@ def _assemble_cluster_payload(
         "ingredient": ingredient,
         "data_quality": {"confidence": float(confidence), "caveats": caveats},
     }
+
+
+def _finalize_cluster_with_taxonomy(cluster_id: str, taxonomy: dict[str, Any] | None = None) -> bool:
+    """Finalize cluster with provided taxonomy (no API call needed).
+    
+    Used for batch imports where taxonomy is already included in the batch response.
+    """
+    database_manager.ensure_tables_exist()
+    with database_manager.get_session() as session:
+        rec = session.get(database_manager.CompiledClusterRecord, cluster_id)
+        if rec is None:
+            return False
+        term = _clean(getattr(rec, "compiled_term", None)) or _clean(getattr(rec, "raw_canonical_term", None)) or _cluster_term_from_id(cluster_id) or cluster_id
+        if not term:
+            return False
+        if _find_ingredient_by_terms(session, [term]) is not None:
+            return True
+        pending = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .filter(database_manager.CompiledClusterItemRecord.item_status != "done")
+            .first()
+        )
+        if pending is not None:
+            return False
+        item_rows = (
+            session.query(database_manager.CompiledClusterItemRecord)
+            .filter(database_manager.CompiledClusterItemRecord.cluster_id == cluster_id)
+            .order_by(database_manager.CompiledClusterItemRecord.merged_item_form_id.asc())
+            .all()
+        )
+        items: list[dict[str, Any]] = []
+        for row in item_rows:
+            payload = _safe_json_dict(getattr(row, "item_json", None))
+            if isinstance(payload, dict) and payload:
+                items.append(payload)
+    payload = _assemble_cluster_payload(term=term, rec=rec, items=items)
+    payload["ingredient"]["taxonomy"] = taxonomy if isinstance(taxonomy, dict) else {}
+    database_manager.upsert_compiled_ingredient(
+        term,
+        payload,
+        seed_category=getattr(rec, "seed_category", None),
+        priority=getattr(rec, "priority", None),
+    )
+    if WRITE_INGREDIENT_FILES:
+        slug = slugify(term)
+        save_payload(payload, slug)
+    update_lookup_files(payload)
+    return True
 
 
 @retry_on_db_lock
@@ -739,11 +813,14 @@ def _process_stage1_cluster(
                         legacy_common = ai_result.get("common_name") or legacy_common or compiled
                     except Exception:
                         legacy_common = legacy_common or compiled
+                rec.common_name = legacy_common or rec.compiled_term
+                rec.confidence_score = None  # No AI confidence for seeded records
+                rec.data_quality_notes = "seeded_from_legacy"
                 rec.payload_json = json.dumps(
                     {
                         "stage1": {
                             "term": rec.compiled_term,
-                            "common_name": legacy_common or rec.compiled_term,
+                            "common_name": rec.common_name,
                             "ingredient_core": core,
                             "data_quality": {"confidence": None, "caveats": []},
                             "seeded_from_legacy": True,
@@ -796,8 +873,37 @@ def _process_stage1_cluster(
             else:
                 rec.priority = priority
             common_name = result.get("common_name") or rec.compiled_term
+            
+            rec.common_name = common_name
+            
+            # Extract confidence from data_quality if present
+            if isinstance(dq, dict):
+                confidence = dq.get("confidence")
+                if confidence is not None:
+                    try:
+                        conf_val = float(confidence)
+                        if 0 <= conf_val <= 1:
+                            rec.confidence_score = int(round(conf_val * 100))
+                        else:
+                            rec.confidence_score = int(round(conf_val))
+                    except (TypeError, ValueError):
+                        pass
+                caveats = dq.get("caveats", [])
+                if caveats:
+                    rec.data_quality_notes = "; ".join(str(c) for c in caveats) if isinstance(caveats, list) else str(caveats)
+                else:
+                    rec.data_quality_notes = None
+            else:
+                rec.data_quality_notes = None
             rec.payload_json = json.dumps(
-                {"stage1": {"term": rec.compiled_term, "common_name": common_name, "ingredient_core": core, "data_quality": dq}},
+                {
+                    "stage1": {
+                        "term": rec.compiled_term,
+                        "common_name": common_name,
+                        "ingredient_core": core,
+                        "data_quality": dq,
+                    }
+                },
                 ensure_ascii=False,
                 sort_keys=True,
             )

@@ -128,7 +128,7 @@ CORE_SCHEMA_SPEC = r"""
 {
   "ingredient_core": {
     "origin": "Plant-Derived|Animal-Derived|Animal-Byproduct|Mineral/Earth|Synthetic|Fermentation|Marine-Derived",
-    "ingredient_category": "Fruits|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars",
+    "ingredient_category": "Fruits & Berries|Vegetables|Grains|Nuts|Seeds|Spices|Herbs|Flowers|Roots|Barks|Clays|Minerals|Salts|Sugars|Seaweeds|Algae|Fish|Shellfish|Crustaceans|Marine - Other|Fermentation - Cultures|Proteins|Synthetic - Other|Synthetic - Surfactants|Synthetic - Colorants",
     "refinement_level": "Raw/Unprocessed|Minimally Processed|Extracted/Distilled|Milled/Ground|Fermented|Synthesized",
     "derived_from": "string",
     "category": "ingredient category",
@@ -176,7 +176,7 @@ ITEMS_SCHEMA_SPEC = r"""
 {
   "items": [{
     "variation": {"value": "string", "status": "found|not_applicable"},
-    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters",
+    "master_category": "UX grouping: Essential Oils|Carrier Oils|Butters|Waxes|Extracts|Absolutes|Concretes|Hydrosols|Resins & Gums|Herbs|Flowers|Roots|Barks|Seeds|Nuts|Spices|Fruits & Berries|Vegetables|Grains & Starches|Clays|Minerals|Salts|Colorants & Pigments|Preservatives & Antioxidants|Surfactants & Cleansers|Emulsifiers & Stabilizers|Thickeners & Gelling Agents|Fermentation Starters|Sugars|Liquid Sweeteners|Acids & PH Adjusters|Seaweeds|Algae|Fish Oils|Shellfish|Crustaceans|Marine Extracts|Proteins",
     "description": "1-2 sentence description",
     "physical_form": {"value": "Oil|Liquid|Powder|Granules|Crystals|Whole|Butter|Wax|Resin|Gel|Paste|Flakes|Chunks", "status": "found"},
     "processing_method": {"value": "Unprocessed|Cold Pressed|Expeller Pressed|Solvent Extracted|Steam Distilled|CO2 Extracted|Refined|Bleached|Deodorized|Hydrogenated|Fractionated|Filtered|Milled|Dried|Freeze-Dried|Fermented|Synthesized", "status": "found"},
@@ -206,6 +206,13 @@ ITEMS_SCHEMA_SPEC = r"""
     "form_bypass": false,
     "variation_bypass": false
   }],
+  "taxonomy": {
+    "scent_profile": ["list of scent descriptors: floral, woody, herbaceous, citrus, spicy, etc"],
+    "color_profile": ["list of color descriptors: pale yellow, amber, brown, colorless, etc"],
+    "texture_profile": ["list of texture descriptors: smooth, grainy, waxy, viscous, etc"],
+    "compatible_processes": ["list of compatible processes: Cold Process Soap, Hot Process Soap, Melt & Pour, Lotion, Cream, etc"],
+    "incompatible_processes": ["list of incompatible processes if any"]
+  },
   "data_quality": {"confidence": 0-1, "caveats": []}
 }
 MANDATORY RULES - EVERY FIELD MUST HAVE AN EXPLICIT ANSWER:
@@ -387,6 +394,22 @@ REQUIRED FIELD HANDLING:
 - inci_name: ALWAYS provide. Use status="not_found" with reason only if genuinely unknown.
 - cas_number: Provide if known. Use status="not_found" with reason if unable to determine.
 
+ORIGIN OVERRIDE RULES (apply strictly):
+- PEG/PPG derivatives (e.g., "PEG-8", "PPG-15", "jojoba oil peg-8 esters") → origin MUST be "Synthetic" regardless of source plant.
+- Ethoxylated or propoxylated compounds → origin MUST be "Synthetic".
+
+CATEGORY RULES FOR MARINE-DERIVED:
+- Seaweeds/kelps/edible sea vegetables → category = "Seaweeds"
+- Microalgae/phytoplankton → category = "Algae"
+- Fish-derived → category = "Fish"
+- Mollusks (abalone, oyster, mussel) → category = "Shellfish"
+- Shrimp/krill/crab → category = "Crustaceans"
+- Other marine (coral, sponges, starfish) → category = "Marine - Other"
+
+CATEGORY RULES FOR FERMENTATION:
+- Bacterial/yeast cultures → category = "Fermentation - Cultures"
+- Hydrolyzed proteins → category = "Proteins"
+
 Cluster ID: "{cluster_id}"
 
 Cluster evidence (JSON; use as source-of-truth hints):
@@ -495,8 +518,13 @@ def complete_item_stubs(
     return all_items
 
 
-def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
-    meta = _render_metadata_blob(term)
+def _render_items_prompt(
+    term: str,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any],
+    metadata_blob: str | None = None,
+) -> str:
+    meta = metadata_blob if metadata_blob is not None else _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
@@ -539,9 +567,14 @@ Meta:{meta}
 SCHEMA:{ITEMS_SCHEMA_SPEC}"""
 
 
-def _render_items_completion_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
+def _render_items_completion_prompt(
+    term: str,
+    ingredient_core: Dict[str, Any],
+    base_context: Dict[str, Any],
+    metadata_blob: str | None = None,
+) -> str:
     """Stage 2B variant: complete existing ingestion-derived items (do not invent new ones)."""
-    meta = _render_metadata_blob(term)
+    meta = metadata_blob if metadata_blob is not None else _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
     base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)

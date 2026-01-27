@@ -53,8 +53,14 @@ def _derive_master_categories_from_rules(
     for it in items:
         if not isinstance(it, dict):
             continue
-        form = (it.get("physical_form") or "").strip()
-        var = (it.get("variation") or "").strip()
+        raw_form = it.get("physical_form") or ""
+        if isinstance(raw_form, dict):
+            raw_form = raw_form.get("value", "") or ""
+        form = str(raw_form).strip()
+        raw_var = it.get("variation") or ""
+        if isinstance(raw_var, dict):
+            raw_var = raw_var.get("value", "") or ""
+        var = str(raw_var).strip()
 
         for mc in rules.get(("physical_form", form), set()):
             out.add(mc)
@@ -199,7 +205,7 @@ def _derive_master_categories(ingredient_category: str, items: list[dict]) -> li
     """Deprecated: use _derive_master_categories_from_rules within a DB session."""
     return []
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
+DEFAULT_DB_PATH = BASE_DIR / "output" / "Final DB.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
@@ -355,14 +361,23 @@ class CompiledClusterRecord(Base):
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
     priority = Column(Integer, nullable=True, default=None)
+    
+    # Common name (user-friendly display name from AI normalization)
+    common_name = Column(Text, nullable=True, default=None)
+    
+    # Confidence score (0-100) from AI compilation
+    confidence_score = Column(Integer, nullable=True, default=None)
+    
+    # Data quality notes/caveats from AI compilation
+    data_quality_notes = Column(Text, nullable=True, default=None)
 
     term_status = Column(String, nullable=False, default="pending")  # pending|processing|done|error
     term_compiled_at = Column(DateTime, nullable=True, default=None)
     term_error = Column(Text, nullable=True, default=None)
     compilation_rank = Column(Integer, nullable=True, default=None)  # Order in which this term was compiled
-
-    # JSON payload (auditable) for stage1/stage2 use.
-    payload_json = Column(Text, nullable=False, default="{}")
+    
+    # Legacy payload_json column (kept for backwards compatibility, now nullable)
+    payload_json = Column(Text, nullable=True, default="{}")
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -2162,11 +2177,17 @@ def upsert_compiled_ingredient(
             if not isinstance(raw_item, dict):
                 continue
 
-            variation = (raw_item.get("variation") or "").strip()
+            raw_variation = raw_item.get("variation") or ""
+            if isinstance(raw_variation, dict):
+                raw_variation = raw_variation.get("value", "") or ""
+            variation = str(raw_variation).strip()
             if not variation:
                 variation = _extract_parenthetical_variation(str(raw_item.get("item_name") or ""), cleaned)
 
-            physical_form = (raw_item.get("physical_form") or "").strip()
+            raw_physical_form = raw_item.get("physical_form") or ""
+            if isinstance(raw_physical_form, dict):
+                raw_physical_form = raw_physical_form.get("value", "") or ""
+            physical_form = str(raw_physical_form).strip()
             # If the model put a variation into physical_form, fix it here.
             if physical_form in variation_forms and not variation:
                 variation = physical_form

@@ -89,7 +89,7 @@ def tools_index():
 @tools_bp.route('/soap')
 def tools_soap():
     calc_limit, calc_tier = _soap_calc_limit()
-    return _render_tool('tools/soap.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
+    return _render_tool('tools/soaps/index.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
 
 @tools_bp.route('/candles')
 def tools_candles():

@@ -1,0 +1,158 @@
+{% extends 'layout.html' %}
+
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+            <div>
+                <h2 class="mb-2"><i class="fas fa-cogs text-primary me-2"></i> System Settings</h2>
+                <p class="text-muted mb-0">Developer-only system configuration. Changes apply immediately.</p>
+            </div>
+            <div class="text-end w-100 w-lg-auto">
+                <div id="systemSettingsStatus" class="alert alert-info py-2 px-3 small mb-0" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0"><i class="fas fa-server"></i> System</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Items Per Page</label>
+                        <select class="form-select js-system-setting" data-section="system" data-key="per_page">
+                            {% set per_page_value = system_settings.system.per_page %}
+                            <option value="10" {% if per_page_value == 10 %}selected{% endif %}>10</option>
+                            <option value="25" {% if per_page_value == 25 %}selected{% endif %}>25</option>
+                            <option value="50" {% if per_page_value == 50 %}selected{% endif %}>50</option>
+                            <option value="100" {% if per_page_value == 100 %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input js-system-setting" type="checkbox"
+                               data-section="system" data-key="enable_csv_export"
+                               {% if system_settings.system.enable_csv_export %}checked{% endif %}>
+                        <label class="form-check-label">Enable CSV Export</label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input js-system-setting" type="checkbox"
+                               data-section="system" data-key="auto_save_forms"
+                               {% if system_settings.system.auto_save_forms %}checked{% endif %}>
+                        <label class="form-check-label">Auto-save Forms</label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input js-system-setting" type="checkbox"
+                               data-section="system" data-key="auto_backup"
+                               {% if system_settings.system.auto_backup %}checked{% endif %}>
+                        <label class="form-check-label">Auto Backup</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0"><i class="fas fa-bell"></i> Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input js-system-setting" type="checkbox"
+                               data-section="notifications" data-key="browser_notifications"
+                               {% if system_settings.notifications.browser_notifications %}checked{% endif %}>
+                        <label class="form-check-label">Browser Notifications</label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input js-system-setting" type="checkbox"
+                               data-section="notifications" data-key="email_alerts"
+                               {% if system_settings.notifications.email_alerts %}checked{% endif %}>
+                        <label class="form-check-label">Email Alerts</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Alert Frequency</label>
+                        <select class="form-select js-system-setting" data-section="notifications" data-key="alert_frequency">
+                            {% set alert_frequency = system_settings.notifications.alert_frequency %}
+                            <option value="real_time" {% if alert_frequency == 'real_time' %}selected{% endif %}>Real Time</option>
+                            <option value="hourly" {% if alert_frequency == 'hourly' %}selected{% endif %}>Hourly</option>
+                            <option value="daily" {% if alert_frequency == 'daily' %}selected{% endif %}>Daily</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const statusBanner = document.getElementById('systemSettingsStatus');
+    const elements = document.querySelectorAll('.js-system-setting');
+    let debounceHandle = null;
+
+    function getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function showStatus(message, variant) {
+        if (!statusBanner) return;
+        statusBanner.textContent = message;
+        statusBanner.className = `alert alert-${variant} py-2 px-3 small mb-0`;
+        statusBanner.style.display = 'block';
+        clearTimeout(statusBanner._hideTimeout);
+        statusBanner._hideTimeout = setTimeout(() => {
+            statusBanner.style.display = 'none';
+        }, 3000);
+    }
+
+    async function saveSetting(section, key, value) {
+        try {
+            const resp = await fetch('{{ url_for('developer.update_system_settings') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ section, key, value })
+            });
+            if (resp.ok) {
+                showStatus('System settings updated', 'success');
+            } else {
+                showStatus('Failed to update system settings', 'danger');
+            }
+        } catch (error) {
+            console.error('Failed to update system settings', error);
+            showStatus('Failed to update system settings', 'danger');
+        }
+    }
+
+    function handleChange(event) {
+        const el = event.target;
+        const section = el.dataset.section;
+        const key = el.dataset.key;
+        const value = (el.type === 'checkbox') ? el.checked : el.value;
+
+        if (debounceHandle) {
+            clearTimeout(debounceHandle);
+        }
+        debounceHandle = setTimeout(() => saveSetting(section, key, value), 200);
+    }
+
+    elements.forEach(el => {
+        el.addEventListener('change', handleChange);
+    });
+})();
+</script>
+{% endblock %}

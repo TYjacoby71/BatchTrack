@@ -1,0 +1,54 @@
+<div class="tab-pane fade show active" id="soapStage1Pane" role="tabpanel" aria-labelledby="soapStage1Tab">
+  <div class="card soap-stage-card">
+    <div class="card-body soap-stage-body" data-stage-index="0">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Mold water weight <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
+          <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
+          <div class="form-text">Fill the mold with water and weigh it.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Oils % of mold</label>
+          <input type="number" class="form-control" id="moldOilPct" min="0" max="100" step="0.1" value="65" title="Normal range is 50-80%.">
+          <div class="form-text soap-stage-note">Normal range is 50-80%.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Total oils target <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
+          <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" placeholder="Auto from mold or enter manually">
+          <div class="form-text soap-stage-note" id="oilTargetHint">Auto-fills when mold sizing is set.</div>
+        </div>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-4">
+          <label class="form-label">Mold shape</label>
+          <select class="form-select" id="moldShape">
+            <option value="loaf">Loaf / rectangular</option>
+            <option value="cylinder">Cylinder / pipe</option>
+          </select>
+        </div>
+        <div class="col-md-8">
+          <div class="mt-2 d-none" id="moldCylinderOptions">
+            <div class="alert alert-warning small mb-2" id="moldCylinderAlert">
+              Cylinder mold selected. Use a correction if you want headspace for pouring or overflow control.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="moldCylinderCorrection">
+                  <label class="form-check-label" for="moldCylinderCorrection">Apply cylinder correction</label>
+                </div>
+                <div class="form-text soap-stage-note">Use this when you want to leave headspace or avoid spill risk.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Cylinder fill factor</label>
+                <input type="number" class="form-control" id="moldCylinderFactor" min="0.5" max="1" step="0.05" value="0.85">
+                <div class="form-text soap-stage-note">0.85 means fill to 85% of measured capacity.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="small text-muted mt-2" id="moldSuggestionNote">Target oils are capped to the mold size above.</div>
+    </div>
+  </div>
+</div>

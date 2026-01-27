@@ -81,6 +81,13 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "description": "Capabilities intended for internal tooling or staging environments.",
         "flags": [
             {
+                "key": "FEATURE_AUTO_BULK_SKU_ON_VARIANT",
+                "label": "Auto-create Bulk SKU on Variant",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Require a unit and create a Bulk SKU when adding a variant.",
+            },
+            {
                 "key": "FEATURE_CSV_EXPORT",
                 "label": "CSV Export",
                 "status": "wired",

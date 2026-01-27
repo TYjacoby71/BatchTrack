@@ -7,6 +7,7 @@ from ...models.product import Product, ProductVariant, ProductSKU
 from ...models import UnifiedInventoryHistory, InventoryLot
 from ...models.batch import Batch
 from ...utils.unit_utils import get_global_unit_list
+from ...utils.settings import is_feature_enabled
 
 try:
     from ...utils.permissions import require_permission
@@ -521,11 +522,14 @@ def view_product(product_id):
     except Exception:
         product_categories = []
 
+    auto_create_bulk_sku_on_variant = is_feature_enabled("FEATURE_AUTO_BULK_SKU_ON_VARIANT")
+
     return render_template('pages/products/view_product.html',
                          product=product,
                          variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
+                         auto_create_bulk_sku_on_variant=auto_create_bulk_sku_on_variant,
                          inventory_groups={},
                          product_categories=product_categories,
                          breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}])

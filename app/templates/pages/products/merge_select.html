@@ -9,6 +9,7 @@
             <p class="text-muted">Select SKUs to merge. Note: You can only merge SKUs of the same product, variant, and unit.</p>
             
             <form method="POST" action="{{ url_for('sku.configure_merge') }}" id="merge-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="card">
                     <div class="card-header">
                         <h5>Select SKUs to Merge</h5>
