@@ -143,27 +143,12 @@
   }
 
   function updateStageStatuses(){
-    STAGE_CONFIGS.forEach(stage => {
-      const button = document.getElementById(stage.tabId);
-      if (!button) return;
-      let badge = button.querySelector('.soap-stage-status');
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'badge bg-secondary ms-2 soap-stage-status';
-        button.appendChild(badge);
-      }
-      const status = getStageCompletion(stage.id);
-      badge.textContent = status.label;
-      badge.classList.remove('bg-secondary', 'bg-success', 'bg-warning', 'bg-info');
-      if (status.state === 'complete') badge.classList.add('bg-success');
-      if (status.state === 'incomplete') badge.classList.add('bg-warning');
-      if (status.state === 'optional') badge.classList.add('bg-secondary');
-      if (status.state === 'info') badge.classList.add('bg-info');
-    });
-    const requiredStages = STAGE_CONFIGS.filter(stage => stage.required);
-    const completeCount = requiredStages.filter(stage => getStageCompletion(stage.id).state === 'complete').length;
+    const tabList = document.getElementById('soapStageTabList');
+    if (tabList) {
+      tabList.querySelectorAll('.soap-stage-status').forEach(el => el.remove());
+    }
     const progress = document.getElementById('soapStageProgress');
-    if (progress) progress.textContent = `${completeCount}/${requiredStages.length} complete`;
+    if (progress) progress.textContent = '';
   }
 
   SoapTool.stages = {
