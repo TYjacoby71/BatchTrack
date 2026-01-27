@@ -4,6 +4,7 @@ from ...models import db, ProductSKU, InventoryItem
 from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
+from ...utils.settings import get_setting
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)
@@ -39,13 +40,17 @@ def add_variant(product_id):
                 return jsonify({'error': 'Product record not found'}), 404
 
         # Get variant name from request
+        auto_create_bulk_sku = bool(get_setting('products.auto_create_bulk_sku_on_variant', False))
+
         if request.is_json:
             data = request.get_json() or {}
             variant_name = data.get('name')
             description = data.get('description')
+            unit_override = data.get('unit') if auto_create_bulk_sku else None
         else:
             variant_name = request.form.get('name')
             description = request.form.get('description')
+            unit_override = request.form.get('unit') if auto_create_bulk_sku else None
 
         if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
@@ -61,6 +66,12 @@ def add_variant(product_id):
         if existing_variant:
             return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
 
+        unit = ''
+        if auto_create_bulk_sku:
+            unit = (unit_override or '').strip() if unit_override else ''
+            if not unit:
+                return jsonify({'error': 'Unit is required to create the default Bulk SKU for this variant'}), 400
+
         # Create the ProductVariant
         new_variant = ProductVariant(
             product_id=product.id,
@@ -71,17 +82,62 @@ def add_variant(product_id):
         )
         db.session.add(new_variant)
 
-        # Commit variant creation
+        new_sku = None
+        if auto_create_bulk_sku:
+            db.session.flush()  # Ensure new_variant has an ID
+            sku_code = ProductService.generate_sku_code(product.name, variant_name, 'Bulk')
+            sku_name = f"{variant_name} {product.name} (Bulk)"
+
+            inventory_item = InventoryItem(
+                name=f"{product.name} - {variant_name} - Bulk",
+                type='product',
+                unit=unit,
+                quantity=0.0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(inventory_item)
+            db.session.flush()
+
+            new_sku = ProductSKU(
+                inventory_item_id=inventory_item.id,
+                product_id=product.id,
+                variant_id=new_variant.id,
+                size_label='Bulk',
+                sku_code=sku_code,
+                sku=sku_code,
+                sku_name=sku_name,
+                unit=unit,
+                low_stock_threshold=product.low_stock_threshold,
+                description=description,
+                is_active=True,
+                is_product_active=True,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(new_sku)
+
+        # Commit changes
         db.session.commit()
 
-        return jsonify({
+        response = {
             'success': True,
             'variant': {
                 'id': new_variant.id,
                 'name': new_variant.name,
                 'description': new_variant.description
             }
-        })
+        }
+
+        if new_sku:
+            response['variant'].update({
+                'sku_id': new_sku.inventory_item_id,
+                'sku': new_sku.sku_code,
+                'unit': new_sku.unit,
+                'size_label': new_sku.size_label
+            })
+
+        return jsonify(response)
 
     except Exception as e:
         # Rollback any changes if there's an error
