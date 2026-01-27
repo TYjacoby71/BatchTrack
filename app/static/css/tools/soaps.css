@@ -18,6 +18,11 @@
   gap: 0.25rem;
   margin-bottom: var(--space-2);
 }
+#soapToolPage .soap-quality-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
 #soapToolPage .soap-quality-grid {
   display: grid;
   gap: var(--space-3);
@@ -143,6 +148,9 @@
   flex-wrap: wrap;
 }
 @media (max-width: 767px) {
+  #soapToolPage .soap-quality-layout {
+    grid-template-columns: 1fr;
+  }
   #soapToolPage .soap-quality-item-header {
     flex-direction: column;
     align-items: flex-start;
@@ -407,23 +415,18 @@
 #soapToolPage .soap-stage-tabs .nav-item.is-expanded .nav-link {
   justify-content: flex-start;
 }
-#soapToolPage .soap-stage-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+#soapToolPage .soap-stage-label-short {
+  display: inline;
   font-size: 0.8rem;
-  font-weight: 600;
 }
-#soapToolPage .soap-stage-label {
+#soapToolPage .soap-stage-label-full {
   display: none;
   font-size: 0.8rem;
 }
-#soapToolPage .soap-stage-tabs .nav-link.active .soap-stage-label {
+#soapToolPage .soap-stage-tabs .nav-item.is-expanded .soap-stage-label-short {
+  display: none;
+}
+#soapToolPage .soap-stage-tabs .nav-item.is-expanded .soap-stage-label-full {
   display: inline;
 }
 #soapToolPage .soap-stage-tabs .nav-link.active {
