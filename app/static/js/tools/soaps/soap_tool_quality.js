@@ -351,7 +351,7 @@
 
     const sat = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0) + (fattyPercent.palmitic || 0) + (fattyPercent.stearic || 0);
     const unsat = (fattyPercent.ricinoleic || 0) + (fattyPercent.oleic || 0) + (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
-    const ratioEl = document.getElementById('fattySatRatio');
+    const ratioEl = document.getElementById('fattySatRatioResult');
     if (ratioEl) {
       ratioEl.textContent = (sat + unsat) > 0 ? `${round(sat, 0)}:${round(unsat, 0)}` : '--';
       pulseValue(ratioEl);
