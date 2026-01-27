@@ -297,6 +297,7 @@ class ProductService:
         from ..models import InventoryItem
 
         return ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
+            ProductSKU.low_stock_threshold > 0,
             InventoryItem.quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True,
             ProductSKU.organization_id == current_user.organization_id
