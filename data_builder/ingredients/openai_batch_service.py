@@ -694,6 +694,13 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
             for item in existing_items
         }
         
+        form_equivalents = {
+            "hydrosol": "liquid",
+            "solid": "powder",
+            "powder": "solid",
+        }
+        variation_defaults = {"raw", "n/a", ""}
+        
         matched_db_ids = set()
         ai_matched = [False] * len(items)
 
@@ -706,6 +713,17 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
                 physical_form = physical_form.get("value", "")
             key = (_clean(variation).lower(), _clean(physical_form).lower())
             matched_item = item_lookup.get(key)
+            
+            if not matched_item or matched_item.id in matched_db_ids:
+                ai_var, ai_form = key
+                for (db_var, db_form), db_item in item_lookup.items():
+                    if db_item.id in matched_db_ids:
+                        continue
+                    var_match = (db_var == ai_var) or (db_var == "" and ai_var in variation_defaults)
+                    form_match = (db_form == ai_form) or (form_equivalents.get(db_form) == ai_form) or (db_form == ai_form.replace("hydrosol", "liquid"))
+                    if var_match and form_match:
+                        matched_item = db_item
+                        break
             
             if matched_item and matched_item.id not in matched_db_ids:
                 matched_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
