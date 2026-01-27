@@ -637,7 +637,7 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
 
 
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
-    """Apply a Stage 2 AI result to the database (matches compiler.py behavior)."""
+    """Apply a Stage 2 AI result to the database with aggressive matching."""
     from datetime import timezone
 
     items = payload.get("items", [])
@@ -649,19 +649,18 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
     with database_manager.get_session() as session:
         existing_items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cluster_id).all()
         now = datetime.now(timezone.utc)
+        
+        pending_items = [item for item in existing_items if item.item_status != "done"]
+        
         item_lookup = {
             (_clean(item.derived_variation).lower(), _clean(item.derived_physical_form).lower()): item
             for item in existing_items
         }
         
-        empty_items = [
-            item for item in existing_items
-            if not _clean(item.derived_variation) and not _clean(item.derived_physical_form)
-            and item.item_status != "done"
-        ]
-        empty_idx = 0
+        matched_db_ids = set()
+        ai_matched = [False] * len(items)
 
-        for ai_item in items:
+        for ai_idx, ai_item in enumerate(items):
             variation = ai_item.get("variation", {})
             if isinstance(variation, dict):
                 variation = variation.get("value", "")
@@ -671,18 +670,31 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
             key = (_clean(variation).lower(), _clean(physical_form).lower())
             matched_item = item_lookup.get(key)
             
-            if not matched_item and empty_idx < len(empty_items):
-                matched_item = empty_items[empty_idx]
-                empty_idx += 1
-                matched_item.derived_variation = _clean(variation)
-                matched_item.derived_physical_form = _clean(physical_form)
-            
-            if matched_item:
+            if matched_item and matched_item.id not in matched_db_ids:
                 matched_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
                 matched_item.item_status = "done"
                 matched_item.item_compiled_at = now
                 matched_item.item_error = None
                 matched_item.updated_at = now
+                matched_db_ids.add(matched_item.id)
+                ai_matched[ai_idx] = True
+
+        unmatched_pending = [item for item in pending_items if item.id not in matched_db_ids]
+        unmatched_ai = [items[i] for i in range(len(items)) if not ai_matched[i]]
+        
+        for db_item, ai_item in zip(unmatched_pending, unmatched_ai):
+            variation = ai_item.get("variation", {})
+            if isinstance(variation, dict):
+                variation = variation.get("value", "")
+            physical_form = ai_item.get("physical_form", {})
+            if isinstance(physical_form, dict):
+                physical_form = physical_form.get("value", "")
+            
+            db_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
+            db_item.item_status = "done"
+            db_item.item_compiled_at = now
+            db_item.item_error = None
+            db_item.updated_at = now
 
         session.commit()
 
