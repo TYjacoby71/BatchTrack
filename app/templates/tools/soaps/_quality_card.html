@@ -26,6 +26,62 @@
   <div class="card-body">
     <div class="soap-quality-layout">
       <div class="soap-quality-section">
+        <div class="soap-quality-section-title">Fatty acids</div>
+        <div class="soap-acid-grid">
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Lauric</span>
+            <span class="soap-acid-value" id="fattyLauric">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLauric"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Myristic</span>
+            <span class="soap-acid-value" id="fattyMyristic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarMyristic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Palmitic</span>
+            <span class="soap-acid-value" id="fattyPalmitic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarPalmitic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Stearic</span>
+            <span class="soap-acid-value" id="fattyStearic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarStearic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Ricinoleic</span>
+            <span class="soap-acid-value" id="fattyRicinoleic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarRicinoleic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Oleic</span>
+            <span class="soap-acid-value" id="fattyOleic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarOleic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Linoleic</span>
+            <span class="soap-acid-value" id="fattyLinoleic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinoleic"></div></div>
+          </div>
+          <div class="soap-acid-row">
+            <span class="soap-acid-label">Linolenic</span>
+            <span class="soap-acid-value" id="fattyLinolenic">--</span>
+            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinolenic"></div></div>
+          </div>
+        </div>
+        <div class="soap-quality-metrics mt-3">
+          <div>
+            <div class="small text-muted">Saturated:Unsaturated</div>
+            <div class="fw-semibold" id="fattySatRatio">--</div>
+          </div>
+          <div>
+            <div class="small text-muted">Avg SAP (KOH)</div>
+            <div class="fw-semibold" id="sapAvgValue">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soap-quality-section">
         <div class="soap-quality-section-header">
           <div class="soap-quality-section-title">Qualities</div>
           <div class="soap-quality-legend">Safe range (shaded) is general guidance. Preset markers show target values.</div>
@@ -185,62 +241,6 @@
           </div>
         </div>
       </div>
-      </div>
-
-      <div class="soap-quality-section">
-        <div class="soap-quality-section-title">Fatty acids</div>
-        <div class="soap-acid-grid">
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Lauric</span>
-            <span class="soap-acid-value" id="fattyLauric">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLauric"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Myristic</span>
-            <span class="soap-acid-value" id="fattyMyristic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarMyristic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Palmitic</span>
-            <span class="soap-acid-value" id="fattyPalmitic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarPalmitic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Stearic</span>
-            <span class="soap-acid-value" id="fattyStearic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarStearic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Ricinoleic</span>
-            <span class="soap-acid-value" id="fattyRicinoleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarRicinoleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Oleic</span>
-            <span class="soap-acid-value" id="fattyOleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarOleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Linoleic</span>
-            <span class="soap-acid-value" id="fattyLinoleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinoleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Linolenic</span>
-            <span class="soap-acid-value" id="fattyLinolenic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinolenic"></div></div>
-          </div>
-        </div>
-        <div class="soap-quality-metrics mt-3">
-          <div>
-            <div class="small text-muted">Saturated:Unsaturated</div>
-            <div class="fw-semibold" id="fattySatRatio">--</div>
-          </div>
-          <div>
-            <div class="small text-muted">Avg SAP (KOH)</div>
-            <div class="fw-semibold" id="sapAvgValue">--</div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
