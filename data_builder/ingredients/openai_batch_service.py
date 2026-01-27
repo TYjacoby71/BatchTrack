@@ -581,6 +581,36 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         session.commit()
 
 
+def _repair_truncated_json(content: str) -> dict[str, Any] | None:
+    """Attempt to repair truncated JSON by finding last complete item."""
+    import re
+    
+    marker = '"variation_bypass"'
+    last_pos = content.rfind(marker)
+    if last_pos == -1:
+        return None
+    
+    search_start = last_pos + len(marker)
+    remaining = content[search_start:search_start + 100]
+    
+    close_match = re.search(r':\s*(true|false)\s*\}', remaining)
+    if not close_match:
+        return None
+    
+    cut_pos = search_start + close_match.end()
+    truncated = content[:cut_pos]
+    
+    open_braces = truncated.count('{') - truncated.count('}')
+    open_brackets = truncated.count('[') - truncated.count(']')
+    
+    repaired = truncated + ']' * open_brackets + '}' * open_braces
+    
+    try:
+        return json.loads(repaired)
+    except json.JSONDecodeError:
+        return None
+
+
 def import_stage2_results(results_path: str | Path) -> dict[str, int]:
     """Import Stage 2 batch results into the database."""
     results_path = Path(results_path)
@@ -622,7 +652,14 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
                     stats["failed"] += 1
                     continue
 
-                payload = json.loads(content)
+                try:
+                    payload = json.loads(content)
+                except json.JSONDecodeError:
+                    payload = _repair_truncated_json(content)
+                    if payload is None:
+                        LOGGER.error(f"Failed to repair JSON for {cluster_id}")
+                        stats["failed"] += 1
+                        continue
 
                 _apply_stage2_result(cluster_id, payload)
                 stats["success"] += 1
