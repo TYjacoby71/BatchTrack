@@ -24,223 +24,257 @@
     </div>
   </div>
   <div class="card-body">
-    <div class="soap-quality-layout">
-      <div class="soap-quality-section">
+    <div class="soap-quality-columns-header">
+      <div class="soap-quality-header-left">
         <div class="soap-quality-section-title">Fatty acids</div>
-        <div class="soap-acid-grid">
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Lauric</span>
-            <span class="soap-acid-value" id="fattyLauric">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLauric"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Myristic</span>
-            <span class="soap-acid-value" id="fattyMyristic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarMyristic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Palmitic</span>
-            <span class="soap-acid-value" id="fattyPalmitic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarPalmitic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Stearic</span>
-            <span class="soap-acid-value" id="fattyStearic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarStearic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Ricinoleic</span>
-            <span class="soap-acid-value" id="fattyRicinoleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarRicinoleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Oleic</span>
-            <span class="soap-acid-value" id="fattyOleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarOleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Linoleic</span>
-            <span class="soap-acid-value" id="fattyLinoleic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinoleic"></div></div>
-          </div>
-          <div class="soap-acid-row">
-            <span class="soap-acid-label">Linolenic</span>
-            <span class="soap-acid-value" id="fattyLinolenic">--</span>
-            <div class="soap-acid-bar"><div class="soap-acid-fill" id="fattyBarLinolenic"></div></div>
-          </div>
+      </div>
+      <div class="soap-quality-divider" aria-hidden="true"></div>
+      <div class="soap-quality-header-right">
+        <div class="soap-quality-section-title">Qualities</div>
+        <div class="soap-quality-legend">Safe range (shaded) is general guidance. Preset markers show target values.</div>
+      </div>
+    </div>
+
+    <div class="soap-quality-rows">
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Lauric</span>
+          <span class="soap-acid-value" id="fattyLauric">--</span>
         </div>
-        <div class="soap-quality-metrics mt-3">
-          <div>
-            <div class="small text-muted">Saturated:Unsaturated</div>
-            <div class="fw-semibold" id="fattySatRatio">--</div>
-          </div>
-          <div>
-            <div class="small text-muted">Avg SAP (KOH)</div>
-            <div class="fw-semibold" id="sapAvgValue">--</div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="hardness">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Hardness</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="hardness">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityHardnessValue">--</span>
+            </div>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="qualityHardnessBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityHardnessSafe"></div>
+                <div class="soap-quality-fill" id="qualityHardnessFill"></div>
+                <span class="quality-target-marker d-none" id="qualityHardnessTarget"><span class="quality-target-label" id="qualityHardnessTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityHardnessRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityHardnessRangeMax"></span>
+              </div>
+            </div>
+            <div class="soap-quality-hint" id="qualityHardnessHint"></div>
           </div>
         </div>
       </div>
 
-      <div class="soap-quality-section">
-        <div class="soap-quality-section-header">
-          <div class="soap-quality-section-title">Qualities</div>
-          <div class="soap-quality-legend">Safe range (shaded) is general guidance. Preset markers show target values.</div>
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Myristic</span>
+          <span class="soap-acid-value" id="fattyMyristic">--</span>
         </div>
-        <div class="soap-quality-grid">
-        <div class="soap-quality-item" data-quality="hardness">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Hardness</span>
-              <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="hardness">
-                <i class="fas fa-info-circle"></i>
-              </button>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="cleansing">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Cleansing</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="cleansing">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCleansingValue">--</span>
             </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityHardnessValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="qualityHardnessBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityHardnessSafe"></div>
-              <div class="soap-quality-fill" id="qualityHardnessFill"></div>
-              <span class="quality-target-marker d-none" id="qualityHardnessTarget"><span class="quality-target-label" id="qualityHardnessTargetLabel"></span></span>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="qualityCleansingBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityCleansingSafe"></div>
+                <div class="soap-quality-fill" id="qualityCleansingFill"></div>
+                <span class="quality-target-marker d-none" id="qualityCleansingTarget"><span class="quality-target-label" id="qualityCleansingTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityCleansingRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityCleansingRangeMax"></span>
+              </div>
             </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityHardnessRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityHardnessRangeMax"></span>
-            </div>
-          </div>
-          <div class="soap-quality-hint" id="qualityHardnessHint"></div>
-        </div>
-        <div class="soap-quality-item" data-quality="cleansing">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Cleansing</span>
-              <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="cleansing">
-                <i class="fas fa-info-circle"></i>
-              </button>
-            </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCleansingValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="qualityCleansingBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityCleansingSafe"></div>
-              <div class="soap-quality-fill" id="qualityCleansingFill"></div>
-              <span class="quality-target-marker d-none" id="qualityCleansingTarget"><span class="quality-target-label" id="qualityCleansingTargetLabel"></span></span>
-            </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityCleansingRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityCleansingRangeMax"></span>
-            </div>
-          </div>
-          <div class="soap-quality-hint" id="qualityCleansingHint"></div>
-        </div>
-        <div class="soap-quality-item" data-quality="conditioning">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Conditioning</span>
-              <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="conditioning">
-                <i class="fas fa-info-circle"></i>
-              </button>
-            </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityConditioningValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="qualityConditioningBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityConditioningSafe"></div>
-              <div class="soap-quality-fill" id="qualityConditioningFill"></div>
-              <span class="quality-target-marker d-none" id="qualityConditioningTarget"><span class="quality-target-label" id="qualityConditioningTargetLabel"></span></span>
-            </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityConditioningRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityConditioningRangeMax"></span>
-            </div>
-          </div>
-          <div class="soap-quality-hint" id="qualityConditioningHint"></div>
-        </div>
-        <div class="soap-quality-item" data-quality="bubbly">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Bubbly</span>
-              <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="bubbly">
-                <i class="fas fa-info-circle"></i>
-              </button>
-            </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityBubblyValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="qualityBubblyBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityBubblySafe"></div>
-              <div class="soap-quality-fill" id="qualityBubblyFill"></div>
-              <span class="quality-target-marker d-none" id="qualityBubblyTarget"><span class="quality-target-label" id="qualityBubblyTargetLabel"></span></span>
-            </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityBubblyRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityBubblyRangeMax"></span>
-            </div>
-          </div>
-          <div class="soap-quality-hint" id="qualityBubblyHint"></div>
-        </div>
-        <div class="soap-quality-item" data-quality="creamy">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Creamy</span>
-              <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="creamy">
-                <i class="fas fa-info-circle"></i>
-              </button>
-            </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCreamyValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="qualityCreamyBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityCreamySafe"></div>
-              <div class="soap-quality-fill" id="qualityCreamyFill"></div>
-              <span class="quality-target-marker d-none" id="qualityCreamyTarget"><span class="quality-target-label" id="qualityCreamyTargetLabel"></span></span>
-            </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityCreamyRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityCreamyRangeMax"></span>
-            </div>
-          </div>
-          <div class="soap-quality-hint" id="qualityCreamyHint"></div>
-        </div>
-        <div class="soap-quality-item" data-quality="iodine">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">Iodine</span>
-            </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="iodineValue">--</span>
-          </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="iodineBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityIodineSafe"></div>
-              <div class="soap-quality-fill" id="iodineFill"></div>
-              <span class="quality-target-marker d-none" id="iodineTarget"><span class="quality-target-label" id="iodineTargetLabel"></span></span>
-            </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityIodineRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityIodineRangeMax"></span>
-            </div>
+            <div class="soap-quality-hint" id="qualityCleansingHint"></div>
           </div>
         </div>
-        <div class="soap-quality-item" data-quality="ins">
-          <div class="soap-quality-item-header">
-            <div class="soap-quality-title">
-              <span class="soap-quality-name">INS</span>
+      </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Palmitic</span>
+          <span class="soap-acid-value" id="fattyPalmitic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="conditioning">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Conditioning</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="conditioning">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityConditioningValue">--</span>
             </div>
-            <span class="soap-quality-value fw-semibold soap-animate-number" id="insValue">--</span>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="qualityConditioningBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityConditioningSafe"></div>
+                <div class="soap-quality-fill" id="qualityConditioningFill"></div>
+                <span class="quality-target-marker d-none" id="qualityConditioningTarget"><span class="quality-target-label" id="qualityConditioningTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityConditioningRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityConditioningRangeMax"></span>
+              </div>
+            </div>
+            <div class="soap-quality-hint" id="qualityConditioningHint"></div>
           </div>
-          <div class="soap-quality-bar-wrap">
-            <div class="soap-quality-bar" id="insBar" role="progressbar">
-              <div class="soap-quality-safe" id="qualityInsSafe"></div>
-              <div class="soap-quality-fill" id="insFill"></div>
-              <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>
+        </div>
+      </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Stearic</span>
+          <span class="soap-acid-value" id="fattyStearic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="bubbly">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Bubbly</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="bubbly">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityBubblyValue">--</span>
             </div>
-            <div class="soap-quality-range-labels">
-              <span class="soap-quality-range-min" id="qualityInsRangeMin"></span>
-              <span class="soap-quality-range-max" id="qualityInsRangeMax"></span>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="qualityBubblyBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityBubblySafe"></div>
+                <div class="soap-quality-fill" id="qualityBubblyFill"></div>
+                <span class="quality-target-marker d-none" id="qualityBubblyTarget"><span class="quality-target-label" id="qualityBubblyTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityBubblyRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityBubblyRangeMax"></span>
+              </div>
+            </div>
+            <div class="soap-quality-hint" id="qualityBubblyHint"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Ricinoleic</span>
+          <span class="soap-acid-value" id="fattyRicinoleic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="creamy">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Creamy</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="creamy">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCreamyValue">--</span>
+            </div>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="qualityCreamyBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityCreamySafe"></div>
+                <div class="soap-quality-fill" id="qualityCreamyFill"></div>
+                <span class="quality-target-marker d-none" id="qualityCreamyTarget"><span class="quality-target-label" id="qualityCreamyTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityCreamyRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityCreamyRangeMax"></span>
+              </div>
+            </div>
+            <div class="soap-quality-hint" id="qualityCreamyHint"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Oleic</span>
+          <span class="soap-acid-value" id="fattyOleic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="iodine">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Iodine</span>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="iodineValue">--</span>
+            </div>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="iodineBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityIodineSafe"></div>
+                <div class="soap-quality-fill" id="iodineFill"></div>
+                <span class="quality-target-marker d-none" id="iodineTarget"><span class="quality-target-label" id="iodineTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityIodineRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityIodineRangeMax"></span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Linoleic</span>
+          <span class="soap-acid-value" id="fattyLinoleic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item" data-quality="ins">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">INS</span>
+              </div>
+              <span class="soap-quality-value fw-semibold soap-animate-number" id="insValue">--</span>
+            </div>
+            <div class="soap-quality-bar-wrap">
+              <div class="soap-quality-bar" id="insBar" role="progressbar">
+                <div class="soap-quality-safe" id="qualityInsSafe"></div>
+                <div class="soap-quality-fill" id="insFill"></div>
+                <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>
+              </div>
+              <div class="soap-quality-range-labels">
+                <span class="soap-quality-range-min" id="qualityInsRangeMin"></span>
+                <span class="soap-quality-range-max" id="qualityInsRangeMax"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soap-quality-row">
+        <div class="soap-acid-cell">
+          <span class="soap-acid-label">Linolenic</span>
+          <span class="soap-acid-value" id="fattyLinolenic">--</span>
+        </div>
+        <div class="soap-quality-divider" aria-hidden="true"></div>
+        <div class="soap-quality-cell">
+          <div class="soap-quality-item soap-quality-item-compact">
+            <div class="soap-quality-item-header">
+              <div class="soap-quality-title">
+                <span class="soap-quality-name">Avg SAP (KOH)</span>
+              </div>
+              <span class="soap-quality-value fw-semibold" id="sapAvgValue">--</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
