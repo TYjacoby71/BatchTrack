@@ -13,11 +13,13 @@ from app.utils.seo import slugify_value
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 from app.utils.permissions import _org_tier_includes_permission
 from app.services.cache_invalidation import recipe_library_cache_key
+from app.utils.settings import is_feature_enabled
 
 recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 
 RECIPE_PURCHASE_PERMISSION = "recipes.purchase_options"
 RECIPE_MARKETPLACE_PERMISSION = "recipes.marketplace_dashboard"
+RECIPE_MARKETPLACE_DISPLAY_FLAG = "FEATURE_RECIPE_MARKETPLACE_DISPLAY"
 
 
 def _org_allows_permission(org: Organization | None, permission_name: str) -> bool:
@@ -29,9 +31,15 @@ def _org_allows_permission(org: Organization | None, permission_name: str) -> bo
         return False
 
 
+def _marketplace_display_enabled() -> bool:
+    return is_feature_enabled(RECIPE_MARKETPLACE_DISPLAY_FLAG)
+
+
 @recipe_library_bp.route("/recipes/library")
 @limiter.limit("60000/hour;5000/minute")
 def recipe_library():
+    if not _marketplace_display_enabled():
+        abort(404)
     search_query = (request.args.get("search") or "").strip()
     category_filter = _safe_int(request.args.get("category"))
     sale_filter = (request.args.get("sale") or "any").lower()
@@ -168,6 +176,8 @@ def recipe_library():
 
 @recipe_library_bp.route("/recipes/library/<int:recipe_id>-<slug>")
 def recipe_library_detail(recipe_id: int, slug: str):
+    if not _marketplace_display_enabled():
+        abort(404)
     recipe = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
@@ -196,8 +206,11 @@ def recipe_library_detail(recipe_id: int, slug: str):
 
     cost_map = _fetch_cost_rollups([recipe.id])
     stats = _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
-    purchase_enabled = _org_allows_permission(recipe.organization, RECIPE_PURCHASE_PERMISSION)
-    org_marketplace_enabled = _org_allows_permission(
+    marketplace_display_enabled = _marketplace_display_enabled()
+    purchase_enabled = marketplace_display_enabled and _org_allows_permission(
+        recipe.organization, RECIPE_PURCHASE_PERMISSION
+    )
+    org_marketplace_enabled = marketplace_display_enabled and _org_allows_permission(
         recipe.organization, RECIPE_MARKETPLACE_PERMISSION
     )
     reveal_details = False
@@ -216,6 +229,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
 
 @recipe_library_bp.route("/recipes/library/organizations/<int:organization_id>")
 def organization_marketplace(organization_id: int):
+    if not _marketplace_display_enabled():
+        abort(404)
     org = Organization.query.get_or_404(organization_id)
     if not _org_allows_permission(org, RECIPE_MARKETPLACE_PERMISSION):
         abort(404)
@@ -287,7 +302,8 @@ def organization_marketplace(organization_id: int):
         organization=org,
         recipes=recipe_cards,
         totals=totals,
-        purchase_enabled=_org_allows_permission(org, RECIPE_PURCHASE_PERMISSION),
+        purchase_enabled=_marketplace_display_enabled()
+        and _org_allows_permission(org, RECIPE_PURCHASE_PERMISSION),
         search_query=search_query,
         sale_filter=sale_filter,
         sort_mode=sort_mode,
@@ -312,8 +328,11 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         ingredient_cost = cost_rollup.get("ingredient_cost")
         total_cost = cost_rollup.get("total_cost")
 
-    org_purchase_enabled = _org_allows_permission(recipe.organization, RECIPE_PURCHASE_PERMISSION)
-    org_marketplace_enabled = _org_allows_permission(
+    marketplace_display_enabled = _marketplace_display_enabled()
+    org_purchase_enabled = marketplace_display_enabled and _org_allows_permission(
+        recipe.organization, RECIPE_PURCHASE_PERMISSION
+    )
+    org_marketplace_enabled = marketplace_display_enabled and _org_allows_permission(
         recipe.organization, RECIPE_MARKETPLACE_PERMISSION
     )
     return {

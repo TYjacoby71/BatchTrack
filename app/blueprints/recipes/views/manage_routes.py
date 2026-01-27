@@ -16,6 +16,7 @@ from app.services.cache_invalidation import (
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.permissions import _org_tier_includes_permission, has_permission
 from app.utils.unit_utils import get_global_unit_list
+from app.utils.settings import is_feature_enabled
 
 from .. import recipes_bp
 
@@ -204,8 +205,10 @@ def view_recipe(recipe_id):
             origin_marketplace_enabled = _org_tier_includes_permission(
                 recipe.org_origin_source_org, "recipes.marketplace_dashboard"
             )
-        show_origin_marketplace = origin_marketplace_enabled and has_permission(
-            current_user, "recipes.marketplace_dashboard"
+        show_origin_marketplace = (
+            is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_DISPLAY")
+            and origin_marketplace_enabled
+            and has_permission(current_user, "recipes.marketplace_dashboard")
         )
         return render_template(
             'pages/recipes/view_recipe.html',

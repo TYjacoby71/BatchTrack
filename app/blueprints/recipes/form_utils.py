@@ -18,6 +18,7 @@ from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
 from app.utils.cache_manager import app_cache
 from app.utils.permissions import has_permission
+from app.utils.settings import is_feature_enabled
 from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,13 @@ def build_recipe_submission(
     )
     if not marketplace_ok:
         return RecipeFormSubmission({}, marketplace_result)
+    marketplace_payload, cover_payload = _sanitize_marketplace_submission(
+        marketplace_result.get("marketplace", {}),
+        marketplace_result.get("cover", {}),
+        existing=existing,
+        sharing_enabled=is_recipe_sharing_enabled(),
+        purchase_enabled=is_recipe_purchase_enabled(),
+    )
 
     kwargs: Dict[str, Any] = {
         'name': form.get('name'),
@@ -208,8 +216,8 @@ def build_recipe_submission(
         'portion_count': portion_fields['portion_count'],
         'portion_unit_id': portion_fields['portion_unit_id'],
     }
-    kwargs.update(marketplace_result['marketplace'])
-    kwargs.update(marketplace_result['cover'])
+    kwargs.update(marketplace_payload)
+    kwargs.update(cover_payload)
 
     return RecipeFormSubmission(kwargs)
 
@@ -639,15 +647,62 @@ def get_recipe_form_data():
 
 
 def is_recipe_sharing_enabled():
+    if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
+        return False
     if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
         return True
     return has_permission(current_user, 'recipes.sharing_controls')
 
 
 def is_recipe_purchase_enabled():
+    if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
+        return False
     if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
         return True
     return has_permission(current_user, 'recipes.purchase_options')
+
+
+def _sanitize_marketplace_submission(
+    marketplace_payload: Dict[str, Any],
+    cover_payload: Dict[str, Any],
+    *,
+    existing: Optional[Recipe] = None,
+    sharing_enabled: bool,
+    purchase_enabled: bool,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    if not sharing_enabled:
+        return _marketplace_payload_from_existing(existing), {}
+
+    sanitized = dict(marketplace_payload or {})
+    if not purchase_enabled:
+        sanitized["is_for_sale"] = False
+        sanitized["sale_price"] = None
+        sanitized["product_store_url"] = None
+    return sanitized, cover_payload
+
+
+def _marketplace_payload_from_existing(existing: Optional[Recipe]) -> Dict[str, Any]:
+    if not existing:
+        return {
+            "sharing_scope": "private",
+            "is_public": False,
+            "is_for_sale": False,
+            "sale_price": None,
+            "product_store_url": None,
+            "marketplace_notes": None,
+            "public_description": None,
+            "skin_opt_in": True,
+        }
+    return {
+        "sharing_scope": "public" if existing.is_public else "private",
+        "is_public": bool(existing.is_public),
+        "is_for_sale": bool(existing.is_for_sale),
+        "sale_price": existing.sale_price,
+        "product_store_url": existing.product_store_url,
+        "marketplace_notes": existing.marketplace_notes,
+        "public_description": existing.public_description,
+        "skin_opt_in": bool(existing.skin_opt_in) if existing.skin_opt_in is not None else True,
+    }
 
 
 def create_variation_template(parent: Recipe) -> Recipe:

@@ -175,6 +175,20 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "default_enabled": False,
                 "description": "Expose the public recipe library link in customer menus.",
             },
+            {
+                "key": "FEATURE_RECIPE_MARKETPLACE_DISPLAY",
+                "label": "Recipe Marketplace Display",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Show marketplace pages, purchase buttons, and org marketplace links.",
+            },
+            {
+                "key": "FEATURE_RECIPE_MARKETPLACE_LISTINGS",
+                "label": "Recipe Listing Controls",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Allow listing controls inside the recipe edit experience.",
+            },
         ],
     },
     {
