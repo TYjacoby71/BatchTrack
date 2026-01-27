@@ -77,6 +77,26 @@
           "name": "recipes.plan_production",
           "display_name": "Production Planning",
           "description": "Plan production runs and check ingredient availability"
+        },
+        {
+          "name": "recipes.create_variations",
+          "display_name": "Create Recipe Variations",
+          "description": "Create recipe variations from an existing parent recipe"
+        },
+        {
+          "name": "recipes.sharing_controls",
+          "display_name": "Recipe Sharing Controls",
+          "description": "Manage public/private sharing controls for recipe listings"
+        },
+        {
+          "name": "recipes.purchase_options",
+          "display_name": "Recipe Purchase Options",
+          "description": "Enable paid recipe listings and purchase links"
+        },
+        {
+          "name": "recipes.marketplace_dashboard",
+          "display_name": "Organization Marketplace Access",
+          "description": "Access the organization marketplace dashboard and links"
         }
       ]
     },
@@ -384,231 +404,6 @@
           "name": "dev.view_all_billing",
           "display_name": "View All Billing",
           "description": "Access billing information for all organizations"
-        }
-      ]
-    },
-    "application_permissions": {
-      "description": "All organization-level permissions available to developers",
-      "permissions": [
-        {
-          "name": "app.dashboard.view",
-          "display_name": "[App] View Dashboard",
-          "description": "Developer access to dashboard functionality"
-        },
-        {
-          "name": "app.inventory.view",
-          "display_name": "[App] View Inventory",
-          "description": "Developer access to inventory viewing"
-        },
-        {
-          "name": "app.inventory.edit",
-          "display_name": "[App] Edit Inventory",
-          "description": "Developer access to inventory editing"
-        },
-        {
-          "name": "app.inventory.adjust",
-          "display_name": "[App] Adjust Inventory",
-          "description": "Developer access to inventory adjustments"
-        },
-        {
-          "name": "app.inventory.reserve",
-          "display_name": "[App] Reserve Inventory",
-          "description": "Developer access to inventory reservations"
-        },
-        {
-          "name": "app.inventory.delete",
-          "display_name": "[App] Delete Inventory",
-          "description": "Developer access to inventory deletion"
-        },
-        {
-          "name": "app.inventory.view_costs",
-          "display_name": "[App] View Inventory Costs",
-          "description": "Developer access to inventory cost information"
-        },
-        {
-          "name": "app.recipes.view",
-          "display_name": "[App] View Recipes",
-          "description": "Developer access to recipe viewing"
-        },
-        {
-          "name": "app.recipes.create",
-          "display_name": "[App] Create Recipes",
-          "description": "Developer access to recipe creation"
-        },
-        {
-          "name": "app.recipes.edit",
-          "display_name": "[App] Edit Recipes",
-          "description": "Developer access to recipe editing"
-        },
-        {
-          "name": "app.recipes.delete",
-          "display_name": "[App] Delete Recipes",
-          "description": "Developer access to recipe deletion"
-        },
-        {
-          "name": "app.recipes.scale",
-          "display_name": "[App] Scale Recipes",
-          "description": "Developer access to recipe scaling"
-        },
-        {
-          "name": "app.recipes.plan_production",
-          "display_name": "[App] Production Planning",
-          "description": "Developer access to production planning"
-        },
-        {
-          "name": "app.batches.view",
-          "display_name": "[App] View Batches",
-          "description": "Developer access to batch viewing"
-        },
-        {
-          "name": "app.batches.create",
-          "display_name": "[App] Create Batches",
-          "description": "Developer access to batch creation"
-        },
-        {
-          "name": "app.batches.edit",
-          "display_name": "[App] Edit Batches",
-          "description": "Developer access to batch editing"
-        },
-        {
-          "name": "app.batches.finish",
-          "display_name": "[App] Finish Batches",
-          "description": "Developer access to batch completion"
-        },
-        {
-          "name": "app.batches.cancel",
-          "display_name": "[App] Cancel Batches",
-          "description": "Developer access to batch cancellation"
-        },
-        {
-          "name": "app.batches.view_costs",
-          "display_name": "[App] View Batch Costs",
-          "description": "Developer access to batch cost information"
-        },
-        {
-          "name": "app.products.view",
-          "display_name": "[App] View Products",
-          "description": "Developer access to product viewing"
-        },
-        {
-          "name": "app.products.create",
-          "display_name": "[App] Create Products",
-          "description": "Developer access to product creation"
-        },
-        {
-          "name": "app.products.edit",
-          "display_name": "[App] Edit Products",
-          "description": "Developer access to product editing"
-        },
-        {
-          "name": "app.products.delete",
-          "display_name": "[App] Delete Products",
-          "description": "Developer access to product deletion"
-        },
-        {
-          "name": "app.products.manage_variants",
-          "display_name": "[App] Manage Product Variants",
-          "description": "Developer access to product variant management"
-        },
-        {
-          "name": "app.products.sales_tracking",
-          "display_name": "[App] Sales Tracking",
-          "description": "Developer access to sales tracking"
-        },
-        {
-          "name": "app.organization.view",
-          "display_name": "[App] View Organization",
-          "description": "Developer access to organization viewing"
-        },
-        {
-          "name": "app.organization.edit",
-          "display_name": "[App] Edit Organization",
-          "description": "Developer access to organization editing"
-        },
-        {
-          "name": "app.organization.manage_users",
-          "display_name": "[App] Manage Organization Users",
-          "description": "Developer access to user management"
-        },
-        {
-          "name": "app.organization.manage_roles",
-          "display_name": "[App] Manage Organization Roles",
-          "description": "Developer access to role management"
-        },
-        {
-          "name": "app.organization.manage_billing",
-          "display_name": "[App] Manage Organization Billing",
-          "description": "Developer access to billing management"
-        },
-        {
-          "name": "app.organization.view_audit_logs",
-          "display_name": "[App] View Organization Audit Logs",
-          "description": "Developer access to audit logs"
-        },
-        {
-          "name": "app.alerts.view",
-          "display_name": "[App] View Alerts",
-          "description": "Developer access to alert viewing"
-        },
-        {
-          "name": "app.alerts.manage",
-          "display_name": "[App] Manage Alerts",
-          "description": "Developer access to alert management"
-        },
-        {
-          "name": "app.alerts.dismiss",
-          "display_name": "[App] Dismiss Alerts",
-          "description": "Developer access to alert dismissal"
-        },
-        {
-          "name": "app.reports.view",
-          "display_name": "[App] View Reports",
-          "description": "Developer access to report viewing"
-        },
-        {
-          "name": "app.reports.export",
-          "display_name": "[App] Export Reports",
-          "description": "Developer access to report exports"
-        },
-        {
-          "name": "app.reports.advanced",
-          "display_name": "[App] Advanced Reports",
-          "description": "Developer access to advanced reporting"
-        },
-        {
-          "name": "app.reports.custom",
-          "display_name": "[App] Custom Reports",
-          "description": "Developer access to custom report creation"
-        },
-        {
-          "name": "app.integrations.shopify",
-          "display_name": "[App] Shopify Integration",
-          "description": "Developer access to Shopify integration"
-        },
-        {
-          "name": "app.integrations.marketplace",
-          "display_name": "[App] Marketplace Integration",
-          "description": "Developer access to marketplace integration"
-        },
-        {
-          "name": "app.integrations.api_access",
-          "display_name": "[App] API Access",
-          "description": "Developer access to API functionality"
-        },
-        {
-          "name": "app.ai.recipe_optimization",
-          "display_name": "[App] AI Recipe Optimization",
-          "description": "Developer access to AI recipe optimization"
-        },
-        {
-          "name": "app.ai.demand_forecasting",
-          "display_name": "[App] AI Demand Forecasting",
-          "description": "Developer access to AI demand forecasting"
-        },
-        {
-          "name": "app.ai.quality_insights",
-          "display_name": "[App] AI Quality Insights",
-          "description": "Developer access to AI quality insights"
         }
       ]
     }

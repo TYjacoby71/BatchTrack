@@ -26,8 +26,13 @@ from datetime import datetime, timezone # Fix missing timezone import
 from . import inventory_bp
 from app.services.cache_invalidation import inventory_list_cache_key
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.settings import is_feature_enabled
 
 logger = logging.getLogger(__name__)
+
+
+def _bulk_inventory_updates_enabled() -> bool:
+    return is_feature_enabled("FEATURE_BULK_INVENTORY_UPDATES")
 
 
 def _expired_quantity_map(item_ids):
@@ -931,6 +936,9 @@ def debug_inventory(id):
 @login_required
 @permission_required('inventory.edit')
 def bulk_inventory_updates():
+    if not _bulk_inventory_updates_enabled():
+        flash("Bulk inventory updates are not enabled for your plan.", "warning")
+        return redirect(url_for('inventory.list_inventory'))
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
@@ -973,6 +981,8 @@ def bulk_inventory_updates():
 @permission_required('inventory.edit')
 def api_bulk_inventory_adjustments():
     payload = request.get_json() or {}
+    if not _bulk_inventory_updates_enabled():
+        return jsonify({"success": False, "error": "Bulk inventory updates are not enabled."}), 403
     org_id = getattr(current_user, 'organization_id', None)
     if not org_id:
         return jsonify({'success': False, 'error': 'Organization context required.'}), 400

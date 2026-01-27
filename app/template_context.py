@@ -12,7 +12,7 @@ from app.utils.cache_manager import app_cache
 from app.utils.unit_utils import get_global_unit_list
 
 from .utils.json_store import read_json_file
-from .utils.settings import is_feature_enabled
+from .utils.settings import get_settings, is_feature_enabled
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -24,7 +24,6 @@ from .utils.timezone_utils import TimezoneUtils
 
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
-_SETTINGS_PATH = Path("settings.json")
 
 
 def _serialize_ingredient_category(category) -> Dict[str, Any]:
@@ -203,7 +202,7 @@ def register_template_context(app: Flask) -> None:
 
         lifetime_left = max(0, lifetime_total - int(lifetime_used or 0))
 
-        cfg = read_json_file(_SETTINGS_PATH, default={}) or {}
+        cfg = get_settings()
         marketing_messages = {"day_1": "", "day_3": "", "day_5": ""}
         marketing_messages.update(cfg.get("marketing_messages", {}))
         marketing_settings = {

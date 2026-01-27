@@ -14,7 +14,10 @@
                     <h2><i class="fas fa-cogs"></i> Settings</h2>
                     <p class="text-muted mb-0">Manage your preferences and system configuration</p>
                 </div>
-                {% if is_org_owner and current_user.organization.tier and not current_user.organization.tier.is_billing_exempt %}
+                {% if is_org_owner
+                    and current_user.organization.tier
+                    and not current_user.organization.tier.is_billing_exempt
+                    and has_permission(current_user, 'organization.view') %}
                 <a href="{{ url_for('organization.dashboard') }}" class="btn btn-outline-primary">
                     <i class="fas fa-crown"></i> Organization Dashboard
                 </a>

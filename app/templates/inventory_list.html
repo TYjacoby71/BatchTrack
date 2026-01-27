@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or is_developer() %}
 {% block content %}
 <h2>Inventory Management</h2>
 

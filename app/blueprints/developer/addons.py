@@ -10,7 +10,7 @@ addons_bp = Blueprint('addons', __name__, url_prefix='/addons')
 
 @addons_bp.route('/')
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def list_addons():
     addons = Addon.query.order_by(Addon.name).all()
     return render_template('developer/addons/list.html', addons=addons)
@@ -18,7 +18,7 @@ def list_addons():
 
 @addons_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def create_addon():
     if request.method == 'POST':
         key = (request.form.get('key') or '').strip()
@@ -63,7 +63,7 @@ def create_addon():
 
 @addons_bp.route('/edit/<int:addon_id>', methods=['GET', 'POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def edit_addon(addon_id):
     addon = db.session.get(Addon, addon_id)
     if not addon:
@@ -89,7 +89,7 @@ def edit_addon(addon_id):
 
 @addons_bp.route('/delete/<int:addon_id>', methods=['POST'])
 @login_required
-@require_permission('developer.system_management')
+@require_permission('dev.manage_tiers')
 def delete_addon(addon_id):
     addon = db.session.get(Addon, addon_id)
     if not addon:

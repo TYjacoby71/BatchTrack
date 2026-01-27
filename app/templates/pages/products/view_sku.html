@@ -307,9 +307,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">SKU Details</h5>
                         <div>
-                            <a href="{{ url_for('sku_merge.select_skus_to_merge') }}" class="btn btn-warning btn-sm me-2">
+                            {% if is_feature_enabled('FEATURE_MERGE_SKUS') %}
+                            <a href="{{ url_for('sku.select_skus_to_merge') }}" class="btn btn-warning btn-sm me-2">
                                 <i class="fas fa-compress-arrows-alt"></i> Merge SKUs
                             </a>
+                            {% endif %}
                             <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editSkuModal">
                                 <i class="fas fa-edit"></i> Edit
                             </button>

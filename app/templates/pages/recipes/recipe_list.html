@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -155,9 +156,11 @@
                         <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
                             <i class="fas fa-copy"></i> Clone
                         </a>
+                        {% if can_create_variations %}
                         <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-code-branch"></i> Variation
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -284,9 +287,11 @@
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-copy"></i> Clone
                                         </a></li>
+                                        {% if can_create_variations %}
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
                                             <i class="fas fa-code-branch"></i> Create Variation
                                         </a></li>
+                                        {% endif %}
                                     </ul>
                                 </div>
                             </div>

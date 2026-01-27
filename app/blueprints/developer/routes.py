@@ -28,7 +28,7 @@ from . import views  # noqa: F401,E402
 
 @developer_bp.route('/vendor-signups')
 @limiter.limit("100 per minute")
-@permission_required('developer.access')
+@permission_required('dev.dashboard')
 def vendor_signups():
     """View vendor signups"""
     from app.utils.json_store import read_json_file
@@ -45,7 +45,7 @@ def vendor_signups():
 
 @developer_bp.route('/waitlist-signups')
 @limiter.limit("100 per minute")
-@permission_required('developer.access')
+@permission_required('dev.dashboard')
 def waitlist_signups_view():
     """
     This is a placeholder for the waitlist signups view.

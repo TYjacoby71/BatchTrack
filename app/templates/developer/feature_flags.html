@@ -8,7 +8,7 @@
         <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
             <div>
                 <h2 class="mb-2"><i class="fas fa-toggle-on text-primary me-2"></i> Feature Flags</h2>
-                <p class="text-muted mb-0">Centralized switchboard for developer and production toggles. Changes apply immediately and persist to <code>settings.json</code>.</p>
+                <p class="text-muted mb-0">Centralized switchboard for developer and production toggles. Changes apply immediately and persist to the database.</p>
             </div>
             <div class="text-end w-100 w-lg-auto">
                 <div id="flagSaveStatus" class="alert alert-info py-2 px-3 small mb-0" style="display:none;"></div>
@@ -27,14 +27,21 @@
                 {% for flag in section.flags %}
                 <div class="col-md-6">
                     <div class="border rounded p-3 h-100">
+                        {% set is_toggle = flag.toggle if flag.toggle is defined else True %}
+                        {% set is_enabled = flag_state.get(flag.key) if is_toggle else (flag.always_on if flag.always_on is defined else True) %}
+                        {% set status_class = 'bg-success' if flag.status in ['wired', 'standard', 'always_on'] else 'bg-secondary' %}
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="form-check form-switch">
-                                <input class="form-check-input feature-flag-toggle" type="checkbox" role="switch"
+                                <input class="form-check-input {% if is_toggle %}feature-flag-toggle{% endif %}" type="checkbox" role="switch"
                                        id="flag_{{ flag.key }}" data-flag-key="{{ flag.key }}"
-                                       {% if flag_state.get(flag.key) %}checked{% endif %}>
+                                       {% if is_enabled %}checked{% endif %}
+                                       {% if not is_toggle %}disabled{% endif %}>
                                 <label class="form-check-label fw-semibold" for="flag_{{ flag.key }}">{{ flag.label }}</label>
+                                {% if not is_toggle %}
+                                <span class="small text-muted ms-2">Always on</span>
+                                {% endif %}
                             </div>
-                            <span class="badge {% if flag.status == 'wired' %}bg-success{% else %}bg-secondary{% endif %}">
+                            <span class="badge {{ status_class }}">
                                 {{ flag.status | capitalize }}
                             </span>
                         </div>

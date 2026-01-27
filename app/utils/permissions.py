@@ -66,7 +66,7 @@ def require_permission(permission_name: str):
             # Developer users have access to developer permissions
             if current_user.user_type == 'developer':
                 # For developer permissions, just check if they're a developer
-                if permission_name.startswith('developer.'):
+                if permission_name.startswith('dev.'):
                     return f(*args, **named_args)
 
             # Check if user has the permission using authorization hierarchy
@@ -385,7 +385,7 @@ class AuthorizationHierarchy:
             # Developers have full access - they are super admins
             if user.user_type == 'developer':
                 # For developer permissions, check if they have the specific developer permission
-                if permission_name.startswith('developer.'):
+                if permission_name.startswith('dev.'):
                     return True  # All developers get all developer permissions
 
                 # For organization permissions when in customer view mode

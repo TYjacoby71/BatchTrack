@@ -14,6 +14,7 @@ from app.services.cache_invalidation import (
     recipe_list_page_cache_key,
 )
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.permissions import _org_tier_includes_permission, has_permission
 from app.utils.unit_utils import get_global_unit_list
 
 from .. import recipes_bp
@@ -198,11 +199,20 @@ def view_recipe(recipe_id):
 
         inventory_units = get_global_unit_list()
         lineage_enabled = True
+        origin_marketplace_enabled = False
+        if recipe.org_origin_source_org:
+            origin_marketplace_enabled = _org_tier_includes_permission(
+                recipe.org_origin_source_org, "recipes.marketplace_dashboard"
+            )
+        show_origin_marketplace = origin_marketplace_enabled and has_permission(
+            current_user, "recipes.marketplace_dashboard"
+        )
         return render_template(
             'pages/recipes/view_recipe.html',
             recipe=recipe,
             inventory_units=inventory_units,
             lineage_enabled=lineage_enabled,
+            show_origin_marketplace=show_origin_marketplace,
         )
 
     except Exception as exc:

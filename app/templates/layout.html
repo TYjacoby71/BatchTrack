@@ -92,6 +92,9 @@
                 BatchTrack 1.0
             </a>
             {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') %}
+            {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+            {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
+            {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
             {% set show_recipe_library_link = recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer') %}
             {% set has_nav_center = navbar_center_title is defined and navbar_center_title %}
             {% if has_nav_center %}
@@ -158,12 +161,18 @@
                     </li>
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
+                    {% if bulk_stock_check_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
+                    {% endif %}
+                    {% if bulk_inventory_updates_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.bulk_inventory_updates') }}">Bulk Inventory Updates</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
+                    {% if global_library_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
+                    {% endif %}
                     {% if show_recipe_library_link %}
                     <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
                     {% endif %}
@@ -371,16 +380,18 @@
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
+                    {% if current_user.is_authenticated and has_permission(current_user, 'products.view') and bulk_stock_check_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.edit') %}
+                    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.edit') and bulk_inventory_updates_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.bulk_inventory_updates') }}">Bulk Inventory Updates</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
+                    {% if global_library_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
+                    {% endif %}
                     {% if show_recipe_library_link %}
                     <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
                     {% endif %}

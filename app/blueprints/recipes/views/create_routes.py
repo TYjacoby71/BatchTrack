@@ -20,7 +20,7 @@ from app.services.recipe_service import (
     get_recipe_details,
     update_recipe,
 )
-from app.utils.permissions import get_effective_organization_id
+from app.utils.permissions import get_effective_organization_id, require_permission
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -248,6 +248,7 @@ def new_recipe():
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
+@require_permission('recipes.create_variations')
 def create_variation(recipe_id):
     try:
         parent = get_recipe_details(recipe_id)

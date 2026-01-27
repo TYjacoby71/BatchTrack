@@ -259,7 +259,7 @@ def container_management():
 @developer_bp.route("/container-management/save-curated", methods=["POST"])
 @login_required
 def save_curated_container_lists():
-    """Save curated container lists to settings.json."""
+    """Save curated container lists to app settings."""
     try:
         data = request.get_json() or {}
         curated_lists = data.get("curated_lists", {})

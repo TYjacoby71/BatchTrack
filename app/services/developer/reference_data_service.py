@@ -4,7 +4,17 @@ from typing import Dict, List
 
 from app.extensions import db
 from app.models import GlobalItem
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.settings import get_settings, save_settings
+
+
+def read_json_file(*_args, **_kwargs):
+    """Backward-compatible shim for tests; reads from app settings DB."""
+    return get_settings()
+
+
+def write_json_file(_path, data):
+    """Backward-compatible shim for tests; writes to app settings DB."""
+    save_settings(data)
 
 
 class ReferenceDataService:

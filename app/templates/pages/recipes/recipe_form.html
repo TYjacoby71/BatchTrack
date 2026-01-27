@@ -136,6 +136,9 @@
     {% if sale_lock %}
         {% set sale_mode_value = 'free' %}
     {% endif %}
+    {% if not recipe_purchase_enabled %}
+        {% set sale_mode_value = 'free' %}
+    {% endif %}
     {% set sale_price_value = field_values.get('sale_price') if field_values and field_values.get('sale_price') not in (None, '') else (recipe.sale_price if recipe and recipe.sale_price else '') %}
     {% set notes_value = field_values.get('marketplace_notes') if field_values and field_values.get('marketplace_notes') is not none else (recipe.marketplace_notes if recipe else '') %}
     {% set desc_value = field_values.get('public_description') if field_values and field_values.get('public_description') is not none else (recipe.public_description if recipe else '') %}
@@ -152,7 +155,7 @@
             <h5 class="card-title mb-0">
                 <i class="fas fa-store"></i> Recipe Library & Marketplace
             </h5>
-            <span class="badge bg-info text-dark">Feature Flag</span>
+            <span class="badge bg-info text-dark">Permission</span>
         </div>
         <div class="card-body">
             <p class="text-muted small mb-3">Control whether this recipe stays private to your organization or appears in the global recipe library. Public recipes can optionally include a cover image and price.</p>
@@ -173,10 +176,12 @@
                         <input class="form-check-input" type="radio" name="sale_mode" id="saleModeFree" value="free" {% if sale_mode_value != 'sale' %}checked{% endif %}>
                         <label class="form-check-label" for="saleModeFree">Free download</label>
                     </div>
+                    {% if recipe_purchase_enabled %}
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="sale_mode" id="saleModeSale" value="sale" {% if sale_mode_value == 'sale' %}checked{% endif %} {% if sale_lock %}disabled{% endif %}>
                         <label class="form-check-label" for="saleModeSale">For sale</label>
                     </div>
+                    {% endif %}
                 </div>
                 {% if sale_lock %}
                 <div class="alert alert-warning mt-3 mb-0">
@@ -184,19 +189,27 @@
                     This recipe can't be marked for sale until it qualifies as a unique, sellable work.
                 </div>
                 {% endif %}
-                <div class="row g-3 align-items-end mt-2" id="salePriceRow" style="display: {% if sale_mode_value == 'sale' and not sale_lock %}flex{% else %}none{% endif %};">
-                    <div class="col-md-4">
-                        <label class="form-label">Sale price</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" step="0.01" min="0" name="sale_price" class="form-control" value="{{ sale_price_value }}">
+                {% if recipe_purchase_enabled %}
+                    <div class="row g-3 align-items-end mt-2" id="salePriceRow" style="display: {% if sale_mode_value == 'sale' and not sale_lock %}flex{% else %}none{% endif %};">
+                        <div class="col-md-4">
+                            <label class="form-label">Sale price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0" name="sale_price" class="form-control" value="{{ sale_price_value }}">
+                            </div>
                         </div>
                     </div>
-                </div>
+                {% else %}
+                    <div class="alert alert-secondary mt-3 mb-0">
+                        <i class="fas fa-lock"></i>
+                        Sale listings require marketplace purchase permission.
+                    </div>
+                {% endif %}
                 <div class="mt-3">
                     <label class="form-label">Marketplace notes</label>
                     <textarea name="marketplace_notes" class="form-control" rows="2" placeholder="Short blurb shown on public cards">{{ notes_value }}</textarea>
                 </div>
+                {% if recipe_purchase_enabled %}
                 <div class="row mt-3">
                     <div class="col-md-6">
                         <label for="product_store_url" class="form-label">Product Store Link</label>
@@ -204,6 +217,7 @@
                         <div class="form-text">Optional link displayed only when the recipe is listed as public.</div>
                     </div>
                 </div>
+                {% endif %}
                 <div class="mt-3" id="publicDescriptionRow" style="display: {% if sharing_scope_value == 'public' %}block{% else %}none{% endif %};">
                     <label class="form-label">Public description</label>
                     <textarea name="public_description" class="form-control" rows="3" placeholder="Long-form description for visitors">{{ desc_value }}</textarea>
@@ -225,7 +239,7 @@
                     <div class="form-text">Square images (at least 800px) look best in the library listing.</div>
                 </div>
             </div>
-            <p class="small text-muted mt-3 mb-0">Marketplace controls are managed by developers via Feature Flags → Recipe Library & Marketplace.</p>
+            <p class="small text-muted mt-3 mb-0">Marketplace controls are managed by developers via Permissions → Recipe Library & Marketplace.</p>
         </div>
     </div>
     {% endif %}

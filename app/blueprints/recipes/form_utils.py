@@ -17,7 +17,7 @@ from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
 from app.utils.cache_manager import app_cache
-from app.utils.settings import is_feature_enabled
+from app.utils.permissions import has_permission
 from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
@@ -634,17 +634,20 @@ def get_recipe_form_data():
 
     data = dict(payload)
     data['recipe_sharing_enabled'] = is_recipe_sharing_enabled()
+    data['recipe_purchase_enabled'] = is_recipe_purchase_enabled()
     return data
 
 
 def is_recipe_sharing_enabled():
-    try:
-        enabled = is_feature_enabled('FEATURE_RECIPE_SHARING_CONTROLS')
-    except Exception:
-        enabled = False
     if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
         return True
-    return enabled
+    return has_permission(current_user, 'recipes.sharing_controls')
+
+
+def is_recipe_purchase_enabled():
+    if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
+        return True
+    return has_permission(current_user, 'recipes.purchase_options')
 
 
 def create_variation_template(parent: Recipe) -> Recipe:

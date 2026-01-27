@@ -120,7 +120,7 @@
                         {% if recipe.organization and recipe.organization.name %}
                         <small class="text-muted">
                             <i class="fas fa-building me-1"></i>{{ recipe.organization.name }}
-                            {% if org_marketplace_enabled %}
+                            {% if recipe.org_marketplace_enabled %}
                                 · <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.organization.id) }}" class="text-decoration-none">Marketplace</a>
                             {% endif %}
                         </small>
@@ -164,7 +164,7 @@
                             {% if recipe.is_for_sale %}Import after purchase{% else %}Import to workspace{% endif %}
                         </a>
                         {% endif %}
-                        {% if purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
+                        {% if recipe.purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
                         <a href="{{ recipe.product_store_url }}" class="btn btn-success w-100" target="_blank" rel="noopener">
                             <i class="fas fa-shopping-cart"></i> Purchase
                         </a>
