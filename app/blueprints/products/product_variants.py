@@ -4,7 +4,7 @@ from ...models import db, ProductSKU, InventoryItem
 from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
-from ...utils.settings import get_setting
+from ...utils.settings import is_feature_enabled
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)
@@ -40,7 +40,7 @@ def add_variant(product_id):
                 return jsonify({'error': 'Product record not found'}), 404
 
         # Get variant name from request
-        auto_create_bulk_sku = bool(get_setting('products.auto_create_bulk_sku_on_variant', False))
+        auto_create_bulk_sku = is_feature_enabled("FEATURE_AUTO_BULK_SKU_ON_VARIANT")
 
         if request.is_json:
             data = request.get_json() or {}

@@ -24,7 +24,6 @@
     "enable_variants": true,
     "show_profit_margins": true,
     "auto_generate_skus": false,
-    "auto_create_bulk_sku_on_variant": false,
     "enable_product_images": true,
     "track_production_costs": true
   },
@@ -86,6 +85,7 @@
     "FEATURE_AUTO_BACKUP": false,
     "FEATURE_CSV_EXPORT": true,
     "FEATURE_ADVANCED_REPORTS": false,
+    "FEATURE_AUTO_BULK_SKU_ON_VARIANT": false,
     "FEATURE_GLOBAL_ITEM_LIBRARY": true,
     "FEATURE_EMAIL_NOTIFICATIONS": true,
     "FEATURE_BROWSER_NOTIFICATIONS": false,
