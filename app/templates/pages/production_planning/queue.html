@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+{% block title %}Production Queue{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-layer-group me-2"></i>Production Queue</h2>
+        <p class="text-muted mb-0">Queued batches reserve inventory until started or cancelled.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Recipes
+        </a>
+    </div>
+</div>
+
+{% if queue_items %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Queued Batches</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Queue</th>
+                        <th>Recipe</th>
+                        <th>Batch Type</th>
+                        <th>Scale</th>
+                        <th>Projected Yield</th>
+                        <th>Queued At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in queue_items %}
+                    {% set snapshot = item.plan_snapshot or {} %}
+                    {% set yield_amount = snapshot.get('projected_yield', item.projected_yield or 0) %}
+                    {% set yield_unit = snapshot.get('projected_yield_unit', item.projected_yield_unit or '') %}
+                    <tr>
+                        <td><span class="badge bg-primary">{{ item.queue_code }}</span></td>
+                        <td>
+                            {% if item.recipe %}
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=item.recipe_id) }}">{{ item.recipe.name }}</a>
+                            {% else %}
+                                <span class="text-muted">Unknown recipe</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.batch_type|title }}</td>
+                        <td>{{ "%.2f"|format(item.scale or 0) }}</td>
+                        <td>{{ yield_amount }} {{ yield_unit }}</td>
+                        <td>{{ TimezoneUtils.format_for_user(item.created_at, '%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('production_planning.start_queue_item', queue_id=item.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-play me-1"></i>Start Batch
+                                </button>
+                            </form>
+                            <form method="post" action="{{ url_for('production_planning.cancel_queue_item', queue_id=item.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-1"></i>
+    No batches are currently queued.
+</div>
+{% endif %}
+{% endblock %}

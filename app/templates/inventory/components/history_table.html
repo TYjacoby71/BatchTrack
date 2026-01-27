@@ -47,7 +47,8 @@
                                  <strong>TST</strong> - Tester<br>
                                  <strong>GFT</strong> - Gift<br>
                                  <strong>QFL</strong> - Quality Fail<br>
-                                 <strong>Note:</strong> finished_batch shows batch label
+                                <strong>PLN</strong> - Planned Queue<br>
+                                <strong>Note:</strong> finished_batch shows batch label
                                </div>
                              </div>
                            </div>"
@@ -105,6 +106,10 @@
                         {% else %}
                           <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
+                      {% elif entry.change_type == 'planned' and entry.queue_code %}
+                        Planned {{ entry.queue_code }}
+                      {% elif entry.change_type == 'planned' %}
+                        Planned queue
                       {% else %}
                         NA
                       {% endif %}

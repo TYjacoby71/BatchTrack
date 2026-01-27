@@ -136,14 +136,15 @@ class PlanProductionApp {
         const scaleInput = document.getElementById('batchScale');
         if (scaleInput) {
             scaleInput.addEventListener('input', () => {
-                this.scale = this._readScale();
-                this._invalidateStockCheck('the batch scale changed');
-                this._updateProjectedYield();
-                this._updateProjectedPortions();
-                if (this.requiresContainers) {
-                    this.containerManager.onContainerRequirementChange();
-                }
-                this.updateValidation();
+                this._onScaleChange();
+            });
+        }
+
+        const projectedYieldInput = document.getElementById('projectedYieldInput');
+        if (projectedYieldInput) {
+            projectedYieldInput.addEventListener('input', () => {
+                const desiredYield = this._readProjectedYield();
+                this._applyProjectedYield(desiredYield);
             });
         }
 
@@ -214,11 +215,55 @@ class PlanProductionApp {
         return isNaN(val) || val <= 0 ? 1 : val;
     }
 
+    _readProjectedYield() {
+        const val = parseFloat(document.getElementById('projectedYieldInput')?.value || '');
+        return isNaN(val) ? 0 : val;
+    }
+
+    _formatNumber(value, decimals = 2) {
+        if (!isFinite(value)) {
+            return '';
+        }
+        const fixed = Number(value).toFixed(decimals);
+        return String(parseFloat(fixed));
+    }
+
+    _applyProjectedYield(desiredYield) {
+        const base = Number(this.baseYield || 0);
+        if (!isFinite(desiredYield) || desiredYield <= 0 || base <= 0) {
+            return;
+        }
+        const scale = desiredYield / base;
+        const scaleInput = document.getElementById('batchScale');
+        if (scaleInput) {
+            scaleInput.value = this._formatNumber(scale, 3);
+        }
+        this._onScaleChange({ skipYieldUpdate: true });
+    }
+
+    _onScaleChange({ skipYieldUpdate = false } = {}) {
+        this.scale = this._readScale();
+        this._invalidateStockCheck('the batch scale changed');
+        if (!skipYieldUpdate) {
+            this._updateProjectedYield();
+        }
+        this._updateProjectedPortions();
+        if (this.requiresContainers) {
+            this.containerManager.onContainerRequirementChange();
+        }
+        this.updateValidation();
+    }
+
     _updateProjectedYield() {
-        const el = document.getElementById('projectedYield');
-        if (el) {
-            const projected = (this.baseYield || 0) * (this.scale || 1);
-            el.textContent = `${projected} ${this.unit}`;
+        const projected = (this.baseYield || 0) * (this.scale || 1);
+        const input = document.getElementById('projectedYieldInput');
+        if (input) {
+            input.value = this._formatNumber(projected, 2);
+            return;
+        }
+        const fallback = document.getElementById('projectedYield');
+        if (fallback) {
+            fallback.textContent = `${projected} ${this.unit}`;
         }
     }
 
@@ -234,6 +279,14 @@ class PlanProductionApp {
 
     updateValidation() {
         this.validation.updateValidation();
+    }
+
+    getProjectedYield() {
+        const inputVal = this._readProjectedYield();
+        if (inputVal > 0) {
+            return inputVal;
+        }
+        return (this.baseYield || 0) * (this.scale || 1);
     }
 
     getCSRFToken() {

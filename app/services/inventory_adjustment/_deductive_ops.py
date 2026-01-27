@@ -28,6 +28,12 @@ DEDUCTIVE_OPERATION_GROUPS = {
         'description': 'Operations that reserve inventory for future use',
         'creates_lot': False,
         'creates_history': True
+    },
+    'planning': {
+        'operations': ['planned'],
+        'description': 'Operations that reserve inventory for queued production',
+        'creates_lot': False,
+        'creates_history': True
     }
 }
 
@@ -44,6 +50,7 @@ DEDUCTION_DESCRIPTIONS = {
     'tester': 'Used {} for testers',
     'gift': 'Used {} for gifts',
     'reserved': 'Reserved {} from inventory',
+    'planned': 'Queued {} for planned production',
     'batch': 'Used {} in batch production'
 }
 

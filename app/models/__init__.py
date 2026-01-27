@@ -19,6 +19,7 @@ from .batch import (
     BatchConsumable,
     ExtraBatchConsumable,
 )
+from .batch_queue import BatchQueueItem
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag
 from .ingredient_reference import (

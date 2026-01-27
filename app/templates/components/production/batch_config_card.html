@@ -21,7 +21,17 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Projected Yield</label>
-                    <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;" id="projectedYield">{{ recipe.predicted_yield or 0 }} {{ recipe.predicted_yield_unit or 'units' }}</div>
+                    <div class="input-group">
+                        <input type="number"
+                               min="0.01"
+                               step="0.01"
+                               class="form-control"
+                               id="projectedYieldInput"
+                               value="{{ recipe.predicted_yield or 0 }}"
+                               placeholder="{{ recipe.predicted_yield or 0 }}">
+                        <span class="input-group-text">{{ recipe.predicted_yield_unit or 'units' }}</span>
+                    </div>
+                    <small class="text-muted">Recipe yield: {{ recipe.predicted_yield or 0 }} {{ recipe.predicted_yield_unit or 'units' }}</small>
                 </div>
             </div>
             {% if recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}

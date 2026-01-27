@@ -12,6 +12,11 @@ export class BatchManager {
             startBatchBtn.addEventListener('click', () => this.startBatch());
         }
 
+        const queueBatchBtn = document.getElementById('queueBatchBtn');
+        if (queueBatchBtn) {
+            queueBatchBtn.addEventListener('click', () => this.addToQueue());
+        }
+
         const confirmForceBtn = document.getElementById('confirmForceStartBtn');
         if (confirmForceBtn) {
             confirmForceBtn.addEventListener('click', () => {
@@ -47,7 +52,7 @@ export class BatchManager {
                 containers: this.getSelectedContainers(),
                 // Absolute: send flat portion fields only
                 ...(flatPortion || {}),
-                projected_yield: (this.main.baseYield || 0) * (this.main.scale || 1),
+                projected_yield: this.main.getProjectedYield(),
                 projected_yield_unit: this.main.unit,
                 force_start: shouldForce
             };
@@ -72,6 +77,50 @@ export class BatchManager {
         } catch (error) {
             console.error('Start batch error:', error);
             alert('Error starting batch. Please try again.');
+        }
+    }
+
+    async addToQueue() {
+        if (!this.main.recipe) return;
+
+        if (!this.main.stockChecked) {
+            this.showErrorMessage('Please run a stock check before adding to the queue.');
+            return;
+        }
+
+        if (!this.main.stockCheckPassed) {
+            this.showErrorMessage('Queueing requires all ingredients in stock.');
+            return;
+        }
+
+        try {
+            const flatPortion = this.getFlatPortionFields();
+            const payload = {
+                recipe_id: this.main.recipe.id,
+                scale: this.main.scale,
+                batch_type: this.main.batchType || 'ingredient',
+                notes: document.getElementById('batchNotes')?.value || '',
+                requires_containers: !!this.main.requiresContainers,
+                containers: this.getSelectedContainers(),
+                ...(flatPortion || {}),
+                projected_yield: this.main.getProjectedYield(),
+                projected_yield_unit: this.main.unit
+            };
+
+            const result = await this.main.apiCall('/production-planning/queue', payload);
+
+            if (result.success) {
+                const queueLabel = result.queue_code ? ` (${result.queue_code})` : '';
+                const queueLink = result.queue_url
+                    ? ` <a href="${result.queue_url}" class="alert-link">View Queue</a>`
+                    : '';
+                this.showSuccessMessage(`Added to queue${queueLabel}.${queueLink}`);
+            } else {
+                this.showErrorMessage(result.message || 'Unable to add to queue.');
+            }
+        } catch (error) {
+            console.error('Add to queue error:', error);
+            this.showErrorMessage(error.message || 'Error adding to queue. Please try again.');
         }
     }
 

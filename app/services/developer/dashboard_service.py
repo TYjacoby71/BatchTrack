@@ -62,6 +62,12 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "status": "wired",
                 "description": "Bulk stock adjustments and checks.",
             },
+            {
+                "key": "FEATURE_PRODUCTION_QUEUE",
+                "label": "Production Queue",
+                "status": "wired",
+                "description": "Queue planned batches and reserve inventory before start.",
+            },
         ],
     },
     {
