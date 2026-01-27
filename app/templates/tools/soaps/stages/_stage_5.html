@@ -1,0 +1,29 @@
+<div class="tab-pane fade" id="soapStage5Pane" role="tabpanel" aria-labelledby="soapStage5Tab">
+  <div class="card soap-stage-card">
+    <div class="card-body soap-stage-body" data-stage-index="4">
+      <div class="row g-3 align-items-start soap-stage-form-row">
+        <div class="col-md-4">
+          <label class="form-label">Fragrance/EO %</label>
+          <input type="number" class="form-control" id="additiveFragrancePct" min="0" max="6" step="0.1" value="3">
+          <div class="form-text soap-stage-note">Above 3% can accelerate trace.</div>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Fragrance/EO selection</label>
+          <div class="position-relative">
+            <input type="text" class="form-control additive-typeahead" id="additiveFragranceName" placeholder="Link fragrance or EO (optional)">
+            <input type="hidden" id="additiveFragranceGi">
+            <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mt-3">
+        <div class="col-md-4">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">Fragrance/EO</div>
+            <div class="fw-semibold" id="additiveFragranceOut">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

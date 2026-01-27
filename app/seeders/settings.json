@@ -24,6 +24,7 @@
     "enable_variants": true,
     "show_profit_margins": true,
     "auto_generate_skus": false,
+    "auto_create_bulk_sku_on_variant": false,
     "enable_product_images": true,
     "track_production_costs": true
   },
