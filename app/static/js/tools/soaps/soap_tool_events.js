@@ -153,8 +153,20 @@
     });
   }
   const stageTabList = document.getElementById('soapStageTabList');
+  const updateStageTabSizing = () => {
+    if (!stageTabList) return;
+    stageTabList.querySelectorAll('.nav-item').forEach(item => item.classList.remove('is-expanded'));
+    const active = stageTabList.querySelector('.nav-link.active');
+    if (active && active.closest('.nav-item')) {
+      active.closest('.nav-item').classList.add('is-expanded');
+    }
+  };
   if (stageTabList) {
-    stageTabList.addEventListener('shown.bs.tab', SoapTool.layout.scheduleStageHeightSync);
+    stageTabList.addEventListener('shown.bs.tab', () => {
+      updateStageTabSizing();
+      SoapTool.layout.scheduleStageHeightSync();
+    });
+    updateStageTabSizing();
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -314,18 +326,30 @@
     });
   }
 
-  document.getElementById('addToolIngredient').addEventListener('click', function(){
-    document.getElementById('tool-ingredients').appendChild(SoapTool.runner.buildLineRow('ingredient'));
-    SoapTool.storage.queueStateSave();
-  });
-  document.getElementById('addToolConsumable').addEventListener('click', function(){
-    document.getElementById('tool-consumables').appendChild(SoapTool.runner.buildLineRow('consumable'));
-    SoapTool.storage.queueStateSave();
-  });
-  document.getElementById('addToolContainer').addEventListener('click', function(){
-    document.getElementById('tool-containers').appendChild(SoapTool.runner.buildLineRow('container'));
-    SoapTool.storage.queueStateSave();
-  });
+  const addToolIngredient = document.getElementById('addToolIngredient');
+  if (addToolIngredient) {
+    addToolIngredient.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-ingredients');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('ingredient'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
+  const addToolConsumable = document.getElementById('addToolConsumable');
+  if (addToolConsumable) {
+    addToolConsumable.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-consumables');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('consumable'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
+  const addToolContainer = document.getElementById('addToolContainer');
+  if (addToolContainer) {
+    addToolContainer.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-containers');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('container'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
   document.getElementById('calcLyeBtn').addEventListener('click', function(){
     SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });

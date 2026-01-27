@@ -94,12 +94,6 @@
       const gi = document.getElementById('additiveFragranceGi');
       if (gi) gi.value = '';
     }
-    if (stageId === 7) {
-      ['tool-ingredients', 'tool-consumables', 'tool-containers'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-      });
-    }
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
     updateStageStatuses();
@@ -144,15 +138,6 @@
       const name = document.getElementById('additiveFragranceName')?.value?.trim();
       const hasFragrance = pct > 0 || !!name;
       return { state: 'optional', label: hasFragrance ? 'Added' : 'Optional' };
-    }
-    if (stageId === 6) {
-      return { state: 'info', label: 'Reference' };
-    }
-    if (stageId === 7) {
-      const hasLines = ['tool-ingredients', 'tool-consumables', 'tool-containers'].some(id => {
-        return document.querySelectorAll(`#${id} .row`).length > 0;
-      });
-      return { state: 'optional', label: hasLines ? 'Added' : 'Optional' };
     }
     return { state: 'incomplete', label: 'Incomplete' };
   }
