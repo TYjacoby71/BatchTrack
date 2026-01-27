@@ -53,6 +53,20 @@
 
   function resetStage(stageId){
     if (stageId === 1) {
+      const lyeNaoh = document.getElementById('lyeTypeNaoh');
+      if (lyeNaoh) lyeNaoh.checked = true;
+      const unitGrams = document.getElementById('unitGrams');
+      if (unitGrams) unitGrams.checked = true;
+      const waterMethod = document.getElementById('waterMethod');
+      if (waterMethod) waterMethod.value = 'percent';
+      const superfat = document.getElementById('lyeSuperfat');
+      if (superfat) superfat.value = '5';
+      SoapTool.units.setUnit('g', { skipAutoCalc: true });
+      SoapTool.runner.applyLyeSelection();
+      SoapTool.runner.setWaterMethod();
+      SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
+    }
+    if (stageId === 2) {
       document.getElementById('moldWaterWeight').value = '';
       document.getElementById('moldOilPct').value = '65';
       document.getElementById('oilTotalTarget').value = '';
@@ -62,7 +76,7 @@
       document.getElementById('moldCylinderFactor').value = '0.85';
       SoapTool.mold.updateMoldSuggested();
     }
-    if (stageId === 2) {
+    if (stageId === 3) {
       const oilRows = document.getElementById('oilRows');
       if (oilRows) {
         oilRows.innerHTML = '';
@@ -70,13 +84,13 @@
       }
       SoapTool.oils.updateOilTotals();
     }
-    if (stageId === 3) {
+    if (stageId === 4) {
       document.getElementById('lyePurity').value = '100';
       document.getElementById('waterPct').value = '33';
       document.getElementById('lyeConcentration').value = '33';
       document.getElementById('waterRatio').value = '2';
     }
-    if (stageId === 4) {
+    if (stageId === 5) {
       document.getElementById('additiveLactatePct').value = '1';
       document.getElementById('additiveSugarPct').value = '1';
       document.getElementById('additiveSaltPct').value = '0.5';
@@ -87,7 +101,7 @@
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
     }
-    if (stageId === 5) {
+    if (stageId === 6) {
       document.getElementById('additiveFragrancePct').value = '3';
       const name = document.getElementById('additiveFragranceName');
       if (name) name.value = '';
@@ -101,13 +115,21 @@
 
   function getStageCompletion(stageId){
     if (stageId === 1) {
+      const superfat = toNumber(document.getElementById('lyeSuperfat').value);
+      const method = document.getElementById('waterMethod')?.value;
+      const hasLye = !!document.querySelector('input[name="lye_type"]:checked');
+      const hasUnit = !!document.querySelector('input[name="weight_unit"]:checked');
+      const complete = hasLye && hasUnit && !!method && superfat >= 0;
+      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set basics' };
+    }
+    if (stageId === 2) {
       const moldWeight = toNumber(document.getElementById('moldWaterWeight').value);
       const oilTarget = toNumber(document.getElementById('oilTotalTarget').value);
       const moldPct = toNumber(document.getElementById('moldOilPct').value);
       const complete = (moldWeight > 0 || oilTarget > 0) && moldPct > 0;
       return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Complete' : 'Needs target' };
     }
-    if (stageId === 2) {
+    if (stageId === 3) {
       const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
       const hasOil = rows.some(row => {
         const name = row.querySelector('.oil-typeahead')?.value?.trim();
@@ -117,7 +139,7 @@
       });
       return { state: hasOil ? 'complete' : 'incomplete', label: hasOil ? 'Oils added' : 'Add oils' };
     }
-    if (stageId === 3) {
+    if (stageId === 4) {
       const purity = toNumber(document.getElementById('lyePurity').value);
       const method = document.getElementById('waterMethod')?.value || 'percent';
       const waterValue = method === 'percent'
@@ -128,12 +150,12 @@
       const complete = purity > 0 && waterValue > 0;
       return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set water' };
     }
-    if (stageId === 4) {
+    if (stageId === 5) {
       const hasAdditive = ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
         .some(id => toNumber(document.getElementById(id).value) > 0);
       return { state: 'optional', label: hasAdditive ? 'Added' : 'Optional' };
     }
-    if (stageId === 5) {
+    if (stageId === 6) {
       const pct = toNumber(document.getElementById('additiveFragrancePct').value);
       const name = document.getElementById('additiveFragranceName')?.value?.trim();
       const hasFragrance = pct > 0 || !!name;

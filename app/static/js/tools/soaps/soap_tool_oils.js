@@ -21,9 +21,9 @@
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
-      mode: SoapTool.config.isAuthenticated ? 'recipe' : 'public',
+      mode: 'public',
       giHiddenEl: hiddenGi,
-      includeInventory: SoapTool.config.isAuthenticated,
+      includeInventory: false,
       includeGlobal: true,
       ingredientFirst: true,
       searchType: 'ingredient',
