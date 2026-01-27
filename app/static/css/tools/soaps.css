@@ -327,7 +327,9 @@
 #soapToolPage .soap-stage-tabs .nav-tabs {
   border-bottom: 1px solid var(--color-border);
   gap: var(--space-1);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 #soapToolPage .soap-stage-tabs .nav-link {
   border: 1px solid var(--color-border);
@@ -340,6 +342,42 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+#soapToolPage .soap-stage-tabs .nav-item {
+  flex: 1 1 0;
+  min-width: 2.5rem;
+}
+#soapToolPage .soap-stage-tabs .nav-item.is-expanded {
+  flex: 3 1 0;
+}
+#soapToolPage .soap-stage-tabs .nav-link {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#soapToolPage .soap-stage-tabs .nav-item.is-expanded .nav-link {
+  justify-content: flex-start;
+}
+#soapToolPage .soap-stage-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+#soapToolPage .soap-stage-label {
+  display: none;
+  font-size: 0.8rem;
+}
+#soapToolPage .soap-stage-tabs .nav-link.active .soap-stage-label {
+  display: inline;
 }
 #soapToolPage .soap-stage-tabs .nav-link.active {
   background: var(--color-surface);
