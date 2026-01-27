@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_
 from datetime import datetime, timezone, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
+from app.utils.settings import is_feature_enabled
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
 import logging
@@ -11,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 # Create the sku blueprint
 sku_bp = Blueprint('sku', __name__)
+
+
+def _merge_skus_enabled() -> bool:
+    return is_feature_enabled("FEATURE_MERGE_SKUS")
 
 @sku_bp.route('/<int:inventory_item_id>')
 @login_required
@@ -152,6 +157,9 @@ def edit_sku(inventory_item_id):
 @login_required
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
+    if not _merge_skus_enabled():
+        flash("SKU merge is not enabled for your plan.", "warning")
+        return redirect(url_for('products.list_products'))
     skus = ProductSKU.query.join(
         InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
     ).filter(
@@ -165,6 +173,9 @@ def select_skus_to_merge():
 @login_required
 def configure_merge():
     """Configure merge settings for selected SKUs"""
+    if not _merge_skus_enabled():
+        flash("SKU merge is not enabled for your plan.", "warning")
+        return redirect(request.referrer or url_for('products.list_products'))
     sku_ids = request.form.getlist('sku_ids')
 
     if len(sku_ids) < 2:
@@ -213,6 +224,9 @@ def configure_merge():
 @login_required
 def execute_merge():
     """Execute the SKU merge"""
+    if not _merge_skus_enabled():
+        flash("SKU merge is not enabled for your plan.", "warning")
+        return redirect(request.referrer or url_for('products.list_products'))
     try:
         sku_ids = request.form.getlist('sku_ids')
         target_sku_id = request.form.get('target_sku_id')

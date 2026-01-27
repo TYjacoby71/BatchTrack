@@ -68,11 +68,18 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "description": "Lot-based expiration handling (always on).",
             },
             {
-                "key": "FEATURE_BULK_OPERATIONS",
-                "label": "Bulk Inventory Operations",
+                "key": "FEATURE_BULK_STOCK_CHECK",
+                "label": "Bulk Stock Check",
                 "status": "wired",
                 "default_enabled": False,
-                "description": "Bulk stock adjustments and checks.",
+                "description": "Multi-recipe stock check and shopping list exports.",
+            },
+            {
+                "key": "FEATURE_BULK_INVENTORY_UPDATES",
+                "label": "Bulk Inventory Updates",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Bulk inventory adjustments and high-volume update tooling.",
             },
         ],
     },
@@ -80,6 +87,13 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "title": "Developer & advanced features",
         "description": "Capabilities intended for internal tooling or staging environments.",
         "flags": [
+            {
+                "key": "FEATURE_MERGE_SKUS",
+                "label": "Merge SKUs",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Merge multiple SKUs into a single consolidated SKU.",
+            },
             {
                 "key": "FEATURE_AUTO_BULK_SKU_ON_VARIANT",
                 "label": "Auto-create Bulk SKU on Variant",
@@ -107,6 +121,46 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "status": "wired",
                 "default_enabled": True,
                 "description": "Org access to the shared global inventory library.",
+            },
+        ],
+    },
+    {
+        "title": "Organization administration",
+        "description": "Controls for organization-level management tooling.",
+        "flags": [
+            {
+                "key": "FEATURE_ORG_ROLE_MANAGEMENT",
+                "label": "Role Management Tab",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Show the Role Management tab on the organization dashboard.",
+            },
+        ],
+    },
+    {
+        "title": "Commerce & POS integrations",
+        "description": "Stubbed flags for future ecommerce and POS entry points.",
+        "flags": [
+            {
+                "key": "FEATURE_ECOMMERCE_INTEGRATIONS",
+                "label": "E-commerce Integration Hub",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Gate the entry point for ecommerce integration workflows.",
+            },
+            {
+                "key": "FEATURE_SHOPIFY_INTEGRATION",
+                "label": "Shopify Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Shopify integration surfaces.",
+            },
+            {
+                "key": "FEATURE_ETSY_INTEGRATION",
+                "label": "Etsy Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Etsy marketplace integration surfaces.",
             },
         ],
     },

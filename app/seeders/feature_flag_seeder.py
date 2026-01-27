@@ -30,6 +30,15 @@ def _iter_catalog_flags() -> Iterable[Dict[str, object]]:
 def seed_feature_flags() -> None:
     """Ensure feature flags exist in the database."""
     try:
+        legacy_map = {
+            "FEATURE_BULK_STOCK_CHECK": "FEATURE_BULK_OPERATIONS",
+            "FEATURE_BULK_INVENTORY_UPDATES": "FEATURE_BULK_OPERATIONS",
+        }
+        legacy_flags = {}
+        for legacy_key in set(legacy_map.values()):
+            legacy_flags[legacy_key] = FeatureFlag.query.filter_by(
+                key=legacy_key
+            ).first()
         created = 0
         updated = 0
         for entry in _iter_catalog_flags():
@@ -38,10 +47,17 @@ def seed_feature_flags() -> None:
                 existing.description = entry["description"]
                 updated += 1
             else:
+                legacy_key = legacy_map.get(entry["key"])
+                legacy_flag = legacy_flags.get(legacy_key) if legacy_key else None
+                enabled = (
+                    bool(legacy_flag.enabled)
+                    if legacy_flag is not None
+                    else bool(entry["default_enabled"])
+                )
                 db.session.add(
                     FeatureFlag(
                         key=entry["key"],
-                        enabled=bool(entry["default_enabled"]),
+                        enabled=enabled,
                         description=entry["description"],
                     )
                 )

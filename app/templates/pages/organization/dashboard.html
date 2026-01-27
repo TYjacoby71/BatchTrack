@@ -19,6 +19,7 @@
 
 {% block content %}
 <div>
+    {% set role_management_enabled = is_feature_enabled('FEATURE_ORG_ROLE_MANAGEMENT') %}
     <!-- Header Card -->
     <div class="card mb-4">
         <div class="card-body">
@@ -50,11 +51,13 @@
                         <i class="fas fa-users"></i> User Management
                     </button>
                 </li>
+                {% if role_management_enabled %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
                         <i class="fas fa-shield-alt"></i> Roles & Permissions
                     </button>
                 </li>
+                {% endif %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
                         <i class="fas fa-chart-bar"></i> Reports & Logs
@@ -81,10 +84,12 @@
                     {% include 'organization/components/user_management_tab.html' %}
                 </div>
 
+                {% if role_management_enabled %}
                 <!-- Roles & Permissions Tab -->
                 <div class="tab-pane fade" id="roles" role="tabpanel">
                     {% include 'organization/components/roles_permissions_tab.html' %}
                 </div>
+                {% endif %}
 
                 <!-- Reports & Logs Tab -->
                 <div class="tab-pane fade" id="reports" role="tabpanel">
@@ -108,7 +113,9 @@
 <!-- Include Modal Components -->
 {% include 'organization/components/invite_user_modal.html' %}
 {% include 'organization/components/edit_user_modal.html' %}
+{% if role_management_enabled %}
 {% include 'organization/components/create_role_modal.html' %}
+{% endif %}
 
 <script>
 function openInviteModal() {
