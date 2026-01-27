@@ -29,6 +29,8 @@ body {
 .navbar {
   margin: 0;
   border-radius: 0;
+  position: relative;
+  z-index: 2000;
 }
 
 .navbar .container-fluid {

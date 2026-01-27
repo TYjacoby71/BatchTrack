@@ -131,13 +131,21 @@ HTML_TEMPLATE = """
 <body>
     <h1>Final DB Portal</h1>
     
-    <div class="stats">
+    <div class="stats" id="raw-stats">
         <div class="stats-grid">
             <div class="stat-box">
-                <h3 id="stat-total-terms">{{ stats.total_terms }}</h3>
-                <p>Terms</p>
+                <h3 id="stat-source-items">{{ stats.source_items }}</h3>
+                <p>Source Items</p>
             </div>
             <div class="stat-box">
+                <h3 id="stat-cosing-items">{{ stats.cosing_items }}</h3>
+                <p>CosIng Items</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="stat-tgsc-items">{{ stats.tgsc_items }}</h3>
+                <p>TGSC Items</p>
+            </div>
+            <div class="stat-box" style="border-left: 3px solid #7c3aed;">
                 <h3 id="stat-total-merged">{{ stats.total_merged }}</h3>
                 <p>Merged Items</p>
             </div>
@@ -153,17 +161,95 @@ HTML_TEMPLATE = """
                 <h3 id="stat-both-sources">{{ stats.both_sources }}</h3>
                 <p>Both Sources</p>
             </div>
-            <div class="stat-box">
-                <h3 id="stat-with-specs">{{ stats.with_specs }}</h3>
-                <p>With Specs</p>
+            <div class="stat-box" style="border-left: 3px solid #10b981;">
+                <h3 id="stat-pubchem-enriched">{{ stats.pubchem_enriched }}</h3>
+                <p>PubChem Enriched</p>
             </div>
-            <div class="stat-box">
+            <div class="stat-box" style="border-left: 3px solid #2563eb;">
                 <h3 id="stat-total-clusters">{{ stats.total_clusters }}</h3>
                 <p>Clusters</p>
             </div>
             <div class="stat-box">
-                <h3 id="stat-multi-item-clusters">{{ stats.multi_item_clusters }}</h3>
-                <p>Multi-Item Clusters</p>
+                <h3 id="stat-composites">{{ stats.composites }}</h3>
+                <p>Composites</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats" id="compiled-stats" style="display:none;">
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Queue Overview</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box" style="border-left: 3px solid #7c3aed;">
+                    <h3 id="cstat-queued-items">0</h3>
+                    <p>Total Queued Items</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #2563eb;">
+                    <h3 id="cstat-clusters">0</h3>
+                    <p>Clusters</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #f59e0b;">
+                    <h3 id="cstat-composites">0</h3>
+                    <p>Composites</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Stage 1: Term Normalization (Clusters)</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box" style="background: #dcfce7;">
+                    <h3 id="cstat-stage1-done" style="color: #166534;">0</h3>
+                    <p>Normalized</p>
+                </div>
+                <div class="stat-box" style="background: #fef3c7;">
+                    <h3 id="cstat-stage1-pending" style="color: #92400e;">0</h3>
+                    <p>Pending</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-stage1-pct" style="color: #2563eb;">0%</h3>
+                    <p>Stage 1 Progress</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Stage 2: Item Compilation</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-box" style="background: #dcfce7;">
+                    <h3 id="cstat-stage2-done" style="color: #166534;">0</h3>
+                    <p>Compiled</p>
+                </div>
+                <div class="stat-box" style="background: #fef3c7;">
+                    <h3 id="cstat-stage2-batch-pending" style="color: #92400e;">0</h3>
+                    <p>Batch Pending</p>
+                </div>
+                <div class="stat-box" style="background: #f3f4f6;">
+                    <h3 id="cstat-stage2-pending" style="color: #6b7280;">0</h3>
+                    <p>Pending</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-stage2-pct" style="color: #2563eb;">0%</h3>
+                    <p>Progress</p>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Cluster Distribution</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-box">
+                    <h3 id="cstat-zero-items" style="color: #dc2626;">0</h3>
+                    <p>Zero Items</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-single-item" style="color: #059669;">0</h3>
+                    <p>Single Item</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="cstat-multi-item" style="color: #7c3aed;">0</h3>
+                    <p>Multi-Item</p>
+                </div>
             </div>
         </div>
     </div>
@@ -688,12 +774,6 @@ HTML_TEMPLATE = """
                     html += `<div class="detail-label">Reason</div><div class="detail-value">${data.reason || '-'}</div>`;
                     html += `<div class="detail-label">Common Name</div><div class="detail-value">${showValue(data.canonical_term, data.derived_term)}</div>`;
                     html += `<div class="detail-label">Botanical Key</div><div class="detail-value">${showValue(data.botanical_key, null)}</div>`;
-                    if (data.reconciled_term) {
-                        html += `<div class="detail-label">Reconciled Base</div><div class="detail-value"><span class="curated">${data.reconciled_term}</span></div>`;
-                    }
-                    if (data.reconciled_variation) {
-                        html += `<div class="detail-label">Reconciled Variation</div><div class="detail-value"><span class="curated">${data.reconciled_variation}</span></div>`;
-                    }
                     if (data.parent_cluster_id) {
                         html += `<div class="detail-label">Parent Cluster</div><div class="detail-value"><a href="#" onclick="event.preventDefault(); closeDetail(); showClusterDetail('${data.parent_cluster_id.replace(/'/g, "\\'")}')" style="color:#7c3aed;">${data.parent_cluster_id}</a></div>`;
                     }
@@ -1376,15 +1456,40 @@ HTML_TEMPLATE = """
             fetch(`/api/stats?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(stats => {
-                    // Raw stats box labels remain; compiled mode maps the first two boxes and zeros others.
-                    document.getElementById('stat-total-terms').textContent = stats.total_terms || 0;
-                    document.getElementById('stat-total-merged').textContent = stats.total_merged || 0;
-                    document.getElementById('stat-cosing-only').textContent = stats.cosing_only || 0;
-                    document.getElementById('stat-tgsc-only').textContent = stats.tgsc_only || 0;
-                    document.getElementById('stat-both-sources').textContent = stats.both_sources || 0;
-                    document.getElementById('stat-with-specs').textContent = stats.with_specs || 0;
-                    document.getElementById('stat-total-clusters').textContent = stats.total_clusters || 0;
-                    document.getElementById('stat-multi-item-clusters').textContent = stats.multi_item_clusters || 0;
+                    if (currentDataset === 'compiled') {
+                        document.getElementById('raw-stats').style.display = 'none';
+                        document.getElementById('compiled-stats').style.display = 'block';
+                        document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
+                        document.getElementById('cstat-clusters').textContent = (stats.clusters || 0).toLocaleString();
+                        document.getElementById('cstat-composites').textContent = (stats.composites || 0).toLocaleString();
+                        document.getElementById('cstat-stage1-done').textContent = (stats.stage1_done || 0).toLocaleString();
+                        document.getElementById('cstat-stage1-pending').textContent = (stats.stage1_pending || 0).toLocaleString();
+                        const stage1Total = (stats.stage1_done || 0) + (stats.stage1_pending || 0);
+                        const stage1Pct = stage1Total > 0 ? Math.round((stats.stage1_done || 0) / stage1Total * 100) : 0;
+                        document.getElementById('cstat-stage1-pct').textContent = stage1Pct + '%';
+                        document.getElementById('cstat-stage2-done').textContent = (stats.stage2_done || 0).toLocaleString();
+                        document.getElementById('cstat-stage2-batch-pending').textContent = (stats.stage2_batch_pending || 0).toLocaleString();
+                        document.getElementById('cstat-stage2-pending').textContent = (stats.stage2_pending || 0).toLocaleString();
+                        const stage2Total = (stats.stage2_done || 0) + (stats.stage2_batch_pending || 0) + (stats.stage2_pending || 0);
+                        const stage2Pct = stage2Total > 0 ? Math.round((stats.stage2_done || 0) / stage2Total * 100) : 0;
+                        document.getElementById('cstat-stage2-pct').textContent = stage2Pct + '%';
+                        document.getElementById('cstat-zero-items').textContent = (stats.zero_items || 0).toLocaleString();
+                        document.getElementById('cstat-single-item').textContent = (stats.single_item || 0).toLocaleString();
+                        document.getElementById('cstat-multi-item').textContent = (stats.multi_item || 0).toLocaleString();
+                    } else {
+                        document.getElementById('raw-stats').style.display = 'block';
+                        document.getElementById('compiled-stats').style.display = 'none';
+                        document.getElementById('stat-source-items').textContent = (stats.source_items || 0).toLocaleString();
+                        document.getElementById('stat-cosing-items').textContent = (stats.cosing_items || 0).toLocaleString();
+                        document.getElementById('stat-tgsc-items').textContent = (stats.tgsc_items || 0).toLocaleString();
+                        document.getElementById('stat-total-merged').textContent = (stats.total_merged || 0).toLocaleString();
+                        document.getElementById('stat-cosing-only').textContent = (stats.cosing_only || 0).toLocaleString();
+                        document.getElementById('stat-tgsc-only').textContent = (stats.tgsc_only || 0).toLocaleString();
+                        document.getElementById('stat-both-sources').textContent = (stats.both_sources || 0).toLocaleString();
+                        document.getElementById('stat-pubchem-enriched').textContent = (stats.pubchem_enriched || 0).toLocaleString();
+                        document.getElementById('stat-total-clusters').textContent = (stats.total_clusters || 0).toLocaleString();
+                        document.getElementById('stat-composites').textContent = (stats.composites || 0).toLocaleString();
+                    }
                 });
         }
 
@@ -1425,14 +1530,17 @@ def index():
     
     stats = {}
     
-    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms")
-    stats['total_terms'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items")
+    stats['source_items'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'cosing'")
+    stats['cosing_items'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'tgsc'")
+    stats['tgsc_items'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms")
     stats['total_merged'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
-    stats['both_sources'] = cur.fetchone()[0]
     
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 0")
     stats['cosing_only'] = cur.fetchone()[0]
@@ -1440,14 +1548,17 @@ def index():
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1 AND has_cosing = 0")
     stats['tgsc_only'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
-    stats['with_specs'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
+    stats['both_sources'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
+    stats['pubchem_enriched'] = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM clusters")
     stats['total_clusters'] = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
-    stats['multi_item_clusters'] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
+    stats['composites'] = cur.fetchone()[0]
     
     conn.close()
     return render_template_string(HTML_TEMPLATE, stats=stats)
@@ -1459,54 +1570,96 @@ def api_stats():
     conn = get_db('final')
     cur = conn.cursor()
     stats = {
-        "total_terms": 0,
+        "source_items": 0,
+        "cosing_items": 0,
+        "tgsc_items": 0,
         "total_merged": 0,
         "cosing_only": 0,
         "tgsc_only": 0,
         "both_sources": 0,
-        "with_specs": 0,
+        "pubchem_enriched": 0,
         "total_clusters": 0,
-        "multi_item_clusters": 0,
+        "composites": 0,
     }
 
     if dataset == "compiled":
-        if _table_exists(conn, "compiled_clusters"):
-            cur.execute("SELECT COUNT(*) FROM compiled_clusters")
-            stats["total_clusters"] = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM compiled_clusters WHERE term_status = 'done'")
-            stats["total_terms"] = cur.fetchone()[0]
+        compiled_stats = {
+            "queued_items": 0,
+            "clusters": 0,
+            "composites": 0,
+            "stage1_done": 0,
+            "stage1_pending": 0,
+            "stage2_done": 0,
+            "stage2_pending": 0,
+            "zero_items": 0,
+            "single_item": 0,
+            "multi_item": 0,
+        }
+        
         if _table_exists(conn, "compiled_cluster_items"):
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
-            stats["total_merged"] = cur.fetchone()[0]
+            compiled_stats["queued_items"] = cur.fetchone()[0]
+        
+        if _table_exists(conn, "clusters"):
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%'")
+            compiled_stats["clusters"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id LIKE 'composite:%'")
+            compiled_stats["composites"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE canonical_term IS NOT NULL AND canonical_term != ''")
+            compiled_stats["stage1_done"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE canonical_term IS NULL OR canonical_term = ''")
+            compiled_stats["stage1_pending"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 0")
+            compiled_stats["zero_items"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count = 1")
+            compiled_stats["single_item"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM clusters WHERE cluster_id NOT LIKE 'composite:%' AND item_count > 1")
+            compiled_stats["multi_item"] = cur.fetchone()[0]
+        
+        # Stage 2: Count from compiled_cluster_items if exists, else from merged_item_forms
+        if _table_exists(conn, "compiled_cluster_items"):
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'done'")
-            stats["with_specs"] = cur.fetchone()[0]
-        # Legacy fallback
-        if stats["total_terms"] == 0 and _table_exists(conn, "ingredients"):
-            cur.execute("SELECT COUNT(*) FROM ingredients")
-            stats["total_terms"] = cur.fetchone()[0]
-        if stats["total_merged"] == 0 and _table_exists(conn, "ingredient_items"):
-            cur.execute("SELECT COUNT(*) FROM ingredient_items")
-            stats["total_merged"] = cur.fetchone()[0]
+            compiled_stats["stage2_done"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'batch_pending'")
+            compiled_stats["stage2_batch_pending"] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE item_status = 'pending'")
+            compiled_stats["stage2_pending"] = cur.fetchone()[0]
+        else:
+            cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE compiled_specs_json IS NOT NULL AND compiled_specs_json != '{}'")
+            compiled_stats["stage2_done"] = cur.fetchone()[0]
+            compiled_stats["stage2_batch_pending"] = 0
+            cur.execute("SELECT COUNT(*) FROM merged_item_forms")
+            compiled_stats["stage2_pending"] = cur.fetchone()[0] - compiled_stats["stage2_done"]
+        
         conn.close()
-        return jsonify(stats)
+        return jsonify(compiled_stats)
 
-    # raw (existing)
-    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM merged_item_forms")
-    stats["total_terms"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items")
+    stats["source_items"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'cosing'")
+    stats["cosing_items"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE source = 'tgsc'")
+    stats["tgsc_items"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms")
     stats["total_merged"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
-    stats["both_sources"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 0")
     stats["cosing_only"] = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_tgsc = 1 AND has_cosing = 0")
     stats["tgsc_only"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json IS NOT NULL AND merged_specs_json != '{}'")
-    stats["with_specs"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(DISTINCT definition_cluster_id) FROM source_items WHERE definition_cluster_id IS NOT NULL")
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE has_cosing = 1 AND has_tgsc = 1")
+    stats["both_sources"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM merged_item_forms WHERE merged_specs_json LIKE '%pubchem%'")
+    stats["pubchem_enriched"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM clusters")
     stats["total_clusters"] = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM (SELECT definition_cluster_id FROM source_items WHERE definition_cluster_id IS NOT NULL GROUP BY definition_cluster_id HAVING COUNT(*) > 1)")
-    stats["multi_item_clusters"] = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM source_items WHERE is_composite = 1")
+    stats["composites"] = cur.fetchone()[0]
     conn.close()
     return jsonify(stats)
 
@@ -1741,7 +1894,7 @@ def api_compiled_clusters():
     # Build dynamic ORDER BY based on sort parameters
     order_dir = "DESC" if sort_order == "desc" else "ASC"
     if sort_field == "name":
-        order_sql = f"COALESCE(json_extract(c.payload_json, '$.stage1.common_name'), c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
+        order_sql = f"COALESCE(c.common_name, c.compiled_term, c.raw_canonical_term) {order_dir}, c.cluster_id"
     elif sort_field == "priority":
         order_sql = f"c.priority {order_dir}, c.cluster_id"
     else:  # rank (default)
@@ -1753,7 +1906,7 @@ def api_compiled_clusters():
         SELECT c.cluster_id, c.raw_canonical_term, c.compiled_term, c.term_status,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id) as total_items,
                (SELECT COUNT(*) FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id AND i.item_status = 'done') as items_done,
-               json_extract(c.payload_json, '$.stage1.common_name') as common_name,
+               c.common_name,
                c.priority,
                c.compilation_rank
         FROM compiled_clusters c
@@ -1793,7 +1946,8 @@ def api_compiled_cluster_detail(cluster_id: str):
     cur.execute(
         """
         SELECT cluster_id, raw_canonical_term, compiled_term, term_status, origin, ingredient_category,
-               botanical_name, inci_name, cas_number, refinement_level, derived_from, payload_json
+               botanical_name, inci_name, cas_number, refinement_level, derived_from, 
+               common_name, confidence_score, data_quality_notes, priority
         FROM compiled_clusters WHERE cluster_id = ?
         """,
         (cluster_id,),
@@ -1803,12 +1957,10 @@ def api_compiled_cluster_detail(cluster_id: str):
         conn.close()
         return jsonify({"error": "Compiled cluster not found"})
 
-    payload = parse_json(row[11]) if row[11] else {}
-    stage1_core = {}
-    common_name = None
-    if payload and isinstance(payload.get("stage1"), dict):
-        stage1_core = payload["stage1"].get("ingredient_core", {})
-        common_name = payload["stage1"].get("common_name")
+    common_name = row[11]
+    confidence_score = row[12]
+    data_quality_notes = row[13]
+    priority = row[14]
 
     cur.execute(
         """
@@ -1856,8 +2008,9 @@ def api_compiled_cluster_detail(cluster_id: str):
             "cas_number": row[8],
             "refinement_level": row[9],
             "derived_from": row[10],
-            "short_description": stage1_core.get("short_description"),
-            "detailed_description": stage1_core.get("detailed_description"),
+            "priority": priority,
+            "confidence_score": confidence_score,
+            "data_quality_notes": data_quality_notes,
             "total_items": len(items),
             "items_done": done,
             "items": items,
@@ -2013,7 +2166,7 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
 
 @app.route('/api/clusters')
 def api_clusters():
-    """Show raw cluster data from source_definitions - no overlays, no aggregation."""
+    """Show raw cluster data from clusters - no overlays, no aggregation."""
     page = int(request.args.get('page', 1))
     search = request.args.get('search', '').strip()
     cluster_size = request.args.get('cluster_size', 'all')
@@ -2031,8 +2184,8 @@ def api_clusters():
     
     if search:
         search_param = f"%{search}%"
-        where_clauses.append("(sd.canonical_term LIKE ? OR sd.cluster_id LIKE ? OR sd.reconciled_term LIKE ?)")
-        params.extend([search_param, search_param, search_param])
+        where_clauses.append("(sd.canonical_term LIKE ? OR sd.cluster_id LIKE ?)")
+        params.extend([search_param, search_param])
     
     if category:
         where_clauses.append("""EXISTS (
@@ -2060,7 +2213,7 @@ def api_clusters():
     
     having_sql = "HAVING " + " AND ".join(having_clauses) if having_clauses else ""
     
-    # Query raw cluster data from source_definitions with item counts by source type
+    # Query raw cluster data from clusters with item counts by source type
     # Items are counted from merged_item_forms: cosing_only, tgsc_only, or both (merged duplicates)
     cur.execute(f"""
         SELECT 
@@ -2078,7 +2231,7 @@ def api_clusters():
             (SELECT COUNT(DISTINCT mif.id) FROM merged_item_forms mif 
              JOIN source_items si ON si.merged_item_id = mif.id 
              WHERE si.definition_cluster_id = sd.cluster_id AND mif.has_cosing = 1 AND mif.has_tgsc = 1) as both_sources
-        FROM source_definitions sd
+        FROM clusters sd
         {where_sql}
         {having_sql}
         ORDER BY sd.canonical_term, sd.cluster_id
@@ -2103,7 +2256,7 @@ def api_clusters():
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id) as item_count,
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'cosing') as cosing_count,
                 (SELECT COUNT(*) FROM source_items si WHERE si.definition_cluster_id = sd.cluster_id AND si.source = 'tgsc') as tgsc_count
-            FROM source_definitions sd
+            FROM clusters sd
             {where_sql}
             {having_sql}
         )
@@ -2217,29 +2370,27 @@ def api_cluster_detail(cluster_id):
         else:
             tgsc_only.append(item)
     
-    # Get cluster info from source_definitions
+    # Get cluster info from clusters
     cur.execute("""
-        SELECT reason, canonical_term, botanical_key, reconciled_term, reconciled_variation, parent_cluster_id 
-        FROM source_definitions WHERE cluster_id = ?
+        SELECT reason, canonical_term, botanical_key, parent_cluster_id 
+        FROM clusters WHERE cluster_id = ?
     """, (cluster_id,))
     def_row = cur.fetchone()
     reason = def_row[0] if def_row else None
     canonical_term = def_row[1] if def_row else None
     botanical_key = def_row[2] if def_row else None
-    reconciled_term = def_row[3] if def_row else None
-    reconciled_variation = def_row[4] if def_row else None
-    parent_cluster_id = def_row[5] if def_row else None
+    parent_cluster_id = def_row[3] if def_row else None
     
     # Get child derivatives (clusters that have this cluster as parent)
     # Also include siblings if this cluster itself has a parent
     cur.execute("""
-        SELECT cluster_id, canonical_term, reconciled_variation 
-        FROM source_definitions 
+        SELECT cluster_id, canonical_term 
+        FROM clusters 
         WHERE parent_cluster_id = ?
            OR (? IS NOT NULL AND parent_cluster_id = ?)
         ORDER BY canonical_term
     """, (cluster_id, parent_cluster_id, parent_cluster_id))
-    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1], 'variation': r[2]} for r in cur.fetchall() if r[0] != cluster_id]
+    child_derivatives = [{'cluster_id': r[0], 'canonical_term': r[1]} for r in cur.fetchall() if r[0] != cluster_id]
     
     conn.close()
     return jsonify({
@@ -2248,8 +2399,6 @@ def api_cluster_detail(cluster_id):
         'derived_term': derived_term,
         'canonical_term': canonical_term,
         'botanical_key': botanical_key,
-        'reconciled_term': reconciled_term,
-        'reconciled_variation': reconciled_variation,
         'parent_cluster_id': parent_cluster_id,
         'child_derivatives': child_derivatives,
         'is_composite': False,
@@ -2526,10 +2675,10 @@ def api_merged_item_detail(item_id):
             # Keep the response small; UI will show truncated list if needed.
             cluster_terms = cluster_terms[:30]
             
-            # Get canonical_term and botanical_key from source_definitions
+            # Get canonical_term and botanical_key from clusters
             cur.execute(f"""
                 SELECT canonical_term, botanical_key 
-                FROM source_definitions 
+                FROM clusters 
                 WHERE cluster_id IN ({placeholders})
                 LIMIT 1
             """, cluster_ids)
@@ -2576,10 +2725,10 @@ def api_source_item_detail(key):
     
     cur.execute("""
         SELECT key, source, source_row_id, source_row_number, source_ref, content_hash,
-               is_composite, raw_name, inci_name, cas_number, cas_numbers_json,
+               is_composite, raw_name, inci_name, cas_number,
                derived_term, derived_variation, derived_physical_form, derived_part, derived_part_reason,
                origin, ingredient_category, refinement_level, status, needs_review_reason,
-               definition_display_name, item_display_name, derived_function_tags_json,
+               definition_display_name, item_display_name,
                derived_function_tag_entries_json, derived_master_categories_json,
                variation_bypass, variation_bypass_reason, definition_cluster_id,
                definition_cluster_confidence, definition_cluster_reason,
@@ -2594,8 +2743,19 @@ def api_source_item_detail(key):
     if not row:
         return jsonify({'error': 'Source item not found'})
     
+    key = row[0]
+    
+    # Get CAS numbers from relational table
+    cur2 = get_db('final').cursor()
+    cur2.execute("SELECT cas_number FROM item_cas_numbers WHERE source_item_key = ?", (key,))
+    cas_numbers = [r[0] for r in cur2.fetchall()]
+    
+    # Get function tags from relational table
+    cur2.execute("SELECT function_tag FROM item_functions WHERE source_item_key = ?", (key,))
+    function_tags = [r[0] for r in cur2.fetchall()]
+    
     return jsonify({
-        'key': row[0],
+        'key': key,
         'source': row[1],
         'source_row_id': row[2],
         'source_row_number': row[3],
@@ -2605,32 +2765,32 @@ def api_source_item_detail(key):
         'raw_name': row[7],
         'inci_name': row[8],
         'cas_number': row[9],
-        'cas_numbers': parse_json(row[10]) or [],
-        'derived_term': row[11],
-        'derived_variation': row[12],
-        'derived_physical_form': row[13],
-        'derived_part': row[14],
-        'derived_part_reason': row[15],
-        'origin': row[16],
-        'ingredient_category': row[17],
-        'refinement_level': row[18],
-        'status': row[19],
-        'needs_review_reason': row[20],
-        'definition_display_name': row[21],
-        'item_display_name': row[22],
-        'function_tags': parse_json(row[23]) or [],
-        'function_tag_entries': parse_json(row[24]) or [],
-        'master_categories': parse_json(row[25]) or [],
-        'variation_bypass': bool(row[26]),
-        'variation_bypass_reason': row[27],
-        'definition_cluster_id': row[28],
-        'definition_cluster_confidence': row[29],
-        'definition_cluster_reason': row[30],
-        'specs': parse_json(row[31]),
-        'specs_sources': parse_json(row[32]),
-        'specs_notes': parse_json(row[33]),
-        'merged_item_id': row[34],
-        'ingested_at': row[35]
+        'cas_numbers': cas_numbers,
+        'derived_term': row[10],
+        'derived_variation': row[11],
+        'derived_physical_form': row[12],
+        'derived_part': row[13],
+        'derived_part_reason': row[14],
+        'origin': row[15],
+        'ingredient_category': row[16],
+        'refinement_level': row[17],
+        'status': row[18],
+        'needs_review_reason': row[19],
+        'definition_display_name': row[20],
+        'item_display_name': row[21],
+        'function_tags': function_tags,
+        'function_tag_entries': parse_json(row[22]) or [],
+        'master_categories': parse_json(row[23]) or [],
+        'variation_bypass': bool(row[24]),
+        'variation_bypass_reason': row[25],
+        'definition_cluster_id': row[26],
+        'definition_cluster_confidence': row[27],
+        'definition_cluster_reason': row[28],
+        'specs': parse_json(row[29]),
+        'specs_sources': parse_json(row[30]),
+        'specs_notes': parse_json(row[31]),
+        'merged_item_id': row[32],
+        'ingested_at': row[33]
     })
 
 @app.route('/api/export-analysis')

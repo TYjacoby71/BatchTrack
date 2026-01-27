@@ -1,13 +1,9 @@
 {% extends 'layout.html' %}
-{% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
+{% set navbar_center_title = 'Soap Formulator' %}
+{% block content %}
 <div class="py-1" id="soapToolPage">
-  <h2 class="mb-3 d-flex align-items-center gap-2">
-    Soap Maker Tools
-    {% if not tool_enabled %}
-    <span class="badge bg-secondary">Coming Soon</span>
-    {% endif %}
-  </h2>
+  <h1 class="visually-hidden">Soap Formulator</h1>
   {% if not tool_enabled %}
   <div class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="fas fa-hourglass-half me-2"></i>
@@ -21,11 +17,123 @@
   </script>
   <div id="soapAlertStack" class="mb-3"></div>
   <style>
+    #soapToolPage {
+      margin-top: calc(-1 * var(--space-4));
+    }
     #soapToolPage .soap-quality-row {
       display: grid;
-      grid-template-columns: 90px 1fr;
-      gap: 0.75rem;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label hint"
+        "bar bar"
+        "note note";
+      row-gap: var(--space-1);
+      column-gap: var(--space-2);
       align-items: center;
+    }
+    #soapToolPage .soap-quality-label {
+      grid-area: label;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+    #soapToolPage .soap-quality-name {
+      font-size: 0.85rem;
+      color: var(--color-muted);
+    }
+    #soapToolPage .soap-quality-value {
+      font-variant-numeric: tabular-nums;
+    }
+    #soapToolPage .soap-quality-help {
+      grid-area: hint;
+      align-self: start;
+    }
+    #soapToolPage .soap-quality-help-placeholder {
+      grid-area: hint;
+      width: 1rem;
+      height: 1rem;
+    }
+    #soapToolPage .soap-quality-progress {
+      grid-area: bar;
+      position: relative;
+      height: var(--space-4);
+      padding-bottom: var(--space-4);
+      border-radius: var(--radius-2);
+      background: var(--color-subtle-bg-2);
+      background-clip: content-box;
+      overflow: visible;
+    }
+    #soapToolPage .soap-quality-range {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: var(--space-4);
+      display: flex;
+      border-radius: inherit;
+      overflow: hidden;
+      z-index: 1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    #soapToolPage .soap-quality-range-start,
+    #soapToolPage .soap-quality-range-ideal,
+    #soapToolPage .soap-quality-range-end {
+      height: 100%;
+    }
+    #soapToolPage .soap-quality-progress .progress-bar {
+      height: var(--space-4);
+      z-index: 2;
+      position: relative;
+    }
+    #soapToolPage .soap-quality-boundary {
+      position: absolute;
+      top: calc(100% + var(--space-3));
+      font-size: 0.7rem;
+      color: var(--color-muted);
+      white-space: nowrap;
+    }
+    #soapToolPage .soap-quality-boundary-start {
+      left: 0;
+      transform: translateX(-10%);
+    }
+    #soapToolPage .soap-quality-boundary-end {
+      right: 0;
+      transform: translateX(10%);
+    }
+    #soapToolPage .soap-quality-section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: var(--space-1);
+      color: var(--color-text);
+    }
+    #soapToolPage .soap-quality-legend {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: var(--color-muted);
+    }
+    #soapToolPage .soap-fatty-table {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    #soapToolPage .soap-fatty-table td {
+      padding: var(--space-1) 0;
+      border: none;
+      font-size: 0.85rem;
+    }
+    #soapToolPage .soap-quality-row .small.text-muted:empty {
+      display: none;
+    }
+    #soapToolPage .soap-fatty-table tbody tr:not(:last-child) td {
+      border-bottom: none;
+    }
+    #soapToolPage #soapConfigCard,
+    #soapToolPage #soapQualityCard,
+    #soapToolPage #resultsCard {
+      margin-bottom: var(--space-2);
+    }
+    #soapToolPage #resultsCard {
+      margin-top: var(--space-2);
     }
     #soapToolPage .soap-mobile-drawer {
       position: fixed;
@@ -109,16 +217,6 @@
       justify-content: center;
       background: var(--color-subtle-bg-2);
     }
-    #soapToolPage .soap-quality-progress {
-      overflow: hidden;
-    }
-    #soapToolPage .soap-quality-range {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      opacity: 0.35;
-      pointer-events: none;
-    }
     #soapToolPage .soap-quality-range-start {
       background: var(--color-warning-bg);
     }
@@ -148,6 +246,24 @@
       align-items: center;
       margin-top: var(--space-4);
     }
+    #soapToolPage .soap-config-row .form-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.25rem;
+    }
+    #soapToolPage .soap-config-row .form-control,
+    #soapToolPage .soap-config-row .form-select,
+    #soapToolPage .soap-config-row .btn-group .btn {
+      min-height: 38px;
+    }
+    #soapToolPage .accordion-body .form-label {
+      margin-bottom: 0.25rem;
+    }
+    #soapToolPage .soap-stage-form-row .form-control,
+    #soapToolPage .soap-stage-form-row .form-select {
+      min-height: 38px;
+    }
     #soapToolPage .soap-field .form-text {
       display: none;
     }
@@ -167,29 +283,106 @@
       50% { transform: translateY(-2px); opacity: 1; }
       100% { transform: translateY(0); opacity: 1; }
     }
-    #soapToolPage .soap-quality-row .progress { height: 10px; }
+    #soapToolPage .soap-quality-row .progress { height: var(--space-4); }
     #soapToolPage .quality-target-marker {
       position: absolute;
-      top: -6px;
-      bottom: -6px;
-      border-left: 2px dashed var(--color-success);
+      top: 0;
+      bottom: var(--space-4);
+      border-left: 2px dashed var(--color-primary);
       width: 0;
+      z-index: 3;
     }
     #soapToolPage .quality-target-label {
       position: absolute;
-      top: -18px;
+      top: calc(100% + var(--space-1));
       left: 0;
       transform: translateX(-50%);
       font-size: 0.7rem;
-      color: var(--color-success);
+      color: var(--color-primary);
       background: var(--color-surface);
-      padding: 0 2px;
+      padding: 0 4px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-1);
     }
     #soapToolPage .soap-oil-profile td {
       padding: 0.2rem 0.35rem;
     }
     #soapToolPage .soap-stage-note {
       font-size: 0.78rem;
+    }
+    #soapToolPage .accordion-item {
+      border-radius: var(--radius-3);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button {
+      background-color: var(--color-surface);
+    }
+    #soapToolPage .accordion-button:focus {
+      box-shadow: none;
+    }
+    #soapToolPage .accordion-button:not(.collapsed) {
+      color: var(--color-text);
+      box-shadow: none;
+    }
+    #soapToolPage .soap-stage-pane {
+      display: flex;
+      flex-direction: column;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced {
+      height: var(--soap-stage-height);
+    }
+    #soapToolPage .soap-stage-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-tabs .nav-tabs {
+      border-bottom: 1px solid var(--color-border);
+      gap: var(--space-1);
+      flex-wrap: wrap;
+    }
+    #soapToolPage .soap-stage-tabs .nav-link {
+      border: 1px solid var(--color-border);
+      border-bottom: none;
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      background: var(--color-subtle-bg-2);
+      color: var(--color-text);
+      padding: var(--space-2) var(--space-3);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    #soapToolPage .soap-stage-tabs .nav-link.active {
+      background: var(--color-surface);
+      box-shadow: var(--shadow-1);
+    }
+    #soapToolPage .soap-stage-card {
+      margin-bottom: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-tabs {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .tab-content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .tab-pane {
+      height: 100%;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card .card-body {
+      flex: 1 1 auto;
+      overflow: auto;
     }
     #soapToolPage .oil-profile-float {
       position: absolute;
@@ -200,10 +393,25 @@
       z-index: 1040;
       box-shadow: var(--shadow-2);
     }
+    #soapToolPage .oil-profile-open {
+      display: none;
+    }
+    @media (min-width: 1760px) {
+      #soapToolPage .oil-profile-float {
+        position: fixed;
+        top: 120px;
+        right: auto;
+        left: calc((100vw - 1140px) / 2 - 280px - 24px);
+        width: 260px;
+        max-width: 260px;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+    }
     #soapToolPage #soapStageQualityRow {
       display: flex !important;
       flex-wrap: nowrap;
-      align-items: flex-start;
+      align-items: stretch;
     }
     #soapToolPage #soapStageQualityRow > .soap-stage-col {
       flex: 0 0 50%;
@@ -215,11 +423,15 @@
       max-width: 50%;
       min-width: 0;
     }
-    @media (max-width: 991px) {
+    @media (max-width: 767px) {
       #soapToolPage .oil-profile-float {
         position: static;
         width: 100%;
         max-width: 100%;
+        display: none !important;
+      }
+      #soapToolPage .oil-profile-open {
+        display: inline-flex;
       }
       #soapToolPage #soapStageQualityRow {
         flex-wrap: wrap;
@@ -244,9 +456,11 @@
 
   {% include 'tools/soap/_config_card.html' %}
 
-  <div class="row mt-4 g-4" id="soapStageQualityRow">
+  <div class="row mt-2 g-2" id="soapStageQualityRow">
     <div class="col-lg-6 soap-stage-col">
-      {% include 'tools/soap/_stages.html' %}
+      <div class="soap-stage-pane" id="soapStagePane">
+        {% include 'tools/soap/_stages.html' %}
+      </div>
     </div>
 
     <div class="col-lg-6 soap-quality-col">
@@ -466,13 +680,13 @@
   const CITRIC_CATEGORY_SET = new Set(['Preservatives & Additives', 'Salts & Minerals', 'Aqueous Solutions & Blends']);
 
   const STAGE_CONFIGS = [
-    { id: 1, headingId: 'soapStage1Heading', collapseId: 'soapStage1Collapse', required: true },
-    { id: 2, headingId: 'soapStage2Heading', collapseId: 'soapStage2Collapse', required: true },
-    { id: 3, headingId: 'soapStage3Heading', collapseId: 'soapStage3Collapse', required: true },
-    { id: 4, headingId: 'soapStage4Heading', collapseId: 'soapStage4Collapse', required: false },
-    { id: 5, headingId: 'soapStage5Heading', collapseId: 'soapStage5Collapse', required: false },
-    { id: 6, headingId: 'soapStage6Heading', collapseId: 'soapStage6Collapse', required: false },
-    { id: 7, headingId: 'soapStage7Heading', collapseId: 'soapStage7Collapse', required: false },
+    { id: 1, tabId: 'soapStage1Tab', paneId: 'soapStage1Pane', required: true },
+    { id: 2, tabId: 'soapStage2Tab', paneId: 'soapStage2Pane', required: true },
+    { id: 3, tabId: 'soapStage3Tab', paneId: 'soapStage3Pane', required: true },
+    { id: 4, tabId: 'soapStage4Tab', paneId: 'soapStage4Pane', required: false },
+    { id: 5, tabId: 'soapStage5Tab', paneId: 'soapStage5Pane', required: false },
+    { id: 6, tabId: 'soapStage6Tab', paneId: 'soapStage6Pane', required: false },
+    { id: 7, tabId: 'soapStage7Tab', paneId: 'soapStage7Pane', required: false },
   ];
 
   function formatTime(ts){
@@ -567,25 +781,26 @@
 
   function flashStage(stageItem){
     if (!stageItem) return;
-    stageItem.classList.add('soap-stage-highlight');
-    setTimeout(() => stageItem.classList.remove('soap-stage-highlight'), 900);
+    const target = stageItem.querySelector?.('.soap-stage-card') || stageItem;
+    target.classList.add('soap-stage-highlight');
+    setTimeout(() => target.classList.remove('soap-stage-highlight'), 900);
   }
 
   function injectStageActions(){
-    const items = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-item'));
-    items.forEach((item, index) => {
-      const body = item.querySelector('.accordion-body');
+    const bodies = Array.from(document.querySelectorAll('#soapStageTabContent .soap-stage-body'));
+    bodies.forEach((body, index) => {
       if (!body || body.querySelector('.soap-stage-actions')) return;
+      const stageIndex = Number(body.dataset.stageIndex ?? index);
       const actions = document.createElement('div');
       actions.className = 'soap-stage-actions';
       actions.innerHTML = `
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${stageIndex}">
           <i class="fas fa-arrow-left me-1"></i>Back
         </button>
-        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${stageIndex}">
           Reset stage
         </button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${index}">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${stageIndex}">
           Next<i class="fas fa-arrow-right ms-1"></i>
         </button>
       `;
@@ -596,23 +811,25 @@
   function openStageByIndex(index){
     const stage = STAGE_CONFIGS[index];
     if (!stage) return;
-    const target = document.getElementById(stage.collapseId);
-    if (!target) return;
-    const collapses = Array.from(document.querySelectorAll('#soapStageAccordion .accordion-collapse'));
-    collapses.forEach(collapse => {
-      if (collapse === target) return;
-      if (window.bootstrap?.Collapse) {
-        bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).hide();
-      } else {
-        collapse.classList.remove('show');
-      }
-    });
-    if (window.bootstrap?.Collapse) {
-      bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
+    const tabButton = document.getElementById(stage.tabId);
+    if (!tabButton) return;
+    if (window.bootstrap?.Tab) {
+      bootstrap.Tab.getOrCreateInstance(tabButton).show();
     } else {
-      target.classList.add('show');
+      document.querySelectorAll('#soapStageTabList .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('#soapStageTabContent .tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+      });
+      tabButton.classList.add('active');
+      tabButton.setAttribute('aria-selected', 'true');
+      const pane = document.getElementById(stage.paneId);
+      if (pane) pane.classList.add('show', 'active');
     }
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scheduleStageHeightSync();
+    tabButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
   function resetStage(stageId){
@@ -723,8 +940,7 @@
 
   function updateStageStatuses(){
     STAGE_CONFIGS.forEach(stage => {
-      const heading = document.getElementById(stage.headingId);
-      const button = heading?.querySelector('.accordion-button');
+      const button = document.getElementById(stage.tabId);
       if (!button) return;
       let badge = button.querySelector('.soap-stage-status');
       if (!badge) {
@@ -1056,6 +1272,10 @@
       <div class="col-md-1 d-grid">
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
       </div>`;
+    const mobileProfile = document.createElement('div');
+    mobileProfile.className = 'col-12 d-lg-none mt-2';
+    mobileProfile.innerHTML = '<button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>';
+    row.appendChild(mobileProfile);
     row.querySelectorAll('.form-text').forEach(text => {
       const wrapper = text.closest('.col-md-6, .col-md-3, .col-md-2');
       if (wrapper) wrapper.classList.add('soap-field');
@@ -1265,34 +1485,47 @@
 
   function updateSelectedOilProfileDisplay({ name, sapKoh, iodine, fattyProfile } = {}){
     const floatCard = document.getElementById('oilProfileFloat');
-    const nameEl = document.getElementById('selectedOilName');
-    if (nameEl) nameEl.textContent = name || 'Pick an oil to preview';
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    const nameLabel = name || 'Pick an oil to preview';
+    setText('selectedOilName', nameLabel);
+    setText('selectedOilModalName', nameLabel);
     if (floatCard) {
       floatCard.classList.toggle('d-none', !name);
     }
-    const sapEl = document.getElementById('selectedOilSap');
-    const iodineEl = document.getElementById('selectedOilIodine');
-    if (sapEl) sapEl.textContent = sapKoh > 0 ? round(sapKoh, 1) : '--';
-    if (iodineEl) iodineEl.textContent = iodine > 0 ? round(iodine, 1) : '--';
+    const sapValue = sapKoh > 0 ? round(sapKoh, 1) : '--';
+    const iodineValue = iodine > 0 ? round(iodine, 1) : '--';
+    setText('selectedOilSap', sapValue);
+    setText('selectedOilModalSap', sapValue);
+    setText('selectedOilIodine', iodineValue);
+    setText('selectedOilModalIodine', iodineValue);
 
     const qualities = fattyProfile ? computeQualities(fattyProfile) : {};
     const setValue = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      const safe = isFinite(value) && value > 0 ? round(value, 1) : '--';
+      setText(id, safe);
     };
     setValue('selectedOilHardness', qualities.hardness);
+    setValue('selectedOilModalHardness', qualities.hardness);
     setValue('selectedOilCleansing', qualities.cleansing);
+    setValue('selectedOilModalCleansing', qualities.cleansing);
     setValue('selectedOilConditioning', qualities.conditioning);
+    setValue('selectedOilModalConditioning', qualities.conditioning);
     setValue('selectedOilBubbly', qualities.bubbly);
+    setValue('selectedOilModalBubbly', qualities.bubbly);
     setValue('selectedOilCreamy', qualities.creamy);
+    setValue('selectedOilModalCreamy', qualities.creamy);
 
     const fattyKeys = ['lauric', 'myristic', 'palmitic', 'stearic', 'ricinoleic', 'oleic', 'linoleic', 'linolenic'];
     fattyKeys.forEach(key => {
-      const el = document.getElementById(`selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`);
-      if (!el) return;
+      const baseId = `selectedOil${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      const modalId = `selectedOilModal${key.charAt(0).toUpperCase()}${key.slice(1)}`;
       const value = fattyProfile ? toNumber(fattyProfile[key]) : 0;
-      el.textContent = value > 0 ? round(value, 1) : '--';
+      const safe = value > 0 ? round(value, 1) : '--';
+      setText(baseId, safe);
+      setText(modalId, safe);
     });
   }
 
@@ -1345,6 +1578,30 @@
     state.lastPreviewRow = null;
     updateSelectedOilProfileDisplay();
   }
+
+  function syncStageHeight(){
+    const stagePane = document.getElementById('soapStagePane');
+    const qualityCard = document.getElementById('soapQualityCard');
+    if (!stagePane || !qualityCard) return;
+    const shouldSync = window.matchMedia('(min-width: 768px)').matches;
+    if (!shouldSync) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    const qualityHeight = qualityCard.offsetHeight;
+    if (!qualityHeight) {
+      stagePane.classList.remove('is-height-synced');
+      stagePane.style.removeProperty('--soap-stage-height');
+      return;
+    }
+    stagePane.style.setProperty('--soap-stage-height', `${qualityHeight}px`);
+    stagePane.classList.add('is-height-synced');
+  }
+
+  const scheduleStageHeightSync = () => {
+    window.requestAnimationFrame(syncStageHeight);
+  };
 
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
@@ -1512,19 +1769,34 @@
   }
 
   function setQualityRangeBars(){
-    Object.entries(QUALITY_RANGES).forEach(([key, range]) => {
-      const [min, max] = range;
+    const rangeConfig = {
+      hardness: { range: QUALITY_RANGES.hardness, scale: 100 },
+      cleansing: { range: QUALITY_RANGES.cleansing, scale: 100 },
+      conditioning: { range: QUALITY_RANGES.conditioning, scale: 100 },
+      bubbly: { range: QUALITY_RANGES.bubbly, scale: 100 },
+      creamy: { range: QUALITY_RANGES.creamy, scale: 100 },
+      iodine: { range: IODINE_RANGE, scale: IODINE_SCALE_MAX },
+      ins: { range: INS_RANGE, scale: INS_SCALE_MAX },
+    };
+    Object.entries(rangeConfig).forEach(([key, config]) => {
+      const [min, max] = config.range;
+      const scale = config.scale;
       const name = key.charAt(0).toUpperCase() + key.slice(1);
       const start = document.getElementById(`quality${name}RangeStart`);
       const ideal = document.getElementById(`quality${name}RangeIdeal`);
       const end = document.getElementById(`quality${name}RangeEnd`);
-      if (!start || !ideal || !end) return;
-      const startPct = Math.max(0, Math.min(100, min));
-      const idealPct = Math.max(0, Math.min(100, max - min));
-      const endPct = Math.max(0, 100 - max);
-      start.style.width = `${startPct}%`;
-      ideal.style.width = `${idealPct}%`;
-      end.style.width = `${endPct}%`;
+      if (start && ideal && end) {
+        const startPct = Math.max(0, Math.min(100, (min / scale) * 100));
+        const idealPct = Math.max(0, Math.min(100, ((max - min) / scale) * 100));
+        const endPct = Math.max(0, Math.min(100, 100 - ((max / scale) * 100)));
+        start.style.width = `${startPct}%`;
+        ideal.style.width = `${idealPct}%`;
+        end.style.width = `${endPct}%`;
+      }
+      const minLabel = document.getElementById(`quality${name}RangeMin`);
+      const maxLabel = document.getElementById(`quality${name}RangeMax`);
+      if (minLabel) minLabel.textContent = round(min, 0);
+      if (maxLabel) maxLabel.textContent = round(max, 0);
     });
   }
 
@@ -2028,9 +2300,12 @@
     setQuality('Bubbly', qualities.bubbly);
     setQuality('Creamy', qualities.creamy);
 
-    document.getElementById('fattyCoverageNote').textContent = coveragePct > 0
-      ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
-      : 'Fatty acid coverage: not enough data yet';
+    const coverageNote = document.getElementById('fattyCoverageNote');
+    if (coverageNote) {
+      coverageNote.textContent = coveragePct > 0
+        ? `Fatty acid coverage: ${round(coveragePct, 1)}% of oils`
+        : 'Fatty acid coverage: not enough data yet';
+    }
 
     const iodineEl = document.getElementById('iodineValue');
     const insEl = document.getElementById('insValue');
@@ -2102,6 +2377,7 @@
       warningBox.classList.add('d-none');
       warningBox.textContent = '';
     }
+    scheduleStageHeightSync();
   }
 
   function updateVisualGuidance(data){
@@ -2905,6 +3181,19 @@
   });
 
   document.getElementById('oilRows').addEventListener('click', function(e){
+    const profileButton = e.target.closest('.oil-profile-open');
+    if (profileButton) {
+      const row = profileButton.closest('.oil-row');
+      if (row) {
+        setSelectedOilProfileFromRow(row);
+        const modalEl = document.getElementById('oilProfileModal');
+        if (modalEl && window.bootstrap) {
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+          modal.show();
+        }
+      }
+      return;
+    }
     if (e.target.classList.contains('remove-oil')) {
       const row = e.target.closest('.oil-row');
       if (row) {
@@ -2923,11 +3212,16 @@
     }
   });
 
-  const stageAccordion = document.getElementById('soapStageAccordion');
-  if (stageAccordion) {
-    stageAccordion.addEventListener('click', event => {
+  const stageTabContent = document.getElementById('soapStageTabContent');
+  if (stageTabContent) {
+    stageTabContent.addEventListener('click', event => {
       const actionBtn = event.target.closest('[data-stage-action]');
       if (!actionBtn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       const action = actionBtn.dataset.stageAction;
       const index = Number(actionBtn.dataset.stageIndex);
       if (Number.isNaN(index)) return;
@@ -2935,6 +3229,10 @@
       if (action === 'next') openStageByIndex(Math.min(STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') resetStage(index + 1);
     });
+  }
+  const stageTabList = document.getElementById('soapStageTabList');
+  if (stageTabList) {
+    stageTabList.addEventListener('shown.bs.tab', scheduleStageHeightSync);
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -3082,7 +3380,7 @@
         queueStateSave();
         validateNumericField(e.target);
         updateStageStatuses();
-        flashStage(e.target.closest('.accordion-item'));
+        flashStage(e.target.closest('.soap-stage-card'));
       }
     });
     soapRoot.addEventListener('change', function(e){
@@ -3245,6 +3543,8 @@
     resultsObserver.observe(resultsCard, { attributes: true, attributeFilter: ['style', 'class'] });
   };
   setupMobileDrawer();
+  window.addEventListener('resize', scheduleStageHeightSync);
+  window.addEventListener('load', scheduleStageHeightSync);
 
   const initialOilRow = document.querySelector('#oilRows .oil-row');
   if (initialOilRow) {
@@ -3267,6 +3567,7 @@
   updateAdditivesOutput(getTotalOilsGrams());
   updateStageStatuses();
   restoreState();
+  scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
     downloadModal.addEventListener('show.bs.modal', updateDownloadPreview);

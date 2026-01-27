@@ -1,0 +1,45 @@
+Summary of what I found + fixed
+
+The batch export/import path was out of sync with the compiler:
+Stage 2 export read a non‑existent compiled_payload field and used variation/physical_form columns that don’t exist (should be payload_json + derived_*), so seed items were empty and requests didn’t contain the data needed to complete items.
+Stage 2 import tried to write item fields that aren’t in CompiledClusterItemRecord.
+Stage 1 import wasn’t writing payload_json or assigning compilation_rank.
+Stage 2 export was always hitting _render_metadata_blob, which is the slow path.
+I aligned batch export/import with compiler behavior, added chunking so no item requests are dropped, and made metadata optional (default off) so exports don’t stall.
+What changed (code)
+
+Batch export consistency + completeness
+Stage 2 export now uses payload_json + derived_* fields, builds stubs the same way as compiler (includes specs + bypass flags + item_name), and chunks items (BATCH_STAGE2_CHUNK_SIZE, default 25) so no pending items are missed.
+Stage 2 export defaults to skip metadata (fast) unless BATCH_EXPORT_INCLUDE_METADATA=1 is set.
+Stage 2 custom_id supports chunking (stage2::cluster_id::chunk) and import parses both new + old formats.
+Batch import fixes
+Stage 1 import now updates payload_json, sets term_status, term_compiled_at, and assigns compilation_rank if missing.
+Stage 2 import now matches items by derived_variation + derived_physical_form and only updates item_json + status fields (matching compiler).
+Maintenance utilities
+Added data_builder/ingredients/batch_maintenance.py to:
+backfill Stage 1 compilation_rank
+mark first N compiled items as done (default 2406)
+reset batch_pending → pending
+Blocked in this environment
+
+There is no DB file in this workspace (no *.db present, and output/Final DB.db is missing).
+That means I could not run the rank backfill / item‑status fixes / batch reset / stage‑2 export here.
+Commands to run on your DB
+
+Backfill ranks + mark first 2406 items done + reset batch_pending
+python -m data_builder.ingredients.batch_maintenance \
+  --db-path "data_builder/ingredients/output/Final DB.db" \
+  --all
+Export 2000 Stage‑2 terms
+COMPILER_DB_PATH="data_builder/ingredients/output/Final DB.db" \
+python -m data_builder.ingredients.openai_batch_service export --stage 2 --limit 2000
+Optional knobs:
+
+BATCH_EXPORT_INCLUDE_METADATA=1 to include metadata (slow).
+BATCH_STAGE2_CHUNK_SIZE=25 (default) to control per‑request item chunking.
+If the DB path is different, tell me the exact path and I’ll rerun the maintenance + export for you.
+
+Pending (blocked by missing DB)
+
+Reset batch_pending → pending
+Export 2000 Stage‑2 terms
