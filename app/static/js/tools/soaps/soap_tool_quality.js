@@ -313,7 +313,7 @@
         } else if (value > range[1]) {
           hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.high || '';
         } else {
-          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.ok || '';
+          hintEl.textContent = '';
         }
       }
     }
