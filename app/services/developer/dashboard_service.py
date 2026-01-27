@@ -81,6 +81,12 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "description": "Verbose logging & unsafe diagnostics.",
             },
             {
+                "key": "FEATURE_AUTO_BULK_SKU_ON_VARIANT",
+                "label": "Auto-create Bulk SKU on Variant",
+                "status": "wired",
+                "description": "Require a unit and create a Bulk SKU when adding a variant.",
+            },
+            {
                 "key": "FEATURE_AUTO_BACKUP",
                 "label": "Auto-backup System",
                 "status": "stub",
