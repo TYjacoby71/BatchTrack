@@ -34,9 +34,25 @@
                             <input type="number" name="retail_price" class="form-control" value="{{ sku.retail_price or '' }}" step="0.01" min="0" placeholder="0.00">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Low Stock Threshold</label>
-                            <input type="number" name="low_stock_threshold" class="form-control" 
-                                   value="{{ sku.low_stock_threshold or '' }}" step="0.01" min="0" placeholder="Minimum stock level">
+                            <label class="form-label d-flex align-items-center justify-content-between">
+                                <span>Low Stock Threshold</span>
+                                <span class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="low_stock_threshold_enabled"
+                                           name="low_stock_threshold_enabled"
+                                           {% if sku.low_stock_threshold is not none %}checked{% endif %}>
+                                    <label class="form-check-label small" for="low_stock_threshold_enabled">Alert</label>
+                                </span>
+                            </label>
+                            <div class="d-flex align-items-center gap-2" id="lowStockThresholdRow"
+                                 style="{{ '' if sku.low_stock_threshold is not none else 'display: none;' }}">
+                                <input type="number" name="low_stock_threshold" id="low_stock_threshold"
+                                       class="form-control"
+                                       value="{{ sku.low_stock_threshold if sku.low_stock_threshold is not none else '' }}"
+                                       step="0.01" min="0" placeholder="Minimum stock level">
+                            </div>
+                            <small class="text-muted">
+                                Toggle on to enable low-stock alerts for this SKU. When off, alerts are disabled.
+                            </small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Location</label>
@@ -217,6 +233,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 shelfLifeGroup.style.display = 'none';
                 document.getElementById('shelf_life_days').value = '';
             }
+        });
+    }
+
+    const lowStockToggle = document.getElementById('low_stock_threshold_enabled');
+    const lowStockRow = document.getElementById('lowStockThresholdRow');
+    const lowStockInput = document.getElementById('low_stock_threshold');
+
+    if (lowStockToggle && lowStockRow && lowStockInput) {
+        const applyLowStockState = (enabled) => {
+            lowStockRow.style.display = enabled ? 'flex' : 'none';
+            lowStockInput.disabled = !enabled;
+            if (enabled) {
+                lowStockInput.focus();
+            } else {
+                lowStockInput.value = '';
+            }
+        };
+
+        applyLowStockState(lowStockToggle.checked);
+        lowStockToggle.addEventListener('change', function() {
+            applyLowStockState(this.checked);
         });
     }
 

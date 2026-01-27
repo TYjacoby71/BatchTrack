@@ -84,9 +84,14 @@ def edit_sku(inventory_item_id):
                     sku.inventory_item.unit = clean_unit
 
         # Update thresholds
-        low_stock_threshold = request.form.get('low_stock_threshold')
-        if low_stock_threshold:
-            sku.low_stock_threshold = float(low_stock_threshold)
+        low_stock_enabled = request.form.get('low_stock_threshold_enabled') == 'on'
+        if low_stock_enabled:
+            low_stock_threshold = request.form.get('low_stock_threshold')
+            sku.low_stock_threshold = (
+                float(low_stock_threshold) if low_stock_threshold else None
+            )
+        else:
+            sku.low_stock_threshold = None
 
         # Handle unit cost override
         if request.form.get('override_unit_cost'):
