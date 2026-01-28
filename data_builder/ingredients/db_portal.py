@@ -1717,6 +1717,54 @@ def api_compiled_ingredients():
 
     conn = get_db("final")
     cur = conn.cursor()
+    
+    # Use compiled_cluster_items for terms view
+    if _table_exists(conn, "compiled_cluster_items"):
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("derived_term LIKE ?")
+            params.append(f"%{search}%")
+        if category:
+            where_clauses.append("json_extract(item_json, '$.master_category') = ?")
+            params.append(category)
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # Count unique terms
+        cur.execute(f"SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items {where_sql}", params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            f"""
+            SELECT derived_term, 
+                   json_extract(item_json, '$.master_category') as category,
+                   COUNT(*) as item_count,
+                   GROUP_CONCAT(DISTINCT derived_variation) as variations
+            FROM compiled_cluster_items
+            {where_sql}
+            GROUP BY derived_term
+            ORDER BY derived_term
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+        rows = cur.fetchall()
+
+        ingredients = [
+            {
+                "term": r[0], 
+                "origin": "compiled", 
+                "ingredient_category": r[1] or "N/A", 
+                "item_count": int(r[2] or 0),
+                "variations": r[3] or ""
+            }
+            for r in rows
+        ]
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        conn.close()
+        return jsonify({"ingredients": ingredients, "total": total, "total_pages": total_pages, "page": page})
+    
+    # Fallback to legacy ingredients table
     if not _table_exists(conn, "ingredients"):
         conn.close()
         return jsonify({"ingredients": [], "total": 0, "total_pages": 1, "page": page})
