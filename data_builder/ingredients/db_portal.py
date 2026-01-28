@@ -1346,6 +1346,53 @@ HTML_TEMPLATE = """
                         html += '</div>';
                     }
                     
+                    // Soapmaking Enrichment Data - ALWAYS show, even if empty
+                    html += '<div class="detail-section" style="background:#fef3c7;border-radius:8px;padding:12px;margin-bottom:20px;"><h3 style="color:#92400e;margin-top:0;">Soapmaking Data</h3>';
+                    html += '<div class="detail-grid">';
+                    html += `<div class="detail-label">Protected</div><div class="detail-value">${data.protected_flag ? '<span style="color:#059669;font-weight:600;">Yes</span>' : '<span style="color:#9ca3af;">No</span>'}</div>`;
+                    html += `<div class="detail-label">SAP (NaOH)</div><div class="detail-value">${data.sap_naoh ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">SAP (KOH)</div><div class="detail-value">${data.sap_koh ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Iodine Value</div><div class="detail-value">${data.iodine_value ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">INS Value</div><div class="detail-value">${data.ins_value ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Enrichment Source</div><div class="detail-value">${data.enrichment_source ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Enrichment Date</div><div class="detail-value">${data.enrichment_date ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += '</div>';
+                    
+                    // Fatty Acids
+                    html += '<div style="margin-top:12px;"><strong style="color:#92400e;">Fatty Acid Profile:</strong></div>';
+                    html += '<div class="detail-grid" style="margin-top:8px;">';
+                    const fa = data.fatty_acids || {};
+                    html += `<div class="detail-label">Lauric</div><div class="detail-value">${fa.lauric ?? '<span style="color:#9ca3af;">-</span>'}${fa.lauric ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Myristic</div><div class="detail-value">${fa.myristic ?? '<span style="color:#9ca3af;">-</span>'}${fa.myristic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Palmitic</div><div class="detail-value">${fa.palmitic ?? '<span style="color:#9ca3af;">-</span>'}${fa.palmitic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Stearic</div><div class="detail-value">${fa.stearic ?? '<span style="color:#9ca3af;">-</span>'}${fa.stearic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Ricinoleic</div><div class="detail-value">${fa.ricinoleic ?? '<span style="color:#9ca3af;">-</span>'}${fa.ricinoleic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Oleic</div><div class="detail-value">${fa.oleic ?? '<span style="color:#9ca3af;">-</span>'}${fa.oleic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Linoleic</div><div class="detail-value">${fa.linoleic ?? '<span style="color:#9ca3af;">-</span>'}${fa.linoleic ? '%' : ''}</div>`;
+                    html += `<div class="detail-label">Linolenic</div><div class="detail-value">${fa.linolenic ?? '<span style="color:#9ca3af;">-</span>'}${fa.linolenic ? '%' : ''}</div>`;
+                    html += '</div>';
+                    
+                    // Soap Properties
+                    html += '<div style="margin-top:12px;"><strong style="color:#92400e;">Soap Quality Properties:</strong></div>';
+                    html += '<div class="detail-grid" style="margin-top:8px;">';
+                    const sp = data.soap_properties || {};
+                    html += `<div class="detail-label">Hardness</div><div class="detail-value">${sp.hardness ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Cleansing</div><div class="detail-value">${sp.cleansing ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Bubbly Lather</div><div class="detail-value">${sp.bubbly_lather ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Creamy Lather</div><div class="detail-value">${sp.creamy_lather ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += `<div class="detail-label">Conditioning</div><div class="detail-value">${sp.conditioning ?? '<span style="color:#9ca3af;">-</span>'}</div>`;
+                    html += '</div>';
+                    
+                    // Use Case Tags
+                    const useCases = data.use_case_tags || [];
+                    html += `<div style="margin-top:12px;"><strong style="color:#92400e;">Use Cases:</strong> `;
+                    if (useCases.length) {
+                        useCases.forEach(t => { html += `<span class="badge" style="background:#fde68a;color:#92400e;margin:2px;">${t}</span>`; });
+                    } else {
+                        html += '<span style="color:#9ca3af;">None tagged</span>';
+                    }
+                    html += '</div></div>';
+                    
                     // Raw pre-compilation data - show as attributes
                     const rj = data.raw_item_json || {};
                     if (Object.keys(rj).length) {
@@ -2245,7 +2292,10 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
         """
         SELECT cci.cluster_id, cci.merged_item_form_id, cci.derived_term, cci.derived_variation, 
                cci.derived_physical_form, cci.item_status, cci.raw_item_json, cci.item_json,
-               cc.compiled_term, cci.refinement_flags
+               cc.compiled_term, cci.refinement_flags,
+               cci.sap_naoh, cci.sap_koh, cci.iodine_value, cci.ins_value,
+               cci.fatty_acids_json, cci.soap_properties_json, cci.protected_flag,
+               cci.use_case_tags, cci.enrichment_source, cci.enrichment_date
         FROM compiled_cluster_items cci
         LEFT JOIN compiled_clusters cc ON cc.cluster_id = cci.cluster_id
         WHERE cci.cluster_id = ? AND cci.merged_item_form_id = ?
@@ -2293,8 +2343,96 @@ def api_compiled_cluster_item_detail(cluster_id: str, mif_id: int):
             "refinement_flags": row[9].split(",") if row[9] else [],
             "source_data": mif_data,
             "master_category": (parse_json(row[7]) or {}).get("master_category", ""),
+            "sap_naoh": row[10],
+            "sap_koh": row[11],
+            "iodine_value": row[12],
+            "ins_value": row[13],
+            "fatty_acids": parse_json(row[14]) if row[14] else None,
+            "soap_properties": parse_json(row[15]) if row[15] else None,
+            "protected_flag": bool(row[16]) if row[16] else False,
+            "use_case_tags": parse_json(row[17]) if row[17] else [],
+            "enrichment_source": row[18],
+            "enrichment_date": row[19],
         }
     )
+
+@app.route("/api/compiled/cluster-item-by-id/<int:item_id>")
+def api_compiled_cluster_item_by_id(item_id: int):
+    """Get detailed compiled cluster item by its primary ID."""
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"error": "Compiled cluster items table not found"})
+    cur.execute(
+        """
+        SELECT cci.cluster_id, cci.merged_item_form_id, cci.derived_term, cci.derived_variation, 
+               cci.derived_physical_form, cci.item_status, cci.raw_item_json, cci.item_json,
+               cc.compiled_term, cci.refinement_flags,
+               cci.sap_naoh, cci.sap_koh, cci.iodine_value, cci.ins_value,
+               cci.fatty_acids_json, cci.soap_properties_json, cci.protected_flag,
+               cci.use_case_tags, cci.enrichment_source, cci.enrichment_date
+        FROM compiled_cluster_items cci
+        LEFT JOIN compiled_clusters cc ON cc.cluster_id = cci.cluster_id
+        WHERE cci.id = ?
+        """,
+        (item_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Compiled cluster item not found"})
+    
+    mif_id = row[1]
+    cur.execute(
+        """
+        SELECT cas_numbers_json, merged_specs_json, sources_json, has_cosing, has_tgsc, has_seed
+        FROM merged_item_forms WHERE id = ?
+        """,
+        (mif_id,),
+    )
+    mif_row = cur.fetchone()
+    conn.close()
+    
+    mif_data = {}
+    if mif_row:
+        mif_data = {
+            "cas_numbers": parse_json(mif_row[0]) if mif_row[0] else [],
+            "merged_specs": parse_json(mif_row[1]) if mif_row[1] else {},
+            "sources": parse_json(mif_row[2]) if mif_row[2] else {},
+            "has_cosing": bool(mif_row[3]),
+            "has_tgsc": bool(mif_row[4]),
+            "has_seed": bool(mif_row[5]),
+        }
+    
+    return jsonify(
+        {
+            "id": item_id,
+            "cluster_id": row[0],
+            "merged_item_form_id": row[1],
+            "derived_term": row[2],
+            "derived_variation": row[3],
+            "derived_physical_form": row[4],
+            "item_status": row[5],
+            "raw_item_json": parse_json(row[6]) if row[6] else {},
+            "item_json": parse_json(row[7]) if row[7] else {},
+            "compiled_term": row[8],
+            "refinement_flags": row[9].split(",") if row[9] else [],
+            "source_data": mif_data,
+            "master_category": (parse_json(row[7]) or {}).get("master_category", ""),
+            "sap_naoh": row[10],
+            "sap_koh": row[11],
+            "iodine_value": row[12],
+            "ins_value": row[13],
+            "fatty_acids": parse_json(row[14]) if row[14] else None,
+            "soap_properties": parse_json(row[15]) if row[15] else None,
+            "protected_flag": bool(row[16]) if row[16] else False,
+            "use_case_tags": parse_json(row[17]) if row[17] else [],
+            "enrichment_source": row[18],
+            "enrichment_date": row[19],
+        }
+    )
+
 
 @app.route('/api/clusters')
 def api_clusters():
