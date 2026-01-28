@@ -1780,9 +1780,9 @@ def api_compiled_items():
         where_clauses = []
         params = []
         if search:
-            where_clauses.append("(cluster_id LIKE ? OR derived_term LIKE ? OR derived_variation LIKE ? OR derived_physical_form LIKE ?)")
+            where_clauses.append("(cluster_id LIKE ? OR derived_term LIKE ? OR derived_variation LIKE ? OR derived_physical_form LIKE ? OR derived_refinement LIKE ? OR refinement_flag LIKE ?)")
             s = f"%{search}%"
-            params.extend([s, s, s, s])
+            params.extend([s, s, s, s, s, s])
         where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
         cur.execute(f"SELECT COUNT(*) FROM compiled_cluster_items {where_sql}", params)
@@ -1792,7 +1792,8 @@ def api_compiled_items():
             f"""
             SELECT cluster_id, merged_item_form_id, derived_term, derived_variation, derived_physical_form, item_status,
                    CASE WHEN raw_item_json IS NOT NULL AND raw_item_json != '{{}}' THEN 1 ELSE 0 END as has_raw_specs,
-                   CASE WHEN item_json IS NOT NULL AND item_json != '{{}}' THEN 1 ELSE 0 END as has_compiled
+                   CASE WHEN item_json IS NOT NULL AND item_json != '{{}}' THEN 1 ELSE 0 END as has_compiled,
+                   derived_refinement, refinement_flag
             FROM compiled_cluster_items
             {where_sql}
             ORDER BY cluster_id, merged_item_form_id
@@ -1810,6 +1811,8 @@ def api_compiled_items():
                 "item_status": r[5],
                 "has_raw_specs": bool(r[6]),
                 "has_compiled": bool(r[7]),
+                "derived_refinement": r[8],
+                "refinement_flag": r[9],
             }
             for r in cur.fetchall()
         ]
