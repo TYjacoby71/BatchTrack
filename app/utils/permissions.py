@@ -1,12 +1,31 @@
 from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app
 from flask_login import current_user, login_required
-from functools import wraps
+from functools import wraps, lru_cache
 from werkzeug.exceptions import Forbidden
 from typing import Iterable
 from enum import Enum
+from dataclasses import dataclass
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PermissionScope:
+    dev: bool = False
+    customer: bool = False
+
+    @property
+    def is_dev_only(self) -> bool:
+        return self.dev and not self.customer
+
+    @property
+    def is_customer_only(self) -> bool:
+        return self.customer and not self.dev
+
+    @property
+    def is_shared(self) -> bool:
+        return self.dev and self.customer
 
 class AppPermission(Enum):
     """Enumeration of application permissions"""
@@ -44,6 +63,54 @@ def wants_json() -> bool:
     from app.utils.http import wants_json as http_wants_json
     return http_wants_json()
 
+
+def _record_required_permissions(func, permissions: Iterable[str]):
+    if not permissions:
+        return func
+    try:
+        required = set(getattr(func, "_required_permissions", set()))
+        for permission in permissions:
+            if permission:
+                required.add(permission)
+        func._required_permissions = required
+    except Exception:
+        pass
+    return func
+
+
+@lru_cache(maxsize=512)
+def resolve_permission_scope(permission_name: str) -> PermissionScope:
+    if not permission_name:
+        return PermissionScope()
+    if permission_name.startswith("dev."):
+        return PermissionScope(dev=True, customer=False)
+    try:
+        from app.models.developer_permission import DeveloperPermission
+        from app.models.permission import Permission
+
+        dev_allowed = (
+            DeveloperPermission.query.filter_by(
+                name=permission_name,
+                is_active=True,
+            ).first()
+            is not None
+        )
+        customer_allowed = (
+            Permission.query.filter_by(
+                name=permission_name,
+                is_active=True,
+            ).first()
+            is not None
+        )
+        return PermissionScope(dev=dev_allowed, customer=customer_allowed)
+    except Exception as exc:
+        logger.warning("Permission scope lookup failed for %s: %s", permission_name, exc)
+        return PermissionScope()
+
+
+def clear_permission_scope_cache() -> None:
+    resolve_permission_scope.cache_clear()
+
 def require_permission(permission_name: str):
     """
     Decorator to require specific permissions with proper error handling
@@ -74,7 +141,7 @@ def require_permission(permission_name: str):
             flash(f"You don't have permission to access this feature. Required permission: {permission_name}", "error")
             return redirect(url_for("app_routes.dashboard"))
 
-        return decorated_function
+        return _record_required_permissions(decorated_function, [permission_name])
     return decorator
 
 # Alias for backward compatibility
@@ -101,7 +168,7 @@ def any_permission_required(*permission_names):
                 raise Forbidden("You do not have any of the required permissions.")
 
             return f(*args, **named_args)
-        return decorated_function
+        return _record_required_permissions(decorated_function, permission_names)
     return decorator
 
 def tier_required(min_tier: str):

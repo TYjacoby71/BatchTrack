@@ -2,7 +2,7 @@ from flask import render_template, request, jsonify, flash, redirect, url_for, a
 from flask_login import login_required, current_user
 from app.models import Permission, Role, User, DeveloperPermission
 from app.extensions import db
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, clear_permission_scope_cache
 from app.models.subscription_tier import SubscriptionTier
 from . import auth_bp
 
@@ -227,6 +227,7 @@ def update_permission_matrix():
             org_owner_role.permissions = Permission.query.filter_by(is_active=True).all()
 
         db.session.commit()
+        clear_permission_scope_cache()
 
         return jsonify({
             'success': True,
@@ -265,6 +266,7 @@ def toggle_permission_status():
 
         permission.is_active = new_status
         db.session.commit()
+        clear_permission_scope_cache()
 
         status_text = 'activated' if new_status else 'deactivated'
         return jsonify({
