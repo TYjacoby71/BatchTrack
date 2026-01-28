@@ -60,7 +60,7 @@
     const row = document.createElement('div');
     row.className = 'row g-2 align-items-end oil-row mb-2';
     row.innerHTML = `
-      <div class="col-md-6">
+      <div class="col-md-6 soap-field-stack">
         <label class="form-label">Oil, fat, or wax</label>
         <div class="position-relative">
           <input type="text" class="form-control oil-typeahead" placeholder="Search oils, butters, waxes...">
@@ -72,7 +72,7 @@
         </div>
         <div class="form-text small text-muted">Filtered to oils, butters, and waxes.</div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 soap-field-stack">
         <label class="form-label">Weight</label>
         <div class="input-group">
           <input type="number" class="form-control oil-grams" min="0" step="0.1">
@@ -80,7 +80,7 @@
         </div>
         <div class="small text-warning oil-limit-hint" data-role="oil-grams-hint"></div>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-2 soap-field-stack">
         <label class="form-label">Percent</label>
         <div class="input-group">
           <input type="number" class="form-control oil-percent" min="0" step="0.1">
@@ -88,8 +88,10 @@
         </div>
         <div class="small text-warning oil-limit-hint" data-role="oil-percent-hint"></div>
       </div>
-      <div class="col-md-1 d-grid">
-        <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
+      <div class="col-md-1 d-flex align-items-end justify-content-center">
+        <button class="btn btn-outline-danger soap-icon-btn remove-oil" type="button" aria-label="Remove oil" title="Remove oil">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
       </div>`;
     const mobileProfile = document.createElement('div');
     mobileProfile.className = 'col-12 d-lg-none mt-2';

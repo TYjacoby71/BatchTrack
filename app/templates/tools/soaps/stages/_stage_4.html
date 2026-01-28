@@ -1,28 +1,28 @@
 <div class="tab-pane fade" id="soapStage5Pane" role="tabpanel" aria-labelledby="soapStage5Tab">
   <div class="soap-stage-body p-3" data-stage-index="4">
     <div class="row g-3">
-      <div class="col-md-3">
+      <div class="col-md-3 soap-field-stack">
         <label class="form-label">Sodium lactate</label>
         <div class="input-group">
           <input type="number" class="form-control" id="additiveLactatePct" min="0" max="5" step="0.1" value="1">
           <span class="input-group-text">%</span>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 soap-field-stack">
         <label class="form-label">Sugar</label>
         <div class="input-group">
           <input type="number" class="form-control" id="additiveSugarPct" min="0" max="5" step="0.1" value="1">
           <span class="input-group-text">%</span>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 soap-field-stack">
         <label class="form-label">Salt</label>
         <div class="input-group">
           <input type="number" class="form-control" id="additiveSaltPct" min="0" max="5" step="0.1" value="0.5">
           <span class="input-group-text">%</span>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 soap-field-stack">
         <label class="form-label">Citric acid</label>
         <div class="input-group">
           <input type="number" class="form-control" id="additiveCitricPct" min="0" max="5" step="0.1" value="0">
@@ -32,7 +32,7 @@
       </div>
     </div>
     <div class="row g-3 mt-1">
-      <div class="col-md-6">
+      <div class="col-md-6 soap-field-stack">
         <label class="form-label">Sodium lactate item</label>
         <div class="position-relative">
           <input type="text" class="form-control additive-typeahead" id="additiveLactateName" placeholder="Link sodium lactate (optional)">
@@ -40,7 +40,7 @@
           <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
         </div>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-6 soap-field-stack">
         <label class="form-label">Sugar item</label>
         <div class="position-relative">
           <input type="text" class="form-control additive-typeahead" id="additiveSugarName" placeholder="Link sugar (optional)">
@@ -48,7 +48,7 @@
           <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
         </div>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-6 soap-field-stack">
         <label class="form-label">Salt item</label>
         <div class="position-relative">
           <input type="text" class="form-control additive-typeahead" id="additiveSaltName" placeholder="Link salt (optional)">
@@ -56,7 +56,7 @@
           <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
         </div>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-6 soap-field-stack">
         <label class="form-label">Citric acid item</label>
         <div class="position-relative">
           <input type="text" class="form-control additive-typeahead" id="additiveCitricName" placeholder="Link citric acid (optional)">
@@ -67,31 +67,31 @@
     </div>
     <div class="row g-3 mt-3">
       <div class="col-md-4">
-        <div class="border rounded p-2 h-100">
+        <div class="border rounded p-2 h-100 soap-output-tile">
           <div class="small text-muted">Sodium lactate</div>
           <div class="fw-semibold" id="additiveLactateOut">--</div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="border rounded p-2 h-100">
+        <div class="border rounded p-2 h-100 soap-output-tile">
           <div class="small text-muted">Sugar</div>
           <div class="fw-semibold" id="additiveSugarOut">--</div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="border rounded p-2 h-100">
+        <div class="border rounded p-2 h-100 soap-output-tile">
           <div class="small text-muted">Salt</div>
           <div class="fw-semibold" id="additiveSaltOut">--</div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="border rounded p-2 h-100">
+        <div class="border rounded p-2 h-100 soap-output-tile">
           <div class="small text-muted">Citric acid</div>
           <div class="fw-semibold" id="additiveCitricOut">--</div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="border rounded p-2 h-100">
+        <div class="border rounded p-2 h-100 soap-output-tile">
           <div class="small text-muted">Extra lye for citric</div>
           <div class="fw-semibold" id="additiveCitricLyeOut">--</div>
         </div>

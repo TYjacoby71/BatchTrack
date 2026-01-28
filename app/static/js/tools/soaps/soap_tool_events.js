@@ -134,8 +134,9 @@
       }
       return;
     }
-    if (e.target.classList.contains('remove-oil')) {
-      const row = e.target.closest('.oil-row');
+    const removeButton = e.target.closest('.remove-oil');
+    if (removeButton) {
+      const row = removeButton.closest('.oil-row');
       if (row) {
         state.lastRemovedOil = SoapTool.oils.serializeOilRow(row);
         state.lastRemovedOilIndex = Array.from(row.parentElement.children).indexOf(row);
