@@ -156,29 +156,6 @@ def _redirect_back():
     return redirect(referrer or fallback)
 
 
-def _get_upgrade_tiers_for_permission(permission_name: str, organization):
-    if not organization or not permission_name:
-        return []
-    try:
-        from app.models.subscription_tier import SubscriptionTier
-
-        current_tier_id = getattr(organization, "subscription_tier_id", None)
-        tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
-        upgrade_tiers = []
-        for tier in tiers:
-            if current_tier_id and tier.id == current_tier_id:
-                continue
-            if not (tier.has_valid_integration or tier.is_billing_exempt):
-                continue
-            if any(p.name == permission_name and p.is_active for p in tier.permissions):
-                upgrade_tiers.append(tier)
-        upgrade_tiers.sort(key=lambda t: t.id)
-        return upgrade_tiers
-    except Exception as exc:
-        logger.warning("Upgrade tier lookup failed for %s: %s", permission_name, exc)
-        return []
-
-
 def _build_upgrade_markup(upgrade_tiers):
     if not upgrade_tiers:
         return None
@@ -242,7 +219,12 @@ def _permission_denied_response(permission_names: Iterable[str]):
         if organization and scope.customer:
             tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
             if permission_name not in tier_permissions:
-                upgrade_tiers = _get_upgrade_tiers_for_permission(permission_name, organization)
+                from app.services.billing_service import BillingService
+
+                upgrade_tiers = BillingService.get_permission_denied_upgrade_options(
+                    permission_name,
+                    organization,
+                )
     except Exception as exc:
         logger.warning("Permission denial context failed: %s", exc)
 

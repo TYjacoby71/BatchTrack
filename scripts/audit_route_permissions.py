@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from app import create_app
 from app.route_access import RouteAccessConfig
-from app.utils.permissions import permission_exists_in_catalog
+from app.seeders.consolidated_permission_seeder import load_consolidated_permissions
 
 
 def _is_public(rule) -> bool:
@@ -24,6 +24,26 @@ def _format_methods(rule) -> str:
 def audit_route_permissions() -> int:
     app = create_app()
     with app.app_context():
+        catalog_permissions = set()
+        try:
+            data = load_consolidated_permissions()
+            for category in data.get("organization_permissions", {}).values():
+                for perm in category.get("permissions", []):
+                    name = perm.get("name")
+                    if name:
+                        catalog_permissions.add(name)
+            for category in data.get("developer_permissions", {}).values():
+                for perm in category.get("permissions", []):
+                    name = perm.get("name")
+                    if name:
+                        catalog_permissions.add(name)
+            for perm in data.get("system_administration", {}).get("permissions", []):
+                name = perm.get("name")
+                if name:
+                    catalog_permissions.add(name)
+        except Exception as exc:
+            print(f"⚠️  Unable to load permission catalog: {exc}")
+
         missing_permissions = []
         undefined_permissions = []
 
@@ -40,7 +60,7 @@ def audit_route_permissions() -> int:
                 continue
 
             for permission_name in sorted(required):
-                if not permission_exists_in_catalog(permission_name):
+                if catalog_permissions and permission_name not in catalog_permissions:
                     undefined_permissions.append((permission_name, rule.rule, rule.endpoint))
 
         if missing_permissions:

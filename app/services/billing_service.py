@@ -113,6 +113,28 @@ class BillingService:
         return SubscriptionTier.query.filter_by(is_customer_facing=True).all()
 
     @staticmethod
+    def get_permission_denied_upgrade_options(permission_name, organization):
+        """Return upgrade tiers that include the given permission."""
+        if not organization or not permission_name:
+            return []
+        try:
+            current_tier_id = getattr(organization, "subscription_tier_id", None)
+            tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+            upgrade_tiers = []
+            for tier in tiers:
+                if current_tier_id and tier.id == current_tier_id:
+                    continue
+                if not (tier.has_valid_integration or tier.is_billing_exempt):
+                    continue
+                if any(p.name == permission_name and p.is_active for p in tier.permissions):
+                    upgrade_tiers.append(tier)
+            upgrade_tiers.sort(key=lambda t: t.id)
+            return upgrade_tiers
+        except Exception as exc:
+            logger.warning("Upgrade lookup failed for %s: %s", permission_name, exc)
+            return []
+
+    @staticmethod
     def get_live_pricing_data():
         """Get live pricing data from active billing providers only."""
         try:
