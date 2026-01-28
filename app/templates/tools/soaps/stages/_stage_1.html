@@ -2,18 +2,27 @@
   <div class="soap-stage-body p-3" data-stage-index="1">
     <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Mold water weight <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
-          <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
+          <label class="form-label">Mold water weight</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
+            <span class="input-group-text unit-label">g</span>
+          </div>
           <div class="form-text">Fill the mold with water and weigh it.</div>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Oils % of mold</label>
-          <input type="number" class="form-control" id="moldOilPct" min="0" max="100" step="0.1" value="65" title="Normal range is 50-80%.">
+          <label class="form-label">Oils of mold</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="moldOilPct" min="0" max="100" step="0.1" value="65" title="Normal range is 50-80%.">
+            <span class="input-group-text">%</span>
+          </div>
           <div class="form-text soap-stage-note">Normal range is 50-80%.</div>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Total oils target <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
-          <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" placeholder="Auto from mold or enter manually">
+          <label class="form-label">Total oils target</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" placeholder="Auto from mold or enter manually">
+            <span class="input-group-text unit-label">g</span>
+          </div>
           <div class="form-text soap-stage-note" id="oilTargetHint">Auto-fills when mold sizing is set.</div>
         </div>
       </div>
