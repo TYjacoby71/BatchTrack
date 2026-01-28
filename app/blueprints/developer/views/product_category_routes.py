@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required
-
 from app.extensions import db
 from app.models import ProductCategory, Product, Recipe
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/product-categories")
-@login_required
+@require_developer_permission("dev.system_admin")
 def product_categories():
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     return render_template("developer/categories/list.html", categories=categories)
 
 
 @developer_bp.route("/product-categories/new", methods=["GET", "POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_product_category():
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
@@ -43,7 +42,7 @@ def create_product_category():
 
 
 @developer_bp.route("/product-categories/<int:cat_id>/edit", methods=["GET", "POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def edit_product_category(cat_id):
     cat = ProductCategory.query.get_or_404(cat_id)
     if request.method == "POST":
@@ -71,7 +70,7 @@ def edit_product_category(cat_id):
 
 
 @developer_bp.route("/product-categories/<int:cat_id>/delete", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def delete_product_category(cat_id):
     cat = ProductCategory.query.get_or_404(cat_id)
     in_use = (

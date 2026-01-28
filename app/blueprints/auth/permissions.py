@@ -61,13 +61,9 @@ def _resolve_permission_metadata(name, catalog, *, prefer_org: bool):
     return description, category
 
 @auth_bp.route('/permissions')
-@login_required
+@require_permission("dev.assign_permissions")
 def manage_permissions():
     """Show system permissions management page"""
-    # Check if user has developer access
-    if not current_user.user_type == 'developer':
-        abort(403)
-
     catalog = _load_permission_catalog()
     permission_registry = {}
 
@@ -151,12 +147,9 @@ def manage_permissions():
 
 
 @auth_bp.route('/permissions/update', methods=['POST'])
-@login_required
+@require_permission("dev.assign_permissions")
 def update_permission_matrix():
     """Update permission availability for dev/customer scopes."""
-    if not current_user.user_type == 'developer':
-        return jsonify({'success': False, 'message': 'Insufficient permissions'}), 403
-
     data = request.get_json() or {}
     name = (data.get('name') or '').strip()
     dev_enabled = bool(data.get('dev_enabled'))
@@ -244,13 +237,9 @@ def update_permission_matrix():
         return jsonify({'success': False, 'message': f'Error updating permission: {str(e)}'}), 500
 
 @auth_bp.route('/permissions/toggle-status', methods=['POST'])
-@login_required
+@require_permission("dev.assign_permissions")
 def toggle_permission_status():
     """Toggle active/inactive status of a permission"""
-    # Check if user has developer access
-    if not current_user.user_type == 'developer':
-        return jsonify({'success': False, 'message': 'Insufficient permissions'}), 403
-
     data = request.get_json()
     permission_id = data.get('permission_id')
     permission_table = data.get('table')

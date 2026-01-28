@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
-from flask_login import login_required
-
 from app.models import User
 from app.services.developer.user_service import UserService
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/users")
-@login_required
+@require_developer_permission("dev.manage_users")
 def users():
     """User management dashboard."""
     customer_users = UserService.list_customer_users()
@@ -23,7 +22,7 @@ def users():
 
 
 @developer_bp.route("/users/<int:user_id>/toggle-active", methods=["POST"])
-@login_required
+@require_developer_permission("dev.manage_users")
 def toggle_user_active(user_id):
     """Toggle user active status."""
     user = User.query.get_or_404(user_id)
@@ -33,7 +32,7 @@ def toggle_user_active(user_id):
 
 
 @developer_bp.route("/api/user/<int:user_id>")
-@login_required
+@require_developer_permission("dev.manage_users")
 def get_user_details(user_id):
     """Get detailed user information for editing."""
     user = User.query.get_or_404(user_id)
@@ -51,7 +50,7 @@ def get_user_details(user_id):
 
 
 @developer_bp.route("/api/developer-user/<int:user_id>")
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_developer_user_details(user_id):
     """Get detailed developer user information for editing."""
     user = User.query.get_or_404(user_id)
@@ -93,7 +92,7 @@ def get_developer_user_details(user_id):
 
 
 @developer_bp.route("/api/user/update", methods=["POST"])
-@login_required
+@require_developer_permission("dev.manage_users")
 def update_user():
     """Update user information."""
     data = request.get_json() or {}
@@ -104,7 +103,7 @@ def update_user():
 
 
 @developer_bp.route("/api/developer-user/update", methods=["POST"])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def update_developer_user():
     """Update developer user information."""
     data = request.get_json() or {}
@@ -115,7 +114,7 @@ def update_developer_user():
 
 
 @developer_bp.route("/api/user/reset-password", methods=["POST"])
-@login_required
+@require_developer_permission("dev.manage_users")
 def reset_user_password():
     """Reset user password."""
     data = request.get_json() or {}
@@ -126,7 +125,7 @@ def reset_user_password():
 
 
 @developer_bp.route("/api/user/soft-delete", methods=["POST"])
-@login_required
+@require_developer_permission("dev.manage_users")
 def soft_delete_user():
     """Soft delete a user."""
     data = request.get_json() or {}

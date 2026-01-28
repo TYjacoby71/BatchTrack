@@ -5,6 +5,8 @@ from werkzeug.exceptions import Forbidden
 from typing import Iterable
 from enum import Enum
 from dataclasses import dataclass
+from urllib.parse import urlparse
+from markupsafe import Markup, escape
 import logging
 
 logger = logging.getLogger(__name__)
@@ -111,6 +113,154 @@ def resolve_permission_scope(permission_name: str) -> PermissionScope:
 def clear_permission_scope_cache() -> None:
     resolve_permission_scope.cache_clear()
 
+
+def permission_exists_in_catalog(permission_name: str) -> bool:
+    if not permission_name:
+        return False
+    try:
+        from app.models.developer_permission import DeveloperPermission
+        from app.models.permission import Permission
+
+        return bool(
+            DeveloperPermission.query.filter_by(name=permission_name, is_active=True).first()
+            or Permission.query.filter_by(name=permission_name, is_active=True).first()
+        )
+    except Exception as exc:
+        logger.warning("Permission existence lookup failed for %s: %s", permission_name, exc)
+        return False
+
+
+def _default_denied_endpoint() -> str:
+    if getattr(current_user, "user_type", None) == "developer":
+        return "developer.dashboard"
+    return "app_routes.dashboard"
+
+
+def _safe_referrer() -> str | None:
+    referrer = request.referrer
+    if not referrer:
+        return None
+    try:
+        ref_parts = urlparse(referrer)
+        host_parts = urlparse(request.host_url)
+        if ref_parts.scheme in {"http", "https"} and ref_parts.netloc == host_parts.netloc:
+            return referrer
+    except Exception:
+        return None
+    return None
+
+
+def _redirect_back():
+    fallback = url_for(_default_denied_endpoint())
+    referrer = _safe_referrer()
+    return redirect(referrer or fallback)
+
+
+def _get_upgrade_tiers_for_permission(permission_name: str, organization):
+    if not organization or not permission_name:
+        return []
+    try:
+        from app.models.subscription_tier import SubscriptionTier
+
+        current_tier_id = getattr(organization, "subscription_tier_id", None)
+        tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        upgrade_tiers = []
+        for tier in tiers:
+            if current_tier_id and tier.id == current_tier_id:
+                continue
+            if not (tier.has_valid_integration or tier.is_billing_exempt):
+                continue
+            if any(p.name == permission_name and p.is_active for p in tier.permissions):
+                upgrade_tiers.append(tier)
+        upgrade_tiers.sort(key=lambda t: t.id)
+        return upgrade_tiers
+    except Exception as exc:
+        logger.warning("Upgrade tier lookup failed for %s: %s", permission_name, exc)
+        return []
+
+
+def _build_upgrade_markup(upgrade_tiers):
+    if not upgrade_tiers:
+        return None
+    tier_names = ", ".join(escape(tier.name) for tier in upgrade_tiers[:2])
+    if len(upgrade_tiers) > 2:
+        tier_names = f"{tier_names}, and more"
+    upgrade_url = url_for("billing.upgrade")
+    return Markup(
+        f' <span class="ms-1">Upgrade to {tier_names} to unlock this feature.</span> '
+        f'<a class="btn btn-sm btn-primary ms-2" href="{upgrade_url}">View upgrade options</a>'
+    )
+
+
+def _build_permission_denied_message(permission_name: str, *, reason: str | None = None, upgrade_tiers=None):
+    if reason == "developer_only":
+        base = "Developer access required to use this feature."
+    elif reason == "organization_required":
+        base = "Select an organization to access customer features."
+    else:
+        base = f"You don't have permission to access this feature ({permission_name})."
+
+    upgrade_markup = _build_upgrade_markup(upgrade_tiers or [])
+    if upgrade_markup:
+        return Markup(escape(base)) + upgrade_markup
+    return base
+
+
+def _select_primary_permission(permission_names: Iterable[str]) -> tuple[str, PermissionScope]:
+    permissions = [p for p in permission_names if p]
+    if not permissions:
+        return "unknown", PermissionScope()
+    for name in permissions:
+        scope = resolve_permission_scope(name)
+        if scope.is_customer_only or scope.is_dev_only:
+            return name, scope
+    primary = permissions[0]
+    return primary, resolve_permission_scope(primary)
+
+
+def _permission_denied_response(permission_names: Iterable[str]):
+    permission_name, scope = _select_primary_permission(permission_names)
+
+    if scope.is_dev_only and getattr(current_user, "user_type", None) != "developer":
+        message = _build_permission_denied_message(permission_name, reason="developer_only")
+        if wants_json():
+            return jsonify({"error": "developer_only", "message": str(message)}), 403
+        flash(message, "error")
+        return _redirect_back()
+
+    if scope.is_customer_only and getattr(current_user, "user_type", None) == "developer":
+        if not (session.get("dev_selected_org_id") or session.get("masquerade_org_id")):
+            message = _build_permission_denied_message(permission_name, reason="organization_required")
+            if wants_json():
+                return jsonify({"error": "organization_required", "message": str(message)}), 403
+            flash(message, "warning")
+            return _redirect_back()
+
+    upgrade_tiers = []
+    try:
+        organization = get_effective_organization()
+        if organization and scope.customer:
+            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+            if permission_name not in tier_permissions:
+                upgrade_tiers = _get_upgrade_tiers_for_permission(permission_name, organization)
+    except Exception as exc:
+        logger.warning("Permission denial context failed: %s", exc)
+
+    message = _build_permission_denied_message(permission_name, upgrade_tiers=upgrade_tiers)
+    if wants_json():
+        payload = {
+            "error": "permission_denied",
+            "permission": permission_name,
+            "message": str(message),
+        }
+        if upgrade_tiers:
+            payload["upgrade_available"] = True
+            payload["upgrade_tiers"] = [tier.name for tier in upgrade_tiers]
+            payload["upgrade_url"] = url_for("billing.upgrade")
+        return jsonify(payload), 403
+    flash(message, "error")
+    return _redirect_back()
+
 def require_permission(permission_name: str):
     """
     Decorator to require specific permissions with proper error handling
@@ -134,12 +284,7 @@ def require_permission(permission_name: str):
             if has_permission(current_user, permission_name):
                 return f(*args, **named_args)
 
-            # Permission denied - return appropriate response
-            if wants_json():
-                return jsonify({"error": f"Permission denied: {permission_name}"}), 403
-
-            flash(f"You don't have permission to access this feature. Required permission: {permission_name}", "error")
-            return redirect(url_for("app_routes.dashboard"))
+            return _permission_denied_response([permission_name])
 
         return _record_required_permissions(decorated_function, [permission_name])
     return decorator
@@ -159,13 +304,7 @@ def any_permission_required(*permission_names):
 
             # Check if user has any of the required permissions
             if not any(has_permission(current_user, perm) for perm in permission_names):
-                if wants_json():
-                    return jsonify({
-                        "error": "forbidden",
-                        "permissions": list(permission_names),
-                        "message": f"Requires one of: {', '.join(permission_names)}"
-                    }), 403
-                raise Forbidden("You do not have any of the required permissions.")
+                return _permission_denied_response(permission_names)
 
             return f(*args, **named_args)
         return _record_required_permissions(decorated_function, permission_names)

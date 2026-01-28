@@ -60,6 +60,7 @@ def waitlist_signups_view():
 
 @developer_bp.route('/api/vendor/signup', methods=['POST'])
 @limiter.limit("10 per minute")
+@permission_required('dev.dashboard')
 def api_vendor_signup():
     """API endpoint to handle vendor signup submissions."""
     if not request.is_json:

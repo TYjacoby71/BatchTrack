@@ -61,7 +61,6 @@ class RouteAccessConfig:
     DEVELOPER_ONLY_PATH_PREFIXES: Tuple[str, ...] = ("/developer/",)
 
     DEVELOPER_NO_ORG_REQUIRED_PREFIXES: Tuple[str, ...] = (
-        "/developer/",
         "/auth/permissions",
         "/global-items",
         "/api/drawers",

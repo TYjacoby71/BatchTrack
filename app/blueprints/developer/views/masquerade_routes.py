@@ -1,19 +1,16 @@
 from __future__ import annotations
 
 from flask import flash, redirect, session, url_for
-from flask_login import login_required
-
 from app.extensions import db
 from app.models import Organization
 from app.utils.timezone_utils import TimezoneUtils
 
-from ..decorators import permission_required
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/select-org/<int:org_id>")
-@login_required
-@permission_required("dev.all_organizations")
+@require_developer_permission("dev.all_organizations")
 def select_organization(org_id):
     """Select an organization to view as developer (customer support)."""
     org = Organization.query.get_or_404(org_id)
@@ -23,8 +20,7 @@ def select_organization(org_id):
 
 
 @developer_bp.route("/view-as-organization/<int:org_id>")
-@login_required
-@permission_required("dev.all_organizations")
+@require_developer_permission("dev.all_organizations")
 def view_as_organization(org_id):
     """Set session to view as a specific organization (customer support)."""
     organization = Organization.query.get_or_404(org_id)
@@ -44,8 +40,7 @@ def view_as_organization(org_id):
 
 
 @developer_bp.route("/clear-organization-filter")
-@login_required
-@permission_required("dev.all_organizations")
+@require_developer_permission("dev.all_organizations")
 def clear_organization_filter():
     """Clear the organization filter and return to developer view."""
     org_name = None
