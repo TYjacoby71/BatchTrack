@@ -57,48 +57,16 @@
   }
 
   function buildOilRow(){
-    const row = document.createElement('div');
-    row.className = 'row g-2 align-items-end oil-row mb-2';
-    row.innerHTML = `
-      <div class="col-md-6 soap-field-stack">
-        <label class="form-label">Oil, fat, or wax</label>
-        <div class="position-relative">
-          <input type="text" class="form-control oil-typeahead" placeholder="Search oils, butters, waxes...">
-          <input type="hidden" class="oil-sap-koh">
-          <input type="hidden" class="oil-iodine">
-          <input type="hidden" class="oil-fatty">
-          <input type="hidden" class="oil-gi-id">
-          <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
-        </div>
-        <div class="form-text small text-muted">Filtered to oils, butters, and waxes.</div>
-      </div>
-      <div class="col-md-3 soap-field-stack">
-        <label class="form-label">Weight</label>
-        <div class="input-group">
-          <input type="number" class="form-control oil-grams" min="0" step="0.1">
-          <span class="input-group-text unit-label">g</span>
-        </div>
-        <div class="small text-warning oil-limit-hint" data-role="oil-grams-hint"></div>
-      </div>
-      <div class="col-md-2 soap-field-stack">
-        <label class="form-label">Percent</label>
-        <div class="input-group">
-          <input type="number" class="form-control oil-percent" min="0" step="0.1">
-          <span class="input-group-text">%</span>
-        </div>
-        <div class="small text-warning oil-limit-hint" data-role="oil-percent-hint"></div>
-      </div>
-      <div class="col-md-1 d-flex align-items-end justify-content-center">
-        <button class="btn btn-outline-danger soap-icon-btn remove-oil" type="button" aria-label="Remove oil" title="Remove oil">
-          <i class="fas fa-times" aria-hidden="true"></i>
-        </button>
-      </div>`;
-    const mobileProfile = document.createElement('div');
-    mobileProfile.className = 'col-12 d-lg-none mt-2';
-    mobileProfile.innerHTML = '<button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>';
-    row.appendChild(mobileProfile);
+    const template = document.getElementById('oilRowTemplate');
+    const row = template?.content?.querySelector('.oil-row')?.cloneNode(true);
+    if (!row) {
+      return document.createElement('div');
+    }
+    row.querySelectorAll('input').forEach(input => {
+      input.value = '';
+    });
     row.querySelectorAll('.form-text').forEach(text => {
-      const wrapper = text.closest('.col-md-6, .col-md-3, .col-md-2');
+      const wrapper = text.closest('.soap-field-stack, [class*="col-"]');
       if (wrapper) wrapper.classList.add('soap-field');
     });
     attachOilTypeahead(row);

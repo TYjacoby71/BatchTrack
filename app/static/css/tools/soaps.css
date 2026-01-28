@@ -1,7 +1,7 @@
 #soapToolPage {
   margin-top: calc(-1 * var(--space-4));
   --soap-field-height: 40px;
-  --soap-addon-width: 3.25rem;
+  --soap-addon-width: clamp(2.25rem, 6vw, 3rem);
   --soap-field-gap: 0.35rem;
 }
 #soapToolPage .soap-quality-section-title {
@@ -328,6 +328,7 @@
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
+  min-width: 0;
 }
 #soapToolPage .soap-stage-body .input-group {
   width: 100%;
@@ -349,7 +350,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   font-weight: 600;
 }
 #soapToolPage .soap-metric-icon {
@@ -681,21 +682,6 @@
     overflow-y: auto;
   }
 }
-#soapToolPage #soapStageQualityRow {
-  display: flex !important;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-#soapToolPage #soapStageQualityRow > .soap-stage-col {
-  flex: 0 0 50%;
-  max-width: 50%;
-  min-width: 0;
-}
-#soapToolPage #soapStageQualityRow > .soap-quality-col {
-  flex: 0 0 50%;
-  max-width: 50%;
-  min-width: 0;
-}
 @media (max-width: 767px) {
   #soapToolPage .oil-profile-float {
     position: static;
@@ -705,14 +691,6 @@
   }
   #soapToolPage .oil-profile-open {
     display: inline-flex;
-  }
-  #soapToolPage #soapStageQualityRow {
-    flex-wrap: wrap;
-  }
-  #soapToolPage #soapStageQualityRow > .soap-stage-col,
-  #soapToolPage #soapStageQualityRow > .soap-quality-col {
-    flex: 0 0 100%;
-    max-width: 100%;
   }
 }
 @media (max-width: 767px) {

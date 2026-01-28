@@ -539,10 +539,6 @@
   window.addEventListener('resize', SoapTool.layout.scheduleStageHeightSync);
   window.addEventListener('load', SoapTool.layout.scheduleStageHeightSync);
 
-  const initialOilRow = document.querySelector('#oilRows .oil-row');
-  if (initialOilRow) {
-    SoapTool.oils.attachOilTypeahead(initialOilRow);
-  }
   SoapTool.additives.attachAdditiveTypeahead('additiveFragranceName', 'additiveFragranceGi', FRAGRANCE_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveLactateName', 'additiveLactateGi', LACTATE_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveSugarName', 'additiveSugarGi', SUGAR_CATEGORY_SET);
@@ -560,6 +556,10 @@
   SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
   SoapTool.stages.updateStageStatuses();
   SoapTool.storage.restoreState();
+  const oilRows = document.getElementById('oilRows');
+  if (oilRows && !oilRows.querySelector('.oil-row')) {
+    oilRows.appendChild(SoapTool.oils.buildOilRow());
+  }
   SoapTool.layout.scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {
