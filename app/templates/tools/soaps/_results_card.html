@@ -1,12 +1,7 @@
 <div class="card mt-2 mb-2" id="resultsCard">
   <div class="card-header d-flex align-items-center justify-content-between">
     <strong>Formula Details</strong>
-    <div class="d-flex align-items-center gap-2">
-      <button class="btn btn-sm btn-outline-secondary" type="button" id="resultsCardToggle" aria-expanded="true" aria-controls="resultsCardBody">
-        Collapse
-      </button>
-      <span class="badge bg-success d-none" id="resultsReadyBadge">Updated</span>
-    </div>
+    <span class="badge bg-success d-none" id="resultsReadyBadge">Updated</span>
   </div>
   <div class="card-body" id="resultsCardBody">
     <div class="row g-3 results-metrics">
@@ -102,4 +97,7 @@
       </div>
     </div>
   </div>
+  <button class="btn btn-link results-toggle" type="button" id="resultsCardToggle" aria-expanded="true" aria-controls="resultsCardBody" aria-label="Collapse formula details">
+    <i class="fas fa-chevron-up" aria-hidden="true"></i>
+  </button>
 </div>

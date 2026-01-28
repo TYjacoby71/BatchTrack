@@ -2,17 +2,26 @@
   <div class="soap-stage-body p-3" data-stage-index="3">
     <div class="row g-3 align-items-start soap-stage-form-row">
       <div class="col-md-4">
-        <label class="form-label">Lye purity (%)</label>
-        <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
+        <label class="form-label">Lye purity</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
+          <span class="input-group-text">%</span>
+        </div>
         <div class="form-text soap-stage-note" id="lyePurityHint">Most calculators assume 100%.</div>
       </div>
       <div class="col-md-4 water-input" data-method="percent">
-        <label class="form-label">Water % of oils</label>
-        <input type="number" class="form-control" id="waterPct" min="20" max="50" step="0.1" value="33">
+        <label class="form-label">Water of oils</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="waterPct" min="20" max="50" step="0.1" value="33">
+          <span class="input-group-text">%</span>
+        </div>
       </div>
       <div class="col-md-4 water-input d-none" data-method="concentration">
-        <label class="form-label">Lye concentration %</label>
-        <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
+        <label class="form-label">Lye concentration</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
+          <span class="input-group-text">%</span>
+        </div>
       </div>
       <div class="col-md-4 water-input d-none" data-method="ratio">
         <label class="form-label">Water : Lye ratio</label>

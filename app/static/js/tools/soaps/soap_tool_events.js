@@ -194,7 +194,14 @@
       resultsCard.classList.toggle('is-collapsed');
       const isCollapsed = resultsCard.classList.contains('is-collapsed');
       resultsToggle.setAttribute('aria-expanded', (!isCollapsed).toString());
-      resultsToggle.textContent = isCollapsed ? 'Expand' : 'Collapse';
+      const label = isCollapsed ? 'Expand formula details' : 'Collapse formula details';
+      resultsToggle.setAttribute('aria-label', label);
+      resultsToggle.setAttribute('title', label);
+      const icon = resultsToggle.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-chevron-down', isCollapsed);
+        icon.classList.toggle('fa-chevron-up', !isCollapsed);
+      }
     });
   }
 

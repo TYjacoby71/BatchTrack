@@ -245,8 +245,35 @@
   box-shadow: var(--shadow-1);
   height: 100%;
 }
+#soapToolPage #resultsCard {
+  position: relative;
+}
+#soapToolPage .results-toggle {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-1);
+}
+#soapToolPage .results-toggle:hover {
+  color: var(--color-text);
+  background: var(--color-subtle-bg-2);
+}
 #soapToolPage #resultsCard.is-collapsed .card-body {
-  padding: var(--space-2);
+  padding: var(--space-1);
+}
+#soapToolPage #resultsCard.is-collapsed .card-header {
+  padding: var(--space-2) var(--space-3);
 }
 #soapToolPage #resultsCard.is-collapsed .results-metrics {
   display: grid;
@@ -260,18 +287,43 @@
   padding: 0;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile {
-  padding: var(--space-2);
+  padding: 0.4rem 0.5rem;
   box-shadow: none;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-icon {
   display: none;
 }
+#soapToolPage #resultsCard.is-collapsed .soap-metric-tile .d-flex {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .small {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .fs-5 {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   line-height: 1.1;
+}
+#soapToolPage .soap-stage-body .form-label {
+  min-height: 1.1rem;
+}
+#soapToolPage .soap-stage-body .input-group {
+  width: 100%;
+  flex-wrap: nowrap;
+}
+#soapToolPage .soap-stage-body .input-group .form-control {
+  min-width: 0;
+}
+#soapToolPage .soap-stage-body .input-group-text {
+  font-size: 0.75rem;
+  background: var(--color-subtle-bg-2);
+  border-color: var(--color-border);
+  color: var(--color-muted);
+  min-height: 38px;
+}
+#soapToolPage .soap-stage-body .input-group .form-control {
+  min-height: 38px;
 }
 #soapToolPage .soap-metric-icon {
   width: 32px;
