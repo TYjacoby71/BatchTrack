@@ -86,6 +86,24 @@
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.clearSelectedOilProfile();
     }
+    if (e.target.classList.contains('oil-grams')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
+  });
+
+  document.getElementById('oilRows').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    if (e.target.classList.contains('oil-grams')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
   });
 
   document.getElementById('oilRows').addEventListener('mouseover', function(e){
@@ -169,6 +187,17 @@
     updateStageTabSizing();
   }
 
+  const resultsToggle = document.getElementById('resultsCardToggle');
+  const resultsCard = document.getElementById('resultsCard');
+  if (resultsToggle && resultsCard) {
+    resultsToggle.addEventListener('click', () => {
+      resultsCard.classList.toggle('is-collapsed');
+      const isCollapsed = resultsCard.classList.contains('is-collapsed');
+      resultsToggle.setAttribute('aria-expanded', (!isCollapsed).toString());
+      resultsToggle.textContent = isCollapsed ? 'Expand' : 'Collapse';
+    });
+  }
+
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
     el.addEventListener('change', function(){
       SoapTool.units.setUnit(this.value);
@@ -177,6 +206,7 @@
   });
 
   document.getElementById('oilTotalTarget').addEventListener('input', function(){
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -255,12 +285,14 @@
 
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
   });
   document.getElementById('moldOilPct').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -269,6 +301,7 @@
   if (moldShape) {
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -278,6 +311,7 @@
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -287,6 +321,7 @@
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -351,10 +386,13 @@
     });
   }
 
-  document.getElementById('calcLyeBtn').addEventListener('click', function(){
-    SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
-    SoapTool.storage.queueStateSave();
-  });
+  const calcLyeBtn = document.getElementById('calcLyeBtn');
+  if (calcLyeBtn) {
+    calcLyeBtn.addEventListener('click', function(){
+      SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
     try {

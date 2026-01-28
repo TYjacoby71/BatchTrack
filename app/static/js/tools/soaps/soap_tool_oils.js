@@ -75,10 +75,12 @@
       <div class="col-md-3">
         <label class="form-label">Weight <span class="badge rounded-pill soap-unit-chip unit-label">g</span></label>
         <input type="number" class="form-control oil-grams" min="0" step="0.1">
+        <div class="small text-warning oil-limit-hint" data-role="oil-grams-hint"></div>
       </div>
       <div class="col-md-2">
         <label class="form-label">%</label>
         <input type="number" class="form-control oil-percent" min="0" step="0.1">
+        <div class="small text-warning oil-limit-hint" data-role="oil-percent-hint"></div>
       </div>
       <div class="col-md-1 d-grid">
         <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
@@ -116,6 +118,142 @@
     if (!derived.length) return 0;
     const sum = derived.reduce((acc, value) => acc + value, 0);
     return sum / derived.length;
+  }
+
+  function getRowLimits(row, target){
+    if (!row || !target || target <= 0) {
+      return { allowedGrams: null, allowedPct: null };
+    }
+    const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
+    const otherTotal = rows.reduce((acc, current) => {
+      if (current === row) return acc;
+      return acc + toGrams(current.querySelector('.oil-grams')?.value);
+    }, 0);
+    const otherPct = rows.reduce((acc, current) => {
+      if (current === row) return acc;
+      return acc + clamp(toNumber(current.querySelector('.oil-percent')?.value), 0);
+    }, 0);
+    const allowedPct = Math.max(0, 100 - otherPct);
+    const allowedByTotal = Math.max(0, target - otherTotal);
+    const allowedByPct = (target * allowedPct) / 100;
+    const allowedGrams = Math.max(0, Math.min(allowedByTotal, allowedByPct));
+    return { allowedGrams, allowedPct };
+  }
+
+  function setOilHint(row, field, message){
+    if (!row) return;
+    const hint = row.querySelector(`[data-role="oil-${field}-hint"]`);
+    if (!hint) return;
+    if (message) {
+      hint.textContent = message;
+      hint.classList.add('is-visible');
+    } else {
+      hint.textContent = '';
+      hint.classList.remove('is-visible');
+    }
+  }
+
+  function bounceInput(input){
+    if (!input) return;
+    input.classList.remove('oil-input-bounce');
+    void input.offsetWidth;
+    input.classList.add('oil-input-bounce');
+  }
+
+  function validateOilEntry(row, field, options = {}){
+    const target = getOilTargetGrams();
+    if (!row || !target || target <= 0) {
+      setOilHint(row, field, '');
+      return;
+    }
+    const gramsInput = row.querySelector('.oil-grams');
+    const pctInput = row.querySelector('.oil-percent');
+    const limits = getRowLimits(row, target);
+    if (field === 'grams' && gramsInput) {
+      const grams = toGrams(gramsInput.value);
+      let message = '';
+      if (grams > target + 0.01) {
+        message = 'Entry exceeds the max oils allowed in stage 2.';
+      } else if (limits.allowedGrams !== null && grams > limits.allowedGrams + 0.01) {
+        message = `Must be under ${round(fromGrams(limits.allowedGrams), 2)} ${state.currentUnit} to stay within the stage 2 oil limit.`;
+      }
+      if (message) {
+        const nextValue = limits.allowedGrams !== null ? round(fromGrams(limits.allowedGrams), 2) : round(fromGrams(target), 2);
+        gramsInput.value = nextValue > 0 ? nextValue : '';
+        setOilHint(row, field, message);
+        gramsInput.classList.add('oil-input-warning');
+        bounceInput(gramsInput);
+        updateOilTotals();
+      } else {
+        gramsInput.classList.remove('oil-input-warning');
+        setOilHint(row, field, '');
+      }
+    }
+    if (field === 'percent' && pctInput) {
+      const pct = clamp(toNumber(pctInput.value), 0);
+      let message = '';
+      if (pct > 100.01) {
+        message = 'Entry exceeds the max oils allowed in stage 2.';
+      } else if (limits.allowedPct !== null && pct > limits.allowedPct + 0.01) {
+        message = `Must be under ${round(limits.allowedPct, 2)}% to stay within the stage 2 oil limit.`;
+      }
+      if (message) {
+        const nextPct = limits.allowedPct !== null ? round(limits.allowedPct, 2) : 100;
+        pctInput.value = nextPct > 0 ? nextPct : '';
+        setOilHint(row, field, message);
+        pctInput.classList.add('oil-input-warning');
+        bounceInput(pctInput);
+        updateOilTotals();
+      } else {
+        pctInput.classList.remove('oil-input-warning');
+        setOilHint(row, field, '');
+      }
+    }
+  }
+
+  function scaleOilsToTarget(target){
+    const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
+    const nextTarget = target ?? getOilTargetGrams();
+    if (!nextTarget || nextTarget <= 0 || !rows.length) {
+      state.lastOilTarget = nextTarget;
+      return;
+    }
+    const totalPct = rows.reduce((sum, row) => sum + clamp(toNumber(row.querySelector('.oil-percent')?.value), 0), 0);
+    const totalWeight = rows.reduce((sum, row) => sum + toGrams(row.querySelector('.oil-grams')?.value), 0);
+    if (totalPct <= 0 && totalWeight <= 0) {
+      state.lastOilTarget = nextTarget;
+      return;
+    }
+    if (state.lastOilTarget && Math.abs(state.lastOilTarget - nextTarget) < 0.01) {
+      return;
+    }
+    if (totalPct > 0) {
+      rows.forEach(row => {
+        const pctInput = row.querySelector('.oil-percent');
+        const gramsInput = row.querySelector('.oil-grams');
+        const pct = clamp(toNumber(pctInput?.value), 0);
+        if (gramsInput) {
+          gramsInput.value = pct > 0 ? round(fromGrams(nextTarget * (pct / 100)), 2) : '';
+        }
+      });
+    } else if (totalWeight > 0) {
+      const ratio = nextTarget / totalWeight;
+      rows.forEach(row => {
+        const gramsInput = row.querySelector('.oil-grams');
+        const pctInput = row.querySelector('.oil-percent');
+        const grams = toGrams(gramsInput?.value);
+        if (gramsInput) {
+          const nextGrams = grams > 0 ? grams * ratio : 0;
+          gramsInput.value = nextGrams > 0 ? round(fromGrams(nextGrams), 2) : '';
+        }
+        if (pctInput) {
+          const nextGrams = toGrams(gramsInput?.value);
+          pctInput.value = nextGrams > 0 ? round((nextGrams / nextTarget) * 100, 2) : '';
+        }
+      });
+    }
+    state.lastOilTarget = nextTarget;
+    updateOilTotals({ skipEnforce: true });
   }
 
   function enforceOilTargetCap(rows, target){
@@ -488,5 +626,7 @@
     updateOilTips,
     getTotalOilsGrams,
     serializeOilRow,
+    validateOilEntry,
+    scaleOilsToTarget,
   };
 })(window);
