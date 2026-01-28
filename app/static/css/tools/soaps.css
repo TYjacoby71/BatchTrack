@@ -624,6 +624,8 @@
 #soapToolPage .soap-stage-card {
   margin-bottom: 0;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: soap-stage;
 }
 #soapToolPage .soap-stage-body {
   min-width: 0;
@@ -631,6 +633,42 @@
 }
 #soapToolPage .soap-stage-body .row > [class*="col-"] {
   min-width: 0;
+}
+#soapToolPage .soap-stage-grid > [class*="col-"] {
+  min-width: 0;
+}
+#soapToolPage .oil-row .oil-remove-col {
+  justify-content: center;
+}
+@container soap-stage (max-width: 840px) {
+  #soapToolPage .soap-stage-grid > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-name-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-weight-col,
+  #soapToolPage .oil-row .oil-percent-col {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  #soapToolPage .oil-row .oil-remove-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+    justify-content: flex-end;
+  }
+}
+@container soap-stage (max-width: 560px) {
+  #soapToolPage .oil-row .oil-weight-col,
+  #soapToolPage .oil-row .oil-percent-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-remove-col {
+    justify-content: center;
+  }
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-tabs {
   flex: 1 1 auto;
