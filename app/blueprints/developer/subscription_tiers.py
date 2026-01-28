@@ -20,7 +20,7 @@ subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/s
 def manage_tiers():
     """Main page to view all tiers directly from the database."""
     all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
-    all_permissions = Permission.query.order_by(Permission.name).all()
+    all_permissions = Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
 
     # Convert to dictionary format expected by template
     tiers_dict = {}
@@ -205,7 +205,7 @@ def create_tier():
         return redirect(url_for('.manage_tiers'))
 
     # For GET request
-    all_permissions = Permission.query.order_by(Permission.name).all()
+    all_permissions = Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
     all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
     return render_template('developer/create_tier.html', all_permissions=all_permissions, all_addons=all_addons)
 
@@ -327,7 +327,7 @@ def edit_tier(tier_id):
             return redirect(url_for('.edit_tier', tier_id=tier_id))
 
     # For GET request
-    all_permissions = Permission.query.order_by(Permission.name).all()
+    all_permissions = Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
     all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
     return render_template('developer/edit_tier.html',
                            tier=tier,

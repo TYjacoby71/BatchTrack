@@ -215,8 +215,9 @@ def cleanup_old_permissions():
         perm.is_active = False
         print(f"Deactivated old organization permission: {perm.name}")
 
-    # Find and deactivate old developer permissions
-    old_dev_perms = DeveloperPermission.query.filter(~DeveloperPermission.name.in_(dev_perm_names)).all()
+    # Find and deactivate old developer permissions (keep shared org names too)
+    allowed_dev_names = dev_perm_names.union(org_perm_names)
+    old_dev_perms = DeveloperPermission.query.filter(~DeveloperPermission.name.in_(allowed_dev_names)).all()
     for perm in old_dev_perms:
         perm.is_active = False
         print(f"Deactivated old developer permission: {perm.name}")
