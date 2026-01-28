@@ -196,11 +196,13 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
+                            {% if is_feature_enabled('FEATURE_MERGE_SKUS') %}
                             <li>
                               <a class="dropdown-item" href="{{ url_for('sku.select_skus_to_merge') }}">
                                 <i class="fas fa-compress-arrows-alt me-2"></i> Merge SKUs
                               </a>
                             </li>
+                            {% endif %}
                           </ul>
                         </div>
                     </td>

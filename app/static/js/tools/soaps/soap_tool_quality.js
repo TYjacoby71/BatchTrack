@@ -3,7 +3,6 @@
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp } = SoapTool.helpers;
-  const { formatWeight, formatPercent } = SoapTool.units;
   const { computeFattyAcids, computeQualities, computeOilQualityScores } = SoapTool.calc;
   const {
     QUALITY_RANGES,
@@ -21,53 +20,43 @@
 
   const { pulseValue, showSoapAlert } = SoapTool.ui;
 
-  function setProgress(id, value, label){
-    const bar = document.getElementById(id);
-    if (!bar) return;
-    if (!isFinite(value)) {
-      bar.style.width = '0%';
-      return;
-    }
-    const clamped = Math.max(0, Math.min(100, value));
-    bar.style.width = `${clamped}%`;
-    bar.setAttribute('aria-valuemin', '0');
-    bar.setAttribute('aria-valuemax', '100');
-    bar.setAttribute('aria-valuenow', clamped.toFixed(1));
-    if (label) {
-      bar.setAttribute('aria-label', label);
-    }
-  }
-
-  function setQualityBarColor(bar, value, range){
-    if (!bar || !range) return;
-    bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-secondary');
-    if (!isFinite(value)) {
-      bar.classList.add('bg-secondary');
-      return;
-    }
-    if (value < range[0]) {
-      bar.classList.add('bg-warning');
-    } else if (value > range[1]) {
-      bar.classList.add('bg-danger');
-    } else {
-      bar.classList.add('bg-success');
-    }
-  }
-
-  function setScaledBar(id, value, range, max, label){
-    const bar = document.getElementById(id);
-    if (!bar) return;
+  function setBarFill({ barId, fillId, value, max, label }){
+    const bar = document.getElementById(barId);
+    const fill = document.getElementById(fillId);
+    if (!bar || !fill) return null;
     const safeValue = isFinite(value) ? value : 0;
     const clamped = Math.max(0, Math.min(max, safeValue));
     const width = max > 0 ? (clamped / max) * 100 : 0;
-    bar.style.width = `${width}%`;
+    fill.style.width = `${width}%`;
     bar.setAttribute('aria-valuemin', '0');
     bar.setAttribute('aria-valuemax', String(max));
     bar.setAttribute('aria-valuenow', clamped.toFixed(1));
     if (label) {
       bar.setAttribute('aria-label', label);
     }
-    setQualityBarColor(bar, safeValue, range);
+    return { bar, fill, value: safeValue };
+  }
+
+  function setQualityBarColor(fill, value, range){
+    if (!fill || !range) return;
+    fill.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-secondary');
+    if (!isFinite(value)) {
+      fill.classList.add('bg-secondary');
+      return;
+    }
+    if (value < range[0]) {
+      fill.classList.add('bg-warning');
+    } else if (value > range[1]) {
+      fill.classList.add('bg-danger');
+    } else {
+      fill.classList.add('bg-success');
+    }
+  }
+
+  function setScaledBar(barId, fillId, value, range, max, label){
+    const result = setBarFill({ barId, fillId, value, max, label });
+    if (!result) return;
+    setQualityBarColor(result.fill, value, range);
   }
 
   function setQualityRangeBars(){
@@ -84,16 +73,18 @@
       const [min, max] = config.range;
       const scale = config.scale;
       const name = key.charAt(0).toUpperCase() + key.slice(1);
-      const start = document.getElementById(`quality${name}RangeStart`);
-      const ideal = document.getElementById(`quality${name}RangeIdeal`);
-      const end = document.getElementById(`quality${name}RangeEnd`);
-      if (start && ideal && end) {
+      const barId = key === 'iodine' ? 'iodineBar' : (key === 'ins' ? 'insBar' : `quality${name}Bar`);
+      const safe = document.getElementById(`quality${name}Safe`);
+      if (safe) {
         const startPct = Math.max(0, Math.min(100, (min / scale) * 100));
-        const idealPct = Math.max(0, Math.min(100, ((max - min) / scale) * 100));
-        const endPct = Math.max(0, Math.min(100, 100 - ((max / scale) * 100)));
-        start.style.width = `${startPct}%`;
-        ideal.style.width = `${idealPct}%`;
-        end.style.width = `${endPct}%`;
+        const widthPct = Math.max(0, Math.min(100, ((max - min) / scale) * 100));
+        safe.style.left = `${startPct}%`;
+        safe.style.width = `${widthPct}%`;
+        safe.title = `Safe range ${round(min, 0)}-${round(max, 0)}`;
+      }
+      const bar = document.getElementById(barId);
+      if (bar) {
+        bar.dataset.safeRange = `${round(min, 0)}-${round(max, 0)}`;
       }
       const minLabel = document.getElementById(`quality${name}RangeMin`);
       const maxLabel = document.getElementById(`quality${name}RangeMax`);
@@ -118,20 +109,14 @@
   }
 
   function updateFattyBar(fattyPercent){
-    const totals = {};
-    let total = 0;
-    FATTY_DISPLAY_KEYS.forEach(key => {
-      const value = clamp(toNumber(fattyPercent[key]), 0, 100);
-      totals[key] = value;
-      total += value;
-    });
     FATTY_DISPLAY_KEYS.forEach(key => {
       const el = document.getElementById(`fattyBar${key.charAt(0).toUpperCase()}${key.slice(1)}`);
       if (!el) return;
-      const width = total > 0 ? (totals[key] / total) * 100 : 0;
+      const value = clamp(toNumber(fattyPercent[key]), 0, 100);
+      const width = value;
       el.style.width = `${width}%`;
       el.style.backgroundColor = FATTY_BAR_COLORS[key] || 'var(--color-muted)';
-      el.title = `${key.charAt(0).toUpperCase()}${key.slice(1)}: ${round(totals[key], 1)}%`;
+      el.title = `${key.charAt(0).toUpperCase()}${key.slice(1)}: ${round(value, 1)}%`;
     });
   }
 
@@ -299,20 +284,25 @@
 
     function setQuality(name, value){
       const label = document.getElementById(`quality${name}Value`);
-      const bar = document.getElementById(`quality${name}Bar`);
       const hintEl = document.getElementById(`quality${name}Hint`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
       pulseValue(label);
-      setProgress(`quality${name}Bar`, hasCoverage ? value : 0, name);
       const rangeKey = name.toLowerCase();
       const range = QUALITY_RANGES[rangeKey];
-      if (bar && range) {
-        setQualityBarColor(bar, value, range);
+      const fillResult = setBarFill({
+        barId: `quality${name}Bar`,
+        fillId: `quality${name}Fill`,
+        value: hasCoverage ? value : 0,
+        max: 100,
+        label: name
+      });
+      if (fillResult && range) {
+        setQualityBarColor(fillResult.fill, value, range);
         if (hasCoverage && isFinite(value)) {
-          bar.title = `${name}: ${round(value, 1)} (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
+          fillResult.bar.title = `${name}: ${round(value, 1)} (safe ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
         } else {
-          bar.title = `${name}: -- (ideal ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
+          fillResult.bar.title = `${name}: -- (safe ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
         }
       }
       if (hintEl && range) {
@@ -323,7 +313,7 @@
         } else if (value > range[1]) {
           hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.high || '';
         } else {
-          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.ok || '';
+          hintEl.textContent = '';
         }
       }
     }
@@ -356,12 +346,12 @@
       sapEl.textContent = sapAvg > 0 ? round(sapAvg, 1) : '--';
       pulseValue(sapEl);
     }
-    setScaledBar('iodineBar', iodine, IODINE_RANGE, IODINE_SCALE_MAX, 'Iodine');
-    setScaledBar('insBar', ins, INS_RANGE, INS_SCALE_MAX, 'INS');
+    setScaledBar('iodineBar', 'iodineFill', iodine, IODINE_RANGE, IODINE_SCALE_MAX, 'Iodine');
+    setScaledBar('insBar', 'insFill', ins, INS_RANGE, INS_SCALE_MAX, 'INS');
 
     const sat = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0) + (fattyPercent.palmitic || 0) + (fattyPercent.stearic || 0);
     const unsat = (fattyPercent.ricinoleic || 0) + (fattyPercent.oleic || 0) + (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
-    const ratioEl = document.getElementById('fattySatRatio');
+    const ratioEl = document.getElementById('fattySatRatioResult');
     if (ratioEl) {
       ratioEl.textContent = (sat + unsat) > 0 ? `${round(sat, 0)}:${round(unsat, 0)}` : '--';
       pulseValue(ratioEl);

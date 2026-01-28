@@ -86,6 +86,24 @@
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.clearSelectedOilProfile();
     }
+    if (e.target.classList.contains('oil-grams')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
+  });
+
+  document.getElementById('oilRows').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    if (e.target.classList.contains('oil-grams')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
   });
 
   document.getElementById('oilRows').addEventListener('mouseover', function(e){
@@ -153,8 +171,38 @@
     });
   }
   const stageTabList = document.getElementById('soapStageTabList');
+  const updateStageTabSizing = () => {
+    if (!stageTabList) return;
+    stageTabList.querySelectorAll('.nav-item').forEach(item => item.classList.remove('is-expanded'));
+    const active = stageTabList.querySelector('.nav-link.active');
+    if (active && active.closest('.nav-item')) {
+      active.closest('.nav-item').classList.add('is-expanded');
+    }
+  };
   if (stageTabList) {
-    stageTabList.addEventListener('shown.bs.tab', SoapTool.layout.scheduleStageHeightSync);
+    stageTabList.addEventListener('shown.bs.tab', () => {
+      updateStageTabSizing();
+      SoapTool.layout.scheduleStageHeightSync();
+    });
+    updateStageTabSizing();
+  }
+
+  const resultsToggle = document.getElementById('resultsCardToggle');
+  const resultsCard = document.getElementById('resultsCard');
+  if (resultsToggle && resultsCard) {
+    resultsToggle.addEventListener('click', () => {
+      resultsCard.classList.toggle('is-collapsed');
+      const isCollapsed = resultsCard.classList.contains('is-collapsed');
+      resultsToggle.setAttribute('aria-expanded', (!isCollapsed).toString());
+      const label = isCollapsed ? 'Expand formula details' : 'Collapse formula details';
+      resultsToggle.setAttribute('aria-label', label);
+      resultsToggle.setAttribute('title', label);
+      const icon = resultsToggle.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-chevron-down', isCollapsed);
+        icon.classList.toggle('fa-chevron-up', !isCollapsed);
+      }
+    });
   }
 
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
@@ -165,6 +213,7 @@
   });
 
   document.getElementById('oilTotalTarget').addEventListener('input', function(){
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -243,12 +292,14 @@
 
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
   });
   document.getElementById('moldOilPct').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -257,6 +308,7 @@
   if (moldShape) {
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -266,6 +318,7 @@
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -275,6 +328,7 @@
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -314,23 +368,38 @@
     });
   }
 
-  document.getElementById('addToolIngredient').addEventListener('click', function(){
-    document.getElementById('tool-ingredients').appendChild(SoapTool.runner.buildLineRow('ingredient'));
-    SoapTool.storage.queueStateSave();
-  });
-  document.getElementById('addToolConsumable').addEventListener('click', function(){
-    document.getElementById('tool-consumables').appendChild(SoapTool.runner.buildLineRow('consumable'));
-    SoapTool.storage.queueStateSave();
-  });
-  document.getElementById('addToolContainer').addEventListener('click', function(){
-    document.getElementById('tool-containers').appendChild(SoapTool.runner.buildLineRow('container'));
-    SoapTool.storage.queueStateSave();
-  });
+  const addToolIngredient = document.getElementById('addToolIngredient');
+  if (addToolIngredient) {
+    addToolIngredient.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-ingredients');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('ingredient'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
+  const addToolConsumable = document.getElementById('addToolConsumable');
+  if (addToolConsumable) {
+    addToolConsumable.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-consumables');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('consumable'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
+  const addToolContainer = document.getElementById('addToolContainer');
+  if (addToolContainer) {
+    addToolContainer.addEventListener('click', function(){
+      const wrapper = document.getElementById('tool-containers');
+      if (wrapper) wrapper.appendChild(SoapTool.runner.buildLineRow('container'));
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
-  document.getElementById('calcLyeBtn').addEventListener('click', function(){
-    SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
-    SoapTool.storage.queueStateSave();
-  });
+  const calcLyeBtn = document.getElementById('calcLyeBtn');
+  if (calcLyeBtn) {
+    calcLyeBtn.addEventListener('click', function(){
+      SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
     try {

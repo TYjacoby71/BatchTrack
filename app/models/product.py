@@ -294,7 +294,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
     @property
     def is_low_stock(self):
         """Check if current stock is below threshold"""
-        return self.quantity <= self.low_stock_threshold
+        threshold = float(self.low_stock_threshold or 0.0)
+        if threshold <= 0:
+            return False
+        return self.quantity <= threshold
 
     @property
     def stock_status(self):

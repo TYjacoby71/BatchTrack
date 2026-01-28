@@ -1,48 +1,54 @@
 <div class="soap-stage-tabs" id="soapStageTabs">
-  <ul class="nav nav-tabs" id="soapStageTabList" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="soapStage1Tab" data-bs-toggle="tab" data-bs-target="#soapStage1Pane" type="button" role="tab" aria-controls="soapStage1Pane" aria-selected="true">
-        Stage 1 — Mold sizing & batch target
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage2Tab" data-bs-toggle="tab" data-bs-target="#soapStage2Pane" type="button" role="tab" aria-controls="soapStage2Pane" aria-selected="false">
-        Stage 2 — Oils, fats & waxes
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage3Tab" data-bs-toggle="tab" data-bs-target="#soapStage3Pane" type="button" role="tab" aria-controls="soapStage3Pane" aria-selected="false">
-        Stage 3 — Lye & water details
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage4Tab" data-bs-toggle="tab" data-bs-target="#soapStage4Pane" type="button" role="tab" aria-controls="soapStage4Pane" aria-selected="false">
-        Stage 4 — Additives & helpers
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage5Tab" data-bs-toggle="tab" data-bs-target="#soapStage5Pane" type="button" role="tab" aria-controls="soapStage5Pane" aria-selected="false">
-        Stage 5 — Fragrance & essential oils
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage6Tab" data-bs-toggle="tab" data-bs-target="#soapStage6Pane" type="button" role="tab" aria-controls="soapStage6Pane" aria-selected="false">
-        Stage 6 — Glossary & reference
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="soapStage7Tab" data-bs-toggle="tab" data-bs-target="#soapStage7Pane" type="button" role="tab" aria-controls="soapStage7Pane" aria-selected="false">
-        Stage 7 — Ingredients, consumables & containers
-      </button>
-    </li>
-  </ul>
-  <div class="tab-content pt-3" id="soapStageTabContent">
-    {% include 'tools/soaps/stages/_stage_1.html' %}
-    {% include 'tools/soaps/stages/_stage_2.html' %}
-    {% include 'tools/soaps/stages/_stage_3.html' %}
-    {% include 'tools/soaps/stages/_stage_4.html' %}
-    {% include 'tools/soaps/stages/_stage_5.html' %}
-    {% include 'tools/soaps/stages/_stage_6.html' %}
-    {% include 'tools/soaps/stages/_stage_7.html' %}
+  <div class="card soap-stage-card">
+    <div class="card-header soap-stage-tabs-header">
+      <ul class="nav nav-tabs" id="soapStageTabList" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="soapStage1Tab" data-bs-toggle="tab" data-bs-target="#soapStage1Pane" type="button" role="tab" aria-controls="soapStage1Pane" aria-selected="true">
+            <span class="soap-stage-label-short">Config</span>
+            <span class="soap-stage-label-full">Configuration &amp; basics</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="soapStage2Tab" data-bs-toggle="tab" data-bs-target="#soapStage2Pane" type="button" role="tab" aria-controls="soapStage2Pane" aria-selected="false">
+            <span class="soap-stage-label-short">Mold &amp; Yield</span>
+            <span class="soap-stage-label-full">Mold sizing &amp; batch target</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="soapStage3Tab" data-bs-toggle="tab" data-bs-target="#soapStage3Pane" type="button" role="tab" aria-controls="soapStage3Pane" aria-selected="false">
+            <span class="soap-stage-label-short">Oils, Fats &amp; Waxes</span>
+            <span class="soap-stage-label-full">Oils, fats &amp; waxes</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="soapStage4Tab" data-bs-toggle="tab" data-bs-target="#soapStage4Pane" type="button" role="tab" aria-controls="soapStage4Pane" aria-selected="false">
+            <span class="soap-stage-label-short">Lye &amp; Water</span>
+            <span class="soap-stage-label-full">Lye &amp; water details</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="soapStage5Tab" data-bs-toggle="tab" data-bs-target="#soapStage5Pane" type="button" role="tab" aria-controls="soapStage5Pane" aria-selected="false">
+            <span class="soap-stage-label-short">Additives &amp; Helpers</span>
+            <span class="soap-stage-label-full">Additives &amp; helpers</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="soapStage6Tab" data-bs-toggle="tab" data-bs-target="#soapStage6Pane" type="button" role="tab" aria-controls="soapStage6Pane" aria-selected="false">
+            <span class="soap-stage-label-short">Fragrances</span>
+            <span class="soap-stage-label-full">Fragrance &amp; essential oils</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="card-body p-0">
+      <div class="tab-content" id="soapStageTabContent">
+        {% include 'tools/soaps/stages/_stage_config.html' %}
+        {% include 'tools/soaps/stages/_stage_1.html' %}
+        {% include 'tools/soaps/stages/_stage_2.html' %}
+        {% include 'tools/soaps/stages/_stage_3.html' %}
+        {% include 'tools/soaps/stages/_stage_4.html' %}
+        {% include 'tools/soaps/stages/_stage_5.html' %}
+      </div>
+    </div>
   </div>
 </div>

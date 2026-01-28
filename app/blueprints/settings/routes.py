@@ -5,7 +5,13 @@ from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
-from ...utils.json_store import read_json_file, write_json_file
+from ...utils.settings import (
+    get_settings,
+    save_settings,
+    update_settings_payload,
+    update_settings_value,
+)
+from ...utils.settings_defaults import merge_settings_defaults
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
 
@@ -51,63 +57,8 @@ def index():
     # Get organization info for org owners
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
 
-    # Get system settings from file or use defaults
-    system_settings = read_json_file("settings.json", default={}) or {}
-
-    # Ensure all required sections exist with defaults
-    system_defaults = {
-        'batch_rules': {
-            'require_timer_completion': False,
-            'allow_intermediate_tags': True,
-            'require_finish_confirmation': True,
-            'stuck_batch_hours': 24
-        },
-        'recipe_builder': {
-            'enable_variations': True,
-            'enable_containers': True,
-            'auto_scale_recipes': False,
-            'show_cost_breakdown': True
-        },
-        'inventory': {
-            'enable_fifo_tracking': True,
-            'show_expiration_dates': True,
-            'auto_calculate_costs': True,
-            'enable_barcode_scanning': False,
-            'show_supplier_info': True,
-            'enable_bulk_operations': True
-        },
-        'products': {
-            'enable_variants': True,
-            'show_profit_margins': True,
-            'auto_generate_skus': False,
-            'auto_create_bulk_sku_on_variant': False,
-            'enable_product_images': True,
-            'track_production_costs': True
-        },
-        'system': {
-            'auto_backup': False,
-            'log_level': 'INFO',
-            'per_page': 25,
-            'enable_csv_export': True,
-            'auto_save_forms': False
-        },
-        'notifications': {
-            'browser_notifications': True,
-            'email_alerts': False,
-            'alert_frequency': 'real_time',
-            'quiet_hours_start': '22:00',
-            'quiet_hours_end': '08:00'
-        }
-    }
-
-    # Merge defaults with existing settings
-    for section, section_settings in system_defaults.items():
-        if section not in system_settings:
-            system_settings[section] = section_settings
-        else:
-            for key, value in section_settings.items():
-                if key not in system_settings[section]:
-                    system_settings[section][key] = value
+    # Get system settings from database and apply defaults
+    system_settings = merge_settings_defaults(get_settings())
 
     # Get available timezones grouped by region
     # Pass current user's timezone to highlight it
@@ -200,14 +151,11 @@ def update_system_settings():
     try:
         data = request.get_json()
 
-        # Load existing settings
-        settings_data = read_json_file("settings.json", default={}) or {}
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid settings payload'}), 400
 
-        # Update the settings
-        settings_data.update(data)
-
-        # Save updated settings
-        write_json_file("settings.json", settings_data)
+        # Merge and persist the settings payload
+        update_settings_payload(data)
 
         return jsonify({'success': True, 'message': 'System settings updated successfully'})
     except Exception as e:
@@ -219,9 +167,17 @@ def save_profile():
     try:
         print(f"Profile save request from user: {current_user.id}")
 
+        payload = request.get_json(silent=True)
+        expects_json = (
+            request.is_json
+            or payload is not None
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in (request.headers.get("Accept") or "")
+        )
+
         # Handle both JSON and form data
-        if request.is_json:
-            data = request.get_json()
+        if payload is not None:
+            data = payload
             first_name = data.get('first_name', '').strip()
             last_name = data.get('last_name', '').strip()
             email = data.get('email', '').strip()
@@ -239,7 +195,7 @@ def save_profile():
         # Validate required fields
         if not first_name or not last_name or not email:
             error_msg = 'First name, last name, and email are required'
-            if request.is_json:
+            if expects_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
             flash(error_msg, 'error')
             return redirect(request.referrer or url_for('settings.index'))
@@ -256,7 +212,7 @@ def save_profile():
         db.session.commit()
         print("Database save successful")
 
-        if request.is_json:
+        if expects_json:
             return jsonify({'success': True, 'message': 'Profile updated successfully'})
         else:
             flash('Profile updated successfully!', 'success')
@@ -274,7 +230,7 @@ def save_profile():
         db.session.rollback()
         error_msg = f'Error updating profile: {str(e)}'
 
-        if request.is_json:
+        if expects_json:
             return jsonify({'success': False, 'error': error_msg}), 500
         else:
             flash(error_msg, 'error')
@@ -460,15 +416,7 @@ def update_system_setting():
             flash('Section and key are required', 'error')
             return jsonify({'error': 'Section and key are required'}), 400
 
-        settings_data = read_json_file("settings.json", default={}) or {}
-        section_settings = settings_data.get(section)
-        if not isinstance(section_settings, dict):
-            section_settings = {}
-            settings_data[section] = section_settings
-
-        section_settings[key] = value
-        write_json_file("settings.json", settings_data)
-
+        update_settings_value(section, key, value)
         flash('System setting saved successfully', 'success')
         return jsonify({'success': True})
 

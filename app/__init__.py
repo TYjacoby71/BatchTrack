@@ -365,6 +365,13 @@ def _add_core_routes(app):
         """
         cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v1")
         try:
+            from app.utils.settings import is_feature_enabled
+
+            global_library_enabled = is_feature_enabled("FEATURE_GLOBAL_ITEM_LIBRARY")
+            cache_key = f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
+        except Exception:
+            pass
+        try:
             cache_ttl = int(current_app.config.get("PUBLIC_HOMEPAGE_CACHE_TTL", 600))
         except (TypeError, ValueError):
             cache_ttl = 600

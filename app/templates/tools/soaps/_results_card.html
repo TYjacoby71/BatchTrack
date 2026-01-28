@@ -1,10 +1,10 @@
-<div class="card mt-2 mb-2" id="resultsCard" style="display:none;">
+<div class="card mt-2 mb-2" id="resultsCard">
   <div class="card-header d-flex align-items-center justify-content-between">
-    <strong>Results</strong>
+    <strong>Formula Details</strong>
     <span class="badge bg-success d-none" id="resultsReadyBadge">Updated</span>
   </div>
-  <div class="card-body">
-    <div class="row g-3">
+  <div class="card-body" id="resultsCardBody">
+    <div class="row g-3 results-metrics">
       <div class="col-md-3 col-sm-6">
         <div class="soap-metric-tile">
           <div class="d-flex align-items-center gap-2">
@@ -84,25 +84,20 @@
           </div>
         </div>
       </div>
-    </div>
-    <div class="alert alert-info mt-3 mb-2">
-      Always add lye to water (never water to lye) and wear protective gear.
-    </div>
-    <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
-    <div class="border rounded p-2 mt-3">
-      <div class="small text-muted mb-1">Visual guidance</div>
-      <ul class="small mb-0" id="soapVisualGuidanceList"></ul>
-    </div>
-    <div class="small text-muted mt-2">
-      Batch yield includes water and additives; expect weight loss during cure.
-    </div>
-    <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
-        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#soapDownloadPreviewModal">Preview download</button>
+      <div class="col-md-3 col-sm-6">
+        <div class="soap-metric-tile">
+          <div class="d-flex align-items-center gap-2">
+            <div class="soap-metric-icon text-muted"><i class="fas fa-adjust"></i></div>
+            <div>
+              <div class="small text-muted">Sat : Unsat</div>
+              <div class="fs-5 fw-semibold soap-animate-number" id="fattySatRatioResult">--</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
     </div>
   </div>
+  <button class="btn btn-link results-toggle" type="button" id="resultsCardToggle" aria-expanded="true" aria-controls="resultsCardBody" aria-label="Collapse formula details">
+    <i class="fas fa-chevron-up" aria-hidden="true"></i>
+  </button>
 </div>

@@ -76,11 +76,69 @@ def batchley_overview():
 
 
 @developer_bp.route("/system-settings")
-@require_developer_permission("system_admin")
+@require_developer_permission("dev.system_settings")
 def system_settings():
-    """Legacy endpoint retained for backwards compatibility."""
-    flash("System settings have moved to Feature Flags & Integrations.", "info")
-    return redirect(url_for("developer.feature_flags"))
+    """Developer-only system settings page."""
+    from app.utils.json_store import read_json_file
+
+    system_settings = read_json_file("settings.json", default={}) or {}
+    defaults = {
+        "system": {
+            "per_page": 25,
+            "enable_csv_export": True,
+            "auto_save_forms": False,
+            "auto_backup": False,
+        },
+        "notifications": {
+            "browser_notifications": True,
+            "email_alerts": False,
+            "alert_frequency": "real_time",
+            "quiet_hours_start": "22:00",
+            "quiet_hours_end": "08:00",
+        },
+    }
+
+    for section, section_settings in defaults.items():
+        if section not in system_settings:
+            system_settings[section] = section_settings
+        else:
+            for key, value in section_settings.items():
+                if key not in system_settings[section]:
+                    system_settings[section][key] = value
+
+    return render_template(
+        "developer/system_settings.html",
+        system_settings=system_settings,
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "System Settings"},
+        ],
+    )
+
+
+@developer_bp.route("/system-settings/update", methods=["POST"])
+@require_developer_permission("dev.system_settings")
+def update_system_settings():
+    """Persist developer system settings updates."""
+    from app.utils.json_store import read_json_file, write_json_file
+
+    data = request.get_json() or {}
+    section = data.get("section")
+    key = data.get("key")
+    value = data.get("value")
+
+    if not section or not key:
+        return jsonify({"success": False, "error": "Section and key are required."}), 400
+
+    settings_data = read_json_file("settings.json", default={}) or {}
+    section_settings = settings_data.get(section)
+    if not isinstance(section_settings, dict):
+        section_settings = {}
+        settings_data[section] = section_settings
+
+    section_settings[key] = value
+    write_json_file("settings.json", settings_data)
+    return jsonify({"success": True})
 
 
 @developer_bp.route("/feature-flags")

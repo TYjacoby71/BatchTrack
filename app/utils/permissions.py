@@ -63,12 +63,6 @@ def require_permission(permission_name: str):
                 flash("Please log in to access this page.", "error")
                 return redirect(url_for("auth.login"))
 
-            # Developer users have access to developer permissions
-            if current_user.user_type == 'developer':
-                # For developer permissions, just check if they're a developer
-                if permission_name.startswith('developer.'):
-                    return f(*args, **named_args)
-
             # Check if user has the permission using authorization hierarchy
             if has_permission(current_user, permission_name):
                 return f(*args, **named_args)
@@ -363,7 +357,7 @@ class AuthorizationHierarchy:
             return []
 
         # Get permissions directly from the database tier relationship
-        return [p.name for p in organization.tier.permissions]
+        return [p.name for p in organization.tier.permissions if p.is_active]
 
     @staticmethod
     def check_user_authorization(user, permission_name):
@@ -382,16 +376,29 @@ class AuthorizationHierarchy:
             pass
 
         try:
-            # Developers have full access - they are super admins
+            # Developers have scoped access based on developer roles + masquerade context
             if user.user_type == 'developer':
-                # For developer permissions, check if they have the specific developer permission
-                if permission_name.startswith('developer.'):
-                    return True  # All developers get all developer permissions
+                from app.models.developer_permission import DeveloperPermission
+                from app.models.permission import Permission
 
-                # For organization permissions when in customer view mode
+                dev_scoped = permission_name.startswith('dev.')
+                if not dev_scoped:
+                    dev_scoped = DeveloperPermission.query.filter_by(
+                        name=permission_name, is_active=True
+                    ).first() is not None
+                org_scoped = Permission.query.filter_by(
+                    name=permission_name, is_active=True
+                ).first() is not None
+
+                if dev_scoped and user.has_developer_permission(permission_name):
+                    return True
+
+                # For organization permissions, require masquerade context
+                if not org_scoped:
+                    return False
                 selected_org_id = session.get('dev_selected_org_id')
                 if not selected_org_id:
-                    return True  # Developer mode - full access to all organization permissions too
+                    return False
                 # If viewing a specific organization, continue with organization checks
 
             # Get organization (handle developer customer view)
@@ -452,12 +459,11 @@ class AuthorizationHierarchy:
         """
         Get all effective permissions for a user based on the authorization hierarchy
         """
-        # Developers in non-customer mode have full access
+        # Developers without masquerade context only see developer permissions
         if user.user_type == 'developer':
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
-                from app.models.permission import Permission
-                return [p.name for p in Permission.query.filter_by(is_active=True).all()]
+                return AuthorizationHierarchy.get_developer_role_permissions(user)
 
         # Get organization
         organization = get_effective_organization()
@@ -516,6 +522,22 @@ class AuthorizationHierarchy:
         #     user_permissions.add(perm)
 
         return list(user_permissions)
+
+    @staticmethod
+    def get_developer_role_permissions(user):
+        """Get permissions from developer role assignments."""
+        try:
+            from app.models.developer_role import DeveloperRole
+            roles = user.get_active_roles()
+            permissions = set()
+            for role in roles:
+                if isinstance(role, DeveloperRole):
+                    for perm in role.get_permissions():
+                        permissions.add(perm.name)
+            return list(permissions)
+        except Exception as exc:
+            logger.warning(f"Developer permission lookup failed: {exc}")
+            return []
 
     @staticmethod
     def check_organization_access(organization):

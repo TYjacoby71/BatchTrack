@@ -26,10 +26,6 @@
                     <label class="form-check-label">Auto-save Forms</label>
                 </div>
 
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" x-model="systemSettings.system.auto_backup" @change="updateSystemSetting('system', 'auto_backup', $event.target.checked)">
-                    <label class="form-check-label">Auto Backup</label>
-                </div>
             </div>
         </div>
     </div>
@@ -63,19 +59,3 @@
     </div>
 </div>
 
-<div class="row mt-3">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-tags"></i> Product Settings</h5>
-            </div>
-            <div class="card-body">
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" x-model="systemSettings.products.auto_create_bulk_sku_on_variant" @change="updateSystemSetting('products', 'auto_create_bulk_sku_on_variant', $event.target.checked)">
-                    <label class="form-check-label">Auto-create Bulk SKU when adding a variant</label>
-                </div>
-                <small class="text-muted">When enabled, new variants require a unit and will immediately create a Bulk SKU. When disabled, SKUs are created later from batches or manual SKU creation.</small>
-            </div>
-        </div>
-    </div>
-</div>

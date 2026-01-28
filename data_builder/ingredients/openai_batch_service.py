@@ -581,6 +581,36 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         session.commit()
 
 
+def _repair_truncated_json(content: str) -> dict[str, Any] | None:
+    """Attempt to repair truncated JSON by finding last complete item."""
+    import re
+    
+    marker = '"variation_bypass"'
+    last_pos = content.rfind(marker)
+    if last_pos == -1:
+        return None
+    
+    search_start = last_pos + len(marker)
+    remaining = content[search_start:search_start + 100]
+    
+    close_match = re.search(r':\s*(true|false)\s*\}', remaining)
+    if not close_match:
+        return None
+    
+    cut_pos = search_start + close_match.end()
+    truncated = content[:cut_pos]
+    
+    open_braces = truncated.count('{') - truncated.count('}')
+    open_brackets = truncated.count('[') - truncated.count(']')
+    
+    repaired = truncated + ']' * open_brackets + '}' * open_braces
+    
+    try:
+        return json.loads(repaired)
+    except json.JSONDecodeError:
+        return None
+
+
 def import_stage2_results(results_path: str | Path) -> dict[str, int]:
     """Import Stage 2 batch results into the database."""
     results_path = Path(results_path)
@@ -622,7 +652,14 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
                     stats["failed"] += 1
                     continue
 
-                payload = json.loads(content)
+                try:
+                    payload = json.loads(content)
+                except json.JSONDecodeError:
+                    payload = _repair_truncated_json(content)
+                    if payload is None:
+                        LOGGER.error(f"Failed to repair JSON for {cluster_id}")
+                        stats["failed"] += 1
+                        continue
 
                 _apply_stage2_result(cluster_id, payload)
                 stats["success"] += 1
@@ -637,7 +674,7 @@ def import_stage2_results(results_path: str | Path) -> dict[str, int]:
 
 
 def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
-    """Apply a Stage 2 AI result to the database (matches compiler.py behavior)."""
+    """Apply a Stage 2 AI result to the database with aggressive matching."""
     from datetime import timezone
 
     items = payload.get("items", [])
@@ -649,12 +686,25 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
     with database_manager.get_session() as session:
         existing_items = session.query(database_manager.CompiledClusterItemRecord).filter_by(cluster_id=cluster_id).all()
         now = datetime.now(timezone.utc)
+        
+        pending_items = [item for item in existing_items if item.item_status != "done"]
+        
         item_lookup = {
             (_clean(item.derived_variation).lower(), _clean(item.derived_physical_form).lower()): item
             for item in existing_items
         }
+        
+        form_equivalents = {
+            "hydrosol": "liquid",
+            "solid": "powder",
+            "powder": "solid",
+        }
+        variation_defaults = {"raw", "n/a", ""}
+        
+        matched_db_ids = set()
+        ai_matched = [False] * len(items)
 
-        for ai_item in items:
+        for ai_idx, ai_item in enumerate(items):
             variation = ai_item.get("variation", {})
             if isinstance(variation, dict):
                 variation = variation.get("value", "")
@@ -663,17 +713,51 @@ def _apply_stage2_result(cluster_id: str, payload: dict[str, Any]) -> None:
                 physical_form = physical_form.get("value", "")
             key = (_clean(variation).lower(), _clean(physical_form).lower())
             matched_item = item_lookup.get(key)
-            if matched_item:
+            
+            if not matched_item or matched_item.id in matched_db_ids:
+                ai_var, ai_form = key
+                for (db_var, db_form), db_item in item_lookup.items():
+                    if db_item.id in matched_db_ids:
+                        continue
+                    var_match = (db_var == ai_var) or (db_var == "" and ai_var in variation_defaults)
+                    form_match = (db_form == ai_form) or (form_equivalents.get(db_form) == ai_form) or (db_form == ai_form.replace("hydrosol", "liquid"))
+                    if var_match and form_match:
+                        matched_item = db_item
+                        break
+            
+            if matched_item and matched_item.id not in matched_db_ids:
                 matched_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
                 matched_item.item_status = "done"
                 matched_item.item_compiled_at = now
                 matched_item.item_error = None
                 matched_item.updated_at = now
+                matched_db_ids.add(matched_item.id)
+                ai_matched[ai_idx] = True
+
+        unmatched_pending = [item for item in pending_items if item.id not in matched_db_ids]
+        unmatched_ai = [items[i] for i in range(len(items)) if not ai_matched[i]]
+        
+        for db_item, ai_item in zip(unmatched_pending, unmatched_ai):
+            variation = ai_item.get("variation", {})
+            if isinstance(variation, dict):
+                variation = variation.get("value", "")
+            physical_form = ai_item.get("physical_form", {})
+            if isinstance(physical_form, dict):
+                physical_form = physical_form.get("value", "")
+            
+            db_item.item_json = json.dumps(ai_item, ensure_ascii=False, sort_keys=True)
+            db_item.item_status = "done"
+            db_item.item_compiled_at = now
+            db_item.item_error = None
+            db_item.updated_at = now
 
         session.commit()
 
+    taxonomy = payload.get("taxonomy")
+    if not isinstance(taxonomy, dict):
+        taxonomy = None
     from .compiler import _finalize_cluster_if_complete
-    _finalize_cluster_if_complete(cluster_id)
+    _finalize_cluster_if_complete(cluster_id, batch_taxonomy=taxonomy)
 
 
 def main():

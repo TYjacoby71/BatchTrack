@@ -101,10 +101,117 @@ def apply_generic_extract(item: CompiledClusterItemRecord, dry_run: bool = True)
     }
 
 
+def apply_missing_var_form(item: CompiledClusterItemRecord, dry_run: bool = True) -> dict:
+    """Handle items with both empty variation and physical form.
+    
+    For botanicals: default to 'Raw' variation and 'Whole' form.
+    For synthetics: flag for manual review.
+    """
+    changes = {
+        "item_id": item.id,
+        "derived_term": item.derived_term,
+        "old_variation": item.derived_variation,
+        "old_form": item.derived_physical_form,
+        "applied": False,
+    }
+    
+    if not dry_run:
+        try:
+            item_data = json.loads(item.item_json) if item.item_json else {}
+        except:
+            item_data = {}
+        
+        cat = item_data.get("master_category", "")
+        botanical_cats = ["Herbs", "Flowers", "Roots", "Seeds", "Barks", "Fruits & Berries", "Vegetables", "Spices", "Nuts"]
+        
+        if cat in botanical_cats:
+            item.derived_variation = "Raw"
+            item.derived_physical_form = "Whole"
+            changes["new_variation"] = "Raw"
+            changes["new_form"] = "Whole"
+            changes["applied"] = True
+        else:
+            changes["action"] = f"Manual review - category: {cat}"
+    
+    return changes
+
+
+def apply_herbs_default_raw(item: CompiledClusterItemRecord, dry_run: bool = True) -> dict:
+    """Set Herbs without variation to 'Raw' variation and 'Whole' form."""
+    changes = {
+        "item_id": item.id,
+        "derived_term": item.derived_term,
+        "old_variation": item.derived_variation,
+        "applied": False,
+    }
+    
+    if not dry_run:
+        item.derived_variation = "Raw"
+        if not item.derived_physical_form:
+            item.derived_physical_form = "Whole"
+        item.updated_at = datetime.utcnow()
+        changes["new_variation"] = "Raw"
+        changes["applied"] = True
+    
+    return changes
+
+
+def apply_synthetic_in_botanical(item: CompiledClusterItemRecord, dry_run: bool = True) -> dict:
+    """Flag synthetic chemicals miscategorized in botanical categories.
+    
+    These need manual recategorization to Synthetic categories.
+    """
+    return {
+        "item_id": item.id,
+        "derived_term": item.derived_term,
+        "current_category": json.loads(item.item_json).get("master_category") if item.item_json else None,
+        "action": "Manual review - synthetic in botanical category",
+        "applied": False,  # Never auto-apply
+    }
+
+
+def apply_hydrosol_form_fix(item: CompiledClusterItemRecord, dry_run: bool = True) -> dict:
+    """Fix items where Hydrosol is the physical form (should be Liquid)."""
+    changes = {
+        "item_id": item.id,
+        "derived_term": item.derived_term,
+        "old_form": item.derived_physical_form,
+        "applied": False,
+    }
+    
+    if not dry_run:
+        item.derived_physical_form = "Liquid"
+        item.updated_at = datetime.utcnow()
+        changes["new_form"] = "Liquid"
+        changes["applied"] = True
+    
+    return changes
+
+
+def apply_oil_form_check(item: CompiledClusterItemRecord, dry_run: bool = True) -> dict:
+    """Review items with 'Oil' form but non-oil variation.
+    
+    These may need form correction or variation adjustment.
+    """
+    return {
+        "item_id": item.id,
+        "derived_term": item.derived_term,
+        "variation": item.derived_variation,
+        "form": item.derived_physical_form,
+        "action": "Manual review - Oil form with non-oil variation",
+        "applied": False,  # Review only
+    }
+
+
 REFINEMENT_HANDLERS = {
     "kernel_to_seed": apply_kernel_to_seed,
     "fixed_to_carrier": apply_fixed_to_carrier,
     "generic_extract": apply_generic_extract,
+    "missing_var_form": apply_missing_var_form,
+    "herbs_default_raw": apply_herbs_default_raw,
+    "synthetic_in_botanical": apply_synthetic_in_botanical,
+    "hydrosol_form_fix": apply_hydrosol_form_fix,
+    "oil_form_check": apply_oil_form_check,
 }
 
 

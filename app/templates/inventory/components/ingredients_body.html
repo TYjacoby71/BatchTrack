@@ -332,7 +332,7 @@
                 <div class="action-menu">
                     <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" 
                        class="dropdown-item {{ 'text-muted' if item.is_archived else '' }}">View Details</a>
-                    {% if item.global_item_id %}
+                    {% if item.global_item_id and global_library_enabled %}
                       <button type="button" class="dropdown-item" data-global-item-id="{{ item.global_item_id }}" onclick="openGlobalItemStats('{{ item.global_item_id }}')">
                         View Global Stats
                       </button>

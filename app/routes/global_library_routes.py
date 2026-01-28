@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash, session, abort
 from flask_login import current_user
 from app.models import GlobalItem, InventoryItem
 from app.services.statistics import AnalyticsDataService
@@ -11,6 +11,7 @@ from app.utils.seo import slugify_value
 from app.extensions import limiter, cache
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 from app.services.cache_invalidation import global_library_cache_key
+from app.utils.settings import is_feature_enabled
 from app.services.global_item_listing_service import (
     DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
     DEFAULT_SCOPE as GLOBAL_LIBRARY_DEFAULT_SCOPE,
@@ -30,6 +31,12 @@ def _global_library_rate_limit() -> str:
     if current_user.is_authenticated:
         return "6000/hour;300/minute"
     return "600/hour;60/minute"
+
+
+def _global_library_enabled() -> bool:
+    if current_user.is_authenticated and getattr(current_user, "user_type", "") == "developer":
+        return True
+    return is_feature_enabled("FEATURE_GLOBAL_ITEM_LIBRARY")
 
 
 def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
@@ -78,6 +85,8 @@ def global_library():
       - category: ingredient category name (only when type=ingredient)
       - search: free text search across name and aka names
     """
+    if not _global_library_enabled():
+        abort(404)
     scope_param = (request.args.get('scope') or request.args.get('type') or '').strip()
     search_query = (request.args.get('search') or '').strip()
     raw_category = (request.args.get('category') or '').strip()
@@ -216,6 +225,8 @@ def global_library():
 @limiter.limit(_global_library_rate_limit)
 def global_item_detail(item_id: int, slug: Optional[str] = None):
     """Public detail page for a specific Global Item."""
+    if not _global_library_enabled():
+        abort(404)
     gi = GlobalItem.query.filter(
         GlobalItem.is_archived != True,
         GlobalItem.id == item_id,
@@ -322,6 +333,8 @@ def save_global_item_to_inventory(item_id: int):
     If unauthenticated, redirect to a lightweight free-account signup flow and
     then return here to complete the save.
     """
+    if not _global_library_enabled():
+        abort(404)
     gi = GlobalItem.query.filter(
         GlobalItem.is_archived != True,
         GlobalItem.id == item_id,
@@ -371,6 +384,8 @@ def global_library_item_stats(item_id: int):
     """Public stats endpoint for a GlobalItem, including cost distribution, rollup,
     and basic item details.
     """
+    if not _global_library_enabled():
+        abort(404)
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Stats request for global item {item_id}")

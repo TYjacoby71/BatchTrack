@@ -76,7 +76,7 @@ The application uses a modular blueprint architecture with three categories:
 - **Flask-Mail**: Email notifications (optional feature)
 
 ### Feature Flags
-The application uses JSON-based feature flags (`settings.json`) to toggle functionality:
+The application uses database-backed feature flags to toggle functionality:
 - FIFO tracking, barcode scanning, recipe variations
 - Cost tracking, expiration tracking
 - AI features, integrations, marketplace features

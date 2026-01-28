@@ -269,6 +269,7 @@ HTML_TEMPLATE = """
                     <button class="view-btn active" data-view="terms" onclick="setView('terms')">Terms</button>
                     <button class="view-btn" data-view="items" onclick="setView('items')">Items</button>
                     <button class="view-btn" data-view="clusters" onclick="setView('clusters')">Clusters</button>
+                    <button class="view-btn" data-view="refined" onclick="setView('refined')" style="background:#8b5cf6; color:#fff;">Refined</button>
                 </div>
             </div>
             <div class="filter-section">
@@ -539,6 +540,8 @@ HTML_TEMPLATE = """
                     </tr>`;
                 } else if (currentView === 'terms') {
                     thead.innerHTML = '<tr><th>Ingredient (term)</th><th>Items</th><th>Origin</th><th>Primary Category</th></tr>';
+                } else if (currentView === 'refined') {
+                    thead.innerHTML = '<tr><th>Term</th><th>Plant Part</th><th>Variation</th><th>Refinement</th><th>Form</th><th>Flag</th></tr>';
                 } else {
                     thead.innerHTML = '<tr><th>Cluster</th><th>Variation</th><th>Form</th><th>Status</th><th>Raw Specs</th><th>Compiled</th></tr>';
                 }
@@ -572,9 +575,15 @@ HTML_TEMPLATE = """
             
             let endpoint;
             if (currentDataset === 'compiled') {
-                endpoint = currentView === 'clusters'
-                    ? '/api/compiled/clusters'
-                    : (currentView === 'terms' ? '/api/compiled/ingredients' : '/api/compiled/items');
+                if (currentView === 'clusters') {
+                    endpoint = '/api/compiled/clusters';
+                } else if (currentView === 'terms') {
+                    endpoint = '/api/compiled/ingredients';
+                } else if (currentView === 'refined') {
+                    endpoint = '/api/compiled/refined';
+                } else {
+                    endpoint = '/api/compiled/items';
+                }
             } else {
                 if (currentView === 'terms') {
                     endpoint = '/api/terms';
@@ -592,13 +601,15 @@ HTML_TEMPLATE = """
                 .then(data => {
                     totalPages = data.total_pages;
                     
-                    if ((data.items || data.terms || data.clusters || []).length === 0) {
+                    if ((data.items || data.terms || data.clusters || data.ingredients || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
                     } else if (currentDataset === 'compiled') {
                         if (currentView === 'clusters') {
                             renderCompiledClustersView(data.clusters);
                         } else if (currentView === 'terms') {
                             renderCompiledIngredientsView(data.ingredients);
+                        } else if (currentView === 'refined') {
+                            renderRefinedItemsView(data.items);
                         } else {
                             renderCompiledItemsView(data.items);
                         }
@@ -661,6 +672,23 @@ HTML_TEMPLATE = """
                     <td>${row.item_status || '-'}</td>
                     <td>${rawSpecs}</td>
                     <td>${compiledBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function renderRefinedItemsView(items) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = (items || []).map(row => {
+                const partBadge = row.plant_part ? `<span class="badge" style="background:#dcfce7;color:#166534;">${row.plant_part}</span>` : '-';
+                const refBadge = row.refinement ? `<span class="badge" style="background:#fef3c7;color:#92400e;">${row.refinement}</span>` : '-';
+                const flagBadge = row.refinement_flag ? `<span class="badge" style="background:#fee2e2;color:#dc2626;">${row.refinement_flag}</span>` : '';
+                return `<tr class="item-row" onclick="showCompiledCluster('${(row.cluster_id || '').replace(/'/g, "\\'")}')">
+                    <td><strong>${row.derived_term || '-'}</strong></td>
+                    <td>${partBadge}</td>
+                    <td>${row.variation || '-'}</td>
+                    <td>${refBadge}</td>
+                    <td>${row.form || '-'}</td>
+                    <td>${flagBadge}</td>
                 </tr>`;
             }).join('');
         }
@@ -1717,6 +1745,54 @@ def api_compiled_ingredients():
 
     conn = get_db("final")
     cur = conn.cursor()
+    
+    # Use compiled_cluster_items for terms view
+    if _table_exists(conn, "compiled_cluster_items"):
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("derived_term LIKE ?")
+            params.append(f"%{search}%")
+        if category:
+            where_clauses.append("json_extract(item_json, '$.master_category') = ?")
+            params.append(category)
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # Count unique terms
+        cur.execute(f"SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items {where_sql}", params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            f"""
+            SELECT derived_term, 
+                   json_extract(item_json, '$.master_category') as category,
+                   COUNT(*) as item_count,
+                   GROUP_CONCAT(DISTINCT derived_variation) as variations
+            FROM compiled_cluster_items
+            {where_sql}
+            GROUP BY derived_term
+            ORDER BY derived_term
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+        rows = cur.fetchall()
+
+        ingredients = [
+            {
+                "term": r[0], 
+                "origin": "compiled", 
+                "ingredient_category": r[1] or "N/A", 
+                "item_count": int(r[2] or 0),
+                "variations": r[3] or ""
+            }
+            for r in rows
+        ]
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        conn.close()
+        return jsonify({"ingredients": ingredients, "total": total, "total_pages": total_pages, "page": page})
+    
+    # Fallback to legacy ingredients table
     if not _table_exists(conn, "ingredients"):
         conn.close()
         return jsonify({"ingredients": [], "total": 0, "total_pages": 1, "page": page})
@@ -1780,9 +1856,9 @@ def api_compiled_items():
         where_clauses = []
         params = []
         if search:
-            where_clauses.append("(cluster_id LIKE ? OR derived_term LIKE ? OR derived_variation LIKE ? OR derived_physical_form LIKE ?)")
+            where_clauses.append("(cluster_id LIKE ? OR derived_term LIKE ? OR derived_variation LIKE ? OR derived_physical_form LIKE ? OR derived_refinement LIKE ? OR refinement_flag LIKE ?)")
             s = f"%{search}%"
-            params.extend([s, s, s, s])
+            params.extend([s, s, s, s, s, s])
         where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
         cur.execute(f"SELECT COUNT(*) FROM compiled_cluster_items {where_sql}", params)
@@ -1792,7 +1868,8 @@ def api_compiled_items():
             f"""
             SELECT cluster_id, merged_item_form_id, derived_term, derived_variation, derived_physical_form, item_status,
                    CASE WHEN raw_item_json IS NOT NULL AND raw_item_json != '{{}}' THEN 1 ELSE 0 END as has_raw_specs,
-                   CASE WHEN item_json IS NOT NULL AND item_json != '{{}}' THEN 1 ELSE 0 END as has_compiled
+                   CASE WHEN item_json IS NOT NULL AND item_json != '{{}}' THEN 1 ELSE 0 END as has_compiled,
+                   derived_refinement, refinement_flag
             FROM compiled_cluster_items
             {where_sql}
             ORDER BY cluster_id, merged_item_form_id
@@ -1810,6 +1887,8 @@ def api_compiled_items():
                 "item_status": r[5],
                 "has_raw_specs": bool(r[6]),
                 "has_compiled": bool(r[7]),
+                "derived_refinement": r[8],
+                "refinement_flag": r[9],
             }
             for r in cur.fetchall()
         ]
@@ -1852,6 +1931,59 @@ def api_compiled_items():
             "physical_form": r[4],
             "status": r[5],
             "has_specs": bool(r[6]),
+        }
+        for r in cur.fetchall()
+    ]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    conn.close()
+    return jsonify({"items": items, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/compiled/refined")
+def api_compiled_refined():
+    page = int(request.args.get("page", 1))
+    search = (request.args.get("search") or "").strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"items": [], "total": 0, "total_pages": 1, "page": page})
+
+    where_clauses = []
+    params = []
+    if search:
+        where_clauses.append("(derived_term LIKE ? OR derived_plant_part LIKE ? OR derived_variation LIKE ? OR derived_refinement LIKE ? OR refinement_flag LIKE ?)")
+        s = f"%{search}%"
+        params.extend([s, s, s, s, s])
+    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+    cur.execute(f"SELECT COUNT(*) FROM compiled_cluster_items {where_sql}", params)
+    total = cur.fetchone()[0]
+
+    cur.execute(
+        f"""
+        SELECT id, cluster_id, derived_term, derived_plant_part, derived_variation, 
+               derived_refinement, derived_physical_form, refinement_flag
+        FROM compiled_cluster_items
+        {where_sql}
+        ORDER BY derived_term, derived_plant_part, derived_variation
+        LIMIT ? OFFSET ?
+        """,
+        params + [per_page, offset],
+    )
+    items = [
+        {
+            "id": r[0],
+            "cluster_id": r[1],
+            "derived_term": r[2],
+            "plant_part": r[3],
+            "variation": r[4],
+            "refinement": r[5],
+            "form": r[6],
+            "refinement_flag": r[7],
         }
         for r in cur.fetchall()
     ]

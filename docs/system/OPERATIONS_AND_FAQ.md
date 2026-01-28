@@ -62,8 +62,8 @@ This document pairs **plain-language instructions** for every major system actio
     - **Highlights:** Authenticated routes follow Flask-Login session, developer endpoints allow org impersonation, drawer endpoints help frontends collect missing data, public APIs limited to units + global-item search + unit conversion.
 
 13. ### [Billing, Tiers, and Feature Flags](#instruction-billing)
-    - **Source Docs:** [`docs/system/FREE_TIER.md`](FREE_TIER.md), `app/services/billing_service.py`, `settings.json` feature flags.
-    - **Steps:** Stripe webhook updates Billing Snapshot → Billing Service gates routes → `has_subscription_feature` hides/show UI; developer flags toggle experiments in `settings.json`.
+    - **Source Docs:** [`docs/system/FREE_TIER.md`](FREE_TIER.md), `app/services/billing_service.py`, database-backed feature flags.
+    - **Steps:** Stripe webhook updates Billing Snapshot → Billing Service gates routes → `has_subscription_feature` hides/show UI; developer flags toggle experiments in the database.
 
 14. ### [Deployments, Migrations, and Monitoring](#instruction-devops)
     - **Source Docs:** [`docs/system/deploy_migration_guide.md`](deploy_migration_guide.md), [`docs/system/DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md#database-changes), [`docs/system/ARCHITECTURE.md`](ARCHITECTURE.md#monitoring--observability).

@@ -1,0 +1,46 @@
+<div class="tab-pane fade show active" id="soapStage1Pane" role="tabpanel" aria-labelledby="soapStage1Tab">
+  <div class="soap-stage-body p-3" data-stage-index="0">
+    <div class="row g-3 align-items-start soap-stage-form-row soap-config-row">
+        <div class="col-md-6">
+          <label class="form-label"><span class="badge bg-secondary me-1">1</span>Lye type</label>
+          <div class="btn-group w-100" role="group" aria-label="Lye type">
+            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeNaoh" value="NaOH" checked>
+            <label class="btn btn-outline-secondary" for="lyeTypeNaoh">NaOH</label>
+            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeKoh" value="KOH">
+            <label class="btn btn-outline-secondary" for="lyeTypeKoh">KOH</label>
+            <input type="radio" class="btn-check" name="lye_type" id="lyeTypeKoh90" value="KOH90">
+            <label class="btn btn-outline-secondary" for="lyeTypeKoh90">90% KOH</label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><span class="badge bg-secondary me-1">2</span>Units</label>
+          <div class="btn-group w-100" role="group" aria-label="Weight units">
+            <input type="radio" class="btn-check" name="weight_unit" id="unitGrams" value="g" checked>
+            <label class="btn btn-outline-secondary" for="unitGrams">g</label>
+            <input type="radio" class="btn-check" name="weight_unit" id="unitOunces" value="oz">
+            <label class="btn btn-outline-secondary" for="unitOunces">oz</label>
+            <input type="radio" class="btn-check" name="weight_unit" id="unitPounds" value="lb">
+            <label class="btn btn-outline-secondary" for="unitPounds">lb</label>
+          </div>
+        </div>
+      </div>
+    <div class="row g-3 align-items-start soap-stage-form-row soap-config-row mt-2">
+        <div class="col-md-6">
+          <label class="form-label"><span class="badge bg-secondary me-1">3</span>Water method</label>
+          <select class="form-select" id="waterMethod" name="water_method">
+            <option value="percent">Water as % of oils</option>
+            <option value="concentration">Lye concentration %</option>
+            <option value="ratio">Water : Lye ratio</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><span class="badge bg-secondary me-1">4</span>Superfat</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
+            <span class="input-group-text">%</span>
+          </div>
+          <div class="form-text soap-stage-note">5% is a balanced default.</div>
+        </div>
+      </div>
+    </div>
+</div>

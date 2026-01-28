@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional
 
 from flask import current_app
 
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.json_store import write_json_file
+from app.utils.settings import get_settings, save_settings
 
 
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
@@ -17,50 +18,68 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             {
                 "key": "FEATURE_FIFO_TRACKING",
                 "label": "FIFO Inventory Tracking",
-                "status": "wired",
-                "description": "First-in-first-out inventory tracking via the inventory adjustment service.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Standard FIFO behavior baked into inventory adjustments (always on).",
             },
             {
                 "key": "FEATURE_BARCODE_SCANNING",
                 "label": "Barcode Scanning",
                 "status": "stub",
+                "default_enabled": False,
                 "description": "Placeholder for future scanner integrations.",
             },
             {
                 "key": "FEATURE_PRODUCT_VARIANTS",
                 "label": "Product Variants System",
-                "status": "wired",
-                "description": "Manage SKUs with variants powered by ProductService.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Variant-ready product catalog (always on).",
             },
             {
                 "key": "FEATURE_AUTO_SKU_GENERATION",
                 "label": "Auto-generate SKUs",
-                "status": "wired",
-                "description": "Automatically create SKU codes when products are saved.",
-            },
-            {
-                "key": "FEATURE_RECIPE_VARIATIONS",
-                "label": "Recipe Variations",
-                "status": "wired",
-                "description": "Support parent/child recipe relationships.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "SKU generation is part of product creation (always on).",
             },
             {
                 "key": "FEATURE_COST_TRACKING",
                 "label": "Cost Tracking & Profit Margins",
-                "status": "wired",
-                "description": "Costing engine + FIFO/average cost calculations.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Core costing engine and margin calculations (always on).",
             },
             {
                 "key": "FEATURE_EXPIRATION_TRACKING",
                 "label": "Expiration Date Tracking",
-                "status": "wired",
-                "description": "Lot-based expiration alerts and services.",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Lot-based expiration handling (always on).",
             },
             {
-                "key": "FEATURE_BULK_OPERATIONS",
-                "label": "Bulk Inventory Operations",
+                "key": "FEATURE_BULK_STOCK_CHECK",
+                "label": "Bulk Stock Check",
                 "status": "wired",
-                "description": "Bulk stock adjustments and checks.",
+                "default_enabled": False,
+                "description": "Multi-recipe stock check and shopping list exports.",
+            },
+            {
+                "key": "FEATURE_BULK_INVENTORY_UPDATES",
+                "label": "Bulk Inventory Updates",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Bulk inventory adjustments and high-volume update tooling.",
             },
         ],
     },
@@ -69,40 +88,79 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "description": "Capabilities intended for internal tooling or staging environments.",
         "flags": [
             {
-                "key": "FEATURE_INVENTORY_ANALYTICS",
-                "label": "Inventory Analytics (Developer)",
+                "key": "FEATURE_MERGE_SKUS",
+                "label": "Merge SKUs",
                 "status": "wired",
-                "description": "Developer-only analytics dashboard and APIs.",
+                "default_enabled": True,
+                "description": "Merge multiple SKUs into a single consolidated SKU.",
             },
             {
-                "key": "FEATURE_DEBUG_MODE",
-                "label": "Debug Mode",
-                "status": "stub",
-                "description": "Verbose logging & unsafe diagnostics.",
-            },
-            {
-                "key": "FEATURE_AUTO_BACKUP",
-                "label": "Auto-backup System",
-                "status": "stub",
-                "description": "Nightly exports of core tables.",
+                "key": "FEATURE_AUTO_BULK_SKU_ON_VARIANT",
+                "label": "Auto-create Bulk SKU on Variant",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Require a unit and create a Bulk SKU when adding a variant.",
             },
             {
                 "key": "FEATURE_CSV_EXPORT",
                 "label": "CSV Export",
                 "status": "wired",
+                "default_enabled": False,
                 "description": "Downloadable CSV exports for reports.",
             },
             {
                 "key": "FEATURE_ADVANCED_REPORTS",
                 "label": "Advanced Reports",
                 "status": "stub",
+                "default_enabled": False,
                 "description": "Future premium reporting suite.",
             },
             {
                 "key": "FEATURE_GLOBAL_ITEM_LIBRARY",
                 "label": "Global Item Library Access",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Org access to the shared global inventory library.",
+            },
+        ],
+    },
+    {
+        "title": "Organization administration",
+        "description": "Controls for organization-level management tooling.",
+        "flags": [
+            {
+                "key": "FEATURE_ORG_ROLE_MANAGEMENT",
+                "label": "Role Management Tab",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Show the Role Management tab on the organization dashboard.",
+            },
+        ],
+    },
+    {
+        "title": "Commerce & POS integrations",
+        "description": "Stubbed flags for future ecommerce and POS entry points.",
+        "flags": [
+            {
+                "key": "FEATURE_ECOMMERCE_INTEGRATIONS",
+                "label": "E-commerce Integration Hub",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Gate the entry point for ecommerce integration workflows.",
+            },
+            {
+                "key": "FEATURE_SHOPIFY_INTEGRATION",
+                "label": "Shopify Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Shopify integration surfaces.",
+            },
+            {
+                "key": "FEATURE_ETSY_INTEGRATION",
+                "label": "Etsy Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Etsy marketplace integration surfaces.",
             },
         ],
     },
@@ -111,64 +169,25 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         "description": "Controls for sharing recipes publicly and exposing the marketplace surface.",
         "flags": [
             {
-                "key": "FEATURE_RECIPE_SHARING_CONTROLS",
-                "label": "Recipe Sharing Controls",
-                "status": "wired",
-                "description": "Enable private/public/free/sale selectors on recipe forms.",
-            },
-            {
                 "key": "FEATURE_RECIPE_LIBRARY_NAV",
                 "label": "Recipe Library Navigation",
                 "status": "wired",
+                "default_enabled": False,
                 "description": "Expose the public recipe library link in customer menus.",
             },
             {
-                "key": "FEATURE_RECIPE_PURCHASE_OPTIONS",
-                "label": "Public Purchase Buttons",
+                "key": "FEATURE_RECIPE_MARKETPLACE_DISPLAY",
+                "label": "Recipe Marketplace Display",
                 "status": "wired",
-                "description": "Show Shopify purchase links inside the public recipe library.",
+                "default_enabled": True,
+                "description": "Show marketplace pages, purchase buttons, and org marketplace links.",
             },
             {
-                "key": "FEATURE_ORG_MARKETPLACE_DASHBOARD",
-                "label": "Organization Marketplace",
+                "key": "FEATURE_RECIPE_MARKETPLACE_LISTINGS",
+                "label": "Recipe Listing Controls",
                 "status": "wired",
-                "description": "Enable the organization-specific public marketplace dashboard and related links.",
-            },
-        ],
-    },
-    {
-        "title": "Notifications & integrations",
-        "description": "Toggle customer-facing communications and external app hooks.",
-        "flags": [
-            {
-                "key": "FEATURE_EMAIL_NOTIFICATIONS",
-                "label": "Email Notifications",
-                "status": "wired",
-                "description": "Transactional + lifecycle email delivery.",
-            },
-            {
-                "key": "FEATURE_BROWSER_NOTIFICATIONS",
-                "label": "Browser Push Notifications",
-                "status": "stub",
-                "description": "Web push notifications to the browser.",
-            },
-            {
-                "key": "FEATURE_SHOPIFY_INTEGRATION",
-                "label": "Shopify Integration",
-                "status": "stub",
-                "description": "Future e-commerce sync pipeline.",
-            },
-            {
-                "key": "FEATURE_API_ACCESS",
-                "label": "REST API Access",
-                "status": "stub",
-                "description": "Public REST API for third-party apps.",
-            },
-            {
-                "key": "FEATURE_OAUTH_PROVIDERS",
-                "label": "OAuth Login Providers",
-                "status": "wired",
-                "description": "Google/Facebook sign-in support.",
+                "default_enabled": True,
+                "description": "Allow listing controls inside the recipe edit experience.",
             },
         ],
     },
@@ -180,18 +199,21 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "key": "FEATURE_AI_RECIPE_OPTIMIZATION",
                 "label": "AI Recipe Optimization",
                 "status": "stub",
+                "default_enabled": False,
                 "description": "ML-assisted formulation suggestions.",
             },
             {
                 "key": "FEATURE_AI_DEMAND_FORECASTING",
                 "label": "AI Demand Forecasting",
                 "status": "stub",
+                "default_enabled": False,
                 "description": "Predict demand to guide purchasing.",
             },
             {
                 "key": "FEATURE_AI_QUALITY_INSIGHTS",
                 "label": "AI Quality Insights",
                 "status": "stub",
+                "default_enabled": False,
                 "description": "Automated quality checks & anomaly detection.",
             },
         ],
@@ -204,30 +226,35 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "key": "TOOLS_SOAP",
                 "label": "Soap Making Tools",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Saponification & curing calculators.",
             },
             {
                 "key": "TOOLS_CANDLES",
                 "label": "Candle Making Tools",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Wick, wax, and fragrance load calculators.",
             },
             {
                 "key": "TOOLS_LOTIONS",
                 "label": "Lotion & Cosmetic Tools",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Batch math for cosmetics and topicals.",
             },
             {
                 "key": "TOOLS_HERBAL",
                 "label": "Herbalist Tools",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Tincture and infusion helpers.",
             },
             {
                 "key": "TOOLS_BAKING",
                 "label": "Baking Tools",
                 "status": "wired",
+                "default_enabled": True,
                 "description": "Recipe scaling for bakers & confectioners.",
             },
         ],
@@ -480,7 +507,7 @@ class DeveloperDashboardService:
             key in payload
             for key in ("messages", "promo_codes", "demo_url", "demo_videos")
         ):
-            cfg = read_json_file("settings.json", default={}) or {}
+            cfg = get_settings()
             if "messages" in payload:
                 cfg["marketing_messages"] = payload["messages"]
             if "promo_codes" in payload:
@@ -489,7 +516,7 @@ class DeveloperDashboardService:
                 cfg["demo_url"] = payload["demo_url"]
             if "demo_videos" in payload:
                 cfg["demo_videos"] = payload["demo_videos"]
-            write_json_file("settings.json", cfg)
+            save_settings(cfg)
 
     @staticmethod
     def build_batchley_context() -> BatchleyContext:
@@ -586,6 +613,15 @@ class DeveloperDashboardService:
     @staticmethod
     def get_feature_flag_sections() -> List[Dict[str, Any]]:
         return FEATURE_FLAG_SECTIONS
+
+    @staticmethod
+    def get_toggleable_feature_keys() -> set[str]:
+        toggleable: set[str] = set()
+        for section in FEATURE_FLAG_SECTIONS:
+            for flag in section.get("flags", []):
+                if flag.get("toggle", True):
+                    toggleable.add(flag["key"])
+        return toggleable
 
     @staticmethod
     def get_waitlist_statistics(force_refresh: bool = False) -> Dict[str, Any]:

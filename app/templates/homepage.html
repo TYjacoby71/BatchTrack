@@ -127,6 +127,7 @@
 </head>
 <body>
     <!-- Header with Navigation -->
+    {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
         <div class="container">
             <a class="navbar-brand text-primary" href="#">
@@ -145,9 +146,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/tools/">Tools</a>
                     </li>
+                    {% if global_library_enabled %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">Inventory Library</a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="#pricing">Pricing</a>
                     </li>

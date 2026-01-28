@@ -1,0 +1,26 @@
+<div class="card mt-2 mb-2" id="soapResultsActionsCard">
+  <div class="card-header">
+    <strong>Guidance &amp; Actions</strong>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info mb-2">
+      Always add lye to water (never water to lye) and wear protective gear.
+    </div>
+    <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
+    <div class="border rounded p-2 mt-3">
+      <div class="small text-muted mb-1">Visual guidance</div>
+      <ul class="small mb-0" id="soapVisualGuidanceList"></ul>
+    </div>
+    <div class="small text-muted mt-2">
+      Batch yield includes water and additives; expect weight loss during cure.
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
+        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#soapDownloadPreviewModal">Preview download</button>
+      </div>
+      <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
+    </div>
+  </div>
+</div>

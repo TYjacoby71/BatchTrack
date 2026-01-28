@@ -44,7 +44,7 @@
               {% else %}
               <span class="badge bg-danger">Missing</span>
               <div class="small text-muted">
-                Add via {{ 'environment or settings.json' if item.allow_config else 'environment variables' }}
+                Add via {{ 'environment or app config' if item.allow_config else 'environment variables' }}
               </div>
               {% endif %}
             </div>
@@ -114,6 +114,72 @@
           </ul>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Integrations Registry</h4>
+      <p class="text-muted small mb-0">Single source of truth for integration readiness, permissions, and toggles.</p>
+    </div>
+    <div class="card-body">
+      {% for category in integration_categories %}
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-uppercase text-muted small mb-0">{{ category.title }}</h6>
+        </div>
+        <div class="row g-3">
+          {% for integration in category["items"] %}
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="fw-semibold">{{ integration.label }}</div>
+                  <div class="small text-muted">{{ integration.description }}</div>
+                </div>
+                <span class="badge {% if integration.status == 'wired' %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ integration.status | capitalize }}
+                </span>
+              </div>
+              {% if integration.required_env %}
+              <div class="small text-muted mt-2">
+                Required env:
+                {% for key in integration.required_env %}
+                  <code>{{ key }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if integration.ready %}
+                  <span class="badge bg-success ms-1">Configured</span>
+                {% else %}
+                  <span class="badge bg-danger ms-1">Missing</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% if integration.permission %}
+              <div class="small text-muted mt-1">Permission: <code>{{ integration.permission }}</code></div>
+              {% endif %}
+              {% if integration.toggleable %}
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input integration-toggle" type="checkbox" role="switch"
+                         id="toggle_{{ integration.key }}"
+                         data-status-key="{{ integration.key }}"
+                         data-toggle-url="{{ url_for(integration.toggle_endpoint) }}"
+                         {% if integration.enabled %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold" for="toggle_{{ integration.key }}">Enabled</label>
+                </div>
+                <span class="badge bg-secondary">Stub</span>
+              </div>
+              <div class="small text-muted mt-2 integration-toggle-status" data-status-key="{{ integration.key }}" style="display:none;"></div>
+              {% endif %}
+              {% if integration.notes %}
+              <div class="small text-muted mt-2">{{ integration.notes }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 
@@ -192,5 +258,44 @@ async function checkWebhook() {
     document.getElementById('webhookCheck').textContent = 'Error checking webhook';
   }
 }
+
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+document.querySelectorAll('.integration-toggle').forEach(toggle => {
+  toggle.addEventListener('change', async () => {
+    const statusKey = toggle.dataset.statusKey;
+    const statusEl = document.querySelector(`.integration-toggle-status[data-status-key="${statusKey}"]`);
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Saving...';
+    }
+    try {
+      const resp = await fetch(toggle.dataset.toggleUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({ enabled: toggle.checked })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        if (statusEl) statusEl.textContent = 'Updated.';
+      } else if (statusEl) {
+        statusEl.textContent = data.error || 'Failed to update.';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'Failed to update.';
+    }
+    if (statusEl) {
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 3000);
+    }
+  });
+});
 </script>
 {% endblock %}

@@ -8,6 +8,8 @@ from flask.cli import with_appcontext
 from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
+    seed_app_settings,
+    seed_feature_flags,
     seed_units,
     seed_subscriptions
 )
@@ -76,6 +78,20 @@ def init_production_command():
             print("✅ Subscription tiers seeded")
         except Exception as e:
             print(f"⚠️  Subscription seeding issue: {e}")
+            print("   Continuing with remaining steps...")
+
+        try:
+            seed_feature_flags()            # Independent - seeds feature flag defaults
+            print("✅ Feature flags seeded")
+        except Exception as e:
+            print(f"⚠️  Feature flag seeding issue: {e}")
+            print("   Continuing with remaining steps...")
+
+        try:
+            seed_app_settings()            # Independent - seeds default settings
+            print("✅ App settings seeded")
+        except Exception as e:
+            print(f"⚠️  App settings seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
         # Add-ons registry (independent)
@@ -302,6 +318,36 @@ def seed_sub_tiers_command():
         print('✅ Subscription tiers seeded successfully!')
     except Exception as e:
         print(f'❌ Subscription tier seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+
+@click.command('seed-feature-flags')
+@with_appcontext
+def seed_feature_flags_command():
+    """Seed feature flags from the catalog"""
+    try:
+        print("🔄 Seeding feature flags...")
+        from .seeders.feature_flag_seeder import seed_feature_flags
+        seed_feature_flags()
+        print("✅ Feature flags seeded successfully!")
+    except Exception as e:
+        print(f"❌ Feature flag seeding failed: {str(e)}")
+        db.session.rollback()
+        raise
+
+
+@click.command('seed-app-settings')
+@with_appcontext
+def seed_app_settings_command():
+    """Seed default app settings"""
+    try:
+        print("🔄 Seeding app settings...")
+        from .seeders.app_settings_seeder import seed_app_settings
+        seed_app_settings()
+        print("✅ App settings seeded successfully!")
+    except Exception as e:
+        print(f"❌ App settings seeding failed: {str(e)}")
         db.session.rollback()
         raise
 
@@ -996,6 +1042,8 @@ def register_commands(app):
     app.cli.add_command(seed_organizations_command)
     app.cli.add_command(seed_units_command)
     app.cli.add_command(seed_sub_tiers_command)
+    app.cli.add_command(seed_feature_flags_command)
+    app.cli.add_command(seed_app_settings_command)
     app.cli.add_command(seed_categories_command)
     app.cli.add_command(seed_product_categories_command) # Added new command
     app.cli.add_command(seed_test_data_command)
