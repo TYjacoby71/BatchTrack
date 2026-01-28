@@ -95,7 +95,7 @@ class SubscriptionTier(db.Model):
         """Check if tier includes a specific permission"""
         if hasattr(permission_name, 'value'):
             permission_name = permission_name.value
-        return any(p.name == permission_name for p in self.permissions)
+        return any(p.name == permission_name and p.is_active for p in self.permissions)
 
     @property
     def is_billing_exempt(self):

@@ -20,6 +20,46 @@ def get_tier_permissions(tier_key):
         Permission.is_active == True
     ).all()
 
+
+def _load_permission_catalog():
+    """Load permission metadata from the consolidated catalog."""
+    try:
+        from app.seeders.consolidated_permission_seeder import load_consolidated_permissions
+        data = load_consolidated_permissions()
+    except Exception:
+        return {}
+
+    catalog = {}
+    for scope_key in ("organization_permissions", "developer_permissions"):
+        for category_key, category_data in data.get(scope_key, {}).items():
+            for perm in category_data.get("permissions", []):
+                name = perm.get("name")
+                if not name:
+                    continue
+                entry = catalog.setdefault(
+                    name,
+                    {
+                        "description": perm.get("description") or perm.get("display_name") or name,
+                        "org_category": None,
+                        "dev_category": None,
+                    },
+                )
+                if scope_key == "organization_permissions":
+                    entry["org_category"] = category_key
+                else:
+                    entry["dev_category"] = category_key
+    return catalog
+
+
+def _resolve_permission_metadata(name, catalog, *, prefer_org: bool):
+    meta = catalog.get(name, {})
+    description = meta.get("description") or name
+    if prefer_org:
+        category = meta.get("org_category") or meta.get("dev_category") or "general"
+    else:
+        category = meta.get("dev_category") or meta.get("org_category") or "general"
+    return description, category
+
 @auth_bp.route('/permissions')
 @login_required
 def manage_permissions():
@@ -28,51 +68,179 @@ def manage_permissions():
     if not current_user.user_type == 'developer':
         abort(403)
 
-    # Get both developer permissions and organization permissions
-    dev_permissions = DeveloperPermission.query.all()
-    org_permissions = Permission.query.all()
+    catalog = _load_permission_catalog()
+    permission_registry = {}
 
-    # Combine all permissions with type indicator
-    all_permissions = []
+    # Start with catalog entries so new permissions appear even if not seeded yet.
+    for name, meta in catalog.items():
+        permission_registry[name] = {
+            "name": name,
+            "description": meta.get("description") or name,
+            "org_category": meta.get("org_category"),
+            "dev_category": meta.get("dev_category"),
+            "dev_enabled": False,
+            "customer_enabled": False,
+            "dev_active": False,
+            "customer_active": False,
+        }
 
-    # Add developer permissions
-    for perm in dev_permissions:
-        all_permissions.append({
-            'id': perm.id,
-            'name': perm.name,
-            'description': perm.description,
-            'category': perm.category or 'general',
-            'is_active': perm.is_active,
-            'type': 'developer',
-            'table': 'developer_permission'
-        })
+    for perm in DeveloperPermission.query.all():
+        if perm.name.startswith("app."):
+            continue
+        entry = permission_registry.setdefault(
+            perm.name,
+            {
+                "name": perm.name,
+                "description": perm.description or perm.name,
+                "org_category": None,
+                "dev_category": perm.category,
+                "dev_enabled": False,
+                "customer_enabled": False,
+                "dev_active": False,
+                "customer_active": False,
+            },
+        )
+        entry["dev_enabled"] = True
+        entry["dev_active"] = bool(perm.is_active)
+        entry["dev_category"] = entry.get("dev_category") or perm.category
+        if not entry.get("description"):
+            entry["description"] = perm.description or perm.name
 
-    # Add organization permissions
-    for perm in org_permissions:
-        all_permissions.append({
-            'id': perm.id,
-            'name': perm.name,
-            'description': perm.description,
-            'category': perm.category or 'general',
-            'is_active': perm.is_active,
-            'type': 'organization',
-            'table': 'permission'
-        })
+    for perm in Permission.query.all():
+        entry = permission_registry.setdefault(
+            perm.name,
+            {
+                "name": perm.name,
+                "description": perm.description or perm.name,
+                "org_category": perm.category,
+                "dev_category": None,
+                "dev_enabled": False,
+                "customer_enabled": False,
+                "dev_active": False,
+                "customer_active": False,
+            },
+        )
+        entry["customer_enabled"] = True
+        entry["customer_active"] = bool(perm.is_active)
+        entry["org_category"] = entry.get("org_category") or perm.category
+        if not entry.get("description"):
+            entry["description"] = perm.description or perm.name
 
-    # Organize by category
     permission_categories = {}
-    for perm in all_permissions:
-        category = perm['category']
-        if category not in permission_categories:
-            permission_categories[category] = []
-        permission_categories[category].append(perm)
+    for entry in permission_registry.values():
+        category = entry.get("org_category") or entry.get("dev_category") or "general"
+        permission_categories.setdefault(category, []).append(
+            {
+                "name": entry["name"],
+                "description": entry.get("description") or entry["name"],
+                "dev_enabled": entry["dev_enabled"],
+                "customer_enabled": entry["customer_enabled"],
+                "active": entry["dev_active"] or entry["customer_active"],
+                "customer_allowed": not entry["name"].startswith("dev."),
+            }
+        )
 
-    # Sort categories and permissions within each category
     for category in permission_categories:
-        permission_categories[category].sort(key=lambda x: x['name'])
+        permission_categories[category].sort(key=lambda x: x["name"])
+    permission_categories = dict(sorted(permission_categories.items(), key=lambda item: item[0]))
 
-    return render_template('pages/auth/permissions.html', 
-                         permission_categories=permission_categories)
+    return render_template(
+        'pages/auth/permissions.html',
+        permission_categories=permission_categories
+    )
+
+
+@auth_bp.route('/permissions/update', methods=['POST'])
+@login_required
+def update_permission_matrix():
+    """Update permission availability for dev/customer scopes."""
+    if not current_user.user_type == 'developer':
+        return jsonify({'success': False, 'message': 'Insufficient permissions'}), 403
+
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    dev_enabled = bool(data.get('dev_enabled'))
+    customer_enabled = bool(data.get('customer_enabled'))
+    is_active = bool(data.get('is_active'))
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Permission name is required'}), 400
+    if name.startswith("dev.") and customer_enabled:
+        return jsonify({'success': False, 'message': 'Developer permissions cannot be customer-scoped'}), 400
+
+    catalog = _load_permission_catalog()
+
+    try:
+        dev_perm = DeveloperPermission.query.filter_by(name=name).first()
+        org_perm = Permission.query.filter_by(name=name).first()
+
+        if dev_enabled:
+            description, category = _resolve_permission_metadata(name, catalog, prefer_org=False)
+            if not dev_perm:
+                dev_perm = DeveloperPermission(
+                    name=name,
+                    description=description,
+                    category=category,
+                    is_active=is_active,
+                )
+                db.session.add(dev_perm)
+            else:
+                dev_perm.description = description
+                dev_perm.category = category
+                dev_perm.is_active = is_active
+        elif dev_perm:
+            dev_perm.developer_roles = []
+            db.session.delete(dev_perm)
+
+        if customer_enabled:
+            description, category = _resolve_permission_metadata(name, catalog, prefer_org=True)
+            if not org_perm:
+                org_perm = Permission(
+                    name=name,
+                    description=description,
+                    category=category,
+                    is_active=is_active,
+                )
+                db.session.add(org_perm)
+            else:
+                org_perm.description = description
+                org_perm.category = category
+                org_perm.is_active = is_active
+        elif org_perm:
+            org_perm.roles = []
+            try:
+                for tier in org_perm.tiers.all():
+                    org_perm.tiers.remove(tier)
+            except Exception:
+                pass
+            db.session.delete(org_perm)
+
+        from app.models.developer_role import DeveloperRole
+        system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
+        if system_admin_role:
+            system_admin_role.permissions = DeveloperPermission.query.filter_by(
+                is_active=True
+            ).all()
+
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            org_owner_role.permissions = Permission.query.filter_by(is_active=True).all()
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'permission': {
+                'name': name,
+                'dev_enabled': dev_enabled,
+                'customer_enabled': customer_enabled,
+                'active': is_active if (dev_enabled or customer_enabled) else False,
+                'customer_allowed': not name.startswith('dev.')
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error updating permission: {str(e)}'}), 500
 
 @auth_bp.route('/permissions/toggle-status', methods=['POST'])
 @login_required

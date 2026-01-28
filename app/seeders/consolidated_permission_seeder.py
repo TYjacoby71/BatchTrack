@@ -209,20 +209,91 @@ def cleanup_old_permissions():
         for perm in category_data['permissions']:
             dev_perm_names.add(perm['name'])
 
-    # Find and deactivate old organization permissions
+    _normalize_legacy_developer_permissions()
+
+    # Find and remove old organization permissions (and associations)
     old_org_perms = Permission.query.filter(~Permission.name.in_(org_perm_names)).all()
     for perm in old_org_perms:
-        perm.is_active = False
-        print(f"Deactivated old organization permission: {perm.name}")
+        perm.roles = []
+        try:
+            for tier in perm.tiers.all():
+                perm.tiers.remove(tier)
+        except Exception:
+            pass
+        db.session.delete(perm)
+        print(f"Removed old organization permission: {perm.name}")
 
-    # Find and deactivate old developer permissions
-    old_dev_perms = DeveloperPermission.query.filter(~DeveloperPermission.name.in_(dev_perm_names)).all()
+    # Remove legacy app.* developer permissions outright
+    legacy_dev_perms = DeveloperPermission.query.filter(
+        DeveloperPermission.name.like("app.%")
+    ).all()
+    for perm in legacy_dev_perms:
+        perm.developer_roles = []
+        db.session.delete(perm)
+        print(f"Removed legacy developer permission: {perm.name}")
+
+    # Find and remove old developer permissions (keep shared org names too)
+    allowed_dev_names = dev_perm_names.union(org_perm_names)
+    old_dev_perms = DeveloperPermission.query.filter(~DeveloperPermission.name.in_(allowed_dev_names)).all()
     for perm in old_dev_perms:
-        perm.is_active = False
-        print(f"Deactivated old developer permission: {perm.name}")
+        perm.developer_roles = []
+        db.session.delete(perm)
+        print(f"Removed old developer permission: {perm.name}")
+
+    _cleanup_orphan_permission_links()
 
     db.session.commit()
     print("✅ Cleaned up old permissions")
+
+
+def _normalize_legacy_developer_permissions():
+    """Map legacy developer.* names to dev.* equivalents."""
+    legacy = DeveloperPermission.query.filter(
+        DeveloperPermission.name.like("developer.%")
+    ).all()
+    if not legacy:
+        return
+
+    for perm in legacy:
+        suffix = perm.name.split("developer.", 1)[-1]
+        new_name = f"dev.{suffix}"
+        existing = DeveloperPermission.query.filter_by(name=new_name).first()
+        if existing:
+            for role in perm.developer_roles:
+                if role not in existing.developer_roles:
+                    existing.developer_roles.append(role)
+            db.session.delete(perm)
+            print(f"Merged legacy permission {perm.name} into {new_name}")
+        else:
+            perm.name = new_name
+            print(f"Renamed legacy permission {perm.name} -> {new_name}")
+
+
+def _cleanup_orphan_permission_links():
+    """Remove orphaned rows in permission join tables."""
+    from sqlalchemy import text
+
+    db.session.execute(
+        text(
+            "DELETE FROM role_permission "
+            "WHERE permission_id NOT IN (SELECT id FROM permission) "
+            "OR role_id NOT IN (SELECT id FROM role)"
+        )
+    )
+    db.session.execute(
+        text(
+            "DELETE FROM subscription_tier_permission "
+            "WHERE permission_id NOT IN (SELECT id FROM permission) "
+            "OR tier_id NOT IN (SELECT id FROM subscription_tier)"
+        )
+    )
+    db.session.execute(
+        text(
+            "DELETE FROM developer_role_permission "
+            "WHERE developer_permission_id NOT IN (SELECT id FROM developer_permission) "
+            "OR developer_role_id NOT IN (SELECT id FROM developer_role)"
+        )
+    )
 
 def seed_organization_roles():
     """Seed initial organization system roles (these can be used by any organization)"""

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deactivate legacy app.* developer permissions (non-customer)."""
+"""Remove legacy app.* developer permissions (non-customer)."""
 
 from __future__ import annotations
 
@@ -21,14 +21,14 @@ def cleanup_developer_permissions():
 
         legacy_ids = {perm.id for perm in legacy_perms}
         for perm in legacy_perms:
-            perm.is_active = False
+            db.session.delete(perm)
 
         roles = DeveloperRole.query.all()
         for role in roles:
             role.permissions = [p for p in role.permissions if p.id not in legacy_ids]
 
         db.session.commit()
-        print(f"✅ Deactivated {len(legacy_perms)} legacy app.* developer permissions")
+        print(f"✅ Removed {len(legacy_perms)} legacy app.* developer permissions")
 
 
 if __name__ == "__main__":

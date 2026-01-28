@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import get_recipe_details
 from app.utils.permissions import _org_tier_includes_permission, has_permission
+from app.utils.settings import is_feature_enabled
 
 from .. import recipes_bp
 from ..lineage_utils import build_lineage_path, serialize_lineage_tree
@@ -72,8 +73,10 @@ def recipe_lineage(recipe_id):
         origin_marketplace_enabled = _org_tier_includes_permission(
             origin_source_org, "recipes.marketplace_dashboard"
         )
-    show_origin_marketplace = origin_marketplace_enabled and has_permission(
-        current_user, "recipes.marketplace_dashboard"
+    show_origin_marketplace = (
+        is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_DISPLAY")
+        and origin_marketplace_enabled
+        and has_permission(current_user, "recipes.marketplace_dashboard")
     )
 
     return render_template(

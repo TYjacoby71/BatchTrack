@@ -91,11 +91,12 @@
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
             </a>
-            {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') %}
+            {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
+            {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') and marketplace_display_enabled %}
             {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
             {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
             {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
-            {% set show_recipe_library_link = recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+            {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
             {% set has_nav_center = navbar_center_title is defined and navbar_center_title %}
             {% if has_nav_center %}
             <div class="position-absolute top-50 start-50 translate-middle text-center">
