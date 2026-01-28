@@ -178,7 +178,7 @@ def billing_integration():
 
 
 @developer_bp.route("/waitlist-statistics")
-@require_developer_permission("system_admin")
+@require_developer_permission("dev.system_admin")
 def waitlist_statistics():
     """View waitlist statistics and data."""
     force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")

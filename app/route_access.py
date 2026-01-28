@@ -46,6 +46,7 @@ class RouteAccessConfig:
         "/homepage",
         "/legal/",
         "/static/",
+        "/favicon.ico",
         "/auth/login",
         "/auth/signup",
         "/auth/logout",
@@ -63,6 +64,7 @@ class RouteAccessConfig:
         "/developer/",
         "/auth/permissions",
         "/global-items",
+        "/api/drawers",
     )
 
     MONITORING_PATHS: Tuple[str, ...] = (
