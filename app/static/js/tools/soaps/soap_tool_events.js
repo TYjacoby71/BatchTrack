@@ -386,10 +386,13 @@
     });
   }
 
-  document.getElementById('calcLyeBtn').addEventListener('click', function(){
-    SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
-    SoapTool.storage.queueStateSave();
-  });
+  const calcLyeBtn = document.getElementById('calcLyeBtn');
+  if (calcLyeBtn) {
+    calcLyeBtn.addEventListener('click', function(){
+      SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
   document.getElementById('saveSoapTool').addEventListener('click', async function(){
     try {
