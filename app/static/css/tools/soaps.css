@@ -305,6 +305,29 @@
   box-shadow: var(--shadow-2);
   transition: box-shadow 0.2s ease, outline 0.2s ease;
 }
+#soapToolPage .oil-limit-hint {
+  min-height: 1.1em;
+  margin-top: 0.25rem;
+  color: var(--color-warning);
+  visibility: hidden;
+  word-break: break-word;
+}
+#soapToolPage .oil-limit-hint.is-visible {
+  visibility: visible;
+}
+#soapToolPage .oil-input-warning {
+  border-color: var(--color-warning);
+  box-shadow: 0 0 0 0.15rem var(--color-warning-bg);
+}
+#soapToolPage .oil-input-bounce {
+  animation: oilInputBounce 0.35s ease;
+}
+@keyframes oilInputBounce {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-2px); }
+  60% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
 #soapToolPage .soap-stage-actions {
   display: flex;
   justify-content: space-between;

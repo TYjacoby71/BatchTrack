@@ -86,6 +86,24 @@
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.clearSelectedOilProfile();
     }
+    if (e.target.classList.contains('oil-grams')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
+  });
+
+  document.getElementById('oilRows').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    if (e.target.classList.contains('oil-grams')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'grams');
+    }
+    if (e.target.classList.contains('oil-percent')) {
+      e.preventDefault();
+      SoapTool.oils.validateOilEntry(e.target.closest('.oil-row'), 'percent');
+    }
   });
 
   document.getElementById('oilRows').addEventListener('mouseover', function(e){
@@ -188,6 +206,7 @@
   });
 
   document.getElementById('oilTotalTarget').addEventListener('input', function(){
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -266,12 +285,14 @@
 
   document.getElementById('moldWaterWeight').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
   });
   document.getElementById('moldOilPct').addEventListener('input', function(){
     SoapTool.mold.updateMoldSuggested();
+    SoapTool.oils.scaleOilsToTarget();
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
@@ -280,6 +301,7 @@
   if (moldShape) {
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -289,6 +311,7 @@
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
@@ -298,6 +321,7 @@
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
       SoapTool.mold.updateMoldSuggested();
+      SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
