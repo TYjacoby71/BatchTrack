@@ -20,7 +20,10 @@
   align-items: stretch;
 }
 #soapToolPage .soap-quality-columns-header {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+#soapToolPage #soapQualityCard .card-body {
+  padding: 0.75rem;
 }
 #soapToolPage .soap-quality-header-left,
 #soapToolPage .soap-quality-header-right {
@@ -30,7 +33,7 @@
   display: grid;
 }
 #soapToolPage .soap-quality-row {
-  padding: var(--space-1) 0;
+  padding: 0.35rem 0;
 }
 #soapToolPage .soap-quality-divider {
   width: 1px;
@@ -97,7 +100,7 @@
 #soapToolPage .soap-quality-range-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 0.35rem;
+  margin-top: 0.2rem;
   font-size: 0.7rem;
   color: var(--color-muted);
 }
