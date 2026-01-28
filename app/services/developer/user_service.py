@@ -22,8 +22,6 @@ class UserService:
 
     @staticmethod
     def toggle_user_active(user: User) -> Tuple[bool, str]:
-        if user.user_type == "developer":
-            return False, "Cannot modify developer users"
         user.is_active = not user.is_active
         db.session.commit()
         status = "activated" if user.is_active else "deactivated"

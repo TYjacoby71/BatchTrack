@@ -148,8 +148,12 @@ async function openUserManagementModal(userId, context = 'general', organization
     }
 
     try {
+        const endpoint = context === 'developer'
+            ? `/developer/api/developer-user/${userId}`
+            : `/developer/api/user/${userId}`;
+
         // Fetch user data and populate modal
-        const response = await fetch(`/developer/api/user/${userId}`, {
+        const response = await fetch(endpoint, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
@@ -189,10 +193,20 @@ function populateUserManagementModal(user) {
     document.getElementById('modalUserCreatedAt').textContent = user.created_at || 'N/A';
 
     // Display current role
-    document.getElementById('modalUserCurrentRole').value = user.display_role || 'No Role Assigned';
+    if (modalContext === 'developer' && Array.isArray(user.roles)) {
+        const assignedRoles = user.roles.filter(role => role.assigned).map(role => role.name);
+        document.getElementById('modalUserCurrentRole').value = assignedRoles.length
+            ? assignedRoles.join(', ')
+            : 'No Role Assigned';
+    } else {
+        document.getElementById('modalUserCurrentRole').value = user.display_role || 'No Role Assigned';
+    }
 
     // Display organization information
-    if (user.organization) {
+    if (modalContext === 'developer') {
+        document.getElementById('modalUserOrganizationName').textContent = 'System';
+        document.getElementById('modalUserOrgId').textContent = 'N/A';
+    } else if (user.organization) {
         document.getElementById('modalUserOrganizationName').textContent = user.organization.name;
         document.getElementById('modalUserOrgId').textContent = user.organization.id;
     } else {
@@ -238,14 +252,23 @@ async function saveModalUser() {
         last_name: document.getElementById('modalUserLastName').value,
         email: document.getElementById('modalUserEmail').value,
         phone: document.getElementById('modalUserPhone').value,
-        user_type: 'customer', // Default to customer since we removed the user type field
-        is_organization_owner: isOwnerChecked,
-        is_active: document.getElementById('modalUserIsActive').checked,
-        transfer_owner_role: isOwnerChecked && !wasOwnerBefore // Flag to indicate role transfer is needed
+        is_active: document.getElementById('modalUserIsActive').checked
     };
 
+    let endpoint = '/developer/api/user/update';
+    if (modalContext === 'developer') {
+        endpoint = '/developer/api/developer-user/update';
+        userData.roles = Array.isArray(currentModalUser?.roles)
+            ? currentModalUser.roles.filter(role => role.assigned).map(role => role.id)
+            : [];
+    } else {
+        userData.user_type = 'customer';
+        userData.is_organization_owner = isOwnerChecked;
+        userData.transfer_owner_role = isOwnerChecked && !wasOwnerBefore;
+    }
+
     try {
-        const response = await fetch('/developer/api/user/update', {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -261,7 +284,7 @@ async function saveModalUser() {
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
             location.reload();
         } else {
-            alert('Error updating user: ' + data.error);
+            alert('Error updating user: ' + (data.message || data.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error updating user:', error);
