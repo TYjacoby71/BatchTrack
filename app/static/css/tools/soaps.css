@@ -163,7 +163,8 @@
   }
 }
 #soapToolPage #soapQualityCard,
-#soapToolPage #resultsCard {
+#soapToolPage #resultsCard,
+#soapToolPage #soapResultsActionsCard {
   margin-bottom: var(--space-2);
 }
 #soapToolPage #resultsCard {
