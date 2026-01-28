@@ -51,23 +51,23 @@
   padding-right: var(--space-3);
 }
 #soapToolPage .soap-quality-item {
-  display: grid;
-  grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
-  column-gap: var(--space-2);
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+#soapToolPage .soap-quality-item-compact {
+  gap: 0;
 }
 #soapToolPage .soap-quality-item-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 #soapToolPage .soap-quality-title {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
 }
 #soapToolPage .soap-quality-name {
   font-size: 0.8rem;
@@ -76,7 +76,6 @@
 #soapToolPage .soap-quality-value {
   font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
-  width: 100%;
   text-align: right;
 }
 #soapToolPage .soap-quality-bar {
@@ -108,21 +107,7 @@
   position: relative;
 }
 #soapToolPage .soap-quality-range-labels {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0;
-  font-size: 0.6rem;
-  color: var(--color-muted);
-  pointer-events: none;
-  z-index: 4;
-}
-#soapToolPage .soap-quality-range-labels span {
-  background: var(--color-surface);
-  padding: 0 2px;
-  border-radius: var(--radius-1);
+  display: none;
 }
 #soapToolPage .soap-quality-hint {
   font-size: 0.72rem;
@@ -144,16 +129,7 @@
   z-index: 3;
 }
 #soapToolPage .quality-target-label {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  color: var(--color-primary);
-  background: var(--color-surface);
-  padding: 0 4px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  display: none;
 }
 #soapToolPage .soap-acid-label {
   font-size: 0.78rem;
@@ -187,7 +163,8 @@
   }
 }
 #soapToolPage #soapQualityCard,
-#soapToolPage #resultsCard {
+#soapToolPage #resultsCard,
+#soapToolPage #soapResultsActionsCard {
   margin-bottom: var(--space-2);
 }
 #soapToolPage #resultsCard {
@@ -399,19 +376,24 @@
 #soapToolPage .soap-stage-tabs {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
+}
+#soapToolPage .soap-stage-tabs-header {
+  padding: var(--space-2) var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-top-left-radius: var(--radius-3);
+  border-top-right-radius: var(--radius-3);
 }
 #soapToolPage .soap-stage-tabs .nav-tabs {
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: none;
   gap: var(--space-1);
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  flex-wrap: wrap;
+  overflow-x: hidden;
 }
 #soapToolPage .soap-stage-tabs .nav-link {
   border: 1px solid var(--color-border);
-  border-bottom: none;
-  border-radius: var(--radius-2) var(--radius-2) 0 0;
+  border-radius: var(--radius-2);
   background: var(--color-subtle-bg-2);
   color: var(--color-text);
   padding: var(--space-2) var(--space-3);
@@ -453,10 +435,11 @@
 }
 #soapToolPage .soap-stage-tabs .nav-link.active {
   background: var(--color-surface);
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
 }
 #soapToolPage .soap-stage-card {
   margin-bottom: 0;
+  overflow: hidden;
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-tabs {
   flex: 1 1 auto;
@@ -477,7 +460,10 @@
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card .card-body {
   flex: 1 1 auto;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 #soapToolPage .oil-profile-float {
   position: absolute;

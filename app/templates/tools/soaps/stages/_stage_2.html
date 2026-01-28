@@ -1,11 +1,10 @@
 <div class="tab-pane fade" id="soapStage3Pane" role="tabpanel" aria-labelledby="soapStage3Tab">
-  <div class="card soap-stage-card">
-    <div class="card-body soap-stage-body" data-stage-index="2">
-      <div class="position-relative">
-        <div class="row g-3">
-          <div class="col-12">
-            <div id="oilRows">
-              <div class="row g-2 align-items-end oil-row mb-2">
+  <div class="soap-stage-body p-3" data-stage-index="2">
+    <div class="position-relative">
+      <div class="row g-3">
+        <div class="col-12">
+          <div id="oilRows">
+            <div class="row g-2 align-items-end oil-row mb-2">
               <div class="col-md-6">
                 <label class="form-label">Oil, fat, or wax</label>
                 <div class="position-relative">
@@ -32,54 +31,53 @@
               <div class="col-12 d-lg-none mt-2">
                 <button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>
               </div>
-              </div>
             </div>
           </div>
-          <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
-            <button class="btn btn-sm btn-outline-primary" id="addOil" type="button">Add Oil</button>
-            <button class="btn btn-sm btn-outline-secondary" id="normalizeOils" type="button">Normalize to 100%</button>
-            <div class="small text-muted">Total %: <span id="oilPercentTotal">0</span>%</div>
-            <div class="small text-muted">Current oils: <span id="oilTotalComputed">--</span></div>
-          </div>
-          <div class="alert alert-warning small mt-2 d-none" id="oilLimitWarning"></div>
-          <div class="alert alert-light border small mt-3 d-none" id="oilBlendTips"></div>
-          <div class="small text-muted mt-2">Select or hover an oil to preview its profile. On mobile, tap "View oil profile."</div>
         </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+          <button class="btn btn-sm btn-outline-primary" id="addOil" type="button">Add Oil</button>
+          <button class="btn btn-sm btn-outline-secondary" id="normalizeOils" type="button">Normalize to 100%</button>
+          <div class="small text-muted">Total %: <span id="oilPercentTotal">0</span>%</div>
+          <div class="small text-muted">Current oils: <span id="oilTotalComputed">--</span></div>
+        </div>
+        <div class="alert alert-warning small mt-2 d-none" id="oilLimitWarning"></div>
+        <div class="alert alert-light border small mt-3 d-none" id="oilBlendTips"></div>
+        <div class="small text-muted mt-2">Select or hover an oil to preview its profile. On mobile, tap "View oil profile."</div>
       </div>
-      <div class="card oil-profile-float d-none" id="oilProfileFloat">
-        <div class="card-body p-2">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <strong class="small">Selected oil profile</strong>
-              <span class="small text-muted" id="selectedOilName">Pick an oil to preview</span>
-            </div>
-            <div class="small text-muted">SAP (KOH): <span id="selectedOilSap">--</span> · Iodine: <span id="selectedOilIodine">--</span></div>
-            <div class="mt-2">
-              <div class="small text-muted">Qualities</div>
-              <div class="d-flex justify-content-between"><span>Hardness</span><span id="selectedOilHardness">--</span></div>
-              <div class="d-flex justify-content-between"><span>Cleansing</span><span id="selectedOilCleansing">--</span></div>
-              <div class="d-flex justify-content-between"><span>Conditioning</span><span id="selectedOilConditioning">--</span></div>
-              <div class="d-flex justify-content-between"><span>Bubbly</span><span id="selectedOilBubbly">--</span></div>
-              <div class="d-flex justify-content-between"><span>Creamy</span><span id="selectedOilCreamy">--</span></div>
-            </div>
-            <div class="mt-2">
-              <div class="small text-muted">Fatty acids</div>
-              <div class="table-responsive">
-                <table class="table table-sm soap-oil-profile mb-0">
-                  <tbody>
-                    <tr><td>Lauric</td><td class="text-end" id="selectedOilLauric">--</td></tr>
-                    <tr><td>Myristic</td><td class="text-end" id="selectedOilMyristic">--</td></tr>
-                    <tr><td>Palmitic</td><td class="text-end" id="selectedOilPalmitic">--</td></tr>
-                    <tr><td>Stearic</td><td class="text-end" id="selectedOilStearic">--</td></tr>
-                    <tr><td>Ricinoleic</td><td class="text-end" id="selectedOilRicinoleic">--</td></tr>
-                    <tr><td>Oleic</td><td class="text-end" id="selectedOilOleic">--</td></tr>
-                    <tr><td>Linoleic</td><td class="text-end" id="selectedOilLinoleic">--</td></tr>
-                    <tr><td>Linolenic</td><td class="text-end" id="selectedOilLinolenic">--</td></tr>
-                  </tbody>
-                </table>
-              </div>
+    </div>
+    <div class="card oil-profile-float d-none" id="oilProfileFloat">
+      <div class="card-body p-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong class="small">Selected oil profile</strong>
+            <span class="small text-muted" id="selectedOilName">Pick an oil to preview</span>
+          </div>
+          <div class="small text-muted">SAP (KOH): <span id="selectedOilSap">--</span> · Iodine: <span id="selectedOilIodine">--</span></div>
+          <div class="mt-2">
+            <div class="small text-muted">Qualities</div>
+            <div class="d-flex justify-content-between"><span>Hardness</span><span id="selectedOilHardness">--</span></div>
+            <div class="d-flex justify-content-between"><span>Cleansing</span><span id="selectedOilCleansing">--</span></div>
+            <div class="d-flex justify-content-between"><span>Conditioning</span><span id="selectedOilConditioning">--</span></div>
+            <div class="d-flex justify-content-between"><span>Bubbly</span><span id="selectedOilBubbly">--</span></div>
+            <div class="d-flex justify-content-between"><span>Creamy</span><span id="selectedOilCreamy">--</span></div>
+          </div>
+          <div class="mt-2">
+            <div class="small text-muted">Fatty acids</div>
+            <div class="table-responsive">
+              <table class="table table-sm soap-oil-profile mb-0">
+                <tbody>
+                  <tr><td>Lauric</td><td class="text-end" id="selectedOilLauric">--</td></tr>
+                  <tr><td>Myristic</td><td class="text-end" id="selectedOilMyristic">--</td></tr>
+                  <tr><td>Palmitic</td><td class="text-end" id="selectedOilPalmitic">--</td></tr>
+                  <tr><td>Stearic</td><td class="text-end" id="selectedOilStearic">--</td></tr>
+                  <tr><td>Ricinoleic</td><td class="text-end" id="selectedOilRicinoleic">--</td></tr>
+                  <tr><td>Oleic</td><td class="text-end" id="selectedOilOleic">--</td></tr>
+                  <tr><td>Linoleic</td><td class="text-end" id="selectedOilLinoleic">--</td></tr>
+                  <tr><td>Linolenic</td><td class="text-end" id="selectedOilLinolenic">--</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-      </div>
+        </div>
     </div>
   </div>
 </div>
