@@ -8,7 +8,7 @@
   color: var(--color-text);
 }
 #soapToolPage .soap-quality-legend {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 400;
   color: var(--color-muted);
 }
@@ -33,7 +33,7 @@
   display: grid;
 }
 #soapToolPage .soap-quality-row {
-  padding: 0.35rem 0;
+  padding: 0.25rem 0;
 }
 #soapToolPage .soap-quality-divider {
   width: 1px;
@@ -52,29 +52,36 @@
 }
 #soapToolPage .soap-quality-item {
   display: grid;
-  gap: var(--space-1);
+  grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: center;
 }
 #soapToolPage .soap-quality-item-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.1rem;
 }
 #soapToolPage .soap-quality-title {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  width: 100%;
 }
 #soapToolPage .soap-quality-name {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-muted);
 }
 #soapToolPage .soap-quality-value {
   font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  width: 100%;
+  text-align: right;
 }
 #soapToolPage .soap-quality-bar {
   position: relative;
-  height: 20px;
+  height: 14px;
   border-radius: var(--radius-2);
   background: var(--color-subtle-bg-2);
   overflow: hidden;
@@ -97,16 +104,32 @@
   z-index: 2;
   transition: width 0.2s ease;
 }
+#soapToolPage .soap-quality-bar-wrap {
+  position: relative;
+}
 #soapToolPage .soap-quality-range-labels {
+  position: absolute;
+  inset: 0;
   display: flex;
   justify-content: space-between;
-  margin-top: 0.2rem;
-  font-size: 0.7rem;
+  align-items: center;
+  margin-top: 0;
+  font-size: 0.6rem;
   color: var(--color-muted);
+  pointer-events: none;
+  z-index: 4;
+}
+#soapToolPage .soap-quality-range-labels span {
+  background: var(--color-surface);
+  padding: 0 2px;
+  border-radius: var(--radius-1);
 }
 #soapToolPage .soap-quality-hint {
   font-size: 0.72rem;
   color: var(--color-muted);
+}
+#soapToolPage .soap-quality-hint:empty {
+  display: none;
 }
 #soapToolPage .soap-quality-help {
   padding: 0;
@@ -133,12 +156,12 @@
   border-radius: var(--radius-1);
 }
 #soapToolPage .soap-acid-label {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--color-text);
 }
 #soapToolPage .soap-acid-value {
   font-variant-numeric: tabular-nums;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-align: right;
 }
 @media (max-width: 767px) {
@@ -287,7 +310,7 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 #soapToolPage .soap-config-row .form-control,
 #soapToolPage .soap-config-row .form-select,
