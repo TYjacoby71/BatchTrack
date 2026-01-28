@@ -167,9 +167,17 @@ def save_profile():
     try:
         print(f"Profile save request from user: {current_user.id}")
 
+        payload = request.get_json(silent=True)
+        expects_json = (
+            request.is_json
+            or payload is not None
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in (request.headers.get("Accept") or "")
+        )
+
         # Handle both JSON and form data
-        if request.is_json:
-            data = request.get_json()
+        if payload is not None:
+            data = payload
             first_name = data.get('first_name', '').strip()
             last_name = data.get('last_name', '').strip()
             email = data.get('email', '').strip()
@@ -187,7 +195,7 @@ def save_profile():
         # Validate required fields
         if not first_name or not last_name or not email:
             error_msg = 'First name, last name, and email are required'
-            if request.is_json:
+            if expects_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
             flash(error_msg, 'error')
             return redirect(request.referrer or url_for('settings.index'))
@@ -204,7 +212,7 @@ def save_profile():
         db.session.commit()
         print("Database save successful")
 
-        if request.is_json:
+        if expects_json:
             return jsonify({'success': True, 'message': 'Profile updated successfully'})
         else:
             flash('Profile updated successfully!', 'success')
@@ -222,7 +230,7 @@ def save_profile():
         db.session.rollback()
         error_msg = f'Error updating profile: {str(e)}'
 
-        if request.is_json:
+        if expects_json:
             return jsonify({'success': False, 'error': error_msg}), 500
         else:
             flash(error_msg, 'error')
