@@ -169,6 +169,17 @@
     updateStageTabSizing();
   }
 
+  const resultsToggle = document.getElementById('resultsCardToggle');
+  const resultsCard = document.getElementById('resultsCard');
+  if (resultsToggle && resultsCard) {
+    resultsToggle.addEventListener('click', () => {
+      resultsCard.classList.toggle('is-collapsed');
+      const isCollapsed = resultsCard.classList.contains('is-collapsed');
+      resultsToggle.setAttribute('aria-expanded', (!isCollapsed).toString());
+      resultsToggle.textContent = isCollapsed ? 'Expand' : 'Collapse';
+    });
+  }
+
   document.querySelectorAll('input[name="weight_unit"]').forEach(el => {
     el.addEventListener('change', function(){
       SoapTool.units.setUnit(this.value);

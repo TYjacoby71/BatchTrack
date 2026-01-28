@@ -245,6 +245,34 @@
   box-shadow: var(--shadow-1);
   height: 100%;
 }
+#soapToolPage #resultsCard.is-collapsed .card-body {
+  padding: var(--space-2);
+}
+#soapToolPage #resultsCard.is-collapsed .results-metrics {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+#soapToolPage #resultsCard.is-collapsed .results-metrics > [class*="col-"] {
+  flex: none;
+  max-width: none;
+  padding: 0;
+}
+#soapToolPage #resultsCard.is-collapsed .soap-metric-tile {
+  padding: var(--space-2);
+  box-shadow: none;
+}
+#soapToolPage #resultsCard.is-collapsed .soap-metric-icon {
+  display: none;
+}
+#soapToolPage #resultsCard.is-collapsed .soap-metric-tile .small {
+  font-size: 0.65rem;
+}
+#soapToolPage #resultsCard.is-collapsed .soap-metric-tile .fs-5 {
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
 #soapToolPage .soap-metric-icon {
   width: 32px;
   height: 32px;
