@@ -209,11 +209,17 @@ def cleanup_old_permissions():
         for perm in category_data['permissions']:
             dev_perm_names.add(perm['name'])
 
-    # Find and deactivate old organization permissions
+    # Find and remove old organization permissions (and associations)
     old_org_perms = Permission.query.filter(~Permission.name.in_(org_perm_names)).all()
     for perm in old_org_perms:
-        perm.is_active = False
-        print(f"Deactivated old organization permission: {perm.name}")
+        perm.roles = []
+        try:
+            for tier in perm.tiers.all():
+                perm.tiers.remove(tier)
+        except Exception:
+            pass
+        db.session.delete(perm)
+        print(f"Removed old organization permission: {perm.name}")
 
     # Remove legacy app.* developer permissions outright
     legacy_dev_perms = DeveloperPermission.query.filter(
@@ -224,12 +230,13 @@ def cleanup_old_permissions():
         db.session.delete(perm)
         print(f"Removed legacy developer permission: {perm.name}")
 
-    # Find and deactivate old developer permissions (keep shared org names too)
+    # Find and remove old developer permissions (keep shared org names too)
     allowed_dev_names = dev_perm_names.union(org_perm_names)
     old_dev_perms = DeveloperPermission.query.filter(~DeveloperPermission.name.in_(allowed_dev_names)).all()
     for perm in old_dev_perms:
-        perm.is_active = False
-        print(f"Deactivated old developer permission: {perm.name}")
+        perm.developer_roles = []
+        db.session.delete(perm)
+        print(f"Removed old developer permission: {perm.name}")
 
     db.session.commit()
     print("✅ Cleaned up old permissions")
