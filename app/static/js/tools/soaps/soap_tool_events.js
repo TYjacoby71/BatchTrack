@@ -609,7 +609,6 @@
   SoapTool.additives.attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET);
   SoapTool.ui.applyHelperVisibility();
-  SoapTool.stages.injectStageActions();
   SoapTool.quality.initQualityTooltips();
   SoapTool.runner.applyLyeSelection();
   SoapTool.runner.setWaterMethod();

@@ -72,6 +72,7 @@
         <div class="form-text soap-stage-note">5% is a balanced default.</div>
       </div>
     </div>
-    <div class="soap-stage-actions-placeholder mt-2" data-stage-actions="inline"></div>
+    {% set stage_index = 0 %}
+    {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>
 </div>
