@@ -1,5 +1,6 @@
 from flask import jsonify, request
 from flask_login import login_required
+from app.utils.permissions import require_permission
 
 from app.services.unit_conversion import ConversionEngine
 
@@ -8,6 +9,7 @@ from .. import drawers_bp
 
 @drawers_bp.route('/retry-operation', methods=['POST'])
 @login_required
+@require_permission('inventory.view')
 def retry_operation():
     """Generic retry mechanism for conversion operations triggered by drawers."""
     data = request.get_json() or {}

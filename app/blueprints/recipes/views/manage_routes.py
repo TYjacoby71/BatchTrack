@@ -14,7 +14,7 @@ from app.services.cache_invalidation import (
     recipe_list_page_cache_key,
 )
 from app.utils.cache_utils import should_bypass_cache
-from app.utils.permissions import _org_tier_includes_permission, has_permission
+from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.settings import is_feature_enabled
 
@@ -126,6 +126,7 @@ def _hydrate_recipe_from_cache(data: dict) -> _RecipeListViewModel:
 
 @recipes_bp.route('/')
 @login_required
+@require_permission('recipes.view')
 def list_recipes():
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = recipe_list_cache_key(org_id)
@@ -191,6 +192,7 @@ def list_recipes():
 
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
+@require_permission('recipes.view')
 def view_recipe(recipe_id):
     try:
         recipe = get_recipe_details(recipe_id)
@@ -226,6 +228,7 @@ def view_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
 @login_required
+@require_permission('recipes.delete')
 def delete_recipe_route(recipe_id):
     try:
         success, message = delete_recipe(recipe_id)
@@ -242,6 +245,7 @@ def delete_recipe_route(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
 @login_required
+@require_permission('recipes.edit')
 def make_parent_recipe(recipe_id):
     try:
         recipe = db.session.get(Recipe, recipe_id)
@@ -289,6 +293,7 @@ def make_parent_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
+@require_permission('recipes.edit')
 def lock_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     recipe.is_locked = True
@@ -299,6 +304,7 @@ def lock_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
 @login_required
+@require_permission('recipes.edit')
 def unlock_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')

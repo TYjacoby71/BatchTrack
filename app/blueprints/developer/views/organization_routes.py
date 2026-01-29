@@ -12,7 +12,7 @@ from flask import (
     session,
     url_for,
 )
-from flask_login import current_user, login_required
+from flask_login import current_user
 from sqlalchemy import or_
 
 from app.extensions import db
@@ -20,12 +20,13 @@ from app.models import Organization, User
 from app.services.developer.organization_service import OrganizationService
 from app.services.statistics import AnalyticsDataService
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/organizations")
 @developer_bp.route("/customer-support")
-@login_required
+@require_developer_permission("dev.all_organizations")
 def organizations():
     """Customer support dashboard for organization triage."""
     organizations = OrganizationService.list_all_organizations()
@@ -68,7 +69,7 @@ def organizations():
 
 
 @developer_bp.route("/organizations/create", methods=["GET", "POST"])
-@login_required
+@require_developer_permission("dev.create_organizations")
 def create_organization():
     """Create new organization with owner user."""
     available_tiers = OrganizationService.build_available_tiers()
@@ -93,7 +94,7 @@ def create_organization():
 
 
 @developer_bp.route("/organizations/<int:org_id>")
-@login_required
+@require_developer_permission("dev.all_organizations")
 def organization_detail(org_id):
     """Detailed organization management."""
     org = Organization.query.get_or_404(org_id)
@@ -144,7 +145,7 @@ def organization_detail(org_id):
 
 
 @developer_bp.route("/organizations/<int:org_id>/edit", methods=["POST"])
-@login_required
+@require_developer_permission("dev.modify_any_organization")
 def edit_organization(org_id):
     """Edit organization details."""
     org = Organization.query.get_or_404(org_id)
@@ -154,7 +155,7 @@ def edit_organization(org_id):
 
 
 @developer_bp.route("/organizations/<int:org_id>/upgrade", methods=["POST"])
-@login_required
+@require_developer_permission("dev.billing_override")
 def upgrade_organization(org_id):
     """Upgrade organization subscription."""
     org = Organization.query.get_or_404(org_id)
@@ -164,7 +165,7 @@ def upgrade_organization(org_id):
 
 
 @developer_bp.route("/organizations/<int:org_id>/delete", methods=["POST"])
-@login_required
+@require_developer_permission("dev.delete_organizations")
 def delete_organization(org_id):
     """Permanently delete an organization and all associated data."""
     data = request.get_json() or {}

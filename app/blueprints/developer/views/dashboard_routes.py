@@ -8,20 +8,18 @@ from flask import (
     request,
     url_for,
 )
-from flask_login import login_required
-
 from app.models.feature_flag import FeatureFlag
 from app.services.developer.dashboard_service import (
     DeveloperDashboardService,
 )
 from app.services.statistics import AnalyticsDataService
 
-from ..decorators import permission_required, require_developer_permission
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/dashboard")
-@login_required
+@require_developer_permission("dev.dashboard")
 def dashboard():
     """Main developer dashboard overview."""
     force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
@@ -38,7 +36,7 @@ def dashboard():
 
 
 @developer_bp.route("/marketing-admin")
-@login_required
+@require_developer_permission("dev.system_admin")
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
     context = DeveloperDashboardService.get_marketing_admin_context()
@@ -46,7 +44,7 @@ def marketing_admin():
 
 
 @developer_bp.route("/marketing-admin/save", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def marketing_admin_save():
     """Persist marketing content to JSON stores."""
     try:
@@ -58,7 +56,7 @@ def marketing_admin_save():
 
 
 @developer_bp.route("/batchley")
-@login_required
+@require_developer_permission("dev.dashboard")
 def batchley_overview():
     """Developer view of Batchley's capabilities, limits, and configuration."""
     batchley_context = DeveloperDashboardService.build_batchley_context()
@@ -142,8 +140,7 @@ def update_system_settings():
 
 
 @developer_bp.route("/feature-flags")
-@login_required
-@permission_required("dev.system_admin")
+@require_developer_permission("dev.system_admin")
 def feature_flags():
     """Feature flags management page."""
     db_flags = FeatureFlag.query.all()
@@ -162,7 +159,7 @@ def feature_flags():
 
 
 @developer_bp.route("/system-statistics")
-@login_required
+@require_developer_permission("dev.access_logs")
 def system_statistics():
     """System-wide statistics dashboard."""
     force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
@@ -171,14 +168,14 @@ def system_statistics():
 
 
 @developer_bp.route("/billing-integration")
-@login_required
+@require_developer_permission("dev.view_all_billing")
 def billing_integration():
     """Billing integration management shell page."""
     return render_template("developer/billing_integration.html")
 
 
 @developer_bp.route("/waitlist-statistics")
-@require_developer_permission("system_admin")
+@require_developer_permission("dev.system_admin")
 def waitlist_statistics():
     """View waitlist statistics and data."""
     force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")

@@ -209,6 +209,7 @@ def create_product_from_data(data):
 @products_bp.route('/')
 @products_bp.route('/list')
 @login_required
+@require_permission('products.view')
 def list_products():
     """List all products with inventory summary and sorting"""
     sort_type = (request.args.get('sort', 'name') or 'name').lower()
@@ -379,6 +380,7 @@ def list_products():
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
+@require_permission('products.create')
 def new_product():
     if request.method == 'POST':
         name = (request.form.get('name') or '').strip()
@@ -445,6 +447,7 @@ def new_product():
 
 @products_bp.route('/<int:product_id>')
 @login_required
+@require_permission('products.view')
 def view_product(product_id):
     """View product details with all SKUs by product ID"""
     from ...services.product_service import ProductService
@@ -537,6 +540,7 @@ def view_product(product_id):
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')
 @login_required
+@require_permission('products.view')
 def view_product_by_name(product_name):
     """Redirect to product by ID for backward compatibility"""
     # Find the first SKU for this product to get the ID
@@ -555,6 +559,7 @@ def view_product_by_name(product_name):
 
 @products_bp.route('/<int:product_id>/edit', methods=['POST'])
 @login_required
+@require_permission('products.edit')
 def edit_product(product_id):
     """Edit product details by product ID"""
     from ...models.product import Product
@@ -606,6 +611,7 @@ def edit_product(product_id):
 
 @products_bp.route('/<int:product_id>/delete', methods=['POST'])
 @login_required
+@require_permission('products.delete')
 def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:

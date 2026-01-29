@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from ..models import db, Recipe, InventoryItem
 from ..services.unit_conversion import ConversionEngine
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,6 +17,7 @@ def _bulk_stock_check_enabled() -> bool:
 
 @bulk_stock_bp.route('/bulk-check', methods=['GET', 'POST'])
 @login_required
+@require_permission('recipes.plan_production')
 def bulk_stock_check():
     try:
         if not _bulk_stock_check_enabled():
@@ -93,6 +95,7 @@ def bulk_stock_check():
 
 @bulk_stock_bp.route('/bulk-check/csv')
 @login_required
+@require_permission('recipes.plan_production')
 def export_shopping_list_csv():
     try:
         if not _bulk_stock_check_enabled():

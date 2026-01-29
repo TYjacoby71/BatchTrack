@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import get_recipe_details
-from app.utils.permissions import _org_tier_includes_permission, has_permission
+from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
 from app.utils.settings import is_feature_enabled
 
 from .. import recipes_bp
@@ -16,6 +16,7 @@ from ..lineage_utils import build_lineage_path, serialize_lineage_tree
 
 @recipes_bp.route('/<int:recipe_id>/lineage')
 @login_required
+@require_permission('recipes.view')
 def recipe_lineage(recipe_id):
     try:
         recipe = get_recipe_details(recipe_id)

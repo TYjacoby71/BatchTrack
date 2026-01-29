@@ -11,7 +11,7 @@ from flask import (
     request,
     url_for,
 )
-from flask_login import current_user, login_required
+from flask_login import current_user
 from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import joinedload
 
@@ -34,6 +34,7 @@ from app.services.global_item_listing_service import (
 )
 from app.services.global_item_sync_service import GlobalItemSyncService
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
@@ -258,7 +259,7 @@ def _generate_item_name(item_type, form_data, *, ingredient=None, variation=None
 
 
 @developer_bp.route("/global-items")
-@login_required
+@require_developer_permission("dev.system_admin")
 def global_items_admin():
     """Developer admin page for managing Global Items."""
 
@@ -338,7 +339,7 @@ def global_items_admin():
 
 
 @developer_bp.route("/global-items/<int:item_id>")
-@login_required
+@require_developer_permission("dev.system_admin")
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
     global_ingredient_categories = (
@@ -377,7 +378,7 @@ def global_item_detail(item_id):
 
 
 @developer_bp.route("/global-items/<int:item_id>/edit", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def global_item_edit(item_id):
     """Edit existing global item."""
     from flask_wtf.csrf import validate_csrf
@@ -558,7 +559,7 @@ def global_item_edit(item_id):
 
 
 @developer_bp.route("/global-items/<int:item_id>/stats")
-@login_required
+@require_developer_permission("dev.system_admin")
 def global_item_stats_view(item_id):
     from app.services.statistics.global_item_stats import GlobalItemStatsService
 
@@ -568,7 +569,7 @@ def global_item_stats_view(item_id):
 
 
 @developer_bp.route("/global-items/create", methods=["GET", "POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_global_item():
     """Create a new global item."""
 
@@ -845,7 +846,7 @@ def create_global_item():
 
 
 @developer_bp.route("/global-items/<int:item_id>/delete", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def delete_global_item(item_id):
     """Delete a global item, handling organization inventory disconnection."""
     try:

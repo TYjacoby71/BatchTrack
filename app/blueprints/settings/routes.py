@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 @settings_bp.route('/')
 @settings_bp.route('')
 @login_required
+@require_permission('settings.view')
 def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
@@ -80,6 +81,7 @@ def index():
 
 @settings_bp.route('/api/user-preferences')
 @login_required
+@require_permission('settings.view')
 def get_user_preferences():
     """Get user preferences for current user"""
     try:
@@ -119,6 +121,7 @@ def get_user_preferences():
 
 @settings_bp.route('/api/user-preferences', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def update_user_preferences():
     """Update user preferences"""
     try:
@@ -163,6 +166,7 @@ def update_system_settings():
 
 @settings_bp.route('/profile/save', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def save_profile():
     try:
         print(f"Profile save request from user: {current_user.id}")
@@ -242,6 +246,7 @@ def save_profile():
 
 @settings_bp.route('/password/change', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def change_password():
     """Change user password"""
     try:
@@ -271,6 +276,7 @@ def change_password():
 
 @settings_bp.route('/set-backup-password', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def set_backup_password():
     """Set backup password for OAuth users"""
     try:
@@ -360,6 +366,7 @@ def bulk_update_containers():
 
 @settings_bp.route('/update-timezone', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def update_timezone():
     timezone = request.form.get('timezone')
 
@@ -373,6 +380,7 @@ def update_timezone():
 
 @settings_bp.route('/update-user-preference', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def update_user_preference():
     """Update user preference via AJAX"""
     try:
@@ -404,6 +412,7 @@ def update_user_preference():
 
 @settings_bp.route('/update-system-setting', methods=['POST'])
 @login_required
+@require_permission('settings.edit')
 def update_system_setting():
     """Update system setting via AJAX"""
     try:
@@ -426,6 +435,7 @@ def update_system_setting():
 
 @settings_bp.route('/user-management')
 @login_required
+@require_permission('organization.manage_users')
 def user_management():
     """User management page for profile and account settings"""
     # Get all users separated by type

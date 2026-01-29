@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
+from app.utils.permissions import require_permission
 from ...models import db, InventoryItem
 from ...models.product import ProductSKU
 from ...models.reservation import Reservation
@@ -27,12 +28,9 @@ reservation_api_bp = Blueprint('reservation_api', __name__, url_prefix='/api/res
 
 @reservation_api_bp.route('/create', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def create_reservation():
     """Create a new reservation - deducts from available inventory"""
-    # Check permission
-    from ...utils.permissions import has_permission
-    if not has_permission('inventory.reserve'):
-        return jsonify({'error': 'Insufficient permissions to create reservations'}), 403
     data = request.get_json()
 
     # Validate required fields
@@ -82,6 +80,7 @@ def create_reservation():
 
 @reservation_api_bp.route('/release/<int:reservation_id>', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def release_reservation(reservation_id):
     """Release a reservation - credits back to original FIFO lots"""
     try:
@@ -110,6 +109,7 @@ def release_reservation(reservation_id):
 
 @reservation_api_bp.route('/convert-to-sale/<int:reservation_id>', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def convert_reservation_to_sale(reservation_id):
     """Convert a reservation to a sale"""
     reservation = db.session.get(Reservation, reservation_id)
@@ -142,6 +142,7 @@ def convert_reservation_to_sale(reservation_id):
 
 @reservation_api_bp.route('/expire-old', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def expire_old_reservations():
     """Expire reservations that have passed their expiration date"""
     from datetime import datetime, timezone

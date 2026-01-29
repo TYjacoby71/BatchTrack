@@ -1,10 +1,11 @@
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from flask_login import login_required, current_user
+from flask_login import current_user
 from app.models import Role, Permission, User, Organization
 from app.models.developer_role import DeveloperRole
 from app.models.developer_permission import DeveloperPermission
 from app.models.user_role_assignment import UserRoleAssignment
+from .decorators import require_developer_permission
 from app.extensions import db
 from werkzeug.security import generate_password_hash
 
@@ -14,12 +15,9 @@ system_roles_bp = Blueprint('system_roles', __name__)
 # The before_request decorator was causing conflicts with the main security checkpoint
 
 @system_roles_bp.route('/system-roles')
-@login_required
+@require_developer_permission("dev.manage_roles")
 def manage_system_roles():
     """Manage system roles and developer users"""
-    if current_user.user_type != 'developer':
-        flash('Developer access required', 'error')
-        return redirect(url_for('auth.login'))
     system_roles = Role.query.filter_by(is_system_role=True).all()
     developer_roles = DeveloperRole.query.filter_by(is_active=True).all()
     developer_users = User.query.filter_by(user_type='developer').all()
@@ -31,7 +29,7 @@ def manage_system_roles():
 
 # System Role Management (Organization Roles)
 @system_roles_bp.route('/system-roles', methods=['POST'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def create_system_role():
     """Create new system role (organization role)"""
     try:
@@ -65,7 +63,7 @@ def create_system_role():
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/system-roles/<int:role_id>', methods=['GET'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_system_role(role_id):
     """Get system role details"""
     role = Role.query.filter_by(id=role_id, is_system_role=True).first_or_404()
@@ -81,7 +79,7 @@ def get_system_role(role_id):
     })
 
 @system_roles_bp.route('/system-roles/<int:role_id>', methods=['PUT'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def update_system_role(role_id):
     """Update system role"""
     try:
@@ -109,7 +107,7 @@ def update_system_role(role_id):
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/system-roles/<int:role_id>', methods=['DELETE'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def delete_system_role(role_id):
     """Delete system role"""
     try:
@@ -127,7 +125,7 @@ def delete_system_role(role_id):
 
 # Developer Role Management
 @system_roles_bp.route('/developer-roles', methods=['POST'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def create_developer_role():
     """Create new developer role"""
     try:
@@ -159,7 +157,7 @@ def create_developer_role():
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/developer-roles/<int:role_id>', methods=['GET'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_developer_role(role_id):
     """Get developer role details"""
     role = DeveloperRole.query.filter_by(id=role_id).first_or_404()
@@ -176,7 +174,7 @@ def get_developer_role(role_id):
     })
 
 @system_roles_bp.route('/developer-roles/<int:role_id>', methods=['PUT'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def update_developer_role(role_id):
     """Update developer role"""
     try:
@@ -203,7 +201,7 @@ def update_developer_role(role_id):
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/developer-roles/<int:role_id>', methods=['DELETE'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def delete_developer_role(role_id):
     """Delete developer role"""
     try:
@@ -220,7 +218,7 @@ def delete_developer_role(role_id):
 
 # Developer User Management
 @system_roles_bp.route('/developer-users', methods=['POST'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def create_developer_user():
     """Create new developer user"""
     try:
@@ -274,7 +272,7 @@ def create_developer_user():
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/developer-users/<int:user_id>/role', methods=['PUT'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def update_developer_user_role(user_id):
     """Update developer user's role"""
     try:
@@ -315,7 +313,7 @@ def update_developer_user_role(user_id):
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/developer-users/<int:user_id>/role', methods=['GET'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_developer_user_role(user_id):
     """Get developer user's current role"""
     try:
@@ -338,7 +336,7 @@ def get_developer_user_role(user_id):
         return jsonify({'success': False, 'error': str(e)})
 
 @system_roles_bp.route('/developer-users/<int:user_id>', methods=['DELETE'])
-@login_required
+@require_developer_permission("dev.manage_roles")
 def delete_developer_user(user_id):
     """Delete developer user"""
     try:
@@ -359,7 +357,7 @@ def delete_developer_user(user_id):
 
 # API endpoints for permissions and roles data
 @system_roles_bp.route('/permissions/api')
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_permissions_api():
     """API endpoint for permissions grouped by category"""
     permissions = Permission.query.filter_by(is_active=True).all()
@@ -378,7 +376,7 @@ def get_permissions_api():
     return jsonify({'categories': categories})
 
 @system_roles_bp.route('/developer-permissions/api')
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_developer_permissions_api():
     """API endpoint for developer permissions grouped by category"""
     permissions = DeveloperPermission.query.filter_by(is_active=True).all()
@@ -397,7 +395,7 @@ def get_developer_permissions_api():
     return jsonify({'categories': categories})
 
 @system_roles_bp.route('/developer-roles/api')
-@login_required
+@require_developer_permission("dev.manage_roles")
 def get_developer_roles_api():
     """API endpoint for developer roles"""
     roles = DeveloperRole.query.filter_by(is_active=True).all()

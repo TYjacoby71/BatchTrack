@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from flask import jsonify, request
-from flask_login import login_required
-
 from app.services.statistics import AnalyticsDataService
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/api/stats")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_stats():
     """API endpoint for dashboard statistics."""
     force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")

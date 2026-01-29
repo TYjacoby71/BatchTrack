@@ -8,7 +8,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @admin_bp.route('/organizations')
 @login_required
-@require_permission('system.admin')
+@require_permission('dev.system_admin')
 def list_organizations():
     """List all organizations for system admin"""
     organizations = Organization.query.all()
@@ -16,7 +16,7 @@ def list_organizations():
 
 @admin_bp.route('/organizations/<int:org_id>')
 @login_required
-@require_permission('system.admin')
+@require_permission('dev.system_admin')
 def view_organization(org_id):
     """View specific organization details"""
     org = Organization.query.get_or_404(org_id)

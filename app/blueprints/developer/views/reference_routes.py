@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
-from flask_login import login_required
-
 from sqlalchemy import func
 
 from app.extensions import db
@@ -17,6 +15,7 @@ from app.models.ingredient_reference import (
 from app.services.developer.reference_data_service import ReferenceDataService
 from app.utils.seo import slugify_value
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
@@ -31,7 +30,7 @@ def _generate_unique_slug(model, seed: str) -> str:
 
 
 @developer_bp.route("/reference-categories")
-@login_required
+@require_developer_permission("dev.system_admin")
 def reference_categories():
     """Manage global ingredient categories."""
     from app.models.category import IngredientCategory
@@ -67,7 +66,7 @@ def reference_categories():
 
 
 @developer_bp.route("/reference-categories/add", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def add_reference_category():
     """Add a new global ingredient category."""
     try:
@@ -107,7 +106,7 @@ def add_reference_category():
 
 
 @developer_bp.route("/reference-categories/delete", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def delete_reference_category():
     """Delete a global ingredient category."""
     try:
@@ -147,7 +146,7 @@ def delete_reference_category():
 
 
 @developer_bp.route("/reference-categories/update-density", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def update_reference_category_density():
     """Update default density for category and linked items."""
     try:
@@ -196,7 +195,7 @@ def update_reference_category_density():
 
 
 @developer_bp.route("/reference-categories/calculate-density", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def calculate_category_density():
     """Calculate average density for category."""
     try:
@@ -243,7 +242,7 @@ def calculate_category_density():
 
 
 @developer_bp.route("/container-management")
-@login_required
+@require_developer_permission("dev.system_admin")
 def container_management():
     """Container management page for curating materials, colors, styles."""
     curated_lists = ReferenceDataService.load_curated_container_lists()
@@ -257,7 +256,7 @@ def container_management():
 
 
 @developer_bp.route("/container-management/save-curated", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def save_curated_container_lists():
     """Save curated container lists to app settings."""
     try:
@@ -276,7 +275,7 @@ def save_curated_container_lists():
 
 
 @developer_bp.route("/api/container-options")
-@login_required
+@require_developer_permission("dev.system_admin")
 def api_container_options():
     """Get curated container options for dropdowns."""
     try:
@@ -287,7 +286,7 @@ def api_container_options():
 
 
 @developer_bp.route("/ingredient-attributes", methods=["GET"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def manage_ingredient_attributes():
     """Curate ingredient lookup tables: tags, physical forms, variations."""
     forms = PhysicalForm.query.order_by(PhysicalForm.name.asc()).all()
@@ -321,14 +320,14 @@ def manage_ingredient_attributes():
 
 
 @developer_bp.route("/physical-forms", methods=["GET"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def legacy_physical_forms_redirect():
     """Backwards-compatible redirect to the new ingredient attributes hub."""
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
 @developer_bp.route("/ingredient-attributes/physical-forms", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_physical_form():
     """Create a new physical form entry."""
     name = (request.form.get("name") or "").strip()
@@ -355,7 +354,7 @@ def create_physical_form():
 
 
 @developer_bp.route("/ingredient-attributes/physical-forms/<int:form_id>/toggle", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def toggle_physical_form(form_id: int):
     """Toggle a physical form's active state."""
     physical_form = PhysicalForm.query.get_or_404(form_id)
@@ -367,7 +366,7 @@ def toggle_physical_form(form_id: int):
 
 
 @developer_bp.route("/ingredient-attributes/variations", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_variation():
     """Create a curated variation entry."""
     name = (request.form.get("name") or "").strip()
@@ -412,7 +411,7 @@ def create_variation():
 
 
 @developer_bp.route("/ingredient-attributes/variations/<int:variation_id>/toggle", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def toggle_variation(variation_id: int):
     variation = Variation.query.get_or_404(variation_id)
     variation.is_active = not variation.is_active
@@ -433,7 +432,7 @@ def _create_tag_entry(model, name: str, description: str | None):
 
 
 @developer_bp.route("/ingredient-attributes/function-tags", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_function_tag():
     name = (request.form.get("name") or "").strip()
     description = (request.form.get("description") or "").strip() or None
@@ -447,7 +446,7 @@ def create_function_tag():
 
 
 @developer_bp.route("/ingredient-attributes/application-tags", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_application_tag():
     name = (request.form.get("name") or "").strip()
     description = (request.form.get("description") or "").strip() or None
@@ -461,7 +460,7 @@ def create_application_tag():
 
 
 @developer_bp.route("/ingredient-attributes/category-tags", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def create_category_tag():
     name = (request.form.get("name") or "").strip()
     description = (request.form.get("description") or "").strip() or None

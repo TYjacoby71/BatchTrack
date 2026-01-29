@@ -1,10 +1,12 @@
 from flask import render_template, jsonify, request
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from .services import ExpirationService
 from . import expiration_bp
 
 @expiration_bp.route('/api/expired-items')
 @login_required
+@require_permission('inventory.view')
 def api_expired_items():
     """API endpoint for expired items"""
     expired = ExpirationService.get_expired_inventory_items()
@@ -12,6 +14,7 @@ def api_expired_items():
 
 @expiration_bp.route('/api/expiring-soon')
 @login_required
+@require_permission('inventory.view')
 def api_expiring_soon():
     """API endpoint for items expiring soon"""
     days_ahead = request.args.get('days', 7, type=int)
@@ -20,6 +23,7 @@ def api_expiring_soon():
 
 @expiration_bp.route('/api/summary')
 @login_required
+@require_permission('inventory.view')
 def api_summary():
     """API endpoint for expiration summary"""
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -42,6 +46,7 @@ def api_summary():
 
 @expiration_bp.route('/api/calculate-expiration', methods=['POST'])
 @login_required
+@require_permission('inventory.view')
 def api_calculate_expiration():
     """Calculate expiration date from entry date and shelf life"""
     data = request.get_json()
@@ -65,6 +70,7 @@ def api_calculate_expiration():
 
 @expiration_bp.route('/api/life-remaining/<int:fifo_id>')
 @login_required
+@require_permission('inventory.view')
 def api_life_remaining(fifo_id):
     """Get life remaining percentage for a FIFO entry"""
     from app.models import UnifiedInventoryHistory
@@ -84,6 +90,7 @@ def api_life_remaining(fifo_id):
 
 @expiration_bp.route('/api/archive-expired', methods=['POST'])
 @login_required
+@require_permission('inventory.adjust')
 def api_archive_expired():
     """Archive expired items with zero quantity"""
     count = ExpirationService.archive_expired_items()
@@ -91,6 +98,7 @@ def api_archive_expired():
 
 @expiration_bp.route('/api/debug-expiration')
 @login_required
+@require_permission('inventory.view')
 def api_debug_expiration():
     """Debug endpoint to check expiration setup"""
     from ...models import InventoryItem, InventoryLot
@@ -131,6 +139,7 @@ def api_debug_expiration():
 
 @expiration_bp.route('/api/mark-expired', methods=['POST'])
 @login_required
+@require_permission('inventory.adjust')
 def api_mark_expired():
     """Mark expired items as expired and remove from inventory"""
     try:
@@ -161,6 +170,7 @@ def api_mark_expired():
 
 @expiration_bp.route('/api/summary')
 @login_required
+@require_permission('inventory.view')
 def api_expiration_summary():
     """Get expiration summary for dashboard widgets"""
     summary = ExpirationService.get_expiration_summary()
@@ -168,6 +178,7 @@ def api_expiration_summary():
 
 @expiration_bp.route('/api/inventory-status/<int:inventory_item_id>')
 @login_required
+@require_permission('inventory.view')
 def api_inventory_status(inventory_item_id):
     """Get expiration status for a specific inventory item"""
     status = ExpirationService.get_inventory_item_expiration_status(inventory_item_id)
@@ -179,6 +190,7 @@ def api_inventory_status(inventory_item_id):
 
 @expiration_bp.route('/api/product-status/<int:product_id>')
 @login_required
+@require_permission('inventory.view')
 def api_product_status(product_id):
     """Get expiration status for a specific product"""
     status = ExpirationService.get_product_expiration_status(product_id)
@@ -190,6 +202,7 @@ def api_product_status(product_id):
 
 @expiration_bp.route('/api/product-inventory/<int:inventory_id>/expiration')
 @login_required
+@require_permission('inventory.view')
 def api_product_inventory_expiration(inventory_id):
     """Get calculated expiration date for specific product inventory"""
     expiration_date = ExpirationService.get_product_inventory_expiration_date(inventory_id)
@@ -213,6 +226,7 @@ def api_product_inventory_expiration(inventory_id):
 
 @expiration_bp.route('/alerts')
 @login_required
+@require_permission('inventory.view')
 def alerts():
     """Display expiration alerts and management"""
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -255,6 +269,7 @@ def alerts():
                          today=today)
 @expiration_bp.route('/api/expiration-summary')
 @login_required
+@require_permission('inventory.view')
 def expiration_summary():
     """Get summary of expiring inventory"""
     try:

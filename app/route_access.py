@@ -12,9 +12,20 @@ class RouteAccessConfig:
         "static",
         "homepage",
         "index",
+        "public_page",
         "auth.login",
         "auth.signup",
         "auth.logout",
+        "auth.quick_signup",
+        "auth.oauth_google",
+        "auth.oauth_callback",
+        "auth.oauth_callback_compat",
+        "auth.resend_verification",
+        "auth.verify_email",
+        "auth.dev_login",
+        "auth.debug_oauth_config",
+        "auth.whop_login",
+        "auth.signup_data",
         "legal.privacy_policy",
         "legal.terms_of_service",
         "billing.stripe_webhook",
@@ -34,18 +45,23 @@ class RouteAccessConfig:
         "public_api_bp.public_global_item_search",
         "global_library_bp.global_library",
         "global_library_bp.global_item_detail",
+        "global_library_bp.global_library_item_stats",
+        "recipes.static",
         "recipe_library_bp.recipe_library",
         "recipe_library_bp.recipe_library_detail",
         "recipe_library_bp.organization_marketplace",
         "help_routes.help_overview",
         "help_routes.help_faq",
         "waitlist.join_waitlist",
+        "api.health_check",
+        "app_routes.vendor_signup",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
         "/homepage",
         "/legal/",
         "/static/",
+        "/favicon.ico",
         "/auth/login",
         "/auth/signup",
         "/auth/logout",
@@ -60,9 +76,9 @@ class RouteAccessConfig:
     DEVELOPER_ONLY_PATH_PREFIXES: Tuple[str, ...] = ("/developer/",)
 
     DEVELOPER_NO_ORG_REQUIRED_PREFIXES: Tuple[str, ...] = (
-        "/developer/",
         "/auth/permissions",
         "/global-items",
+        "/api/drawers",
     )
 
     MONITORING_PATHS: Tuple[str, ...] = (

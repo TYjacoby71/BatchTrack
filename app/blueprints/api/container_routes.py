@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 
 from app.services.batch_integration_service import BatchIntegrationService
 
@@ -9,6 +10,7 @@ container_api_bp = Blueprint('container_api', __name__)
 
 @container_api_bp.route('/batches/<int:batch_id>/containers', methods=['GET'])
 @login_required
+@require_permission('batches.view')
 def get_batch_containers(batch_id):
     """Get batch containers using batch integration service"""
     try:
@@ -25,6 +27,7 @@ def get_batch_containers(batch_id):
 
 @container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>', methods=['DELETE'])
 @login_required
+@require_permission('batches.edit')
 def remove_batch_container(batch_id, container_id):
     """Remove container from batch using batch integration service"""
     try:
@@ -41,6 +44,7 @@ def remove_batch_container(batch_id, container_id):
 
 @container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>/adjust', methods=['POST'])
 @login_required
+@require_permission('batches.edit')
 def adjust_batch_container(batch_id, container_id):
     """Adjust container using batch integration service"""
     try:

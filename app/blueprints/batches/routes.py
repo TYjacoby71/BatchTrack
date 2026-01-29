@@ -1,5 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from ...models import db, Batch, Recipe, InventoryItem, BatchTimer, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer
 from datetime import datetime, timedelta
 from ...utils import get_setting
@@ -75,6 +76,7 @@ def _build_forced_start_note(stock_issues):
 
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
+@require_permission('batches.view')
 def get_batch_remaining_details(batch_id):
     """Get detailed remaining inventory for a specific batch"""
     try:
@@ -88,6 +90,7 @@ def get_batch_remaining_details(batch_id):
 
 @batches_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
+@require_permission('batches.view')
 def get_batch_inventory_summary(batch_id):
     """Get batch inventory summary for FIFO modal"""
     try:
@@ -104,6 +107,7 @@ def get_batch_inventory_summary(batch_id):
 
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
+@require_permission('batches.view')
 def set_column_visibility():
     """Set column visibility preferences"""
     columns = request.form.getlist('columns')
@@ -113,6 +117,7 @@ def set_column_visibility():
 
 @batches_bp.route('/')
 @login_required
+@require_permission('batches.view')
 def list_batches():
     """List batches with filtering and pagination"""
     try:
@@ -175,6 +180,7 @@ def list_batches():
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
+@require_permission('batches.view')
 def view_batch_record(batch_identifier):
     """View a specific batch record - handles completed, failed, and cancelled batches"""
     try:
@@ -218,6 +224,7 @@ def view_batch_record(batch_identifier):
 
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
+@require_permission('batches.edit')
 def update_batch_notes(batch_id):
     """Update batch notes and tags"""
     try:
@@ -248,6 +255,7 @@ def update_batch_notes(batch_id):
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
+@require_permission('batches.view')
 def view_batch_in_progress(batch_identifier):
     """View active batch with full editing capabilities"""
     try:
@@ -303,6 +311,7 @@ def view_batch_in_progress(batch_identifier):
 
 @batches_bp.route('/api/available-ingredients/<int:recipe_id>')
 @login_required
+@require_permission('batches.create')
 def get_available_ingredients_for_batch(recipe_id):
     """Get available ingredients for a specific recipe using USCS"""
     try:
@@ -321,6 +330,7 @@ def get_available_ingredients_for_batch(recipe_id):
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
 @limiter.limit("100/minute")
+@require_permission('batches.create')
 def api_start_batch():
     """Start a new batch from a unified PlanSnapshot built server-side."""
     try:

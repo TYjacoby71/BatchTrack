@@ -1,6 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from app.services.unit_conversion import ConversionEngine
 from app.utils.unit_utils import get_global_unit_list
 from app.models.models import Unit
@@ -10,6 +11,7 @@ unit_api_bp = Blueprint('unit_api', __name__, url_prefix='/api')
 
 @unit_api_bp.route('/units')
 @login_required
+@require_permission('inventory.view')
 def get_units():
     """Get available units for current user"""
     try:
@@ -34,6 +36,7 @@ def get_units():
 
 @unit_api_bp.route('/unit-search')
 @login_required
+@require_permission('inventory.view')
 def unit_search():
     """Search units by type and optional query, scoped to org for custom units.
 
@@ -78,6 +81,7 @@ def unit_search():
 
 @unit_api_bp.route('/convert-units', methods=['POST'])
 @login_required
+@require_permission('inventory.view')
 def convert_units():
     """Convert between units"""
     try:

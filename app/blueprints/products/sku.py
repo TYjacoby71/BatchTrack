@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from sqlalchemy import or_
 from datetime import datetime, timezone, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
@@ -19,6 +20,7 @@ def _merge_skus_enabled() -> bool:
 
 @sku_bp.route('/<int:inventory_item_id>')
 @login_required
+@require_permission('products.view')
 def view_sku(inventory_item_id):
     """View individual SKU details"""
     sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
@@ -56,6 +58,7 @@ def view_sku(inventory_item_id):
 
 @sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
     sku = ProductSKU.query.filter_by(
@@ -163,6 +166,7 @@ def edit_sku(inventory_item_id):
 
 @sku_bp.route('/merge/select')
 @login_required
+@require_permission('products.manage_variants')
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
     if not _merge_skus_enabled():
@@ -179,6 +183,7 @@ def select_skus_to_merge():
 
 @sku_bp.route('/merge/configure', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def configure_merge():
     """Configure merge settings for selected SKUs"""
     if not _merge_skus_enabled():
@@ -230,6 +235,7 @@ def configure_merge():
 
 @sku_bp.route('/merge/execute', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def execute_merge():
     """Execute the SKU merge"""
     if not _merge_skus_enabled():
@@ -332,6 +338,7 @@ def execute_merge():
 
 @sku_bp.route('/api/sku/<int:sku_id>/merge_preview')
 @login_required
+@require_permission('products.manage_variants')
 def get_merge_preview(sku_id):
     """Get preview data for SKU merge"""
     sku = ProductSKU.query.filter_by(
