@@ -29,6 +29,9 @@
     document.querySelectorAll('.unit-label').forEach(el => {
       el.textContent = state.currentUnit;
     });
+    document.querySelectorAll('.unit-suffix').forEach(el => {
+      el.dataset.suffix = state.currentUnit;
+    });
   }
 
   function setUnit(unit, options = {}){

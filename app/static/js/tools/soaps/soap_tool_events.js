@@ -311,6 +311,27 @@
         SoapTool.storage.queueAutoCalc();
       });
     });
+  const additiveWeights = [
+    { weightId: 'additiveLactateWeight', pctId: 'additiveLactatePct' },
+    { weightId: 'additiveSugarWeight', pctId: 'additiveSugarPct' },
+    { weightId: 'additiveSaltWeight', pctId: 'additiveSaltPct' },
+    { weightId: 'additiveCitricWeight', pctId: 'additiveCitricPct' },
+  ];
+  additiveWeights.forEach(({ weightId, pctId }) => {
+    const weightInput = document.getElementById(weightId);
+    const pctInput = document.getElementById(pctId);
+    if (!weightInput || !pctInput) return;
+    weightInput.addEventListener('input', () => {
+      const totalOils = SoapTool.oils.getTotalOilsGrams();
+      if (!totalOils) return;
+      const grams = SoapTool.units.toGrams(weightInput.value);
+      pctInput.value = grams > 0 ? SoapTool.helpers.round((grams / totalOils) * 100, 2) : '';
+      SoapTool.additives.updateAdditivesOutput(totalOils);
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+      SoapTool.storage.queueAutoCalc();
+    });
+  });
 
   document.querySelectorAll('.additive-typeahead').forEach(input => {
     input.addEventListener('input', () => {

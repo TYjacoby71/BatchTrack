@@ -351,6 +351,33 @@
   min-width: 0;
   line-height: 1.1;
 }
+#soapToolPage .soap-input-suffix {
+  position: relative;
+  width: 100%;
+}
+#soapToolPage .soap-input-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+#soapToolPage .soap-input-suffix input.form-control {
+  padding-right: 2.4rem;
+}
+#soapToolPage input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+#soapToolPage input[type="number"]::-webkit-outer-spin-button,
+#soapToolPage input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
@@ -778,6 +805,11 @@
 #soapToolPage #soapStage4Pane .form-control {
   font-size: 0.85rem;
 }
+#soapToolPage #soapStage4Pane .additive-typeahead {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #soapToolPage .fragrance-row .fragrance-remove-col {
   justify-content: center;
 }
@@ -794,7 +826,7 @@
 #soapToolPage .oil-row .oil-remove-col {
   justify-content: center;
 }
-@container soap-stage (max-width: 520px) {
+@container soap-stage (max-width: 360px) {
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
@@ -826,7 +858,7 @@
     justify-content: flex-end;
   }
 }
-@container soap-stage (max-width: 440px) {
+@container soap-stage (max-width: 320px) {
   #soapToolPage .oil-row .oil-weight-col,
   #soapToolPage .oil-row .oil-percent-col {
     flex: 0 0 100%;
