@@ -605,11 +605,9 @@
   SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
   SoapTool.stages.updateStageStatuses();
   SoapTool.storage.restoreState();
-  const oilRows = document.getElementById('oilRows');
   if (oilRows && !oilRows.querySelector('.oil-row')) {
     oilRows.appendChild(SoapTool.oils.buildOilRow());
   }
-  const fragranceRows = document.getElementById('fragranceRows');
   if (fragranceRows && !fragranceRows.querySelector('.fragrance-row')) {
     if (SoapTool.fragrances?.buildFragranceRow) {
       fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
