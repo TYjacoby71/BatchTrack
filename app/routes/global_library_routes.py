@@ -28,6 +28,13 @@ PUBLIC_LIBRARY_DETAIL_LIMIT = 10
 PUBLIC_LIBRARY_WINDOW_HOURS = 24
 
 
+def _tag_required_permissions(*permissions: str):
+    def decorator(func):
+        _record_required_permissions(func, permissions)
+        return func
+    return decorator
+
+
 def _global_library_rate_limit() -> str:
     if current_user.is_authenticated:
         return "6000/hour;300/minute"
@@ -328,7 +335,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
 
 @global_library_bp.route('/global-items/<int:item_id>/save-to-inventory')
 @limiter.limit("6000/hour;300/minute")
-@_record_required_permissions("inventory.edit")
+@_tag_required_permissions("inventory.edit")
 def save_global_item_to_inventory(item_id: int):
     """Save a public global item into the authenticated user's inventory.
 
