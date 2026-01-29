@@ -2723,10 +2723,15 @@ def api_refined_definition_detail(term: str):
                     try:
                         raw_data = json.loads(ir[9])
                         cas_numbers = raw_data.get("cas_numbers", [])
-                        # Extract PubChem data if present
+                        # Extract PubChem data - can be at top level or nested in merged_specs
                         if "pubchem" in raw_data and isinstance(raw_data["pubchem"], dict):
                             pubchem_data = raw_data["pubchem"]
                             pubchem_cid = pubchem_data.get("cid")
+                        elif "merged_specs" in raw_data and isinstance(raw_data["merged_specs"], dict):
+                            merged_specs = raw_data["merged_specs"]
+                            if "pubchem" in merged_specs and isinstance(merged_specs["pubchem"], dict):
+                                pubchem_data = merged_specs["pubchem"]
+                                pubchem_cid = pubchem_data.get("cid")
                     except:
                         pass
                 # Extract additional data from item_json
