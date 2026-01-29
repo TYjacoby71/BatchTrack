@@ -757,19 +757,19 @@
   max-width: 10%;
 }
 #soapToolPage #soapStage4Pane .additive-row {
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
-  flex: 0 0 20%;
-  max-width: 20%;
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-weight-col {
-  flex: 0 0 20%;
-  max-width: 20%;
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
-  flex: 0 0 60%;
-  max-width: 60%;
+  flex: 0 0 60% !important;
+  max-width: 60% !important;
 }
 #soapToolPage #soapStage4Pane .form-label {
   font-size: 0.72rem;
