@@ -786,8 +786,8 @@
 }
 #soapToolPage #soapStage4Pane .additive-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
-  column-gap: var(--space-2);
+  grid-template-columns: 1.2fr 1.1fr 2.7fr;
+  column-gap: var(--space-3);
   align-items: end;
 }
 #soapToolPage #soapStage4Pane .additive-row > [class*="col-"] {
@@ -800,8 +800,10 @@
 #soapToolPage #soapStage4Pane .additive-row .form-label {
   display: block;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+#soapToolPage #soapStage4Pane .additive-row .soap-input-suffix,
+#soapToolPage #soapStage4Pane .additive-row .additive-typeahead {
+  width: 100%;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
   flex: 0 0 20% !important;
