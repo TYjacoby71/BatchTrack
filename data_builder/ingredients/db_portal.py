@@ -337,6 +337,14 @@ HTML_TEMPLATE = """
                     <button class="venn-btn" data-filter="done" onclick="setFilter('done')" style="background:#dcfce7;color:#166534;border-color:#86efac;">Done</button>
                 </div>
             </div>
+            <div class="filter-section" id="refined-cluster-filters" style="display:none;">
+                <div class="filter-label">Source Clusters</div>
+                <div class="venn-filters">
+                    <button class="venn-btn active" data-rcluster="all" onclick="setRefinedClusterFilter('all')">All</button>
+                    <button class="venn-btn" data-rcluster="multi" onclick="setRefinedClusterFilter('multi')" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd;">Multi-Cluster</button>
+                    <button class="venn-btn" data-rcluster="single" onclick="setRefinedClusterFilter('single')">Single-Cluster</button>
+                </div>
+            </div>
             <div class="filter-section">
                 <div class="filter-label">Primary Category</div>
                 <select id="category-filter" onchange="setCategoryFilter(this.value)" style="padding:10px 14px; border:2px solid #d1d5db; border-radius:8px; font-size:14px; min-width:200px; background:#fff;">
@@ -412,6 +420,7 @@ HTML_TEMPLATE = """
         let currentClusterSize = 'all';
         let currentDataset = 'raw'; // raw | compiled | refined
         let refinedCategoryFilter = ''; // category filter for refined mode
+        let currentRefinedClusterFilter = 'all'; // all | multi | single
         let searchTimeout = null;
         let expandedTerms = new Set();
         let sortField = 'rank';  // rank | name | priority
@@ -464,6 +473,18 @@ HTML_TEMPLATE = """
             if (currentDataset === 'raw' && currentView === 'clusters') {
                 info = 'Showing source item clusters - items grouped by what the system expects to merge together.';
             }
+            if (currentDataset === 'refined' && currentView === 'terms') {
+                if (currentRefinedClusterFilter === 'multi') {
+                    info = 'Showing refined terms with MULTIPLE source clusters (merged definitions).';
+                } else if (currentRefinedClusterFilter === 'single') {
+                    info = 'Showing refined terms with a single source cluster.';
+                } else {
+                    info = 'Showing all refined ingredient definitions (terms).';
+                }
+                if (refinedCategoryFilter) {
+                    info += ` Filtered to: ${refinedCategoryFilter}`;
+                }
+            }
             document.getElementById('filter-info').textContent = info;
         }
 
@@ -479,6 +500,7 @@ HTML_TEMPLATE = """
             const statusFilters = document.getElementById('status-filters');
             const viewModeSection = document.getElementById('view-mode-section');
             const clusterFilters = document.getElementById('cluster-filters');
+            const refinedClusterFilters = document.getElementById('refined-cluster-filters');
             
             // Show/hide stats panels
             document.getElementById('raw-stats').style.display = (dataset === 'raw') ? 'block' : 'none';
@@ -499,6 +521,8 @@ HTML_TEMPLATE = """
                 if (sourceFilters) sourceFilters.style.display = 'none';
                 if (statusFilters) statusFilters.style.display = 'none';
                 if (clusterFilters) clusterFilters.style.display = 'none';
+                // Show refined cluster filter only for Terms view
+                if (refinedClusterFilters) refinedClusterFilters.style.display = (currentView === 'terms') ? 'block' : 'none';
             } else if (currentDataset === 'compiled') {
                 currentFilter = 'all';
                 document.querySelectorAll('.venn-btn').forEach(btn => {
@@ -512,11 +536,13 @@ HTML_TEMPLATE = """
                 if (sourceFilters) sourceFilters.style.display = 'none';
                 if (statusFilters) statusFilters.style.display = 'block';
                 if (clusterFilters) clusterFilters.style.display = 'none';
+                if (refinedClusterFilters) refinedClusterFilters.style.display = 'none';
             } else {
                 // Raw mode
                 if (viewModeSection) viewModeSection.style.display = 'block';
                 if (sourceFilters) sourceFilters.style.display = 'block';
                 if (statusFilters) statusFilters.style.display = 'none';
+                if (refinedClusterFilters) refinedClusterFilters.style.display = 'none';
             }
             updateFilterInfo();
             updateTableHeaders();
@@ -535,6 +561,8 @@ HTML_TEMPLATE = """
                 }
             });
             document.getElementById('cluster-filters').style.display = (currentDataset === 'raw' && view === 'clusters') ? 'block' : 'none';
+            // Show refined cluster filter only for Refined + Terms
+            document.getElementById('refined-cluster-filters').style.display = (currentDataset === 'refined' && view === 'terms') ? 'block' : 'none';
             updateFilterInfo();
             updateTableHeaders();
             loadData();
@@ -546,6 +574,16 @@ HTML_TEMPLATE = """
             document.querySelectorAll('[data-cluster]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.cluster === size);
             });
+            loadData();
+        }
+        
+        function setRefinedClusterFilter(filter) {
+            currentRefinedClusterFilter = filter;
+            currentPage = 1;
+            document.querySelectorAll('[data-rcluster]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.rcluster === filter);
+            });
+            updateFilterInfo();
             loadData();
         }
         
@@ -679,7 +717,8 @@ HTML_TEMPLATE = """
             const sortParams = currentDataset === 'compiled' && currentView === 'clusters' 
                 ? `&sort=${sortField}&order=${sortOrder}` : '';
             const refinedCatParam = currentDataset === 'refined' ? `&category=${encodeURIComponent(refinedCategoryFilter)}` : '';
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}${refinedCatParam}`)
+            const refinedClusterParam = (currentDataset === 'refined' && currentView === 'terms') ? `&cluster_filter=${currentRefinedClusterFilter}` : '';
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}${refinedCatParam}${refinedClusterParam}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -2299,6 +2338,7 @@ def api_refined_definitions():
     search = (request.args.get("search") or "").strip()
     category = (request.args.get("category") or "").strip()
     origin = (request.args.get("origin") or "").strip()
+    cluster_filter = (request.args.get("cluster_filter") or "all").strip()
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -2329,9 +2369,25 @@ def api_refined_definitions():
             where_clauses.append("c.origin = ?")
             params.append(origin)
         where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        # Build HAVING clause for cluster count filter
+        having_sql = ""
+        if cluster_filter == "multi":
+            having_sql = "HAVING COUNT(DISTINCT i.cluster_id) > 1"
+        elif cluster_filter == "single":
+            having_sql = "HAVING COUNT(DISTINCT i.cluster_id) = 1"
 
-        # Count unique derived_terms
-        cur.execute(f"SELECT COUNT(DISTINCT i.derived_term) {base_query} {where_sql}", params)
+        # Count unique derived_terms with cluster filter
+        count_query = f"""
+            SELECT COUNT(*) FROM (
+                SELECT i.derived_term
+                {base_query}
+                {where_sql}
+                GROUP BY i.derived_term
+                {having_sql}
+            )
+        """
+        cur.execute(count_query, params)
         total = cur.fetchone()[0]
 
         cur.execute(
@@ -2346,6 +2402,7 @@ def api_refined_definitions():
             {base_query}
             {where_sql}
             GROUP BY i.derived_term
+            {having_sql}
             ORDER BY i.derived_term
             LIMIT ? OFFSET ?
             """,
