@@ -46,6 +46,10 @@
       const value = toNumber(input.value);
       if (value > 0) input.value = round(value * ratio, 2);
     });
+    document.querySelectorAll('.fragrance-grams').forEach(input => {
+      const value = toNumber(input.value);
+      if (value > 0) input.value = round(value * ratio, 2);
+    });
     const oilTarget = document.getElementById('oilTotalTarget');
     if (oilTarget && oilTarget.value) {
       const value = toNumber(oilTarget.value);

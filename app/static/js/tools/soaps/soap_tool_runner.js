@@ -378,6 +378,29 @@
     };
   }
 
+  function collectFragranceRows(totalOils){
+    const rows = [];
+    const target = clamp(totalOils || SoapTool.oils.getTotalOilsGrams() || 0, 0);
+    document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
+      const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
+      const giRaw = row.querySelector('.fragrance-gi-id')?.value || '';
+      const gramsInput = row.querySelector('.fragrance-grams')?.value;
+      const pctInput = row.querySelector('.fragrance-percent')?.value;
+      let grams = SoapTool.units.toGrams(gramsInput);
+      const pct = clamp(toNumber(pctInput), 0);
+      if (grams <= 0 && pct > 0 && target > 0) {
+        grams = target * (pct / 100);
+      }
+      if (!name && !giRaw && grams <= 0) return;
+      rows.push({
+        name: name || 'Fragrance/Essential Oils',
+        globalItemId: giRaw ? parseInt(giRaw) : undefined,
+        grams,
+      });
+    });
+    return rows;
+  }
+
   function buildSoapRecipePayload(calc){
     const notesBlob = buildSoapNotesBlob(calc);
     const baseIngredients = (calc.oils || []).map(oil => ({
@@ -393,10 +416,12 @@
     if (calc.water > 0) {
       baseIngredients.push({ name: 'Distilled Water', quantity: round(calc.water, 2), unit: 'gram' });
     }
-    if (calc.additives?.fragranceG > 0) {
-      const item = getAdditiveItem('additiveFragranceName', 'additiveFragranceGi', 'Fragrance/Essential Oils');
-      baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.fragranceG, 2), unit: 'gram' });
-    }
+    const fragranceRows = collectFragranceRows(calc.totalOils || 0);
+    fragranceRows.forEach(item => {
+      if (item.grams > 0) {
+        baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(item.grams, 2), unit: 'gram' });
+      }
+    });
     if (calc.additives?.lactateG > 0) {
       const item = getAdditiveItem('additiveLactateName', 'additiveLactateGi', 'Sodium Lactate');
       baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.lactateG, 2), unit: 'gram' });

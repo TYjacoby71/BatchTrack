@@ -57,6 +57,22 @@
     return oils;
   }
 
+  function serializeFragrances(){
+    if (SoapTool.fragrances?.collectFragranceData) {
+      return SoapTool.fragrances.collectFragranceData();
+    }
+    const rows = [];
+    document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
+      const name = row.querySelector('.fragrance-typeahead')?.value?.trim() || '';
+      const grams = row.querySelector('.fragrance-grams')?.value || '';
+      const percent = row.querySelector('.fragrance-percent')?.value || '';
+      const gi = row.querySelector('.fragrance-gi-id')?.value || '';
+      if (!name && !grams && !percent && !gi) return;
+      rows.push({ name, grams, percent, gi });
+    });
+    return rows;
+  }
+
   function restoreOilRow(data, index){
     const oilRows = document.getElementById('oilRows');
     if (!oilRows || !data) return;
@@ -95,9 +111,7 @@
         water_ratio: document.getElementById('waterRatio')?.value || '2',
       },
       additives: {
-        fragrance_pct: document.getElementById('additiveFragrancePct').value || '3',
-        fragrance_name: document.getElementById('additiveFragranceName')?.value || '',
-        fragrance_gi: document.getElementById('additiveFragranceGi')?.value || '',
+        fragrances: serializeFragrances(),
         lactate_pct: document.getElementById('additiveLactatePct').value || '1',
         lactate_name: document.getElementById('additiveLactateName')?.value || '',
         lactate_gi: document.getElementById('additiveLactateGi')?.value || '',
@@ -196,11 +210,29 @@
     }
 
     if (data.additives) {
-      document.getElementById('additiveFragrancePct').value = data.additives.fragrance_pct || '3';
-      const fragranceName = document.getElementById('additiveFragranceName');
-      if (fragranceName) fragranceName.value = data.additives.fragrance_name || '';
-      const fragranceGi = document.getElementById('additiveFragranceGi');
-      if (fragranceGi) fragranceGi.value = data.additives.fragrance_gi || '';
+      const fragranceRows = document.getElementById('fragranceRows');
+      if (fragranceRows && SoapTool.fragrances?.buildFragranceRow) {
+        fragranceRows.innerHTML = '';
+        const fragrances = Array.isArray(data.additives.fragrances) && data.additives.fragrances.length
+          ? data.additives.fragrances
+          : null;
+        if (fragrances) {
+          fragrances.forEach(item => {
+            const row = SoapTool.fragrances.buildFragranceRow();
+            row.querySelector('.fragrance-typeahead').value = item.name || '';
+            row.querySelector('.fragrance-grams').value = item.grams || '';
+            row.querySelector('.fragrance-percent').value = item.percent || '';
+            row.querySelector('.fragrance-gi-id').value = item.gi || '';
+            fragranceRows.appendChild(row);
+          });
+        } else if (data.additives.fragrance_pct || data.additives.fragrance_name || data.additives.fragrance_gi) {
+          const row = SoapTool.fragrances.buildFragranceRow();
+          row.querySelector('.fragrance-typeahead').value = data.additives.fragrance_name || '';
+          row.querySelector('.fragrance-percent').value = data.additives.fragrance_pct || '3';
+          row.querySelector('.fragrance-gi-id').value = data.additives.fragrance_gi || '';
+          fragranceRows.appendChild(row);
+        }
+      }
       document.getElementById('additiveLactatePct').value = data.additives.lactate_pct || '1';
       const lactateName = document.getElementById('additiveLactateName');
       if (lactateName) lactateName.value = data.additives.lactate_name || '';
