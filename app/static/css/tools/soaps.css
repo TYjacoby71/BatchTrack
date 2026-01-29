@@ -786,8 +786,8 @@
 }
 #soapToolPage #soapStage4Pane .additive-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
-  column-gap: var(--space-2);
+  grid-template-columns: minmax(8.5rem, 1.1fr) minmax(7rem, 0.9fr) minmax(12rem, 2fr);
+  column-gap: var(--space-4);
   align-items: end;
 }
 #soapToolPage #soapStage4Pane .additive-row > [class*="col-"] {
@@ -796,6 +796,18 @@
   flex: none;
   padding-left: 0;
   padding-right: 0;
+}
+#soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
+#soapToolPage #soapStage4Pane .additive-row .additive-weight-col {
+  min-width: 7.5rem;
+}
+#soapToolPage #soapStage4Pane .additive-row .additive-link-col {
+  min-width: 13rem;
+}
+#soapToolPage #soapStage4Pane .additive-row .form-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
   flex: 0 0 20% !important;
