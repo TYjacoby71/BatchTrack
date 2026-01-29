@@ -385,6 +385,10 @@
   padding-top: 0.3rem;
   padding-bottom: 0.3rem;
   line-height: 1.1;
+  padding-right: 2.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 #soapToolPage .soap-stage-body .input-group {
   width: 100%;
