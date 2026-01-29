@@ -520,3 +520,12 @@ class ProductOpsUser(BaseAuthenticatedUser):
     @task(1)
     def product_stock_summary(self):
         self.client.get("/products/api/stock-summary", name="product_stock_summary")
+
+
+# Explicit user class list so Locust auto-distributes without CLI flags.
+user_classes = [
+    RecipeOpsUser,
+    InventoryOpsUser,
+    ProductOpsUser,
+    AnonymousUser,
+]
