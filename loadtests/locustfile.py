@@ -212,6 +212,7 @@ class AuthenticatedMixin:
 
     login_username: str = ""
     login_password: str = ""
+    csrf_token: Optional[str] = None
 
     def on_start(self):
         creds = _allocate_credentials()
@@ -241,6 +242,40 @@ class AuthenticatedMixin:
         except Exception:
             return None
         return None
+
+    def _base_url(self) -> str:
+        host = (getattr(self, "host", None) or "").strip()
+        if host:
+            return host.rstrip("/")
+        return (getattr(self.client, "base_url", "") or "").rstrip("/")
+
+    def _absolute_url(self, path: str) -> str:
+        if not path:
+            return self._base_url()
+        if path.startswith("http://") or path.startswith("https://"):
+            return path
+        base = self._base_url()
+        if not base:
+            return path
+        if not path.startswith("/"):
+            path = f"/{path}"
+        return f"{base}{path}"
+
+    def _update_csrf_from_response(self, response) -> None:
+        token = self._extract_csrf(response)
+        if token:
+            self.csrf_token = token
+
+    def _csrf_headers(self, referer_path: str | None = None) -> dict:
+        headers: dict[str, str] = {}
+        if self.csrf_token:
+            headers["X-CSRFToken"] = self.csrf_token
+        base_url = self._base_url()
+        if base_url:
+            headers["Origin"] = base_url
+            if referer_path:
+                headers["Referer"] = self._absolute_url(referer_path)
+        return headers
 
     def _login_succeeded(self, response) -> bool:
         if response.status_code in {301, 302, 303, 307, 308}:
@@ -283,19 +318,25 @@ class AuthenticatedMixin:
             self._log_login_failure("login_page", login_page)
             return
 
-        token = self._extract_csrf(login_page)
+        self._update_csrf_from_response(login_page)
+        token = self.csrf_token or self._extract_csrf(login_page)
 
         payload = {
             "username": username,
             "password": password,
+            "form_type": "login",
         }
         if token:
             payload["csrf_token"] = token
 
+        referer_url = self._absolute_url("/auth/login")
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": "/auth/login",
+            "Referer": referer_url,
         }
+        origin = self._base_url()
+        if origin:
+            headers["Origin"] = origin
 
         response = self.client.post(
             "/auth/login",
@@ -304,6 +345,7 @@ class AuthenticatedMixin:
             name="login_submit",
             allow_redirects=False,
         )
+        self._update_csrf_from_response(response)
         if not self._login_succeeded(response):
             self._log_login_failure("login_submit", response)
 
@@ -476,7 +518,8 @@ class InventoryOpsUser(BaseAuthenticatedUser):
         ingredient_id = self._pick_id(self._get_ingredient_ids())
         if ingredient_id:
             payload["ingredient_id"] = ingredient_id
-        self.client.post("/api/unit-converter", json=payload, name="unit_converter")
+        headers = self._csrf_headers(referer_path="/dashboard")
+        self.client.post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
 
 
 class ProductOpsUser(BaseAuthenticatedUser):
