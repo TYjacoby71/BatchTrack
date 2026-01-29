@@ -8,10 +8,15 @@ import json
 import logging
 import os
 import random
+import re
 import time
 from typing import Dict, Optional
 
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ImportError:  # Optional dependency on some runners
+    BeautifulSoup = None
+
 from gevent.lock import Semaphore
 from locust import HttpUser, task, between, events
 
@@ -27,6 +32,15 @@ GLOBAL_ITEM_SEARCH_TERMS = [
     "clay",
     "extract",
 ]
+
+_CSRF_INPUT_RE = re.compile(
+    r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']',
+    re.IGNORECASE,
+)
+_CSRF_META_RE = re.compile(
+    r'name=["\']csrf-token["\']\s+content=["\']([^"\']+)["\']',
+    re.IGNORECASE,
+)
 
 
 def _get_bool_env(name: str, default: bool) -> bool:
@@ -228,19 +242,28 @@ class AuthenticatedMixin:
 
     def _extract_csrf(self, response) -> Optional[str]:
         """Extract CSRF token from login page."""
+        text = response.text or ""
         try:
-            soup = BeautifulSoup(response.text, "html.parser")
+            if BeautifulSoup is not None:
+                soup = BeautifulSoup(text, "html.parser")
 
-            token_field = soup.find("input", {"name": "csrf_token"})
-            if token_field:
-                return token_field.get("value")
+                token_field = soup.find("input", {"name": "csrf_token"})
+                if token_field:
+                    return token_field.get("value")
 
-            meta_csrf = soup.find("meta", {"name": "csrf-token"})
-            if meta_csrf:
-                return meta_csrf.get("content")
+                meta_csrf = soup.find("meta", {"name": "csrf-token"})
+                if meta_csrf:
+                    return meta_csrf.get("content")
 
         except Exception:
             return None
+        if text:
+            match = _CSRF_INPUT_RE.search(text)
+            if match:
+                return match.group(1)
+            match = _CSRF_META_RE.search(text)
+            if match:
+                return match.group(1)
         return None
 
     def _base_url(self) -> str:
