@@ -51,12 +51,12 @@
           <div class="small text-muted">Total %: <span id="oilPercentTotal">0</span>%</div>
           <div class="small text-muted">Current oils: <span id="oilTotalComputed">--</span></div>
         </div>
-        {% set stage_index = 2 %}
-        {% include 'tools/soaps/stages/_stage_actions.html' %}
         <div class="alert alert-warning small mt-1 d-none" id="oilLimitWarning"></div>
         <div class="alert alert-light border small mt-1 d-none" id="oilBlendTips"></div>
       </div>
     </div>
+    {% set stage_index = 2 %}
+    {% include 'tools/soaps/stages/_stage_actions.html' %}
     <div class="card oil-profile-float d-none" id="oilProfileFloat">
       <div class="card-body p-2">
           <div class="d-flex justify-content-between align-items-center mb-1">

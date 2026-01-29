@@ -488,6 +488,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: var(--space-2);
+  width: 100%;
 }
 #soapToolPage .soap-config-row .form-label {
   display: flex;
@@ -797,15 +798,6 @@
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
-  }
-  #soapToolPage #soapStage4Pane .additive-row {
-    flex-wrap: wrap;
-  }
-  #soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
-  #soapToolPage #soapStage4Pane .additive-row .additive-weight-col,
-  #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
-    flex: 0 0 100%;
-    max-width: 100%;
   }
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
