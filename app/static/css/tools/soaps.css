@@ -254,9 +254,6 @@
 #soapToolPage #soapStageQualityRow {
   margin-top: calc(var(--space-3) + 14px) !important;
 }
-#soapToolPage #soapStageQualityRow {
-  margin-top: var(--space-3) !important;
-}
 #soapToolPage .results-toggle {
   position: absolute;
   left: 50%;
@@ -285,28 +282,29 @@
   padding: var(--space-2) var(--space-3);
 }
 #soapToolPage #resultsCard.is-collapsed .results-metrics {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(6.5rem, 1fr));
   gap: var(--space-1);
   margin: 0;
   align-items: stretch;
 }
 #soapToolPage #resultsCard.is-collapsed .results-metrics > [class*="col-"] {
-  flex: 1 1 0;
-  width: 0;
+  flex: none;
+  width: auto;
   max-width: none;
   min-width: 0;
   padding: 0;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile {
-  padding: 0.4rem 0.45rem;
+  padding: 0.35rem 0.4rem;
   box-shadow: var(--shadow-1);
   height: 100%;
+  min-height: 52px;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-icon {
-  width: 22px;
-  height: 22px;
-  font-size: 0.7rem;
+  width: 20px;
+  height: 20px;
+  font-size: 0.65rem;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .d-flex {
   align-items: center;
@@ -316,14 +314,14 @@
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .small {
   font-size: 0.55rem;
-  line-height: 1.1;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .fs-5 {
-  font-size: 0.8rem;
-  line-height: 1.1;
+  font-size: 0.78rem;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -801,8 +799,7 @@
 }
 #soapToolPage .soap-stage-pane.is-height-synced .tab-pane {
   height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card {
   height: 100%;
