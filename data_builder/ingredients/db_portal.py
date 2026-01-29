@@ -856,11 +856,13 @@ HTML_TEMPLATE = """
                         </div>
                     </div>`;
                     
-                    // Descriptions section
-                    html += `<div style="margin-bottom:10px;">
-                        <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Description</div>
-                        <div style="font-size:11px; color:#374151; max-height:60px; overflow:hidden; text-overflow:ellipsis;">${cluster.short_description || '-'}</div>
-                    </div>`;
+                    // Notes/Quality section
+                    if (cluster.data_quality_notes && cluster.data_quality_notes !== '-') {
+                        html += `<div style="margin-bottom:10px;">
+                            <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Notes</div>
+                            <div style="font-size:11px; color:#374151; max-height:60px; overflow:hidden; text-overflow:ellipsis;">${cluster.data_quality_notes}</div>
+                        </div>`;
+                    }
                     
                     // Items within this cluster - expandable
                     if (cluster.items && cluster.items.length > 0) {
@@ -2635,8 +2637,8 @@ def api_refined_definition_detail(term: str):
             """
             SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
                    c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
-                   c.refinement_level, c.derived_from, c.short_description, c.detailed_description,
-                   c.raw_canonical_term
+                   c.refinement_level, c.derived_from, c.raw_canonical_term,
+                   c.data_quality_notes, c.master_category
             FROM compiled_clusters c
             WHERE c.cluster_id IN (
                 SELECT DISTINCT cluster_id FROM compiled_cluster_items WHERE derived_term = ?
@@ -2684,9 +2686,9 @@ def api_refined_definition_detail(term: str):
                 "cas_number": r[8] or "-",
                 "refinement_level": r[9] or "-",
                 "derived_from": r[10] or "-",
-                "short_description": r[11] or "-",
-                "detailed_description": r[12] or "-",
-                "raw_canonical_term": r[13] or "-",
+                "raw_canonical_term": r[11] or "-",
+                "data_quality_notes": r[12] or "-",
+                "master_category": r[13] or "-",
                 "items": cluster_items,
                 "item_count": len(cluster_items),
             })
