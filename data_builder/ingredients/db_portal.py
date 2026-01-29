@@ -2752,10 +2752,10 @@ def api_refined_definition_detail(term: str):
         )
         for r in cur.fetchall():
             cluster_id = r[0]
-            # Get items for this cluster
+            # Get items for this cluster - use merged_item_form_id for API calls
             cur.execute(
                 """
-                SELECT id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form,
+                SELECT merged_item_form_id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form,
                        sap_naoh, sap_koh, iodine_value, ins_value, raw_item_json, item_json,
                        function_tag, sourced_from, use_case_tags
                 FROM compiled_cluster_items
