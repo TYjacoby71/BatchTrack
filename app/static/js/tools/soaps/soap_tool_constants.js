@@ -190,9 +190,8 @@
     { id: 1, tabId: 'soapStage1Tab', paneId: 'soapStage1Pane', required: true },
     { id: 2, tabId: 'soapStage2Tab', paneId: 'soapStage2Pane', required: true },
     { id: 3, tabId: 'soapStage3Tab', paneId: 'soapStage3Pane', required: true },
-    { id: 4, tabId: 'soapStage4Tab', paneId: 'soapStage4Pane', required: true },
+    { id: 4, tabId: 'soapStage4Tab', paneId: 'soapStage4Pane', required: false },
     { id: 5, tabId: 'soapStage5Tab', paneId: 'soapStage5Pane', required: false },
-    { id: 6, tabId: 'soapStage6Tab', paneId: 'soapStage6Pane', required: false },
   ];
 
   const OIL_CATEGORY_SET = new Set(['Oils (Carrier & Fixed)', 'Butters & Solid Fats', 'Waxes']);

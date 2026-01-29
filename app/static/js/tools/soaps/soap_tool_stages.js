@@ -98,19 +98,6 @@
       SoapTool.oils.updateOilTotals();
     }
     if (stageId === 4) {
-      const purity = document.getElementById('lyePurity');
-      if (purity) purity.value = '100';
-      const waterMethod = document.getElementById('waterMethod');
-      if (waterMethod) waterMethod.value = 'percent';
-      const waterPct = document.getElementById('waterPct');
-      if (waterPct) waterPct.value = '33';
-      const lyeConcentration = document.getElementById('lyeConcentration');
-      if (lyeConcentration) lyeConcentration.value = '33';
-      const waterRatio = document.getElementById('waterRatio');
-      if (waterRatio) waterRatio.value = '2';
-      SoapTool.runner.setWaterMethod();
-    }
-    if (stageId === 5) {
       document.getElementById('additiveLactatePct').value = '1';
       document.getElementById('additiveSugarPct').value = '1';
       document.getElementById('additiveSaltPct').value = '0.5';
@@ -121,7 +108,7 @@
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
     }
-    if (stageId === 6) {
+    if (stageId === 5) {
       const fragranceRows = document.getElementById('fragranceRows');
       if (fragranceRows) {
         fragranceRows.innerHTML = '';
@@ -166,22 +153,11 @@
       return { state: hasOil ? 'complete' : 'incomplete', label: hasOil ? 'Oils added' : 'Add oils' };
     }
     if (stageId === 4) {
-      const purity = toNumber(document.getElementById('lyePurity').value);
-      const method = document.getElementById('waterMethod')?.value || 'percent';
-      const waterValue = method === 'percent'
-        ? toNumber(document.getElementById('waterPct').value)
-        : method === 'concentration'
-          ? toNumber(document.getElementById('lyeConcentration').value)
-          : toNumber(document.getElementById('waterRatio').value);
-      const complete = purity > 0 && waterValue > 0;
-      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set water' };
-    }
-    if (stageId === 5) {
       const hasAdditive = ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
         .some(id => toNumber(document.getElementById(id).value) > 0);
       return { state: 'optional', label: hasAdditive ? 'Added' : 'Optional' };
     }
-    if (stageId === 6) {
+    if (stageId === 5) {
       const rows = Array.from(document.querySelectorAll('#fragranceRows .fragrance-row'));
       const hasFragrance = rows.some(row => {
         const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
