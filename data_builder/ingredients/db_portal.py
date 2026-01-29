@@ -486,10 +486,12 @@ HTML_TEMPLATE = """
             document.getElementById('refined-stats').style.display = (dataset === 'refined') ? 'block' : 'none';
             
             if (currentDataset === 'refined') {
-                // Refined mode: hide view mode, show only refined definitions
+                // Refined mode: show view mode for Terms/Items views
                 currentFilter = 'all';
-                currentView = 'terms';  // Refined uses terms view internally
-                if (viewModeSection) viewModeSection.style.display = 'none';
+                document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.view === currentView);
+                });
+                if (viewModeSection) viewModeSection.style.display = 'block';
                 if (sourceFilters) sourceFilters.style.display = 'none';
                 if (statusFilters) statusFilters.style.display = 'none';
                 if (clusterFilters) clusterFilters.style.display = 'none';
@@ -585,7 +587,11 @@ HTML_TEMPLATE = """
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
             if (currentDataset === 'refined') {
-                thead.innerHTML = '<tr><th style="width:25%;">Ingredient Definition</th><th style="width:10%;">Items</th><th style="width:15%;">Origin</th><th style="width:20%;">Category</th><th style="width:15%;">Source Clusters</th><th style="width:15%;">Enrichment</th></tr>';
+                if (currentView === 'terms') {
+                    thead.innerHTML = '<tr><th style="width:25%;">Ingredient Definition</th><th style="width:10%;">Items</th><th style="width:15%;">Origin</th><th style="width:20%;">Category</th><th style="width:15%;">Source Clusters</th><th style="width:15%;">Enrichment</th></tr>';
+                } else {
+                    thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Plant Part</th><th>Origin</th><th>Category</th></tr>';
+                }
                 return;
             }
             if (currentDataset === 'compiled') {
@@ -641,7 +647,11 @@ HTML_TEMPLATE = """
             
             let endpoint;
             if (currentDataset === 'refined') {
-                endpoint = '/api/refined/definitions';
+                if (currentView === 'terms') {
+                    endpoint = '/api/refined/definitions';
+                } else {
+                    endpoint = '/api/refined/items';
+                }
             } else if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
                     endpoint = '/api/compiled/clusters';
@@ -673,7 +683,11 @@ HTML_TEMPLATE = """
                     if ((data.items || data.terms || data.clusters || data.ingredients || data.definitions || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
                     } else if (currentDataset === 'refined') {
-                        renderRefinedDefinitionsView(data.definitions);
+                        if (currentView === 'terms') {
+                            renderRefinedDefinitionsView(data.definitions);
+                        } else {
+                            renderRefinedItemsListView(data.items);
+                        }
                     } else if (currentDataset === 'compiled') {
                         if (currentView === 'clusters') {
                             renderCompiledClustersView(data.clusters);
@@ -716,6 +730,20 @@ HTML_TEMPLATE = """
                     <td>${row.category || '-'}</td>
                     <td>${clusterBadge}</td>
                     <td>${enrichmentBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderRefinedItemsListView(items) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = (items || []).map(row => {
+                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.derived_term || '')}')">
+                    <td><strong>${row.derived_term || '-'}</strong></td>
+                    <td>${row.derived_variation || '-'}</td>
+                    <td>${row.derived_physical_form || '-'}</td>
+                    <td>${row.derived_plant_part || '-'}</td>
+                    <td>${row.origin || '-'}</td>
+                    <td>${row.category || '-'}</td>
                 </tr>`;
             }).join('');
         }
@@ -2372,6 +2400,95 @@ def api_refined_definitions():
     total_pages = max(1, (total + per_page - 1) // per_page)
     conn.close()
     return jsonify({"definitions": definitions, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/refined/items")
+def api_refined_items():
+    """Get all individual refined items (items view) with category from compiled_clusters."""
+    page = int(request.args.get("page", 1))
+    search = (request.args.get("search") or "").strip()
+    category = (request.args.get("category") or "").strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"items": [], "total": 0, "total_pages": 1, "page": page})
+
+    has_compiled_clusters = _table_exists(conn, "compiled_clusters")
+    
+    if has_compiled_clusters:
+        base_query = """
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+        """
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("i.derived_term LIKE ?")
+            params.append(f"%{search}%")
+        if category:
+            where_clauses.append("c.ingredient_category = ?")
+            params.append(category)
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        cur.execute(f"SELECT COUNT(*) {base_query} {where_sql}", params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            f"""
+            SELECT 
+                i.id,
+                i.derived_term,
+                i.derived_variation,
+                i.derived_physical_form,
+                i.derived_plant_part,
+                c.origin,
+                c.ingredient_category
+            {base_query}
+            {where_sql}
+            ORDER BY i.derived_term, i.derived_variation
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+    else:
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("derived_term LIKE ?")
+            params.append(f"%{search}%")
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        cur.execute(f"SELECT COUNT(*) FROM compiled_cluster_items {where_sql}", params)
+        total = cur.fetchone()[0]
+        cur.execute(
+            f"""
+            SELECT id, derived_term, derived_variation, derived_physical_form, derived_plant_part, NULL, NULL
+            FROM compiled_cluster_items
+            {where_sql}
+            ORDER BY derived_term, derived_variation
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+
+    items = [
+        {
+            "id": r[0],
+            "derived_term": r[1] or "-",
+            "derived_variation": r[2] or "-",
+            "derived_physical_form": r[3] or "-",
+            "derived_plant_part": r[4] or "-",
+            "origin": r[5] or "-",
+            "category": r[6] or "-",
+        }
+        for r in cur.fetchall()
+    ]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    conn.close()
+    return jsonify({"items": items, "total": total, "total_pages": total_pages, "page": page})
 
 
 @app.route("/api/refined/definition/<path:term>")
