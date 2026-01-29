@@ -92,6 +92,7 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
+@require_permission('recipes.create')
 def new_recipe():
     if request.method == 'POST':
         is_clone = request.form.get('is_clone') == 'true'
@@ -352,6 +353,7 @@ def create_variation(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
+@require_permission('recipes.edit')
 def edit_recipe(recipe_id):
     recipe = get_recipe_details(recipe_id)
     if not recipe:
@@ -423,6 +425,7 @@ def edit_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
+@require_permission('recipes.create')
 def clone_recipe(recipe_id):
     try:
         success, payload = duplicate_recipe(recipe_id)
@@ -453,6 +456,7 @@ def clone_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/import', methods=['GET'])
 @login_required
+@require_permission('recipes.view')
 def import_recipe(recipe_id: int):
     effective_org_id = get_effective_organization_id()
     recipe = db.session.get(Recipe, recipe_id)

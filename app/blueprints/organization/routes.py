@@ -14,6 +14,7 @@ organization_bp = Blueprint('organization', __name__)
 
 @organization_bp.route('/dashboard')
 @login_required
+@require_permission('organization.view')
 def dashboard():
     """Organization management dashboard"""
     # Check subscription tier first (except for developers)
@@ -107,6 +108,7 @@ def dashboard():
 
 @organization_bp.route('/create-role', methods=['POST'])
 @login_required
+@require_permission('organization.manage_roles')
 def create_role():
     """Create a new organization role"""
     # Check if user is organization owner or developer
@@ -150,6 +152,7 @@ def create_role():
 
 @organization_bp.route('/update-settings', methods=['POST'])
 @login_required
+@require_permission('organization.edit')
 def update_organization_settings():
     """Update organization settings (organization owners only)"""
 
@@ -197,6 +200,7 @@ def update_organization_settings():
 
 @organization_bp.route('/update-tier', methods=['POST'])
 @login_required
+@require_permission('organization.manage_billing')
 def update_subscription_tier():
     """Update organization subscription tier (developers only)"""
 
@@ -250,6 +254,7 @@ def update_subscription_tier():
 
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
+@require_permission('organization.manage_users')
 def invite_user():
     """Invite a new user to the organization"""
     # Check if user is organization owner - developers can access for testing but normal team members cannot
@@ -349,6 +354,7 @@ def invite_user():
 
 @organization_bp.route('/update', methods=['POST'])
 @login_required
+@require_permission('organization.edit')
 def update_organization():
     """Update organization settings"""
 
@@ -378,6 +384,7 @@ def update_organization():
 
 @organization_bp.route('/export/<report_type>')
 @login_required
+@require_permission('reports.export')
 def export_report(report_type):
     """Export various organization reports"""
 
@@ -414,6 +421,7 @@ def export_report(report_type):
 
 @organization_bp.route('/add-user', methods=['POST'])
 @login_required
+@require_permission('organization.manage_users')
 def add_user():
     """Add a new user to the organization (org owners only) - legacy endpoint"""
     # Check if user is organization owner - developers can access for testing but normal team members cannot
@@ -469,6 +477,7 @@ def add_user():
 
 @organization_bp.route('/user/<int:user_id>', methods=['GET'])
 @login_required
+@require_permission('organization.manage_users')
 def get_user(user_id):
     """Get user details for editing"""
     user = User.query.filter_by(
@@ -510,6 +519,7 @@ def get_user(user_id):
 
 @organization_bp.route('/user/<int:user_id>', methods=['PUT'])
 @login_required
+@require_permission('organization.manage_users')
 def update_user(user_id):
     """Update user details (organization owners only)"""
 
@@ -614,6 +624,7 @@ def update_user(user_id):
 
 @organization_bp.route('/user/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
+@require_permission('organization.manage_users')
 def toggle_user_status(user_id):
     """Toggle user active/inactive status (organization owners only)"""
 
@@ -667,6 +678,7 @@ def toggle_user_status(user_id):
 
 @organization_bp.route('/user/<int:user_id>', methods=['DELETE'])
 @login_required
+@require_permission('organization.manage_users')
 def delete_user(user_id):
     """Delete user permanently (organization owners only)"""
 
@@ -709,6 +721,7 @@ def delete_user(user_id):
 
 @organization_bp.route('/user/<int:user_id>/restore', methods=['POST'])
 @login_required
+@require_permission('organization.manage_users')
 def restore_user(user_id):
     """Restore a soft-deleted user (organization owners only)"""
 

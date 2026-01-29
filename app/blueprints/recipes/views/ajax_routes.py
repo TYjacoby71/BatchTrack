@@ -4,6 +4,7 @@ import logging
 
 from flask import jsonify, request
 from flask_login import current_user, login_required
+from app.utils.permissions import require_permission
 from sqlalchemy import func
 
 from app.extensions import db
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def quick_add_unit():
     try:
         data = request.get_json() or {}
@@ -72,6 +74,7 @@ def quick_add_unit():
 
 @recipes_bp.route('/ingredients/quick-add', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def quick_add_ingredient():
     try:
         data = request.get_json()

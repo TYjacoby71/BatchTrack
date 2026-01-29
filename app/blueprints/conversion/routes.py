@@ -3,6 +3,7 @@ from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 from ...models import db, Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
+from app.utils.permissions import require_permission
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 import logging
 from . import conversion_bp
@@ -10,6 +11,7 @@ from . import conversion_bp
 logger = logging.getLogger(__name__)
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
+@require_permission('inventory.view')
 def convert(amount, from_unit, to_unit):
     ingredient_id = request.args.get('ingredient_id', type=int)
     density = request.args.get('density', type=float)
@@ -37,6 +39,7 @@ def convert(amount, from_unit, to_unit):
         }), 400
 
 @conversion_bp.route('/units/<int:unit_id>/delete', methods=['POST'])
+@require_permission('inventory.edit')
 def delete_unit(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     if not (unit.is_custom or unit.user_id):
@@ -60,6 +63,7 @@ def delete_unit(unit_id):
     return redirect(url_for('conversion_bp.manage_units'))
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
+@require_permission('inventory.edit')
 def manage_units():
     from ...utils.unit_utils import get_global_unit_list
     from flask_wtf.csrf import validate_csrf
@@ -248,6 +252,7 @@ def manage_units():
 
 
 @conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
+@require_permission('inventory.edit')
 def delete_mapping(mapping_id):
     # Get mapping with organization scoping
     if current_user.user_type == 'developer':
@@ -275,6 +280,7 @@ def delete_mapping(mapping_id):
     return redirect(url_for('conversion_bp.manage_units'))
 
 @conversion_bp.route('/validate_mapping', methods=['POST'])
+@require_permission('inventory.edit')
 def validate_mapping():
     data = request.get_json()
     from_unit = Unit.query.filter_by(name=data['from_unit']).first()
@@ -301,6 +307,7 @@ def validate_mapping():
     return jsonify({"valid": True})
 
 @conversion_bp.route('/add_mapping', methods=['POST'])
+@require_permission('inventory.edit')
 def add_mapping():
     data = request.get_json()
 

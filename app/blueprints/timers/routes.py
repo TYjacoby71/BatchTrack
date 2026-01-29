@@ -8,6 +8,7 @@ from ...models import db, Batch
 @timers_bp.route('/list_timers')
 @timers_bp.route('/timer_list')
 @login_required
+@require_permission('timers.view')
 def list_timers():
     """Display all timers with management interface"""
     timer_summary = TimerService.get_timer_summary()
@@ -28,6 +29,7 @@ def list_timers():
 @timers_bp.route('/api/create-timer', methods=['POST'])
 @timers_bp.route('/create', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def api_create_timer():
     """Create a new timer for a batch"""
     try:
@@ -75,6 +77,7 @@ def api_create_timer():
 
 @timers_bp.route('/api/timer-status/<int:timer_id>')
 @login_required
+@require_permission('timers.view')
 def api_timer_status(timer_id):
     """Get current timer status"""
     try:
@@ -90,6 +93,7 @@ def api_timer_status(timer_id):
 @timers_bp.route('/api/stop-timer/<int:timer_id>', methods=['POST'])
 @timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def api_stop_timer(timer_id):
     """Stop/complete an active timer"""
     try:
@@ -110,6 +114,7 @@ def api_stop_timer(timer_id):
 
 @timers_bp.route('/delete/<int:timer_id>', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def delete_timer(timer_id):
     """Delete a timer"""
     try:
@@ -130,6 +135,7 @@ def delete_timer(timer_id):
 
 @timers_bp.route('/api/pause-timer/<int:timer_id>', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def api_pause_timer(timer_id):
     """Pause an active timer"""
     try:
@@ -144,6 +150,7 @@ def api_pause_timer(timer_id):
 
 @timers_bp.route('/api/resume-timer/<int:timer_id>', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def api_resume_timer(timer_id):
     """Resume a paused timer"""
     try:
@@ -158,6 +165,7 @@ def api_resume_timer(timer_id):
 
 @timers_bp.route('/api/batch-timers/<int:batch_id>')
 @login_required
+@require_permission('timers.view')
 def api_batch_timers(batch_id):
     """Get all timers for a specific batch"""
     try:
@@ -169,6 +177,7 @@ def api_batch_timers(batch_id):
 
 @timers_bp.route('/api/expired-timers')
 @login_required
+@require_permission('timers.view')
 def api_expired_timers():
     """Get all expired timers"""
     try:
@@ -180,6 +189,7 @@ def api_expired_timers():
 
 @timers_bp.route('/api/auto-expire-timers', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def api_auto_expire_timers():
     """Automatically expire overdue timers"""
     try:
@@ -195,6 +205,7 @@ def api_auto_expire_timers():
 
 @timers_bp.route('/api/timer-summary')
 @login_required
+@require_permission('timers.view')
 def api_timer_summary():
     """Get timer statistics summary"""
     try:
@@ -206,6 +217,7 @@ def api_timer_summary():
 
 @timers_bp.route('/api/cancel/<int:timer_id>', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def cancel_timer(timer_id):
     """Cancel a timer"""
     try:
@@ -230,6 +242,7 @@ def cancel_timer(timer_id):
 
 @timers_bp.route('/api/complete-expired', methods=['POST'])
 @login_required
+@require_permission('timers.manage')
 def complete_expired_timers():
     """Manually trigger completion of expired timers"""
     try:
@@ -262,6 +275,7 @@ def complete_expired_timers():
 
 @timers_bp.route('/api/check-expired')
 @login_required
+@require_permission('timers.view')
 def check_expired_timers():
     """Check for expired timers without completing them"""
     try:

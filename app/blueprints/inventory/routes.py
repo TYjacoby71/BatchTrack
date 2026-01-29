@@ -147,6 +147,7 @@ def can_edit_inventory_item(item):
 @inventory_bp.route('/api/search')
 @login_required
 @limiter.limit("2000/minute")
+@permission_required('inventory.view')
 def api_search_inventory():
     """Search inventory items by name (org-scoped), optionally filtered by type.
 
@@ -176,6 +177,7 @@ def api_search_inventory():
 
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
+@permission_required('inventory.view')
 def api_get_inventory_item(item_id):
     """Return inventory item details for the edit modal (org-scoped)."""
     try:
@@ -311,6 +313,7 @@ def api_toggle_global_link(item_id: int):
 
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
+@permission_required('inventory.edit')
 def api_quick_create_inventory():
     """JSON endpoint to quickly create an inventory item (zero qty) and return it.
     Uses existing create_inventory_item service. Org-scoped.
@@ -471,6 +474,7 @@ def list_inventory():
 
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
+@permission_required('inventory.view')
 def set_column_visibility():
     columns = request.form.getlist('columns')
     session['inventory_columns'] = columns
@@ -478,6 +482,7 @@ def set_column_visibility():
 
 @inventory_bp.route('/view/<int:id>')
 @login_required
+@permission_required('inventory.view')
 def view_inventory(id):
     page = request.args.get('page', 1, type=int)
     per_page = 5
@@ -874,6 +879,7 @@ def edit_inventory(id):
 
 @inventory_bp.route('/archive/<int:id>')
 @login_required
+@permission_required('inventory.delete')
 def archive_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     try:
@@ -887,6 +893,7 @@ def archive_inventory(id):
 
 @inventory_bp.route('/restore/<int:id>')
 @login_required
+@permission_required('inventory.edit')
 def restore_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     try:
@@ -900,6 +907,7 @@ def restore_inventory(id):
 
 @inventory_bp.route('/debug/<int:id>')
 @login_required
+@permission_required('inventory.view')
 def debug_inventory(id):
     """Debug endpoint to check inventory status"""
     try:
@@ -978,7 +986,7 @@ def bulk_inventory_updates():
 
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
 @login_required
-@permission_required('inventory.edit')
+@permission_required('inventory.adjust')
 def api_bulk_inventory_adjustments():
     payload = request.get_json() or {}
     if not _bulk_inventory_updates_enabled():

@@ -1,5 +1,6 @@
 from flask import jsonify, render_template
 from flask_login import login_required
+from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_drawer_action
 
@@ -14,6 +15,7 @@ register_drawer_action(
 
 @drawers_bp.route('/units/quick-create-modal', methods=['GET'])
 @login_required
+@require_permission('inventory.edit')
 def units_quick_create_modal_get():
     """Return the drawer that lets users create a custom unit."""
     modal_html = render_template('components/drawer/quick_create_unit_drawer.html')

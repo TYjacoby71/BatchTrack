@@ -1,17 +1,20 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from ..models import db, Tag
 
 tag_manager_bp = Blueprint('tag_manager', __name__)
 
 @tag_manager_bp.route('/tag-manager')
 @login_required
+@require_permission('tags.manage')
 def tag_manager():
     tags = Tag.scoped().all()
     return render_template('tag_manager.html', tags=tags)
 
 @tag_manager_bp.route('/api/tags', methods=['GET'])
 @login_required
+@require_permission('tags.manage')
 def get_tags():
     tags = Tag.scoped().filter_by(is_active=True).all()
     return jsonify([{
@@ -23,6 +26,7 @@ def get_tags():
 
 @tag_manager_bp.route('/api/tags', methods=['POST'])
 @login_required
+@require_permission('tags.manage')
 def create_tag():
     data = request.get_json()
 
@@ -41,6 +45,7 @@ def create_tag():
 
 @tag_manager_bp.route('/api/tags/<int:tag_id>', methods=['PUT'])
 @login_required
+@require_permission('tags.manage')
 def update_tag(tag_id):
     tag = Tag.scoped().filter_by(id=tag_id).first_or_404()
     data = request.get_json()
@@ -55,6 +60,7 @@ def update_tag(tag_id):
 
 @tag_manager_bp.route('/api/tags/<int:tag_id>', methods=['DELETE'])
 @login_required
+@require_permission('tags.manage')
 def delete_tag(tag_id):
     tag = Tag.scoped().filter_by(id=tag_id).first_or_404()
     tag.is_active = False

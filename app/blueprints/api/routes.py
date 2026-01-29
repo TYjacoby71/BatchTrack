@@ -53,6 +53,8 @@ def health_check():
     return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 @api_bp.route('/server-time')
+@login_required
+@require_permission('dashboard.view')
 def server_time():
     """Get current server time in user's timezone"""
     from ...utils.timezone_utils import TimezoneUtils
@@ -67,6 +69,8 @@ def server_time():
     })
 
 @api_bp.route('/dismiss-alert', methods=['POST'])
+@login_required
+@require_permission('alerts.dismiss')
 def dismiss_alert():
     """Dismiss an alert for the current session"""
     from flask import request
@@ -89,6 +93,7 @@ def dismiss_alert():
 
 @api_bp.route('/dashboard-alerts')
 @login_required
+@require_permission('alerts.view')
 def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""
     try:
@@ -136,6 +141,7 @@ api_bp.register_blueprint(reservation_api_bp)
 
 @api_bp.route('/inventory/item/<int:item_id>', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def get_inventory_item(item_id):
     """Get inventory item details for editing"""
     from ...models import InventoryItem
@@ -165,6 +171,7 @@ def get_inventory_item(item_id):
 
 @api_bp.route('/categories/<int:cat_id>', methods=['GET'])
 @login_required
+@require_permission('products.view')
 def get_category(cat_id):
     c = ProductCategory.query.get_or_404(cat_id)
     return jsonify({'id': c.id, 'name': c.name, 'is_typically_portioned': bool(c.is_typically_portioned)})
@@ -172,6 +179,7 @@ def get_category(cat_id):
 
 @api_bp.route('/unit-search', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def list_units():
     """Unified unit search using get_global_unit_list (standard + org custom)."""
     unit_type = (request.args.get('type') or request.args.get('unit_type') or '').strip()
@@ -205,6 +213,7 @@ def list_units():
 
 @api_bp.route('/units', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def create_unit():
     try:
         data = request.get_json() or {}
@@ -226,6 +235,7 @@ def create_unit():
 
 @api_bp.route('/containers/suggestions', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def get_container_suggestions():
     """Return container field suggestions from curated master lists.
 
@@ -273,6 +283,8 @@ def get_container_suggestions():
 
 # Added timezone endpoint
 @api_bp.route('/timezone', methods=['GET'])
+@login_required
+@require_permission('settings.view')
 def get_timezone():
     """Get server timezone info"""
     from datetime import datetime
@@ -290,6 +302,7 @@ def get_timezone():
 # Added ingredients endpoint for unit converter
 @api_bp.route('/ingredients', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def get_ingredients():
     """Get user's ingredients for unit converter"""
     try:
@@ -329,6 +342,7 @@ def get_ingredients():
 
 @api_bp.route('/bootstrap/recipes', methods=['GET'])
 @login_required
+@require_permission('recipes.view')
 def bootstrap_recipes():
     """Lightweight recipe bootstrap payload for clients that only need IDs + variants."""
     org_id = _resolve_org_id()
@@ -388,6 +402,7 @@ def bootstrap_recipes():
 
 @api_bp.route('/bootstrap/products', methods=['GET'])
 @login_required
+@require_permission('products.view')
 def bootstrap_products():
     """Return product + SKU inventory identifiers for fast client bootstrapping."""
     org_id = _resolve_org_id()
@@ -478,6 +493,7 @@ def unit_converter():
 
 @api_bp.route('/batchbot/chat', methods=['POST'])
 @login_required
+@require_permission('ai.batchbot')
 def batchbot_chat():
     if not _is_batchbot_enabled():
         return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
@@ -533,6 +549,7 @@ def batchbot_chat():
 
 @api_bp.route('/batchbot/usage', methods=['GET'])
 @login_required
+@require_permission('ai.batchbot')
 def batchbot_usage():
     if not _is_batchbot_enabled():
         return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404

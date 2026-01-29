@@ -1,6 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
+from app.utils.permissions import require_permission
 from ...models import (
     db,
     InventoryItem,
@@ -20,6 +21,7 @@ fifo_api_bp = Blueprint('fifo_api', __name__)
 
 @fifo_api_bp.route('/api/fifo-details/<int:inventory_id>')
 @login_required
+@require_permission('inventory.view')
 def get_fifo_details(inventory_id):
     try:
         batch_id = request.args.get('batch_id', type=int)
@@ -77,6 +79,7 @@ def get_fifo_details(inventory_id):
 
 @fifo_api_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
+@require_permission('batches.view')
 def get_batch_inventory_summary(batch_id):
     try:
         # Get batch

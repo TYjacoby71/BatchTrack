@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, render_template, flash, redirect, url_for, session, jsonify, current_app
 from flask_login import login_required, current_user, login_user
 from ...services.billing_service import BillingService
+from ...utils.permissions import require_permission
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
 from ...services.session_service import SessionService
@@ -22,6 +23,7 @@ billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
 @billing_bp.route('/upgrade')
 @login_required
+@require_permission('organization.manage_billing')
 def upgrade():
     """Display upgrade options with live pricing"""
     organization = current_user.organization
@@ -73,6 +75,7 @@ def upgrade():
 
 @billing_bp.route('/storage')
 @login_required
+@require_permission('organization.manage_billing')
 def storage_addon():
     """Redirect to Stripe subscription checkout for storage add-on if configured on the tier."""
     organization = current_user.organization
@@ -111,6 +114,7 @@ def storage_addon():
 
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
+@require_permission('organization.manage_billing')
 def start_addon_checkout(addon_key):
     """Start Stripe checkout for a specific add-on by key (uses addon.stripe_lookup_key).
     Enforces that the add-on is allowed for the organization's current tier.
@@ -155,6 +159,7 @@ def start_addon_checkout(addon_key):
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required
+@require_permission('organization.manage_billing')
 def checkout(tier, billing_cycle='month'):
     """Initiate checkout process"""
     organization = current_user.organization
@@ -187,6 +192,7 @@ def checkout(tier, billing_cycle='month'):
 
 @billing_bp.route('/whop-checkout/<product_id>')
 @login_required
+@require_permission('organization.manage_billing')
 def whop_checkout(product_id):
     """Redirect to Whop checkout"""
     organization = current_user.organization
@@ -274,6 +280,7 @@ def complete_signup_from_whop():
 
 @billing_bp.route('/customer-portal')
 @login_required
+@require_permission('organization.manage_billing')
 def customer_portal():
     """Redirect to Stripe customer portal"""
     organization = current_user.organization
@@ -296,6 +303,7 @@ def customer_portal():
 
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
+@require_permission('organization.manage_billing')
 def cancel_subscription():
     """Cancel current subscription"""
     organization = current_user.organization
@@ -409,6 +417,7 @@ def handle_subscription_deleted(event):
 
 @billing_bp.route('/debug')
 @login_required
+@require_permission('organization.manage_billing')
 def debug_billing():
     """Debug billing information"""
     if not current_user.is_developer:

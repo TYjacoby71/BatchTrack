@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from ...models import db, ProductSKU
 from ...services.product_service import ProductService
 from sqlalchemy import func
@@ -9,6 +10,7 @@ products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products'
 
 @products_api_bp.route('/sku/<int:sku_id>/product')
 @login_required
+@require_permission('products.view')
 def get_product_from_sku(sku_id):
     """Get the Product ID from a SKU ID"""
     try:
@@ -23,6 +25,7 @@ def get_product_from_sku(sku_id):
 
 @products_api_bp.route('/')
 @login_required
+@require_permission('products.view')
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
@@ -52,6 +55,7 @@ def get_products():
 
 @products_api_bp.route('/<int:product_id>/variants')
 @login_required
+@require_permission('products.view')
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
@@ -75,6 +79,7 @@ def get_product_variants(product_id):
 
 @products_api_bp.route('/search')
 @login_required
+@require_permission('products.view')
 def search_products():
     """Search SKUs by product name, variant, or size label"""
     search_term = request.args.get('q', '').strip()
@@ -100,6 +105,7 @@ def search_products():
 
 @products_api_bp.route('/low-stock')
 @login_required
+@require_permission('products.view')
 def get_low_stock():
     """Get SKUs that are low on stock"""
     threshold_multiplier = float(request.args.get('threshold', 1.0))
@@ -124,6 +130,7 @@ def get_low_stock():
 
 @products_api_bp.route('/<int:product_id>/inventory-summary')
 @login_required
+@require_permission('products.view')
 def get_product_inventory_summary_api(product_id):
     """Get inventory summary for a specific product"""
     try:
@@ -137,6 +144,7 @@ def get_product_inventory_summary_api(product_id):
 
 @products_api_bp.route('/quick-add', methods=['POST'])
 @login_required
+@require_permission('products.create')
 def quick_add_product():
     """Quick add product and/or variant"""
     data = request.get_json()
