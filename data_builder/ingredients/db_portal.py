@@ -856,11 +856,17 @@ HTML_TEMPLATE = """
                         </div>
                     </div>`;
                     
-                    // Notes/Quality section
-                    if (cluster.data_quality_notes && cluster.data_quality_notes !== '-') {
+                    // Descriptions section
+                    if (cluster.short_description && cluster.short_description !== '-') {
                         html += `<div style="margin-bottom:10px;">
-                            <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Notes</div>
-                            <div style="font-size:11px; color:#374151; max-height:60px; overflow:hidden; text-overflow:ellipsis;">${cluster.data_quality_notes}</div>
+                            <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Description</div>
+                            <div style="font-size:11px; color:#374151;">${cluster.short_description}</div>
+                        </div>`;
+                    }
+                    if (cluster.detailed_description && cluster.detailed_description !== '-') {
+                        html += `<div style="margin-bottom:10px;">
+                            <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Details</div>
+                            <div style="font-size:11px; color:#475569; max-height:80px; overflow-y:auto;">${cluster.detailed_description}</div>
                         </div>`;
                     }
                     
@@ -2638,7 +2644,7 @@ def api_refined_definition_detail(term: str):
             SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
                    c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
                    c.refinement_level, c.derived_from, c.raw_canonical_term,
-                   c.data_quality_notes, c.master_category
+                   c.data_quality_notes, c.master_category, c.payload_json
             FROM compiled_clusters c
             WHERE c.cluster_id IN (
                 SELECT DISTINCT cluster_id FROM compiled_cluster_items WHERE derived_term = ?
@@ -2674,6 +2680,20 @@ def api_refined_definition_detail(term: str):
                 }
                 for ir in cur.fetchall()
             ]
+            # Extract descriptions from payload_json
+            short_desc = "-"
+            detailed_desc = "-"
+            if r[14]:  # payload_json
+                try:
+                    import json
+                    payload = json.loads(r[14])
+                    stage1 = payload.get("stage1", {})
+                    core = stage1.get("ingredient_core", {})
+                    short_desc = core.get("short_description") or "-"
+                    detailed_desc = core.get("detailed_description") or "-"
+                except:
+                    pass
+            
             source_clusters.append({
                 "cluster_id": cluster_id,
                 "origin": r[1] or "-",
@@ -2689,6 +2709,8 @@ def api_refined_definition_detail(term: str):
                 "raw_canonical_term": r[11] or "-",
                 "data_quality_notes": r[12] or "-",
                 "master_category": r[13] or "-",
+                "short_description": short_desc,
+                "detailed_description": detailed_desc,
                 "items": cluster_items,
                 "item_count": len(cluster_items),
             })
