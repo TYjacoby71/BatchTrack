@@ -18,6 +18,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 @app_routes_bp.route('/user_dashboard')
 @login_required
 @limiter.limit("1000 per minute")
+@permission_required('dashboard.view')
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
@@ -124,12 +125,13 @@ def dashboard():
 
 @app_routes_bp.route('/unit-manager')
 @login_required
-@permission_required('manage_units')
+@permission_required('inventory.edit')
 def unit_manager():
     return redirect(url_for('conversion.manage_units'))
 
 @app_routes_bp.route('/api/dismiss-alert', methods=['POST'])
 @login_required
+@permission_required('alerts.dismiss')
 def dismiss_alert():
     """API endpoint to dismiss alerts for the user session"""
     try:
@@ -152,6 +154,7 @@ def dismiss_alert():
 
 @app_routes_bp.route('/api/dashboard-alerts')
 @login_required
+@permission_required('alerts.view')
 def api_dashboard_alerts():
     """API endpoint to get fresh dashboard alerts"""
     try:
@@ -172,6 +175,7 @@ def api_dashboard_alerts():
 @app_routes_bp.route('/auth-check', methods=['GET'])
 @login_required
 @limiter.limit("500 per minute")
+@permission_required('dashboard.view')
 def auth_check():
     """Lightweight endpoint to verify authentication status without heavy DB work."""
     return jsonify({'status': 'ok'})
@@ -179,7 +183,7 @@ def auth_check():
 
 @app_routes_bp.route('/fault-log')
 @login_required
-@permission_required('view_fault_log')
+@permission_required('alerts.view')
 def view_fault_log():
     try:
         force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
@@ -272,6 +276,8 @@ def vendor_signup():
 
 
 @app_routes_bp.route('/api/server-time')
+@login_required
+@permission_required('dashboard.view')
 def get_server_time():
     """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
     from flask_login import current_user

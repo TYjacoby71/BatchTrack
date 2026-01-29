@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from sqlalchemy import and_, func, desc
 from datetime import datetime, timedelta, timezone
 
@@ -13,6 +14,7 @@ reservations_bp = reservation_bp  # Keep backward compatibility alias
 
 @reservations_bp.route('/')
 @login_required
+@require_permission('inventory.reserve')
 def list_reservations():
     """List all reservations with filtering options"""
     status_filter = request.args.get('status', 'active')
@@ -111,6 +113,7 @@ def list_reservations():
 
 @reservations_bp.route('/api/reservations/create', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def create_reservation():
     """Create a new reservation via API"""
     try:
@@ -143,6 +146,7 @@ def create_reservation():
 
 @reservations_bp.route('/api/reservations/<order_id>/release', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def release_reservation(order_id):
     """Release a reservation by order ID"""
     try:
@@ -200,6 +204,7 @@ def release_reservation(order_id):
 
 @reservations_bp.route('/api/reservations/<order_id>/confirm_sale', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def confirm_sale(order_id):
     """Convert reservation to sale"""
     try:
@@ -218,6 +223,7 @@ def confirm_sale(order_id):
 
 @reservations_bp.route('/api/reservations/<order_id>/details')
 @login_required
+@require_permission('inventory.reserve')
 def get_reservation_details(order_id):
     """Get detailed information about a reservation"""
     try:
@@ -230,6 +236,7 @@ def get_reservation_details(order_id):
 
 @reservations_bp.route('/api/reservations/cleanup_expired', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def cleanup_expired():
     """Clean up expired reservations"""
     try:
@@ -241,6 +248,7 @@ def cleanup_expired():
 
 @reservations_bp.route('/api/inventory/<int:item_id>/reservations')
 @login_required
+@require_permission('inventory.reserve')
 def get_item_reservations(item_id):
     """Get all reservations for a specific inventory item"""
     try:

@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required
+from app.utils.permissions import require_permission
 
 
 class DrawerRegistry:
@@ -72,6 +73,7 @@ def register_cadence_check(check_id: str):
 
 @drawers_bp.route('/check', methods=['GET'])
 @login_required
+@require_permission('dashboard.view')
 def run_drawer_cadence_checks():
     """Execute registered cadence checks and return the next drawer payload, if any."""
     include_param = request.args.get('include')

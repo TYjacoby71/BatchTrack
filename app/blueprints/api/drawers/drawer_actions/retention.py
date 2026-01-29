@@ -1,5 +1,6 @@
 from flask import jsonify, render_template, request, url_for
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 
 from app.services.drawers.payloads import build_drawer_payload
 from app.services.retention_service import RetentionService
@@ -50,6 +51,7 @@ def retention_cadence_check():
 
 @drawers_bp.route('/retention/check', methods=['GET'])
 @login_required
+@require_permission('recipes.delete')
 def retention_check():
     """Direct polling endpoint (used by tests) for retention drawers."""
     items = _get_retention_items()
@@ -59,6 +61,7 @@ def retention_check():
 
 @drawers_bp.route('/retention/modal', methods=['GET'])
 @login_required
+@require_permission('recipes.delete')
 def retention_modal():
     org = getattr(current_user, 'organization', None)
     items = RetentionService.get_pending_drawer_items(org) if org else []
@@ -68,6 +71,7 @@ def retention_modal():
 
 @drawers_bp.route('/retention/acknowledge', methods=['POST'])
 @login_required
+@require_permission('recipes.delete')
 def retention_acknowledge():
     org = getattr(current_user, 'organization', None)
     items = RetentionService.get_pending_drawer_items(org) if org else []
@@ -78,6 +82,7 @@ def retention_acknowledge():
 
 @drawers_bp.route('/retention/export', methods=['GET'])
 @login_required
+@require_permission('recipes.delete')
 def retention_export():
     org = getattr(current_user, 'organization', None)
     export_format = request.args.get('format', 'json')

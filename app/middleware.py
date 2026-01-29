@@ -20,6 +20,7 @@ from flask_login import current_user
 
 from .extensions import db
 from .route_access import RouteAccessConfig
+from .utils.permissions import PermissionScope, resolve_permission_scope
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,49 @@ def _should_log_developer_action(path: str, method: str) -> bool:
     if path in ("/developer/dashboard", "/developer/organizations"):
         return False
     return True
+
+
+def _get_route_required_permissions(endpoint: str | None) -> set[str]:
+    if not endpoint:
+        return set()
+    view_func = current_app.view_functions.get(endpoint)
+    if not view_func:
+        return set()
+    required = getattr(view_func, "_required_permissions", None)
+    if not required:
+        return set()
+    try:
+        return set(required)
+    except TypeError:
+        return {str(required)}
+
+
+def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | None:
+    required_permissions = _get_route_required_permissions(endpoint)
+    if not required_permissions:
+        return None
+    scope = PermissionScope()
+    try:
+        for permission_name in required_permissions:
+            perm_scope = resolve_permission_scope(permission_name)
+            scope.dev = scope.dev or perm_scope.dev
+            scope.customer = scope.customer or perm_scope.customer
+        return scope
+    except Exception as exc:
+        logger.warning("Failed to resolve route permission scope: %s", exc)
+        return None
+
+
+def _classify_route_category(path: str, permission_scope: PermissionScope | None) -> str:
+    if permission_scope:
+        if permission_scope.is_dev_only:
+            return "dev"
+        if permission_scope.is_customer_only:
+            return "customer"
+        return "dev" if RouteAccessConfig.is_developer_only_path(path) else "customer"
+    if RouteAccessConfig.is_developer_only_path(path):
+        return "dev"
+    return "unknown"
 
 
 def register_middleware(app: Flask) -> None:
@@ -150,6 +194,8 @@ def register_middleware(app: Flask) -> None:
                 return jsonify({"error": "Authentication required"}), 401
             return redirect(url_for("auth.login", next=request.url))
 
+        permission_scope = _resolve_route_permission_scope(request.endpoint)
+
         try:
             if RouteAccessConfig.is_developer_only_path(path):
                 if getattr(current_user, "user_type", None) != "developer":
@@ -163,8 +209,18 @@ def register_middleware(app: Flask) -> None:
         except Exception as exc:  # pragma: no cover - avoid hard failures
             logger.warning("Developer access check failed: %s", exc)
 
+        if permission_scope and permission_scope.is_dev_only:
+            if getattr(current_user, "user_type", None) != "developer":
+                if _wants_json_response():
+                    return jsonify({"error": "forbidden", "reason": "developer_only"}), 403
+                try:
+                    flash("Developer access required.", "error")
+                except Exception:
+                    pass
+                return redirect(url_for("app_routes.dashboard"))
+
         if getattr(current_user, "user_type", None) == "developer":
-            return _handle_developer_context(path)
+            return _handle_developer_context(path, request.endpoint, permission_scope)
 
         if getattr(current_user, "user_type", None) != "developer":
             billing_redirect = _enforce_billing()
@@ -204,13 +260,23 @@ def register_middleware(app: Flask) -> None:
         return response
 
 
-def _handle_developer_context(path: str) -> Response | None:
+def _handle_developer_context(
+    path: str,
+    endpoint: str | None,
+    permission_scope: PermissionScope | None = None,
+) -> Response | None:
     try:
         selected_org_id = session.get("dev_selected_org_id")
         masquerade_org_id = session.get("masquerade_org_id")
         allowed_without_org = RouteAccessConfig.is_developer_no_org_required(path)
 
-        if not (selected_org_id or masquerade_org_id or allowed_without_org):
+        if permission_scope is None:
+            permission_scope = _resolve_route_permission_scope(endpoint)
+
+        route_category = _classify_route_category(path, permission_scope)
+        requires_org = route_category in {"customer", "unknown"} and not allowed_without_org
+
+        if requires_org and not (selected_org_id or masquerade_org_id):
             try:
                 flash("Please select an organization to view customer features.", "warning")
             except Exception:

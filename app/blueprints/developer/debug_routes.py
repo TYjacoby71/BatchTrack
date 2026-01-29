@@ -1,21 +1,19 @@
 
 from flask import Blueprint, jsonify, render_template
-from flask_login import current_user, login_required
+from flask_login import current_user
 
 from app.extensions import db
 from app.models import Permission
 from app.models.subscription_tier import SubscriptionTier
 from app.utils.permissions import _org_tier_includes_permission, has_permission
+from .decorators import require_developer_permission
 
 debug_bp = Blueprint('debug', __name__, url_prefix='/debug')
 
 @debug_bp.route('/permissions')
-@login_required
+@require_developer_permission("dev.debug_mode")
 def debug_permissions():
     """Debug endpoint to show current user's permissions"""
-    if current_user.user_type != 'developer':
-        return jsonify({'error': 'Developer access only'}), 403
-    
     # Get all permissions
     all_permissions = Permission.query.filter_by(is_active=True).all()
     
@@ -48,12 +46,9 @@ def debug_permissions():
     })
 
 @debug_bp.route('/tiers')
-@login_required 
+@require_developer_permission("dev.debug_mode")
 def debug_tiers():
     """Debug endpoint to show tier configuration"""
-    if current_user.user_type != 'developer':
-        return jsonify({'error': 'Developer access only'}), 403
-        
     tiers_config = {}
     tiers = SubscriptionTier.query.all()
     for t in tiers:

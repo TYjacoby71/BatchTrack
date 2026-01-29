@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from ...models import db, ProductSKU, Batch
 from ...services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
@@ -13,6 +14,7 @@ product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/pro
 
 @product_inventory_bp.route('/adjust/<int:inventory_item_id>', methods=['POST'])
 @login_required
+@require_permission('inventory.adjust')
 def adjust_sku_inventory(inventory_item_id):
     """SKU inventory adjustment - uses centralized inventory adjustment service"""
     logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT START ===")
@@ -206,6 +208,7 @@ def adjust_sku_inventory(inventory_item_id):
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
 @login_required
+@require_permission('products.view')
 def get_sku_fifo_status(sku_id):
     """Get FIFO status for SKU using unified inventory system"""
     logger.info(f"=== FIFO STATUS REQUEST ===")
@@ -276,6 +279,7 @@ def get_sku_fifo_status(sku_id):
 
 @product_inventory_bp.route('/dispose-expired/<int:sku_id>', methods=['POST'])
 @login_required
+@require_permission('inventory.adjust')
 def dispose_expired_sku(sku_id):
     """Dispose of expired SKU inventory using unified inventory system"""
     sku = ProductSKU.query.filter_by(
@@ -335,6 +339,7 @@ def dispose_expired_sku(sku_id):
 
 @product_inventory_bp.route('/webhook/sale', methods=['POST'])
 @login_required
+@require_permission('products.sales_tracking')
 def process_sale_webhook():
     """Process sales from external systems (Shopify, Etsy, etc.)"""
     if not request.is_json:
@@ -387,6 +392,7 @@ def process_sale_webhook():
 
 @product_inventory_bp.route('/webhook/return', methods=['POST'])
 @login_required
+@require_permission('products.sales_tracking')
 def process_return_webhook():
     """Process returns from external systems"""
     if not request.is_json:
@@ -442,6 +448,7 @@ def process_return_webhook():
 
 @product_inventory_bp.route('/create_manual_reservation', methods=['POST'])
 @login_required
+@require_permission('inventory.reserve')
 def create_manual_reservation():
     """Create a manual reservation (requires reserve_inventory permission)"""
     # Check permission
@@ -504,6 +511,7 @@ def create_manual_reservation():
 
 @product_inventory_bp.route('/add-from-batch', methods=['POST'])
 @login_required
+@require_permission('products.edit')
 def add_inventory_from_batch():
     """Add product inventory from finished batch"""
     data = request.get_json()

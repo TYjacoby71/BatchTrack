@@ -1,5 +1,6 @@
 from flask import jsonify, render_template
 from flask_login import login_required
+from app.utils.permissions import require_permission
 
 from app.models import IngredientCategory
 from app.utils.unit_utils import get_global_unit_list
@@ -17,6 +18,7 @@ register_drawer_action(
 
 @drawers_bp.route('/inventory/quick-create-modal', methods=['GET'])
 @login_required
+@require_permission('inventory.edit')
 def inventory_quick_create_modal_get():
     """Return the quick-create inventory drawer."""
     units = get_global_unit_list()

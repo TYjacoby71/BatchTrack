@@ -225,6 +225,46 @@
         }
       ]
     },
+    "settings_management": {
+      "description": "User and organization settings, profile, and preferences",
+      "permissions": [
+        {
+          "name": "settings.view",
+          "display_name": "View Settings",
+          "description": "Access settings screens and configuration panels"
+        },
+        {
+          "name": "settings.edit",
+          "display_name": "Edit Settings",
+          "description": "Update profile details, preferences, and system settings"
+        }
+      ]
+    },
+    "timer_management": {
+      "description": "Timers and production time tracking",
+      "permissions": [
+        {
+          "name": "timers.view",
+          "display_name": "View Timers",
+          "description": "View active and completed production timers"
+        },
+        {
+          "name": "timers.manage",
+          "display_name": "Manage Timers",
+          "description": "Create, update, pause, or stop production timers"
+        }
+      ]
+    },
+    "tag_management": {
+      "description": "Tag and taxonomy management",
+      "permissions": [
+        {
+          "name": "tags.manage",
+          "display_name": "Manage Tags",
+          "description": "Create, update, and delete tags used across the system"
+        }
+      ]
+    },
     "reports_analytics": {
       "description": "Reporting, analytics, and business insights",
       "permissions": [
@@ -273,6 +313,11 @@
     "ai_features": {
       "description": "AI-powered features and automation",
       "permissions": [
+        {
+          "name": "ai.batchbot",
+          "display_name": "Batchbot Assistant",
+          "description": "Use the Batchbot assistant for production support and insights"
+        },
         {
           "name": "ai.recipe_optimization",
           "display_name": "AI Recipe Optimization",

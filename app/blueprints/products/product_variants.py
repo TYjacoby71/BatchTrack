@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+from ...utils.permissions import require_permission
 from ...models import db, ProductSKU, InventoryItem
 from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
@@ -11,6 +12,7 @@ product_variants_bp = Blueprint('product_variants', __name__)
 
 @product_variants_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
@@ -150,6 +152,7 @@ def add_variant(product_id):
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>')
 @login_required
+@require_permission('products.view')
 def view_variant(product_id, variant_name):
     """View individual product variation details"""
     # Get the product using the new Product model
@@ -247,6 +250,7 @@ def view_variant(product_id, variant_name):
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/skus', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def create_sku_for_variant(product_id, variant_name):
     """Create a new SKU for an existing variant."""
     product = Product.query.filter_by(
@@ -331,6 +335,7 @@ def create_sku_for_variant(product_id, variant_name):
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def edit_variant(product_id, variant_name):
     """Edit product variation details"""
     from ...models.product import Product, ProductVariant
@@ -390,6 +395,7 @@ def edit_variant(product_id, variant_name):
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/delete', methods=['POST'])
 @login_required
+@require_permission('products.manage_variants')
 def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
     from ...models.product import Product, ProductVariant

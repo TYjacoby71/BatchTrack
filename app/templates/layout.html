@@ -447,10 +447,21 @@
                 </ol>
             </nav>
             {% endif %}
-            {% with messages = get_flashed_messages() %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-info">{{ message }}</div>
+                    {% for category, message in messages %}
+                        {% set alert_class = 'info' %}
+                        {% if category in ['error', 'danger'] %}
+                            {% set alert_class = 'danger' %}
+                        {% elif category == 'warning' %}
+                            {% set alert_class = 'warning' %}
+                        {% elif category == 'success' %}
+                            {% set alert_class = 'success' %}
+                        {% endif %}
+                        <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}

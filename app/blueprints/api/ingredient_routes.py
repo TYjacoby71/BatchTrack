@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 
@@ -23,10 +24,10 @@ def _global_library_cache_timeout() -> int:
     )
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
+@login_required
+@require_permission('inventory.view')
 def get_categories():
     """Return ingredient categories: global categories plus user's custom ones."""
-    if not current_user.is_authenticated:
-        return jsonify([])
 
     # Get only global ingredient categories (no user-owned categories)
     all_categories = IngredientCategory.query.filter_by(
@@ -46,6 +47,7 @@ def get_categories():
 
 @ingredient_api_bp.route('/global-library/density-options', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def get_global_library_density_options():
     """Expose global ingredient density options sourced from the Global Inventory Library."""
     include_uncategorized = request.args.get('include_uncategorized', '1') not in {'0', 'false', 'False'}
@@ -53,6 +55,8 @@ def get_global_library_density_options():
     return jsonify(payload)
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
+@login_required
+@require_permission('inventory.view')
 def get_ingredient_density(id):
     ingredient = InventoryItem.query.get_or_404(id)
     if ingredient.density:
@@ -64,6 +68,7 @@ def get_ingredient_density(id):
 @ingredient_api_bp.route('/ingredients/search', methods=['GET'])
 @login_required
 @limiter.limit("3000/minute")
+@require_permission('inventory.view')
 def search_ingredients():
     """Search existing inventory items and return top matches for name field autocomplete.
     This preserves current add flow while enabling typeahead suggestions.
@@ -122,6 +127,7 @@ def search_ingredients():
 @ingredient_api_bp.route('/ingredients/definitions/search', methods=['GET'])
 @login_required
 @limiter.limit("3000/minute")
+@require_permission('inventory.view')
 def search_ingredient_definitions():
     """Search ingredient definitions for the create global item form."""
     q = (request.args.get('q') or '').strip()
@@ -164,6 +170,7 @@ def search_ingredient_definitions():
 @ingredient_api_bp.route('/ingredients/definitions/<int:ingredient_id>/forms', methods=['GET'])
 @login_required
 @limiter.limit("3000/minute")
+@require_permission('inventory.view')
 def list_forms_for_ingredient_definition(ingredient_id: int):
     """Return the existing global items tied to a specific ingredient definition."""
     ingredient = IngredientDefinition.query.get_or_404(ingredient_id)
@@ -228,6 +235,7 @@ def list_forms_for_ingredient_definition(ingredient_id: int):
 @ingredient_api_bp.route('/physical-forms/search', methods=['GET'])
 @login_required
 @limiter.limit("3000/minute")
+@require_permission('inventory.view')
 def search_physical_forms():
     """Search physical forms with lightweight typeahead payloads."""
     q = (request.args.get('q') or '').strip()
@@ -257,6 +265,7 @@ def search_physical_forms():
 @ingredient_api_bp.route('/variations/search', methods=['GET'])
 @login_required
 @limiter.limit("3000/minute")
+@require_permission('inventory.view')
 def search_variations():
     """Search curated variations with physical form metadata."""
     q = (request.args.get('q') or '').strip()
@@ -293,6 +302,7 @@ def search_variations():
 
 @ingredient_api_bp.route('/ingredients/create-or-link', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def create_or_link_ingredient():
     """Create an inventory item by name if not present, optionally linking to a Global Item when a match exists.
     Input JSON: { name, type='ingredient'|'container'|'packaging'|'consumable', unit?, global_item_id? }
@@ -366,6 +376,7 @@ def create_or_link_ingredient():
 
 @ingredient_api_bp.route('/global-items/search', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def search_global_items():
     q = (request.args.get('q') or '').strip()
     item_type = (request.args.get('type') or '').strip()  # optional: ingredient, container, packaging, consumable
@@ -584,6 +595,7 @@ def search_global_items():
 
 @ingredient_api_bp.route('/global-items/<int:global_item_id>/stats', methods=['GET'])
 @login_required
+@require_permission('inventory.view')
 def get_global_item_stats(global_item_id):
     try:
         rollup = GlobalItemStatsService.get_rollup(global_item_id)

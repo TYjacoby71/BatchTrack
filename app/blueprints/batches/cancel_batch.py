@@ -1,5 +1,6 @@
 from flask import Blueprint, redirect, url_for, flash
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from ...services.batch_service import BatchOperationsService
 from ...utils import get_setting
 from app.utils.permissions import role_required
@@ -8,6 +9,7 @@ cancel_batch_bp = Blueprint('cancel_batch', __name__)
 
 @cancel_batch_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
+@require_permission('batches.cancel')
 def cancel_batch(batch_id):
     """Cancel a batch - thin controller delegating to service"""
     try:

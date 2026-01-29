@@ -8,6 +8,7 @@ dashboard_api_bp = Blueprint('dashboard_api', __name__, url_prefix='/api')
 
 @dashboard_api_bp.route('/dashboard-alerts')
 @login_required
+@require_permission('alerts.view')
 def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""
     try:
@@ -36,6 +37,7 @@ def get_dashboard_alerts():
 
 @dashboard_api_bp.route('/dismiss-alert', methods=['POST'])
 @login_required 
+@require_permission('alerts.dismiss')
 def dismiss_alert():
     """Dismiss an alert"""
     try:
@@ -61,6 +63,7 @@ def dismiss_alert():
 
 @dashboard_api_bp.route('/clear-dismissed-alerts', methods=['POST'])
 @login_required 
+@require_permission('alerts.dismiss')
 def clear_dismissed_alerts():
     """Clear all dismissed alerts from session"""
     try:

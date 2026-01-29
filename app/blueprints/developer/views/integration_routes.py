@@ -4,7 +4,7 @@ import os
 import re
 
 from flask import jsonify, render_template, request
-from flask_login import current_user, login_required
+from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
@@ -12,11 +12,12 @@ from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.integrations.registry import build_integration_categories
 from app.utils.settings import get_setting, update_settings_value
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/integrations")
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
@@ -580,7 +581,7 @@ def integrations_checklist():
 
 
 @developer_bp.route("/integrations/test-email", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_test_email():
     """Send a test email to current user's email if configured."""
     try:
@@ -605,7 +606,7 @@ def integrations_test_email():
 
 
 @developer_bp.route("/integrations/test-stripe", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
@@ -625,7 +626,7 @@ def integrations_test_stripe():
 
 
 @developer_bp.route("/integrations/stripe-events", methods=["GET"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_stripe_events():
     """Summarize recent Stripe webhook events from the database."""
     try:
@@ -649,7 +650,7 @@ def integrations_stripe_events():
 
 
 @developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_set_feature_flags():
     """Set feature flags via AJAX."""
     from app.extensions import db
@@ -684,7 +685,7 @@ def integrations_set_feature_flags():
 
 
 @developer_bp.route("/integrations/auto-backup", methods=["POST"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_set_auto_backup():
     """Persist the auto-backup toggle (stubbed)."""
     try:
@@ -697,7 +698,7 @@ def integrations_set_auto_backup():
 
 
 @developer_bp.route("/integrations/check-webhook", methods=["GET"])
-@login_required
+@require_developer_permission("dev.system_admin")
 def integrations_check_webhook():
     """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
     try:

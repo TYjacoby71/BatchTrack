@@ -2,7 +2,7 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { FRAGRANCE_CATEGORY_SET, LACTATE_CATEGORY_SET, SUGAR_CATEGORY_SET, SALT_CATEGORY_SET, CITRIC_CATEGORY_SET } = SoapTool.constants;
+  const { LACTATE_CATEGORY_SET, SUGAR_CATEGORY_SET, SALT_CATEGORY_SET, CITRIC_CATEGORY_SET } = SoapTool.constants;
   const state = SoapTool.state;
 
   function updateDownloadPreview(){
@@ -44,20 +44,39 @@
     if (summary.superfat) summary.superfat.textContent = SoapTool.units.formatPercent(calc.superfat || 0);
   }
 
-  document.getElementById('addOil').addEventListener('click', function(){
-    document.getElementById('oilRows').appendChild(SoapTool.oils.buildOilRow());
-    SoapTool.stages.updateStageStatuses();
-    SoapTool.storage.queueStateSave();
-  });
+  const addOilBtn = document.getElementById('addOil');
+  const oilRows = document.getElementById('oilRows');
+  if (addOilBtn && oilRows) {
+    addOilBtn.addEventListener('click', function(){
+      oilRows.appendChild(SoapTool.oils.buildOilRow());
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
-  document.getElementById('normalizeOils').addEventListener('click', function(){
-    SoapTool.oils.normalizeOils();
-    SoapTool.stages.updateStageStatuses();
-    SoapTool.storage.queueStateSave();
-    SoapTool.storage.queueAutoCalc();
-  });
+  const addFragranceBtn = document.getElementById('addFragrance');
+  if (addFragranceBtn) {
+    addFragranceBtn.addEventListener('click', function(){
+      const fragranceRows = document.getElementById('fragranceRows');
+      if (!fragranceRows) return;
+      fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
+      SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+    });
+  }
 
-  document.getElementById('oilRows').addEventListener('input', function(e){
+  const normalizeOilsBtn = document.getElementById('normalizeOils');
+  if (normalizeOilsBtn) {
+    normalizeOilsBtn.addEventListener('click', function(){
+      SoapTool.oils.normalizeOils();
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+      SoapTool.storage.queueAutoCalc();
+    });
+  }
+
+  if (oilRows) oilRows.addEventListener('input', function(e){
     if (e.target.classList.contains('oil-grams')) {
       state.lastOilEdit = { row: e.target.closest('.oil-row'), field: 'grams' };
     }
@@ -76,13 +95,13 @@
     }
   });
 
-  document.getElementById('oilRows').addEventListener('focusin', function(e){
+  if (oilRows) oilRows.addEventListener('focusin', function(e){
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.setSelectedOilProfileFromRow(e.target.closest('.oil-row'));
     }
   });
 
-  document.getElementById('oilRows').addEventListener('focusout', function(e){
+  if (oilRows) oilRows.addEventListener('focusout', function(e){
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.clearSelectedOilProfile();
     }
@@ -94,7 +113,7 @@
     }
   });
 
-  document.getElementById('oilRows').addEventListener('keydown', function(e){
+  if (oilRows) oilRows.addEventListener('keydown', function(e){
     if (e.key !== 'Enter') return;
     if (e.target.classList.contains('oil-grams')) {
       e.preventDefault();
@@ -106,7 +125,7 @@
     }
   });
 
-  document.getElementById('oilRows').addEventListener('mouseover', function(e){
+  if (oilRows) oilRows.addEventListener('mouseover', function(e){
     if (!e.target.classList.contains('oil-typeahead')) return;
     const row = e.target.closest('.oil-row');
     if (!row || row === state.lastPreviewRow) return;
@@ -114,13 +133,13 @@
     SoapTool.oils.setSelectedOilProfileFromRow(row);
   });
 
-  document.getElementById('oilRows').addEventListener('mouseout', function(e){
+  if (oilRows) oilRows.addEventListener('mouseout', function(e){
     if (e.target.classList.contains('oil-typeahead')) {
       SoapTool.oils.clearSelectedOilProfile();
     }
   });
 
-  document.getElementById('oilRows').addEventListener('click', function(e){
+  if (oilRows) oilRows.addEventListener('click', function(e){
     const profileButton = e.target.closest('.oil-profile-open');
     if (profileButton) {
       const row = profileButton.closest('.oil-row');
@@ -134,8 +153,9 @@
       }
       return;
     }
-    if (e.target.classList.contains('remove-oil')) {
-      const row = e.target.closest('.oil-row');
+    const removeButton = e.target.closest('.remove-oil');
+    if (removeButton) {
+      const row = removeButton.closest('.oil-row');
       if (row) {
         state.lastRemovedOil = SoapTool.oils.serializeOilRow(row);
         state.lastRemovedOilIndex = Array.from(row.parentElement.children).indexOf(row);
@@ -151,6 +171,36 @@
       SoapTool.storage.queueStateSave();
     }
   });
+
+  const fragranceRows = document.getElementById('fragranceRows');
+  if (fragranceRows) {
+    fragranceRows.addEventListener('input', function(e){
+      if (e.target.classList.contains('fragrance-grams')) {
+        SoapTool.state.lastFragranceEdit = { row: e.target.closest('.fragrance-row'), field: 'grams' };
+      }
+      if (e.target.classList.contains('fragrance-percent')) {
+        SoapTool.state.lastFragranceEdit = { row: e.target.closest('.fragrance-row'), field: 'percent' };
+      }
+      if (e.target.classList.contains('fragrance-grams')
+        || e.target.classList.contains('fragrance-percent')
+        || e.target.classList.contains('fragrance-typeahead')) {
+        SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+        SoapTool.stages.updateStageStatuses();
+        SoapTool.storage.queueStateSave();
+        SoapTool.storage.queueAutoCalc();
+      }
+    });
+    fragranceRows.addEventListener('click', function(e){
+      const removeButton = e.target.closest('.remove-fragrance');
+      if (!removeButton) return;
+      const row = removeButton.closest('.fragrance-row');
+      if (row) row.remove();
+      SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+      SoapTool.storage.queueAutoCalc();
+    });
+  }
 
   const stageTabContent = document.getElementById('soapStageTabContent');
   if (stageTabContent) {
@@ -245,11 +295,12 @@
     });
   });
 
-  ['additiveFragrancePct', 'additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
+  ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => {
         SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
+        SoapTool.stages.updateStageStatuses();
         SoapTool.storage.queueStateSave();
         SoapTool.storage.queueAutoCalc();
       });
@@ -538,11 +589,6 @@
   window.addEventListener('resize', SoapTool.layout.scheduleStageHeightSync);
   window.addEventListener('load', SoapTool.layout.scheduleStageHeightSync);
 
-  const initialOilRow = document.querySelector('#oilRows .oil-row');
-  if (initialOilRow) {
-    SoapTool.oils.attachOilTypeahead(initialOilRow);
-  }
-  SoapTool.additives.attachAdditiveTypeahead('additiveFragranceName', 'additiveFragranceGi', FRAGRANCE_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveLactateName', 'additiveLactateGi', LACTATE_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveSugarName', 'additiveSugarGi', SUGAR_CATEGORY_SET);
   SoapTool.additives.attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET);
@@ -559,6 +605,19 @@
   SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
   SoapTool.stages.updateStageStatuses();
   SoapTool.storage.restoreState();
+  const oilRows = document.getElementById('oilRows');
+  if (oilRows && !oilRows.querySelector('.oil-row')) {
+    oilRows.appendChild(SoapTool.oils.buildOilRow());
+  }
+  const fragranceRows = document.getElementById('fragranceRows');
+  if (fragranceRows && !fragranceRows.querySelector('.fragrance-row')) {
+    if (SoapTool.fragrances?.buildFragranceRow) {
+      fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
+    }
+  }
+  if (SoapTool.fragrances?.updateFragranceTotals) {
+    SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+  }
   SoapTool.layout.scheduleStageHeightSync();
   const downloadModal = document.getElementById('soapDownloadPreviewModal');
   if (downloadModal) {

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
-from flask_login import login_required
-
 from app.services.statistics import (
     AnalyticsCatalogError,
     AnalyticsCatalogService,
     AnalyticsDataService,
 )
 
+from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
 @developer_bp.route("/inventory-analytics")
-@login_required
+@require_developer_permission("dev.access_logs")
 def inventory_analytics_stub():
     """Developer inventory analytics."""
     return render_template(
@@ -26,7 +25,7 @@ def inventory_analytics_stub():
 
 
 @developer_bp.route("/api/inventory-analytics/metrics")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_metrics():
     """Get key inventory analytics metrics."""
     try:
@@ -37,7 +36,7 @@ def api_inventory_analytics_metrics():
 
 
 @developer_bp.route("/api/inventory-analytics/top-items")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_top_items():
     """Get top items by usage across organizations."""
     try:
@@ -49,7 +48,7 @@ def api_inventory_analytics_top_items():
 
 
 @developer_bp.route("/api/inventory-analytics/spoilage")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_spoilage():
     """Get spoilage analysis by item."""
     try:
@@ -61,7 +60,7 @@ def api_inventory_analytics_spoilage():
 
 
 @developer_bp.route("/api/inventory-analytics/data-quality")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_data_quality():
     """Get data quality metrics for global items."""
     try:
@@ -72,7 +71,7 @@ def api_inventory_analytics_data_quality():
 
 
 @developer_bp.route("/api/inventory-analytics/recent-activity")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_recent_activity():
     """Get recent inventory activity across all organizations."""
     try:
@@ -84,7 +83,7 @@ def api_inventory_analytics_recent_activity():
 
 
 @developer_bp.route("/api/inventory-analytics/items-list")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_items_list():
     """Get list of global items for selection."""
     try:
@@ -96,7 +95,7 @@ def api_inventory_analytics_items_list():
 
 
 @developer_bp.route("/api/inventory-analytics/cost-distribution/<int:item_id>")
-@login_required
+@require_developer_permission("dev.access_logs")
 def api_inventory_analytics_cost_distribution(item_id):
     """Get cost distribution for a specific global item."""
     try:
@@ -108,7 +107,7 @@ def api_inventory_analytics_cost_distribution(item_id):
 
 
 @developer_bp.route("/analytics-catalog")
-@login_required
+@require_developer_permission("dev.access_logs")
 def analytics_catalog():
     """Developer catalog of analytics data points and domains."""
     from flask import current_app

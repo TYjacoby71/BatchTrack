@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from ...models import db, Batch, Product, ProductVariant, InventoryItem
 from ...models.inventory_lot import InventoryLot
 from ...models.product import ProductSKU
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
+@require_permission('batches.finish')
 def complete_batch(batch_id):
     """Complete a batch and create final products/ingredients - thin controller"""
     try:
@@ -40,6 +42,7 @@ def complete_batch(batch_id):
 
 @finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
 @login_required
+@require_permission('batches.finish')
 def fail_batch(batch_id):
     """Mark a batch as failed via service. Thin controller.
 

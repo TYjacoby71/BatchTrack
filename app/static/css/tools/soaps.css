@@ -1,5 +1,8 @@
 #soapToolPage {
   margin-top: calc(-1 * var(--space-4));
+  --soap-field-height: 40px;
+  --soap-addon-width: clamp(2.25rem, 6vw, 3rem);
+  --soap-field-gap: 0.35rem;
 }
 #soapToolPage .soap-quality-section-title {
   font-size: 0.85rem;
@@ -248,6 +251,9 @@
 #soapToolPage #resultsCard {
   position: relative;
 }
+#soapToolPage #soapStageQualityRow {
+  margin-top: calc(var(--space-3) + 14px) !important;
+}
 #soapToolPage .results-toggle {
   position: absolute;
   left: 50%;
@@ -277,53 +283,117 @@
 }
 #soapToolPage #resultsCard.is-collapsed .results-metrics {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: repeat(8, minmax(6.5rem, 1fr));
+  gap: var(--space-1);
   margin: 0;
+  align-items: stretch;
 }
 #soapToolPage #resultsCard.is-collapsed .results-metrics > [class*="col-"] {
   flex: none;
+  width: auto;
   max-width: none;
+  min-width: 0;
   padding: 0;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile {
-  padding: 0.4rem 0.5rem;
-  box-shadow: none;
+  padding: 0.35rem 0.4rem;
+  box-shadow: var(--shadow-1);
+  height: 100%;
+  min-height: 52px;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-icon {
-  display: none;
+  width: 20px;
+  height: 20px;
+  font-size: 0.65rem;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .d-flex {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .small {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #soapToolPage #resultsCard.is-collapsed .soap-metric-tile .fs-5 {
-  font-size: 0.9rem;
-  line-height: 1.1;
+  font-size: 0.78rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#soapToolPage #resultsCard.is-collapsed .soap-metric-tile .d-flex > div {
+  min-width: 0;
 }
 #soapToolPage .soap-stage-body .form-label {
-  min-height: 1.1rem;
+  min-height: 1.2rem;
+}
+#soapToolPage .soap-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--soap-field-gap);
+  min-width: 0;
+}
+#soapToolPage .soap-field-stack .form-label {
+  margin-bottom: 0;
+}
+#soapToolPage .soap-field-stack .form-text,
+#soapToolPage .soap-field-stack .small {
+  margin-top: 0;
+}
+#soapToolPage .soap-stage-body .form-control {
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+  min-width: 0;
+  line-height: 1.1;
+}
+#soapToolPage .soap-stage-body .form-select {
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+  min-width: 0;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  line-height: 1.1;
 }
 #soapToolPage .soap-stage-body .input-group {
   width: 100%;
   flex-wrap: nowrap;
+  align-items: stretch;
 }
 #soapToolPage .soap-stage-body .input-group .form-control {
   min-width: 0;
+  height: var(--soap-field-height);
+  line-height: 1;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  box-sizing: border-box;
 }
 #soapToolPage .soap-stage-body .input-group-text {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   background: var(--color-subtle-bg-2);
   border-color: var(--color-border);
   color: var(--color-muted);
-  min-height: 38px;
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+  min-width: var(--soap-addon-width);
+  width: var(--soap-addon-width);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  font-weight: 600;
+  align-self: stretch;
+  line-height: 1;
+  box-sizing: border-box;
 }
-#soapToolPage .soap-stage-body .input-group .form-control {
-  min-height: 38px;
+#soapToolPage .soap-stage-body .input-group > .form-control {
+  height: var(--soap-field-height);
+  line-height: 1;
+  box-sizing: border-box;
 }
 #soapToolPage .soap-metric-icon {
   width: 32px;
@@ -333,6 +403,39 @@
   align-items: center;
   justify-content: center;
   background: var(--color-subtle-bg-2);
+}
+#soapToolPage .soap-output-tile {
+  background: var(--color-subtle-bg-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  padding: 0.5rem 0.75rem;
+  min-height: var(--soap-field-height);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+}
+#soapToolPage .soap-icon-btn {
+  width: var(--soap-field-height);
+  height: var(--soap-field-height);
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+#soapToolPage .soap-icon-btn.btn-outline-danger {
+  border-color: transparent;
+  color: var(--color-danger);
+  background: transparent;
+}
+#soapToolPage .soap-icon-btn.btn-outline-danger:hover,
+#soapToolPage .soap-icon-btn.btn-outline-danger:focus {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 #soapToolPage .soap-quality-range-start {
   background: var(--color-warning-bg);
@@ -384,25 +487,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
 #soapToolPage .soap-config-row .form-label {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
 }
 #soapToolPage .soap-config-row .form-control,
-#soapToolPage .soap-config-row .form-select,
 #soapToolPage .soap-config-row .btn-group .btn {
-  min-height: 38px;
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+}
+#soapToolPage .soap-config-row .form-select {
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  line-height: 1.1;
 }
 #soapToolPage .accordion-body .form-label {
   margin-bottom: 0.25rem;
 }
-#soapToolPage .soap-stage-form-row .form-control,
+#soapToolPage .soap-stage-form-row .form-control {
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+}
 #soapToolPage .soap-stage-form-row .form-select {
-  min-height: 38px;
+  min-height: var(--soap-field-height);
+  height: var(--soap-field-height);
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  line-height: 1.1;
 }
 #soapToolPage .soap-field .form-text {
   display: block;
@@ -491,12 +608,14 @@
   overflow-x: hidden;
 }
 #soapToolPage .soap-stage-tabs-header {
-  padding: var(--space-2) var(--space-2) 0;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   border-top-left-radius: var(--radius-3);
   border-top-right-radius: var(--radius-3);
   overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 #soapToolPage .soap-stage-tabs .nav-tabs {
   border-bottom: none;
@@ -505,23 +624,25 @@
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  margin-bottom: 0;
+  width: 100%;
 }
 #soapToolPage .soap-stage-tabs .nav-tabs::-webkit-scrollbar {
   display: none;
 }
 #soapToolPage .soap-stage-tabs .nav-link {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
+  border-radius: 0;
   background: var(--color-subtle-bg-2);
   color: var(--color-text);
-  padding: var(--space-2) var(--space-3);
+  padding: 0.45rem 0.75rem;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   white-space: nowrap;
   min-width: 0;
-  font-size: clamp(0.7rem, 1.6vw, 0.85rem);
+  font-size: 0.8rem;
 }
 #soapToolPage .soap-stage-tabs .nav-item {
   flex: 1 1 0;
@@ -561,6 +682,103 @@
 #soapToolPage .soap-stage-card {
   margin-bottom: 0;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: soap-stage;
+}
+#soapToolPage #soapStage2Pane .soap-stage-body,
+#soapToolPage #soapStage3Pane .soap-stage-body {
+  padding: 0.75rem;
+}
+#soapToolPage #soapStage2Pane {
+  --soap-field-height: 36px;
+  --soap-field-gap: 0.25rem;
+}
+#soapToolPage #soapStage2Pane .form-label {
+  font-size: 0.8rem;
+}
+#soapToolPage #soapStage3Pane {
+  --soap-field-height: 36px;
+  --soap-field-gap: 0.25rem;
+}
+#soapToolPage #soapStage2Pane .form-text,
+#soapToolPage #soapStage3Pane .form-text {
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+  line-height: 1.1;
+}
+#soapToolPage #soapStage3Pane .oil-row .form-label {
+  font-size: 0.72rem;
+}
+#soapToolPage #soapStage3Pane .oil-row .form-control {
+  font-size: 0.85rem;
+}
+#soapToolPage #soapStage3Pane .oil-row .oil-name-col {
+  flex: 0 0 50%;
+  max-width: 50%;
+}
+#soapToolPage #soapStage3Pane .oil-row .oil-weight-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage3Pane .oil-row .oil-percent-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage3Pane .oil-row .oil-remove-col {
+  flex: 0 0 10%;
+  max-width: 10%;
+}
+#soapToolPage #soapStage3Pane .oil-row {
+  flex-wrap: nowrap;
+}
+#soapToolPage .fragrance-row .form-label {
+  font-size: 0.72rem;
+}
+#soapToolPage .fragrance-row .form-control {
+  font-size: 0.85rem;
+}
+#soapToolPage .fragrance-row {
+  flex-wrap: nowrap;
+}
+#soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col {
+  flex: 0 0 50%;
+  max-width: 50%;
+}
+#soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage5Pane .fragrance-row .fragrance-weight-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage5Pane .fragrance-row .fragrance-remove-col {
+  flex: 0 0 10%;
+  max-width: 10%;
+}
+#soapToolPage #soapStage4Pane .additive-row {
+  flex-wrap: nowrap;
+}
+#soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage4Pane .additive-row .additive-weight-col {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+#soapToolPage #soapStage4Pane .additive-row .additive-link-col {
+  flex: 0 0 60%;
+  max-width: 60%;
+}
+#soapToolPage #soapStage4Pane .form-label {
+  font-size: 0.72rem;
+}
+#soapToolPage #soapStage4Pane .form-control {
+  font-size: 0.85rem;
+}
+#soapToolPage .fragrance-row .fragrance-remove-col {
+  justify-content: center;
 }
 #soapToolPage .soap-stage-body {
   min-width: 0;
@@ -568,6 +786,66 @@
 }
 #soapToolPage .soap-stage-body .row > [class*="col-"] {
   min-width: 0;
+}
+#soapToolPage .soap-stage-grid > [class*="col-"] {
+  min-width: 0;
+}
+#soapToolPage .oil-row .oil-remove-col {
+  justify-content: center;
+}
+@container soap-stage (max-width: 520px) {
+  #soapToolPage #soapStage3Pane .oil-row,
+  #soapToolPage .fragrance-row {
+    flex-wrap: wrap;
+  }
+  #soapToolPage #soapStage4Pane .additive-row {
+    flex-wrap: wrap;
+  }
+  #soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
+  #soapToolPage #soapStage4Pane .additive-row .additive-weight-col,
+  #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-weight-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-remove-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-name-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-weight-col,
+  #soapToolPage .oil-row .oil-percent-col {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  #soapToolPage .oil-row .oil-remove-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+    justify-content: flex-end;
+  }
+  #soapToolPage .fragrance-row .fragrance-remove-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+    justify-content: flex-end;
+  }
+}
+@container soap-stage (max-width: 440px) {
+  #soapToolPage .oil-row .oil-weight-col,
+  #soapToolPage .oil-row .oil-percent-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #soapToolPage .oil-row .oil-remove-col {
+    justify-content: center;
+  }
+  #soapToolPage .fragrance-row .fragrance-remove-col {
+    justify-content: center;
+  }
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-tabs {
   flex: 1 1 auto;
@@ -580,6 +858,7 @@
 }
 #soapToolPage .soap-stage-pane.is-height-synced .tab-pane {
   height: 100%;
+  overflow: hidden;
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card {
   height: 100%;
@@ -617,21 +896,6 @@
     overflow-y: auto;
   }
 }
-#soapToolPage #soapStageQualityRow {
-  display: flex !important;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-#soapToolPage #soapStageQualityRow > .soap-stage-col {
-  flex: 0 0 50%;
-  max-width: 50%;
-  min-width: 0;
-}
-#soapToolPage #soapStageQualityRow > .soap-quality-col {
-  flex: 0 0 50%;
-  max-width: 50%;
-  min-width: 0;
-}
 @media (max-width: 767px) {
   #soapToolPage .oil-profile-float {
     position: static;
@@ -641,14 +905,6 @@
   }
   #soapToolPage .oil-profile-open {
     display: inline-flex;
-  }
-  #soapToolPage #soapStageQualityRow {
-    flex-wrap: wrap;
-  }
-  #soapToolPage #soapStageQualityRow > .soap-stage-col,
-  #soapToolPage #soapStageQualityRow > .soap-quality-col {
-    flex: 0 0 100%;
-    max-width: 100%;
   }
 }
 @media (max-width: 767px) {
