@@ -767,20 +767,21 @@ HTML_TEMPLATE = """
             const overlay = document.getElementById('detail-overlay');
             const panel = document.getElementById('detail-panel');
             
-            // Build items HTML - items housed under the derived term
+            // Build items HTML - items housed under the derived term, clickable
             let itemsHtml = '';
             if (data.items && data.items.length > 0) {
-                itemsHtml = '<div class="detail-section"><h3>Items Under This Definition</h3>';
-                itemsHtml += '<div style="max-height:300px; overflow-y:auto;">';
+                itemsHtml = '<div class="detail-section"><h3>Items Under This Definition (' + data.items.length + ')</h3>';
+                itemsHtml += '<div style="max-height:350px; overflow-y:auto;">';
                 itemsHtml += data.items.map(item => 
-                    `<div class="source-item" style="cursor:default;">
-                        <div class="source-item-header">
-                            <span class="source-item-name">${item.variation || item.plant_part || 'Base Form'}</span>
-                            <span class="badge" style="background:#f3f4f6;color:#6b7280;">${item.form || '-'}</span>
+                    `<div class="source-item" style="cursor:pointer; padding:12px; margin-bottom:8px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;" onclick="showCompiledCluster('${(item.cluster_id || '').replace(/'/g, "\\'")}')">
+                        <div class="source-item-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span class="source-item-name" style="font-weight:600; color:#374151;">${item.variation || 'Base Form'}</span>
+                            <span class="badge" style="background:#e0e7ff;color:#4338ca;">${item.form || '-'}</span>
                         </div>
-                        <div class="source-item-details">
-                            <span>Plant Part: ${item.plant_part || '-'}</span>
-                            <span>Refinement: ${item.refinement || '-'}</span>
+                        <div class="source-item-details" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:12px; color:#6b7280;">
+                            <span>Plant Part: <strong>${item.plant_part || '-'}</strong></span>
+                            <span>Refinement: <strong>${item.refinement || '-'}</strong></span>
+                            <span style="grid-column:span 2; color:#9ca3af; font-size:11px;">Cluster: ${item.cluster_id || '-'}</span>
                         </div>
                     </div>`
                 ).join('');
@@ -790,12 +791,13 @@ HTML_TEMPLATE = """
             // Build SAP data HTML
             let sapHtml = '';
             if (data.sap_data) {
-                sapHtml = `<div class="detail-section"><h3>Soapmaking Data</h3>
+                sapHtml = `<div class="detail-section" style="background:#dcfce7; padding:15px; border-radius:8px;">
+                    <h3 style="color:#166534; margin-bottom:10px;">Soapmaking Enrichment Data</h3>
                     <div class="detail-grid">
-                        <span class="detail-label">SAP NaOH:</span><span class="detail-value">${data.sap_data.sap_naoh || '-'}</span>
-                        <span class="detail-label">SAP KOH:</span><span class="detail-value">${data.sap_data.sap_koh || '-'}</span>
-                        <span class="detail-label">Iodine:</span><span class="detail-value">${data.sap_data.iodine_value || '-'}</span>
-                        <span class="detail-label">INS:</span><span class="detail-value">${data.sap_data.ins_value || '-'}</span>
+                        <span class="detail-label">SAP NaOH:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.sap_naoh || '-'}</span>
+                        <span class="detail-label">SAP KOH:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.sap_koh || '-'}</span>
+                        <span class="detail-label">Iodine Value:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.iodine_value || '-'}</span>
+                        <span class="detail-label">INS Value:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.ins_value || '-'}</span>
                     </div>
                 </div>`;
             }
@@ -807,7 +809,7 @@ HTML_TEMPLATE = """
                 clustersHtml += '<div style="display:flex; flex-wrap:wrap; gap:8px;">';
                 clustersHtml += data.source_clusters.map(c => 
                     `<span class="badge" style="background:#f0f9ff; color:#0369a1; font-size:10px; padding:4px 8px; cursor:pointer;" onclick="showCompiledCluster('${(c.cluster_id || '').replace(/'/g, "\\'")}')">
-                        ${c.cluster_id} (${c.item_count || 0})
+                        ${c.common_name || c.cluster_id} (${c.item_count || 0})
                     </span>`
                 ).join('');
                 clustersHtml += '</div></div>';
@@ -815,7 +817,7 @@ HTML_TEMPLATE = """
             
             panel.innerHTML = `
                 <div class="detail-header" style="background:#7c3aed;">
-                    <button class="detail-close" onclick="closeDetailPanel()">&times;</button>
+                    <button class="detail-close" onclick="closeDetail()">&times;</button>
                     <h2>${data.derived_term || '-'}</h2>
                     <p>${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters</p>
                 </div>
@@ -826,6 +828,8 @@ HTML_TEMPLATE = """
                             <span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>
                             <span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>
                             <span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>
+                            <span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>
+                            <span class="detail-label">Source Clusters:</span><span class="detail-value">${data.cluster_count || 0}</span>
                         </div>
                     </div>
                     ${sapHtml}
