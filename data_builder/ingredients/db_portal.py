@@ -277,24 +277,8 @@ HTML_TEMPLATE = """
             </div>
         </div>
         <div>
-            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Origin Distribution</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="stat-box">
-                    <h3 id="rstat-plant">0</h3>
-                    <p>Plant-Derived</p>
-                </div>
-                <div class="stat-box">
-                    <h3 id="rstat-synthetic">0</h3>
-                    <p>Synthetic</p>
-                </div>
-                <div class="stat-box">
-                    <h3 id="rstat-mineral">0</h3>
-                    <p>Mineral</p>
-                </div>
-                <div class="stat-box">
-                    <h3 id="rstat-animal">0</h3>
-                    <p>Animal</p>
-                </div>
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Category Breakdown (click to filter)</div>
+            <div id="refined-category-grid" class="stats-grid" style="grid-template-columns: repeat(5, 1fr); gap: 8px;">
             </div>
         </div>
     </div>
@@ -426,7 +410,8 @@ HTML_TEMPLATE = """
         let currentCategory = '';
         let currentView = 'terms';
         let currentClusterSize = 'all';
-        let currentDataset = 'raw'; // raw | compiled
+        let currentDataset = 'raw'; // raw | compiled | refined
+        let refinedCategoryFilter = ''; // category filter for refined mode
         let searchTimeout = null;
         let expandedTerms = new Set();
         let sortField = 'rank';  // rank | name | priority
@@ -558,6 +543,17 @@ HTML_TEMPLATE = """
             loadData();
         }
         
+        function setRefinedCategory(cat) {
+            if (refinedCategoryFilter === cat) {
+                refinedCategoryFilter = ''; // toggle off
+            } else {
+                refinedCategoryFilter = cat;
+            }
+            currentPage = 1;
+            loadStats(); // refresh to show selected state
+            loadData();
+        }
+        
         function setFilter(filter) {
             currentFilter = filter;
             currentPage = 1;
@@ -668,7 +664,8 @@ HTML_TEMPLATE = """
             
             const sortParams = currentDataset === 'compiled' && currentView === 'clusters' 
                 ? `&sort=${sortField}&order=${sortOrder}` : '';
-            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}`)
+            const refinedCatParam = currentDataset === 'refined' ? `&category=${encodeURIComponent(refinedCategoryFilter)}` : '';
+            fetch(`${endpoint}?filter=${currentFilter}&page=${currentPage}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(currentCategory)}&cluster_size=${currentClusterSize}${sortParams}${refinedCatParam}`)
                 .then(r => r.json())
                 .then(data => {
                     totalPages = data.total_pages;
@@ -1714,10 +1711,16 @@ HTML_TEMPLATE = """
                         document.getElementById('rstat-source-clusters').textContent = (stats.source_clusters || 0).toLocaleString();
                         document.getElementById('rstat-total-items').textContent = (stats.total_items || 0).toLocaleString();
                         document.getElementById('rstat-enriched').textContent = (stats.enriched || 0).toLocaleString();
-                        document.getElementById('rstat-plant').textContent = (stats.plant || 0).toLocaleString();
-                        document.getElementById('rstat-synthetic').textContent = (stats.synthetic || 0).toLocaleString();
-                        document.getElementById('rstat-mineral').textContent = (stats.mineral || 0).toLocaleString();
-                        document.getElementById('rstat-animal').textContent = (stats.animal || 0).toLocaleString();
+                        // Populate category grid
+                        const catGrid = document.getElementById('refined-category-grid');
+                        if (stats.categories && stats.categories.length > 0) {
+                            catGrid.innerHTML = stats.categories.map(cat => 
+                                `<div class="stat-box" style="cursor:pointer; padding:8px; ${refinedCategoryFilter === cat.name ? 'border:2px solid #8b5cf6;' : ''}" onclick="setRefinedCategory('${cat.name.replace(/'/g, "\\'")}')">
+                                    <h3 style="font-size:14px;">${cat.count.toLocaleString()}</h3>
+                                    <p style="font-size:10px;">${cat.name}</p>
+                                </div>`
+                            ).join('');
+                        }
                     } else if (currentDataset === 'compiled') {
                         document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
                         document.getElementById('cstat-clusters').textContent = (stats.clusters || 0).toLocaleString();
@@ -1846,10 +1849,7 @@ def api_stats():
             "source_clusters": 0,
             "total_items": 0,
             "enriched": 0,
-            "plant": 0,
-            "synthetic": 0,
-            "mineral": 0,
-            "animal": 0,
+            "categories": [],
         }
         
         if _table_exists(conn, "compiled_cluster_items"):
@@ -1865,16 +1865,17 @@ def api_stats():
             cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE sap_naoh IS NOT NULL")
             refined_stats["enriched"] = cur.fetchone()[0]
             
-            # Origin counts from compiled_clusters
+            # Category breakdown from compiled_clusters
             if _table_exists(conn, "compiled_clusters"):
-                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%plant%'")
-                refined_stats["plant"] = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%synth%'")
-                refined_stats["synthetic"] = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%mineral%'")
-                refined_stats["mineral"] = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%animal%'")
-                refined_stats["animal"] = cur.fetchone()[0]
+                cur.execute("""
+                    SELECT c.ingredient_category, COUNT(DISTINCT i.derived_term) as cnt
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.ingredient_category IS NOT NULL AND c.ingredient_category != ''
+                    GROUP BY c.ingredient_category
+                    ORDER BY cnt DESC
+                """)
+                refined_stats["categories"] = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
         
         conn.close()
         return jsonify(refined_stats)
@@ -2266,6 +2267,8 @@ def api_refined_definitions():
     """Get refined ingredient definitions - grouped by derived_term with source cluster info."""
     page = int(request.args.get("page", 1))
     search = (request.args.get("search") or "").strip()
+    category = (request.args.get("category") or "").strip()
+    origin = (request.args.get("origin") or "").strip()
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -2275,43 +2278,68 @@ def api_refined_definitions():
         conn.close()
         return jsonify({"definitions": [], "total": 0, "total_pages": 1, "page": page})
 
-    where_clauses = []
-    params = []
-    if search:
-        where_clauses.append("derived_term LIKE ?")
-        params.append(f"%{search}%")
-    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-
-    # Count unique derived_terms
-    cur.execute(f"SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items {where_sql}", params)
-    total = cur.fetchone()[0]
-
-    # Get grouped definitions - use safe subquery that handles missing compiled_clusters table
     has_compiled_clusters = _table_exists(conn, "compiled_clusters")
-    if has_compiled_clusters:
-        origin_sql = "(SELECT origin FROM compiled_clusters WHERE cluster_id = (SELECT cluster_id FROM compiled_cluster_items WHERE derived_term = i.derived_term LIMIT 1))"
-        category_sql = "(SELECT ingredient_category FROM compiled_clusters WHERE cluster_id = (SELECT cluster_id FROM compiled_cluster_items WHERE derived_term = i.derived_term LIMIT 1))"
-    else:
-        origin_sql = "NULL"
-        category_sql = "NULL"
     
-    cur.execute(
-        f"""
-        SELECT 
-            derived_term,
-            COUNT(*) as item_count,
-            COUNT(DISTINCT cluster_id) as cluster_count,
-            MAX(CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
-            {origin_sql} as origin,
-            {category_sql} as category
-        FROM compiled_cluster_items i
-        {where_sql}
-        GROUP BY derived_term
-        ORDER BY derived_term
-        LIMIT ? OFFSET ?
-        """,
-        params + [per_page, offset],
-    )
+    # Build query that joins with compiled_clusters for proper filtering
+    if has_compiled_clusters:
+        # Use JOIN to properly filter by category/origin
+        base_query = """
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+        """
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("i.derived_term LIKE ?")
+            params.append(f"%{search}%")
+        if category:
+            where_clauses.append("c.ingredient_category = ?")
+            params.append(category)
+        if origin:
+            where_clauses.append("c.origin = ?")
+            params.append(origin)
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # Count unique derived_terms
+        cur.execute(f"SELECT COUNT(DISTINCT i.derived_term) {base_query} {where_sql}", params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            f"""
+            SELECT 
+                i.derived_term,
+                COUNT(*) as item_count,
+                COUNT(DISTINCT i.cluster_id) as cluster_count,
+                MAX(CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
+                c.origin,
+                c.ingredient_category
+            {base_query}
+            {where_sql}
+            GROUP BY i.derived_term
+            ORDER BY i.derived_term
+            LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+    else:
+        where_clauses = []
+        params = []
+        if search:
+            where_clauses.append("derived_term LIKE ?")
+            params.append(f"%{search}%")
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        cur.execute(f"SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items {where_sql}", params)
+        total = cur.fetchone()[0]
+        cur.execute(
+            f"""
+            SELECT derived_term, COUNT(*) as item_count, COUNT(DISTINCT cluster_id) as cluster_count,
+                   MAX(CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data, NULL, NULL
+            FROM compiled_cluster_items {where_sql}
+            GROUP BY derived_term ORDER BY derived_term LIMIT ? OFFSET ?
+            """,
+            params + [per_page, offset],
+        )
+
     definitions = [
         {
             "derived_term": r[0],
