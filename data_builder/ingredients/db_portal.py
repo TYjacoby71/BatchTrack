@@ -359,7 +359,7 @@ HTML_TEMPLATE = """
         
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="search" placeholder="Search terms, CAS, INCI, PubChem CID, botanical..." onkeyup="debounceSearch()">
+                <input type="text" id="search" placeholder="Search terms, common names, CAS, INCI, PubChem CID, botanical..." onkeyup="debounceSearch()">
             </div>
             <div class="export-btns">
                 <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
