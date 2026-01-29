@@ -764,8 +764,10 @@ HTML_TEMPLATE = """
         }
 
         function showRefinedDetailPanel(data) {
-            const overlay = document.getElementById('detail-overlay');
-            const panel = document.getElementById('detail-panel');
+            document.getElementById('detail-overlay').classList.add('active');
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('detail-title').textContent = data.derived_term || '-';
+            document.getElementById('detail-subtitle').textContent = `${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters`;
             
             // Build items HTML - items housed under the derived term, clickable
             let itemsHtml = '';
@@ -815,30 +817,16 @@ HTML_TEMPLATE = """
                 clustersHtml += '</div></div>';
             }
             
-            panel.innerHTML = `
-                <div class="detail-header" style="background:#7c3aed;">
-                    <button class="detail-close" onclick="closeDetail()">&times;</button>
-                    <h2>${data.derived_term || '-'}</h2>
-                    <p>${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters</p>
-                </div>
-                <div class="detail-body">
-                    <div class="detail-section">
-                        <h3>Ingredient Definition</h3>
-                        <div class="detail-grid">
-                            <span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>
-                            <span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>
-                            <span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>
-                            <span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>
-                            <span class="detail-label">Source Clusters:</span><span class="detail-value">${data.cluster_count || 0}</span>
-                        </div>
-                    </div>
-                    ${sapHtml}
-                    ${itemsHtml}
-                    ${clustersHtml}
-                </div>
-            `;
-            overlay.classList.add('active');
-            panel.classList.add('active');
+            let html = '<div class="detail-section"><h3>Ingredient Definition</h3><div class="detail-grid">';
+            html += `<span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>`;
+            html += `<span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>`;
+            html += `<span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>`;
+            html += `<span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>`;
+            html += `<span class="detail-label">Source Clusters:</span><span class="detail-value">${data.cluster_count || 0}</span>`;
+            html += '</div></div>';
+            html += sapHtml + itemsHtml + clustersHtml;
+            
+            document.getElementById('detail-body').innerHTML = html;
         }
 
         function renderCompiledIngredientsView(items) {
