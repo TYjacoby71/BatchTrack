@@ -414,11 +414,13 @@ def import_results(batch_id: str) -> int:
                 if not custom_id.startswith("cn_"):
                     continue
                 
-                parts = custom_id[3:].split("_", 1)
-                if len(parts) < 2:
+                # Parse custom_id formats like cn_review_term:xxx, cn_chem_term:xxx, cn_latin_term:xxx
+                # Extract the cluster_id (everything after the second underscore)
+                parts = custom_id.split("_", 2)  # Split into ["cn", "prefix", "cluster_id"]
+                if len(parts) < 3:
                     continue
                     
-                cluster_id = parts[0]
+                cluster_id = parts[2]
                 
                 response = result.get("response", {})
                 body = response.get("body", {})
@@ -434,7 +436,11 @@ def import_results(batch_id: str) -> int:
                     new_common_name = data.get("common_name")
                     confidence = data.get("confidence", "low")
                     
-                    if new_common_name and new_common_name.lower() not in ["unknown", "n/a", "not found"]:
+                    # Normalize N/A responses
+                    if new_common_name and new_common_name.lower() in ["n/a", "na", "none", "not applicable"]:
+                        new_common_name = "N/A"
+                    
+                    if new_common_name and new_common_name.lower() not in ["unknown", "not found"]:
                         cur.execute('''
                             UPDATE compiled_clusters 
                             SET common_name = ?,
