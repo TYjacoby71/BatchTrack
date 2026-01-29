@@ -5,33 +5,6 @@
   const { toNumber } = SoapTool.helpers;
   const { STAGE_CONFIGS } = SoapTool.constants;
 
-  function injectStageActions(){
-    const bodies = Array.from(document.querySelectorAll('#soapStageTabContent .soap-stage-body'));
-    bodies.forEach((body, index) => {
-      if (!body) return;
-      const existing = body.querySelector('.soap-stage-actions');
-      if (existing) return;
-      const stageIndex = Number(body.dataset.stageIndex ?? index);
-      const target = body.querySelector('[data-stage-actions]');
-      const actions = target || document.createElement('div');
-      actions.classList.add('soap-stage-actions');
-      actions.innerHTML = `
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="prev" data-stage-index="${stageIndex}">
-          <i class="fas fa-arrow-left me-1"></i>Back
-        </button>
-        <button class="btn btn-sm btn-outline-danger" type="button" data-stage-action="reset" data-stage-index="${stageIndex}">
-          Reset stage
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-stage-action="next" data-stage-index="${stageIndex}">
-          Next<i class="fas fa-arrow-right ms-1"></i>
-        </button>
-      `;
-      if (!target) {
-        body.appendChild(actions);
-      }
-    });
-  }
-
   function openStageByIndex(index){
     const stage = STAGE_CONFIGS[index];
     if (!stage) return;
@@ -180,7 +153,6 @@
   }
 
   SoapTool.stages = {
-    injectStageActions,
     openStageByIndex,
     resetStage,
     updateStageStatuses,

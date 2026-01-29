@@ -57,6 +57,7 @@
         </div>
       </div>
     <div class="small text-muted mt-1" id="moldSuggestionNote">Target oils are capped to the mold size above.</div>
-    <div class="soap-stage-actions-placeholder mt-2" data-stage-actions="inline"></div>
+    {% set stage_index = 1 %}
+    {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>
 </div>
