@@ -790,20 +790,6 @@ HTML_TEMPLATE = """
                 itemsHtml += '</div></div>';
             }
             
-            // Build SAP data HTML
-            let sapHtml = '';
-            if (data.sap_data) {
-                sapHtml = `<div class="detail-section" style="background:#dcfce7; padding:15px; border-radius:8px;">
-                    <h3 style="color:#166534; margin-bottom:10px;">Soapmaking Enrichment Data</h3>
-                    <div class="detail-grid">
-                        <span class="detail-label">SAP NaOH:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.sap_naoh || '-'}</span>
-                        <span class="detail-label">SAP KOH:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.sap_koh || '-'}</span>
-                        <span class="detail-label">Iodine Value:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.iodine_value || '-'}</span>
-                        <span class="detail-label">INS Value:</span><span class="detail-value" style="font-weight:600;">${data.sap_data.ins_value || '-'}</span>
-                    </div>
-                </div>`;
-            }
-            
             // Build source clusters HTML - at bottom for traceability
             let clustersHtml = '';
             if (data.source_clusters && data.source_clusters.length > 0) {
@@ -824,7 +810,7 @@ HTML_TEMPLATE = """
             html += `<span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>`;
             html += `<span class="detail-label">Source Clusters:</span><span class="detail-value">${data.cluster_count || 0}</span>`;
             html += '</div></div>';
-            html += sapHtml + itemsHtml + clustersHtml;
+            html += itemsHtml + clustersHtml;
             
             document.getElementById('detail-body').innerHTML = html;
         }
@@ -2507,11 +2493,7 @@ def api_refined_definition_detail(term: str):
         SELECT 
             derived_term,
             COUNT(*) as item_count,
-            COUNT(DISTINCT cluster_id) as cluster_count,
-            MAX(sap_naoh) as sap_naoh,
-            MAX(sap_koh) as sap_koh,
-            MAX(iodine_value) as iodine_value,
-            MAX(ins_value) as ins_value
+            COUNT(DISTINCT cluster_id) as cluster_count
         FROM compiled_cluster_items
         WHERE derived_term = ?
         GROUP BY derived_term
@@ -2577,15 +2559,6 @@ def api_refined_definition_detail(term: str):
             origin = source_clusters[0]["origin"]
             category = source_clusters[0]["category"]
 
-    sap_data = None
-    if row[3]:  # sap_naoh exists
-        sap_data = {
-            "sap_naoh": row[3],
-            "sap_koh": row[4],
-            "iodine_value": row[5],
-            "ins_value": row[6],
-        }
-
     conn.close()
     return jsonify({
         "derived_term": row[0],
@@ -2593,7 +2566,6 @@ def api_refined_definition_detail(term: str):
         "cluster_count": row[2],
         "origin": origin,
         "category": category,
-        "sap_data": sap_data,
         "items": items,
         "source_clusters": source_clusters,
     })
