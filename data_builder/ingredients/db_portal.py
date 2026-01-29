@@ -890,13 +890,19 @@ HTML_TEMPLATE = """
                             
                             // Card border changes if needs finalization
                             const cardBorder = item.needs_finalization ? '2px solid #f87171' : '1px solid #e5e7eb';
+                            const itemId = item.id || '';
+                            const itemData = encodeURIComponent(JSON.stringify(item));
                             
-                            html += `<div style="padding:8px 10px; margin-bottom:6px; background:#fff; border-radius:6px; border:${cardBorder}; font-size:11px;">
+                            html += `<div style="padding:8px 10px; margin-bottom:6px; background:#fff; border-radius:6px; border:${cardBorder}; font-size:11px; cursor:pointer; transition:all 0.2s;" 
+                                onclick="showItemDetails(${itemId}, '${clusterId}')" 
+                                onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.12)'" 
+                                onmouseout="this.style.boxShadow='none'">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span style="font-weight:600;">${item.variation || 'Base'}</span>
                                     <div>
                                         <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
                                         ${sapBadge} ${casBadge} ${pubchemBadge} ${conflictBadge}
+                                        <span class="badge" style="background:#f0fdf4;color:#16a34a;font-size:8px;">Click for details</span>
                                     </div>
                                 </div>
                                 <div style="color:#6b7280; font-size:10px; margin-bottom:4px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>`;
@@ -1485,6 +1491,12 @@ HTML_TEMPLATE = """
                     }
                     document.getElementById('detail-body').innerHTML = html;
                 });
+        }
+
+        // Wrapper to show item details from refined view - calls the existing showCompiledClusterItem
+        function showItemDetails(itemId, clusterId) {
+            // Use the existing compiled cluster item viewer
+            showCompiledClusterItem(clusterId, itemId);
         }
 
         function showCompiledCluster(clusterId) {
