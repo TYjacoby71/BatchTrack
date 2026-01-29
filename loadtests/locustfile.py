@@ -9,7 +9,7 @@ import logging
 import os
 import random
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 from bs4 import BeautifulSoup
 from gevent.lock import Semaphore
@@ -266,8 +266,8 @@ class AuthenticatedMixin:
         if token:
             self.csrf_token = token
 
-    def _csrf_headers(self, referer_path: str | None = None) -> dict:
-        headers: dict[str, str] = {}
+    def _csrf_headers(self, referer_path: Optional[str] = None) -> Dict[str, str]:
+        headers: Dict[str, str] = {}
         if self.csrf_token:
             headers["X-CSRFToken"] = self.csrf_token
         base_url = self._base_url()
