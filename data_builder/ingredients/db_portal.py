@@ -488,6 +488,10 @@ HTML_TEMPLATE = """
             if (currentDataset === 'refined') {
                 // Refined mode: show view mode for Terms/Items views
                 currentFilter = 'all';
+                // Reset to terms view if on an invalid view
+                if (currentView !== 'terms' && currentView !== 'items') {
+                    currentView = 'terms';
+                }
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.view === currentView);
                 });
@@ -588,9 +592,9 @@ HTML_TEMPLATE = """
             const thead = document.getElementById('table-head');
             if (currentDataset === 'refined') {
                 if (currentView === 'terms') {
-                    thead.innerHTML = '<tr><th style="width:25%;">Ingredient Definition</th><th style="width:10%;">Items</th><th style="width:15%;">Origin</th><th style="width:20%;">Category</th><th style="width:15%;">Source Clusters</th><th style="width:15%;">Enrichment</th></tr>';
+                    thead.innerHTML = '<tr><th style="width:22%;">Ingredient Definition</th><th style="width:8%;">Items</th><th style="width:12%;">Origin</th><th style="width:18%;">Category</th><th style="width:12%;">Source Clusters</th><th style="width:10%;">Enrichment</th></tr>';
                 } else {
-                    thead.innerHTML = '<tr><th>Term</th><th>Variation</th><th>Form</th><th>Plant Part</th><th>Origin</th><th>Category</th></tr>';
+                    thead.innerHTML = '<tr><th style="width:20%;">Term</th><th style="width:12%;">Variation</th><th style="width:10%;">Form</th><th style="width:12%;">Plant Part</th><th style="width:12%;">Origin</th><th style="width:18%;">Category</th><th style="width:8%;">SAP</th></tr>';
                 }
                 return;
             }
@@ -737,13 +741,15 @@ HTML_TEMPLATE = """
         function renderRefinedItemsListView(items) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = (items || []).map(row => {
+                const sapBadge = row.has_sap ? '<span class="badge" style="background:#dcfce7;color:#166534;">SAP</span>' : '';
                 return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.derived_term || '')}')">
-                    <td><strong>${row.derived_term || '-'}</strong></td>
+                    <td style="max-width:200px;"><strong>${row.derived_term || '-'}</strong></td>
                     <td>${row.derived_variation || '-'}</td>
                     <td>${row.derived_physical_form || '-'}</td>
                     <td>${row.derived_plant_part || '-'}</td>
                     <td>${row.origin || '-'}</td>
                     <td>${row.category || '-'}</td>
+                    <td>${sapBadge}</td>
                 </tr>`;
             }).join('');
         }
@@ -2446,7 +2452,8 @@ def api_refined_items():
                 i.derived_physical_form,
                 i.derived_plant_part,
                 c.origin,
-                c.ingredient_category
+                c.ingredient_category,
+                CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END as has_sap
             {base_query}
             {where_sql}
             ORDER BY i.derived_term, i.derived_variation
@@ -2465,7 +2472,8 @@ def api_refined_items():
         total = cur.fetchone()[0]
         cur.execute(
             f"""
-            SELECT id, derived_term, derived_variation, derived_physical_form, derived_plant_part, NULL, NULL
+            SELECT id, derived_term, derived_variation, derived_physical_form, derived_plant_part, NULL, NULL,
+                   CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END as has_sap
             FROM compiled_cluster_items
             {where_sql}
             ORDER BY derived_term, derived_variation
@@ -2483,6 +2491,7 @@ def api_refined_items():
             "derived_plant_part": r[4] or "-",
             "origin": r[5] or "-",
             "category": r[6] or "-",
+            "has_sap": bool(r[7]) if len(r) > 7 else False,
         }
         for r in cur.fetchall()
     ]
