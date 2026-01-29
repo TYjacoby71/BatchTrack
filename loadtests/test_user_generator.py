@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from app.extensions import db
-from app.models import User, Organization, SubscriptionTier, Role
+from app.models import User, Organization, SubscriptionTier, Role, Permission
 from app.models.user_role_assignment import UserRoleAssignment
 from app.utils.timezone_utils import TimezoneUtils
 from werkzeug.security import generate_password_hash
@@ -43,6 +43,15 @@ def _ensure_org_owner_role(user, org_owner_role):
     return True
 
 
+def _ensure_exempt_tier_permissions(exempt_tier):
+    """Ensure the exempt tier has all active permissions."""
+    if not exempt_tier:
+        return False
+    all_permissions = Permission.query.filter_by(is_active=True).all()
+    exempt_tier.permissions = all_permissions
+    return True
+
+
 def create_load_test_users(count=100, base_username="loadtest_user", password="loadtest123"):
     """
     Create multiple test users for load testing to avoid session conflicts.
@@ -56,15 +65,16 @@ def create_load_test_users(count=100, base_username="loadtest_user", password="l
     app = create_app()
     
     with app.app_context():
+        # Resolve exempt tier (required for full permissions)
+        exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
+        if not exempt_tier:
+            print("❌ No Exempt Plan found! Run subscription seeder first.")
+            return []
+        _ensure_exempt_tier_permissions(exempt_tier)
+
         # Get or create a test organization
         org = Organization.query.filter_by(name='Load Test Organization').first()
         if not org:
-            # Get exempt tier for test org
-            exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
-            if not exempt_tier:
-                print("❌ No Exempt Plan found! Run subscription seeder first.")
-                return []
-            
             org = Organization(
                 name='Load Test Organization',
                 contact_email='loadtest@example.com',
@@ -82,6 +92,8 @@ def create_load_test_users(count=100, base_username="loadtest_user", password="l
                 org.subscription_status = 'active'
             if not org.billing_status:
                 org.billing_status = 'active'
+            if org.subscription_tier_id != exempt_tier.id:
+                org.subscription_tier_id = exempt_tier.id
         
         org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
         if not org_owner_role:
