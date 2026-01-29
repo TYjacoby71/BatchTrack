@@ -25,24 +25,38 @@ def audit_route_permissions() -> int:
     app = create_app()
     with app.app_context():
         catalog_permissions = set()
+        catalog_source = "db"
         try:
-            data = load_consolidated_permissions()
-            for category in data.get("organization_permissions", {}).values():
-                for perm in category.get("permissions", []):
-                    name = perm.get("name")
-                    if name:
-                        catalog_permissions.add(name)
-            for category in data.get("developer_permissions", {}).values():
-                for perm in category.get("permissions", []):
-                    name = perm.get("name")
-                    if name:
-                        catalog_permissions.add(name)
-            for perm in data.get("system_administration", {}).get("permissions", []):
-                name = perm.get("name")
-                if name:
-                    catalog_permissions.add(name)
+            from app.models.permission import Permission
+            from app.models.developer_permission import DeveloperPermission
+
+            catalog_permissions.update(
+                perm.name for perm in Permission.query.all() if getattr(perm, "name", None)
+            )
+            catalog_permissions.update(
+                perm.name for perm in DeveloperPermission.query.all() if getattr(perm, "name", None)
+            )
         except Exception as exc:
-            print(f"⚠️  Unable to load permission catalog: {exc}")
+            catalog_source = "json"
+            try:
+                data = load_consolidated_permissions()
+                for category in data.get("organization_permissions", {}).values():
+                    for perm in category.get("permissions", []):
+                        name = perm.get("name")
+                        if name:
+                            catalog_permissions.add(name)
+                for category in data.get("developer_permissions", {}).values():
+                    for perm in category.get("permissions", []):
+                        name = perm.get("name")
+                        if name:
+                            catalog_permissions.add(name)
+                for perm in data.get("system_administration", {}).get("permissions", []):
+                    name = perm.get("name")
+                    if name:
+                        catalog_permissions.add(name)
+            except Exception as json_exc:
+                print(f"⚠️  Unable to load permission catalog: {exc} (db), {json_exc} (json)")
+                catalog_source = "none"
 
         missing_permissions = []
         undefined_permissions = []
@@ -76,6 +90,9 @@ def audit_route_permissions() -> int:
                 print(f"  - {permission_name} on {rule} -> {endpoint}")
         else:
             print("\n✅ All referenced permissions exist in catalog.")
+
+        if catalog_source != "none":
+            print(f"\nℹ️  Permission catalog source: {catalog_source}")
 
         return 1 if missing_permissions or undefined_permissions else 0
 
