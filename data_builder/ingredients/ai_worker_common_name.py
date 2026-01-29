@@ -159,6 +159,106 @@ Respond with JSON: {{"common_name": "...", "confidence": "high|medium|low", "not
     return prompt
 
 
+def get_all_duplicate_definitions() -> list[dict]:
+    """Get all definitions with duplicate common names in a single query."""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    cur.execute('''
+        WITH duplicate_names AS (
+            SELECT c.common_name
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            WHERE c.common_name IS NOT NULL 
+              AND c.common_name != '' 
+              AND c.common_name != 'N/A'
+              AND c.common_name != 'Not Found'
+              AND i.derived_term != c.common_name
+              AND LOWER(i.derived_term) NOT LIKE '%' || LOWER(c.common_name) || '%'
+            GROUP BY c.common_name
+            HAVING COUNT(DISTINCT i.derived_term) > 1
+        )
+        SELECT DISTINCT 
+            i.derived_term,
+            c.botanical_name,
+            c.inci_name,
+            c.cas_number,
+            c.origin,
+            c.ingredient_category,
+            c.cluster_id,
+            c.common_name
+        FROM compiled_cluster_items i
+        JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+        WHERE c.common_name IN (SELECT common_name FROM duplicate_names)
+          AND i.derived_term != c.common_name
+          AND LOWER(i.derived_term) NOT LIKE '%' || LOWER(c.common_name) || '%'
+        ORDER BY c.common_name, i.derived_term
+    ''')
+    
+    definitions = []
+    for row in cur.fetchall():
+        definitions.append({
+            "derived_term": row[0],
+            "botanical_name": row[1],
+            "inci_name": row[2],
+            "cas_number": row[3],
+            "origin": row[4],
+            "category": row[5],
+            "cluster_id": row[6],
+            "current_common_name": row[7],
+        })
+    
+    conn.close()
+    return definitions
+
+
+def export_all_batches(batch_size: int = 500) -> list[Path]:
+    """Export ALL definitions needing common name research in batches of batch_size."""
+    LOGGER.info("Fetching all duplicate definitions...")
+    all_items = get_all_duplicate_definitions()
+    
+    if not all_items:
+        LOGGER.info("No duplicate common names found")
+        return []
+    
+    LOGGER.info(f"Total definitions to export: {len(all_items)}")
+    
+    output_files = []
+    batch_num = 1
+    
+    for i in range(0, len(all_items), batch_size):
+        batch = all_items[i:i + batch_size]
+        output_file = EXPORTS_DIR / f"common_name_export_{batch_num}.jsonl"
+        
+        with open(output_file, "w") as f:
+            for defn in batch:
+                prompt = build_prompt_for_definition(defn, defn["current_common_name"])
+                
+                request = {
+                    "custom_id": f"cn_{defn['cluster_id']}_{defn['derived_term'][:50]}",
+                    "method": "POST",
+                    "url": "/v1/chat/completions",
+                    "body": {
+                        "model": MODEL_NAME,
+                        "temperature": TEMPERATURE,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "response_format": {"type": "json_object"}
+                    }
+                }
+                
+                f.write(json.dumps(request) + "\n")
+        
+        LOGGER.info(f"Exported batch {batch_num}: {len(batch)} items to {output_file}")
+        output_files.append(output_file)
+        batch_num += 1
+    
+    LOGGER.info(f"Created {len(output_files)} batch files")
+    return output_files
+
+
 def export_batch(limit: int = 100) -> Path:
     """Export definitions needing common name research to JSONL for batch processing."""
     duplicates = find_duplicate_common_names()
@@ -226,6 +326,34 @@ def submit_batch(file_path: str) -> str:
     LOGGER.info(f"Status: {batch.status}")
     
     return batch.id
+
+
+def submit_all_batches() -> list[str]:
+    """Submit all common_name_export_*.jsonl files to OpenAI."""
+    export_files = sorted(EXPORTS_DIR.glob("common_name_export_*.jsonl"))
+    
+    if not export_files:
+        LOGGER.error("No common_name_export files found. Run export-all first.")
+        return []
+    
+    batch_ids = []
+    for file_path in export_files:
+        LOGGER.info(f"Submitting {file_path.name}...")
+        try:
+            batch_id = submit_batch(str(file_path))
+            batch_ids.append(batch_id)
+            time.sleep(1)
+        except Exception as e:
+            LOGGER.error(f"Failed to submit {file_path.name}: {e}")
+    
+    LOGGER.info(f"Submitted {len(batch_ids)} batches")
+    
+    batch_ids_file = EXPORTS_DIR / "common_name_batch_ids.json"
+    with open(batch_ids_file, "w") as f:
+        json.dump(batch_ids, f, indent=2)
+    LOGGER.info(f"Saved batch IDs to {batch_ids_file}")
+    
+    return batch_ids
 
 
 def check_status(batch_id: str) -> dict:
@@ -430,8 +558,13 @@ def main():
     export_parser = subparsers.add_parser("export", help="Export to JSONL for batch")
     export_parser.add_argument("--limit", type=int, default=100, help="Max items to export")
     
+    export_all_parser = subparsers.add_parser("export-all", help="Export ALL items in batches of 500")
+    export_all_parser.add_argument("--batch-size", type=int, default=500, help="Items per batch file")
+    
     submit_parser = subparsers.add_parser("submit", help="Submit batch to OpenAI")
     submit_parser.add_argument("--file", required=True, help="JSONL file path")
+    
+    submit_all_parser = subparsers.add_parser("submit-all", help="Submit all common_name_export files")
     
     status_parser = subparsers.add_parser("status", help="Check batch status")
     status_parser.add_argument("--batch-id", required=True, help="Batch ID")
@@ -448,8 +581,12 @@ def main():
         show_stats()
     elif args.command == "export":
         export_batch(args.limit)
+    elif args.command == "export-all":
+        export_all_batches(args.batch_size)
     elif args.command == "submit":
         submit_batch(args.file)
+    elif args.command == "submit-all":
+        submit_all_batches()
     elif args.command == "status":
         check_status(args.batch_id)
     elif args.command == "import":
