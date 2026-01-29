@@ -786,8 +786,8 @@
 }
 #soapToolPage #soapStage4Pane .additive-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(140px, 1fr) minmax(260px, 2.2fr);
-  column-gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  column-gap: var(--space-2);
   align-items: end;
 }
 #soapToolPage #soapStage4Pane .additive-row > [class*="col-"] {
@@ -797,23 +797,23 @@
   padding-left: 0;
   padding-right: 0;
 }
+#soapToolPage #soapStage4Pane .additive-row .form-label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
-  flex: initial !important;
-  max-width: none !important;
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-weight-col {
-  flex: initial !important;
-  max-width: none !important;
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
-  flex: initial !important;
-  max-width: none !important;
-}
-#soapToolPage #soapStage4Pane .additive-row .form-label {
-  white-space: nowrap;
-}
-#soapToolPage #soapStage4Pane .additive-row .soap-input-suffix input.form-control {
-  padding-right: 2rem;
+  flex: 0 0 60% !important;
+  max-width: 60% !important;
 }
 #soapToolPage #soapStage4Pane .form-label {
   font-size: 0.72rem;
@@ -842,14 +842,10 @@
 #soapToolPage .oil-row .oil-remove-col {
   justify-content: center;
 }
-@container soap-stage (max-width: 520px) {
+@container soap-stage (max-width: 320px) {
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
-  }
-  #soapToolPage #soapStage4Pane .additive-row {
-    grid-template-columns: 1fr;
-    row-gap: var(--space-2);
   }
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
@@ -878,7 +874,7 @@
     justify-content: flex-end;
   }
 }
-@container soap-stage (max-width: 360px) {
+@container soap-stage (max-width: 280px) {
   #soapToolPage .oil-row .oil-weight-col,
   #soapToolPage .oil-row .oil-percent-col {
     flex: 0 0 100%;
