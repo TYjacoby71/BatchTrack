@@ -6,7 +6,7 @@ import io
 import json
 import os
 import sqlite3
-from flask import Flask, render_template_string, request, jsonify, Response
+from flask import Flask, render_template_string, request, jsonify, Response, make_response
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1995,7 +1995,11 @@ def index():
     stats['composites'] = cur.fetchone()[0]
     
     conn.close()
-    return render_template_string(HTML_TEMPLATE, stats=stats)
+    response = make_response(render_template_string(HTML_TEMPLATE, stats=stats))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/api/stats')
