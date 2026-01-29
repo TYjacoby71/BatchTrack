@@ -1966,6 +1966,24 @@ def api_categories():
     dataset = (request.args.get("dataset") or "raw").strip().lower()
     conn = get_db('final')
     cur = conn.cursor()
+    
+    if dataset == "refined":
+        # Use compiled_clusters categories with counts based on distinct derived_terms
+        if _table_exists(conn, "compiled_cluster_items") and _table_exists(conn, "compiled_clusters"):
+            cur.execute("""
+                SELECT c.ingredient_category, COUNT(DISTINCT i.derived_term) as cnt
+                FROM compiled_cluster_items i
+                JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                WHERE c.ingredient_category IS NOT NULL AND c.ingredient_category != ''
+                GROUP BY c.ingredient_category
+                ORDER BY cnt DESC
+            """)
+            categories = [{'name': row[0], 'count': row[1]} for row in cur.fetchall()]
+            conn.close()
+            return jsonify({'categories': categories})
+        conn.close()
+        return jsonify({"categories": []})
+    
     if dataset == "compiled":
         # Prefer cluster-mirror compiled categories when present; fallback to legacy ingredients.
         if _table_exists(conn, "compiled_clusters"):
