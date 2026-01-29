@@ -254,6 +254,51 @@ HTML_TEMPLATE = """
         </div>
     </div>
     
+    <div class="stats" id="refined-stats" style="display:none;">
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Refined Ingredient Definitions</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-box" style="border-left: 3px solid #8b5cf6;">
+                    <h3 id="rstat-definitions">0</h3>
+                    <p>Definitions</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #2563eb;">
+                    <h3 id="rstat-source-clusters">0</h3>
+                    <p>Source Clusters</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #10b981;">
+                    <h3 id="rstat-total-items">0</h3>
+                    <p>Total Items</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #f59e0b;">
+                    <h3 id="rstat-enriched">0</h3>
+                    <p>Enriched (SAP Data)</p>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Origin Distribution</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-box">
+                    <h3 id="rstat-plant">0</h3>
+                    <p>Plant-Derived</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-synthetic">0</h3>
+                    <p>Synthetic</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-mineral">0</h3>
+                    <p>Mineral</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-animal">0</h3>
+                    <p>Animal</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="main-content">
         <div class="filter-row">
             <div class="filter-section">
@@ -261,15 +306,15 @@ HTML_TEMPLATE = """
                 <div class="view-toggle">
                     <button class="view-btn active" data-dataset="raw" onclick="setDataset('raw')">Raw data</button>
                     <button class="view-btn" data-dataset="compiled" onclick="setDataset('compiled')">Compiled data</button>
+                    <button class="view-btn" data-dataset="refined" onclick="setDataset('refined')" style="background:#8b5cf6; color:#fff;">Refined</button>
                 </div>
             </div>
-            <div class="filter-section">
+            <div class="filter-section" id="view-mode-section">
                 <div class="filter-label">View Mode</div>
-                <div class="view-toggle">
+                <div class="view-toggle" id="view-mode-buttons">
                     <button class="view-btn active" data-view="terms" onclick="setView('terms')">Terms</button>
                     <button class="view-btn" data-view="items" onclick="setView('items')">Items</button>
                     <button class="view-btn" data-view="clusters" onclick="setView('clusters')">Clusters</button>
-                    <button class="view-btn" data-view="refined" onclick="setView('refined')" style="background:#8b5cf6; color:#fff;">Refined</button>
                 </div>
             </div>
             <div class="filter-section">
@@ -445,24 +490,40 @@ HTML_TEMPLATE = """
                 btn.classList.toggle('active', btn.dataset.dataset === dataset);
             });
 
-            // Compiled dataset uses separate tables; swap filter sections.
             const sourceFilters = document.querySelector('.filter-section:has([data-filter="cosing"])');
             const statusFilters = document.getElementById('status-filters');
-            if (currentDataset === 'compiled') {
+            const viewModeSection = document.getElementById('view-mode-section');
+            const clusterFilters = document.getElementById('cluster-filters');
+            
+            // Show/hide stats panels
+            document.getElementById('raw-stats').style.display = (dataset === 'raw') ? 'block' : 'none';
+            document.getElementById('compiled-stats').style.display = (dataset === 'compiled') ? 'block' : 'none';
+            document.getElementById('refined-stats').style.display = (dataset === 'refined') ? 'block' : 'none';
+            
+            if (currentDataset === 'refined') {
+                // Refined mode: hide view mode, show only refined definitions
+                currentFilter = 'all';
+                currentView = 'terms';  // Refined uses terms view internally
+                if (viewModeSection) viewModeSection.style.display = 'none';
+                if (sourceFilters) sourceFilters.style.display = 'none';
+                if (statusFilters) statusFilters.style.display = 'none';
+                if (clusterFilters) clusterFilters.style.display = 'none';
+            } else if (currentDataset === 'compiled') {
                 currentFilter = 'all';
                 document.querySelectorAll('.venn-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.filter === 'all');
                 });
-                // Default compiled view is clusters (mirrors raw clusters/items).
                 currentView = 'clusters';
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.view === currentView);
                 });
-                // Show status filter, hide source filter for compiled view
+                if (viewModeSection) viewModeSection.style.display = 'block';
                 if (sourceFilters) sourceFilters.style.display = 'none';
                 if (statusFilters) statusFilters.style.display = 'block';
+                if (clusterFilters) clusterFilters.style.display = 'none';
             } else {
-                // Show source filter, hide status filter for raw view
+                // Raw mode
+                if (viewModeSection) viewModeSection.style.display = 'block';
                 if (sourceFilters) sourceFilters.style.display = 'block';
                 if (statusFilters) statusFilters.style.display = 'none';
             }
@@ -527,6 +588,10 @@ HTML_TEMPLATE = """
         
         function updateTableHeaders() {
             const thead = document.getElementById('table-head');
+            if (currentDataset === 'refined') {
+                thead.innerHTML = '<tr><th style="width:25%;">Ingredient Definition</th><th style="width:10%;">Items</th><th style="width:15%;">Origin</th><th style="width:20%;">Category</th><th style="width:15%;">Source Clusters</th><th style="width:15%;">Enrichment</th></tr>';
+                return;
+            }
             if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
                     thead.innerHTML = `<tr>
@@ -568,13 +633,20 @@ HTML_TEMPLATE = """
         function loadData() {
             const search = document.getElementById('search').value;
             const tbody = document.getElementById('table-body');
-            const colSpan = currentDataset === 'compiled'
-                ? (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6))
-                : (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 5 : 6));
+            let colSpan = 6;
+            if (currentDataset === 'refined') {
+                colSpan = 6;
+            } else if (currentDataset === 'compiled') {
+                colSpan = (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 7 : 6));
+            } else {
+                colSpan = (currentView === 'terms' ? 4 : (currentView === 'clusters' ? 6 : 6));
+            }
             tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Loading...</td></tr>`;
             
             let endpoint;
-            if (currentDataset === 'compiled') {
+            if (currentDataset === 'refined') {
+                endpoint = '/api/refined/definitions';
+            } else if (currentDataset === 'compiled') {
                 if (currentView === 'clusters') {
                     endpoint = '/api/compiled/clusters';
                 } else if (currentView === 'terms') {
@@ -601,8 +673,10 @@ HTML_TEMPLATE = """
                 .then(data => {
                     totalPages = data.total_pages;
                     
-                    if ((data.items || data.terms || data.clusters || data.ingredients || []).length === 0) {
+                    if ((data.items || data.terms || data.clusters || data.ingredients || data.definitions || []).length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">No items found</td></tr>`;
+                    } else if (currentDataset === 'refined') {
+                        renderRefinedDefinitionsView(data.definitions);
                     } else if (currentDataset === 'compiled') {
                         if (currentView === 'clusters') {
                             renderCompiledClustersView(data.clusters);
@@ -626,6 +700,110 @@ HTML_TEMPLATE = """
                     document.getElementById('prev-btn').disabled = currentPage <= 1;
                     document.getElementById('next-btn').disabled = currentPage >= totalPages;
                 });
+        }
+
+        function renderRefinedDefinitionsView(definitions) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = (definitions || []).map(row => {
+                const enrichmentBadge = row.has_sap_data 
+                    ? '<span class="badge" style="background:#dcfce7;color:#166534;">SAP</span>' 
+                    : '';
+                const clusterCount = row.cluster_count || 0;
+                const clusterBadge = clusterCount > 1 
+                    ? `<span class="badge" style="background:#dbeafe;color:#1e40af;">${clusterCount} clusters</span>`
+                    : `<span class="badge" style="background:#f3f4f6;color:#6b7280;">1 cluster</span>`;
+                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.derived_term || '')}')">
+                    <td><strong style="color:#7c3aed;">${row.derived_term || '-'}</strong></td>
+                    <td>${row.item_count || 0}</td>
+                    <td>${row.origin || '-'}</td>
+                    <td>${row.category || '-'}</td>
+                    <td>${clusterBadge}</td>
+                    <td>${enrichmentBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function showRefinedDefinition(termEncoded) {
+            const term = decodeURIComponent(termEncoded);
+            fetch(`/api/refined/definition/${encodeURIComponent(term)}`)
+                .then(r => r.json())
+                .then(data => {
+                    showRefinedDetailPanel(data);
+                });
+        }
+
+        function showRefinedDetailPanel(data) {
+            const overlay = document.getElementById('detail-overlay');
+            const panel = document.getElementById('detail-panel');
+            
+            // Build items HTML - items housed under the derived term
+            let itemsHtml = '';
+            if (data.items && data.items.length > 0) {
+                itemsHtml = '<div class="detail-section"><h3>Items Under This Definition</h3>';
+                itemsHtml += '<div style="max-height:300px; overflow-y:auto;">';
+                itemsHtml += data.items.map(item => 
+                    `<div class="source-item" style="cursor:default;">
+                        <div class="source-item-header">
+                            <span class="source-item-name">${item.variation || item.plant_part || 'Base Form'}</span>
+                            <span class="badge" style="background:#f3f4f6;color:#6b7280;">${item.form || '-'}</span>
+                        </div>
+                        <div class="source-item-details">
+                            <span>Plant Part: ${item.plant_part || '-'}</span>
+                            <span>Refinement: ${item.refinement || '-'}</span>
+                        </div>
+                    </div>`
+                ).join('');
+                itemsHtml += '</div></div>';
+            }
+            
+            // Build SAP data HTML
+            let sapHtml = '';
+            if (data.sap_data) {
+                sapHtml = `<div class="detail-section"><h3>Soapmaking Data</h3>
+                    <div class="detail-grid">
+                        <span class="detail-label">SAP NaOH:</span><span class="detail-value">${data.sap_data.sap_naoh || '-'}</span>
+                        <span class="detail-label">SAP KOH:</span><span class="detail-value">${data.sap_data.sap_koh || '-'}</span>
+                        <span class="detail-label">Iodine:</span><span class="detail-value">${data.sap_data.iodine_value || '-'}</span>
+                        <span class="detail-label">INS:</span><span class="detail-value">${data.sap_data.ins_value || '-'}</span>
+                    </div>
+                </div>`;
+            }
+            
+            // Build source clusters HTML - at bottom for traceability
+            let clustersHtml = '';
+            if (data.source_clusters && data.source_clusters.length > 0) {
+                clustersHtml = '<div class="detail-section" style="margin-top:20px; padding-top:15px; border-top:2px solid #e5e7eb;"><h3 style="color:#6b7280; font-size:12px;">Source Clusters (Traceability)</h3>';
+                clustersHtml += '<div style="display:flex; flex-wrap:wrap; gap:8px;">';
+                clustersHtml += data.source_clusters.map(c => 
+                    `<span class="badge" style="background:#f0f9ff; color:#0369a1; font-size:10px; padding:4px 8px; cursor:pointer;" onclick="showCompiledCluster('${(c.cluster_id || '').replace(/'/g, "\\'")}')">
+                        ${c.cluster_id} (${c.item_count || 0})
+                    </span>`
+                ).join('');
+                clustersHtml += '</div></div>';
+            }
+            
+            panel.innerHTML = `
+                <div class="detail-header" style="background:#7c3aed;">
+                    <button class="detail-close" onclick="closeDetailPanel()">&times;</button>
+                    <h2>${data.derived_term || '-'}</h2>
+                    <p>${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters</p>
+                </div>
+                <div class="detail-body">
+                    <div class="detail-section">
+                        <h3>Ingredient Definition</h3>
+                        <div class="detail-grid">
+                            <span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>
+                            <span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>
+                            <span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>
+                        </div>
+                    </div>
+                    ${sapHtml}
+                    ${itemsHtml}
+                    ${clustersHtml}
+                </div>
+            `;
+            overlay.classList.add('active');
+            panel.classList.add('active');
         }
 
         function renderCompiledIngredientsView(items) {
@@ -1531,9 +1709,16 @@ HTML_TEMPLATE = """
             fetch(`/api/stats?dataset=${currentDataset}`)
                 .then(r => r.json())
                 .then(stats => {
-                    if (currentDataset === 'compiled') {
-                        document.getElementById('raw-stats').style.display = 'none';
-                        document.getElementById('compiled-stats').style.display = 'block';
+                    if (currentDataset === 'refined') {
+                        document.getElementById('rstat-definitions').textContent = (stats.definitions || 0).toLocaleString();
+                        document.getElementById('rstat-source-clusters').textContent = (stats.source_clusters || 0).toLocaleString();
+                        document.getElementById('rstat-total-items').textContent = (stats.total_items || 0).toLocaleString();
+                        document.getElementById('rstat-enriched').textContent = (stats.enriched || 0).toLocaleString();
+                        document.getElementById('rstat-plant').textContent = (stats.plant || 0).toLocaleString();
+                        document.getElementById('rstat-synthetic').textContent = (stats.synthetic || 0).toLocaleString();
+                        document.getElementById('rstat-mineral').textContent = (stats.mineral || 0).toLocaleString();
+                        document.getElementById('rstat-animal').textContent = (stats.animal || 0).toLocaleString();
+                    } else if (currentDataset === 'compiled') {
                         document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
                         document.getElementById('cstat-clusters').textContent = (stats.clusters || 0).toLocaleString();
                         document.getElementById('cstat-composites').textContent = (stats.composites || 0).toLocaleString();
@@ -1552,8 +1737,6 @@ HTML_TEMPLATE = """
                         document.getElementById('cstat-single-item').textContent = (stats.single_item || 0).toLocaleString();
                         document.getElementById('cstat-multi-item').textContent = (stats.multi_item || 0).toLocaleString();
                     } else {
-                        document.getElementById('raw-stats').style.display = 'block';
-                        document.getElementById('compiled-stats').style.display = 'none';
                         document.getElementById('stat-source-items').textContent = (stats.source_items || 0).toLocaleString();
                         document.getElementById('stat-cosing-items').textContent = (stats.cosing_items || 0).toLocaleString();
                         document.getElementById('stat-tgsc-items').textContent = (stats.tgsc_items || 0).toLocaleString();
@@ -1656,6 +1839,45 @@ def api_stats():
         "total_clusters": 0,
         "composites": 0,
     }
+
+    if dataset == "refined":
+        refined_stats = {
+            "definitions": 0,
+            "source_clusters": 0,
+            "total_items": 0,
+            "enriched": 0,
+            "plant": 0,
+            "synthetic": 0,
+            "mineral": 0,
+            "animal": 0,
+        }
+        
+        if _table_exists(conn, "compiled_cluster_items"):
+            cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items")
+            refined_stats["definitions"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(DISTINCT cluster_id) FROM compiled_cluster_items")
+            refined_stats["source_clusters"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
+            refined_stats["total_items"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE sap_naoh IS NOT NULL")
+            refined_stats["enriched"] = cur.fetchone()[0]
+            
+            # Origin counts from compiled_clusters
+            if _table_exists(conn, "compiled_clusters"):
+                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%plant%'")
+                refined_stats["plant"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%synth%'")
+                refined_stats["synthetic"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%mineral%'")
+                refined_stats["mineral"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items i JOIN compiled_clusters c ON i.cluster_id = c.cluster_id WHERE LOWER(c.origin) LIKE '%animal%'")
+                refined_stats["animal"] = cur.fetchone()[0]
+        
+        conn.close()
+        return jsonify(refined_stats)
 
     if dataset == "compiled":
         compiled_stats = {
@@ -2037,6 +2259,180 @@ def api_compiled_refined():
     total_pages = max(1, (total + per_page - 1) // per_page)
     conn.close()
     return jsonify({"items": items, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/refined/definitions")
+def api_refined_definitions():
+    """Get refined ingredient definitions - grouped by derived_term with source cluster info."""
+    page = int(request.args.get("page", 1))
+    search = (request.args.get("search") or "").strip()
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"definitions": [], "total": 0, "total_pages": 1, "page": page})
+
+    where_clauses = []
+    params = []
+    if search:
+        where_clauses.append("derived_term LIKE ?")
+        params.append(f"%{search}%")
+    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+    # Count unique derived_terms
+    cur.execute(f"SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items {where_sql}", params)
+    total = cur.fetchone()[0]
+
+    # Get grouped definitions - use safe subquery that handles missing compiled_clusters table
+    has_compiled_clusters = _table_exists(conn, "compiled_clusters")
+    if has_compiled_clusters:
+        origin_sql = "(SELECT origin FROM compiled_clusters WHERE cluster_id = (SELECT cluster_id FROM compiled_cluster_items WHERE derived_term = i.derived_term LIMIT 1))"
+        category_sql = "(SELECT ingredient_category FROM compiled_clusters WHERE cluster_id = (SELECT cluster_id FROM compiled_cluster_items WHERE derived_term = i.derived_term LIMIT 1))"
+    else:
+        origin_sql = "NULL"
+        category_sql = "NULL"
+    
+    cur.execute(
+        f"""
+        SELECT 
+            derived_term,
+            COUNT(*) as item_count,
+            COUNT(DISTINCT cluster_id) as cluster_count,
+            MAX(CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
+            {origin_sql} as origin,
+            {category_sql} as category
+        FROM compiled_cluster_items i
+        {where_sql}
+        GROUP BY derived_term
+        ORDER BY derived_term
+        LIMIT ? OFFSET ?
+        """,
+        params + [per_page, offset],
+    )
+    definitions = [
+        {
+            "derived_term": r[0],
+            "item_count": r[1],
+            "cluster_count": r[2],
+            "has_sap_data": bool(r[3]),
+            "origin": r[4] or "-",
+            "category": r[5] or "-",
+        }
+        for r in cur.fetchall()
+    ]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    conn.close()
+    return jsonify({"definitions": definitions, "total": total, "total_pages": total_pages, "page": page})
+
+
+@app.route("/api/refined/definition/<path:term>")
+def api_refined_definition_detail(term: str):
+    """Get detailed info for a single refined definition with items housed under term."""
+    conn = get_db("final")
+    cur = conn.cursor()
+    if not _table_exists(conn, "compiled_cluster_items"):
+        conn.close()
+        return jsonify({"error": "No data available"})
+
+    # Get aggregate info for this derived_term
+    cur.execute(
+        """
+        SELECT 
+            derived_term,
+            COUNT(*) as item_count,
+            COUNT(DISTINCT cluster_id) as cluster_count,
+            MAX(sap_naoh) as sap_naoh,
+            MAX(sap_koh) as sap_koh,
+            MAX(iodine_value) as iodine_value,
+            MAX(ins_value) as ins_value
+        FROM compiled_cluster_items
+        WHERE derived_term = ?
+        GROUP BY derived_term
+        """,
+        (term,),
+    )
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Term not found"})
+
+    # Get all items under this derived_term - these are "housed under the refined term"
+    cur.execute(
+        """
+        SELECT id, cluster_id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form
+        FROM compiled_cluster_items
+        WHERE derived_term = ?
+        ORDER BY derived_plant_part, derived_variation
+        LIMIT 100
+        """,
+        (term,),
+    )
+    items = [
+        {
+            "id": r[0],
+            "cluster_id": r[1],
+            "plant_part": r[2] or "-",
+            "variation": r[3] or "-",
+            "refinement": r[4] or "-",
+            "form": r[5] or "-",
+        }
+        for r in cur.fetchall()
+    ]
+
+    # Get origin/category from compiled_clusters (with fallback if table missing)
+    source_clusters = []
+    origin = "-"
+    category = "-"
+    if _table_exists(conn, "compiled_clusters"):
+        cur.execute(
+            """
+            SELECT DISTINCT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
+                   (SELECT COUNT(*) FROM compiled_cluster_items WHERE cluster_id = c.cluster_id) as item_count
+            FROM compiled_clusters c
+            WHERE c.cluster_id IN (
+                SELECT DISTINCT cluster_id FROM compiled_cluster_items WHERE derived_term = ?
+            )
+            """,
+            (term,),
+        )
+        source_clusters = [
+            {
+                "cluster_id": r[0],
+                "origin": r[1] or "-",
+                "category": r[2] or "-",
+                "common_name": r[3] or "-",
+                "term_status": r[4] or "-",
+                "item_count": r[5] or 0,
+            }
+            for r in cur.fetchall()
+        ]
+        if source_clusters:
+            origin = source_clusters[0]["origin"]
+            category = source_clusters[0]["category"]
+
+    sap_data = None
+    if row[3]:  # sap_naoh exists
+        sap_data = {
+            "sap_naoh": row[3],
+            "sap_koh": row[4],
+            "iodine_value": row[5],
+            "ins_value": row[6],
+        }
+
+    conn.close()
+    return jsonify({
+        "derived_term": row[0],
+        "item_count": row[1],
+        "cluster_count": row[2],
+        "origin": origin,
+        "category": category,
+        "sap_data": sap_data,
+        "items": items,
+        "source_clusters": source_clusters,
+    })
 
 
 @app.route("/api/compiled/clusters")
