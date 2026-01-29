@@ -2,6 +2,7 @@ import re
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 
 from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
@@ -12,6 +13,7 @@ onboarding_bp = Blueprint('onboarding', __name__, url_prefix='/onboarding')
 
 @onboarding_bp.route('/welcome', methods=['GET', 'POST'])
 @login_required
+@require_permission('dashboard.view')
 def welcome():
     """Guided landing checklist right after signup."""
     user = current_user

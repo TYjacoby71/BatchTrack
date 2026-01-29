@@ -45,6 +45,8 @@ class RouteAccessConfig:
         "public_api_bp.public_global_item_search",
         "global_library_bp.global_library",
         "global_library_bp.global_item_detail",
+        "global_library_bp.global_library_item_stats",
+        "recipes.static",
         "recipe_library_bp.recipe_library",
         "recipe_library_bp.recipe_library_detail",
         "recipe_library_bp.organization_marketplace",
