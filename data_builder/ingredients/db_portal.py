@@ -878,52 +878,87 @@ HTML_TEMPLATE = """
                             </div>
                             <div style="max-height:300px; overflow-y:auto;">`;
                         cluster.items.forEach(item => {
-                            const hasSap = item.sap_naoh || item.sap_koh;
+                            // Check for SAP data (resolved)
+                            const hasSap = item.sap_naoh?.value || item.sap_koh?.value;
                             const sapBadge = hasSap ? `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9px;">SAP</span>` : '';
                             const casBadge = (item.cas_numbers && item.cas_numbers.length) ? `<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:9px;">CAS</span>` : '';
                             const pubchemBadge = item.pubchem_cid ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:9px;">PubChem</span>` : '';
+                            const conflictBadge = item.needs_finalization ? `<span class="badge" style="background:#fecaca;color:#991b1b;font-size:9px;">⚠ CONFLICT</span>` : '';
                             const casText = (item.cas_numbers && item.cas_numbers.length) ? item.cas_numbers.join(', ') : '';
                             const funcTags = (item.function_tags && item.function_tags.length) ? item.function_tags.slice(0,3).join(', ') : '';
                             const apps = (item.applications && item.applications.length) ? item.applications.slice(0,3).join(', ') : '';
                             
-                            html += `<div style="padding:8px 10px; margin-bottom:6px; background:#fff; border-radius:6px; border:1px solid #e5e7eb; font-size:11px;">
+                            // Card border changes if needs finalization
+                            const cardBorder = item.needs_finalization ? '2px solid #f87171' : '1px solid #e5e7eb';
+                            
+                            html += `<div style="padding:8px 10px; margin-bottom:6px; background:#fff; border-radius:6px; border:${cardBorder}; font-size:11px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span style="font-weight:600;">${item.variation || 'Base'}</span>
                                     <div>
                                         <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
-                                        ${sapBadge} ${casBadge} ${pubchemBadge}
+                                        ${sapBadge} ${casBadge} ${pubchemBadge} ${conflictBadge}
                                     </div>
                                 </div>
-                                <div style="color:#6b7280; font-size:10px; margin-bottom:2px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>`;
+                                <div style="color:#6b7280; font-size:10px; margin-bottom:4px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>`;
                             
-                            // CAS Numbers
-                            if (casText) {
-                                html += `<div style="font-size:10px; font-family:monospace; color:#1d4ed8; margin-top:4px;">CAS: ${casText}</div>`;
-                            }
-                            // PubChem CID
-                            if (item.pubchem_cid) {
-                                html += `<div style="font-size:10px; font-family:monospace; color:#065f46; margin-top:2px;">PubChem CID: <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${item.pubchem_cid}" target="_blank" style="color:#059669;">${item.pubchem_cid}</a></div>`;
-                            }
-                            // Color/Odor
-                            if (item.color || item.odor_profile) {
-                                html += `<div style="font-size:10px; color:#475569; margin-top:2px;">`;
-                                if (item.color) html += `Color: ${item.color}`;
-                                if (item.color && item.odor_profile) html += ` | `;
-                                if (item.odor_profile) html += `Odor: ${item.odor_profile}`;
+                            // Identifiers section
+                            if (casText || item.pubchem_cid) {
+                                html += `<div style="background:#f8fafc; padding:4px 6px; border-radius:4px; margin-bottom:4px;">`;
+                                if (casText) {
+                                    html += `<div style="font-size:10px; font-family:monospace; color:#1d4ed8;">CAS: ${casText}</div>`;
+                                }
+                                if (item.pubchem_cid) {
+                                    html += `<div style="font-size:10px; font-family:monospace; color:#065f46;">PubChem: <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${item.pubchem_cid}" target="_blank" style="color:#059669;">${item.pubchem_cid}</a></div>`;
+                                }
                                 html += `</div>`;
                             }
-                            // Function tags
-                            if (funcTags) {
-                                html += `<div style="font-size:10px; color:#059669; margin-top:2px;">Functions: ${funcTags}</div>`;
+                            
+                            // Soapmaking data - consolidated single values
+                            if (hasSap) {
+                                html += `<div style="background:#fffbeb; padding:4px 6px; border-radius:4px; margin-bottom:4px;">
+                                    <div style="font-size:9px; color:#92400e; font-weight:600; margin-bottom:2px;">SOAPMAKING DATA</div>`;
+                                
+                                // Helper to render a resolved field
+                                const renderField = (label, field) => {
+                                    if (!field?.value) return '';
+                                    const srcLabel = field.source ? ` <span style="color:#9ca3af;font-size:8px;">(${field.source})</span>` : '';
+                                    const conflictIcon = field.conflict ? ` <span style="color:#ef4444;" title="Conflict: ${JSON.stringify(field.all_values)}">⚠</span>` : '';
+                                    return `<span style="margin-right:8px;">${label}: <strong>${field.value}</strong>${srcLabel}${conflictIcon}</span>`;
+                                };
+                                
+                                html += `<div style="font-size:10px; color:#78350f;">`;
+                                html += renderField('SAP NaOH', item.sap_naoh);
+                                html += renderField('SAP KOH', item.sap_koh);
+                                html += `</div>`;
+                                if (item.iodine_value?.value || item.ins_value?.value) {
+                                    html += `<div style="font-size:10px; color:#78350f;">`;
+                                    html += renderField('Iodine', item.iodine_value);
+                                    html += renderField('INS', item.ins_value);
+                                    html += `</div>`;
+                                }
+                                html += `</div>`;
                             }
+                            
+                            // Properties section
+                            if (item.color || item.odor_profile || funcTags) {
+                                html += `<div style="font-size:10px; color:#475569; margin-top:2px;">`;
+                                if (item.color) html += `<span style="margin-right:8px;">Color: ${item.color}</span>`;
+                                if (item.odor_profile) html += `<span style="margin-right:8px;">Odor: ${item.odor_profile}</span>`;
+                                html += `</div>`;
+                                if (funcTags) {
+                                    html += `<div style="font-size:10px; color:#059669;">Functions: ${funcTags}</div>`;
+                                }
+                            }
+                            
                             // Applications
                             if (apps) {
-                                html += `<div style="font-size:10px; color:#7c3aed; margin-top:2px;">Uses: ${apps}</div>`;
+                                html += `<div style="font-size:10px; color:#7c3aed;">Uses: ${apps}</div>`;
                             }
+                            
                             // Description (truncated)
                             if (item.description) {
-                                const desc = item.description.length > 100 ? item.description.substring(0, 100) + '...' : item.description;
-                                html += `<div style="font-size:10px; color:#6b7280; margin-top:4px; font-style:italic;">${desc}</div>`;
+                                const desc = item.description.length > 80 ? item.description.substring(0, 80) + '...' : item.description;
+                                html += `<div style="font-size:10px; color:#6b7280; margin-top:2px; font-style:italic;">${desc}</div>`;
                             }
                             html += `</div>`;
                         });
@@ -2755,23 +2790,82 @@ def api_refined_definition_detail(term: str):
                             pubchem_cid = pubchem_data.get("cid")
                     except:
                         pass
+                # Build consolidated fields with priority: soapcalc > source > pubchem > AI
+                # and detect conflicts between sources
+                def resolve_field(sources_dict):
+                    """Resolve a field from multiple sources by priority, detect conflicts."""
+                    priority = ['soapcalc', 'source', 'pubchem', 'ai']
+                    values = {k: v for k, v in sources_dict.items() if v is not None}
+                    if not values:
+                        return {"value": None, "source": None, "conflict": False, "all_values": {}}
+                    # Get value by priority
+                    resolved_value = None
+                    resolved_source = None
+                    for src in priority:
+                        if src in values:
+                            resolved_value = values[src]
+                            resolved_source = src
+                            break
+                    # Check for conflicts (different non-None values)
+                    unique_vals = set(str(v) for v in values.values() if v is not None)
+                    has_conflict = len(unique_vals) > 1
+                    return {"value": resolved_value, "source": resolved_source, "conflict": has_conflict, "all_values": values}
+                
+                # Collect SAP values from different sources
+                sap_naoh_sources = {"soapcalc": ir[5]}
+                sap_koh_sources = {"soapcalc": ir[6]}
+                iodine_sources = {"soapcalc": ir[7]}
+                ins_sources = {"soapcalc": ir[8]}
+                
+                # Add PubChem values if available
+                if pubchem_data:
+                    # PubChem doesn't typically have SAP but might have other properties
+                    pass
+                
+                # Add AI values from item_json
+                ai_sap = item_extras.get("SAP")
+                ai_iodine = item_extras.get("Iodine")
+                if ai_sap:
+                    sap_naoh_sources["ai"] = ai_sap
+                if ai_iodine:
+                    iodine_sources["ai"] = ai_iodine
+                
+                # Resolve each field
+                sap_naoh_resolved = resolve_field(sap_naoh_sources)
+                sap_koh_resolved = resolve_field(sap_koh_sources)
+                iodine_resolved = resolve_field(iodine_sources)
+                ins_resolved = resolve_field(ins_sources)
+                
+                # Check if item needs finalization (any conflicts)
+                needs_finalization = any([
+                    sap_naoh_resolved["conflict"],
+                    sap_koh_resolved["conflict"],
+                    iodine_resolved["conflict"],
+                    ins_resolved["conflict"]
+                ])
+                
                 cluster_items.append({
                     "id": ir[0],
                     "plant_part": ir[1] or "-",
                     "variation": ir[2] or "-",
                     "refinement": ir[3] or "-",
                     "form": ir[4] or "-",
-                    "sap_naoh": ir[5],
-                    "sap_koh": ir[6],
-                    "iodine_value": ir[7],
-                    "ins_value": ir[8],
+                    # Resolved single values
+                    "sap_naoh": sap_naoh_resolved,
+                    "sap_koh": sap_koh_resolved,
+                    "iodine_value": iodine_resolved,
+                    "ins_value": ins_resolved,
                     "cas_numbers": cas_numbers,
                     "pubchem_cid": pubchem_cid,
-                    "pubchem_data": pubchem_data,
                     "function_tag": ir[11] or "",
                     "sourced_from": ir[12] or "",
-                    "use_case_tags": ir[13] or "",
-                    **item_extras,
+                    "needs_finalization": needs_finalization,
+                    # Keep useful extras (no duplicates)
+                    "color": item_extras.get("color", ""),
+                    "odor_profile": item_extras.get("odor_profile", ""),
+                    "applications": item_extras.get("applications", []),
+                    "function_tags": item_extras.get("function_tags", []),
+                    "description": item_extras.get("description", ""),
                 })
             # Extract descriptions from payload_json
             short_desc = "-"
