@@ -876,18 +876,51 @@ HTML_TEMPLATE = """
                             <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:6px; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('span').textContent = this.nextElementSibling.style.display === 'none' ? '▶' : '▼';">
                                 <span>▼</span> Items (${cluster.items.length})
                             </div>
-                            <div style="max-height:150px; overflow-y:auto;">`;
+                            <div style="max-height:300px; overflow-y:auto;">`;
                         cluster.items.forEach(item => {
                             const hasSap = item.sap_naoh || item.sap_koh;
                             const sapBadge = hasSap ? `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9px;">SAP</span>` : '';
-                            html += `<div style="padding:6px 8px; margin-bottom:4px; background:#fff; border-radius:6px; border:1px solid #e5e7eb; font-size:11px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                            const casBadge = (item.cas_numbers && item.cas_numbers.length) ? `<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:9px;">CAS</span>` : '';
+                            const casText = (item.cas_numbers && item.cas_numbers.length) ? item.cas_numbers.join(', ') : '';
+                            const funcTags = (item.function_tags && item.function_tags.length) ? item.function_tags.slice(0,3).join(', ') : '';
+                            const apps = (item.applications && item.applications.length) ? item.applications.slice(0,3).join(', ') : '';
+                            
+                            html += `<div style="padding:8px 10px; margin-bottom:6px; background:#fff; border-radius:6px; border:1px solid #e5e7eb; font-size:11px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span style="font-weight:600;">${item.variation || 'Base'}</span>
-                                    <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
-                                    ${sapBadge}
+                                    <div>
+                                        <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
+                                        ${sapBadge} ${casBadge}
+                                    </div>
                                 </div>
-                                <div style="color:#6b7280; font-size:10px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>
-                            </div>`;
+                                <div style="color:#6b7280; font-size:10px; margin-bottom:2px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>`;
+                            
+                            // CAS Numbers
+                            if (casText) {
+                                html += `<div style="font-size:10px; font-family:monospace; color:#1d4ed8; margin-top:4px;">CAS: ${casText}</div>`;
+                            }
+                            // Color/Odor
+                            if (item.color || item.odor_profile) {
+                                html += `<div style="font-size:10px; color:#475569; margin-top:2px;">`;
+                                if (item.color) html += `Color: ${item.color}`;
+                                if (item.color && item.odor_profile) html += ` | `;
+                                if (item.odor_profile) html += `Odor: ${item.odor_profile}`;
+                                html += `</div>`;
+                            }
+                            // Function tags
+                            if (funcTags) {
+                                html += `<div style="font-size:10px; color:#059669; margin-top:2px;">Functions: ${funcTags}</div>`;
+                            }
+                            // Applications
+                            if (apps) {
+                                html += `<div style="font-size:10px; color:#7c3aed; margin-top:2px;">Uses: ${apps}</div>`;
+                            }
+                            // Description (truncated)
+                            if (item.description) {
+                                const desc = item.description.length > 100 ? item.description.substring(0, 100) + '...' : item.description;
+                                html += `<div style="font-size:10px; color:#6b7280; margin-top:4px; font-style:italic;">${desc}</div>`;
+                            }
+                            html += `</div>`;
                         });
                         html += '</div></div>';
                     }
@@ -2659,15 +2692,42 @@ def api_refined_definition_detail(term: str):
             cur.execute(
                 """
                 SELECT id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form,
-                       sap_naoh, sap_koh, iodine_value, ins_value
+                       sap_naoh, sap_koh, iodine_value, ins_value, raw_item_json, item_json,
+                       function_tag, sourced_from, use_case_tags
                 FROM compiled_cluster_items
                 WHERE cluster_id = ? AND derived_term = ?
                 ORDER BY derived_plant_part, derived_variation
                 """,
                 (cluster_id, term),
             )
-            cluster_items = [
-                {
+            cluster_items = []
+            for ir in cur.fetchall():
+                # Extract CAS from raw_item_json
+                cas_numbers = []
+                if ir[9]:  # raw_item_json
+                    try:
+                        raw_data = json.loads(ir[9])
+                        cas_numbers = raw_data.get("cas_numbers", [])
+                    except:
+                        pass
+                # Extract additional data from item_json
+                item_extras = {}
+                if ir[10]:  # item_json
+                    try:
+                        item_data = json.loads(ir[10])
+                        item_extras = {
+                            "description": item_data.get("description", ""),
+                            "color": item_data.get("color", ""),
+                            "odor_profile": item_data.get("odor_profile", ""),
+                            "applications": item_data.get("applications", []),
+                            "function_tags": item_data.get("function_tags", []),
+                            "safety_tags": item_data.get("safety_tags", []),
+                            "synonyms": item_data.get("synonyms", []),
+                            "processing_method": item_data.get("processing_method", {}),
+                        }
+                    except:
+                        pass
+                cluster_items.append({
                     "id": ir[0],
                     "plant_part": ir[1] or "-",
                     "variation": ir[2] or "-",
@@ -2677,9 +2737,12 @@ def api_refined_definition_detail(term: str):
                     "sap_koh": ir[6],
                     "iodine_value": ir[7],
                     "ins_value": ir[8],
-                }
-                for ir in cur.fetchall()
-            ]
+                    "cas_numbers": cas_numbers,
+                    "function_tag": ir[11] or "",
+                    "sourced_from": ir[12] or "",
+                    "use_case_tags": ir[13] or "",
+                    **item_extras,
+                })
             # Extract descriptions from payload_json
             short_desc = "-"
             detailed_desc = "-"
