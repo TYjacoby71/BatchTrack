@@ -785,7 +785,17 @@
   max-width: 10%;
 }
 #soapToolPage #soapStage4Pane .additive-row {
-  flex-wrap: nowrap !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  column-gap: var(--space-2);
+  align-items: end;
+}
+#soapToolPage #soapStage4Pane .additive-row > [class*="col-"] {
+  width: auto;
+  max-width: none;
+  flex: none;
+  padding-left: 0;
+  padding-right: 0;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
   flex: 0 0 20% !important;

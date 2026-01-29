@@ -44,30 +44,19 @@
     if (summary.superfat) summary.superfat.textContent = SoapTool.units.formatPercent(calc.superfat || 0);
   }
 
-  const addOilBtn = document.getElementById('addOil');
   const oilRows = document.getElementById('oilRows');
+  const addOilBtn = document.getElementById('addOil');
+  const normalizeOilsBtn = document.getElementById('normalizeOils');
   if (addOilBtn && oilRows) {
+    addOilBtn.dataset.bound = 'direct';
     addOilBtn.addEventListener('click', function(){
       oilRows.appendChild(SoapTool.oils.buildOilRow());
       SoapTool.stages.updateStageStatuses();
       SoapTool.storage.queueStateSave();
     });
   }
-
-  const addFragranceBtn = document.getElementById('addFragrance');
-  if (addFragranceBtn) {
-    addFragranceBtn.addEventListener('click', function(){
-      const fragranceRows = document.getElementById('fragranceRows');
-      if (!fragranceRows) return;
-      fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
-      SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
-      SoapTool.stages.updateStageStatuses();
-      SoapTool.storage.queueStateSave();
-    });
-  }
-
-  const normalizeOilsBtn = document.getElementById('normalizeOils');
   if (normalizeOilsBtn) {
+    normalizeOilsBtn.dataset.bound = 'direct';
     normalizeOilsBtn.addEventListener('click', function(){
       SoapTool.oils.normalizeOils();
       SoapTool.stages.updateStageStatuses();
@@ -173,6 +162,16 @@
   });
 
   const fragranceRows = document.getElementById('fragranceRows');
+  const addFragranceBtn = document.getElementById('addFragrance');
+  if (addFragranceBtn && fragranceRows) {
+    addFragranceBtn.dataset.bound = 'direct';
+    addFragranceBtn.addEventListener('click', function(){
+      fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
+      SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+      SoapTool.stages.updateStageStatuses();
+      SoapTool.storage.queueStateSave();
+    });
+  }
   if (fragranceRows) {
     fragranceRows.addEventListener('input', function(e){
       if (e.target.classList.contains('fragrance-grams')) {
@@ -206,11 +205,34 @@
   if (stageTabContent) {
     stageTabContent.addEventListener('click', event => {
       const actionBtn = event.target.closest('[data-stage-action]');
-      if (!actionBtn) return;
+      const soapActionBtn = event.target.closest('[data-soap-action]');
+      if (!actionBtn && !soapActionBtn) return;
       event.preventDefault();
       event.stopPropagation();
       if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
+      }
+      if (soapActionBtn) {
+        if (soapActionBtn.dataset.bound === 'direct') return;
+        const action = soapActionBtn.dataset.soapAction;
+        if (action === 'add-oil' && oilRows) {
+          oilRows.appendChild(SoapTool.oils.buildOilRow());
+          SoapTool.stages.updateStageStatuses();
+          SoapTool.storage.queueStateSave();
+        }
+        if (action === 'normalize-oils') {
+          SoapTool.oils.normalizeOils();
+          SoapTool.stages.updateStageStatuses();
+          SoapTool.storage.queueStateSave();
+          SoapTool.storage.queueAutoCalc();
+        }
+        if (action === 'add-fragrance' && fragranceRows) {
+          fragranceRows.appendChild(SoapTool.fragrances.buildFragranceRow());
+          SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
+          SoapTool.stages.updateStageStatuses();
+          SoapTool.storage.queueStateSave();
+        }
+        return;
       }
       const action = actionBtn.dataset.stageAction;
       const index = Number(actionBtn.dataset.stageIndex);
