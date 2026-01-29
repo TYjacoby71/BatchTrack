@@ -793,7 +793,7 @@
 #soapToolPage .oil-row .oil-remove-col {
   justify-content: center;
 }
-@container soap-stage (max-width: 840px) {
+@container soap-stage (max-width: 520px) {
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
@@ -811,10 +811,6 @@
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-weight-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-remove-col {
-    flex: 0 0 100%;
-    max-width: 100%;
-  }
-  #soapToolPage .soap-stage-grid > [class*="col-"] {
     flex: 0 0 100%;
     max-width: 100%;
   }
@@ -838,7 +834,7 @@
     justify-content: flex-end;
   }
 }
-@container soap-stage (max-width: 560px) {
+@container soap-stage (max-width: 440px) {
   #soapToolPage .oil-row .oil-weight-col,
   #soapToolPage .oil-row .oil-percent-col {
     flex: 0 0 100%;

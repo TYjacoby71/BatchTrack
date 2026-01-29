@@ -24,26 +24,16 @@
         </div>
       </div>
     </div>
-    <div class="row g-3 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
-      <div class="col-lg-6 col-md-12 d-flex flex-column gap-2">
-        <div class="soap-field-stack">
-          <label class="form-label">Water method</label>
-          <select class="form-select" id="waterMethod" name="water_method">
-            <option value="percent">Water as % of oils</option>
-            <option value="concentration">Lye concentration %</option>
-            <option value="ratio">Water : Lye ratio</option>
-          </select>
-        </div>
-        <div class="soap-field-stack">
-          <label class="form-label">Lye purity</label>
-          <div class="input-group">
-            <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
-            <span class="input-group-text">%</span>
-          </div>
-          <div class="form-text soap-stage-note" id="lyePurityHint">Most calculators assume 100%.</div>
-        </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-lg-6 col-md-12 soap-field-stack">
+        <label class="form-label">Water method</label>
+        <select class="form-select" id="waterMethod" name="water_method">
+          <option value="percent">Water as % of oils</option>
+          <option value="concentration">Lye concentration %</option>
+          <option value="ratio">Water : Lye ratio</option>
+        </select>
       </div>
-      <div class="col-lg-6 col-md-12 d-flex flex-column gap-2">
+      <div class="col-lg-6 col-md-12">
         <div class="soap-field-stack water-input" data-method="percent">
           <label class="form-label">Water of oils</label>
           <div class="input-group">
@@ -62,15 +52,26 @@
           <label class="form-label">Water : Lye ratio</label>
           <input type="number" class="form-control" id="waterRatio" min="1" max="4" step="0.05" value="2">
         </div>
-        <div class="soap-field-stack">
-          <label class="form-label">Superfat</label>
-          <div class="input-group">
-            <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
-            <span class="input-group-text">%</span>
-          </div>
-          <div class="form-text soap-stage-note">5% is a balanced default.</div>
-        </div>
       </div>
     </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-lg-6 col-md-12 soap-field-stack">
+        <label class="form-label">Lye purity</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
+          <span class="input-group-text">%</span>
+        </div>
+        <div class="form-text soap-stage-note" id="lyePurityHint">Most calculators assume 100%.</div>
+      </div>
+      <div class="col-lg-6 col-md-12 soap-field-stack">
+        <label class="form-label">Superfat</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
+          <span class="input-group-text">%</span>
+        </div>
+        <div class="form-text soap-stage-note">5% is a balanced default.</div>
+      </div>
+    </div>
+    <div class="soap-stage-actions-placeholder mt-2" data-stage-actions="inline"></div>
   </div>
 </div>
