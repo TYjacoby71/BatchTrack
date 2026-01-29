@@ -808,48 +808,89 @@ HTML_TEMPLATE = """
             document.getElementById('detail-title').textContent = data.derived_term || '-';
             document.getElementById('detail-subtitle').textContent = `${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters`;
             
-            // Build items HTML - items housed under the derived term, clickable
-            let itemsHtml = '';
-            if (data.items && data.items.length > 0) {
-                itemsHtml = '<div class="detail-section"><h3>Items Under This Definition (' + data.items.length + ')</h3>';
-                itemsHtml += '<div style="max-height:350px; overflow-y:auto;">';
-                itemsHtml += data.items.map(item => 
-                    `<div class="source-item" style="cursor:pointer; padding:12px; margin-bottom:8px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;" onclick="showCompiledCluster('${(item.cluster_id || '').replace(/'/g, "\\'")}')">
-                        <div class="source-item-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span class="source-item-name" style="font-weight:600; color:#374151;">${item.variation || 'Base Form'}</span>
-                            <span class="badge" style="background:#e0e7ff;color:#4338ca;">${item.form || '-'}</span>
-                        </div>
-                        <div class="source-item-details" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:12px; color:#6b7280;">
-                            <span>Plant Part: <strong>${item.plant_part || '-'}</strong></span>
-                            <span>Refinement: <strong>${item.refinement || '-'}</strong></span>
-                            <span style="grid-column:span 2; color:#9ca3af; font-size:11px;">Cluster: ${item.cluster_id || '-'}</span>
-                        </div>
-                    </div>`
-                ).join('');
-                itemsHtml += '</div></div>';
-            }
-            
-            // Build source clusters HTML - at bottom for traceability
-            let clustersHtml = '';
-            if (data.source_clusters && data.source_clusters.length > 0) {
-                clustersHtml = '<div class="detail-section" style="margin-top:20px; padding-top:15px; border-top:2px solid #e5e7eb;"><h3 style="color:#6b7280; font-size:12px;">Source Clusters (Traceability)</h3>';
-                clustersHtml += '<div style="display:flex; flex-wrap:wrap; gap:8px;">';
-                clustersHtml += data.source_clusters.map(c => 
-                    `<span class="badge" style="background:#f0f9ff; color:#0369a1; font-size:10px; padding:4px 8px; cursor:pointer;" onclick="showCompiledCluster('${(c.cluster_id || '').replace(/'/g, "\\'")}')">
-                        ${c.common_name || c.cluster_id} (${c.item_count || 0})
-                    </span>`
-                ).join('');
-                clustersHtml += '</div></div>';
-            }
-            
-            let html = '<div class="detail-section"><h3>Ingredient Definition</h3><div class="detail-grid">';
+            // Header section with refined term summary
+            let html = '<div class="detail-section"><h3>Refined Ingredient Definition</h3><div class="detail-grid">';
             html += `<span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>`;
             html += `<span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>`;
             html += `<span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>`;
             html += `<span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>`;
             html += `<span class="detail-label">Source Clusters:</span><span class="detail-value">${data.cluster_count || 0}</span>`;
             html += '</div></div>';
-            html += itemsHtml + clustersHtml;
+            
+            // Source Clusters section - display clusters side-by-side with full term data
+            if (data.source_clusters && data.source_clusters.length > 0) {
+                html += '<div class="detail-section"><h3>Source Clusters (' + data.source_clusters.length + ')</h3>';
+                
+                // Side-by-side cluster columns
+                const columnWidth = data.source_clusters.length === 1 ? '100%' : 
+                                   data.source_clusters.length === 2 ? '48%' : '31%';
+                html += `<div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:12px;">`;
+                
+                data.source_clusters.forEach((cluster, idx) => {
+                    const clusterId = (cluster.cluster_id || '').replace(/'/g, "\\'");
+                    html += `<div style="flex:1; min-width:280px; max-width:${columnWidth}; background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:16px;">`;
+                    
+                    // Cluster header - clickable to view full cluster
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">
+                        <span style="font-weight:700; color:#1e40af; font-size:14px;">Cluster ${idx + 1}</span>
+                        <span class="badge" style="background:#dbeafe; color:#1d4ed8; font-size:10px; cursor:pointer;" onclick="showCompiledCluster('${clusterId}')">View Full</span>
+                    </div>`;
+                    
+                    // Identity section
+                    html += `<div style="margin-bottom:10px;">
+                        <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Identity</div>
+                        <div style="font-size:13px;"><strong>${cluster.common_name || '-'}</strong></div>
+                        <div style="font-size:11px; color:#64748b; font-style:italic;">${cluster.botanical_name || '-'}</div>
+                        <div style="font-size:11px; color:#475569;">INCI: ${cluster.inci_name || '-'}</div>
+                        <div style="font-size:11px; font-family:monospace; color:#475569;">CAS: ${cluster.cas_number || '-'}</div>
+                    </div>`;
+                    
+                    // Classification section
+                    html += `<div style="margin-bottom:10px;">
+                        <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Classification</div>
+                        <div style="font-size:11px; display:grid; grid-template-columns:1fr 1fr; gap:2px;">
+                            <span>Origin: <strong>${cluster.origin || '-'}</strong></span>
+                            <span>Category: <strong>${cluster.category || '-'}</strong></span>
+                            <span>Refinement: <strong>${cluster.refinement_level || '-'}</strong></span>
+                            <span>Status: <strong>${cluster.term_status || '-'}</strong></span>
+                        </div>
+                    </div>`;
+                    
+                    // Descriptions section
+                    html += `<div style="margin-bottom:10px;">
+                        <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Description</div>
+                        <div style="font-size:11px; color:#374151; max-height:60px; overflow:hidden; text-overflow:ellipsis;">${cluster.short_description || '-'}</div>
+                    </div>`;
+                    
+                    // Items within this cluster - expandable
+                    if (cluster.items && cluster.items.length > 0) {
+                        html += `<div style="margin-top:10px; padding-top:8px; border-top:1px dashed #cbd5e1;">
+                            <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:6px; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('span').textContent = this.nextElementSibling.style.display === 'none' ? '▶' : '▼';">
+                                <span>▼</span> Items (${cluster.items.length})
+                            </div>
+                            <div style="max-height:150px; overflow-y:auto;">`;
+                        cluster.items.forEach(item => {
+                            const hasSap = item.sap_naoh || item.sap_koh;
+                            const sapBadge = hasSap ? `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9px;">SAP</span>` : '';
+                            html += `<div style="padding:6px 8px; margin-bottom:4px; background:#fff; border-radius:6px; border:1px solid #e5e7eb; font-size:11px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:600;">${item.variation || 'Base'}</span>
+                                    <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
+                                    ${sapBadge}
+                                </div>
+                                <div style="color:#6b7280; font-size:10px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>
+                            </div>`;
+                        });
+                        html += '</div></div>';
+                    }
+                    
+                    // Cluster ID footer
+                    html += `<div style="margin-top:8px; font-size:9px; color:#94a3b8; word-break:break-all;">${cluster.cluster_id}</div>`;
+                    html += '</div>';
+                });
+                
+                html += '</div></div>';
+            }
             
             document.getElementById('detail-body').innerHTML = html;
         }
@@ -2585,33 +2626,70 @@ def api_refined_definition_detail(term: str):
         for r in cur.fetchall()
     ]
 
-    # Get origin/category from compiled_clusters (with fallback if table missing)
+    # Get full term data from compiled_clusters for each source cluster
     source_clusters = []
     origin = "-"
     category = "-"
     if _table_exists(conn, "compiled_clusters"):
         cur.execute(
             """
-            SELECT DISTINCT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
-                   (SELECT COUNT(*) FROM compiled_cluster_items WHERE cluster_id = c.cluster_id) as item_count
+            SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
+                   c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
+                   c.refinement_level, c.derived_from, c.short_description, c.detailed_description,
+                   c.raw_canonical_term
             FROM compiled_clusters c
             WHERE c.cluster_id IN (
                 SELECT DISTINCT cluster_id FROM compiled_cluster_items WHERE derived_term = ?
             )
+            ORDER BY c.common_name
             """,
             (term,),
         )
-        source_clusters = [
-            {
-                "cluster_id": r[0],
+        for r in cur.fetchall():
+            cluster_id = r[0]
+            # Get items for this cluster
+            cur.execute(
+                """
+                SELECT id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form,
+                       sap_naoh, sap_koh, iodine_value, ins_value
+                FROM compiled_cluster_items
+                WHERE cluster_id = ? AND derived_term = ?
+                ORDER BY derived_plant_part, derived_variation
+                """,
+                (cluster_id, term),
+            )
+            cluster_items = [
+                {
+                    "id": ir[0],
+                    "plant_part": ir[1] or "-",
+                    "variation": ir[2] or "-",
+                    "refinement": ir[3] or "-",
+                    "form": ir[4] or "-",
+                    "sap_naoh": ir[5],
+                    "sap_koh": ir[6],
+                    "iodine_value": ir[7],
+                    "ins_value": ir[8],
+                }
+                for ir in cur.fetchall()
+            ]
+            source_clusters.append({
+                "cluster_id": cluster_id,
                 "origin": r[1] or "-",
                 "category": r[2] or "-",
                 "common_name": r[3] or "-",
                 "term_status": r[4] or "-",
-                "item_count": r[5] or 0,
-            }
-            for r in cur.fetchall()
-        ]
+                "compiled_term": r[5] or "-",
+                "botanical_name": r[6] or "-",
+                "inci_name": r[7] or "-",
+                "cas_number": r[8] or "-",
+                "refinement_level": r[9] or "-",
+                "derived_from": r[10] or "-",
+                "short_description": r[11] or "-",
+                "detailed_description": r[12] or "-",
+                "raw_canonical_term": r[13] or "-",
+                "items": cluster_items,
+                "item_count": len(cluster_items),
+            })
         if source_clusters:
             origin = source_clusters[0]["origin"]
             category = source_clusters[0]["category"]
@@ -2623,7 +2701,6 @@ def api_refined_definition_detail(term: str):
         "cluster_count": row[2],
         "origin": origin,
         "category": category,
-        "items": items,
         "source_clusters": source_clusters,
     })
 
