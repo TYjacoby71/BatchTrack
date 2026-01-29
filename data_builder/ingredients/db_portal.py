@@ -359,7 +359,7 @@ HTML_TEMPLATE = """
         
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="search" placeholder="Search terms, CAS numbers..." onkeyup="debounceSearch()">
+                <input type="text" id="search" placeholder="Search terms, CAS, INCI, PubChem CID, botanical..." onkeyup="debounceSearch()">
             </div>
             <div class="export-btns">
                 <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
@@ -881,6 +881,7 @@ HTML_TEMPLATE = """
                             const hasSap = item.sap_naoh || item.sap_koh;
                             const sapBadge = hasSap ? `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:9px;">SAP</span>` : '';
                             const casBadge = (item.cas_numbers && item.cas_numbers.length) ? `<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:9px;">CAS</span>` : '';
+                            const pubchemBadge = item.pubchem_cid ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:9px;">PubChem</span>` : '';
                             const casText = (item.cas_numbers && item.cas_numbers.length) ? item.cas_numbers.join(', ') : '';
                             const funcTags = (item.function_tags && item.function_tags.length) ? item.function_tags.slice(0,3).join(', ') : '';
                             const apps = (item.applications && item.applications.length) ? item.applications.slice(0,3).join(', ') : '';
@@ -890,7 +891,7 @@ HTML_TEMPLATE = """
                                     <span style="font-weight:600;">${item.variation || 'Base'}</span>
                                     <div>
                                         <span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:9px;">${item.form || '-'}</span>
-                                        ${sapBadge} ${casBadge}
+                                        ${sapBadge} ${casBadge} ${pubchemBadge}
                                     </div>
                                 </div>
                                 <div style="color:#6b7280; font-size:10px; margin-bottom:2px;">Part: ${item.plant_part || '-'} | Ref: ${item.refinement || '-'}</div>`;
@@ -898,6 +899,10 @@ HTML_TEMPLATE = """
                             // CAS Numbers
                             if (casText) {
                                 html += `<div style="font-size:10px; font-family:monospace; color:#1d4ed8; margin-top:4px;">CAS: ${casText}</div>`;
+                            }
+                            // PubChem CID
+                            if (item.pubchem_cid) {
+                                html += `<div style="font-size:10px; font-family:monospace; color:#065f46; margin-top:2px;">PubChem CID: <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${item.pubchem_cid}" target="_blank" style="color:#059669;">${item.pubchem_cid}</a></div>`;
                             }
                             // Color/Odor
                             if (item.color || item.odor_profile) {
@@ -2442,8 +2447,12 @@ def api_refined_definitions():
         where_clauses = []
         params = []
         if search:
-            where_clauses.append("i.derived_term LIKE ?")
-            params.append(f"%{search}%")
+            # Search all identifiers: term, common name, CAS, INCI, botanical, PubChem CID
+            where_clauses.append("""(i.derived_term LIKE ? 
+                OR c.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ?
+                OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)""")
+            s = f"%{search}%"
+            params.extend([s, s, s, s, s, s, s])
         if category:
             where_clauses.append("c.ingredient_category = ?")
             params.append(category)
@@ -2550,8 +2559,12 @@ def api_refined_items():
         where_clauses = []
         params = []
         if search:
-            where_clauses.append("i.derived_term LIKE ?")
-            params.append(f"%{search}%")
+            # Search all identifiers: term, CAS, INCI, botanical, PubChem CID
+            where_clauses.append("""(i.derived_term LIKE ? 
+                OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ? OR c.common_name LIKE ?
+                OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)""")
+            s = f"%{search}%"
+            params.extend([s, s, s, s, s, s, s])
         if category:
             where_clauses.append("c.ingredient_category = ?")
             params.append(category)
@@ -2702,12 +2715,18 @@ def api_refined_definition_detail(term: str):
             )
             cluster_items = []
             for ir in cur.fetchall():
-                # Extract CAS from raw_item_json
+                # Extract CAS and PubChem from raw_item_json
                 cas_numbers = []
+                pubchem_cid = None
+                pubchem_data = {}
                 if ir[9]:  # raw_item_json
                     try:
                         raw_data = json.loads(ir[9])
                         cas_numbers = raw_data.get("cas_numbers", [])
+                        # Extract PubChem data if present
+                        if "pubchem" in raw_data and isinstance(raw_data["pubchem"], dict):
+                            pubchem_data = raw_data["pubchem"]
+                            pubchem_cid = pubchem_data.get("cid")
                     except:
                         pass
                 # Extract additional data from item_json
@@ -2725,6 +2744,10 @@ def api_refined_definition_detail(term: str):
                             "synonyms": item_data.get("synonyms", []),
                             "processing_method": item_data.get("processing_method", {}),
                         }
+                        # Also check item_json for pubchem
+                        if not pubchem_cid and "pubchem" in item_data:
+                            pubchem_data = item_data.get("pubchem", {})
+                            pubchem_cid = pubchem_data.get("cid")
                     except:
                         pass
                 cluster_items.append({
@@ -2738,6 +2761,8 @@ def api_refined_definition_detail(term: str):
                     "iodine_value": ir[7],
                     "ins_value": ir[8],
                     "cas_numbers": cas_numbers,
+                    "pubchem_cid": pubchem_cid,
+                    "pubchem_data": pubchem_data,
                     "function_tag": ir[11] or "",
                     "sourced_from": ir[12] or "",
                     "use_case_tags": ir[13] or "",
@@ -2815,9 +2840,13 @@ def api_compiled_clusters():
     elif filter_type == "done":
         where_clauses.append("c.term_status = 'done'")
     if search:
-        where_clauses.append("(c.cluster_id LIKE ? OR c.compiled_term LIKE ? OR c.raw_canonical_term LIKE ?)")
+        # Search across all identifiers: term, common name, CAS, INCI, botanical, PubChem CID
+        where_clauses.append("""(c.cluster_id LIKE ? OR c.compiled_term LIKE ? OR c.raw_canonical_term LIKE ?
+            OR c.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ?
+            OR EXISTS (SELECT 1 FROM compiled_cluster_items ci WHERE ci.cluster_id = c.cluster_id 
+                       AND (ci.raw_item_json LIKE ? OR ci.item_json LIKE ?)))""")
         s = f"%{search}%"
-        params.extend([s, s, s])
+        params.extend([s, s, s, s, s, s, s, s, s])
     where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
     cur.execute(f"SELECT COUNT(*) FROM compiled_clusters c {where_sql}", params)
@@ -3447,8 +3476,13 @@ def api_terms():
     params = []
     
     if search:
-        where_clauses.append("m.derived_term LIKE ?")
-        params.append(f"%{search}%")
+        # Search all identifiers: term, INCI, CAS, PubChem CID
+        where_clauses.append("""(m.derived_term LIKE ? 
+            OR json_extract(m.merged_specs_json, '$.inci_name') LIKE ?
+            OR json_extract(m.merged_specs_json, '$.cas_numbers') LIKE ?
+            OR json_extract(m.merged_specs_json, '$.pubchem.cid') LIKE ?)""")
+        s = f"%{search}%"
+        params.extend([s, s, s, s])
     
     if filter_type == 'cosing':
         where_clauses.append("m.has_cosing = 1")
