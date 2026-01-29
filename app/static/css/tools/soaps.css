@@ -351,6 +351,24 @@
   min-width: 0;
   line-height: 1.1;
 }
+#soapToolPage .soap-input-suffix {
+  position: relative;
+  width: 100%;
+}
+#soapToolPage .soap-input-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+#soapToolPage .soap-input-suffix input.form-control {
+  padding-right: 2.4rem;
+}
 #soapToolPage input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
