@@ -790,7 +790,7 @@
 }
 #soapToolPage #soapStage4Pane .additive-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.1fr 2.7fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
   column-gap: var(--space-3);
   align-items: end;
 }
@@ -803,7 +803,7 @@
 }
 #soapToolPage #soapStage4Pane .additive-row .form-label {
   display: block;
-  white-space: nowrap;
+  white-space: normal;
 }
 #soapToolPage #soapStage4Pane .additive-row .soap-input-suffix,
 #soapToolPage #soapStage4Pane .additive-row .additive-typeahead {
@@ -852,6 +852,10 @@
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
+  }
+  #soapToolPage #soapStage4Pane .additive-row {
+    grid-template-columns: 1fr;
+    row-gap: var(--space-2);
   }
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
