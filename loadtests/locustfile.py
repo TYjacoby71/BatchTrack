@@ -9,6 +9,7 @@ import logging
 import os
 import random
 import re
+import sys
 import time
 from typing import Dict, Optional
 
@@ -67,6 +68,32 @@ LOCUST_USER_COUNT = max(1, _get_int_env("LOCUST_USER_COUNT", 10000))
 LOCUST_CACHE_TTL_SECONDS = max(0, _get_int_env("LOCUST_CACHE_TTL", 120))
 LOCUST_REQUIRE_HTTPS = _get_bool_env("LOCUST_REQUIRE_HTTPS", True)
 LOCUST_LOG_LOGIN_FAILURE_CONTEXT = _get_bool_env("LOCUST_LOG_LOGIN_FAILURE_CONTEXT", True)
+
+
+def _sanitize_cli_args() -> None:
+    """Drop empty CLI args before Locust parses positional user classes."""
+    if not sys.argv:
+        return
+    cleaned_args = [sys.argv[0]]
+    dropped = False
+    for arg in sys.argv[1:]:
+        if arg is None:
+            dropped = True
+            continue
+        if isinstance(arg, str) and not arg.strip():
+            dropped = True
+            continue
+        cleaned_args.append(arg)
+
+    if dropped:
+        LOGGER.warning(
+            "Removed empty CLI arguments to avoid Locust 'Unknown User(s)' errors. "
+            "Check any LOCUST_USER_CLASSES interpolation for empty values."
+        )
+        sys.argv[:] = cleaned_args
+
+
+_sanitize_cli_args()
 
 
 def _load_user_credentials():
