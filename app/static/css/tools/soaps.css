@@ -1,4 +1,4 @@
-#soapToolPage {
+soapToolPage {
   margin-top: calc(-1 * var(--space-4));
   --soap-field-height: 40px;
   --soap-addon-width: clamp(2.25rem, 6vw, 3rem);
@@ -351,33 +351,6 @@
   min-width: 0;
   line-height: 1.1;
 }
-#soapToolPage .soap-input-suffix {
-  position: relative;
-  width: 100%;
-}
-#soapToolPage .soap-input-suffix::after {
-  content: attr(data-suffix);
-  position: absolute;
-  right: 0.65rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-muted);
-  pointer-events: none;
-}
-#soapToolPage .soap-input-suffix input.form-control {
-  padding-right: 2.4rem;
-}
-#soapToolPage input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-#soapToolPage input[type="number"]::-webkit-outer-spin-button,
-#soapToolPage input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
@@ -385,10 +358,6 @@
   padding-top: 0.3rem;
   padding-bottom: 0.3rem;
   line-height: 1.1;
-  padding-right: 2.5rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
 }
 #soapToolPage .soap-stage-body .input-group {
   width: 100%;
@@ -519,7 +488,6 @@
   justify-content: space-between;
   align-items: center;
   margin-top: var(--space-2);
-  width: 100%;
 }
 #soapToolPage .soap-config-row .form-label {
   display: flex;
@@ -789,48 +757,24 @@
   max-width: 10%;
 }
 #soapToolPage #soapStage4Pane .additive-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
-  column-gap: var(--space-3);
-  align-items: end;
+  flex-wrap: wrap;
 }
-#soapToolPage #soapStage4Pane .additive-row > [class*="col-"] {
-  width: auto;
-  max-width: none;
-  flex: none;
-  padding-left: 0;
-  padding-right: 0;
-}
-#soapToolPage #soapStage4Pane .additive-row .form-label {
-  display: block;
-  white-space: normal;
-}
-#soapToolPage #soapStage4Pane .additive-row .soap-input-suffix,
-#soapToolPage #soapStage4Pane .additive-row .additive-typeahead {
-  width: 100%;
-}
-#soapToolPage #soapStage4Pane .additive-row .additive-percent-col {
-  flex: 0 0 20% !important;
-  max-width: 20% !important;
-}
+#soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
 #soapToolPage #soapStage4Pane .additive-row .additive-weight-col {
-  flex: 0 0 20% !important;
-  max-width: 20% !important;
+  flex: 1 1 6.5rem;
+  min-width: 6.5rem;
+  max-width: none;
 }
 #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
-  flex: 0 0 60% !important;
-  max-width: 60% !important;
+  flex: 2 1 11rem;
+  min-width: 11rem;
+  max-width: none;
 }
 #soapToolPage #soapStage4Pane .form-label {
   font-size: 0.72rem;
 }
 #soapToolPage #soapStage4Pane .form-control {
   font-size: 0.85rem;
-}
-#soapToolPage #soapStage4Pane .additive-typeahead {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 #soapToolPage .fragrance-row .fragrance-remove-col {
   justify-content: center;
@@ -848,14 +792,10 @@
 #soapToolPage .oil-row .oil-remove-col {
   justify-content: center;
 }
-@container soap-stage (max-width: 320px) {
+@container soap-stage (max-width: 520px) {
   #soapToolPage #soapStage3Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
-  }
-  #soapToolPage #soapStage4Pane .additive-row {
-    grid-template-columns: 1fr;
-    row-gap: var(--space-2);
   }
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
   #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
@@ -884,7 +824,16 @@
     justify-content: flex-end;
   }
 }
-@container soap-stage (max-width: 280px) {
+@container soap-stage (max-width: 360px) {
+  #soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
+  #soapToolPage #soapStage4Pane .additive-row .additive-weight-col,
+  #soapToolPage #soapStage4Pane .additive-row .additive-link-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+@container soap-stage (max-width: 440px) {
   #soapToolPage .oil-row .oil-weight-col,
   #soapToolPage .oil-row .oil-percent-col {
     flex: 0 0 100%;
