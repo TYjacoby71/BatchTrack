@@ -353,6 +353,12 @@ redis-cli -u $REDIS_URL ping
 - Check for memory leaks in application code
 - Monitor Redis memory usage
 
+**5. Locust "Unknown User(s)"**
+
+- This usually means an empty positional argument was passed for user classes.
+- Check any scripts that append `"$LOCUST_USER_CLASSES"` and skip it when empty.
+- You can also `unset LOCUST_USER_CLASSES` to fall back to the default class mix.
+
 ### Performance Tuning
 
 **Database Query Optimization:**

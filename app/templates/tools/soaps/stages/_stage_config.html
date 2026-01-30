@@ -36,16 +36,14 @@
       <div class="col-lg-6 col-md-12">
         <div class="soap-field-stack water-input" data-method="percent">
           <label class="form-label">Water of oils</label>
-          <div class="input-group">
+          <div class="soap-input-suffix" data-suffix="%">
             <input type="number" class="form-control" id="waterPct" min="20" max="50" step="0.1" value="33">
-            <span class="input-group-text">%</span>
           </div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="concentration">
           <label class="form-label">Lye concentration</label>
-          <div class="input-group">
+          <div class="soap-input-suffix" data-suffix="%">
             <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
-            <span class="input-group-text">%</span>
           </div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="ratio">
@@ -57,21 +55,20 @@
     <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
       <div class="col-lg-6 col-md-12 soap-field-stack">
         <label class="form-label">Lye purity</label>
-        <div class="input-group">
+        <div class="soap-input-suffix" data-suffix="%">
           <input type="number" class="form-control" id="lyePurity" min="90" max="100" step="0.1" value="100">
-          <span class="input-group-text">%</span>
         </div>
         <div class="form-text soap-stage-note" id="lyePurityHint">Most calculators assume 100%.</div>
       </div>
       <div class="col-lg-6 col-md-12 soap-field-stack">
         <label class="form-label">Superfat</label>
-        <div class="input-group">
+        <div class="soap-input-suffix" data-suffix="%">
           <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
-          <span class="input-group-text">%</span>
         </div>
         <div class="form-text soap-stage-note">5% is a balanced default.</div>
       </div>
     </div>
-    <div class="soap-stage-actions-placeholder mt-2" data-stage-actions="inline"></div>
+    {% set stage_index = 0 %}
+    {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>
 </div>
