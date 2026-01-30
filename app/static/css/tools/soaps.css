@@ -166,12 +166,12 @@
   }
 }
 #soapToolPage #soapQualityCard,
-#soapToolPage #resultsCard,
 #soapToolPage #soapResultsActionsCard {
   margin-bottom: var(--space-2);
 }
 #soapToolPage #resultsCard {
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1);
 }
 #soapToolPage .soap-mobile-drawer {
   position: fixed;
@@ -252,7 +252,7 @@
   position: relative;
 }
 #soapToolPage #soapStageQualityRow {
-  margin-top: calc(var(--space-3) + 14px) !important;
+  margin-top: calc(var(--space-2) + 8px) !important;
 }
 #soapToolPage .results-toggle {
   position: absolute;
