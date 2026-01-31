@@ -44,7 +44,7 @@ def adjust_sku_inventory(inventory_item_id):
         if request.is_json:
             return jsonify({'error': 'SKU not found'}), 404
         flash('SKU not found', 'error')
-        return redirect(url_for('products.list_products'))
+        return redirect(url_for('products.product_list'))
 
     # Parse request data
     if request.is_json:

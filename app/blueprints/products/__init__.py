@@ -8,7 +8,6 @@ from .sku import sku_bp
 from .product_variants import product_variants_bp
 from .product_alerts_bp import product_alerts_bp
 from .api import products_api_bp
-from . import product_alerts  # Registers /products/alerts + /products/api/stock-summary
 
 def register_product_blueprints(app):
     """Register all product-related blueprints"""
