@@ -99,8 +99,8 @@
       input.value = '';
     });
     attachFragranceTypeahead(row);
-    row.querySelectorAll('.unit-label').forEach(el => {
-      el.textContent = state.currentUnit;
+    row.querySelectorAll('.unit-suffix').forEach(el => {
+      el.dataset.suffix = state.currentUnit;
     });
     return row;
   }
