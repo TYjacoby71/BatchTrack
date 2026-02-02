@@ -165,7 +165,7 @@ def view_variant(product_id, variant_name):
 
     if not product:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     # Get the variant by name
     variant = ProductVariant.query.filter_by(
@@ -260,7 +260,7 @@ def create_sku_for_variant(product_id, variant_name):
 
     if not product:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     variant = ProductVariant.query.filter_by(
         product_id=product.id,
@@ -348,7 +348,7 @@ def edit_variant(product_id, variant_name):
 
     if not product:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     # Get the variant
     variant = ProductVariant.query.filter_by(
@@ -408,7 +408,7 @@ def delete_variant(product_id, variant_name):
 
     if not product:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     # Get the variant
     variant = ProductVariant.query.filter_by(
