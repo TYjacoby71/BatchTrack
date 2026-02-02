@@ -324,6 +324,8 @@
         sap_koh: oil.sapKoh || null,
         fatty_profile: oil.fattyProfile || null,
         global_item_id: oil.global_item_id || null,
+        default_unit: oil.default_unit || null,
+        ingredient_category_name: oil.ingredient_category_name || null,
       })),
       totals: {
         total_oils_g: round(calc.totalOils || 0, 2),
@@ -369,12 +371,16 @@
     };
   }
 
-  function getAdditiveItem(nameId, giId, fallbackName){
+  function getAdditiveItem(nameId, giId, fallbackName, unitId, categoryId){
     const name = document.getElementById(nameId)?.value?.trim();
     const giRaw = document.getElementById(giId)?.value || '';
+    const defaultUnit = unitId ? document.getElementById(unitId)?.value || '' : '';
+    const categoryName = categoryId ? document.getElementById(categoryId)?.value || '' : '';
     return {
       name: name || fallbackName,
       globalItemId: giRaw ? parseInt(giRaw) : undefined,
+      defaultUnit: defaultUnit || undefined,
+      categoryName: categoryName || undefined,
     };
   }
 
@@ -384,6 +390,8 @@
     document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
       const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
       const giRaw = row.querySelector('.fragrance-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.fragrance-default-unit')?.value || '';
+      const categoryName = row.querySelector('.fragrance-category')?.value || '';
       const gramsInput = row.querySelector('.fragrance-grams')?.value;
       const pctInput = row.querySelector('.fragrance-percent')?.value;
       let grams = SoapTool.units.toGrams(gramsInput);
@@ -395,6 +403,8 @@
       rows.push({
         name: name || 'Fragrance/Essential Oils',
         globalItemId: giRaw ? parseInt(giRaw) : undefined,
+        defaultUnit: defaultUnit || undefined,
+        categoryName: categoryName || undefined,
         grams,
       });
     });
@@ -408,6 +418,8 @@
       global_item_id: oil.global_item_id || undefined,
       quantity: oil.grams,
       unit: 'gram',
+      default_unit: oil.default_unit || undefined,
+      ingredient_category_name: oil.ingredient_category_name || undefined,
     }));
     const lyeName = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
     if (calc.lyeAdjusted > 0) {
@@ -419,24 +431,59 @@
     const fragranceRows = collectFragranceRows(calc.totalOils || 0);
     fragranceRows.forEach(item => {
       if (item.grams > 0) {
-        baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(item.grams, 2), unit: 'gram' });
+        baseIngredients.push({
+          name: item.name,
+          global_item_id: item.globalItemId,
+          quantity: round(item.grams, 2),
+          unit: 'gram',
+          default_unit: item.defaultUnit,
+          ingredient_category_name: item.categoryName,
+        });
       }
     });
     if (calc.additives?.lactateG > 0) {
-      const item = getAdditiveItem('additiveLactateName', 'additiveLactateGi', 'Sodium Lactate');
-      baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.lactateG, 2), unit: 'gram' });
+      const item = getAdditiveItem('additiveLactateName', 'additiveLactateGi', 'Sodium Lactate', 'additiveLactateUnit', 'additiveLactateCategory');
+      baseIngredients.push({
+        name: item.name,
+        global_item_id: item.globalItemId,
+        quantity: round(calc.additives.lactateG, 2),
+        unit: 'gram',
+        default_unit: item.defaultUnit,
+        ingredient_category_name: item.categoryName,
+      });
     }
     if (calc.additives?.sugarG > 0) {
-      const item = getAdditiveItem('additiveSugarName', 'additiveSugarGi', 'Sugar');
-      baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.sugarG, 2), unit: 'gram' });
+      const item = getAdditiveItem('additiveSugarName', 'additiveSugarGi', 'Sugar', 'additiveSugarUnit', 'additiveSugarCategory');
+      baseIngredients.push({
+        name: item.name,
+        global_item_id: item.globalItemId,
+        quantity: round(calc.additives.sugarG, 2),
+        unit: 'gram',
+        default_unit: item.defaultUnit,
+        ingredient_category_name: item.categoryName,
+      });
     }
     if (calc.additives?.saltG > 0) {
-      const item = getAdditiveItem('additiveSaltName', 'additiveSaltGi', 'Salt');
-      baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.saltG, 2), unit: 'gram' });
+      const item = getAdditiveItem('additiveSaltName', 'additiveSaltGi', 'Salt', 'additiveSaltUnit', 'additiveSaltCategory');
+      baseIngredients.push({
+        name: item.name,
+        global_item_id: item.globalItemId,
+        quantity: round(calc.additives.saltG, 2),
+        unit: 'gram',
+        default_unit: item.defaultUnit,
+        ingredient_category_name: item.categoryName,
+      });
     }
     if (calc.additives?.citricG > 0) {
-      const item = getAdditiveItem('additiveCitricName', 'additiveCitricGi', 'Citric Acid');
-      baseIngredients.push({ name: item.name, global_item_id: item.globalItemId, quantity: round(calc.additives.citricG, 2), unit: 'gram' });
+      const item = getAdditiveItem('additiveCitricName', 'additiveCitricGi', 'Citric Acid', 'additiveCitricUnit', 'additiveCitricCategory');
+      baseIngredients.push({
+        name: item.name,
+        global_item_id: item.globalItemId,
+        quantity: round(calc.additives.citricG, 2),
+        unit: 'gram',
+        default_unit: item.defaultUnit,
+        ingredient_category_name: item.categoryName,
+      });
       baseIngredients.push({ name: 'Extra Lye for Citric Acid', quantity: round(calc.additives.citricLyeG, 2), unit: 'gram' });
     }
     return {

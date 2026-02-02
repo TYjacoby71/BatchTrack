@@ -22,6 +22,7 @@
     ingredientFirst: false,
     displayVariant: null,
     showSourceBadge: true,
+    globalUrlBuilder: null,
     resultFilter: null,
   };
 
@@ -310,6 +311,9 @@
         container_style: form.container_style || null,
         container_color: form.container_color || null,
         saponification_value: form.saponification_value || null,
+        iodine_value: form.iodine_value || null,
+        fatty_acid_profile: form.fatty_acid_profile || null,
+        melting_point_c: form.melting_point_c || null,
       }));
       const filteredForms = dedupeIds
         ? forms.filter(form => !form.global_item_id || !dedupeIds.has(String(form.global_item_id)))
@@ -346,6 +350,7 @@
     const displayVariant = opts.displayVariant;
     const resultFilter = typeof opts.resultFilter === 'function' ? opts.resultFilter : null;
     const onSelection = typeof opts.onSelection === 'function' ? opts.onSelection : null;
+    const globalUrlBuilder = opts.globalUrlBuilder;
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || (!giHiddenEl && opts.requireHidden !== false)) return;
 
@@ -363,6 +368,9 @@
     }
 
     function buildGlobalUrl(q, effectiveSearchType, useIngredientFirst){
+      if (typeof globalUrlBuilder === 'function') {
+        return globalUrlBuilder(q, effectiveSearchType, useIngredientFirst);
+      }
       const params = new URLSearchParams({ q });
       if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
       if (effectiveSearchType === 'ingredient' && useIngredientFirst) params.set('group', 'ingredient');

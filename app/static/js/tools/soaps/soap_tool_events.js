@@ -3,45 +3,238 @@
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { LACTATE_CATEGORY_SET, SUGAR_CATEGORY_SET, SALT_CATEGORY_SET, CITRIC_CATEGORY_SET } = SoapTool.constants;
+  const { round, toNumber, clamp } = SoapTool.helpers;
+  const { formatWeight, formatPercent, toGrams } = SoapTool.units;
   const state = SoapTool.state;
 
-  function updateDownloadPreview(){
-    const summary = {
-      oils: document.getElementById('downloadSummaryOils'),
-      lye: document.getElementById('downloadSummaryLye'),
-      water: document.getElementById('downloadSummaryWater'),
-      yield: document.getElementById('downloadSummaryYield'),
-      superfat: document.getElementById('downloadSummarySuperfat'),
-    };
-    const list = document.getElementById('soapDownloadInciList');
-    const empty = document.getElementById('soapDownloadPreviewEmpty');
-    if (!list || !empty) return;
-    const calc = state.lastCalc || SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: false });
+  function getCalcForExport(){
+    const calc = state.lastCalc || SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
     if (!calc) {
-      empty.classList.remove('d-none');
-      list.innerHTML = '';
-      Object.values(summary).forEach(el => { if (el) el.textContent = '--'; });
-      return;
+      if (SoapTool.ui?.showSoapAlert) {
+        SoapTool.ui.showSoapAlert('warning', 'Run a calculation before exporting or printing.', { dismissible: true, timeoutMs: 6000 });
+      }
+      return null;
     }
-    empty.classList.add('d-none');
-    const payload = SoapTool.runner.buildSoapRecipePayload(calc);
-    list.innerHTML = '';
-    if (!payload.ingredients.length) {
-      const li = document.createElement('li');
-      li.textContent = 'Add oils to build an INCI list.';
-      list.appendChild(li);
-    } else {
-      payload.ingredients.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item.name || 'Ingredient';
-        list.appendChild(li);
+    return calc;
+  }
+
+  function collectFragranceExportRows(totalOils){
+    const rows = [];
+    document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
+      const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
+      const gramsInput = row.querySelector('.fragrance-grams')?.value;
+      const pctInput = row.querySelector('.fragrance-percent')?.value;
+      let grams = toGrams(gramsInput);
+      let pct = clamp(toNumber(pctInput), 0);
+      if (grams <= 0 && pct > 0 && totalOils > 0) {
+        grams = totalOils * (pct / 100);
+      }
+      if (grams <= 0 && pct <= 0 && !name) return;
+      if (!pct && grams > 0 && totalOils > 0) {
+        pct = (grams / totalOils) * 100;
+      }
+      rows.push({
+        name: name || 'Fragrance/Essential Oils',
+        grams,
+        pct,
       });
+    });
+    return rows;
+  }
+
+  function collectAdditiveExportRows(additives){
+    const rows = [];
+    if (!additives) return rows;
+    const lactateName = document.getElementById('additiveLactateName')?.value?.trim() || 'Sodium Lactate';
+    const sugarName = document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar';
+    const saltName = document.getElementById('additiveSaltName')?.value?.trim() || 'Salt';
+    const citricName = document.getElementById('additiveCitricName')?.value?.trim() || 'Citric Acid';
+    if (additives.lactateG > 0) {
+      rows.push({ name: lactateName, grams: additives.lactateG, pct: additives.lactatePct });
     }
-    if (summary.oils) summary.oils.textContent = SoapTool.units.formatWeight(calc.totalOils || 0);
-    if (summary.lye) summary.lye.textContent = SoapTool.units.formatWeight(calc.lyeAdjusted || 0);
-    if (summary.water) summary.water.textContent = SoapTool.units.formatWeight(calc.water || 0);
-    if (summary.yield) summary.yield.textContent = SoapTool.units.formatWeight(calc.batchYield || 0);
-    if (summary.superfat) summary.superfat.textContent = SoapTool.units.formatPercent(calc.superfat || 0);
+    if (additives.sugarG > 0) {
+      rows.push({ name: sugarName, grams: additives.sugarG, pct: additives.sugarPct });
+    }
+    if (additives.saltG > 0) {
+      rows.push({ name: saltName, grams: additives.saltG, pct: additives.saltPct });
+    }
+    if (additives.citricG > 0) {
+      rows.push({ name: citricName, grams: additives.citricG, pct: additives.citricPct });
+    }
+    return rows;
+  }
+
+  function buildFormulaCsv(calc){
+    const totalOils = calc.totalOils || 0;
+    const rows = [['section', 'name', 'quantity', 'unit', 'percent']];
+    rows.push(['Summary', 'Lye Type', calc.lyeType || '', '', '']);
+    rows.push(['Summary', 'Superfat', round(calc.superfat || 0, 2), '%', '']);
+    rows.push(['Summary', 'Lye Purity', round(calc.purity || 0, 1), '%', '']);
+    rows.push(['Summary', 'Water Method', calc.waterMethod || '', '', '']);
+    rows.push(['Summary', 'Water %', round(calc.waterPct || 0, 1), '%', '']);
+    rows.push(['Summary', 'Lye Concentration', round(calc.lyeConcentration || 0, 1), '%', '']);
+    rows.push(['Summary', 'Water Ratio', round(calc.waterRatio || 0, 2), '', '']);
+    rows.push(['Summary', 'Total Oils', round(totalOils, 2), 'gram', '']);
+    rows.push(['Summary', 'Batch Yield', round(calc.batchYield || 0, 2), 'gram', '']);
+
+    (calc.oils || []).forEach(oil => {
+      const pct = totalOils > 0 ? round((oil.grams / totalOils) * 100, 2) : '';
+      rows.push(['Oils', oil.name || 'Oil', round(oil.grams || 0, 2), 'gram', pct]);
+    });
+    if (calc.lyeAdjusted > 0) {
+      rows.push(['Lye', calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)', round(calc.lyeAdjusted, 2), 'gram', '']);
+    }
+    if (calc.water > 0) {
+      rows.push(['Water', 'Distilled Water', round(calc.water, 2), 'gram', '']);
+    }
+    const fragrances = collectFragranceExportRows(totalOils);
+    fragrances.forEach(row => {
+      rows.push(['Fragrance', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
+    });
+    const additiveRows = collectAdditiveExportRows(calc.additives);
+    additiveRows.forEach(row => {
+      rows.push(['Additives', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
+    });
+    if (calc.additives?.citricLyeG > 0) {
+      rows.push(['Additives', 'Extra Lye for Citric Acid', round(calc.additives.citricLyeG, 2), 'gram', '']);
+    }
+    return rows;
+  }
+
+  function csvEscape(value){
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function buildCsvString(rows){
+    return rows.map(row => row.map(csvEscape).join(',')).join('\n');
+  }
+
+  function triggerCsvDownload(csvText, filename){
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function buildPrintSheet(calc){
+    const totalOils = calc.totalOils || 0;
+    const oils = (calc.oils || []).map(oil => ({
+      name: oil.name || 'Oil',
+      grams: oil.grams || 0,
+      pct: totalOils > 0 ? (oil.grams / totalOils) * 100 : 0,
+    }));
+    const fragrances = collectFragranceExportRows(totalOils);
+    const additives = collectAdditiveExportRows(calc.additives);
+    const now = new Date().toLocaleString();
+    const oilRows = oils.length
+      ? oils.map(oil => `
+          <tr>
+            <td>${oil.name}</td>
+            <td class="text-end">${formatWeight(oil.grams)}</td>
+            <td class="text-end">${formatPercent(oil.pct)}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" class="text-muted">No oils added.</td></tr>';
+    const fragranceRows = fragrances.length
+      ? fragrances.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td class="text-end">${formatWeight(item.grams)}</td>
+            <td class="text-end">${formatPercent(item.pct)}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" class="text-muted">No fragrances added.</td></tr>';
+    const additiveRows = additives.length
+      ? additives.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td class="text-end">${formatWeight(item.grams)}</td>
+            <td class="text-end">${formatPercent(item.pct)}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" class="text-muted">No additives added.</td></tr>';
+    const lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+    const extraLyeRow = calc.additives?.citricLyeG > 0
+      ? `<tr><td>Extra Lye for Citric Acid</td><td class="text-end">${formatWeight(calc.additives.citricLyeG)}</td></tr>`
+      : '';
+
+    return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Soap Formula Sheet</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      h2 { font-size: 16px; margin-top: 20px; }
+      .meta { font-size: 12px; color: #555; margin-bottom: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }
+      th { background: #f3f4f6; text-align: left; }
+      .text-end { text-align: right; }
+      .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
+      .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
+      .text-muted { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Soap Formula Sheet</h1>
+    <div class="meta">Generated ${now}</div>
+    <div class="summary-grid">
+      <div class="summary-item"><span>Lye type</span><span>${calc.lyeType || '--'}</span></div>
+      <div class="summary-item"><span>Superfat</span><span>${formatPercent(calc.superfat || 0)}</span></div>
+      <div class="summary-item"><span>Lye purity</span><span>${formatPercent(calc.purity || 0)}</span></div>
+      <div class="summary-item"><span>Total oils</span><span>${formatWeight(totalOils)}</span></div>
+      <div class="summary-item"><span>Water</span><span>${formatWeight(calc.water || 0)}</span></div>
+      <div class="summary-item"><span>Batch yield</span><span>${formatWeight(calc.batchYield || 0)}</span></div>
+      <div class="summary-item"><span>Water method</span><span>${calc.waterMethod || '--'}</span></div>
+      <div class="summary-item"><span>Lye concentration</span><span>${formatPercent(calc.lyeConcentration || 0)}</span></div>
+    </div>
+
+    <h2>Oils</h2>
+    <table>
+      <thead>
+        <tr><th>Oil</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
+      </thead>
+      <tbody>${oilRows}</tbody>
+    </table>
+
+    <h2>Lye & Water</h2>
+    <table>
+      <thead>
+        <tr><th>Item</th><th class="text-end">Weight</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>${lyeLabel}</td><td class="text-end">${formatWeight(calc.lyeAdjusted || 0)}</td></tr>
+        <tr><td>Distilled Water</td><td class="text-end">${formatWeight(calc.water || 0)}</td></tr>
+        ${extraLyeRow}
+      </tbody>
+    </table>
+
+    <h2>Fragrance & Essential Oils</h2>
+    <table>
+      <thead>
+        <tr><th>Fragrance</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
+      </thead>
+      <tbody>${fragranceRows}</tbody>
+    </table>
+
+    <h2>Additives</h2>
+    <table>
+      <thead>
+        <tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
+      </thead>
+      <tbody>${additiveRows}</tbody>
+    </table>
+  </body>
+</html>`;
   }
 
   const oilRows = document.getElementById('oilRows');
@@ -529,6 +722,40 @@
     });
   }
 
+  const exportSoapCsvBtn = document.getElementById('exportSoapCsv');
+  if (exportSoapCsvBtn) {
+    exportSoapCsvBtn.addEventListener('click', function(){
+      const calc = getCalcForExport();
+      if (!calc) return;
+      const rows = buildFormulaCsv(calc);
+      const csvText = buildCsvString(rows);
+      triggerCsvDownload(csvText, 'soap_formula.csv');
+    });
+  }
+
+  const printSoapSheetBtn = document.getElementById('printSoapSheet');
+  if (printSoapSheetBtn) {
+    printSoapSheetBtn.addEventListener('click', function(){
+      const calc = getCalcForExport();
+      if (!calc) return;
+      const html = buildPrintSheet(calc);
+      const win = window.open('', '_blank', 'width=960,height=720');
+      if (!win) {
+        if (SoapTool.ui?.showSoapAlert) {
+          SoapTool.ui.showSoapAlert('warning', 'Pop-up blocked. Allow pop-ups to print the sheet.', { dismissible: true, timeoutMs: 6000 });
+        }
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.onload = () => {
+        win.print();
+      };
+    });
+  }
+
   const undoRemoveBtn = document.getElementById('soapUndoRemove');
   if (undoRemoveBtn) {
     undoRemoveBtn.addEventListener('click', () => {
@@ -647,10 +874,10 @@
   window.addEventListener('resize', SoapTool.layout.scheduleStageHeightSync);
   window.addEventListener('load', SoapTool.layout.scheduleStageHeightSync);
 
-  SoapTool.additives.attachAdditiveTypeahead('additiveLactateName', 'additiveLactateGi', LACTATE_CATEGORY_SET);
-  SoapTool.additives.attachAdditiveTypeahead('additiveSugarName', 'additiveSugarGi', SUGAR_CATEGORY_SET);
-  SoapTool.additives.attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET);
-  SoapTool.additives.attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET);
+  SoapTool.additives.attachAdditiveTypeahead('additiveLactateName', 'additiveLactateGi', LACTATE_CATEGORY_SET, 'additiveLactateUnit', 'additiveLactateCategory');
+  SoapTool.additives.attachAdditiveTypeahead('additiveSugarName', 'additiveSugarGi', SUGAR_CATEGORY_SET, 'additiveSugarUnit', 'additiveSugarCategory');
+  SoapTool.additives.attachAdditiveTypeahead('additiveSaltName', 'additiveSaltGi', SALT_CATEGORY_SET, 'additiveSaltUnit', 'additiveSaltCategory');
+  SoapTool.additives.attachAdditiveTypeahead('additiveCitricName', 'additiveCitricGi', CITRIC_CATEGORY_SET, 'additiveCitricUnit', 'additiveCitricCategory');
   SoapTool.ui.applyHelperVisibility();
   SoapTool.quality.initQualityTooltips();
   SoapTool.runner.applyLyeSelection();
@@ -674,8 +901,4 @@
     SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
   }
   SoapTool.layout.scheduleStageHeightSync();
-  const downloadModal = document.getElementById('soapDownloadPreviewModal');
-  if (downloadModal) {
-    downloadModal.addEventListener('show.bs.modal', updateDownloadPreview);
-  }
 })(window);
