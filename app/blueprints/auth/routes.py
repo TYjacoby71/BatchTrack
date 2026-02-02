@@ -18,6 +18,7 @@ from ...services.email_service import EmailService
 from ...extensions import limiter
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
+from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.billing_service import BillingService
 from datetime import datetime, timedelta
 import re
@@ -176,6 +177,26 @@ def quick_signup():
         next_url = _safe_next_path(request.form.get("next")) or url_for("inventory.list_inventory")
         global_item_id = (request.form.get("global_item_id") or "").strip()
 
+        trap_value = (request.form.get("website") or "").strip()
+        if trap_value:
+            trap_email = (request.form.get("email") or "").strip().lower() or None
+            PublicBotTrapService.record_hit(
+                request=request,
+                source="quick_signup",
+                reason="honeypot",
+                email=trap_email,
+                extra={"field": "website"},
+                block=False,
+            )
+            if trap_email:
+                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
+                PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
+            else:
+                PublicBotTrapService.add_block(
+                    ip=PublicBotTrapService.resolve_request_ip(request),
+                )
+            return redirect(url_for("auth.login", next=next_url))
+
         full_name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         password = (request.form.get("password") or "").strip()
@@ -190,6 +211,20 @@ def quick_signup():
                 prefill_name=full_name,
                 prefill_email=email,
             )
+
+        if PublicBotTrapService.is_blocked(
+            ip=PublicBotTrapService.resolve_request_ip(request),
+            email=email,
+        ):
+            PublicBotTrapService.record_hit(
+                request=request,
+                source="quick_signup",
+                reason="blocked",
+                email=email,
+                extra={"flow": "quick_signup"},
+                block=False,
+            )
+            return redirect(url_for("auth.login", next=next_url))
 
         if not password or len(password) < 8:
             flash("Password must be at least 8 characters.", "error")
