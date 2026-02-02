@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Audit and split refined ingredient definitions by common-name conflicts.
 
-This script treats refined ingredient definitions as compiled cluster groups
-keyed by compiled_clusters.compiled_term. It detects definitions where the
-clusters disagree on common_name, and (optionally) reassigns those clusters
-to new definition terms using botanical_name or original terms.
+This script treats refined ingredient definitions as their own objects when the
+ingredient_definitions table exists, otherwise falls back to compiled_term. It
+detects definitions where clusters disagree on common_name, and (optionally)
+reassigns those clusters to new definition terms using botanical_name or
+original terms.
 
 Default behavior:
 - Only Plant-Derived clusters are eligible for reassignment.
@@ -37,6 +38,8 @@ class ClusterRow:
     origin: str
     ingredient_category: str
     payload_json: str
+    definition_id: int | None
+    definition_term: str
 
 
 _PLACEHOLDER_COMMON = {"", "n/a", "not found", "unknown"}
@@ -59,7 +62,7 @@ def normalize_common_name(value: str | None) -> str:
 
 
 def definition_key(row: ClusterRow) -> str:
-    return _clean(row.compiled_term) or _clean(row.raw_canonical_term) or row.cluster_id
+    return _clean(row.definition_term) or _clean(row.compiled_term) or _clean(row.raw_canonical_term) or row.cluster_id
 
 
 def is_plant_derived(row: ClusterRow) -> bool:
@@ -88,26 +91,58 @@ def pick_target_term(row: ClusterRow) -> str:
     return _clean(row.compiled_term) or row.cluster_id
 
 
+def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (name,))
+    return cur.fetchone() is not None
+
+
 def load_clusters(conn: sqlite3.Connection) -> list[ClusterRow]:
     cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT c.cluster_id,
-               c.compiled_term,
-               c.raw_canonical_term,
-               c.common_name,
-               c.botanical_name,
-               c.inci_name,
-               c.cas_number,
-               c.origin,
-               c.ingredient_category,
-               c.payload_json
-        FROM compiled_clusters c
-        WHERE EXISTS (
-            SELECT 1 FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id
+    has_definitions = _table_exists(conn, "ingredient_definitions")
+    if has_definitions:
+        cur.execute(
+            """
+            SELECT c.cluster_id,
+                   c.compiled_term,
+                   c.raw_canonical_term,
+                   c.common_name,
+                   c.botanical_name,
+                   c.inci_name,
+                   c.cas_number,
+                   c.origin,
+                   c.ingredient_category,
+                   c.payload_json,
+                   d.id,
+                   d.definition_term
+            FROM compiled_clusters c
+            LEFT JOIN ingredient_definitions d ON c.definition_id = d.id
+            WHERE EXISTS (
+                SELECT 1 FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id
+            )
+            """
         )
-        """
-    )
+    else:
+        cur.execute(
+            """
+            SELECT c.cluster_id,
+                   c.compiled_term,
+                   c.raw_canonical_term,
+                   c.common_name,
+                   c.botanical_name,
+                   c.inci_name,
+                   c.cas_number,
+                   c.origin,
+                   c.ingredient_category,
+                   c.payload_json,
+                   NULL as definition_id,
+                   NULL as definition_term
+            FROM compiled_clusters c
+            WHERE EXISTS (
+                SELECT 1 FROM compiled_cluster_items i WHERE i.cluster_id = c.cluster_id
+            )
+            """
+        )
     rows = []
     for r in cur.fetchall():
         rows.append(
@@ -122,6 +157,8 @@ def load_clusters(conn: sqlite3.Connection) -> list[ClusterRow]:
                 origin=_clean(r[7]),
                 ingredient_category=_clean(r[8]),
                 payload_json=r[9] or "",
+                definition_id=(int(r[10]) if r[10] is not None else None),
+                definition_term=_clean(r[11]),
             )
         )
     return rows
@@ -169,6 +206,23 @@ def update_payload_term(payload_json: str, new_term: str) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
+def _ensure_definition(conn: sqlite3.Connection, term: str) -> int | None:
+    if not _table_exists(conn, "ingredient_definitions"):
+        return None
+    cur = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO ingredient_definitions (definition_term, created_at, updated_at)
+        VALUES (?, ?, ?)
+        """,
+        (term, now, now),
+    )
+    cur.execute("SELECT id FROM ingredient_definitions WHERE definition_term = ?", (term,))
+    row = cur.fetchone()
+    return int(row[0]) if row else None
+
+
 def apply_updates(
     conn: sqlite3.Connection,
     updates: list[tuple[str, str, str]],
@@ -177,14 +231,25 @@ def apply_updates(
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
     for cluster_id, new_term, new_payload in updates:
-        cur.execute(
-            """
-            UPDATE compiled_clusters
-            SET compiled_term = ?, payload_json = ?, updated_at = ?
-            WHERE cluster_id = ?
-            """,
-            (new_term, new_payload, now, cluster_id),
-        )
+        definition_id = _ensure_definition(conn, new_term)
+        if definition_id is None:
+            cur.execute(
+                """
+                UPDATE compiled_clusters
+                SET compiled_term = ?, payload_json = ?, updated_at = ?
+                WHERE cluster_id = ?
+                """,
+                (new_term, new_payload, now, cluster_id),
+            )
+        else:
+            cur.execute(
+                """
+                UPDATE compiled_clusters
+                SET compiled_term = ?, definition_id = ?, payload_json = ?, updated_at = ?
+                WHERE cluster_id = ?
+                """,
+                (new_term, definition_id, new_payload, now, cluster_id),
+            )
     conn.commit()
     return len(updates)
 
