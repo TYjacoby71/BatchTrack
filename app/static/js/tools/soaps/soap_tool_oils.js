@@ -26,6 +26,13 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: true,
+      globalUrlBuilder: function(q, _searchType, useIngredientFirst){
+        const params = new URLSearchParams({ q });
+        if (useIngredientFirst) {
+          params.set('group', 'ingredient');
+        }
+        return `/api/public/soapcalc-oils/search?${params.toString()}`;
+      },
       searchType: 'ingredient',
       resultFilter: (item, source) => matchesCategory(item, OIL_CATEGORY_SET, source),
       requireHidden: false,
