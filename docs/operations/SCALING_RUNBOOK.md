@@ -81,6 +81,13 @@ SESSION_LIFETIME_MINUTES=60
 CACHE_TYPE=RedisCache
 CACHE_REDIS_URL=${REDIS_URL}
 CACHE_DEFAULT_TIMEOUT=120
+# Redis connection pooling (shared across sessions/cache/limiter)
+REDIS_POOL_MAX_CONNECTIONS=200
+REDIS_POOL_TIMEOUT=5
+REDIS_SOCKET_TIMEOUT=5
+REDIS_CONNECT_TIMEOUT=5
+# Optional: cap by plan max clients and auto-budget per worker
+# REDIS_MAX_CONNECTIONS=250
 
 # Gunicorn worker configuration
 GUNICORN_WORKERS=8                    # 2x CPU cores + 1
@@ -121,6 +128,7 @@ Use the following table when preparing staging/pre-production for a 5,000-user L
 | Database connectivity | `DATABASE_INTERNAL_URL`, `DATABASE_URL` | Internal Render URL, fallback external URL | `_normalize_db_url` prefers internal networking for lower latency. |
 | SQLAlchemy pooling | `SQLALCHEMY_POOL_SIZE=80`, `SQLALCHEMY_MAX_OVERFLOW=40`, `SQLALCHEMY_POOL_TIMEOUT=45`, `SQLALCHEMY_POOL_RECYCLE=1800`, `SQLALCHEMY_POOL_USE_LIFO=true`, `SQLALCHEMY_POOL_RESET_ON_RETURN=commit` | Ship these verbatim | Prevents the `QueuePool limit of size 5 overflow 10 reached` errors observed in the latest load test logs. |
 | Redis + rate limiting | `REDIS_URL`, `RATELIMIT_STORAGE_URI`, `RATELIMIT_STORAGE_URL`, `RATELIMIT_ENABLED=true`, `RATELIMIT_DEFAULT="5000 per hour;1000 per minute"` | Point at HA Redis | Keeps Flask-Limiter aligned with the in-code defaults in `app/extensions.py`. |
+| Redis pooling | `REDIS_POOL_MAX_CONNECTIONS=200`, `REDIS_POOL_TIMEOUT=5`, `REDIS_SOCKET_TIMEOUT=5`, `REDIS_CONNECT_TIMEOUT=5` | Set per-worker pool caps | Prevents run-away Redis client creation under bursty load. |
 | Sessions & cache | `SESSION_TYPE=redis`, `SESSION_LIFETIME_MINUTES=60`, `CACHE_TYPE=RedisCache`, `CACHE_REDIS_URL=${REDIS_URL}`, `CACHE_DEFAULT_TIMEOUT=120` | Use Redis for shared state | 60-minute lifetime keeps Locust logins valid through multi-hour tests. |
 | Billing cache tuning | `BILLING_CACHE_ENABLED=true`, `BILLING_GATE_CACHE_TTL_SECONDS=60`, `BILLING_STATUS_CACHE_TTL=120` | Enabled | Cuts repeated billing queries during recipe dashboards. |
 | Worker / Gunicorn | `GUNICORN_WORKERS=8`, `GUNICORN_WORKER_CLASS=gevent`, `GUNICORN_WORKER_CONNECTIONS=1000`, `GUNICORN_TIMEOUT=30`, `GUNICORN_KEEPALIVE=2`, `GUNICORN_MAX_REQUESTS=2000` | Matches `gunicorn.conf.py` | Provides 8×1k concurrent sockets (8k connections) before queueing. |
@@ -200,6 +208,8 @@ Redis handles:
 - Billing data caching  
 - Session storage (if configured)
 - Application logs warn if `RATELIMIT_STORAGE_URI` falls back to `memory://` in production—treat that as a misconfiguration.
+- Redis connections are pooled and shared across sessions, caching, and rate limiting; set `REDIS_POOL_MAX_CONNECTIONS` to cap per-worker usage.
+- If your Redis plan publishes a max clients limit, set `REDIS_MAX_CONNECTIONS` and the app will auto-budget the pool based on `GUNICORN_WORKERS` (or `WEB_CONCURRENCY`).
 
 **Minimum Redis Configuration:**
 
