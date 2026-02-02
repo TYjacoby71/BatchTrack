@@ -1230,8 +1230,10 @@ def _backfill_definition_links() -> None:
                     """
                 )
             )
-    except Exception:  # pragma: no cover
-        return
+            conn.commit()
+    except Exception as e:
+        LOGGER.error("Failed to backfill definition links: %s", e)
+        raise
 
 
 def configure_db_path(path: str | os.PathLike[str]) -> None:

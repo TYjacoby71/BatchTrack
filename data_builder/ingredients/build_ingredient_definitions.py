@@ -25,6 +25,9 @@ def main() -> None:
         database_manager.configure_db_path(args.db_path)
 
     database_manager.ensure_tables_exist()
+    
+    print("Populating ingredient_definitions from compiled_clusters...")
+    database_manager._backfill_definition_links()
 
     with database_manager.get_session() as session:
         total_defs = session.query(database_manager.IngredientDefinition).count()
