@@ -253,7 +253,7 @@ def integrations_checklist():
                     "REDIS_POOL_MAX_CONNECTIONS",
                     "Shared Redis connection pool size (across cache/sessions/limiter).",
                     required=False,
-                    recommended="~80% of Redis maxclients",
+                    recommended="Default 10 per worker (or set REDIS_MAX_CONNECTIONS)",
                 ),
                 _make_item(
                     "REDIS_POOL_TIMEOUT",
