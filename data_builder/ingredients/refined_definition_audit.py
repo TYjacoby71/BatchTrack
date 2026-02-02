@@ -259,7 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--db-path",
         default=str(database_manager.DB_PATH),
-        help="Path to Final DB.db (defaults to COMPILER_DB_PATH or output/Final DB.db).",
+        help="Path to Final DB.db (defaults to FINAL_DB_PATH or output/Final DB.db).",
     )
     parser.add_argument(
         "--definition",

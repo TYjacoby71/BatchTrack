@@ -11,7 +11,7 @@ It:
   terms from the merged catalog (deterministic clustering)
 
 Notes:
-- The database path is controlled via `COMPILER_DB_PATH` (defaults to compiler_state.db).
+- The database path is controlled via `FINAL_DB_PATH` (defaults to output/Final DB.db).
 - The pipeline does **not** write CSV exports automatically (to avoid huge generated files).
 - If you want a CSV export, run `derive_terms_from_catalog.py --csv-out ...` explicitly.
 """
@@ -127,7 +127,7 @@ def main() -> None:
 
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     p = argparse.ArgumentParser(description="Deterministic ingestion pipeline (CosIng + TGSC -> SQLite state DB)")
-    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses Final DB.db)")
     args = p.parse_args()
     if (args.db_path or "").strip():
         database_manager.configure_db_path((args.db_path or "").strip())

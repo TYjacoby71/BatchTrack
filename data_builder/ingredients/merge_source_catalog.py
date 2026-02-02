@@ -1,6 +1,6 @@
 """Build a merged source catalog from CosIng + TGSC.
 
-This creates/updates `source_catalog_items` in compiler_state.db.
+This creates/updates `source_catalog_items` in Final DB.db.
 
 Merge strategy (deterministic):
 1) Ingest CosIng first (authoritative for INCI + CAS + EC + Functions/Restrictions).
