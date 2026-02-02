@@ -1,11 +1,13 @@
 from collections import OrderedDict
 from flask import Blueprint, jsonify, make_response, request, current_app
+from flask_login import current_user
 from datetime import datetime, timezone
 from app.extensions import limiter, csrf, cache
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.public_bot_service import PublicBotService, PublicBotServiceError
+from app.services.public_bot_trap_service import PublicBotTrapService
 from app.services.ai import GoogleAIClientError
 from app.services.cache_invalidation import global_library_cache_key
 from app.utils.cache_utils import stable_cache_key
@@ -25,6 +27,46 @@ def _global_library_cache_timeout() -> int:
 def server_time():
     ts = datetime.now(timezone.utc).isoformat()
     resp = make_response(jsonify({"server_time": ts}))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@public_api_bp.route("/bot-trap", methods=["GET", "POST"])
+@limiter.limit("60/minute")
+@csrf.exempt
+def public_bot_trap():
+    payload = {}
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+    elif request.form:
+        payload = request.form.to_dict()
+    if not isinstance(payload, dict):
+        payload = {}
+
+    raw_source = request.args.get("source") or payload.get("source") or "public"
+    raw_reason = request.args.get("reason") or payload.get("reason") or "link_click"
+    source = str(raw_source).strip()
+    reason = str(raw_reason).strip()
+    email = (payload.get("email") or request.args.get("email") or "").strip().lower() or None
+
+    user_id = current_user.get_id() if current_user.is_authenticated else None
+
+    PublicBotTrapService.record_hit(
+        request=request,
+        source=source,
+        reason=reason,
+        email=email,
+        user_id=user_id,
+        extra={"payload_keys": list(payload.keys())},
+        block=True,
+    )
+
+    if current_user.is_authenticated:
+        PublicBotTrapService.block_user(current_user, reason="bot_trap_route")
+    elif email:
+        PublicBotTrapService.block_email_if_user_exists(email)
+
+    resp = make_response("", 204)
     resp.headers["Cache-Control"] = "no-store"
     return resp
 

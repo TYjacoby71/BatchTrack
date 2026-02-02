@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="mt-3 pt-3 border-top">
   <form class="tool-waitlist-form" data-waitlist-key="{{ waitlist_key }}">
     <label class="form-label small mb-1 text-muted">{{ label }}</label>
+    <input type="text" class="bot-trap-field" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
     <div class="input-group input-group-sm">
       <input type="email" class="form-control" name="email" placeholder="you@example.com" required>
       <button class="btn btn-outline-secondary" type="submit">
@@ -222,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
       form.addEventListener('submit', async function(ev){
         ev.preventDefault();
         const emailInput = form.querySelector('input[name="email"]');
+        const trapInput = form.querySelector('input[name="website"]');
         const waitlistKey = form.dataset.waitlistKey || 'public_tools';
         if (!emailInput.value){
           return;
@@ -233,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
               email: emailInput.value,
+              website: trapInput ? trapInput.value : '',
               waitlist_key: waitlistKey,
               source: waitlistKey,
               context: 'tools_page',
