@@ -822,6 +822,7 @@ def _process_stage1_cluster(
                     except Exception:
                         legacy_common = legacy_common or compiled
                 rec.common_name = legacy_common or rec.compiled_term
+                database_manager.link_cluster_to_definition(session, rec)
                 rec.confidence_score = None  # No AI confidence for seeded records
                 rec.data_quality_notes = "seeded_from_legacy"
                 rec.payload_json = json.dumps(
@@ -883,6 +884,7 @@ def _process_stage1_cluster(
             common_name = result.get("common_name") or rec.compiled_term
             
             rec.common_name = common_name
+            database_manager.link_cluster_to_definition(session, rec)
             
             # Extract confidence from data_quality if present
             if isinstance(dq, dict):

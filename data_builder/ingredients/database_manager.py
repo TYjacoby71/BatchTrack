@@ -331,6 +331,27 @@ class IngredientRecord(Base):
     enumeration_notes = Column(Text, nullable=True, default=None)
 
 
+class IngredientDefinition(Base):
+    """Refined ingredient definition (first-class object)."""
+
+    __tablename__ = "ingredient_definitions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    definition_term = Column(String, nullable=False, unique=True, index=True)
+
+    common_name = Column(Text, nullable=True, default=None)
+    origin = Column(String, nullable=True, default=None)
+    ingredient_category = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+    derived_from = Column(String, nullable=True, default=None)
+    botanical_name = Column(String, nullable=True, default=None)
+    inci_name = Column(String, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class CompiledClusterRecord(Base):
     """Compiled mirror of a raw SourceDefinition cluster (keyed by cluster_id).
 
@@ -352,6 +373,7 @@ class CompiledClusterRecord(Base):
 
     # Stage 1 outputs
     compiled_term = Column(Text, nullable=True, default=None)
+    definition_id = Column(Integer, ForeignKey("ingredient_definitions.id"), nullable=True, index=True)
     seed_category = Column(String, nullable=True, default=None)
     origin = Column(String, nullable=True, default=None)
     ingredient_category = Column(String, nullable=True, default=None)
@@ -1101,6 +1123,8 @@ def ensure_tables_exist() -> None:
     _ensure_pubchem_columns()
     _ensure_compiled_cluster_columns()
     _ensure_compiled_cluster_indexes()
+    _ensure_ingredient_definition_indexes()
+    _backfill_definition_links()
 
 
 def _ensure_compiled_cluster_indexes() -> None:
@@ -1110,6 +1134,7 @@ def _ensure_compiled_cluster_indexes() -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term_status ON compiled_clusters(term_status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_term ON compiled_clusters(compiled_term)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_priority ON compiled_clusters(priority)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_clusters_definition_id ON compiled_clusters(definition_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_compiled_cluster_items_status ON compiled_cluster_items(item_status)"))
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_compiled_cluster_items_cluster_mif ON compiled_cluster_items(cluster_id, merged_item_form_id)"))
     except Exception:  # pragma: no cover
@@ -1125,6 +1150,86 @@ def _ensure_compiled_cluster_columns() -> None:
             if "priority" not in column_names:
                 conn.execute(text("ALTER TABLE compiled_clusters ADD COLUMN priority INTEGER"))
                 LOGGER.info("Added priority column to compiled_clusters")
+            if "definition_id" not in column_names:
+                conn.execute(text("ALTER TABLE compiled_clusters ADD COLUMN definition_id INTEGER"))
+                LOGGER.info("Added definition_id column to compiled_clusters")
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_ingredient_definition_indexes() -> None:
+    """Best-effort indexing for ingredient_definitions (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text("CREATE UNIQUE INDEX IF NOT EXISTS ux_ingredient_definitions_term ON ingredient_definitions(definition_term)")
+            )
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_ingredient_definitions_term ON ingredient_definitions(definition_term)")
+            )
+    except Exception:  # pragma: no cover
+        return
+
+
+def _backfill_definition_links() -> None:
+    """Populate ingredient_definitions + link compiled_clusters.definition_id."""
+    try:
+        with engine.connect() as conn:
+            # Ensure both tables exist
+            row = conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='ingredient_definitions' LIMIT 1")
+            ).fetchone()
+            if row is None:
+                return
+            row = conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='compiled_clusters' LIMIT 1")
+            ).fetchone()
+            if row is None:
+                return
+
+            # Only proceed if any clusters are missing definition_id
+            missing = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM compiled_clusters
+                    WHERE definition_id IS NULL
+                      AND compiled_term IS NOT NULL
+                      AND TRIM(compiled_term) != ''
+                    LIMIT 1
+                    """
+                )
+            ).fetchone()
+            if missing is None:
+                return
+
+            conn.execute(
+                text(
+                    """
+                    INSERT OR IGNORE INTO ingredient_definitions (
+                        definition_term,
+                        created_at,
+                        updated_at
+                    )
+                    SELECT DISTINCT compiled_term, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    FROM compiled_clusters
+                    WHERE compiled_term IS NOT NULL AND TRIM(compiled_term) != ''
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    UPDATE compiled_clusters
+                    SET definition_id = (
+                        SELECT id FROM ingredient_definitions d
+                        WHERE d.definition_term = compiled_clusters.compiled_term
+                    )
+                    WHERE definition_id IS NULL
+                      AND compiled_term IS NOT NULL
+                      AND TRIM(compiled_term) != ''
+                    """
+                )
+            )
     except Exception:  # pragma: no cover
         return
 
@@ -1146,6 +1251,75 @@ def configure_db_path(path: str | os.PathLike[str]) -> None:
         pass
     engine = _make_engine(DB_PATH)
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+
+def _clean_text(value: Any) -> str:
+    return ("" if value is None else str(value)).strip()
+
+
+def _is_missing_text(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return True
+        lowered = cleaned.lower()
+        if lowered in _PLACEHOLDER_NOT_FOUND or lowered in _PLACEHOLDER_NOT_APPLICABLE:
+            return True
+        return False
+    return False
+
+
+def link_cluster_to_definition(session: Session, rec: CompiledClusterRecord) -> IngredientDefinition | None:
+    """Ensure compiled cluster points at a definition record."""
+    term = _clean_text(getattr(rec, "compiled_term", None))
+    if not term:
+        return None
+
+    definition = (
+        session.query(IngredientDefinition)
+        .filter(IngredientDefinition.definition_term == term)
+        .first()
+    )
+    if definition is None:
+        definition = IngredientDefinition(definition_term=term)
+        session.add(definition)
+        session.flush()
+
+    changed = False
+    if definition.common_name is None and not _is_missing_text(getattr(rec, "common_name", None)):
+        definition.common_name = rec.common_name
+        changed = True
+    if definition.origin is None and not _is_missing_text(getattr(rec, "origin", None)):
+        definition.origin = rec.origin
+        changed = True
+    if definition.ingredient_category is None and not _is_missing_text(getattr(rec, "ingredient_category", None)):
+        definition.ingredient_category = rec.ingredient_category
+        changed = True
+    if definition.refinement_level is None and not _is_missing_text(getattr(rec, "refinement_level", None)):
+        definition.refinement_level = rec.refinement_level
+        changed = True
+    if definition.derived_from is None and not _is_missing_text(getattr(rec, "derived_from", None)):
+        definition.derived_from = rec.derived_from
+        changed = True
+    if definition.botanical_name is None and not _is_missing_text(getattr(rec, "botanical_name", None)):
+        definition.botanical_name = rec.botanical_name
+        changed = True
+    if definition.inci_name is None and not _is_missing_text(getattr(rec, "inci_name", None)):
+        definition.inci_name = rec.inci_name
+        changed = True
+    if definition.cas_number is None and not _is_missing_text(getattr(rec, "cas_number", None)):
+        definition.cas_number = rec.cas_number
+        changed = True
+
+    if changed:
+        definition.updated_at = datetime.utcnow()
+
+    if rec.definition_id != definition.id:
+        rec.definition_id = definition.id
+
+    return definition
 
 
 def _ensure_merged_item_form_indexes() -> None:

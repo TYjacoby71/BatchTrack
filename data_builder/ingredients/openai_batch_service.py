@@ -564,6 +564,7 @@ def _apply_stage1_result(cluster_id: str, payload: dict[str, Any]) -> None:
         rec.botanical_name = _extract_stage1_field(core.get("botanical_name"))
         rec.inci_name = _extract_stage1_field(core.get("inci_name"))
         rec.cas_number = _extract_stage1_field(core.get("cas_number"))
+        database_manager.link_cluster_to_definition(session, rec)
 
         existing_payload = _safe_json_dict(rec.payload_json)
         existing_payload["stage1"] = {
