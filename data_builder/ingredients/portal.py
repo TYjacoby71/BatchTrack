@@ -1,6 +1,6 @@
-"""Lightweight viewer/exporter for the ingredient compiler state DB.
+"""Lightweight viewer/exporter for the ingredient state DB.
 
-This is intentionally small and self-contained: it reads `compiler_state.db`
+This is intentionally small and self-contained: it reads `Final DB.db`
 and renders a basic table + CSV export so you can *see* progress and back it up.
 """
 
@@ -72,7 +72,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
     # Ensure DB exists / schema present.
     if db_path is not None:
-        # NOTE: database_manager reads COMPILER_DB_PATH at import-time by default.
+        # NOTE: database_manager reads FINAL_DB_PATH at import-time by default.
         # Use configure_db_path so --db-path reliably takes effect.
         database_manager.configure_db_path(str(db_path))
     database_manager.ensure_tables_exist()
@@ -431,7 +431,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         return Response(
             out,
             mimetype="text/csv; charset=utf-8",
-            headers={"Content-Disposition": "attachment; filename=ingredient_compiler_state.csv"},
+            headers={"Content-Disposition": "attachment; filename=ingredient_state.csv"},
         )
 
     @app.get("/download.db")
@@ -447,7 +447,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         return send_file(
             path,
             as_attachment=True,
-            download_name="compiler_state.db",
+            download_name="Final DB.db",
             mimetype="application/octet-stream",
             conditional=True,
         )
@@ -806,10 +806,10 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="View/export the ingredient compiler_state.db")
+    parser = argparse.ArgumentParser(description="View/export the ingredient Final DB.db")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5055)
-    parser.add_argument("--db-path", default="", help="Override COMPILER_DB_PATH for this portal run")
+    parser.add_argument("--db-path", default="", help="Override FINAL_DB_PATH for this portal run")
     return parser.parse_args(argv)
 
 

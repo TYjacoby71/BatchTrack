@@ -1,4 +1,4 @@
-"""Seed compiler_state.db vocab tables from data source JSON files.
+"""Seed Final DB.db vocab tables from data source JSON files.
 
 This lets you ship curated vocab (forms/variations/categories/etc.) alongside the repo
 and seed any environment (local, Replit, Render, production) deterministically.
