@@ -231,10 +231,10 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             },
             {
                 "key": "TOOLS_SOAP_CSV_PRIMARY",
-                "label": "Soap Tool CSV Fallback",
+                "label": "Soap Tool CSV Source",
                 "status": "wired",
                 "default_enabled": False,
-                "description": "Use CSV-backed soapcalc data only when GIL has no matches.",
+                "description": "Toggle CSV source for soap tool lookups (off = GIL).",
             },
             {
                 "key": "TOOLS_SOAP_PUSH",

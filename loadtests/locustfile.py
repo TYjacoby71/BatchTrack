@@ -95,6 +95,48 @@ def _sanitize_cli_args() -> None:
         sys.argv[:] = cleaned_args
 
 
+def _extract_global_item_id(payload) -> Optional[int]:
+    if not isinstance(payload, dict):
+        return None
+    results = payload.get("results") or []
+    for entry in results:
+        if not isinstance(entry, dict):
+            continue
+        forms = entry.get("forms") or []
+        for form in forms:
+            if isinstance(form, dict) and form.get("id"):
+                return int(form["id"])
+        if entry.get("id"):
+            return int(entry["id"])
+    return None
+
+
+_sanitize_cli_args()
+
+
+def _sanitize_cli_args() -> None:
+    """Drop empty CLI args before Locust parses positional user classes."""
+    if not sys.argv:
+        return
+    cleaned_args = [sys.argv[0]]
+    dropped = False
+    for arg in sys.argv[1:]:
+        if arg is None:
+            dropped = True
+            continue
+        if isinstance(arg, str) and not arg.strip():
+            dropped = True
+            continue
+        cleaned_args.append(arg)
+
+    if dropped:
+        LOGGER.warning(
+            "Removed empty CLI arguments to avoid Locust 'Unknown User(s)' errors. "
+            "Check any LOCUST_USER_CLASSES interpolation for empty values."
+        )
+        sys.argv[:] = cleaned_args
+
+
 _sanitize_cli_args()
 
 
@@ -709,6 +751,106 @@ class BatchWorkflowSequence(SequentialTaskSet):
         raise StopUser()
 
     @task
+    def browse_public_pages(self):
+        self.client.get("/", name="homepage")
+        self.client.get("/tools", name="tools_index")
+        self.client.get("/global-items", name="global_items")
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        self.client.get(
+            "/api/public/global-items/search",
+            params={"q": query, "type": "ingredient", "group": "ingredient"},
+            name="public_global_item_search",
+        )
+        self.client.get("/auth/signup", name="signup_page")
+        self.client.get("/api/public/units", name="public_units")
+
+    @task
+    def browse_authenticated_pages(self):
+        self.client.get("/dashboard", name="dashboard")
+        self.client.get("/recipes", name="recipes_list")
+        self.client.get("/batches", name="batches_list")
+        self.client.get("/inventory", name="inventory_list")
+        self.client.get("/products", name="products_list")
+        self.client.get("/global-items", name="global_items")
+
+    @task
+    def fetch_bootstrap_endpoints(self):
+        self.client.get("/api/bootstrap/recipes", name="bootstrap_recipes")
+        self.client.get("/api/bootstrap/products", name="bootstrap_products")
+
+    @task
+    def browse_search_endpoints(self):
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        self.client.get(
+            "/api/ingredients/global-items/search",
+            params={"q": query, "type": "ingredient", "group": "ingredient"},
+            name="auth_global_item_search",
+        )
+        self.client.get(
+            "/inventory/api/search",
+            params={"q": query, "type": "ingredient"},
+            name="inventory_search",
+        )
+        self.client.get("/api/ingredients/categories", name="ingredient_categories")
+        self.client.get(
+            "/api/ingredients/ingredients/search",
+            params={"q": query},
+            name="ingredient_definition_search",
+        )
+        self.client.get("/api/ingredients", name="ingredients_list")
+        self.client.get(
+            "/api/products/search",
+            params={"q": query},
+            name="product_search",
+        )
+        self.client.get(
+            "/api/products/low-stock",
+            params={"threshold": 1.0},
+            name="product_low_stock",
+        )
+        self.client.get("/products/alerts", name="product_alerts")
+        self.client.get("/products/api/stock-summary", name="product_stock_summary")
+
+    @task
+    def browse_detail_endpoints(self):
+        recipe_ids = self.user._get_recipe_ids()
+        product_ids = self.user._get_product_ids()
+        ingredient_ids = self.user._get_ingredient_ids()
+
+        recipe_id = self.user._pick_id(recipe_ids)
+        if recipe_id:
+            self.client.get(f"/recipes/{recipe_id}/view", name="recipe_detail")
+            self.client.get(
+                f"/batches/api/available-ingredients/{recipe_id}",
+                name="batch_available_ingredients",
+            )
+
+        product_id = self.user._pick_id(product_ids)
+        if product_id:
+            self.client.get(f"/products/{product_id}", name="product_detail")
+
+        ingredient_id = self.user._pick_id(ingredient_ids)
+        if ingredient_id:
+            self.client.get(
+                f"/api/inventory/item/{ingredient_id}",
+                name="inventory_item_detail",
+            )
+
+    @task
+    def unit_converter(self):
+        payload = {
+            "from_amount": 1000,
+            "from_unit": "g",
+            "to_unit": "kg",
+        }
+        ingredient_id = self.user._pick_id(self.user._get_ingredient_ids())
+        if ingredient_id:
+            payload["ingredient_id"] = ingredient_id
+        self.user._ensure_csrf_token("/dashboard")
+        headers = self.user._csrf_headers(referer_path="/dashboard")
+        self.client.post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
+
+    @task
     def lookup_global_milk(self):
         response = self.client.get(
             "/api/ingredients/global-items/search",
@@ -798,6 +940,15 @@ class BatchWorkflowSequence(SequentialTaskSet):
         match = re.search(r"/recipes/(\\d+)", location)
         self.recipe_id = int(match.group(1)) if match else None
         self._require(self.recipe_id, "recipe id")
+
+    @task
+    def view_created_recipe(self):
+        self._require(self.recipe_id, "recipe id")
+        self.client.get(f"/recipes/{self.recipe_id}/view", name="recipe_detail")
+        self.client.get(
+            f"/batches/api/available-ingredients/{self.recipe_id}",
+            name="batch_available_ingredients",
+        )
 
     @task
     def start_and_cancel_batch(self):
