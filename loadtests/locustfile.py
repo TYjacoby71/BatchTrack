@@ -732,6 +732,11 @@ class BatchWorkflowSequence(SequentialTaskSet):
         self.client.get("/global-items", name="global_items")
 
     @task
+    def fetch_bootstrap_endpoints(self):
+        self.client.get("/api/bootstrap/recipes", name="bootstrap_recipes")
+        self.client.get("/api/bootstrap/products", name="bootstrap_products")
+
+    @task
     def browse_search_endpoints(self):
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
         self.client.get(
