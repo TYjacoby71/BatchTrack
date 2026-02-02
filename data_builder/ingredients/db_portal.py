@@ -256,8 +256,11 @@ HTML_TEMPLATE = """
     
     <div class="stats" id="refined-stats" style="display:none;">
         <div style="margin-bottom: 15px;">
-            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Refined Ingredient Definitions</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Refined Ingredient Definitions (Objects)</div>
+            <div id="refined-status-note" style="display:none; margin-bottom:10px; font-size:12px; color:#b45309;">
+                Definitions are not initialized. Run the definition build step to see object stats.
+            </div>
+            <div class="stats-grid" style="grid-template-columns: repeat(6, 1fr);">
                 <div class="stat-box" style="border-left: 3px solid #8b5cf6;">
                     <h3 id="rstat-definitions">0</h3>
                     <p>Definitions</p>
@@ -273,6 +276,35 @@ HTML_TEMPLATE = """
                 <div class="stat-box" style="border-left: 3px solid #f59e0b;">
                     <h3 id="rstat-enriched">0</h3>
                     <p>Enriched (SAP Data)</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #0ea5e9;">
+                    <h3 id="rstat-common-names">0</h3>
+                    <p>Unique Common Names</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #64748b;">
+                    <h3 id="rstat-category-count">0</h3>
+                    <p>Primary Categories</p>
+                </div>
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Unique Item Attributes</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-box">
+                    <h3 id="rstat-unique-functions">0</h3>
+                    <p>Functions</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-applications">0</h3>
+                    <p>Applications</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-variations">0</h3>
+                    <p>Variations</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-forms">0</h3>
+                    <p>Physical Forms</p>
                 </div>
             </div>
         </div>
@@ -766,8 +798,8 @@ HTML_TEMPLATE = """
                 const clusterBadge = clusterCount > 1 
                     ? `<span class="badge" style="background:#dbeafe;color:#1e40af;">${clusterCount} clusters</span>`
                     : `<span class="badge" style="background:#f3f4f6;color:#6b7280;">1 cluster</span>`;
-                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.derived_term || '')}')">
-                    <td><strong style="color:#7c3aed;">${row.derived_term || '-'}</strong></td>
+                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.definition_term || '')}')">
+                    <td><strong style="color:#7c3aed;">${row.definition_term || '-'}</strong></td>
                     <td>${row.item_count || 0}</td>
                     <td>${row.origin || '-'}</td>
                     <td>${row.category || '-'}</td>
@@ -781,8 +813,8 @@ HTML_TEMPLATE = """
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = (items || []).map(row => {
                 const sapBadge = row.has_sap ? '<span class="badge" style="background:#dcfce7;color:#166534;">SAP</span>' : '';
-                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.derived_term || '')}')">
-                    <td style="max-width:200px;"><strong>${row.derived_term || '-'}</strong></td>
+                return `<tr class="item-row" onclick="showRefinedDefinition('${encodeURIComponent(row.definition_term || '')}')">
+                    <td style="max-width:200px;"><strong>${row.definition_term || '-'}</strong></td>
                     <td>${row.derived_variation || '-'}</td>
                     <td>${row.derived_physical_form || '-'}</td>
                     <td>${row.derived_plant_part || '-'}</td>
@@ -805,12 +837,16 @@ HTML_TEMPLATE = """
         function showRefinedDetailPanel(data) {
             document.getElementById('detail-overlay').classList.add('active');
             document.getElementById('detail-panel').classList.add('active');
-            document.getElementById('detail-title').textContent = data.derived_term || '-';
+            document.getElementById('detail-title').textContent = data.definition_term || '-';
             document.getElementById('detail-subtitle').textContent = `${data.origin || '-'} | ${data.category || '-'} | ${data.item_count || 0} items from ${data.cluster_count || 0} clusters`;
             
             // Header section with refined term summary
             let html = '<div class="detail-section"><h3>Refined Ingredient Definition</h3><div class="detail-grid">';
-            html += `<span class="detail-label">Derived Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.derived_term || '-'}</span>`;
+            html += `<span class="detail-label">Definition Term:</span><span class="detail-value" style="font-weight:600; color:#7c3aed;">${data.definition_term || '-'}</span>`;
+            const commonNameValue = data.common_name 
+                ? data.common_name 
+                : (data.common_name_variants && data.common_name_variants > 1 ? 'Multiple' : '-');
+            html += `<span class="detail-label">Common Name:</span><span class="detail-value">${commonNameValue}</span>`;
             html += `<span class="detail-label">Origin:</span><span class="detail-value">${data.origin || '-'}</span>`;
             html += `<span class="detail-label">Category:</span><span class="detail-value">${data.category || '-'}</span>`;
             html += `<span class="detail-label">Total Items:</span><span class="detail-value">${data.item_count || 0}</span>`;
@@ -1896,6 +1932,14 @@ HTML_TEMPLATE = """
                         document.getElementById('rstat-source-clusters').textContent = (stats.source_clusters || 0).toLocaleString();
                         document.getElementById('rstat-total-items').textContent = (stats.total_items || 0).toLocaleString();
                         document.getElementById('rstat-enriched').textContent = (stats.enriched || 0).toLocaleString();
+                        document.getElementById('rstat-common-names').textContent = (stats.unique_common_names || 0).toLocaleString();
+                        document.getElementById('rstat-category-count').textContent = (stats.unique_categories || 0).toLocaleString();
+                        document.getElementById('rstat-unique-functions').textContent = (stats.unique_functions || 0).toLocaleString();
+                        document.getElementById('rstat-unique-applications').textContent = (stats.unique_applications || 0).toLocaleString();
+                        document.getElementById('rstat-unique-variations').textContent = (stats.unique_variations || 0).toLocaleString();
+                        document.getElementById('rstat-unique-forms').textContent = (stats.unique_physical_forms || 0).toLocaleString();
+                        const note = document.getElementById('refined-status-note');
+                        if (note) note.style.display = (stats.definitions_ready === false) ? 'block' : 'none';
                         // Populate category grid
                         const catGrid = document.getElementById('refined-category-grid');
                         if (stats.categories && stats.categories.length > 0) {
@@ -1905,6 +1949,8 @@ HTML_TEMPLATE = """
                                     <p style="font-size:10px;">${cat.name}</p>
                                 </div>`
                             ).join('');
+                        } else {
+                            catGrid.innerHTML = '';
                         }
                     } else if (currentDataset === 'compiled') {
                         document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
@@ -1951,6 +1997,18 @@ def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
     try:
         cur = conn.cursor()
         cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (name,))
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+def _definitions_ready(conn: sqlite3.Connection) -> bool:
+    """Return True if ingredient_definitions exists and is linked to clusters."""
+    if not _table_exists(conn, "ingredient_definitions") or not _table_exists(conn, "compiled_clusters"):
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM compiled_clusters WHERE definition_id IS NOT NULL LIMIT 1")
         return cur.fetchone() is not None
     except Exception:
         return False
@@ -2039,32 +2097,141 @@ def api_stats():
             "total_items": 0,
             "enriched": 0,
             "categories": [],
+            "unique_categories": 0,
+            "unique_common_names": 0,
+            "unique_functions": 0,
+            "unique_applications": 0,
+            "unique_variations": 0,
+            "unique_physical_forms": 0,
+            "definitions_ready": False,
         }
         
         if _table_exists(conn, "compiled_cluster_items"):
-            cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items")
-            refined_stats["definitions"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(DISTINCT cluster_id) FROM compiled_cluster_items")
-            refined_stats["source_clusters"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
-            refined_stats["total_items"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE sap_naoh IS NOT NULL")
-            refined_stats["enriched"] = cur.fetchone()[0]
-            
-            # Category breakdown from compiled_clusters
-            if _table_exists(conn, "compiled_clusters"):
-                cur.execute("""
-                    SELECT c.ingredient_category, COUNT(DISTINCT i.derived_term) as cnt
+            has_definitions = _definitions_ready(conn)
+            refined_stats["definitions_ready"] = bool(has_definitions)
+            if has_definitions:
+                cur.execute("SELECT COUNT(*) FROM ingredient_definitions")
+                refined_stats["definitions"] = cur.fetchone()[0]
+
+                cur.execute("SELECT COUNT(*) FROM compiled_clusters WHERE definition_id IS NOT NULL")
+                refined_stats["source_clusters"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
                     FROM compiled_cluster_items i
                     JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
-                    WHERE c.ingredient_category IS NOT NULL AND c.ingredient_category != ''
-                    GROUP BY c.ingredient_category
+                    WHERE c.definition_id IS NOT NULL
+                    """
+                )
+                refined_stats["total_items"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.definition_id IS NOT NULL AND i.sap_naoh IS NOT NULL
+                    """
+                )
+                refined_stats["enriched"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT ingredient_category, COUNT(*) as cnt
+                    FROM ingredient_definitions
+                    WHERE ingredient_category IS NOT NULL AND TRIM(ingredient_category) != ''
+                    GROUP BY ingredient_category
                     ORDER BY cnt DESC
-                """)
-                refined_stats["categories"] = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+                    """
+                )
+                categories = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+                refined_stats["categories"] = categories
+                refined_stats["unique_categories"] = len(categories)
+
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT LOWER(TRIM(common_name)))
+                    FROM ingredient_definitions
+                    WHERE common_name IS NOT NULL
+                      AND TRIM(common_name) != ''
+                      AND LOWER(TRIM(common_name)) NOT IN ('n/a', 'not found', 'unknown')
+                    """
+                )
+                refined_stats["unique_common_names"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT i.derived_variation, i.derived_physical_form, i.item_json
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.definition_id IS NOT NULL
+                    """
+                )
+                unique_variations: set[str] = set()
+                unique_forms: set[str] = set()
+                unique_functions: set[str] = set()
+                unique_apps: set[str] = set()
+
+                placeholders = {"", "n/a", "na", "not found", "unknown", "none", "null", "nil", "tbd"}
+
+                def _norm(value: str | None) -> str:
+                    return (value or "").strip()
+
+                def _add_if_valid(container: set[str], value: str | None) -> None:
+                    cleaned = _norm(value)
+                    if not cleaned:
+                        return
+                    lowered = cleaned.lower()
+                    if lowered in placeholders:
+                        return
+                    container.add(cleaned)
+
+                for derived_variation, derived_form, item_json in cur.fetchall():
+                    _add_if_valid(unique_variations, derived_variation)
+                    _add_if_valid(unique_forms, derived_form)
+
+                    if not item_json:
+                        continue
+                    try:
+                        payload = json.loads(item_json)
+                    except Exception:
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+
+                    variation = payload.get("variation")
+                    if isinstance(variation, dict):
+                        variation = variation.get("value")
+                    if not _norm(derived_variation):
+                        _add_if_valid(unique_variations, variation)
+
+                    form = payload.get("physical_form")
+                    if isinstance(form, dict):
+                        form = form.get("value")
+                    if not _norm(derived_form):
+                        _add_if_valid(unique_forms, form)
+
+                    func_tags = payload.get("function_tags")
+                    if isinstance(func_tags, str):
+                        func_tags = [func_tags]
+                    if isinstance(func_tags, list):
+                        for tag in func_tags:
+                            if isinstance(tag, str):
+                                _add_if_valid(unique_functions, tag)
+
+                    apps = payload.get("applications")
+                    if isinstance(apps, str):
+                        apps = [apps]
+                    if isinstance(apps, list):
+                        for app in apps:
+                            if isinstance(app, str):
+                                _add_if_valid(unique_apps, app)
+
+                refined_stats["unique_variations"] = len(unique_variations)
+                refined_stats["unique_physical_forms"] = len(unique_forms)
+                refined_stats["unique_functions"] = len(unique_functions)
+                refined_stats["unique_applications"] = len(unique_apps)
         
         conn.close()
         return jsonify(refined_stats)
@@ -2487,69 +2654,157 @@ def api_refined_definitions():
         return jsonify({"definitions": [], "total": 0, "total_pages": 1, "page": page})
 
     has_compiled_clusters = _table_exists(conn, "compiled_clusters")
+    has_definitions = _definitions_ready(conn)
+    if not has_definitions:
+        conn.close()
+        return jsonify({"items": [], "total": 0, "total_pages": 1, "page": page, "message": "Definitions not initialized"})
+    if not has_definitions:
+        conn.close()
+        return jsonify({"definitions": [], "total": 0, "total_pages": 1, "page": page, "message": "Definitions not initialized"})
+    has_definitions = _definitions_ready(conn)
     
     # Build query that joins with compiled_clusters for proper filtering
     if has_compiled_clusters:
-        # Use JOIN to properly filter by category/origin
-        base_query = """
-            FROM compiled_cluster_items i
-            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
-        """
-        where_clauses = []
-        params = []
-        if search:
-            # Search all identifiers: term, common name, CAS, INCI, botanical, PubChem CID
-            where_clauses.append("""(i.derived_term LIKE ? 
-                OR c.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ?
-                OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)""")
-            s = f"%{search}%"
-            params.extend([s, s, s, s, s, s, s])
-        if category:
-            where_clauses.append("c.ingredient_category = ?")
-            params.append(category)
-        if origin:
-            where_clauses.append("c.origin = ?")
-            params.append(origin)
-        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-        
-        # Build HAVING clause for cluster count filter
-        having_sql = ""
-        if cluster_filter == "multi":
-            having_sql = "HAVING COUNT(DISTINCT i.cluster_id) > 1"
-        elif cluster_filter == "single":
-            having_sql = "HAVING COUNT(DISTINCT i.cluster_id) = 1"
+        common_name_expr = (
+            "CASE WHEN c.common_name IS NOT NULL AND TRIM(c.common_name) != '' "
+            "AND c.common_name NOT IN ('N/A', 'Not Found') THEN LOWER(TRIM(c.common_name)) END"
+        )
+        if has_definitions:
+            base_query = """
+                FROM ingredient_definitions d
+                JOIN compiled_clusters c ON c.definition_id = d.id
+                JOIN compiled_cluster_items i ON i.cluster_id = c.cluster_id
+            """
+            where_clauses = []
+            params = []
+            if search:
+                # Search all identifiers: definition term, common name, CAS, INCI, botanical, PubChem CID
+                where_clauses.append(
+                    """(d.definition_term LIKE ? 
+                    OR d.common_name LIKE ? OR c.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ?
+                    OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)"""
+                )
+                s = f"%{search}%"
+                params.extend([s, s, s, s, s, s, s, s])
+            if category:
+                where_clauses.append("COALESCE(d.ingredient_category, c.ingredient_category) = ?")
+                params.append(category)
+            if origin:
+                where_clauses.append("COALESCE(d.origin, c.origin) = ?")
+                params.append(origin)
+            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+            
+            # Build HAVING clause for cluster count filter
+            having_sql = ""
+            if cluster_filter == "multi":
+                having_sql = "HAVING COUNT(DISTINCT c.cluster_id) > 1"
+            elif cluster_filter == "single":
+                having_sql = "HAVING COUNT(DISTINCT c.cluster_id) = 1"
 
-        # Count unique derived_terms with cluster filter
-        count_query = f"""
-            SELECT COUNT(*) FROM (
-                SELECT i.derived_term
+            # Count unique definition ids with cluster filter
+            count_query = f"""
+                SELECT COUNT(*) FROM (
+                    SELECT d.id
+                    {base_query}
+                    {where_sql}
+                    GROUP BY d.id
+                    {having_sql}
+                )
+            """
+            cur.execute(count_query, params)
+            total = cur.fetchone()[0]
+
+            cur.execute(
+                f"""
+                SELECT 
+                    d.definition_term as definition_term,
+                    COUNT(*) as item_count,
+                    COUNT(DISTINCT c.cluster_id) as cluster_count,
+                    MAX(CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
+                    COALESCE(d.origin, MAX(c.origin)) as origin,
+                    COALESCE(d.ingredient_category, MAX(c.ingredient_category)) as ingredient_category,
+                    COUNT(DISTINCT {common_name_expr}) as common_name_variants,
+                    COALESCE(d.common_name,
+                        CASE WHEN COUNT(DISTINCT {common_name_expr}) = 1 THEN MAX(c.common_name) ELSE NULL END
+                    ) as common_name
                 {base_query}
                 {where_sql}
-                GROUP BY i.derived_term
+                GROUP BY d.id
                 {having_sql}
+                ORDER BY d.definition_term
+                LIMIT ? OFFSET ?
+                """,
+                params + [per_page, offset],
             )
-        """
-        cur.execute(count_query, params)
-        total = cur.fetchone()[0]
+        else:
+            definition_expr = "COALESCE(NULLIF(c.compiled_term, ''), NULLIF(c.raw_canonical_term, ''), c.cluster_id)"
+            # Use JOIN to properly filter by category/origin
+            base_query = """
+                FROM compiled_cluster_items i
+                JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            """
+            where_clauses = []
+            params = []
+            if search:
+                # Search all identifiers: definition term, common name, CAS, INCI, botanical, PubChem CID
+                where_clauses.append(
+                    f"""({definition_expr} LIKE ? 
+                    OR c.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ?
+                    OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)"""
+                )
+                s = f"%{search}%"
+                params.extend([s, s, s, s, s, s, s])
+            if category:
+                where_clauses.append("c.ingredient_category = ?")
+                params.append(category)
+            if origin:
+                where_clauses.append("c.origin = ?")
+                params.append(origin)
+            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+            
+            # Build HAVING clause for cluster count filter
+            having_sql = ""
+            if cluster_filter == "multi":
+                having_sql = "HAVING COUNT(DISTINCT i.cluster_id) > 1"
+            elif cluster_filter == "single":
+                having_sql = "HAVING COUNT(DISTINCT i.cluster_id) = 1"
 
-        cur.execute(
-            f"""
-            SELECT 
-                i.derived_term,
-                COUNT(*) as item_count,
-                COUNT(DISTINCT i.cluster_id) as cluster_count,
-                MAX(CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
-                c.origin,
-                c.ingredient_category
-            {base_query}
-            {where_sql}
-            GROUP BY i.derived_term
-            {having_sql}
-            ORDER BY i.derived_term
-            LIMIT ? OFFSET ?
-            """,
-            params + [per_page, offset],
-        )
+            # Count unique definition terms with cluster filter
+            count_query = f"""
+                SELECT COUNT(*) FROM (
+                    SELECT {definition_expr} as definition_term
+                    {base_query}
+                    {where_sql}
+                    GROUP BY definition_term
+                    {having_sql}
+                )
+            """
+            cur.execute(count_query, params)
+            total = cur.fetchone()[0]
+
+            cur.execute(
+                f"""
+                SELECT 
+                    {definition_expr} as definition_term,
+                    COUNT(*) as item_count,
+                    COUNT(DISTINCT i.cluster_id) as cluster_count,
+                    MAX(CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data,
+                    MAX(c.origin) as origin,
+                    MAX(c.ingredient_category) as ingredient_category,
+                    COUNT(DISTINCT {common_name_expr}) as common_name_variants,
+                    CASE 
+                        WHEN COUNT(DISTINCT {common_name_expr}) = 1 THEN MAX(c.common_name) 
+                        ELSE NULL 
+                    END as common_name
+                {base_query}
+                {where_sql}
+                GROUP BY definition_term
+                {having_sql}
+                ORDER BY definition_term
+                LIMIT ? OFFSET ?
+                """,
+                params + [per_page, offset],
+            )
     else:
         where_clauses = []
         params = []
@@ -2562,7 +2817,7 @@ def api_refined_definitions():
         cur.execute(
             f"""
             SELECT derived_term, COUNT(*) as item_count, COUNT(DISTINCT cluster_id) as cluster_count,
-                   MAX(CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data, NULL, NULL
+                   MAX(CASE WHEN sap_naoh IS NOT NULL THEN 1 ELSE 0 END) as has_sap_data, NULL, NULL, NULL, NULL
             FROM compiled_cluster_items {where_sql}
             GROUP BY derived_term ORDER BY derived_term LIMIT ? OFFSET ?
             """,
@@ -2571,12 +2826,14 @@ def api_refined_definitions():
 
     definitions = [
         {
-            "derived_term": r[0],
+            "definition_term": r[0],
             "item_count": r[1],
             "cluster_count": r[2],
             "has_sap_data": bool(r[3]),
             "origin": r[4] or "-",
             "category": r[5] or "-",
+            "common_name_variants": r[6] or 0,
+            "common_name": r[7] or None,
         }
         for r in cur.fetchall()
     ]
@@ -2603,45 +2860,92 @@ def api_refined_items():
     has_compiled_clusters = _table_exists(conn, "compiled_clusters")
     
     if has_compiled_clusters:
-        base_query = """
-            FROM compiled_cluster_items i
-            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
-        """
-        where_clauses = []
-        params = []
-        if search:
-            # Search all identifiers: term, CAS, INCI, botanical, PubChem CID
-            where_clauses.append("""(i.derived_term LIKE ? 
-                OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ? OR c.common_name LIKE ?
-                OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)""")
-            s = f"%{search}%"
-            params.extend([s, s, s, s, s, s, s])
-        if category:
-            where_clauses.append("c.ingredient_category = ?")
-            params.append(category)
-        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        if has_definitions:
+            base_query = """
+                FROM ingredient_definitions d
+                JOIN compiled_clusters c ON c.definition_id = d.id
+                JOIN compiled_cluster_items i ON i.cluster_id = c.cluster_id
+            """
+            where_clauses = []
+            params = []
+            if search:
+                # Search all identifiers: definition term, CAS, INCI, botanical, PubChem CID
+                where_clauses.append(
+                    """(d.definition_term LIKE ? 
+                    OR d.common_name LIKE ? OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ? OR c.common_name LIKE ?
+                    OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)"""
+                )
+                s = f"%{search}%"
+                params.extend([s, s, s, s, s, s, s, s])
+            if category:
+                where_clauses.append("COALESCE(d.ingredient_category, c.ingredient_category) = ?")
+                params.append(category)
+            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-        cur.execute(f"SELECT COUNT(*) {base_query} {where_sql}", params)
-        total = cur.fetchone()[0]
+            cur.execute(f"SELECT COUNT(*) {base_query} {where_sql}", params)
+            total = cur.fetchone()[0]
 
-        cur.execute(
-            f"""
-            SELECT 
-                i.id,
-                i.derived_term,
-                i.derived_variation,
-                i.derived_physical_form,
-                i.derived_plant_part,
-                c.origin,
-                c.ingredient_category,
-                CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END as has_sap
-            {base_query}
-            {where_sql}
-            ORDER BY i.derived_term, i.derived_variation
-            LIMIT ? OFFSET ?
-            """,
-            params + [per_page, offset],
-        )
+            cur.execute(
+                f"""
+                SELECT 
+                    i.id,
+                    d.definition_term as definition_term,
+                    i.derived_variation,
+                    i.derived_physical_form,
+                    i.derived_plant_part,
+                    COALESCE(d.origin, c.origin) as origin,
+                    COALESCE(d.ingredient_category, c.ingredient_category) as ingredient_category,
+                    CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END as has_sap
+                {base_query}
+                {where_sql}
+                ORDER BY d.definition_term, i.derived_variation
+                LIMIT ? OFFSET ?
+                """,
+                params + [per_page, offset],
+            )
+        else:
+            definition_expr = "COALESCE(NULLIF(c.compiled_term, ''), NULLIF(c.raw_canonical_term, ''), c.cluster_id)"
+            base_query = """
+                FROM compiled_cluster_items i
+                JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            """
+            where_clauses = []
+            params = []
+            if search:
+                # Search all identifiers: definition term, CAS, INCI, botanical, PubChem CID
+                where_clauses.append(
+                    f"""({definition_expr} LIKE ? 
+                    OR c.cas_number LIKE ? OR c.inci_name LIKE ? OR c.botanical_name LIKE ? OR c.common_name LIKE ?
+                    OR i.raw_item_json LIKE ? OR i.item_json LIKE ?)"""
+                )
+                s = f"%{search}%"
+                params.extend([s, s, s, s, s, s, s])
+            if category:
+                where_clauses.append("c.ingredient_category = ?")
+                params.append(category)
+            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+            cur.execute(f"SELECT COUNT(*) {base_query} {where_sql}", params)
+            total = cur.fetchone()[0]
+
+            cur.execute(
+                f"""
+                SELECT 
+                    i.id,
+                    {definition_expr} as definition_term,
+                    i.derived_variation,
+                    i.derived_physical_form,
+                    i.derived_plant_part,
+                    c.origin,
+                    c.ingredient_category,
+                    CASE WHEN i.sap_naoh IS NOT NULL THEN 1 ELSE 0 END as has_sap
+                {base_query}
+                {where_sql}
+                ORDER BY definition_term, i.derived_variation
+                LIMIT ? OFFSET ?
+                """,
+                params + [per_page, offset],
+            )
     else:
         where_clauses = []
         params = []
@@ -2666,7 +2970,7 @@ def api_refined_items():
     items = [
         {
             "id": r[0],
-            "derived_term": r[1] or "-",
+            "definition_term": r[1] or "-",
             "derived_variation": r[2] or "-",
             "derived_physical_form": r[3] or "-",
             "derived_plant_part": r[4] or "-",
@@ -2689,36 +2993,107 @@ def api_refined_definition_detail(term: str):
     if not _table_exists(conn, "compiled_cluster_items"):
         conn.close()
         return jsonify({"error": "No data available"})
-
-    # Get aggregate info for this derived_term
-    cur.execute(
-        """
-        SELECT 
-            derived_term,
-            COUNT(*) as item_count,
-            COUNT(DISTINCT cluster_id) as cluster_count
-        FROM compiled_cluster_items
-        WHERE derived_term = ?
-        GROUP BY derived_term
-        """,
-        (term,),
-    )
-    row = cur.fetchone()
-    if not row:
+    if not _definitions_ready(conn):
         conn.close()
-        return jsonify({"error": "Term not found"})
+        return jsonify({"error": "Definitions not initialized"})
 
-    # Get all items under this derived_term - these are "housed under the refined term"
-    cur.execute(
-        """
-        SELECT id, cluster_id, derived_plant_part, derived_variation, derived_refinement, derived_physical_form
-        FROM compiled_cluster_items
-        WHERE derived_term = ?
-        ORDER BY derived_plant_part, derived_variation
-        LIMIT 100
-        """,
-        (term,),
+    has_definitions = _definitions_ready(conn)
+    common_name_expr = (
+        "CASE WHEN c.common_name IS NOT NULL AND TRIM(c.common_name) != '' "
+        "AND c.common_name NOT IN ('N/A', 'Not Found') THEN LOWER(TRIM(c.common_name)) END"
     )
+
+    if has_definitions:
+        cur.execute(
+            """
+            SELECT id, definition_term, common_name, origin, ingredient_category
+            FROM ingredient_definitions
+            WHERE definition_term = ?
+            """,
+            (term,),
+        )
+        definition_row = cur.fetchone()
+        if not definition_row:
+            conn.close()
+            return jsonify({"error": "Term not found"})
+        definition_id = definition_row[0]
+
+        cur.execute(
+            f"""
+            SELECT 
+                d.definition_term as definition_term,
+                COUNT(*) as item_count,
+                COUNT(DISTINCT c.cluster_id) as cluster_count,
+                COALESCE(d.origin, MAX(c.origin)) as origin,
+                COALESCE(d.ingredient_category, MAX(c.ingredient_category)) as category,
+                COUNT(DISTINCT {common_name_expr}) as common_name_variants,
+                COALESCE(d.common_name,
+                    CASE WHEN COUNT(DISTINCT {common_name_expr}) = 1 THEN MAX(c.common_name) ELSE NULL END
+                ) as common_name
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            JOIN ingredient_definitions d ON c.definition_id = d.id
+            WHERE d.id = ?
+            GROUP BY d.id
+            """,
+            (definition_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "Term not found"})
+
+        cur.execute(
+            """
+            SELECT i.id, i.cluster_id, i.derived_plant_part, i.derived_variation, i.derived_refinement, i.derived_physical_form
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            WHERE c.definition_id = ?
+            ORDER BY i.derived_plant_part, i.derived_variation
+            LIMIT 100
+            """,
+            (definition_id,),
+        )
+    else:
+        # Get aggregate info for this definition term
+        definition_expr = "COALESCE(NULLIF(c.compiled_term, ''), NULLIF(c.raw_canonical_term, ''), c.cluster_id)"
+        cur.execute(
+            f"""
+            SELECT 
+                {definition_expr} as definition_term,
+                COUNT(*) as item_count,
+                COUNT(DISTINCT i.cluster_id) as cluster_count,
+                MAX(c.origin) as origin,
+                MAX(c.ingredient_category) as category,
+                COUNT(DISTINCT {common_name_expr}) as common_name_variants,
+                CASE 
+                    WHEN COUNT(DISTINCT {common_name_expr}) = 1 THEN MAX(c.common_name) 
+                    ELSE NULL 
+                END as common_name
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            WHERE {definition_expr} = ?
+            GROUP BY definition_term
+            """,
+            (term,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "Term not found"})
+
+        # Get all items under this definition term - these are "housed under the refined term"
+        cur.execute(
+            f"""
+            SELECT i.id, i.cluster_id, i.derived_plant_part, i.derived_variation, i.derived_refinement, i.derived_physical_form
+            FROM compiled_cluster_items i
+            JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+            WHERE {definition_expr} = ?
+            ORDER BY i.derived_plant_part, i.derived_variation
+            LIMIT 100
+            """,
+            (term,),
+        )
     items = [
         {
             "id": r[0],
@@ -2736,20 +3111,32 @@ def api_refined_definition_detail(term: str):
     origin = "-"
     category = "-"
     if _table_exists(conn, "compiled_clusters"):
-        cur.execute(
-            """
-            SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
-                   c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
-                   c.refinement_level, c.derived_from, c.raw_canonical_term,
-                   c.data_quality_notes, c.master_category, c.payload_json
-            FROM compiled_clusters c
-            WHERE c.cluster_id IN (
-                SELECT DISTINCT cluster_id FROM compiled_cluster_items WHERE derived_term = ?
+        if has_definitions:
+            cur.execute(
+                """
+                SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
+                       c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
+                       c.refinement_level, c.derived_from, c.raw_canonical_term,
+                       c.data_quality_notes, c.master_category, c.payload_json
+                FROM compiled_clusters c
+                WHERE c.definition_id = ?
+                ORDER BY c.common_name
+                """,
+                (definition_id,),
             )
-            ORDER BY c.common_name
-            """,
-            (term,),
-        )
+        else:
+            cur.execute(
+                f"""
+                SELECT c.cluster_id, c.origin, c.ingredient_category, c.common_name, c.term_status,
+                       c.compiled_term, c.botanical_name, c.inci_name, c.cas_number,
+                       c.refinement_level, c.derived_from, c.raw_canonical_term,
+                       c.data_quality_notes, c.master_category, c.payload_json
+                FROM compiled_clusters c
+                WHERE {definition_expr} = ?
+                ORDER BY c.common_name
+                """,
+                (term,),
+            )
         for r in cur.fetchall():
             cluster_id = r[0]
             # Get items for this cluster - use merged_item_form_id for API calls
@@ -2759,10 +3146,10 @@ def api_refined_definition_detail(term: str):
                        sap_naoh, sap_koh, iodine_value, ins_value, raw_item_json, item_json,
                        function_tag, sourced_from, use_case_tags
                 FROM compiled_cluster_items
-                WHERE cluster_id = ? AND derived_term = ?
+                WHERE cluster_id = ?
                 ORDER BY derived_plant_part, derived_variation
                 """,
-                (cluster_id, term),
+                (cluster_id,),
             )
             cluster_items = []
             for ir in cur.fetchall():
@@ -2920,14 +3307,19 @@ def api_refined_definition_detail(term: str):
         if source_clusters:
             origin = source_clusters[0]["origin"]
             category = source_clusters[0]["category"]
+        else:
+            origin = row[3] or "-"
+            category = row[4] or "-"
 
     conn.close()
     return jsonify({
-        "derived_term": row[0],
+        "definition_term": row[0],
         "item_count": row[1],
         "cluster_count": row[2],
         "origin": origin,
         "category": category,
+        "common_name_variants": row[5] or 0,
+        "common_name": row[6] or None,
         "source_clusters": source_clusters,
     })
 
