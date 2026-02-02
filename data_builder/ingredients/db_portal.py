@@ -256,8 +256,11 @@ HTML_TEMPLATE = """
     
     <div class="stats" id="refined-stats" style="display:none;">
         <div style="margin-bottom: 15px;">
-            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Refined Ingredient Definitions</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Refined Ingredient Definitions (Objects)</div>
+            <div id="refined-status-note" style="display:none; margin-bottom:10px; font-size:12px; color:#b45309;">
+                Definitions are not initialized. Run the definition build step to see object stats.
+            </div>
+            <div class="stats-grid" style="grid-template-columns: repeat(6, 1fr);">
                 <div class="stat-box" style="border-left: 3px solid #8b5cf6;">
                     <h3 id="rstat-definitions">0</h3>
                     <p>Definitions</p>
@@ -273,6 +276,35 @@ HTML_TEMPLATE = """
                 <div class="stat-box" style="border-left: 3px solid #f59e0b;">
                     <h3 id="rstat-enriched">0</h3>
                     <p>Enriched (SAP Data)</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #0ea5e9;">
+                    <h3 id="rstat-common-names">0</h3>
+                    <p>Unique Common Names</p>
+                </div>
+                <div class="stat-box" style="border-left: 3px solid #64748b;">
+                    <h3 id="rstat-category-count">0</h3>
+                    <p>Primary Categories</p>
+                </div>
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 10px;">Unique Item Attributes</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-box">
+                    <h3 id="rstat-unique-functions">0</h3>
+                    <p>Functions</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-applications">0</h3>
+                    <p>Applications</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-variations">0</h3>
+                    <p>Variations</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="rstat-unique-forms">0</h3>
+                    <p>Physical Forms</p>
                 </div>
             </div>
         </div>
@@ -1900,6 +1932,14 @@ HTML_TEMPLATE = """
                         document.getElementById('rstat-source-clusters').textContent = (stats.source_clusters || 0).toLocaleString();
                         document.getElementById('rstat-total-items').textContent = (stats.total_items || 0).toLocaleString();
                         document.getElementById('rstat-enriched').textContent = (stats.enriched || 0).toLocaleString();
+                        document.getElementById('rstat-common-names').textContent = (stats.unique_common_names || 0).toLocaleString();
+                        document.getElementById('rstat-category-count').textContent = (stats.unique_categories || 0).toLocaleString();
+                        document.getElementById('rstat-unique-functions').textContent = (stats.unique_functions || 0).toLocaleString();
+                        document.getElementById('rstat-unique-applications').textContent = (stats.unique_applications || 0).toLocaleString();
+                        document.getElementById('rstat-unique-variations').textContent = (stats.unique_variations || 0).toLocaleString();
+                        document.getElementById('rstat-unique-forms').textContent = (stats.unique_physical_forms || 0).toLocaleString();
+                        const note = document.getElementById('refined-status-note');
+                        if (note) note.style.display = (stats.definitions_ready === false) ? 'block' : 'none';
                         // Populate category grid
                         const catGrid = document.getElementById('refined-category-grid');
                         if (stats.categories && stats.categories.length > 0) {
@@ -1909,6 +1949,8 @@ HTML_TEMPLATE = """
                                     <p style="font-size:10px;">${cat.name}</p>
                                 </div>`
                             ).join('');
+                        } else {
+                            catGrid.innerHTML = '';
                         }
                     } else if (currentDataset === 'compiled') {
                         document.getElementById('cstat-queued-items').textContent = (stats.queued_items || 0).toLocaleString();
@@ -2055,66 +2097,141 @@ def api_stats():
             "total_items": 0,
             "enriched": 0,
             "categories": [],
+            "unique_categories": 0,
+            "unique_common_names": 0,
+            "unique_functions": 0,
+            "unique_applications": 0,
+            "unique_variations": 0,
+            "unique_physical_forms": 0,
+            "definitions_ready": False,
         }
         
         if _table_exists(conn, "compiled_cluster_items"):
             has_definitions = _definitions_ready(conn)
+            refined_stats["definitions_ready"] = bool(has_definitions)
             if has_definitions:
                 cur.execute("SELECT COUNT(*) FROM ingredient_definitions")
                 refined_stats["definitions"] = cur.fetchone()[0]
-            else:
-                definition_expr = "COALESCE(NULLIF(c.compiled_term, ''), NULLIF(c.raw_canonical_term, ''), c.cluster_id)"
-                if _table_exists(conn, "compiled_clusters"):
-                    cur.execute(
-                        f"""
-                        SELECT COUNT(DISTINCT {definition_expr})
-                        FROM compiled_cluster_items i
-                        JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
-                        """
-                    )
-                    refined_stats["definitions"] = cur.fetchone()[0]
-                else:
-                    # Fallback if compiled_clusters missing
-                    cur.execute("SELECT COUNT(DISTINCT derived_term) FROM compiled_cluster_items")
-                    refined_stats["definitions"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(DISTINCT cluster_id) FROM compiled_cluster_items")
-            refined_stats["source_clusters"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items")
-            refined_stats["total_items"] = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM compiled_cluster_items WHERE sap_naoh IS NOT NULL")
-            refined_stats["enriched"] = cur.fetchone()[0]
-            
-            # Category breakdown from compiled_clusters or ingredient_definitions
-            if _table_exists(conn, "compiled_clusters"):
-                if has_definitions:
-                    cur.execute(
-                        """
-                        SELECT COALESCE(d.ingredient_category, c.ingredient_category) as category,
-                               COUNT(DISTINCT d.id) as cnt
-                        FROM compiled_clusters c
-                        JOIN ingredient_definitions d ON c.definition_id = d.id
-                        WHERE COALESCE(d.ingredient_category, c.ingredient_category) IS NOT NULL
-                          AND COALESCE(d.ingredient_category, c.ingredient_category) != ''
-                        GROUP BY COALESCE(d.ingredient_category, c.ingredient_category)
-                        ORDER BY cnt DESC
-                        """
-                    )
-                    refined_stats["categories"] = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
-                else:
-                    cur.execute(
-                        """
-                        SELECT c.ingredient_category, COUNT(DISTINCT c.compiled_term) as cnt
-                        FROM compiled_cluster_items i
-                        JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
-                        WHERE c.ingredient_category IS NOT NULL AND c.ingredient_category != ''
-                        GROUP BY c.ingredient_category
-                        ORDER BY cnt DESC
-                        """
-                    )
-                    refined_stats["categories"] = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+
+                cur.execute("SELECT COUNT(*) FROM compiled_clusters WHERE definition_id IS NOT NULL")
+                refined_stats["source_clusters"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.definition_id IS NOT NULL
+                    """
+                )
+                refined_stats["total_items"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.definition_id IS NOT NULL AND i.sap_naoh IS NOT NULL
+                    """
+                )
+                refined_stats["enriched"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT ingredient_category, COUNT(*) as cnt
+                    FROM ingredient_definitions
+                    WHERE ingredient_category IS NOT NULL AND TRIM(ingredient_category) != ''
+                    GROUP BY ingredient_category
+                    ORDER BY cnt DESC
+                    """
+                )
+                categories = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+                refined_stats["categories"] = categories
+                refined_stats["unique_categories"] = len(categories)
+
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT LOWER(TRIM(common_name)))
+                    FROM ingredient_definitions
+                    WHERE common_name IS NOT NULL
+                      AND TRIM(common_name) != ''
+                      AND LOWER(TRIM(common_name)) NOT IN ('n/a', 'not found', 'unknown')
+                    """
+                )
+                refined_stats["unique_common_names"] = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT i.derived_variation, i.derived_physical_form, i.item_json
+                    FROM compiled_cluster_items i
+                    JOIN compiled_clusters c ON i.cluster_id = c.cluster_id
+                    WHERE c.definition_id IS NOT NULL
+                    """
+                )
+                unique_variations: set[str] = set()
+                unique_forms: set[str] = set()
+                unique_functions: set[str] = set()
+                unique_apps: set[str] = set()
+
+                placeholders = {"", "n/a", "na", "not found", "unknown", "none", "null", "nil", "tbd"}
+
+                def _norm(value: str | None) -> str:
+                    return (value or "").strip()
+
+                def _add_if_valid(container: set[str], value: str | None) -> None:
+                    cleaned = _norm(value)
+                    if not cleaned:
+                        return
+                    lowered = cleaned.lower()
+                    if lowered in placeholders:
+                        return
+                    container.add(cleaned)
+
+                for derived_variation, derived_form, item_json in cur.fetchall():
+                    _add_if_valid(unique_variations, derived_variation)
+                    _add_if_valid(unique_forms, derived_form)
+
+                    if not item_json:
+                        continue
+                    try:
+                        payload = json.loads(item_json)
+                    except Exception:
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+
+                    variation = payload.get("variation")
+                    if isinstance(variation, dict):
+                        variation = variation.get("value")
+                    if not _norm(derived_variation):
+                        _add_if_valid(unique_variations, variation)
+
+                    form = payload.get("physical_form")
+                    if isinstance(form, dict):
+                        form = form.get("value")
+                    if not _norm(derived_form):
+                        _add_if_valid(unique_forms, form)
+
+                    func_tags = payload.get("function_tags")
+                    if isinstance(func_tags, str):
+                        func_tags = [func_tags]
+                    if isinstance(func_tags, list):
+                        for tag in func_tags:
+                            if isinstance(tag, str):
+                                _add_if_valid(unique_functions, tag)
+
+                    apps = payload.get("applications")
+                    if isinstance(apps, str):
+                        apps = [apps]
+                    if isinstance(apps, list):
+                        for app in apps:
+                            if isinstance(app, str):
+                                _add_if_valid(unique_apps, app)
+
+                refined_stats["unique_variations"] = len(unique_variations)
+                refined_stats["unique_physical_forms"] = len(unique_forms)
+                refined_stats["unique_functions"] = len(unique_functions)
+                refined_stats["unique_applications"] = len(unique_apps)
         
         conn.close()
         return jsonify(refined_stats)
@@ -2538,6 +2655,12 @@ def api_refined_definitions():
 
     has_compiled_clusters = _table_exists(conn, "compiled_clusters")
     has_definitions = _definitions_ready(conn)
+    if not has_definitions:
+        conn.close()
+        return jsonify({"items": [], "total": 0, "total_pages": 1, "page": page, "message": "Definitions not initialized"})
+    if not has_definitions:
+        conn.close()
+        return jsonify({"definitions": [], "total": 0, "total_pages": 1, "page": page, "message": "Definitions not initialized"})
     has_definitions = _definitions_ready(conn)
     
     # Build query that joins with compiled_clusters for proper filtering
@@ -2870,6 +2993,9 @@ def api_refined_definition_detail(term: str):
     if not _table_exists(conn, "compiled_cluster_items"):
         conn.close()
         return jsonify({"error": "No data available"})
+    if not _definitions_ready(conn):
+        conn.close()
+        return jsonify({"error": "Definitions not initialized"})
 
     has_definitions = _definitions_ready(conn)
     common_name_expr = (
