@@ -7,6 +7,7 @@
     unitOptionsHtml: (window.soapToolConfig && window.soapToolConfig.unitOptionsHtml) || '',
     calcLimit: Number.isFinite(window.SOAP_CALC_LIMIT) ? window.SOAP_CALC_LIMIT : null,
     calcTier: window.SOAP_CALC_TIER || 'guest',
+    useCsvPrimary: !!(window.soapToolConfig && window.soapToolConfig.useCsvPrimary),
     isAuthenticated: window.__IS_AUTHENTICATED__ === true,
   };
 
@@ -31,6 +32,7 @@
     clamp,
     formatTime,
     getStorage,
+    buildSoapcalcSearchBuilders,
   };
 
   function round(value, decimals = 3){
@@ -67,5 +69,24 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function buildSoapcalcSearchBuilders(){
+    const buildGilUrl = (q, effectiveSearchType, useIngredientFirst) => {
+      const params = new URLSearchParams({ q });
+      if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
+      if (effectiveSearchType === 'ingredient' && useIngredientFirst) params.set('group', 'ingredient');
+      return `/api/public/global-items/search?${params.toString()}`;
+    };
+    const buildCsvUrl = (q, _searchType, useIngredientFirst) => {
+      const params = new URLSearchParams({ q });
+      if (useIngredientFirst) params.set('group', 'ingredient');
+      return `/api/public/soapcalc-items/search?${params.toString()}`;
+    };
+    const useCsvPrimary = SoapTool.config.useCsvPrimary === true;
+    return {
+      primary: useCsvPrimary ? buildCsvUrl : buildGilUrl,
+      fallback: useCsvPrimary ? buildGilUrl : buildCsvUrl,
+    };
   }
 })(window);

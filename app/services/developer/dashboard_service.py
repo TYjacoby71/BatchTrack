@@ -230,6 +230,13 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "description": "Saponification & curing calculators.",
             },
             {
+                "key": "TOOLS_SOAP_CSV_PRIMARY",
+                "label": "Soap Tool CSV Primary Lookup",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Use CSV-backed soapcalc data first (fallback to GIL).",
+            },
+            {
                 "key": "TOOLS_CANDLES",
                 "label": "Candle Making Tools",
                 "status": "wired",

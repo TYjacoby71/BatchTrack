@@ -2,17 +2,20 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { toNumber, round, clamp } = SoapTool.helpers;
+  const { toNumber, round, clamp, buildSoapcalcSearchBuilders } = SoapTool.helpers;
   const { formatWeight, toGrams, fromGrams } = SoapTool.units;
   const { computeAdditives } = SoapTool.calc;
   const { FRAGRANCE_CATEGORY_SET } = SoapTool.constants;
   const state = SoapTool.state;
 
-  function attachAdditiveTypeahead(inputId, hiddenId, categorySet){
+  function attachAdditiveTypeahead(inputId, hiddenId, categorySet, unitId, categoryId){
     const input = document.getElementById(inputId);
     const hidden = document.getElementById(hiddenId);
+    const hiddenUnit = unitId ? document.getElementById(unitId) : null;
+    const hiddenCategory = categoryId ? document.getElementById(categoryId) : null;
     const list = input?.parentElement?.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') return;
+    const builders = buildSoapcalcSearchBuilders();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -21,6 +24,9 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: false,
+      globalUrlBuilder: builders.primary,
+      globalFallbackUrlBuilder: builders.fallback,
+      globalFallbackMode: 'fallback',
       searchType: 'ingredient',
       resultFilter: (item, source) => {
         const category = getItemCategoryName(item);
@@ -28,8 +34,16 @@
         return categorySet.has(category);
       },
       requireHidden: false,
-      onSelection: function(){
+      onSelection: function(picked){
+        if (hiddenUnit) hiddenUnit.value = picked?.default_unit || '';
+        if (hiddenCategory) hiddenCategory.value = picked?.ingredient_category_name || '';
         SoapTool.storage.queueStateSave();
+      }
+    });
+    input.addEventListener('input', function(){
+      if (!this.value.trim()) {
+        if (hiddenUnit) hiddenUnit.value = '';
+        if (hiddenCategory) hiddenCategory.value = '';
       }
     });
   }
@@ -68,8 +82,11 @@
   function attachFragranceTypeahead(row){
     const input = row.querySelector('.fragrance-typeahead');
     const hidden = row.querySelector('.fragrance-gi-id');
+    const hiddenUnit = row.querySelector('.fragrance-default-unit');
+    const hiddenCategory = row.querySelector('.fragrance-category');
     const list = row.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') return;
+    const builders = buildSoapcalcSearchBuilders();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -78,6 +95,9 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: false,
+      globalUrlBuilder: builders.primary,
+      globalFallbackUrlBuilder: builders.fallback,
+      globalFallbackMode: 'fallback',
       searchType: 'ingredient',
       resultFilter: (item, source) => {
         const category = getItemCategoryName(item);
@@ -85,8 +105,16 @@
         return FRAGRANCE_CATEGORY_SET.has(category);
       },
       requireHidden: false,
-      onSelection: function(){
+      onSelection: function(picked){
+        if (hiddenUnit) hiddenUnit.value = picked?.default_unit || '';
+        if (hiddenCategory) hiddenCategory.value = picked?.ingredient_category_name || '';
         SoapTool.storage.queueStateSave();
+      }
+    });
+    input.addEventListener('input', function(){
+      if (!this.value.trim()) {
+        if (hiddenUnit) hiddenUnit.value = '';
+        if (hiddenCategory) hiddenCategory.value = '';
       }
     });
   }
@@ -148,8 +176,17 @@
       const grams = row.querySelector('.fragrance-grams')?.value || '';
       const percent = row.querySelector('.fragrance-percent')?.value || '';
       const gi = row.querySelector('.fragrance-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.fragrance-default-unit')?.value || '';
+      const categoryName = row.querySelector('.fragrance-category')?.value || '';
       if (!name && !grams && !percent && !gi) return;
-      rows.push({ name, grams, percent, gi });
+      rows.push({
+        name,
+        grams,
+        percent,
+        gi,
+        defaultUnit,
+        categoryName,
+      });
     });
     return rows;
   }

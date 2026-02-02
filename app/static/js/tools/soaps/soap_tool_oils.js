@@ -2,7 +2,7 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { round, toNumber, clamp } = SoapTool.helpers;
+  const { round, toNumber, clamp, buildSoapcalcSearchBuilders } = SoapTool.helpers;
   const { toGrams, fromGrams } = SoapTool.units;
   const { OIL_CATEGORY_SET, OIL_TIP_RULES } = SoapTool.constants;
   const { computeQualities } = SoapTool.calc;
@@ -14,10 +14,13 @@
     const hiddenIodine = row.querySelector('.oil-iodine');
     const hiddenFatty = row.querySelector('.oil-fatty');
     const hiddenGi = row.querySelector('.oil-gi-id');
+    const hiddenUnit = row.querySelector('.oil-default-unit');
+    const hiddenCategory = row.querySelector('.oil-category');
     const list = row.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
       return;
     }
+    const builders = buildSoapcalcSearchBuilders();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -26,13 +29,9 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: true,
-      globalUrlBuilder: function(q, _searchType, useIngredientFirst){
-        const params = new URLSearchParams({ q });
-        if (useIngredientFirst) {
-          params.set('group', 'ingredient');
-        }
-        return `/api/public/soapcalc-oils/search?${params.toString()}`;
-      },
+      globalUrlBuilder: builders.primary,
+      globalFallbackUrlBuilder: builders.fallback,
+      globalFallbackMode: 'fallback',
       searchType: 'ingredient',
       resultFilter: (item, source) => matchesCategory(item, OIL_CATEGORY_SET, source),
       requireHidden: false,
@@ -46,6 +45,12 @@
         if (hiddenFatty) {
           hiddenFatty.value = picked?.fatty_acid_profile ? JSON.stringify(picked.fatty_acid_profile) : '';
         }
+        if (hiddenUnit) {
+          hiddenUnit.value = picked?.default_unit || '';
+        }
+        if (hiddenCategory) {
+          hiddenCategory.value = picked?.ingredient_category_name || '';
+        }
         setSelectedOilProfile(picked);
         updateOilTotals();
         SoapTool.storage.queueStateSave();
@@ -58,6 +63,8 @@
         if (hiddenIodine) hiddenIodine.value = '';
         if (hiddenFatty) hiddenFatty.value = '';
         if (hiddenGi) hiddenGi.value = '';
+        if (hiddenUnit) hiddenUnit.value = '';
+        if (hiddenCategory) hiddenCategory.value = '';
         clearSelectedOilProfile();
       }
     });
@@ -394,6 +401,8 @@
       const iodine = toNumber(row.querySelector('.oil-iodine')?.value);
       const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
       const gi = row.querySelector('.oil-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.oil-default-unit')?.value || '';
+      const categoryName = row.querySelector('.oil-category')?.value || '';
       let fattyProfile = null;
       if (fattyRaw) {
         try {
@@ -410,6 +419,8 @@
         iodine,
         fattyProfile,
         global_item_id: gi ? parseInt(gi) : null,
+        default_unit: defaultUnit || null,
+        ingredient_category_name: categoryName || null,
       });
     });
     return oils;
@@ -578,6 +589,8 @@
       iodine: row.querySelector('.oil-iodine')?.value || '',
       fattyRaw: row.querySelector('.oil-fatty')?.value || '',
       gi: row.querySelector('.oil-gi-id')?.value || '',
+      defaultUnit: row.querySelector('.oil-default-unit')?.value || '',
+      categoryName: row.querySelector('.oil-category')?.value || '',
     };
   }
 

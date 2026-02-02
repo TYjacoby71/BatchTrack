@@ -137,7 +137,12 @@ def tools_draft():
                 except Exception:
                     qty = None
                 unit = (ln.get('unit') or '').strip() or None
-                rec = {'name': name, 'global_item_id': gi}
+                rec = {
+                    'name': name,
+                    'global_item_id': gi,
+                    'default_unit': (ln.get('default_unit') or '').strip() or None,
+                    'ingredient_category_name': (ln.get('ingredient_category_name') or '').strip() or None,
+                }
                 if kind == 'container':
                     rec['quantity'] = int(qty) if qty is not None else 1
                 else:
