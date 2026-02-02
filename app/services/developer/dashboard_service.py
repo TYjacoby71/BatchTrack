@@ -1,983 +1,681 @@
-"""
-Locust Load Testing Configuration - Production Mix
+from __future__ import annotations
 
-Uses production-weighted user classes and environment-driven credentials.
-"""
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-import json
-import logging
-import os
-import random
-import re
-import sys
-import time
-from typing import Dict, Optional
+from flask import current_app
 
-try:
-    from bs4 import BeautifulSoup
-except ImportError:  # Optional dependency on some runners
-    BeautifulSoup = None
+from app.utils.json_store import write_json_file
+from app.utils.settings import get_settings, save_settings
 
-from gevent.lock import Semaphore
-from locust import HttpUser, task, between, events, SequentialTaskSet
-from locust.exception import StopUser
 
-LOGGER = logging.getLogger(__name__)
-
-GLOBAL_ITEM_SEARCH_TERMS = [
-    "basil",
-    "lavender",
-    "peppermint",
-    "powder",
-    "oil",
-    "butter",
-    "clay",
-    "extract",
+FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
+    {
+        "title": "Core business features",
+        "description": "Enable or disable the production features that every organization depends on.",
+        "flags": [
+            {
+                "key": "FEATURE_FIFO_TRACKING",
+                "label": "FIFO Inventory Tracking",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Standard FIFO behavior baked into inventory adjustments (always on).",
+            },
+            {
+                "key": "FEATURE_BARCODE_SCANNING",
+                "label": "Barcode Scanning",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Placeholder for future scanner integrations.",
+            },
+            {
+                "key": "FEATURE_PRODUCT_VARIANTS",
+                "label": "Product Variants System",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Variant-ready product catalog (always on).",
+            },
+            {
+                "key": "FEATURE_AUTO_SKU_GENERATION",
+                "label": "Auto-generate SKUs",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "SKU generation is part of product creation (always on).",
+            },
+            {
+                "key": "FEATURE_COST_TRACKING",
+                "label": "Cost Tracking & Profit Margins",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Core costing engine and margin calculations (always on).",
+            },
+            {
+                "key": "FEATURE_EXPIRATION_TRACKING",
+                "label": "Expiration Date Tracking",
+                "status": "standard",
+                "toggle": False,
+                "always_on": True,
+                "default_enabled": True,
+                "description": "Lot-based expiration handling (always on).",
+            },
+            {
+                "key": "FEATURE_BULK_STOCK_CHECK",
+                "label": "Bulk Stock Check",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Multi-recipe stock check and shopping list exports.",
+            },
+            {
+                "key": "FEATURE_BULK_INVENTORY_UPDATES",
+                "label": "Bulk Inventory Updates",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Bulk inventory adjustments and high-volume update tooling.",
+            },
+        ],
+    },
+    {
+        "title": "Developer & advanced features",
+        "description": "Capabilities intended for internal tooling or staging environments.",
+        "flags": [
+            {
+                "key": "FEATURE_MERGE_SKUS",
+                "label": "Merge SKUs",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Merge multiple SKUs into a single consolidated SKU.",
+            },
+            {
+                "key": "FEATURE_AUTO_BULK_SKU_ON_VARIANT",
+                "label": "Auto-create Bulk SKU on Variant",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Require a unit and create a Bulk SKU when adding a variant.",
+            },
+            {
+                "key": "FEATURE_CSV_EXPORT",
+                "label": "CSV Export",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Downloadable CSV exports for reports.",
+            },
+            {
+                "key": "FEATURE_ADVANCED_REPORTS",
+                "label": "Advanced Reports",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Future premium reporting suite.",
+            },
+            {
+                "key": "FEATURE_GLOBAL_ITEM_LIBRARY",
+                "label": "Global Item Library Access",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Org access to the shared global inventory library.",
+            },
+        ],
+    },
+    {
+        "title": "Organization administration",
+        "description": "Controls for organization-level management tooling.",
+        "flags": [
+            {
+                "key": "FEATURE_ORG_ROLE_MANAGEMENT",
+                "label": "Role Management Tab",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Show the Role Management tab on the organization dashboard.",
+            },
+        ],
+    },
+    {
+        "title": "Commerce & POS integrations",
+        "description": "Stubbed flags for future ecommerce and POS entry points.",
+        "flags": [
+            {
+                "key": "FEATURE_ECOMMERCE_INTEGRATIONS",
+                "label": "E-commerce Integration Hub",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Gate the entry point for ecommerce integration workflows.",
+            },
+            {
+                "key": "FEATURE_SHOPIFY_INTEGRATION",
+                "label": "Shopify Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Shopify integration surfaces.",
+            },
+            {
+                "key": "FEATURE_ETSY_INTEGRATION",
+                "label": "Etsy Integration",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Stub for Etsy marketplace integration surfaces.",
+            },
+        ],
+    },
+    {
+        "title": "Recipe Library & Marketplace",
+        "description": "Controls for sharing recipes publicly and exposing the marketplace surface.",
+        "flags": [
+            {
+                "key": "FEATURE_RECIPE_LIBRARY_NAV",
+                "label": "Recipe Library Navigation",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Expose the public recipe library link in customer menus.",
+            },
+            {
+                "key": "FEATURE_RECIPE_MARKETPLACE_DISPLAY",
+                "label": "Recipe Marketplace Display",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Show marketplace pages, purchase buttons, and org marketplace links.",
+            },
+            {
+                "key": "FEATURE_RECIPE_MARKETPLACE_LISTINGS",
+                "label": "Recipe Listing Controls",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Allow listing controls inside the recipe edit experience.",
+            },
+        ],
+    },
+    {
+        "title": "AI & forecasting experiments",
+        "description": "Aspirational features that are not yet implemented.",
+        "flags": [
+            {
+                "key": "FEATURE_AI_RECIPE_OPTIMIZATION",
+                "label": "AI Recipe Optimization",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "ML-assisted formulation suggestions.",
+            },
+            {
+                "key": "FEATURE_AI_DEMAND_FORECASTING",
+                "label": "AI Demand Forecasting",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Predict demand to guide purchasing.",
+            },
+            {
+                "key": "FEATURE_AI_QUALITY_INSIGHTS",
+                "label": "AI Quality Insights",
+                "status": "stub",
+                "default_enabled": False,
+                "description": "Automated quality checks & anomaly detection.",
+            },
+        ],
+    },
+    {
+        "title": "Public tool availability",
+        "description": "Control which calculator suites are exposed on the marketing site.",
+        "flags": [
+            {
+                "key": "TOOLS_SOAP",
+                "label": "Soap Making Tools",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Saponification & curing calculators.",
+            },
+            {
+                "key": "TOOLS_SOAP_CSV_PRIMARY",
+                "label": "Soap Tool CSV Fallback",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Use CSV-backed soapcalc data only when GIL has no matches.",
+            },
+            {
+                "key": "TOOLS_SOAP_PUSH",
+                "label": "Soap Tool Push to Recipes",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Expose the Push to Recipes button in Soap Tools.",
+            },
+            {
+                "key": "TOOLS_CANDLES",
+                "label": "Candle Making Tools",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Wick, wax, and fragrance load calculators.",
+            },
+            {
+                "key": "TOOLS_LOTIONS",
+                "label": "Lotion & Cosmetic Tools",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Batch math for cosmetics and topicals.",
+            },
+            {
+                "key": "TOOLS_HERBAL",
+                "label": "Herbalist Tools",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Tincture and infusion helpers.",
+            },
+            {
+                "key": "TOOLS_BAKING",
+                "label": "Baking Tools",
+                "status": "wired",
+                "default_enabled": True,
+                "description": "Recipe scaling for bakers & confectioners.",
+            },
+        ],
+    },
 ]
 
-_CSRF_INPUT_RE = re.compile(
-    r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']',
-    re.IGNORECASE,
-)
-_CSRF_META_RE = re.compile(
-    r'name=["\']csrf-token["\']\s+content=["\']([^"\']+)["\']',
-    re.IGNORECASE,
-)
+
+BATCHLEY_JOB_CATALOG: List[Dict[str, Any]] = [
+    {
+        "slug": "recipe-intake",
+        "name": "Recipe Draft Intake",
+        "tool": "create_recipe_draft",
+        "status": "wired",
+        "description": "Uploads text (and OCR’d images) to create missing inventory items first, then saves the recipe as a draft with granular success messaging.",
+        "inputs": [
+            "Text instructions, ingredient lists, or OCR payloads",
+            "Optional yield amount/unit for scaling",
+            "Ingredient rows with allow_create toggles",
+        ],
+        "outputs": [
+            "New inventory items seeded before the recipe",
+            "Recipe draft saved for manual review/publish",
+            "Partial failure report when a single ingredient needs correction",
+        ],
+        "handoff": "Draft stays unpublished until a human reviews and publishes the recipe.",
+    },
+    {
+        "slug": "bulk-inventory",
+        "name": "Bulk Inventory Receipt Builder",
+        "tool": "submit_bulk_inventory_update",
+        "status": "wired",
+        "description": "Parses messy receipts or free-form shopping lists, asks for clarifications, and stages create/restock/spoil/trash rows in the bulk modal.",
+        "inputs": [
+            "Receipt text or photo transcription (quantities + units)",
+            "Desired change_type per row (create/restock/spoil/trash)",
+            "Optional cost overrides and notes",
+        ],
+        "outputs": [
+            "Draft bulk adjustment queued for user confirmation",
+            "Ability to auto-submit when customer explicitly asks",
+            "Row-level audit trail posted back to the chat transcript",
+        ],
+        "handoff": "Customer can edit/save drafts in the modal before the final submit call.",
+    },
+    {
+        "slug": "single-restock",
+        "name": "Single Item Restock",
+        "tool": "log_inventory_purchase",
+        "status": "wired",
+        "description": "Fast path for topping up one inventory item when the user already knows the SKU.",
+        "inputs": [
+            "Inventory item ID or fuzzy name match",
+            "Quantity + unit, optional cost per unit",
+            "Free-form note for receipt/source",
+        ],
+        "outputs": [
+            "Inventory adjustment entry with costing metadata",
+            "Follow-up prompt offering FIFO/expiration guidance",
+        ],
+        "handoff": "Ideal for “I just restocked olive oil” requests—no modal required.",
+    },
+    {
+        "slug": "insights",
+        "name": "Insight Snapshot / KPI Q&A",
+        "tool": "fetch_insight_snapshot",
+        "status": "wired",
+        "description": "Returns costing, freshness, throughput, and global benchmark snippets that Batchley can narrate back to the user.",
+        "inputs": [
+            "Optional focus flag: cost, freshness, throughput, overview",
+        ],
+        "outputs": [
+            "Structured JSON (org dashboard, hotspots, freshness risks)",
+            "Comparative guidance vs global averages",
+        ],
+        "handoff": "Often paired with coaching copy or follow-up prompts to gather more context.",
+    },
+    {
+        "slug": "marketplace",
+        "name": "Marketplace Sync Check",
+        "tool": "fetch_marketplace_status",
+        "status": "beta",
+        "description": "Surfaces recipe marketplace readiness, pending syncs, and recent failures so support can respond inside the chat.",
+        "inputs": [
+            'Optional "limit" to cap how many listings to summarize (default 5)',
+        ],
+        "outputs": [
+            "Counts for total/pending/failed listings",
+            "Top product cards with last sync timestamp + status",
+        ],
+        "handoff": "Hidden unless the org tier has marketplace permissions.",
+    },
+]
 
 
-def _get_bool_env(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+BATCHLEY_ENV_KEYS: List[Dict[str, Any]] = [
+    {
+        "key": "GOOGLE_AI_API_KEY",
+        "label": "Google AI API Key",
+        "description": "Gemini credential for both Batchley and the public help bot.",
+        "secret": True,
+    },
+    {
+        "key": "GOOGLE_AI_BATCHBOT_MODEL",
+        "label": "Batchley Model",
+        "description": "Model override for authenticated Batchley traffic.",
+    },
+    {
+        "key": "GOOGLE_AI_PUBLICBOT_MODEL",
+        "label": "Public Bot Model",
+        "description": "Model used on the marketing site/public help modal.",
+    },
+    {
+        "key": "BATCHBOT_DEFAULT_MAX_REQUESTS",
+        "label": "Default Action Cap",
+        "description": "Base automation quota per org per window (tiers override).",
+    },
+    {
+        "key": "BATCHBOT_CHAT_MAX_MESSAGES",
+        "label": "Default Chat Cap",
+        "description": "Baseline chat-only prompts per window.",
+    },
+    {
+        "key": "BATCHBOT_REQUEST_WINDOW_DAYS",
+        "label": "Usage Window (days)",
+        "description": "Length of the rolling window for action/chat quotas.",
+    },
+    {
+        "key": "BATCHBOT_SIGNUP_BONUS_REQUESTS",
+        "label": "Signup Bonus Credits",
+        "description": "Promo requests granted to new organizations.",
+    },
+    {
+        "key": "BATCHBOT_REFILL_LOOKUP_KEY",
+        "label": "Stripe Refill Lookup Key",
+        "description": "Price lookup key referenced when issuing refill checkout sessions.",
+    },
+    {
+        "key": "BATCHBOT_COST_PER_MILLION_INPUT",
+        "label": "Cost Per Million Input Tokens",
+        "description": "Reference compute cost for per-token pricing.",
+        "format": "currency",
+    },
+    {
+        "key": "BATCHBOT_COST_PER_MILLION_OUTPUT",
+        "label": "Cost Per Million Output Tokens",
+        "description": "Reference compute cost for responses.",
+        "format": "currency",
+    },
+]
 
 
-def _get_int_env(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if value is None or value == "":
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        LOGGER.warning("Invalid %s value %r, using %s", name, value, default)
-        return default
+BATCHLEY_WORKFLOW_NOTES: List[Dict[str, str]] = [
+    {
+        "title": "Session-bound execution",
+        "body": "Batchley refuses to run without an authenticated organization user, so every automation inherits the same RBAC + tier limits as the UI.",
+    },
+    {
+        "title": "Chat vs action metering",
+        "body": "Pure Q&A consumes the chat bucket; tool calls consume the action bucket and will automatically recommend the refill checkout URL when exhausted.",
+    },
+    {
+        "title": "Draft-first UX",
+        "body": "Recipe creation and bulk inventory flows always build drafts so humans can confirm edits before publishing. Partial failures are spelled out in the response payload.",
+    },
+    {
+        "title": "Marketplace awareness",
+        "body": "Marketplace tooling only activates for tiers that include `integrations.marketplace`, preventing leakage for customers without licensing.",
+    },
+]
 
 
-LOCUST_USER_BASE = os.getenv("LOCUST_USER_BASE", "loadtest_user")
-LOCUST_USER_PASSWORD = os.getenv("LOCUST_USER_PASSWORD", "loadtest123")
-LOCUST_USER_COUNT = max(1, _get_int_env("LOCUST_USER_COUNT", 10000))
-LOCUST_CACHE_TTL_SECONDS = max(0, _get_int_env("LOCUST_CACHE_TTL", 120))
-LOCUST_REQUIRE_HTTPS = _get_bool_env("LOCUST_REQUIRE_HTTPS", True)
-LOCUST_LOG_LOGIN_FAILURE_CONTEXT = _get_bool_env("LOCUST_LOG_LOGIN_FAILURE_CONTEXT", True)
-LOCUST_ENABLE_BROWSE_USERS = _get_bool_env("LOCUST_ENABLE_BROWSE_USERS", False)
+@dataclass(frozen=True)
+class BatchleyContext:
+    job_catalog: List[Dict[str, Any]]
+    env_status: List[Dict[str, Any]]
+    limit_cards: List[Dict[str, str]]
+    workflow_notes: List[Dict[str, str]]
 
 
-def _sanitize_cli_args() -> None:
-    """Drop empty CLI args before Locust parses positional user classes."""
-    if not sys.argv:
-        return
-    cleaned_args = [sys.argv[0]]
-    dropped = False
-    for arg in sys.argv[1:]:
-        if arg is None:
-            dropped = True
-            continue
-        if isinstance(arg, str) and not arg.strip():
-            dropped = True
-            continue
-        cleaned_args.append(arg)
+class DeveloperDashboardService:
+    """Service helpers backing the developer dashboard experience."""
 
-    if dropped:
-        LOGGER.warning(
-            "Removed empty CLI arguments to avoid Locust 'Unknown User(s)' errors. "
-            "Check any LOCUST_USER_CLASSES interpolation for empty values."
+    @staticmethod
+    def build_dashboard_context(force_refresh: bool = False) -> Dict[str, Any]:
+        from app.services.statistics import AnalyticsDataService
+
+        dashboard_data = AnalyticsDataService.get_developer_dashboard(
+            force_refresh=force_refresh
         )
-        sys.argv[:] = cleaned_args
-
-
-def _extract_global_item_id(payload) -> Optional[int]:
-    if not isinstance(payload, dict):
-        return None
-    results = payload.get("results") or []
-    for entry in results:
-        if not isinstance(entry, dict):
-            continue
-        forms = entry.get("forms") or []
-        for form in forms:
-            if isinstance(form, dict) and form.get("id"):
-                return int(form["id"])
-        if entry.get("id"):
-            return int(entry["id"])
-    return None
-
-
-_sanitize_cli_args()
-
-
-def _load_user_credentials():
-    raw = (os.getenv("LOCUST_USER_CREDENTIALS") or "").strip()
-    if raw:
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            LOGGER.warning("LOCUST_USER_CREDENTIALS invalid JSON: %s", exc)
-        else:
-            if isinstance(payload, list):
-                cleaned = []
-                for entry in payload:
-                    if not isinstance(entry, dict):
-                        continue
-                    username = (entry.get("username") or "").strip()
-                    password = (entry.get("password") or "").strip()
-                    if username and password:
-                        cleaned.append({"username": username, "password": password})
-                if cleaned:
-                    return cleaned
-                LOGGER.warning("LOCUST_USER_CREDENTIALS provided but empty after cleanup.")
-            else:
-                LOGGER.warning("LOCUST_USER_CREDENTIALS must be a JSON list.")
-
-    return [
-        {"username": f"{LOCUST_USER_BASE}{i}", "password": LOCUST_USER_PASSWORD}
-        for i in range(1, LOCUST_USER_COUNT + 1)
-    ]
-
-
-_CREDENTIAL_POOL = _load_user_credentials()
-_CREDENTIAL_LOCK = Semaphore()
-_CREDENTIAL_INDEX = 0
-
-
-def _allocate_credentials() -> dict:
-    global _CREDENTIAL_INDEX
-    if not _CREDENTIAL_POOL:
-        return {"username": "", "password": ""}
-    with _CREDENTIAL_LOCK:
-        credential = _CREDENTIAL_POOL[_CREDENTIAL_INDEX % len(_CREDENTIAL_POOL)]
-        _CREDENTIAL_INDEX += 1
-    return dict(credential)
-
-
-class SharedCache:
-    def __init__(self, name: str, default):
-        self._name = name
-        self._default = default
-        self._value = None
-        self._updated_at = 0.0
-        self._lock = Semaphore()
-
-    def get(self, loader):
-        if LOCUST_CACHE_TTL_SECONDS <= 0:
-            return self._refresh(loader)
-
-        now = time.time()
-        if self._value is not None and (now - self._updated_at) < LOCUST_CACHE_TTL_SECONDS:
-            return self._value
-        with self._lock:
-            now = time.time()
-            if self._value is not None and (now - self._updated_at) < LOCUST_CACHE_TTL_SECONDS:
-                return self._value
-            return self._refresh(loader)
-
-    def _refresh(self, loader):
-        try:
-            value = loader()
-        except Exception as exc:
-            LOGGER.warning("Locust cache refresh failed for %s: %s", self._name, exc)
-            if self._value is not None:
-                return self._value
-            return self._clone_default()
-
-        if value is None:
-            value = self._clone_default()
-        self._value = value
-        self._updated_at = time.time()
-        return self._value
-
-    def _clone_default(self):
-        if isinstance(self._default, dict):
-            return dict(self._default)
-        if isinstance(self._default, list):
-            return list(self._default)
-        return self._default
-
-
-_RECIPE_BOOTSTRAP_CACHE = SharedCache("recipe_bootstrap", [])
-_PRODUCT_BOOTSTRAP_CACHE = SharedCache(
-    "product_bootstrap", {"products": [], "sku_inventory_ids": []}
-)
-_INGREDIENT_LIST_CACHE = SharedCache("ingredient_list", [])
-
-
-@events.test_start.add_listener
-def _validate_locust_host(environment, **kwargs):
-    if not LOCUST_REQUIRE_HTTPS:
-        return
-    host = (environment.host or "").strip()
-    if not host:
-        LOGGER.warning("LOCUST_REQUIRE_HTTPS=1 but no --host was provided.")
-        return
-    if not host.startswith("https://"):
-        raise RuntimeError(
-            "LOCUST_REQUIRE_HTTPS=1 requires an https:// host so Secure cookies persist."
+        overview = dashboard_data.get("overview") or {}
+        tier_breakdown = overview.get("tiers") or {}
+        recent_orgs = dashboard_data.get("recent_organizations") or []
+        problem_orgs = dashboard_data.get("attention_organizations") or []
+        waitlist_count = dashboard_data.get("waitlist_count", 0)
+        new_orgs_count = dashboard_data.get("recent_count") or len(recent_orgs)
+        attention_count = dashboard_data.get("attention_count") or len(problem_orgs)
+        fault_feed = AnalyticsDataService.get_fault_log_entries(
+            include_all=True, force_refresh=force_refresh
         )
+        support_queue = fault_feed[:4]
+        support_queue_total = len(fault_feed)
 
+        generated_iso = dashboard_data.get("generated_at")
+        generated_display = DeveloperDashboardService._format_generated_at(generated_iso)
 
-class AnonymousUser(HttpUser):
-    """Anonymous user browsing public content only."""
-
-    abstract = not LOCUST_ENABLE_BROWSE_USERS
-    wait_time = between(4, 12)
-    weight = 1
-
-    @task(5)
-    def view_homepage(self):
-        """Load homepage."""
-        self.client.get("/", name="homepage")
-
-    @task(3)
-    def view_tools_index(self):
-        """Browse tools index page."""
-        self.client.get("/tools", name="tools_index")
-
-    @task(2)
-    def view_global_items(self):
-        """Browse global items library."""
-        self.client.get("/global-items", name="global_items")
-
-    @task(2)
-    def search_public_global_items(self):
-        """Exercise the public global item search endpoint."""
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        params = {"q": query, "type": "ingredient", "group": "ingredient"}
-        self.client.get(
-            "/api/public/global-items/search",
-            params=params,
-            name="public_global_item_search",
-        )
-
-    @task(1)
-    def view_signup(self):
-        """View signup page."""
-        self.client.get("/auth/signup", name="signup_page")
-
-    @task(1)
-    def view_public_units(self):
-        """Hit public units endpoint."""
-        self.client.get("/api/public/units", name="public_units")
-
-
-class AuthenticatedMixin:
-    """Shared helpers for authenticated users."""
-
-    login_username: str = ""
-    login_password: str = ""
-    csrf_token: Optional[str] = None
-
-    def on_start(self):
-        creds = _allocate_credentials()
-        self.login_username = creds.get("username", "")
-        self.login_password = creds.get("password", "")
-        self._perform_login(self.login_username, self.login_password)
-
-    def _safe_json(self, response):
-        try:
-            return response.json()
-        except ValueError:
-            return None
-
-    def _extract_csrf(self, response) -> Optional[str]:
-        """Extract CSRF token from login page."""
-        text = response.text or ""
-        try:
-            if BeautifulSoup is not None:
-                soup = BeautifulSoup(text, "html.parser")
-
-                token_field = soup.find("input", {"name": "csrf_token"})
-                if token_field:
-                    return token_field.get("value")
-
-                meta_csrf = soup.find("meta", {"name": "csrf-token"})
-                if meta_csrf:
-                    return meta_csrf.get("content")
-
-        except Exception:
-            return None
-        if text:
-            match = _CSRF_INPUT_RE.search(text)
-            if match:
-                return match.group(1)
-            match = _CSRF_META_RE.search(text)
-            if match:
-                return match.group(1)
-        return None
-
-    def _base_url(self) -> str:
-        host = (getattr(self, "host", None) or "").strip()
-        if host:
-            return host.rstrip("/")
-        return (getattr(self.client, "base_url", "") or "").rstrip("/")
-
-    def _absolute_url(self, path: str) -> str:
-        if not path:
-            return self._base_url()
-        if path.startswith("http://") or path.startswith("https://"):
-            return path
-        base = self._base_url()
-        if not base:
-            return path
-        if not path.startswith("/"):
-            path = f"/{path}"
-        return f"{base}{path}"
-
-    def _update_csrf_from_response(self, response) -> None:
-        token = self._extract_csrf(response)
-        if token:
-            self.csrf_token = token
-
-    def _ensure_csrf_token(self, path: str) -> Optional[str]:
-        if self.csrf_token:
-            return self.csrf_token
-        response = self.client.get(path, name=f"csrf:{path}")
-        self._update_csrf_from_response(response)
-        return self.csrf_token
-
-    def _csrf_headers(self, referer_path: Optional[str] = None) -> Dict[str, str]:
-        headers: Dict[str, str] = {}
-        if self.csrf_token:
-            headers["X-CSRFToken"] = self.csrf_token
-        base_url = self._base_url()
-        if base_url:
-            headers["Origin"] = base_url
-            if referer_path:
-                headers["Referer"] = self._absolute_url(referer_path)
-        return headers
-
-    def _login_succeeded(self, response) -> bool:
-        if response.status_code in {301, 302, 303, 307, 308}:
-            return True
-        if response.status_code != 200:
-            return False
-        response_url = (response.url or "").lower()
-        if "/auth/login" in response_url:
-            return False
-        return True
-
-    def _log_login_failure(self, stage: str, response=None, extra=None):
-        if not LOCUST_LOG_LOGIN_FAILURE_CONTEXT:
-            return
-        context = {
-            "stage": stage,
-            "username": self.login_username,
+        return {
+            "total_orgs": overview.get("total_organizations", 0),
+            "active_orgs": overview.get("active_organizations", 0),
+            "total_users": overview.get("total_users", 0),
+            "active_users": overview.get("active_users", 0),
+            "new_orgs_count": new_orgs_count,
+            "attention_count": attention_count,
+            "tier_breakdown": tier_breakdown,
+            "recent_orgs": recent_orgs,
+            "problem_orgs": problem_orgs,
+            "support_queue": support_queue,
+            "support_queue_total": support_queue_total,
+            "waitlist_count": waitlist_count,
+            "dashboard_generated_at": generated_display,
         }
-        if response is not None:
-            context.update(
+
+    @staticmethod
+    def get_marketing_admin_context() -> Dict[str, Any]:
+        from app.services.statistics import AnalyticsDataService
+
+        marketing_data = AnalyticsDataService.get_marketing_content()
+        reviews = marketing_data.get("reviews", [])
+        spotlights = marketing_data.get("spotlights", [])
+        messages = {"day_1": "", "day_3": "", "day_5": ""}
+        messages.update(marketing_data.get("marketing_messages", {}))
+        promo_codes = marketing_data.get("promo_codes", []) or []
+        demo_url = marketing_data.get("demo_url", "") or ""
+        demo_videos = marketing_data.get("demo_videos", []) or []
+        return {
+            "reviews": reviews,
+            "spotlights": spotlights,
+            "messages": messages,
+            "promo_codes": promo_codes,
+            "demo_url": demo_url,
+            "demo_videos": demo_videos,
+        }
+
+    @staticmethod
+    def save_marketing_payload(payload: Dict[str, Any]) -> None:
+        if "reviews" in payload:
+            write_json_file("data/reviews.json", payload["reviews"])
+        if "spotlights" in payload:
+            write_json_file("data/spotlights.json", payload["spotlights"])
+        if any(
+            key in payload
+            for key in ("messages", "promo_codes", "demo_url", "demo_videos")
+        ):
+            cfg = get_settings()
+            if "messages" in payload:
+                cfg["marketing_messages"] = payload["messages"]
+            if "promo_codes" in payload:
+                cfg["promo_codes"] = payload["promo_codes"]
+            if "demo_url" in payload:
+                cfg["demo_url"] = payload["demo_url"]
+            if "demo_videos" in payload:
+                cfg["demo_videos"] = payload["demo_videos"]
+            save_settings(cfg)
+
+    @staticmethod
+    def build_batchley_context() -> BatchleyContext:
+        env_status: List[Dict[str, Any]] = []
+
+        for entry in BATCHLEY_ENV_KEYS:
+            raw_value = current_app.config.get(entry["key"])
+            formatted = DeveloperDashboardService._format_env_value(entry, raw_value)
+            is_set = raw_value not in (None, "")
+            env_status.append(
                 {
-                    "status": response.status_code,
-                    "url": response.url,
+                    "key": entry["key"],
+                    "label": entry["label"],
+                    "description": entry["description"],
+                    "is_secret": entry.get("secret", False),
+                    "is_set": is_set,
+                    "value": "Configured" if entry.get("secret") and is_set else formatted,
                 }
             )
-            snippet = (response.text or "").strip()
-            if snippet:
-                context["body_snippet"] = snippet[:200]
-        if extra:
-            context.update(extra)
-        LOGGER.warning("Locust login failed: %s", context)
 
-    def _perform_login(self, username: str, password: str):
-        if not username or not password:
-            self._log_login_failure("missing_credentials")
-            return
-
-        login_page = self.client.get("/auth/login", name="login_page")
-        if login_page.status_code != 200:
-            self._log_login_failure("login_page", login_page)
-            return
-
-        self._update_csrf_from_response(login_page)
-        token = self.csrf_token or self._extract_csrf(login_page)
-
-        payload = {
-            "username": username,
-            "password": password,
-            "form_type": "login",
-        }
-        if token:
-            payload["csrf_token"] = token
-
-        referer_url = self._absolute_url("/auth/login")
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": referer_url,
-        }
-        origin = self._base_url()
-        if origin:
-            headers["Origin"] = origin
-
-        response = self.client.post(
-            "/auth/login",
-            data=payload,
-            headers=headers,
-            name="login_submit",
-            allow_redirects=False,
-        )
-        self._update_csrf_from_response(response)
-        if not self._login_succeeded(response):
-            self._log_login_failure("login_submit", response)
-
-    def _fetch_recipe_bootstrap(self):
-        response = self.client.get("/api/bootstrap/recipes", name="bootstrap_recipes")
-        if response.status_code != 200:
-            return []
-        payload = self._safe_json(response)
-        if isinstance(payload, dict):
-            return payload.get("recipes", [])
-        return []
-
-    def _fetch_product_bootstrap(self):
-        response = self.client.get("/api/bootstrap/products", name="bootstrap_products")
-        if response.status_code != 200:
-            return {"products": [], "sku_inventory_ids": []}
-        payload = self._safe_json(response)
-        if isinstance(payload, dict):
-            return payload
-        return {"products": [], "sku_inventory_ids": []}
-
-    def _fetch_ingredient_list(self):
-        response = self.client.get("/api/ingredients", name="ingredients_list")
-        if response.status_code != 200:
-            return []
-        payload = self._safe_json(response)
-        if isinstance(payload, list):
-            return payload
-        return []
-
-    def _get_recipe_ids(self):
-        recipes = _RECIPE_BOOTSTRAP_CACHE.get(self._fetch_recipe_bootstrap)
-        return [
-            recipe.get("id")
-            for recipe in recipes
-            if isinstance(recipe, dict) and recipe.get("id")
+        limit_cards = [
+            {
+                "label": "Default action cap / window",
+                "value": DeveloperDashboardService._format_limit(
+                    current_app.config.get("BATCHBOT_DEFAULT_MAX_REQUESTS"),
+                    suffix=" requests",
+                ),
+                "description": "Used when a subscription tier does not override `max_batchbot_requests` (set -1 for unlimited).",
+            },
+            {
+                "label": "Default chat cap / window",
+                "value": DeveloperDashboardService._format_limit(
+                    current_app.config.get("BATCHBOT_CHAT_MAX_MESSAGES"),
+                    suffix=" messages",
+                ),
+                "description": "Pure Q&A prompts before Batchley demands either a refill or tier bump (set -1 for unlimited).",
+            },
+            {
+                "label": "Usage window",
+                "value": DeveloperDashboardService._format_limit(
+                    current_app.config.get("BATCHBOT_REQUEST_WINDOW_DAYS"),
+                    suffix=" days",
+                ),
+                "description": "Defines when counters reset for both chat and action buckets.",
+            },
+            {
+                "label": "Signup bonus credits",
+                "value": DeveloperDashboardService._format_limit(
+                    current_app.config.get("BATCHBOT_SIGNUP_BONUS_REQUESTS"),
+                    suffix=" requests",
+                ),
+                "description": "Granted per organization immediately after the signup service creates the org.",
+            },
+            {
+                "label": "Stripe refill lookup key",
+                "value": current_app.config.get("BATCHBOT_REFILL_LOOKUP_KEY") or "Not set",
+                "description": "Must match the price lookup key used by the `batchbot_refill_100` add-on.",
+            },
+            {
+                "label": "Request timeout",
+                "value": DeveloperDashboardService._format_limit(
+                    current_app.config.get("BATCHBOT_REQUEST_TIMEOUT_SECONDS"),
+                    suffix=" seconds",
+                ),
+                "description": "Raise when Gemini calls might take longer—defaults to 45 seconds.",
+            },
+            {
+                "label": "Cost reference (input tokens)",
+                "value": DeveloperDashboardService._format_env_value(
+                    {"format": "currency"},
+                    current_app.config.get("BATCHBOT_COST_PER_MILLION_INPUT"),
+                )
+                or "Not set",
+                "description": "Used for pricing conversations; update when Google adjusts rates.",
+            },
+            {
+                "label": "Cost reference (output tokens)",
+                "value": DeveloperDashboardService._format_env_value(
+                    {"format": "currency"},
+                    current_app.config.get("BATCHBOT_COST_PER_MILLION_OUTPUT"),
+                )
+                or "Not set",
+                "description": "Pairs with the input rate when modeling gross margin.",
+            },
         ]
 
-    def _get_product_ids(self):
-        payload = _PRODUCT_BOOTSTRAP_CACHE.get(self._fetch_product_bootstrap)
-        if not isinstance(payload, dict):
-            return []
-        products = payload.get("products", [])
-        return [
-            product.get("id")
-            for product in products
-            if isinstance(product, dict) and product.get("id")
-        ]
-
-    def _get_ingredient_ids(self):
-        ingredients = _INGREDIENT_LIST_CACHE.get(self._fetch_ingredient_list)
-        return [
-            ingredient.get("id")
-            for ingredient in ingredients
-            if isinstance(ingredient, dict) and ingredient.get("id")
-        ]
-
-    def _pick_id(self, ids):
-        return random.choice(ids) if ids else None
-
-
-class BaseAuthenticatedUser(AuthenticatedMixin, HttpUser):
-    abstract = True
-
-
-class RecipeOpsUser(BaseAuthenticatedUser):
-    """Recipe planning + batch workflow."""
-
-    abstract = not LOCUST_ENABLE_BROWSE_USERS
-    wait_time = between(6, 14)
-    weight = 4
-
-    @task(7)
-    def view_dashboard(self):
-        self.client.get("/dashboard", name="dashboard")
-
-    @task(6)
-    def view_recipes_list(self):
-        self.client.get("/recipes", name="recipes_list")
-
-    @task(4)
-    def view_recipe_detail(self):
-        recipe_id = self._pick_id(self._get_recipe_ids())
-        if not recipe_id:
-            return
-        self.client.get(f"/recipes/{recipe_id}/view", name="recipe_detail")
-
-    @task(3)
-    def view_batches_list(self):
-        self.client.get("/batches", name="batches_list")
-
-    @task(2)
-    def view_global_items(self):
-        self.client.get("/global-items", name="global_items")
-
-    @task(2)
-    def search_global_items(self):
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        params = {"q": query, "type": "ingredient", "group": "ingredient"}
-        self.client.get(
-            "/api/ingredients/global-items/search",
-            params=params,
-            name="auth_global_item_search",
+        return BatchleyContext(
+            job_catalog=BATCHLEY_JOB_CATALOG,
+            env_status=env_status,
+            limit_cards=limit_cards,
+            workflow_notes=BATCHLEY_WORKFLOW_NOTES,
         )
 
-    @task(1)
-    def view_batch_available_ingredients(self):
-        recipe_id = self._pick_id(self._get_recipe_ids())
-        if not recipe_id:
-            return
-        self.client.get(
-            f"/batches/api/available-ingredients/{recipe_id}",
-            name="batch_available_ingredients",
+    @staticmethod
+    def get_feature_flag_sections() -> List[Dict[str, Any]]:
+        return FEATURE_FLAG_SECTIONS
+
+    @staticmethod
+    def get_toggleable_feature_keys() -> set[str]:
+        toggleable: set[str] = set()
+        for section in FEATURE_FLAG_SECTIONS:
+            for flag in section.get("flags", []):
+                if flag.get("toggle", True):
+                    toggleable.add(flag["key"])
+        return toggleable
+
+    @staticmethod
+    def get_waitlist_statistics(force_refresh: bool = False) -> Dict[str, Any]:
+        from app.services.statistics import AnalyticsDataService
+
+        return AnalyticsDataService.get_waitlist_statistics(
+            force_refresh=force_refresh
         )
 
+    @staticmethod
+    def _format_generated_at(generated_iso: Optional[str]) -> Optional[str]:
+        if not generated_iso:
+            return None
+        try:
+            generated_dt = datetime.fromisoformat(generated_iso)
+            return generated_dt.strftime("%Y-%m-%d %H:%M UTC")
+        except ValueError:
+            return generated_iso
 
-class InventoryOpsUser(BaseAuthenticatedUser):
-    """Inventory browsing + ingredient lookup."""
+    @staticmethod
+    def _format_env_value(entry: Dict[str, Any], raw_value: Any) -> Optional[str]:
+        if raw_value in (None, ""):
+            return None
+        if entry.get("format") == "currency":
+            try:
+                return f"${float(raw_value):,.2f}"
+            except (TypeError, ValueError):
+                return str(raw_value)
+        return str(raw_value)
 
-    abstract = not LOCUST_ENABLE_BROWSE_USERS
-    wait_time = between(6, 14)
-    weight = 3
-
-    @task(6)
-    def view_inventory_list(self):
-        self.client.get("/inventory", name="inventory_list")
-
-    @task(5)
-    def search_inventory(self):
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        params = {"q": query, "type": "ingredient"}
-        self.client.get(
-            "/inventory/api/search",
-            params=params,
-            name="inventory_search",
-        )
-
-    @task(3)
-    def view_inventory_item(self):
-        item_id = self._pick_id(self._get_ingredient_ids())
-        if not item_id:
-            return
-        self.client.get(
-            f"/api/inventory/item/{item_id}",
-            name="inventory_item_detail",
-        )
-
-    @task(3)
-    def ingredient_categories(self):
-        self.client.get("/api/ingredients/categories", name="ingredient_categories")
-
-    @task(2)
-    def ingredient_definition_search(self):
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
-            "/api/ingredients/ingredients/search",
-            params={"q": query},
-            name="ingredient_definition_search",
-        )
-
-    @task(2)
-    def refresh_ingredient_list(self):
-        self.client.get("/api/ingredients", name="ingredients_list")
-
-    @task(1)
-    def unit_converter(self):
-        payload = {
-            "from_amount": 1000,
-            "from_unit": "g",
-            "to_unit": "kg",
-        }
-        ingredient_id = self._pick_id(self._get_ingredient_ids())
-        if ingredient_id:
-            payload["ingredient_id"] = ingredient_id
-        headers = self._csrf_headers(referer_path="/dashboard")
-        self.client.post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
-
-
-class ProductOpsUser(BaseAuthenticatedUser):
-    """Product inventory + SKU management."""
-
-    abstract = not LOCUST_ENABLE_BROWSE_USERS
-    wait_time = between(6, 14)
-    weight = 2
-
-    @task(6)
-    def view_products_list(self):
-        self.client.get("/products", name="products_list")
-
-    @task(4)
-    def view_product_detail(self):
-        product_id = self._pick_id(self._get_product_ids())
-        if not product_id:
-            return
-        self.client.get(f"/products/{product_id}", name="product_detail")
-
-    @task(3)
-    def search_products(self):
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
-            "/api/products/search",
-            params={"q": query},
-            name="product_search",
-        )
-
-    @task(2)
-    def low_stock_summary(self):
-        self.client.get(
-            "/api/products/low-stock",
-            params={"threshold": 1.0},
-            name="product_low_stock",
-        )
-
-    @task(2)
-    def product_alerts(self):
-        self.client.get("/products/alerts", name="product_alerts")
-
-    @task(1)
-    def product_stock_summary(self):
-        self.client.get("/products/api/stock-summary", name="product_stock_summary")
-
-
-class BatchWorkflowSequence(SequentialTaskSet):
-    def on_start(self):
-        self.milk_global_item_id = None
-        self.milk_item_id = None
-        self.custom_item_id = None
-        self.recipe_id = None
-        self._suffix = f"{int(time.time() * 1000)}-{random.randint(1000, 9999)}"
-        self._milk_item_name = f"Milk (Locust {self._suffix})"
-        self._custom_item_name = f"Custom Pickle {self._suffix}"
-        self._recipe_name = f"Locust Milk Pickle Recipe {self._suffix}"
-        self._milk_unit = "gallon"
-        self._pickle_unit = "count"
-
-    def _require(self, value, label):
-        if value:
-            return value
-        LOGGER.warning("Locust batch workflow missing %s", label)
-        raise StopUser()
-
-    def _restock_item(self, item_id: int, unit: str, name: str) -> None:
-        token = self.user._ensure_csrf_token("/inventory")
-        data = {
-            "change_type": "restock",
-            "quantity": "10",
-            "input_unit": unit,
-            "notes": "Locust restock",
-        }
-        if token:
-            data["csrf_token"] = token
-        headers = self.user._csrf_headers(referer_path="/inventory")
-        headers["X-Requested-With"] = "XMLHttpRequest"
-        headers["Accept"] = "application/json"
-        response = self.client.post(
-            f"/inventory/adjust/{item_id}",
-            data=data,
-            headers=headers,
-            name=name,
-        )
-        payload = self.user._safe_json(response)
-        if response.status_code >= 400 or (payload and not payload.get("success", True)):
-            LOGGER.warning("Locust restock failed (%s): %s", name, payload or response.text)
-            raise StopUser()
-
-    def _start_batch(self, request_name: str) -> int:
-        payload = {
-            "recipe_id": self.recipe_id,
-            "scale": 1.0,
-            "batch_type": "ingredient",
-            "notes": "Locust batch workflow",
-            "force_start": False,
-        }
-        headers = self.user._csrf_headers(referer_path="/batches")
-        response = self.client.post(
-            "/batches/api/start-batch",
-            json=payload,
-            headers=headers,
-            name=request_name,
-        )
-        data = self.user._safe_json(response)
-        if data and data.get("success") and data.get("batch_id"):
-            return int(data["batch_id"])
-        LOGGER.warning("Batch start failed: %s", data or response.text)
-        raise StopUser()
-
-    @task
-    def browse_public_pages(self):
-        self.client.get("/", name="homepage")
-        self.client.get("/tools", name="tools_index")
-        self.client.get("/global-items", name="global_items")
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
-            "/api/public/global-items/search",
-            params={"q": query, "type": "ingredient", "group": "ingredient"},
-            name="public_global_item_search",
-        )
-        self.client.get("/auth/signup", name="signup_page")
-        self.client.get("/api/public/units", name="public_units")
-
-    @task
-    def browse_authenticated_pages(self):
-        self.client.get("/dashboard", name="dashboard")
-        self.client.get("/recipes", name="recipes_list")
-        self.client.get("/batches", name="batches_list")
-        self.client.get("/inventory", name="inventory_list")
-        self.client.get("/products", name="products_list")
-        self.client.get("/global-items", name="global_items")
-
-    @task
-    def fetch_bootstrap_endpoints(self):
-        self.client.get("/api/bootstrap/recipes", name="bootstrap_recipes")
-        self.client.get("/api/bootstrap/products", name="bootstrap_products")
-
-    @task
-    def browse_search_endpoints(self):
-        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
-            "/api/ingredients/global-items/search",
-            params={"q": query, "type": "ingredient", "group": "ingredient"},
-            name="auth_global_item_search",
-        )
-        self.client.get(
-            "/inventory/api/search",
-            params={"q": query, "type": "ingredient"},
-            name="inventory_search",
-        )
-        self.client.get("/api/ingredients/categories", name="ingredient_categories")
-        self.client.get(
-            "/api/ingredients/ingredients/search",
-            params={"q": query},
-            name="ingredient_definition_search",
-        )
-        self.client.get("/api/ingredients", name="ingredients_list")
-        self.client.get(
-            "/api/products/search",
-            params={"q": query},
-            name="product_search",
-        )
-        self.client.get(
-            "/api/products/low-stock",
-            params={"threshold": 1.0},
-            name="product_low_stock",
-        )
-        self.client.get("/products/alerts", name="product_alerts")
-        self.client.get("/products/api/stock-summary", name="product_stock_summary")
-
-    @task
-    def browse_detail_endpoints(self):
-        recipe_ids = self.user._get_recipe_ids()
-        product_ids = self.user._get_product_ids()
-        ingredient_ids = self.user._get_ingredient_ids()
-
-        recipe_id = self.user._pick_id(recipe_ids)
-        if recipe_id:
-            self.client.get(f"/recipes/{recipe_id}/view", name="recipe_detail")
-            self.client.get(
-                f"/batches/api/available-ingredients/{recipe_id}",
-                name="batch_available_ingredients",
-            )
-
-        product_id = self.user._pick_id(product_ids)
-        if product_id:
-            self.client.get(f"/products/{product_id}", name="product_detail")
-
-        ingredient_id = self.user._pick_id(ingredient_ids)
-        if ingredient_id:
-            self.client.get(
-                f"/api/inventory/item/{ingredient_id}",
-                name="inventory_item_detail",
-            )
-
-    @task
-    def unit_converter(self):
-        payload = {
-            "from_amount": 1000,
-            "from_unit": "g",
-            "to_unit": "kg",
-        }
-        ingredient_id = self.user._pick_id(self.user._get_ingredient_ids())
-        if ingredient_id:
-            payload["ingredient_id"] = ingredient_id
-        self.user._ensure_csrf_token("/dashboard")
-        headers = self.user._csrf_headers(referer_path="/dashboard")
-        self.client.post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
-
-    @task
-    def lookup_global_milk(self):
-        response = self.client.get(
-            "/api/ingredients/global-items/search",
-            params={"q": "milk", "type": "ingredient", "group": "ingredient"},
-            name="global_items_search_milk",
-        )
-        payload = self.user._safe_json(response)
-        self.milk_global_item_id = _extract_global_item_id(payload)
-        self._require(self.milk_global_item_id, "global milk item id")
-
-    @task
-    def create_global_milk_inventory(self):
-        self._require(self.milk_global_item_id, "global milk item id")
-        payload = {
-            "name": self._milk_item_name,
-            "type": "ingredient",
-            "unit": self._milk_unit,
-            "global_item_id": self.milk_global_item_id,
-        }
-        headers = self.user._csrf_headers(referer_path="/inventory")
-        response = self.client.post(
-            "/api/ingredients/ingredients/create-or-link",
-            json=payload,
-            headers=headers,
-            name="create_global_milk_inventory",
-        )
-        data = self.user._safe_json(response)
-        item = (data or {}).get("item") if isinstance(data, dict) else None
-        self.milk_item_id = item.get("id") if isinstance(item, dict) else None
-        self._require(self.milk_item_id, "milk inventory item id")
-
-    @task
-    def create_custom_pickle_inventory(self):
-        payload = {
-            "name": self._custom_item_name,
-            "type": "ingredient",
-            "unit": self._pickle_unit,
-        }
-        headers = self.user._csrf_headers(referer_path="/inventory")
-        response = self.client.post(
-            "/api/ingredients/ingredients/create-or-link",
-            json=payload,
-            headers=headers,
-            name="create_custom_pickle_inventory",
-        )
-        data = self.user._safe_json(response)
-        item = (data or {}).get("item") if isinstance(data, dict) else None
-        self.custom_item_id = item.get("id") if isinstance(item, dict) else None
-        self._require(self.custom_item_id, "custom pickle item id")
-
-    @task
-    def restock_milk_and_pickle(self):
-        self._require(self.milk_item_id, "milk inventory item id")
-        self._require(self.custom_item_id, "custom pickle item id")
-        self._restock_item(self.milk_item_id, self._milk_unit, "restock_global_milk")
-        self._restock_item(self.custom_item_id, self._pickle_unit, "restock_custom_pickle")
-
-    @task
-    def create_recipe(self):
-        self._require(self.milk_global_item_id, "global milk item id")
-        self._require(self.custom_item_id, "custom pickle item id")
-        token = self.user._ensure_csrf_token("/recipes/new")
-        form_data = [
-            ("csrf_token", token or ""),
-            ("name", self._recipe_name),
-            ("instructions", "Locust recipe using milk + custom pickle"),
-            ("predicted_yield", "1"),
-            ("predicted_yield_unit", "count"),
-            ("ingredient_ids[]", str(self.custom_item_id)),
-            ("ingredient_ids[]", ""),
-            ("global_item_ids[]", ""),
-            ("global_item_ids[]", str(self.milk_global_item_id)),
-            ("amounts[]", "1"),
-            ("amounts[]", "1"),
-            ("units[]", self._pickle_unit),
-            ("units[]", self._milk_unit),
-        ]
-        headers = self.user._csrf_headers(referer_path="/recipes/new")
-        response = self.client.post(
-            "/recipes/new",
-            data=form_data,
-            headers=headers,
-            allow_redirects=False,
-            name="create_recipe",
-        )
-        location = response.headers.get("Location", "")
-        match = re.search(r"/recipes/(\\d+)", location)
-        self.recipe_id = int(match.group(1)) if match else None
-        self._require(self.recipe_id, "recipe id")
-
-    @task
-    def view_created_recipe(self):
-        self._require(self.recipe_id, "recipe id")
-        self.client.get(f"/recipes/{self.recipe_id}/view", name="recipe_detail")
-        self.client.get(
-            f"/batches/api/available-ingredients/{self.recipe_id}",
-            name="batch_available_ingredients",
-        )
-
-    @task
-    def start_and_cancel_batch(self):
-        self._require(self.recipe_id, "recipe id")
-        batch_id = self._start_batch("start_batch_for_cancel")
-        token = self.user._ensure_csrf_token("/batches")
-        data = {"csrf_token": token} if token else {}
-        headers = self.user._csrf_headers(referer_path=f"/batches/{batch_id}")
-        response = self.client.post(
-            f"/batches/cancel/{batch_id}",
-            data=data,
-            headers=headers,
-            allow_redirects=False,
-            name="cancel_batch",
-        )
-        if response.status_code >= 400:
-            LOGGER.warning("Cancel batch failed: %s", response.text)
-            raise StopUser()
-
-    @task
-    def start_and_fail_batch(self):
-        self._require(self.recipe_id, "recipe id")
-        batch_id = self._start_batch("start_batch_for_fail")
-        headers = self.user._csrf_headers(referer_path=f"/batches/in-progress/{batch_id}")
-        response = self.client.post(
-            f"/batches/finish-batch/{batch_id}/fail",
-            json={"reason": "Locust workflow failure"},
-            headers=headers,
-            name="fail_batch",
-        )
-        if response.status_code >= 400:
-            LOGGER.warning("Fail batch failed: %s", response.text)
-            raise StopUser()
-
-    @task
-    def start_and_complete_batch(self):
-        self._require(self.recipe_id, "recipe id")
-        batch_id = self._start_batch("start_batch_for_complete")
-        token = self.user._ensure_csrf_token("/batches")
-        data = {
-            "output_type": "ingredient",
-            "final_quantity": "1",
-            "output_unit": "count",
-        }
-        if token:
-            data["csrf_token"] = token
-        headers = self.user._csrf_headers(referer_path=f"/batches/in-progress/{batch_id}")
-        response = self.client.post(
-            f"/batches/finish-batch/{batch_id}/complete",
-            data=data,
-            headers=headers,
-            allow_redirects=False,
-            name="complete_batch",
-        )
-        if response.status_code >= 400:
-            LOGGER.warning("Complete batch failed: %s", response.text)
-            raise StopUser()
-        raise StopUser()
-
-
-class BatchWorkflowUser(BaseAuthenticatedUser):
-    wait_time = between(1, 3)
-    tasks = [BatchWorkflowSequence]
-    weight = 1
-
-
-# Explicit user class list so Locust auto-distributes without CLI flags.
-user_classes = [
-    BatchWorkflowUser,
-    RecipeOpsUser,
-    InventoryOpsUser,
-    ProductOpsUser,
-    AnonymousUser,
-]
+    @staticmethod
+    def _format_limit(raw_value: Any, *, suffix: str = "") -> str:
+        if raw_value in (None, ""):
+            return "Not set"
+        try:
+            numeric = float(raw_value)
+            if numeric < 0:
+                return "Unlimited"
+            if numeric.is_integer():
+                numeric = int(numeric)
+            return f"{numeric}{suffix}"
+        except (TypeError, ValueError):
+            return f"{raw_value}{suffix}"
