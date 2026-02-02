@@ -2,7 +2,7 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { toNumber, round, clamp, buildSoapcalcSearchBuilders } = SoapTool.helpers;
+  const { toNumber, round, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { formatWeight, toGrams, fromGrams } = SoapTool.units;
   const { computeAdditives } = SoapTool.calc;
   const { FRAGRANCE_CATEGORY_SET } = SoapTool.constants;
@@ -15,7 +15,7 @@
     const hiddenCategory = categoryId ? document.getElementById(categoryId) : null;
     const list = input?.parentElement?.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') return;
-    const builders = buildSoapcalcSearchBuilders();
+    const builder = buildSoapcalcSearchBuilder();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -24,9 +24,7 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: false,
-      globalUrlBuilder: builders.primary,
-      globalFallbackUrlBuilder: builders.fallback,
-      globalFallbackMode: 'fallback',
+      globalUrlBuilder: builder,
       searchType: 'ingredient',
       resultFilter: (item, source) => {
         const category = getItemCategoryName(item);
@@ -86,7 +84,7 @@
     const hiddenCategory = row.querySelector('.fragrance-category');
     const list = row.querySelector('[data-role="suggestions"]');
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') return;
-    const builders = buildSoapcalcSearchBuilders();
+    const builder = buildSoapcalcSearchBuilder();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -95,9 +93,7 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: false,
-      globalUrlBuilder: builders.primary,
-      globalFallbackUrlBuilder: builders.fallback,
-      globalFallbackMode: 'fallback',
+      globalUrlBuilder: builder,
       searchType: 'ingredient',
       resultFilter: (item, source) => {
         const category = getItemCategoryName(item);

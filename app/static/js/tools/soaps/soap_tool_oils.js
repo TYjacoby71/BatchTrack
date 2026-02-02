@@ -2,7 +2,7 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { round, toNumber, clamp, buildSoapcalcSearchBuilders } = SoapTool.helpers;
+  const { round, toNumber, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { toGrams, fromGrams } = SoapTool.units;
   const { OIL_CATEGORY_SET, OIL_TIP_RULES } = SoapTool.constants;
   const { computeQualities } = SoapTool.calc;
@@ -20,7 +20,7 @@
     if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
       return;
     }
-    const builders = buildSoapcalcSearchBuilders();
+    const builder = buildSoapcalcSearchBuilder();
     window.attachMergedInventoryGlobalTypeahead({
       inputEl: input,
       listEl: list,
@@ -29,9 +29,7 @@
       includeInventory: false,
       includeGlobal: true,
       ingredientFirst: true,
-      globalUrlBuilder: builders.primary,
-      globalFallbackUrlBuilder: builders.fallback,
-      globalFallbackMode: 'fallback',
+      globalUrlBuilder: builder,
       searchType: 'ingredient',
       resultFilter: (item, source) => matchesCategory(item, OIL_CATEGORY_SET, source),
       requireHidden: false,

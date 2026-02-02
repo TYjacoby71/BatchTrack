@@ -23,8 +23,6 @@
     displayVariant: null,
     showSourceBadge: true,
     globalUrlBuilder: null,
-    globalFallbackUrlBuilder: null,
-    globalFallbackMode: 'fallback',
     resultFilter: null,
   };
 
@@ -353,8 +351,6 @@
     const resultFilter = typeof opts.resultFilter === 'function' ? opts.resultFilter : null;
     const onSelection = typeof opts.onSelection === 'function' ? opts.onSelection : null;
     const globalUrlBuilder = opts.globalUrlBuilder;
-    const globalFallbackUrlBuilder = opts.globalFallbackUrlBuilder;
-    const globalFallbackMode = opts.globalFallbackMode || 'fallback';
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || (!giHiddenEl && opts.requireHidden !== false)) return;
 
@@ -420,22 +416,10 @@
       const globalPromise = includeGlobal !== false
         ? fetch(buildGlobalUrl(q, effectiveSearchType, ingredientFirst)).then(r => r.json()).catch(() => ({ results: [] }))
         : Promise.resolve({ results: [] });
-      const fallbackPromise = (includeGlobal !== false && typeof globalFallbackUrlBuilder === 'function')
-        ? fetch(globalFallbackUrlBuilder(q, effectiveSearchType, ingredientFirst)).then(r => r.json()).catch(() => ({ results: [] }))
-        : Promise.resolve({ results: [] });
 
-      Promise.all([inventoryPromise, globalPromise, fallbackPromise]).then(results => {
+      Promise.all([inventoryPromise, globalPromise]).then(results => {
         const inventoryRaw = (results[0] && results[0].results) || [];
-        const primaryGlobalRaw = (results[1] && results[1].results) || [];
-        const fallbackGlobalRaw = (results[2] && results[2].results) || [];
-        let globalRaw = primaryGlobalRaw;
-        if (typeof globalFallbackUrlBuilder === 'function') {
-          if (globalFallbackMode === 'append') {
-            globalRaw = primaryGlobalRaw.concat(fallbackGlobalRaw);
-          } else if (!primaryGlobalRaw.length) {
-            globalRaw = fallbackGlobalRaw;
-          }
-        }
+        const globalRaw = (results[1] && results[1].results) || [];
         const inventory = resultFilter
           ? inventoryRaw.filter(item => resultFilter(item, 'inventory'))
           : inventoryRaw;

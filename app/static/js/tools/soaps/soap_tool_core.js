@@ -32,7 +32,7 @@
     clamp,
     formatTime,
     getStorage,
-    buildSoapcalcSearchBuilders,
+    buildSoapcalcSearchBuilder,
   };
 
   function round(value, decimals = 3){
@@ -71,7 +71,7 @@
     }
   }
 
-  function buildSoapcalcSearchBuilders(){
+  function buildSoapcalcSearchBuilder(){
     const buildGilUrl = (q, effectiveSearchType, useIngredientFirst) => {
       const params = new URLSearchParams({ q });
       if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
@@ -83,10 +83,6 @@
       if (useIngredientFirst) params.set('group', 'ingredient');
       return `/api/public/soapcalc-items/search?${params.toString()}`;
     };
-    const useCsvPrimary = SoapTool.config.useCsvPrimary === true;
-    return {
-      primary: useCsvPrimary ? buildCsvUrl : buildGilUrl,
-      fallback: useCsvPrimary ? buildGilUrl : buildCsvUrl,
-    };
+    return SoapTool.config.useCsvPrimary === true ? buildCsvUrl : buildGilUrl;
   }
 })(window);
