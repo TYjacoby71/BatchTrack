@@ -73,9 +73,6 @@ LOCUST_ENABLE_BROWSE_USERS = _get_bool_env("LOCUST_ENABLE_BROWSE_USERS", True)
 LOCUST_FAIL_FAST_LOGIN = _get_bool_env("LOCUST_FAIL_FAST_LOGIN", True)
 LOCUST_ABORT_ON_AUTH_FAILURE = _get_bool_env("LOCUST_ABORT_ON_AUTH_FAILURE", False)
 LOCUST_MAX_LOGIN_ATTEMPTS = max(1, _get_int_env("LOCUST_MAX_LOGIN_ATTEMPTS", 2))
-LOCUST_ENABLE_PRODUCT_STOCK_SUMMARY = _get_bool_env(
-    "LOCUST_ENABLE_PRODUCT_STOCK_SUMMARY", False
-)
 
 
 def _sanitize_cli_args() -> None:
@@ -721,12 +718,6 @@ class ProductOpsUser(BaseAuthenticatedUser):
     def product_alerts(self):
         self._authed_get("/products/alerts", name="product_alerts")
 
-    @task(1)
-    def product_stock_summary(self):
-        if not LOCUST_ENABLE_PRODUCT_STOCK_SUMMARY:
-            return
-        self._authed_get("/products/api/stock-summary", name="product_stock_summary")
-
 
 class BatchWorkflowSequence(SequentialTaskSet):
     def on_start(self):
@@ -861,8 +852,6 @@ class BatchWorkflowSequence(SequentialTaskSet):
             name="product_low_stock",
         )
         self._authed_get("/products/alerts", name="product_alerts")
-        if LOCUST_ENABLE_PRODUCT_STOCK_SUMMARY:
-            self._authed_get("/products/api/stock-summary", name="product_stock_summary")
 
     @task
     def browse_detail_endpoints(self):
