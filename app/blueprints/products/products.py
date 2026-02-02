@@ -468,7 +468,7 @@ def view_product(product_id):
 
         if not base_sku:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products.list_products'))
 
         product = base_sku.product
 
@@ -551,7 +551,7 @@ def view_product_by_name(product_name):
 
     if not sku:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
 
@@ -572,7 +572,7 @@ def edit_product(product_id):
 
     if not product:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     name = (request.form.get('name') or '').strip()
     category_id = request.form.get('category_id')
@@ -623,7 +623,7 @@ def delete_product(product_id):
 
         if not base_sku:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products.list_products'))
 
         product = base_sku.product
 
@@ -635,7 +635,7 @@ def delete_product(product_id):
 
         if not skus:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products.list_products'))
 
         # Check if any SKU has inventory
         total_inventory = sum((sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in skus)
@@ -659,7 +659,7 @@ def delete_product(product_id):
         db.session.commit()
 
         flash(f'Product "{product.name}" deleted successfully', 'success')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     except Exception as e:
         db.session.rollback()
