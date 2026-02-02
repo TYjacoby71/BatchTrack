@@ -140,6 +140,22 @@ def _sanitize_cli_args() -> None:
 _sanitize_cli_args()
 
 
+def _extract_global_item_id(payload) -> Optional[int]:
+    if not isinstance(payload, dict):
+        return None
+    results = payload.get("results") or []
+    for entry in results:
+        if not isinstance(entry, dict):
+            continue
+        forms = entry.get("forms") or []
+        for form in forms:
+            if isinstance(form, dict) and form.get("id"):
+                return int(form["id"])
+        if entry.get("id"):
+            return int(entry["id"])
+    return None
+
+
 def _load_user_credentials():
     raw = (os.getenv("LOCUST_USER_CREDENTIALS") or "").strip()
     if raw:

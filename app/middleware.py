@@ -16,11 +16,12 @@ from flask import (
     session,
     url_for,
 )
-from flask_login import current_user
+from flask_login import current_user, logout_user
 
 from .extensions import db
 from .route_access import RouteAccessConfig
 from .utils.permissions import PermissionScope, resolve_permission_scope
+from .services.public_bot_trap_service import PublicBotTrapService
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,25 @@ def register_middleware(app: Flask) -> None:
 
         if path.startswith("/static/"):
             return None
+
+        try:
+            if PublicBotTrapService.should_block_request(request, current_user):
+                logger.warning(
+                    "Blocked request from bot trap: path=%s ip=%s user_id=%s",
+                    path,
+                    PublicBotTrapService.resolve_request_ip(request),
+                    getattr(current_user, "id", None),
+                )
+                if current_user.is_authenticated:
+                    try:
+                        logout_user()
+                    except Exception:
+                        pass
+                if _wants_json_response():
+                    return jsonify({"error": "Access blocked"}), 403
+                return ("Forbidden", 403)
+        except Exception as exc:
+            logger.warning("Bot trap block check failed: %s", exc)
 
         if RouteAccessConfig.is_public_endpoint(request.endpoint):
             return None

@@ -43,7 +43,7 @@ def _configure_pubchem_env(args: argparse.Namespace) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Canonical pre-AI pipeline (ONE supported path)")
-    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses Final DB.db)")
     p.add_argument(
         "--stage",
         default="all",

@@ -1,6 +1,5 @@
 import logging
 import os
-from threading import Lock
 from typing import Any
 
 from flask import Flask, current_app, redirect, render_template, request, url_for
@@ -14,75 +13,9 @@ from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
 from .utils.cache_utils import should_bypass_cache
+from .utils.redis_pool import get_redis_pool
 
 logger = logging.getLogger(__name__)
-_redis_pool_lock = Lock()
-_REDIS_POOL_INFO_KEY = "redis_pool_info"
-
-
-def _initialize_redis_pool(app: Flask):
-    """Provision a Redis connection pool and refresh it after each worker fork."""
-    redis_url = app.config.get("REDIS_URL")
-    if not redis_url:
-        return None
-
-    current_pid = os.getpid()
-    cached = app.extensions.get(_REDIS_POOL_INFO_KEY)
-    if cached and cached.get("pid") == current_pid:
-        return cached.get("pool")
-
-    with _redis_pool_lock:
-        cached = app.extensions.get(_REDIS_POOL_INFO_KEY)
-        if cached:
-            cached_pid = cached.get("pid")
-            pool = cached.get("pool")
-            if cached_pid == current_pid and pool is not None:
-                return pool
-            if pool is not None:
-                try:
-                    pool.disconnect()
-                except Exception as exc:  # pragma: no cover - defensive logging
-                    logger.warning("Failed to disconnect inherited Redis pool (pid=%s): %s", cached_pid, exc)
-            app.extensions.pop(_REDIS_POOL_INFO_KEY, None)
-
-    try:
-        import redis
-    except ImportError:  # pragma: no cover - optional dependency
-        logger.warning("Redis library not installed; skipping shared connection pool setup.")
-        return None
-
-    def _float_env(key: str, default: float) -> float:
-        try:
-            return float(os.environ.get(key, default))
-        except (TypeError, ValueError):
-            return default
-
-    try:
-        max_conns = int(os.environ.get("REDIS_POOL_MAX_CONNECTIONS", "200"))
-    except (TypeError, ValueError):
-        max_conns = 200
-
-    pool_timeout = _float_env("REDIS_POOL_TIMEOUT", 5.0)
-    socket_timeout = _float_env("REDIS_SOCKET_TIMEOUT", 5.0)
-    connect_timeout = _float_env("REDIS_CONNECT_TIMEOUT", 5.0)
-
-    pool_class = getattr(redis, "BlockingConnectionPool", redis.ConnectionPool)
-    pool = pool_class.from_url(
-        redis_url,
-        max_connections=None if max_conns <= 0 else max_conns,
-        timeout=pool_timeout,
-        socket_timeout=socket_timeout,
-        socket_connect_timeout=connect_timeout,
-    )
-    app.extensions[_REDIS_POOL_INFO_KEY] = {"pid": current_pid, "pool": pool}
-    app.extensions["redis_pool"] = pool  # backwards compatibility for any legacy access
-    logger.info(
-        "Initialized Redis connection pool (pid=%s, max_connections=%s, timeout=%ss)",
-        current_pid,
-        max_conns if max_conns > 0 else "unbounded",
-        pool_timeout,
-    )
-    return pool
 
 
 def create_app(config: dict[str, Any] | None = None) -> Flask:
@@ -191,7 +124,7 @@ def _configure_cache(app: Flask) -> None:
     }
 
     if redis_url:
-        pool = _initialize_redis_pool(app)
+        pool = get_redis_pool(app)
         if pool is not None:
             cache_config["CACHE_TYPE"] = "RedisCache"
             cache_config["CACHE_REDIS_URL"] = redis_url
@@ -219,7 +152,7 @@ def _configure_sessions(app: Flask) -> None:
         try:
             import redis
 
-            pool = _initialize_redis_pool(app)
+            pool = get_redis_pool(app)
             if pool is not None:
                 session_redis = redis.Redis(connection_pool=pool)
             else:
@@ -254,7 +187,7 @@ def _configure_rate_limiter(app: Flask) -> None:
     )
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     if storage_uri.startswith("redis"):
-        pool = _initialize_redis_pool(app)
+        pool = get_redis_pool(app)
         if pool is not None:
             storage_options = dict(app.config.get("RATELIMIT_STORAGE_OPTIONS") or {})
             storage_options["connection_pool"] = pool

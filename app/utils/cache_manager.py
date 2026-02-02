@@ -7,6 +7,8 @@ import time
 from threading import Lock
 from typing import Any, Dict
 
+from .redis_pool import get_redis_pool
+
 try:  # optional dependency
     import redis  # type: ignore
     from redis.exceptions import RedisError  # type: ignore
@@ -79,15 +81,34 @@ class RedisCache:
             raise RuntimeError("redis package not available")
         self._namespace = namespace.strip(":")
         self._default_ttl = default_ttl
-        self._client = redis.Redis.from_url(
-            url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=False
-        )
+        self._url = url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._client = None
+        self._pool = None
         self._fallback = SimpleCache(max_size=1000, default_ttl=default_ttl)
         self._redis_disabled_until = 0.0
         self._redis_backoff_seconds = 60
 
     def _k(self, key: str) -> str:
         return f"bt:{self._namespace}:{key}"
+
+    def _get_client(self):
+        if redis is None:
+            raise RuntimeError("redis package not available")
+
+        pool = get_redis_pool()
+        if pool is not None and pool is not self._pool:
+            self._pool = pool
+            self._client = redis.Redis(connection_pool=pool, decode_responses=False)
+            return self._client
+
+        if self._client is None:
+            if pool is None:
+                self._client = redis.Redis.from_url(self._url, decode_responses=False)
+            else:
+                self._pool = pool
+                self._client = redis.Redis(connection_pool=pool, decode_responses=False)
+
+        return self._client
 
     def _can_use_redis(self) -> bool:
         return time.time() >= self._redis_disabled_until
@@ -106,7 +127,8 @@ class RedisCache:
     def get(self, key: str) -> Any:
         if self._can_use_redis():
             try:
-                raw = self._client.get(self._k(key))
+                client = self._get_client()
+                raw = client.get(self._k(key))
                 if raw is None:
                     self._fallback.delete(key)
                     return None
@@ -123,8 +145,9 @@ class RedisCache:
         expires = ttl if ttl is not None else self._default_ttl
         if self._can_use_redis():
             try:
+                client = self._get_client()
                 raw = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
-                self._client.set(self._k(key), raw, ex=expires)
+                client.set(self._k(key), raw, ex=expires)
             except RedisError as exc:  # type: ignore[arg-type]
                 self._handle_redis_failure("set", exc)
         self._fallback.set(key, value, ttl=expires)
@@ -132,7 +155,8 @@ class RedisCache:
     def delete(self, key: str) -> None:
         if self._can_use_redis():
             try:
-                self._client.delete(self._k(key))
+                client = self._get_client()
+                client.delete(self._k(key))
             except RedisError as exc:  # type: ignore[arg-type]
                 self._handle_redis_failure("delete", exc)
         self._fallback.delete(key)
@@ -143,11 +167,12 @@ class RedisCache:
     def clear_prefix(self, prefix: str) -> None:
         if self._can_use_redis():
             try:
+                client = self._get_client()
                 match = f"bt:{self._namespace}:{prefix}*"
                 cursor = 0
-                pipe = self._client.pipeline()
+                pipe = client.pipeline()
                 while True:
-                    cursor, keys = self._client.scan(cursor=cursor, match=match, count=500)
+                    cursor, keys = client.scan(cursor=cursor, match=match, count=500)
                     if keys:
                         pipe.delete(*keys)
                     if cursor == 0:

@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from flask import Blueprint, jsonify, request
 
 from app.utils.json_store import read_json_file, write_json_file
+from app.services.public_bot_trap_service import PublicBotTrapService
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
@@ -43,19 +44,55 @@ def join_waitlist():
     """Handle waitlist form submissions - save to JSON only."""
     try:
         payload = request.get_json() or {}
+        if not isinstance(payload, dict):
+            payload = {}
+
+        metadata = _extract_waitlist_metadata(payload)
+        trap_value = (payload.get("website") or payload.get("company") or "").strip()
+        trap_email = (payload.get("email") or "").strip().lower() or None
+        if trap_value:
+            PublicBotTrapService.record_hit(
+                request=request,
+                source=metadata.get("source", "waitlist"),
+                reason="waitlist_honeypot",
+                email=trap_email,
+                extra={"field": "website"},
+                block=False,
+            )
+            if trap_email:
+                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
+                PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
+            else:
+                PublicBotTrapService.add_block(
+                    ip=PublicBotTrapService.resolve_request_ip(request),
+                )
+            return jsonify({"message": "Successfully joined waitlist"}), 200
 
         email = (payload.get("email") or "").strip()
         if not email:
             return jsonify({"error": "Email is required"}), 400
+        email = email.lower()
 
         first_name = (payload.get("first_name") or "").strip()
         last_name = (payload.get("last_name") or "").strip()
         business_type = (payload.get("business_type") or "").strip()
 
-        metadata = _extract_waitlist_metadata(payload)
+        if PublicBotTrapService.is_blocked(
+            ip=PublicBotTrapService.resolve_request_ip(request),
+            email=email,
+        ):
+            PublicBotTrapService.record_hit(
+                request=request,
+                source=metadata.get("source", "waitlist"),
+                reason="waitlist_blocked",
+                email=email,
+                extra={"waitlist_key": metadata.get("waitlist_key")},
+                block=False,
+            )
+            return jsonify({"message": "Successfully joined waitlist"}), 200
 
         waitlist_entry = {
-            "email": email.lower(),
+            "email": email,
             "first_name": first_name,
             "last_name": last_name,
             "business_type": business_type or "not_specified",
