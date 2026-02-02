@@ -66,6 +66,21 @@
             margin: -1px !important;
             padding: 0 !important;
         }
+        .bot-trap-link,
+        .bot-trap-field {
+            display: block !important;
+            position: absolute !important;
+            left: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            clip: rect(0,0,0,0) !important;
+            border: 0 !important;
+            margin: -1px !important;
+            padding: 0 !important;
+        }
         .app-container {
             max-width: 1200px; /* Adjust as needed */
             margin: 0 auto;
@@ -470,6 +485,9 @@
         </div>
     </main>
     {% include 'components/shared/unit_converter_modal.html' %}
+    {% if not current_user.is_authenticated %}
+    <a class="bot-trap-link" href="{{ url_for('public_api_bp.public_bot_trap', source='layout') }}" rel="nofollow" aria-hidden="true" tabindex="-1">Continue</a>
+    {% endif %}
     </div>
     <footer class="bg-light text-center text-muted py-3 mt-5">
             <div class="container">
