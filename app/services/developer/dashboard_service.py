@@ -231,10 +231,17 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
             },
             {
                 "key": "TOOLS_SOAP_CSV_PRIMARY",
-                "label": "Soap Tool CSV Primary Lookup",
+                "label": "Soap Tool CSV Fallback",
                 "status": "wired",
-                "default_enabled": True,
-                "description": "Use CSV-backed soapcalc data first (fallback to GIL).",
+                "default_enabled": False,
+                "description": "Use CSV-backed soapcalc data only when GIL has no matches.",
+            },
+            {
+                "key": "TOOLS_SOAP_PUSH",
+                "label": "Soap Tool Push to Recipes",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Expose the Push to Recipes button in Soap Tools.",
             },
             {
                 "key": "TOOLS_CANDLES",
