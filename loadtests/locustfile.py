@@ -959,6 +959,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
     @task
     def create_recipe(self):
         self._require(self.milk_global_item_id, "global milk item id")
+        self._require(self.milk_item_id, "milk inventory item id")
         self._require(self.custom_item_id, "custom pickle item id")
         token = self.user._ensure_csrf_token("/recipes/new")
         form_data = [
@@ -968,9 +969,9 @@ class BatchWorkflowSequence(SequentialTaskSet):
             ("predicted_yield", "1"),
             ("predicted_yield_unit", "count"),
             ("ingredient_ids[]", str(self.custom_item_id)),
-            ("ingredient_ids[]", ""),
+            ("ingredient_ids[]", str(self.milk_item_id)),
             ("global_item_ids[]", ""),
-            ("global_item_ids[]", str(self.milk_global_item_id)),
+            ("global_item_ids[]", ""),
             ("amounts[]", "1"),
             ("amounts[]", "1"),
             ("units[]", self._pickle_unit),
