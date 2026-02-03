@@ -165,13 +165,19 @@ soapToolPage {
     text-align: left;
   }
 }
+#soapToolPage #soapAlertStack {
+  margin-bottom: var(--space-2);
+}
 #soapToolPage #soapQualityCard,
 #soapToolPage #soapResultsActionsCard {
   margin-bottom: var(--space-2);
 }
+#soapToolPage #soapResultsActionsCard {
+  margin-top: var(--space-2);
+}
 #soapToolPage #resultsCard {
-  margin-top: var(--space-1);
-  margin-bottom: var(--space-1);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 #soapToolPage .soap-mobile-drawer {
   position: fixed;
@@ -252,12 +258,12 @@ soapToolPage {
   position: relative;
 }
 #soapToolPage #soapStageQualityRow {
-  margin-top: calc(var(--space-2) + 8px) !important;
+  margin-top: var(--space-2) !important;
 }
 #soapToolPage .results-toggle {
   position: absolute;
   left: 50%;
-  bottom: -14px;
+  bottom: calc(-1 * var(--space-2));
   transform: translateX(-50%);
   width: 32px;
   height: 28px;
@@ -552,23 +558,14 @@ soapToolPage {
 }
 #soapToolPage .quality-target-marker {
   position: absolute;
-  top: 0;
-  bottom: var(--space-4);
+  top: -2px;
+  bottom: -2px;
   border-left: 2px dashed var(--color-primary);
   width: 0;
   z-index: 3;
 }
 #soapToolPage .quality-target-label {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  left: 0;
-  transform: translateX(-50%);
-  font-size: 0.7rem;
-  color: var(--color-primary);
-  background: var(--color-surface);
-  padding: 0 4px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  display: none;
 }
 #soapToolPage .soap-oil-profile td {
   padding: 0.2rem 0.35rem;
