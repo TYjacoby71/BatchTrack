@@ -227,13 +227,13 @@ def integrations_checklist():
                     "SQLALCHEMY_POOL_SIZE",
                     "SQLAlchemy connection pool size (per instance).",
                     required=False,
-                    recommended="30 (baseline for ~90 users; scale with workers)",
+                    recommended="20 (baseline for ~90 users; scale with workers)",
                 ),
                 _make_item(
                     "SQLALCHEMY_MAX_OVERFLOW",
                     "Additional connections allowed past pool_size.",
                     required=False,
-                    recommended="30",
+                    recommended="20",
                 ),
                 _make_item(
                     "SQLALCHEMY_POOL_TIMEOUT",
@@ -280,10 +280,16 @@ def integrations_checklist():
                     recommended="120",
                 ),
                 _make_item(
+                    "REDIS_MAX_CONNECTIONS",
+                    "Max clients allowed by your Redis plan (used to auto-budget pool per worker).",
+                    required=False,
+                    recommended="225 (example)",
+                ),
+                _make_item(
                     "REDIS_POOL_MAX_CONNECTIONS",
                     "Shared Redis connection pool size (across cache/sessions/limiter).",
                     required=False,
-                    recommended="200 (baseline for ~90 users; or ~80% of maxclients)",
+                    recommended="auto (set REDIS_MAX_CONNECTIONS; optional override is per worker)",
                 ),
                 _make_item(
                     "REDIS_POOL_TIMEOUT",

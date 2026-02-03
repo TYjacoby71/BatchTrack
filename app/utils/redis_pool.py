@@ -28,6 +28,16 @@ def _int_setting(value: Any, default: int | None) -> int | None:
         return default
 
 
+def _resolve_worker_count(app: Flask | None) -> int:
+    worker_count = (
+        _int_setting(_get_setting(app, "WEB_CONCURRENCY"), None)
+        or _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
+        or _int_setting(_get_setting(app, "WORKERS"), 1)
+        or 1
+    )
+    return max(worker_count, 1)
+
+
 def _get_setting(app: Flask | None, key: str) -> Any:
     if app is not None and key in app.config:
         return app.config.get(key)
@@ -43,18 +53,13 @@ def _resolve_pool_max_connections(app: Flask | None) -> int:
         _int_setting(_get_setting(app, "REDIS_MAX_CONNECTIONS"), None)
         or _int_setting(_get_setting(app, "REDIS_MAX_CLIENTS"), None)
     )
+    worker_count = _resolve_worker_count(app)
     if redis_max is not None:
-        worker_count = (
-            _int_setting(_get_setting(app, "WEB_CONCURRENCY"), None)
-            or _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
-            or _int_setting(_get_setting(app, "WORKERS"), 1)
-            or 1
-        )
-        worker_count = max(worker_count, 1)
         # Leave headroom for sidecars and administrative connections.
         return max(5, int(redis_max * 0.8 / worker_count))
 
-    return 200
+    default_total_budget = 200
+    return max(5, int(default_total_budget / worker_count))
 
 
 def _build_pool(app: Flask | None, redis_url: str):

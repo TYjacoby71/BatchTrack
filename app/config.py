@@ -307,8 +307,8 @@ class StagingConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 30),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 30),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
         'pool_pre_ping': True,
         'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
         'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
@@ -328,8 +328,8 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 30),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 30),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
         'pool_pre_ping': True,
         'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
         'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
