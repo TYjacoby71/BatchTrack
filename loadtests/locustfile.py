@@ -721,7 +721,6 @@ class ProductOpsUser(BaseAuthenticatedUser):
 
 class BatchWorkflowSequence(SequentialTaskSet):
     def on_start(self):
-        self.milk_global_item_id = None
         self.milk_item_id = None
         self.custom_item_id = None
         self.recipe_id = None
@@ -893,33 +892,18 @@ class BatchWorkflowSequence(SequentialTaskSet):
         self._authed_post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
 
     @task
-    def lookup_global_milk(self):
-        response = self._authed_get(
-            "/api/ingredients/global-items/search",
-            params={"q": "milk", "type": "ingredient", "group": "ingredient"},
-            name="global_items_search_milk",
-        )
-        if response is None:
-            return
-        payload = self.user._safe_json(response)
-        self.milk_global_item_id = _extract_global_item_id(payload)
-        self._require(self.milk_global_item_id, "global milk item id")
-
-    @task
-    def create_global_milk_inventory(self):
-        self._require(self.milk_global_item_id, "global milk item id")
+    def create_custom_milk_inventory(self):
         payload = {
             "name": self._milk_item_name,
             "type": "ingredient",
             "unit": self._milk_unit,
-            "global_item_id": self.milk_global_item_id,
         }
         headers = self.user._csrf_headers(referer_path="/inventory")
         response = self._authed_post(
             "/api/ingredients/ingredients/create-or-link",
             json=payload,
             headers=headers,
-            name="create_global_milk_inventory",
+            name="create_custom_milk_inventory",
         )
         if response is None:
             raise StopUser()
@@ -953,12 +937,11 @@ class BatchWorkflowSequence(SequentialTaskSet):
     def restock_milk_and_pickle(self):
         self._require(self.milk_item_id, "milk inventory item id")
         self._require(self.custom_item_id, "custom pickle item id")
-        self._restock_item(self.milk_item_id, self._milk_unit, "restock_global_milk")
+        self._restock_item(self.milk_item_id, self._milk_unit, "restock_custom_milk")
         self._restock_item(self.custom_item_id, self._pickle_unit, "restock_custom_pickle")
 
     @task
     def create_recipe(self):
-        self._require(self.milk_global_item_id, "global milk item id")
         self._require(self.milk_item_id, "milk inventory item id")
         self._require(self.custom_item_id, "custom pickle item id")
         token = self.user._ensure_csrf_token("/recipes/new")
