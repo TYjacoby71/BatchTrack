@@ -468,23 +468,35 @@ def unit_converter():
         if ingredient_id:
             ingredient = db.session.get(InventoryItem, ingredient_id)
 
-        # Perform conversion using unit conversion service
-        from app.services.unit_conversion import UnitConversionService
-        result = UnitConversionService.convert_with_density(
-            from_amount, from_unit, to_unit, 
+        # Perform conversion using unit conversion engine
+        from app.services.unit_conversion import ConversionEngine
+        result = ConversionEngine.convert_units(
+            from_amount,
+            from_unit,
+            to_unit,
+            ingredient_id=ingredient_id,
             density=ingredient.density if ingredient else None
         )
 
-        if result['success']:
+        if result.get('success'):
             return jsonify({
                 'success': True,
-                'result': result['converted_amount'],
+                'result': result.get('converted_value'),
                 'from_amount': from_amount,
                 'from_unit': from_unit,
-                'to_unit': to_unit
+                'to_unit': to_unit,
+                'conversion_type': result.get('conversion_type'),
+                'requires_attention': result.get('requires_attention', False)
             })
         else:
-            return jsonify({'success': False, 'error': result.get('error', 'Conversion failed')})
+            error_data = result.get('error_data') or {}
+            return jsonify({
+                'success': False,
+                'error': error_data.get('message') or result.get('error_code') or 'Conversion failed',
+                'error_code': result.get('error_code'),
+                'drawer_payload': result.get('drawer_payload'),
+                'requires_drawer': result.get('requires_drawer', False)
+            })
 
     except Exception as e:
         current_app.logger.error(f"Unit converter API error: {str(e)}")

@@ -6,7 +6,7 @@ from app.models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchC
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product
 from app.services.base_service import BaseService
 from app.services.stock_check.core import UniversalStockCheckService
-from app.services.stock_check.types import StockCheckRequest, InventoryCategory
+from app.services.stock_check.types import InventoryCategory
 from app.models.recipe import RecipeIngredient
 from app.utils.unit_utils import get_global_unit_list
 from app.services.freshness_service import FreshnessService
@@ -81,60 +81,72 @@ class BatchManagementService(BaseService):
             # Get recipe ingredients first
             recipe_ingredients = RecipeIngredient.query.filter_by(recipe_id=recipe_id).all()
 
-            # Create stock check requests for recipe ingredients
-            stock_requests = []
+            # Check stock for recipe ingredients via USCS
+            uscs = UniversalStockCheckService()
+            stock_results = []
             recipe_ingredient_ids = []
 
             for recipe_ingredient in recipe_ingredients:
-                request_obj = StockCheckRequest(
-                    inventory_category=InventoryCategory.INGREDIENT,
-                    item_id=recipe_ingredient.ingredient_id,
-                    required_amount=recipe_ingredient.amount * scale,
-                    required_unit=recipe_ingredient.unit,
-                    organization_id=current_user.organization_id
+                item_id = recipe_ingredient.inventory_item_id
+                if not item_id:
+                    continue
+                recipe_ingredient_ids.append(item_id)
+                stock_results.append(
+                    uscs.check_single_item(
+                        item_id=item_id,
+                        quantity_needed=recipe_ingredient.quantity * scale,
+                        unit=recipe_ingredient.unit,
+                        category=InventoryCategory.INGREDIENT,
+                    )
                 )
-                stock_requests.append(request_obj)
-                recipe_ingredient_ids.append(recipe_ingredient.ingredient_id)
-
-            # Use USCS to check stock
-            uscs = UniversalStockCheckService()
-            stock_results = uscs.check_stock(stock_requests)
 
             ingredients_data = []
 
             # Process recipe ingredients with stock check results
             for result in stock_results:
+                status_value = result.status.value if hasattr(result.status, "value") else str(result.status)
+                if status_value == "ERROR":
+                    status_label = "error"
+                elif status_value in {"OK", "LOW"}:
+                    status_label = "sufficient"
+                else:
+                    status_label = "insufficient"
                 ingredients_data.append({
                     'id': result.item_id,
-                    'name': result.name,
-                    'needed_amount': result.required_amount or 0,
-                    'needed_unit': result.required_unit or result.unit,
-                    'available_amount': result.available,
-                    'inventory_unit': result.unit,
-                    'status': 'sufficient' if result.status == 'AVAILABLE' else 'insufficient',
+                    'name': result.item_name,
+                    'needed_amount': result.needed_quantity or 0,
+                    'needed_unit': result.needed_unit,
+                    'available_amount': result.available_quantity,
+                    'inventory_unit': result.available_unit,
+                    'status': status_label,
                     'category': 'recipe_ingredient'
                 })
 
-            # Get all other ingredients available to organization using USCS
-            additional_request = StockCheckRequest(
-                inventory_category=InventoryCategory.INGREDIENT,
-                organization_id=current_user.organization_id
+            # Add remaining organization ingredients (without re-checking each stock item)
+            additional_items = (
+                InventoryItem.query.filter_by(
+                    organization_id=current_user.organization_id,
+                    type='ingredient',
+                    is_active=True,
+                    is_archived=False
+                )
+                .order_by(InventoryItem.name)
+                .all()
             )
-            additional_results = uscs.check_stock([additional_request])
-
-            # Filter out recipe ingredients we already have
-            for result in additional_results:
-                if result.item_id not in recipe_ingredient_ids:
-                    ingredients_data.append({
-                        'id': result.item_id,
-                        'name': result.name,
-                        'needed_amount': 0,
-                        'needed_unit': result.unit,
-                        'available_amount': result.available,
-                        'inventory_unit': result.unit,
-                        'status': 'available' if result.status == 'AVAILABLE' else 'insufficient',
-                        'category': 'additional_ingredient'
-                    })
+            for item in additional_items:
+                if item.id in recipe_ingredient_ids:
+                    continue
+                available_qty = item.available_quantity or 0
+                ingredients_data.append({
+                    'id': item.id,
+                    'name': item.name,
+                    'needed_amount': 0,
+                    'needed_unit': item.unit,
+                    'available_amount': available_qty,
+                    'inventory_unit': item.unit,
+                    'status': 'available' if available_qty > 0 else 'insufficient',
+                    'category': 'additional_ingredient'
+                })
 
             return ingredients_data, None
 
