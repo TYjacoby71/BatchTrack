@@ -12,6 +12,7 @@ def _create_user(app):
 
     with app.app_context():
         from app.models.permission import Permission
+        from app.models.role import Role
         from app.models.subscription_tier import SubscriptionTier
 
         org = Organization(name=f"Session Org {suffix}")
@@ -44,8 +45,9 @@ def _create_user(app):
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        user.is_organization_owner = True
-        db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
     return username, password
 

@@ -133,8 +133,9 @@ def _create_test_data():
     )
     db.session.add(user)
     db.session.commit()
-    user.is_organization_owner = True
-    db.session.commit()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
 
 def _ensure_sqlite_schema_columns():
@@ -245,8 +246,9 @@ def test_user(app):
         )
         db.session.add(user)
         db.session.commit()
-        user.is_organization_owner = True
-        db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
         yield user
 

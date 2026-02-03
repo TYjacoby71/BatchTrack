@@ -9,6 +9,7 @@ def _api(client, app, path, payload):
     if not user:
         from app.models import Organization
         from app.models.permission import Permission
+        from app.models.role import Role
         from app.models.subscription_tier import SubscriptionTier
         org = Organization(name='Test Org')
         db.session.add(org)
@@ -39,8 +40,9 @@ def _api(client, app, path, payload):
         )
         db.session.add(user)
         db.session.commit()
-        user.is_organization_owner = True
-        db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user.id)

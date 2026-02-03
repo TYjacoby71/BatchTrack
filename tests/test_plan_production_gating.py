@@ -13,6 +13,7 @@ from app.services.batch_service import BatchOperationsService
 def _build_recipe_with_missing_inventory():
     from app.models.permission import Permission
     from app.models.subscription_tier import SubscriptionTier
+    from app.models.role import Role
 
     org = Organization(name='Gating Org')
     db.session.add(org)
@@ -42,7 +43,9 @@ def _build_recipe_with_missing_inventory():
     )
     db.session.add(user)
     db.session.flush()
-    user.is_organization_owner = True
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
     recipe = Recipe(
         name='Gated Recipe',
