@@ -234,8 +234,8 @@ class BaseConfig:
         'pool_pre_ping': True,
         'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 900),
         'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 15),
-        'pool_use_lifo': True,
-        'pool_reset_on_return': 'commit',
+        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
+        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
 
     BILLING_CACHE_ENABLED = env.bool('BILLING_CACHE_ENABLED', True)
