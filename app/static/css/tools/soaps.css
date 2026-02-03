@@ -357,6 +357,22 @@ soapToolPage {
   min-width: 0;
   line-height: 1.1;
 }
+#soapToolPage .soap-input-suffix {
+  position: relative;
+}
+#soapToolPage .soap-input-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+#soapToolPage .soap-input-suffix .form-control {
+  padding-right: calc(var(--soap-addon-width) + var(--space-1));
+}
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
