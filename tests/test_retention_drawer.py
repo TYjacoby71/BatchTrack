@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 def test_retention_flow_ack_to_delete(client, db_session, app):
     # Arrange: create org, tier with 365d retention, user, and an old recipe not used by batches
     from app.models import Organization, User
+    from app.models.permission import Permission
+    from app.models.role import Role
     from app.models.subscription_tier import SubscriptionTier
     from app.models.recipe import Recipe
     from app.services.retention_service import RetentionService
@@ -12,6 +14,12 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     unique_suffix = str(int(time.time() * 1000))[-6:]
     tier = SubscriptionTier(name=f'Test Tier {unique_suffix}', billing_provider='exempt', user_limit=5, data_retention_days=365)
     db_session.add(tier)
+    perm = Permission.query.filter_by(name='recipes.delete').first()
+    if not perm:
+        perm = Permission(name='recipes.delete', description='Delete recipes')
+        db_session.add(perm)
+        db_session.flush()
+    tier.permissions.append(perm)
     org = Organization(name='Retention Org')
     db_session.add(org)
     db_session.flush()
@@ -22,6 +30,9 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     user.set_password('password')
     db_session.add(user)
     db_session.commit()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
     # Login
     client.post('/auth/login', data={'username': 'ret_user', 'password': 'password'})

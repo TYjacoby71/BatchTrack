@@ -1,6 +1,7 @@
 import logging
 from datetime import date, datetime, timezone
 from sqlalchemy import extract
+from sqlalchemy.exc import IntegrityError
 from flask_login import current_user
 
 from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient, InventoryLot
@@ -38,24 +39,12 @@ class BatchOperationsService(BaseService):
             snap_portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
 
-            recipe = db.session.get(Recipe, snap_recipe_id)
-            if not recipe:
-                return None, "Recipe not found"
+            recipe = None
 
             containers_data = containers_data or []
 
-            # Generate batch label via centralized generator
-            label_code = generate_batch_label_code(recipe)
-
-            # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
-            projected_yield = (
-                float(snap_projected_yield)
-                if snap_projected_yield is not None
-                else float(snap_scale) * float(recipe.predicted_yield or 0.0)
-            )
-            projected_yield_unit = (
-                snap_projected_yield_unit or recipe.predicted_yield_unit
-            )
+            # Generate batch label via centralized generator (serialized per recipe row)
+            label_code = None
 
             # Build portion snapshot from plan only
             portion_snap = None
@@ -66,11 +55,6 @@ class BatchOperationsService(BaseService):
                     'portion_count': snap_portioning.get('portion_count'),
                     'portion_unit_id': snap_portioning.get('portion_unit_id')
                 }
-
-            print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
-
-            # Create the batch
-            print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning snapshot: {portion_snap}")
 
             # Ensure plan_snapshot is JSON-serializable. The API route should already pass a dict.
             serializable_plan_snapshot = None
@@ -86,36 +70,62 @@ class BatchOperationsService(BaseService):
                     except Exception:
                         serializable_plan_snapshot = plan_snapshot
 
-            batch = Batch(
-                recipe_id=snap_recipe_id,
-                label_code=generate_batch_label_code(recipe),
-                batch_type=snap_batch_type,
-                projected_yield=projected_yield,
-                projected_yield_unit=projected_yield_unit,
-                scale=snap_scale,
-                status='in_progress',
-                notes=snap_notes,
-                is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
-                portion_name=portion_snap.get('portion_name') if portion_snap else None,
-                projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
-                portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
-                plan_snapshot=serializable_plan_snapshot,
-                created_by=(getattr(current_user, 'id', None) or getattr(recipe, 'created_by', None) or 1),
-                organization_id=(getattr(current_user, 'organization_id', None) or getattr(recipe, 'organization_id', None) or 1),
-                started_at=TimezoneUtils.utc_now()
-            )
+            batch = None
+            for attempt in range(3):
+                recipe = Recipe.query.filter_by(id=snap_recipe_id).with_for_update().first()
+                if not recipe:
+                    return None, "Recipe not found"
+                # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
+                projected_yield = (
+                    float(snap_projected_yield)
+                    if snap_projected_yield is not None
+                    else float(snap_scale) * float(recipe.predicted_yield or 0.0)
+                )
+                projected_yield_unit = (
+                    snap_projected_yield_unit or recipe.predicted_yield_unit
+                )
+                if attempt == 0:
+                    print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
+                    # Create the batch
+                    print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning snapshot: {portion_snap}")
+                label_code = generate_batch_label_code(recipe)
+                batch = Batch(
+                    recipe_id=snap_recipe_id,
+                    label_code=label_code,
+                    batch_type=snap_batch_type,
+                    projected_yield=projected_yield,
+                    projected_yield_unit=projected_yield_unit,
+                    scale=snap_scale,
+                    status='in_progress',
+                    notes=snap_notes,
+                    is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                    portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                    projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                    portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
+                    plan_snapshot=serializable_plan_snapshot,
+                    created_by=(getattr(current_user, 'id', None) or getattr(recipe, 'created_by', None) or 1),
+                    organization_id=(getattr(current_user, 'organization_id', None) or getattr(recipe, 'organization_id', None) or 1),
+                    started_at=TimezoneUtils.utc_now()
+                )
 
-            db.session.add(batch)
-            # Ensure batch is INSERTed so FK references in inventory history succeed
-            try:
-                db.session.flush()
-            except Exception:
-                pass
+                db.session.add(batch)
+                try:
+                    # Ensure batch is INSERTed so FK references in inventory history succeed
+                    db.session.flush()
+                    break
+                except IntegrityError as exc:
+                    db.session.rollback()
+                    if attempt == 2:
+                        logger.warning(
+                            "Batch label collision after retries (recipe_id=%s, label=%s): %s",
+                            snap_recipe_id,
+                            label_code,
+                            exc,
+                        )
+                        return None, ["Unable to allocate a unique batch label. Please retry."]
+                    continue
+
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
-            try:
-                pass
-            except Exception:
-                pass
 
             # Lock costing method for this batch at start based on organization setting
             try:

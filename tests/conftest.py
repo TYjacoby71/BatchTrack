@@ -90,7 +90,10 @@ def _create_test_data():
     from app.models.subscription_tier import SubscriptionTier
     from app.models.models import Organization, User
     from app.models.product_category import ProductCategory
+    from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
     from app.extensions import db
+
+    seed_consolidated_permissions()
 
     # Create a test subscription tier
     tier = SubscriptionTier(
@@ -101,6 +104,8 @@ def _create_test_data():
         billing_provider='exempt'
     )
     db.session.add(tier)
+    db.session.commit()
+    tier.permissions = Permission.query.filter_by(is_active=True).all()
     db.session.commit()
 
     # Ensure a default product category exists for tests
@@ -122,10 +127,15 @@ def _create_test_data():
         username='testuser',  # Added username for completeness
         password_hash='test_hash',
         is_verified=True,
-        organization_id=org.id  # This is correct - organization_id is a foreign key
+        organization_id=org.id,  # This is correct - organization_id is a foreign key
+        user_type='customer',
+        is_active=True
     )
     db.session.add(user)
     db.session.commit()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
 
 def _ensure_sqlite_schema_columns():
@@ -217,10 +227,12 @@ def test_user(app):
         # Create a basic tier
         tier = SubscriptionTier(
             name='Basic',
-            user_limit=5
+            user_limit=5,
+            billing_provider='exempt'
         )
         db.session.add(tier)
         db.session.flush()
+        tier.permissions = Permission.query.filter_by(is_active=True).all()
 
         # Assign tier to organization
         org.subscription_tier_id = tier.id
@@ -234,6 +246,9 @@ def test_user(app):
         )
         db.session.add(user)
         db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
         yield user
 
@@ -257,6 +272,16 @@ def developer_user(app):
         )
         db.session.add(user)
         db.session.commit()
+
+        from app.models.developer_role import DeveloperRole
+        from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
+
+        role = DeveloperRole.query.filter_by(name='system_admin').first()
+        if role is None:
+            seed_consolidated_permissions()
+            role = DeveloperRole.query.filter_by(name='system_admin').first()
+        if role:
+            user.assign_role(role)
 
         yield user
 
