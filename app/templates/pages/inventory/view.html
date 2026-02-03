@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const densityInput = document.getElementById('density');
 
                     // Toggle readonly/disabled and add visual indicators
-                    const isLinkedToGlobal = !!(item.global_item_id && item.ownership === 'global');
+                    const isLinkedToGlobal = !!(item.global_item_id && item.ownership !== 'org');
 
                     // Global link controls (advanced)
                     const globalLinkSection = document.getElementById('globalLinkSection');

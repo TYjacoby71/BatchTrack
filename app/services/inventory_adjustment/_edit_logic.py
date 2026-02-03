@@ -27,8 +27,11 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if not item:
             return False, "Inventory item not found"
 
-        # Disallow identity edits when globally managed
-        is_global_locked = getattr(item, 'global_item_id', None) is not None
+        # Disallow identity edits when globally managed (ownership != 'org')
+        is_global_locked = (
+            getattr(item, 'global_item_id', None) is not None
+            and getattr(item, 'ownership', None) != 'org'
+        )
 
         if is_global_locked:
             # Prevent changes to name, category, density for globally-managed items (unit is user-editable)
