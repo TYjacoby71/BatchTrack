@@ -60,7 +60,7 @@
     <strong>Redis provisioning & presets:</strong>
     <ul class="mb-2">
       <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code> once. The app mirrors it into <code>RATELIMIT_STORAGE_URL</code> automatically unless you override it.</li>
-      <li>Use <code>SESSION_REDIS_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
+      <li>Use <code>REDIS_POOL_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
       <li>Set <code>WEB_CONCURRENCY</code> only as high as the Redis/Postgres plans can handle. During testing, keep it at <code>1</code>–<code>2</code>; raise both concurrency and Redis limits together when upgrading.</li>
       <li>For high-usage tiers (10k+ active users), a single well-sized Redis node normally suffices—scale memory and <code>maxclients</code> before considering sharding.</li>
     </ul>
@@ -110,7 +110,7 @@
             <li>Logging level: <code>{{ logging_status.LOG_LEVEL }}</code>; PII redaction {% if logging_status.LOG_REDACT_PII %}<span class="text-success">enabled</span>{% else %}<span class="text-danger">disabled</span>{% endif %}. Keep DEBUG off in production.</li>
             <li>Stripe tiers: {% if stripe_status.tiers_configured %}<span class="text-success">configured</span>{% else %}<span class="text-danger">missing price mappings</span>{% endif %}. Update <code>app/seeders/subscription_tiers.json</code> before launch.</li>
             <li>POS / Shopify: {{ shopify_status.notes }}</li>
-            <li>Sessions use pooled Redis connections. Adjust <code>SESSION_REDIS_MAX_CONNECTIONS</code> when you change <code>WEB_CONCURRENCY</code>.</li>
+            <li>Sessions use pooled Redis connections. Adjust <code>REDIS_POOL_MAX_CONNECTIONS</code> when you change <code>WEB_CONCURRENCY</code>.</li>
           </ul>
         </div>
       </div>

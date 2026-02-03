@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 _POOL_INFO_KEY = "redis_pool_info"
 _POOL_LOCK = Lock()
 _STANDALONE_EXTENSIONS: dict[str, Any] = {}
+_DEFAULT_POOL_TOTAL_CONNECTIONS = 50
+_DEFAULT_POOL_PER_WORKER_CAP = 10
 
 
 def _float_setting(value: Any, default: float) -> float:
@@ -44,19 +46,32 @@ def _get_setting(app: Flask | None, key: str) -> Any:
     return os.environ.get(key)
 
 
+def _resolve_worker_count(app: Flask | None) -> int:
+    worker_count = (
+        _int_setting(_get_setting(app, "WEB_CONCURRENCY"), None)
+        or _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
+        or _int_setting(_get_setting(app, "WORKERS"), None)
+        or 1
+    )
+    return max(worker_count, 1)
+
+
 def _resolve_pool_max_connections(app: Flask | None) -> int:
     explicit = _int_setting(_get_setting(app, "REDIS_POOL_MAX_CONNECTIONS"), None)
+    if explicit is None:
+        explicit = _int_setting(_get_setting(app, "SESSION_REDIS_MAX_CONNECTIONS"), None)
     if explicit is not None:
         return explicit
 
     redis_max = (
         _int_setting(_get_setting(app, "REDIS_MAX_CONNECTIONS"), None)
         or _int_setting(_get_setting(app, "REDIS_MAX_CLIENTS"), None)
+        or _int_setting(_get_setting(app, "REDIS_MAXCLIENTS"), None)
     )
     worker_count = _resolve_worker_count(app)
     if redis_max is not None:
         # Leave headroom for sidecars and administrative connections.
-        return max(5, int(redis_max * 0.8 / worker_count))
+        return max(1, int(redis_max * 0.8 / worker_count))
 
     default_total_budget = 200
     return max(5, int(default_total_budget / worker_count))
