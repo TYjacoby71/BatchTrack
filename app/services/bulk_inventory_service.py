@@ -67,7 +67,18 @@ class BulkInventoryService:
                     raise self._abort(idx, line, change_type, str(exc))
 
                 unit = line.get("unit") or item.unit or "gram"
-                cost = line.get("cost_per_unit")
+                cost_entry_type = (line.get("cost_entry_type") or "no_change").lower()
+                if cost_entry_type not in {"no_change", "per_unit", "total"}:
+                    cost_entry_type = "no_change"
+                raw_cost = line.get("cost_per_unit")
+                cost_override = None
+                if cost_entry_type != "no_change" and raw_cost is not None:
+                    if cost_entry_type == "total":
+                        if quantity <= 0:
+                            raise self._abort(idx, line, change_type, "total cost requires a positive quantity.")
+                        cost_override = raw_cost / quantity
+                    else:
+                        cost_override = raw_cost
                 resolved_notes = line.get("notes")
                 if not resolved_notes and note_builder:
                     resolved_notes = note_builder(change_type, item, line)
@@ -81,7 +92,7 @@ class BulkInventoryService:
                     quantity=quantity,
                     notes=resolved_notes,
                     created_by=created_by,
-                    cost_override=cost,
+                    cost_override=cost_override,
                     unit=unit,
                     defer_commit=True,
                     include_event_payload=True,

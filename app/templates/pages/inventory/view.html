@@ -121,7 +121,6 @@
         <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', item_id=item.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="change_type" value="restock">
-          <input type="hidden" name="cost_entry_type" value="per_unit">
 
           <div class="row">
             <div class="col-md-6">
@@ -314,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const densityInput = document.getElementById('density');
 
                     // Toggle readonly/disabled and add visual indicators
-                    const isLinkedToGlobal = !!(item.global_item_id && item.ownership === 'global');
+                    const isLinkedToGlobal = !!(item.global_item_id && item.ownership !== 'org');
 
                     // Global link controls (advanced)
                     const globalLinkSection = document.getElementById('globalLinkSection');
