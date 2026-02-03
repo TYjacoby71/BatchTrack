@@ -19,7 +19,8 @@ except ImportError:  # Optional dependency on some runners
     BeautifulSoup = None
 
 from gevent.lock import Semaphore
-from locust import HttpUser, task, between, events
+from locust import HttpUser, task, between, events, SequentialTaskSet
+from locust.exception import StopUser
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +69,10 @@ LOCUST_USER_COUNT = max(1, _get_int_env("LOCUST_USER_COUNT", 10000))
 LOCUST_CACHE_TTL_SECONDS = max(0, _get_int_env("LOCUST_CACHE_TTL", 120))
 LOCUST_REQUIRE_HTTPS = _get_bool_env("LOCUST_REQUIRE_HTTPS", True)
 LOCUST_LOG_LOGIN_FAILURE_CONTEXT = _get_bool_env("LOCUST_LOG_LOGIN_FAILURE_CONTEXT", True)
+LOCUST_ENABLE_BROWSE_USERS = _get_bool_env("LOCUST_ENABLE_BROWSE_USERS", True)
+LOCUST_FAIL_FAST_LOGIN = _get_bool_env("LOCUST_FAIL_FAST_LOGIN", True)
+LOCUST_ABORT_ON_AUTH_FAILURE = _get_bool_env("LOCUST_ABORT_ON_AUTH_FAILURE", False)
+LOCUST_MAX_LOGIN_ATTEMPTS = max(1, _get_int_env("LOCUST_MAX_LOGIN_ATTEMPTS", 2))
 
 
 def _sanitize_cli_args() -> None:
@@ -91,6 +96,22 @@ def _sanitize_cli_args() -> None:
             "Check any LOCUST_USER_CLASSES interpolation for empty values."
         )
         sys.argv[:] = cleaned_args
+
+
+def _extract_global_item_id(payload) -> Optional[int]:
+    if not isinstance(payload, dict):
+        return None
+    results = payload.get("results") or []
+    for entry in results:
+        if not isinstance(entry, dict):
+            continue
+        forms = entry.get("forms") or []
+        for form in forms:
+            if isinstance(form, dict) and form.get("id"):
+                return int(form["id"])
+        if entry.get("id"):
+            return int(entry["id"])
+    return None
 
 
 _sanitize_cli_args()
@@ -208,6 +229,7 @@ def _validate_locust_host(environment, **kwargs):
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content only."""
 
+    abstract = not LOCUST_ENABLE_BROWSE_USERS
     wait_time = between(4, 12)
     weight = 1
 
@@ -219,7 +241,7 @@ class AnonymousUser(HttpUser):
     @task(3)
     def view_tools_index(self):
         """Browse tools index page."""
-        self.client.get("/tools", name="tools_index")
+        self.client.get("/tools/", name="tools_index")
 
     @task(2)
     def view_global_items(self):
@@ -254,12 +276,18 @@ class AuthenticatedMixin:
     login_username: str = ""
     login_password: str = ""
     csrf_token: Optional[str] = None
+    is_authenticated: bool = False
+    _login_failures: int = 0
 
     def on_start(self):
         creds = _allocate_credentials()
         self.login_username = creds.get("username", "")
         self.login_password = creds.get("password", "")
-        self._perform_login(self.login_username, self.login_password)
+        self.is_authenticated = False
+        self._login_failures = 0
+        if not self._perform_login(self.login_username, self.login_password):
+            if LOCUST_FAIL_FAST_LOGIN:
+                raise StopUser()
 
     def _safe_json(self, response):
         try:
@@ -316,6 +344,15 @@ class AuthenticatedMixin:
         if token:
             self.csrf_token = token
 
+    def _ensure_csrf_token(self, path: str) -> Optional[str]:
+        if self.csrf_token:
+            return self.csrf_token
+        response = self._authed_get(path, name=f"csrf:{path}")
+        if response is None:
+            return self.csrf_token
+        self._update_csrf_from_response(response)
+        return self.csrf_token
+
     def _csrf_headers(self, referer_path: Optional[str] = None) -> Dict[str, str]:
         headers: Dict[str, str] = {}
         if self.csrf_token:
@@ -329,6 +366,9 @@ class AuthenticatedMixin:
 
     def _login_succeeded(self, response) -> bool:
         if response.status_code in {301, 302, 303, 307, 308}:
+            location = (response.headers.get("Location") or "").lower()
+            if location and "/auth/login" in location:
+                return False
             return True
         if response.status_code != 200:
             return False
@@ -358,15 +398,69 @@ class AuthenticatedMixin:
             context.update(extra)
         LOGGER.warning("Locust login failed: %s", context)
 
-    def _perform_login(self, username: str, password: str):
+    def _record_auth_failure(self):
+        self.is_authenticated = False
+        self._login_failures += 1
+
+    def _can_retry_login(self) -> bool:
+        return self._login_failures < LOCUST_MAX_LOGIN_ATTEMPTS
+
+    def _ensure_authenticated(self) -> bool:
+        if self.is_authenticated:
+            return True
+        if not self._can_retry_login():
+            return False
+        return self._perform_login(self.login_username, self.login_password)
+
+    def _is_auth_failure_response(self, response) -> bool:
+        if response is None:
+            return False
+        if response.status_code in {401, 403}:
+            return True
+        if response.status_code in {301, 302, 303, 307, 308}:
+            location = (response.headers.get("Location") or "").lower()
+            if "/auth/login" in location:
+                return True
+        response_url = (response.url or "").lower()
+        if "/auth/login" in response_url:
+            return True
+        return False
+
+    def _handle_auth_failure(self, response, request_name: Optional[str] = None) -> bool:
+        if not self._is_auth_failure_response(response):
+            return False
+        self._record_auth_failure()
+        if LOCUST_ABORT_ON_AUTH_FAILURE:
+            extra = {"request": request_name} if request_name else None
+            self._log_login_failure("auth_failure", response, extra=extra)
+            raise StopUser()
+        return True
+
+    def _authed_get(self, path: str, **kwargs):
+        if not self._ensure_authenticated():
+            return None
+        response = self.client.get(path, **kwargs)
+        self._handle_auth_failure(response, kwargs.get("name"))
+        return response
+
+    def _authed_post(self, path: str, **kwargs):
+        if not self._ensure_authenticated():
+            return None
+        response = self.client.post(path, **kwargs)
+        self._handle_auth_failure(response, kwargs.get("name"))
+        return response
+
+    def _perform_login(self, username: str, password: str) -> bool:
         if not username or not password:
             self._log_login_failure("missing_credentials")
-            return
+            self._record_auth_failure()
+            return False
 
         login_page = self.client.get("/auth/login", name="login_page")
         if login_page.status_code != 200:
             self._log_login_failure("login_page", login_page)
-            return
+            self._record_auth_failure()
+            return False
 
         self._update_csrf_from_response(login_page)
         token = self.csrf_token or self._extract_csrf(login_page)
@@ -398,9 +492,16 @@ class AuthenticatedMixin:
         self._update_csrf_from_response(response)
         if not self._login_succeeded(response):
             self._log_login_failure("login_submit", response)
+            self._record_auth_failure()
+            return False
+        self.is_authenticated = True
+        self._login_failures = 0
+        return True
 
     def _fetch_recipe_bootstrap(self):
-        response = self.client.get("/api/bootstrap/recipes", name="bootstrap_recipes")
+        response = self._authed_get("/api/bootstrap/recipes", name="bootstrap_recipes")
+        if response is None:
+            return []
         if response.status_code != 200:
             return []
         payload = self._safe_json(response)
@@ -409,7 +510,9 @@ class AuthenticatedMixin:
         return []
 
     def _fetch_product_bootstrap(self):
-        response = self.client.get("/api/bootstrap/products", name="bootstrap_products")
+        response = self._authed_get("/api/bootstrap/products", name="bootstrap_products")
+        if response is None:
+            return {"products": [], "sku_inventory_ids": []}
         if response.status_code != 200:
             return {"products": [], "sku_inventory_ids": []}
         payload = self._safe_json(response)
@@ -418,7 +521,9 @@ class AuthenticatedMixin:
         return {"products": [], "sku_inventory_ids": []}
 
     def _fetch_ingredient_list(self):
-        response = self.client.get("/api/ingredients", name="ingredients_list")
+        response = self._authed_get("/api/ingredients", name="ingredients_list")
+        if response is None:
+            return []
         if response.status_code != 200:
             return []
         payload = self._safe_json(response)
@@ -464,37 +569,38 @@ class BaseAuthenticatedUser(AuthenticatedMixin, HttpUser):
 class RecipeOpsUser(BaseAuthenticatedUser):
     """Recipe planning + batch workflow."""
 
+    abstract = not LOCUST_ENABLE_BROWSE_USERS
     wait_time = between(6, 14)
     weight = 4
 
     @task(7)
     def view_dashboard(self):
-        self.client.get("/dashboard", name="dashboard")
+        self._authed_get("/dashboard", name="dashboard")
 
     @task(6)
     def view_recipes_list(self):
-        self.client.get("/recipes", name="recipes_list")
+        self._authed_get("/recipes/", name="recipes_list")
 
     @task(4)
     def view_recipe_detail(self):
         recipe_id = self._pick_id(self._get_recipe_ids())
         if not recipe_id:
             return
-        self.client.get(f"/recipes/{recipe_id}/view", name="recipe_detail")
+        self._authed_get(f"/recipes/{recipe_id}/view", name="recipe_detail")
 
     @task(3)
     def view_batches_list(self):
-        self.client.get("/batches", name="batches_list")
+        self._authed_get("/batches/", name="batches_list")
 
     @task(2)
     def view_global_items(self):
-        self.client.get("/global-items", name="global_items")
+        self._authed_get("/global-items", name="global_items")
 
     @task(2)
     def search_global_items(self):
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
         params = {"q": query, "type": "ingredient", "group": "ingredient"}
-        self.client.get(
+        self._authed_get(
             "/api/ingredients/global-items/search",
             params=params,
             name="auth_global_item_search",
@@ -505,7 +611,7 @@ class RecipeOpsUser(BaseAuthenticatedUser):
         recipe_id = self._pick_id(self._get_recipe_ids())
         if not recipe_id:
             return
-        self.client.get(
+        self._authed_get(
             f"/batches/api/available-ingredients/{recipe_id}",
             name="batch_available_ingredients",
         )
@@ -514,18 +620,19 @@ class RecipeOpsUser(BaseAuthenticatedUser):
 class InventoryOpsUser(BaseAuthenticatedUser):
     """Inventory browsing + ingredient lookup."""
 
+    abstract = not LOCUST_ENABLE_BROWSE_USERS
     wait_time = between(6, 14)
     weight = 3
 
     @task(6)
     def view_inventory_list(self):
-        self.client.get("/inventory", name="inventory_list")
+        self._authed_get("/inventory/", name="inventory_list")
 
     @task(5)
     def search_inventory(self):
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
         params = {"q": query, "type": "ingredient"}
-        self.client.get(
+        self._authed_get(
             "/inventory/api/search",
             params=params,
             name="inventory_search",
@@ -536,19 +643,19 @@ class InventoryOpsUser(BaseAuthenticatedUser):
         item_id = self._pick_id(self._get_ingredient_ids())
         if not item_id:
             return
-        self.client.get(
+        self._authed_get(
             f"/api/inventory/item/{item_id}",
             name="inventory_item_detail",
         )
 
     @task(3)
     def ingredient_categories(self):
-        self.client.get("/api/ingredients/categories", name="ingredient_categories")
+        self._authed_get("/api/ingredients/categories", name="ingredient_categories")
 
     @task(2)
     def ingredient_definition_search(self):
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
+        self._authed_get(
             "/api/ingredients/ingredients/search",
             params={"q": query},
             name="ingredient_definition_search",
@@ -556,7 +663,7 @@ class InventoryOpsUser(BaseAuthenticatedUser):
 
     @task(2)
     def refresh_ingredient_list(self):
-        self.client.get("/api/ingredients", name="ingredients_list")
+        self._authed_get("/api/ingredients", name="ingredients_list")
 
     @task(1)
     def unit_converter(self):
@@ -569,30 +676,31 @@ class InventoryOpsUser(BaseAuthenticatedUser):
         if ingredient_id:
             payload["ingredient_id"] = ingredient_id
         headers = self._csrf_headers(referer_path="/dashboard")
-        self.client.post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
+        self._authed_post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
 
 
 class ProductOpsUser(BaseAuthenticatedUser):
     """Product inventory + SKU management."""
 
+    abstract = not LOCUST_ENABLE_BROWSE_USERS
     wait_time = between(6, 14)
     weight = 2
 
     @task(6)
     def view_products_list(self):
-        self.client.get("/products", name="products_list")
+        self._authed_get("/products/", name="products_list")
 
     @task(4)
     def view_product_detail(self):
         product_id = self._pick_id(self._get_product_ids())
         if not product_id:
             return
-        self.client.get(f"/products/{product_id}", name="product_detail")
+        self._authed_get(f"/products/{product_id}", name="product_detail")
 
     @task(3)
     def search_products(self):
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
-        self.client.get(
+        self._authed_get(
             "/api/products/search",
             params={"q": query},
             name="product_search",
@@ -600,7 +708,7 @@ class ProductOpsUser(BaseAuthenticatedUser):
 
     @task(2)
     def low_stock_summary(self):
-        self.client.get(
+        self._authed_get(
             "/api/products/low-stock",
             params={"threshold": 1.0},
             name="product_low_stock",
@@ -608,15 +716,354 @@ class ProductOpsUser(BaseAuthenticatedUser):
 
     @task(2)
     def product_alerts(self):
-        self.client.get("/products/alerts", name="product_alerts")
+        self._authed_get("/products/alerts", name="product_alerts")
 
-    @task(1)
-    def product_stock_summary(self):
-        self.client.get("/products/api/stock-summary", name="product_stock_summary")
+
+class BatchWorkflowSequence(SequentialTaskSet):
+    def on_start(self):
+        self.milk_item_id = None
+        self.custom_item_id = None
+        self.recipe_id = None
+        self._suffix = f"{int(time.time() * 1000)}-{random.randint(1000, 9999)}"
+        self._milk_item_name = f"Milk (Locust {self._suffix})"
+        self._custom_item_name = f"Custom Pickle {self._suffix}"
+        self._recipe_name = f"Locust Milk Pickle Recipe {self._suffix}"
+        self._milk_unit = "gallon"
+        self._pickle_unit = "count"
+
+    def _authed_get(self, path: str, **kwargs):
+        return self.user._authed_get(path, **kwargs)
+
+    def _authed_post(self, path: str, **kwargs):
+        return self.user._authed_post(path, **kwargs)
+
+    def _require(self, value, label):
+        if value:
+            return value
+        LOGGER.warning("Locust batch workflow missing %s", label)
+        raise StopUser()
+
+    def _restock_item(self, item_id: int, unit: str, name: str) -> None:
+        token = self.user._ensure_csrf_token("/inventory/")
+        data = {
+            "change_type": "restock",
+            "quantity": "10",
+            "input_unit": unit,
+            "notes": "Locust restock",
+        }
+        if token:
+            data["csrf_token"] = token
+        headers = self.user._csrf_headers(referer_path="/inventory/")
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers["Accept"] = "application/json"
+        response = self._authed_post(
+            f"/inventory/adjust/{item_id}",
+            data=data,
+            headers=headers,
+            name=name,
+        )
+        if response is None:
+            raise StopUser()
+        payload = self.user._safe_json(response)
+        if response.status_code >= 400 or (payload and not payload.get("success", True)):
+            LOGGER.warning("Locust restock failed (%s): %s", name, payload or response.text)
+            raise StopUser()
+
+    def _start_batch(self, request_name: str) -> int:
+        payload = {
+            "recipe_id": self.recipe_id,
+            "scale": 1.0,
+            "batch_type": "ingredient",
+            "notes": "Locust batch workflow",
+            "force_start": False,
+        }
+        headers = self.user._csrf_headers(referer_path="/batches/")
+        response = self._authed_post(
+            "/batches/api/start-batch",
+            json=payload,
+            headers=headers,
+            name=request_name,
+        )
+        if response is None:
+            raise StopUser()
+        data = self.user._safe_json(response)
+        if data and data.get("success") and data.get("batch_id"):
+            return int(data["batch_id"])
+        LOGGER.warning("Batch start failed: %s", data or response.text)
+        raise StopUser()
+
+    @task
+    def browse_public_pages(self):
+        self.client.get("/", name="homepage")
+        self.client.get("/tools/", name="tools_index")
+        self.client.get("/global-items", name="global_items")
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        self.client.get(
+            "/api/public/global-items/search",
+            params={"q": query, "type": "ingredient", "group": "ingredient"},
+            name="public_global_item_search",
+        )
+        self.client.get("/auth/signup", name="signup_page")
+        self.client.get("/api/public/units", name="public_units")
+
+    @task
+    def browse_authenticated_pages(self):
+        self._authed_get("/dashboard", name="dashboard")
+        self._authed_get("/recipes/", name="recipes_list")
+        self._authed_get("/batches/", name="batches_list")
+        self._authed_get("/inventory/", name="inventory_list")
+        self._authed_get("/products/", name="products_list")
+        self._authed_get("/global-items", name="global_items")
+
+    @task
+    def fetch_bootstrap_endpoints(self):
+        self._authed_get("/api/bootstrap/recipes", name="bootstrap_recipes")
+        self._authed_get("/api/bootstrap/products", name="bootstrap_products")
+
+    @task
+    def browse_search_endpoints(self):
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        self._authed_get(
+            "/api/ingredients/global-items/search",
+            params={"q": query, "type": "ingredient", "group": "ingredient"},
+            name="auth_global_item_search",
+        )
+        self._authed_get(
+            "/inventory/api/search",
+            params={"q": query, "type": "ingredient"},
+            name="inventory_search",
+        )
+        self._authed_get("/api/ingredients/categories", name="ingredient_categories")
+        self._authed_get(
+            "/api/ingredients/ingredients/search",
+            params={"q": query},
+            name="ingredient_definition_search",
+        )
+        self._authed_get("/api/ingredients", name="ingredients_list")
+        self._authed_get(
+            "/api/products/search",
+            params={"q": query},
+            name="product_search",
+        )
+        self._authed_get(
+            "/api/products/low-stock",
+            params={"threshold": 1.0},
+            name="product_low_stock",
+        )
+        self._authed_get("/products/alerts", name="product_alerts")
+
+    @task
+    def browse_detail_endpoints(self):
+        recipe_ids = self.user._get_recipe_ids()
+        product_ids = self.user._get_product_ids()
+        ingredient_ids = self.user._get_ingredient_ids()
+
+        recipe_id = self.user._pick_id(recipe_ids)
+        if recipe_id:
+            self._authed_get(f"/recipes/{recipe_id}/view", name="recipe_detail")
+            self._authed_get(
+                f"/batches/api/available-ingredients/{recipe_id}",
+                name="batch_available_ingredients",
+            )
+
+        product_id = self.user._pick_id(product_ids)
+        if product_id:
+            self._authed_get(f"/products/{product_id}", name="product_detail")
+
+        ingredient_id = self.user._pick_id(ingredient_ids)
+        if ingredient_id:
+            self._authed_get(
+                f"/api/inventory/item/{ingredient_id}",
+                name="inventory_item_detail",
+            )
+
+    @task
+    def unit_converter(self):
+        payload = {
+            "from_amount": 1000,
+            "from_unit": "g",
+            "to_unit": "kg",
+        }
+        ingredient_id = self.user._pick_id(self.user._get_ingredient_ids())
+        if ingredient_id:
+            payload["ingredient_id"] = ingredient_id
+        self.user._ensure_csrf_token("/dashboard")
+        headers = self.user._csrf_headers(referer_path="/dashboard")
+        self._authed_post("/api/unit-converter", json=payload, headers=headers, name="unit_converter")
+
+    @task
+    def create_custom_milk_inventory(self):
+        payload = {
+            "name": self._milk_item_name,
+            "type": "ingredient",
+            "unit": self._milk_unit,
+        }
+        headers = self.user._csrf_headers(referer_path="/inventory/")
+        response = self._authed_post(
+            "/api/ingredients/ingredients/create-or-link",
+            json=payload,
+            headers=headers,
+            name="create_custom_milk_inventory",
+        )
+        if response is None:
+            raise StopUser()
+        data = self.user._safe_json(response)
+        item = (data or {}).get("item") if isinstance(data, dict) else None
+        self.milk_item_id = item.get("id") if isinstance(item, dict) else None
+        self._require(self.milk_item_id, "milk inventory item id")
+
+    @task
+    def create_custom_pickle_inventory(self):
+        payload = {
+            "name": self._custom_item_name,
+            "type": "ingredient",
+            "unit": self._pickle_unit,
+        }
+        headers = self.user._csrf_headers(referer_path="/inventory/")
+        response = self._authed_post(
+            "/api/ingredients/ingredients/create-or-link",
+            json=payload,
+            headers=headers,
+            name="create_custom_pickle_inventory",
+        )
+        if response is None:
+            raise StopUser()
+        data = self.user._safe_json(response)
+        item = (data or {}).get("item") if isinstance(data, dict) else None
+        self.custom_item_id = item.get("id") if isinstance(item, dict) else None
+        self._require(self.custom_item_id, "custom pickle item id")
+
+    @task
+    def restock_milk_and_pickle(self):
+        self._require(self.milk_item_id, "milk inventory item id")
+        self._require(self.custom_item_id, "custom pickle item id")
+        self._restock_item(self.milk_item_id, self._milk_unit, "restock_custom_milk")
+        self._restock_item(self.custom_item_id, self._pickle_unit, "restock_custom_pickle")
+
+    @task
+    def create_recipe(self):
+        self._require(self.milk_item_id, "milk inventory item id")
+        self._require(self.custom_item_id, "custom pickle item id")
+        token = self.user._ensure_csrf_token("/recipes/new")
+        form_data = [
+            ("csrf_token", token or ""),
+            ("name", self._recipe_name),
+            ("instructions", "Locust recipe using milk + custom pickle"),
+            ("predicted_yield", "1"),
+            ("predicted_yield_unit", "count"),
+            ("ingredient_ids[]", str(self.custom_item_id)),
+            ("ingredient_ids[]", str(self.milk_item_id)),
+            ("global_item_ids[]", ""),
+            ("global_item_ids[]", ""),
+            ("amounts[]", "1"),
+            ("amounts[]", "1"),
+            ("units[]", self._pickle_unit),
+            ("units[]", self._milk_unit),
+        ]
+        headers = self.user._csrf_headers(referer_path="/recipes/new")
+        response = self._authed_post(
+            "/recipes/new",
+            data=form_data,
+            headers=headers,
+            allow_redirects=False,
+            name="create_recipe",
+        )
+        if response is None:
+            raise StopUser()
+        if response.status_code >= 400:
+            LOGGER.warning("Create recipe failed: %s", response.text)
+            raise StopUser()
+        location = response.headers.get("Location", "")
+        if not location:
+            LOGGER.warning("Create recipe missing redirect: %s", response.text)
+            raise StopUser()
+        match = re.search(r"/recipes/(\d+)", location)
+        self.recipe_id = int(match.group(1)) if match else None
+        self._require(self.recipe_id, "recipe id")
+
+    @task
+    def view_created_recipe(self):
+        self._require(self.recipe_id, "recipe id")
+        self._authed_get(f"/recipes/{self.recipe_id}/view", name="recipe_detail")
+        self._authed_get(
+            f"/batches/api/available-ingredients/{self.recipe_id}",
+            name="batch_available_ingredients",
+        )
+
+    @task
+    def start_and_cancel_batch(self):
+        self._require(self.recipe_id, "recipe id")
+        batch_id = self._start_batch("start_batch_for_cancel")
+        token = self.user._ensure_csrf_token("/batches/")
+        data = {"csrf_token": token} if token else {}
+        headers = self.user._csrf_headers(referer_path=f"/batches/{batch_id}")
+        response = self._authed_post(
+            f"/batches/cancel/{batch_id}",
+            data=data,
+            headers=headers,
+            allow_redirects=False,
+            name="cancel_batch",
+        )
+        if response is None:
+            raise StopUser()
+        if response.status_code >= 400:
+            LOGGER.warning("Cancel batch failed: %s", response.text)
+            raise StopUser()
+
+    @task
+    def start_and_fail_batch(self):
+        self._require(self.recipe_id, "recipe id")
+        batch_id = self._start_batch("start_batch_for_fail")
+        headers = self.user._csrf_headers(referer_path=f"/batches/in-progress/{batch_id}")
+        response = self._authed_post(
+            f"/batches/finish-batch/{batch_id}/fail",
+            json={"reason": "Locust workflow failure"},
+            headers=headers,
+            name="fail_batch",
+        )
+        if response is None:
+            raise StopUser()
+        if response.status_code >= 400:
+            LOGGER.warning("Fail batch failed: %s", response.text)
+            raise StopUser()
+
+    @task
+    def start_and_complete_batch(self):
+        self._require(self.recipe_id, "recipe id")
+        batch_id = self._start_batch("start_batch_for_complete")
+        token = self.user._ensure_csrf_token("/batches/")
+        data = {
+            "output_type": "ingredient",
+            "final_quantity": "1",
+            "output_unit": "count",
+        }
+        if token:
+            data["csrf_token"] = token
+        headers = self.user._csrf_headers(referer_path=f"/batches/in-progress/{batch_id}")
+        response = self._authed_post(
+            f"/batches/finish-batch/{batch_id}/complete",
+            data=data,
+            headers=headers,
+            allow_redirects=False,
+            name="complete_batch",
+        )
+        if response is None:
+            raise StopUser()
+        if response.status_code >= 400:
+            LOGGER.warning("Complete batch failed: %s", response.text)
+            raise StopUser()
+        raise StopUser()
+
+
+class BatchWorkflowUser(BaseAuthenticatedUser):
+    wait_time = between(1, 3)
+    tasks = [BatchWorkflowSequence]
+    weight = 1
 
 
 # Explicit user class list so Locust auto-distributes without CLI flags.
 user_classes = [
+    BatchWorkflowUser,
     RecipeOpsUser,
     InventoryOpsUser,
     ProductOpsUser,

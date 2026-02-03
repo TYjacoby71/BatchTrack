@@ -6,6 +6,7 @@ from app.extensions import limiter, csrf, cache
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.soapcalc_oils_service import search_soapcalc_items, search_soapcalc_oils
 from app.services.public_bot_service import PublicBotService, PublicBotServiceError
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.services.ai import GoogleAIClientError
@@ -304,6 +305,48 @@ def public_global_item_search():
         return jsonify(payload)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@public_api_bp.route("/soapcalc-items/search", methods=["GET"])
+@limiter.limit("60/minute")
+def public_soapcalc_items_search():
+    """Search soapcalc CSV inventory items for public tools."""
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"success": True, "results": []})
+    group_mode = request.args.get("group") == "ingredient"
+    limit_raw = request.args.get("limit")
+    limit = 25
+    if limit_raw:
+        try:
+            limit = max(1, min(25, int(limit_raw)))
+        except (TypeError, ValueError):
+            limit = 25
+    results = search_soapcalc_items(q, limit=limit, group=group_mode)
+    resp = make_response(jsonify({"success": True, "results": results}))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@public_api_bp.route("/soapcalc-oils/search", methods=["GET"])
+@limiter.limit("60/minute")
+def public_soapcalc_oils_search():
+    """Legacy soapcalc oil search endpoint."""
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"success": True, "results": []})
+    group_mode = request.args.get("group") == "ingredient"
+    limit_raw = request.args.get("limit")
+    limit = 25
+    if limit_raw:
+        try:
+            limit = max(1, min(25, int(limit_raw)))
+        except (TypeError, ValueError):
+            limit = 25
+    results = search_soapcalc_oils(q, limit=limit, group=group_mode)
+    resp = make_response(jsonify({"success": True, "results": results}))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @public_api_bp.route("/convert-units", methods=["POST"])

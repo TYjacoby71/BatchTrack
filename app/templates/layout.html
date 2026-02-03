@@ -486,7 +486,7 @@
     </main>
     {% include 'components/shared/unit_converter_modal.html' %}
     {% if not current_user.is_authenticated %}
-    <a class="bot-trap-link" href="{{ url_for('public_api_bp.public_bot_trap', source='layout') }}" rel="nofollow" aria-hidden="true" tabindex="-1">Continue</a>
+    <a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='layout') }}" rel="nofollow" aria-hidden="true" tabindex="-1">Continue</a>
     {% endif %}
     </div>
     <footer class="bg-light text-center text-muted py-3 mt-5">

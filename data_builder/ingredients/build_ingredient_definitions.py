@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--db-path",
         default="",
-        help="Path to Final DB.db (defaults to COMPILER_DB_PATH or output/Final DB.db).",
+        help="Path to Final DB.db (defaults to FINAL_DB_PATH or output/Final DB.db).",
     )
     return parser
 
@@ -25,6 +25,9 @@ def main() -> None:
         database_manager.configure_db_path(args.db_path)
 
     database_manager.ensure_tables_exist()
+    
+    print("Populating ingredient_definitions from compiled_clusters...")
+    database_manager._backfill_definition_links()
 
     with database_manager.get_session() as session:
         total_defs = session.query(database_manager.IngredientDefinition).count()

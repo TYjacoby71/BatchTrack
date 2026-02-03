@@ -11,7 +11,7 @@ This is the deterministic "Wave 4" pass, built on top of the merged catalog:
   names (binomial or chemical name) for both the item and the term.
 
 Outputs:
-- Upserts `normalized_terms` in compiler_state.db (and optionally writes a CSV).
+- Upserts `normalized_terms` in Final DB.db (and optionally writes a CSV).
 """
 
 from __future__ import annotations
@@ -525,7 +525,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Derive canonical normalized_terms from source_catalog_items")
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--include", action="append", default=[], help="Only process items containing this substring (repeatable)")
-    p.add_argument("--no-db", action="store_true", help="Do not write to compiler_state.db")
+    p.add_argument("--no-db", action="store_true", help="Do not write to Final DB.db")
     p.add_argument("--csv-out", default="", help="Optional CSV output path")
     p.add_argument("--show", type=int, default=0, help="Print up to N derived term rows to stdout (debug)")
     return p.parse_args(argv)

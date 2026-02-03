@@ -206,7 +206,7 @@ def _derive_master_categories(ingredient_category: str, items: list[dict]) -> li
     return []
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "output" / "Final DB.db"
-DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
+DB_PATH = Path(os.environ.get("FINAL_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 # Retry configuration for database locks
@@ -1230,15 +1230,17 @@ def _backfill_definition_links() -> None:
                     """
                 )
             )
-    except Exception:  # pragma: no cover
-        return
+            conn.commit()
+    except Exception as e:
+        LOGGER.error("Failed to backfill definition links: %s", e)
+        raise
 
 
 def configure_db_path(path: str | os.PathLike[str]) -> None:
     """Reconfigure the SQLite DB path at runtime.
 
     Notes:
-    - Many modules import `database_manager` early, so relying on COMPILER_DB_PATH
+    - Many modules import `database_manager` early, so relying on FINAL_DB_PATH
       *after* import is unreliable. This function makes DB selection explicit.
     - Safe for scripts/portals that want a `--db-path` flag.
     """

@@ -78,10 +78,12 @@ def process_inventory_adjustment(
     try:
         # Normalize quantity to the item's canonical unit if a different unit was provided
         normalized_quantity = quantity
+        conversion_factor = None
         if unit and item.unit and unit != item.unit:
             try:
+                amount_val = float(quantity)
                 conv = ConversionEngine.convert_units(
-                    amount=float(quantity),
+                    amount=amount_val,
                     from_unit=unit,
                     to_unit=item.unit,
                     ingredient_id=item.id,
@@ -89,6 +91,8 @@ def process_inventory_adjustment(
                 )
                 if conv and conv.get('converted_value') is not None:
                     normalized_quantity = conv['converted_value']
+                    if amount_val:
+                        conversion_factor = normalized_quantity / amount_val
                     logger.info(f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}")
                 else:
                     db.session.rollback()
@@ -98,6 +102,38 @@ def process_inventory_adjustment(
                 db.session.rollback()
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")
                 return _response(False, f"Unit conversion failed: {str(e)}")
+
+        # Normalize cost override to item's unit when a different unit was provided
+        if cost_override is not None and unit and item.unit and unit != item.unit:
+            if not conversion_factor:
+                try:
+                    conv_cost = ConversionEngine.convert_units(
+                        amount=1.0,
+                        from_unit=unit,
+                        to_unit=item.unit,
+                        ingredient_id=item.id,
+                        density=item.density
+                    )
+                    if conv_cost and conv_cost.get('converted_value') is not None:
+                        conversion_factor = conv_cost['converted_value']
+                except Exception as e:
+                    logger.error(f"Cost conversion failed for item {item.id}: {e}")
+                    return _response(False, f"Cost conversion failed: {str(e)}")
+            if not conversion_factor or conversion_factor <= 0:
+                return _response(False, f"Cannot convert cost from {unit} to {item.unit}.")
+            try:
+                original_cost = float(cost_override)
+                cost_override = original_cost / conversion_factor
+                logger.info(
+                    "COST NORMALIZATION: %s per %s -> %s per %s for item %s",
+                    original_cost,
+                    unit,
+                    cost_override,
+                    item.unit,
+                    item.id,
+                )
+            except (TypeError, ValueError):
+                return _response(False, "Invalid cost provided.")
 
         # CENTRAL DELEGATION - Route to appropriate operation module
         result = _delegate_to_operation_module(

@@ -16,9 +16,11 @@
     </div>
     <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">Export INCI</a>
-        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#soapDownloadPreviewModal">Preview download</button>
+        {% if is_feature_enabled('TOOLS_SOAP_PUSH') %}
+          <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
+        {% endif %}
+        <button class="btn btn-outline-secondary" id="exportSoapCsv" type="button">Export CSV</button>
+        <button class="btn btn-outline-primary" id="printSoapSheet" type="button">Print Sheet</button>
       </div>
       <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
     </div>

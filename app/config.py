@@ -234,8 +234,8 @@ class BaseConfig:
         'pool_pre_ping': True,
         'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 900),
         'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 15),
-        'pool_use_lifo': True,
-        'pool_reset_on_return': 'commit',
+        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
+        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
 
     BILLING_CACHE_ENABLED = env.bool('BILLING_CACHE_ENABLED', True)
@@ -307,10 +307,13 @@ class StagingConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,
-        'max_overflow': 20,
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
+        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
+        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
     _staging_ratelimit_uri = env.str('RATELIMIT_STORAGE_URI') or env.str('REDIS_URL') or 'memory://'
     RATELIMIT_STORAGE_URI = _staging_ratelimit_uri
@@ -325,12 +328,13 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 80),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 40),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 30),
-        'pool_use_lifo': True,
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
+        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
+        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
     _prod_ratelimit_uri = (
         env.str('RATELIMIT_STORAGE_URI')

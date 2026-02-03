@@ -684,7 +684,9 @@ def adjust_inventory(item_id):
         # Support either per-unit or total cost entry; if total, convert to per-unit
         raw_cost = form_data.get('cost_per_unit')
         cost_entry_type = (form_data.get('cost_entry_type') or 'no_change').strip().lower()
-        if raw_cost not in (None, ''):
+        if cost_entry_type not in {'no_change', 'per_unit', 'total'}:
+            cost_entry_type = 'no_change'
+        if cost_entry_type != 'no_change' and raw_cost not in (None, ''):
             try:
                 parsed_cost = float(raw_cost)
                 if cost_entry_type == 'total':
@@ -802,7 +804,7 @@ def edit_inventory(id):
         # Enforce immutability for globally-managed identity fields
         is_global_locked = (
             getattr(item, 'global_item_id', None) is not None
-            and getattr(item, 'ownership', None) == 'global'
+            and getattr(item, 'ownership', None) != 'org'
         )
 
         # Update basic fields
@@ -812,9 +814,7 @@ def edit_inventory(id):
             # Ignore attempted name changes
             form_data['name'] = item.name
 
-        # Unit can be changed only if not global locked
-        if not is_global_locked:
-            item.unit = form_data.get('unit', item.unit)
+        # Unit changes (with conversion) are handled in update_inventory_item
         item.cost_per_unit = float(form_data.get('cost_per_unit', item.cost_per_unit or 0))
         item.low_stock_threshold = float(form_data.get('low_stock_threshold', item.low_stock_threshold or 0))
         item.type = form_data.get('type', item.type)

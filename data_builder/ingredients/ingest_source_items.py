@@ -1,6 +1,6 @@
 """Item-first ingestion for CosIng (INCI) + TGSC.
 
-This script reads the bundled CSV sources and writes into compiler_state.db:
+This script reads the bundled CSV sources and writes into Final DB.db:
 - source_items: every source row as an *item* (with derived definition linkage)
 - normalized_terms: deduped derived definition terms for later queueing/compilation
 
@@ -360,7 +360,7 @@ def ingest_sources(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Ingest INCI/TGSC source items into compiler_state.db")
+    parser = argparse.ArgumentParser(description="Ingest INCI/TGSC source items into Final DB.db")
     parser.add_argument("--cosing", default=str(DATA_SOURCES_DIR / "cosing.csv"))
     parser.add_argument("--tgsc", default=str(DATA_SOURCES_DIR / "tgsc_ingredients.csv"))
     parser.add_argument("--limit", type=int, default=0, help="Optional cap (combined across sources)")

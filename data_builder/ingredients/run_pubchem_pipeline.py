@@ -19,7 +19,7 @@ from . import database_manager
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Deterministic PubChem pipeline (match -> fetch -> apply)")
-    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses compiler_state.db)")
+    p.add_argument("--db-path", default="", help="SQLite DB path override (otherwise uses Final DB.db)")
     p.add_argument("--mode", default="full", choices=["match_only", "fetch_only", "apply_only", "full"])
     p.add_argument("--match-limit", type=int, default=0, help="Max merged_item_forms to match (0 = no limit)")
     p.add_argument("--term-match-limit", type=int, default=0, help="Max normalized_terms to match (0 = no limit)")

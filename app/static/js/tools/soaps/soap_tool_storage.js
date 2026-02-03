@@ -43,6 +43,8 @@
       const iodine = row.querySelector('.oil-iodine')?.value || '';
       const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
       const gi = row.querySelector('.oil-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.oil-default-unit')?.value || '';
+      const categoryName = row.querySelector('.oil-category')?.value || '';
       if (!name && !grams && !percent && !gi) return;
       oils.push({
         name,
@@ -52,6 +54,8 @@
         iodine,
         fattyRaw,
         gi,
+        defaultUnit,
+        categoryName,
       });
     });
     return oils;
@@ -67,8 +71,10 @@
       const grams = row.querySelector('.fragrance-grams')?.value || '';
       const percent = row.querySelector('.fragrance-percent')?.value || '';
       const gi = row.querySelector('.fragrance-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.fragrance-default-unit')?.value || '';
+      const categoryName = row.querySelector('.fragrance-category')?.value || '';
       if (!name && !grams && !percent && !gi) return;
-      rows.push({ name, grams, percent, gi });
+      rows.push({ name, grams, percent, gi, defaultUnit, categoryName });
     });
     return rows;
   }
@@ -84,6 +90,10 @@
     row.querySelector('.oil-iodine').value = data.iodine || '';
     row.querySelector('.oil-fatty').value = data.fattyRaw || '';
     row.querySelector('.oil-gi-id').value = data.gi || '';
+    const unitEl = row.querySelector('.oil-default-unit');
+    if (unitEl) unitEl.value = data.defaultUnit || '';
+    const categoryEl = row.querySelector('.oil-category');
+    if (categoryEl) categoryEl.value = data.categoryName || '';
     const children = Array.from(oilRows.children);
     if (index >= children.length) {
       oilRows.appendChild(row);
@@ -115,15 +125,23 @@
         lactate_pct: document.getElementById('additiveLactatePct').value || '1',
         lactate_name: document.getElementById('additiveLactateName')?.value || '',
         lactate_gi: document.getElementById('additiveLactateGi')?.value || '',
+        lactate_unit: document.getElementById('additiveLactateUnit')?.value || '',
+        lactate_category: document.getElementById('additiveLactateCategory')?.value || '',
         sugar_pct: document.getElementById('additiveSugarPct').value || '1',
         sugar_name: document.getElementById('additiveSugarName')?.value || '',
         sugar_gi: document.getElementById('additiveSugarGi')?.value || '',
+        sugar_unit: document.getElementById('additiveSugarUnit')?.value || '',
+        sugar_category: document.getElementById('additiveSugarCategory')?.value || '',
         salt_pct: document.getElementById('additiveSaltPct').value || '0.5',
         salt_name: document.getElementById('additiveSaltName')?.value || '',
         salt_gi: document.getElementById('additiveSaltGi')?.value || '',
+        salt_unit: document.getElementById('additiveSaltUnit')?.value || '',
+        salt_category: document.getElementById('additiveSaltCategory')?.value || '',
         citric_pct: document.getElementById('additiveCitricPct').value || '0',
         citric_name: document.getElementById('additiveCitricName')?.value || '',
         citric_gi: document.getElementById('additiveCitricGi')?.value || '',
+        citric_unit: document.getElementById('additiveCitricUnit')?.value || '',
+        citric_category: document.getElementById('additiveCitricCategory')?.value || '',
       },
       mold: {
         water_weight: document.getElementById('moldWaterWeight').value || '',
@@ -187,6 +205,10 @@
         row.querySelector('.oil-iodine').value = oil.iodine || '';
         row.querySelector('.oil-fatty').value = oil.fattyRaw || '';
         row.querySelector('.oil-gi-id').value = oil.gi || '';
+        const unitEl = row.querySelector('.oil-default-unit');
+        if (unitEl) unitEl.value = oil.defaultUnit || '';
+        const categoryEl = row.querySelector('.oil-category');
+        if (categoryEl) categoryEl.value = oil.categoryName || '';
         oilRows.appendChild(row);
       });
     }
@@ -223,6 +245,10 @@
             row.querySelector('.fragrance-grams').value = item.grams || '';
             row.querySelector('.fragrance-percent').value = item.percent || '';
             row.querySelector('.fragrance-gi-id').value = item.gi || '';
+            const unitEl = row.querySelector('.fragrance-default-unit');
+            if (unitEl) unitEl.value = item.defaultUnit || '';
+            const categoryEl = row.querySelector('.fragrance-category');
+            if (categoryEl) categoryEl.value = item.categoryName || '';
             fragranceRows.appendChild(row);
           });
         } else if (data.additives.fragrance_pct || data.additives.fragrance_name || data.additives.fragrance_gi) {
@@ -238,21 +264,37 @@
       if (lactateName) lactateName.value = data.additives.lactate_name || '';
       const lactateGi = document.getElementById('additiveLactateGi');
       if (lactateGi) lactateGi.value = data.additives.lactate_gi || '';
+      const lactateUnit = document.getElementById('additiveLactateUnit');
+      if (lactateUnit) lactateUnit.value = data.additives.lactate_unit || '';
+      const lactateCategory = document.getElementById('additiveLactateCategory');
+      if (lactateCategory) lactateCategory.value = data.additives.lactate_category || '';
       document.getElementById('additiveSugarPct').value = data.additives.sugar_pct || '1';
       const sugarName = document.getElementById('additiveSugarName');
       if (sugarName) sugarName.value = data.additives.sugar_name || '';
       const sugarGi = document.getElementById('additiveSugarGi');
       if (sugarGi) sugarGi.value = data.additives.sugar_gi || '';
+      const sugarUnit = document.getElementById('additiveSugarUnit');
+      if (sugarUnit) sugarUnit.value = data.additives.sugar_unit || '';
+      const sugarCategory = document.getElementById('additiveSugarCategory');
+      if (sugarCategory) sugarCategory.value = data.additives.sugar_category || '';
       document.getElementById('additiveSaltPct').value = data.additives.salt_pct || '0.5';
       const saltName = document.getElementById('additiveSaltName');
       if (saltName) saltName.value = data.additives.salt_name || '';
       const saltGi = document.getElementById('additiveSaltGi');
       if (saltGi) saltGi.value = data.additives.salt_gi || '';
+      const saltUnit = document.getElementById('additiveSaltUnit');
+      if (saltUnit) saltUnit.value = data.additives.salt_unit || '';
+      const saltCategory = document.getElementById('additiveSaltCategory');
+      if (saltCategory) saltCategory.value = data.additives.salt_category || '';
       document.getElementById('additiveCitricPct').value = data.additives.citric_pct || '0';
       const citricName = document.getElementById('additiveCitricName');
       if (citricName) citricName.value = data.additives.citric_name || '';
       const citricGi = document.getElementById('additiveCitricGi');
       if (citricGi) citricGi.value = data.additives.citric_gi || '';
+      const citricUnit = document.getElementById('additiveCitricUnit');
+      if (citricUnit) citricUnit.value = data.additives.citric_unit || '';
+      const citricCategory = document.getElementById('additiveCitricCategory');
+      if (citricCategory) citricCategory.value = data.additives.citric_category || '';
     }
 
     if (data.mold) {
