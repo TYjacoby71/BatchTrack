@@ -241,7 +241,7 @@ class AnonymousUser(HttpUser):
     @task(3)
     def view_tools_index(self):
         """Browse tools index page."""
-        self.client.get("/tools", name="tools_index")
+        self.client.get("/tools/", name="tools_index")
 
     @task(2)
     def view_global_items(self):
@@ -579,7 +579,7 @@ class RecipeOpsUser(BaseAuthenticatedUser):
 
     @task(6)
     def view_recipes_list(self):
-        self._authed_get("/recipes", name="recipes_list")
+        self._authed_get("/recipes/", name="recipes_list")
 
     @task(4)
     def view_recipe_detail(self):
@@ -590,7 +590,7 @@ class RecipeOpsUser(BaseAuthenticatedUser):
 
     @task(3)
     def view_batches_list(self):
-        self._authed_get("/batches", name="batches_list")
+        self._authed_get("/batches/", name="batches_list")
 
     @task(2)
     def view_global_items(self):
@@ -626,7 +626,7 @@ class InventoryOpsUser(BaseAuthenticatedUser):
 
     @task(6)
     def view_inventory_list(self):
-        self._authed_get("/inventory", name="inventory_list")
+        self._authed_get("/inventory/", name="inventory_list")
 
     @task(5)
     def search_inventory(self):
@@ -688,7 +688,7 @@ class ProductOpsUser(BaseAuthenticatedUser):
 
     @task(6)
     def view_products_list(self):
-        self._authed_get("/products", name="products_list")
+        self._authed_get("/products/", name="products_list")
 
     @task(4)
     def view_product_detail(self):
@@ -744,7 +744,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
         raise StopUser()
 
     def _restock_item(self, item_id: int, unit: str, name: str) -> None:
-        token = self.user._ensure_csrf_token("/inventory")
+        token = self.user._ensure_csrf_token("/inventory/")
         data = {
             "change_type": "restock",
             "quantity": "10",
@@ -753,7 +753,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
         }
         if token:
             data["csrf_token"] = token
-        headers = self.user._csrf_headers(referer_path="/inventory")
+        headers = self.user._csrf_headers(referer_path="/inventory/")
         headers["X-Requested-With"] = "XMLHttpRequest"
         headers["Accept"] = "application/json"
         response = self._authed_post(
@@ -777,7 +777,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
             "notes": "Locust batch workflow",
             "force_start": False,
         }
-        headers = self.user._csrf_headers(referer_path="/batches")
+        headers = self.user._csrf_headers(referer_path="/batches/")
         response = self._authed_post(
             "/batches/api/start-batch",
             json=payload,
@@ -795,7 +795,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
     @task
     def browse_public_pages(self):
         self.client.get("/", name="homepage")
-        self.client.get("/tools", name="tools_index")
+        self.client.get("/tools/", name="tools_index")
         self.client.get("/global-items", name="global_items")
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
         self.client.get(
@@ -809,10 +809,10 @@ class BatchWorkflowSequence(SequentialTaskSet):
     @task
     def browse_authenticated_pages(self):
         self._authed_get("/dashboard", name="dashboard")
-        self._authed_get("/recipes", name="recipes_list")
-        self._authed_get("/batches", name="batches_list")
-        self._authed_get("/inventory", name="inventory_list")
-        self._authed_get("/products", name="products_list")
+        self._authed_get("/recipes/", name="recipes_list")
+        self._authed_get("/batches/", name="batches_list")
+        self._authed_get("/inventory/", name="inventory_list")
+        self._authed_get("/products/", name="products_list")
         self._authed_get("/global-items", name="global_items")
 
     @task
@@ -898,7 +898,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
             "type": "ingredient",
             "unit": self._milk_unit,
         }
-        headers = self.user._csrf_headers(referer_path="/inventory")
+        headers = self.user._csrf_headers(referer_path="/inventory/")
         response = self._authed_post(
             "/api/ingredients/ingredients/create-or-link",
             json=payload,
@@ -919,7 +919,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
             "type": "ingredient",
             "unit": self._pickle_unit,
         }
-        headers = self.user._csrf_headers(referer_path="/inventory")
+        headers = self.user._csrf_headers(referer_path="/inventory/")
         response = self._authed_post(
             "/api/ingredients/ingredients/create-or-link",
             json=payload,
@@ -994,7 +994,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
     def start_and_cancel_batch(self):
         self._require(self.recipe_id, "recipe id")
         batch_id = self._start_batch("start_batch_for_cancel")
-        token = self.user._ensure_csrf_token("/batches")
+        token = self.user._ensure_csrf_token("/batches/")
         data = {"csrf_token": token} if token else {}
         headers = self.user._csrf_headers(referer_path=f"/batches/{batch_id}")
         response = self._authed_post(
@@ -1031,7 +1031,7 @@ class BatchWorkflowSequence(SequentialTaskSet):
     def start_and_complete_batch(self):
         self._require(self.recipe_id, "recipe id")
         batch_id = self._start_batch("start_batch_for_complete")
-        token = self.user._ensure_csrf_token("/batches")
+        token = self.user._ensure_csrf_token("/batches/")
         data = {
             "output_type": "ingredient",
             "final_quantity": "1",
