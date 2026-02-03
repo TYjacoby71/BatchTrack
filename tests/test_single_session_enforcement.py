@@ -11,9 +11,28 @@ def _create_user(app):
     password = "super-secret-pass"
 
     with app.app_context():
+        from app.models.permission import Permission
+        from app.models.subscription_tier import SubscriptionTier
+
         org = Organization(name=f"Session Org {suffix}")
         db.session.add(org)
         db.session.flush()
+
+        perm = Permission.query.filter_by(name='dashboard.view').first()
+        if not perm:
+            perm = Permission(name='dashboard.view', description='View dashboard')
+            db.session.add(perm)
+            db.session.flush()
+
+        tier = SubscriptionTier(
+            name=f"Session Tier {suffix}",
+            billing_provider='exempt',
+            user_limit=5
+        )
+        db.session.add(tier)
+        db.session.flush()
+        tier.permissions.append(perm)
+        org.subscription_tier_id = tier.id
 
         user = User(
             username=username,
@@ -24,6 +43,8 @@ def _create_user(app):
         )
         user.set_password(password)
         db.session.add(user)
+        db.session.commit()
+        user.is_organization_owner = True
         db.session.commit()
 
     return username, password
