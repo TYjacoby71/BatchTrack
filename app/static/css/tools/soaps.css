@@ -682,50 +682,50 @@ soapToolPage {
   container-type: inline-size;
   container-name: soap-stage;
 }
-#soapToolPage #soapStage2Pane .soap-stage-body,
-#soapToolPage #soapStage3Pane .soap-stage-body {
+#soapToolPage #soapStage1Pane .soap-stage-body,
+#soapToolPage #soapStage2Pane .soap-stage-body {
   padding: 0.75rem;
+}
+#soapToolPage #soapStage1Pane {
+  --soap-field-height: 36px;
+  --soap-field-gap: 0.25rem;
+}
+#soapToolPage #soapStage1Pane .form-label {
+  font-size: 0.8rem;
 }
 #soapToolPage #soapStage2Pane {
   --soap-field-height: 36px;
   --soap-field-gap: 0.25rem;
 }
-#soapToolPage #soapStage2Pane .form-label {
-  font-size: 0.8rem;
-}
-#soapToolPage #soapStage3Pane {
-  --soap-field-height: 36px;
-  --soap-field-gap: 0.25rem;
-}
-#soapToolPage #soapStage2Pane .form-text,
-#soapToolPage #soapStage3Pane .form-text {
+#soapToolPage #soapStage1Pane .form-text,
+#soapToolPage #soapStage2Pane .form-text {
   font-size: 0.7rem;
   margin-top: 0.15rem;
   line-height: 1.1;
 }
-#soapToolPage #soapStage3Pane .oil-row .form-label {
+#soapToolPage #soapStage2Pane .oil-row .form-label {
   font-size: 0.72rem;
 }
-#soapToolPage #soapStage3Pane .oil-row .form-control {
+#soapToolPage #soapStage2Pane .oil-row .form-control {
   font-size: 0.85rem;
 }
-#soapToolPage #soapStage3Pane .oil-row .oil-name-col {
+#soapToolPage #soapStage2Pane .oil-row .oil-name-col {
   flex: 0 0 50%;
   max-width: 50%;
 }
-#soapToolPage #soapStage3Pane .oil-row .oil-weight-col {
+#soapToolPage #soapStage2Pane .oil-row .oil-weight-col {
   flex: 0 0 20%;
   max-width: 20%;
 }
-#soapToolPage #soapStage3Pane .oil-row .oil-percent-col {
+#soapToolPage #soapStage2Pane .oil-row .oil-percent-col {
   flex: 0 0 20%;
   max-width: 20%;
 }
-#soapToolPage #soapStage3Pane .oil-row .oil-remove-col {
+#soapToolPage #soapStage2Pane .oil-row .oil-remove-col {
   flex: 0 0 10%;
   max-width: 10%;
 }
-#soapToolPage #soapStage3Pane .oil-row {
+#soapToolPage #soapStage2Pane .oil-row {
   flex-wrap: nowrap;
 }
 #soapToolPage .fragrance-row .form-label {
@@ -790,7 +790,7 @@ soapToolPage {
   justify-content: center;
 }
 @container soap-stage (max-width: 520px) {
-  #soapToolPage #soapStage3Pane .oil-row,
+  #soapToolPage #soapStage2Pane .oil-row,
   #soapToolPage .fragrance-row {
     flex-wrap: wrap;
   }
