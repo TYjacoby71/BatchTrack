@@ -44,6 +44,19 @@ def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
     if not unit_key:
         return None
     unit_key_lower = unit_key.lower()
+    unit = Unit.query.filter(
+        (Unit.name == unit_key) |
+        (Unit.symbol == unit_key) |
+        (func.lower(Unit.name) == unit_key_lower) |
+        (func.lower(Unit.symbol) == unit_key_lower)
+    ).first()
+    if unit:
+        return unit
+    try:
+        from app.seeders.unit_seeder import seed_units
+        seed_units()
+    except Exception:
+        return None
     return Unit.query.filter(
         (Unit.name == unit_key) |
         (Unit.symbol == unit_key) |

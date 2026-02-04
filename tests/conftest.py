@@ -98,9 +98,19 @@ def _create_test_data():
     seed_consolidated_permissions()
     seed_units()
 
-    if not Unit.query.filter_by(name='piece').first():
-        db.session.add(Unit(name='piece', symbol='pc', unit_type='count', base_unit='count', conversion_factor=1.0, is_custom=False, is_mapped=True))
-        db.session.commit()
+    required_units = [
+        dict(name='piece', symbol='pc', unit_type='count', base_unit='count', conversion_factor=1.0),
+        dict(name='scoops', symbol='scoops', unit_type='count', base_unit='count', conversion_factor=1.0),
+        dict(name='kg', symbol='kg', unit_type='weight', base_unit='gram', conversion_factor=1000.0),
+        dict(name='gram', symbol='g', unit_type='weight', base_unit='gram', conversion_factor=1.0),
+        dict(name='oz', symbol='oz', unit_type='weight', base_unit='gram', conversion_factor=28.3495),
+        dict(name='ml', symbol='ml', unit_type='volume', base_unit='ml', conversion_factor=1.0),
+        dict(name='count', symbol='ct', unit_type='count', base_unit='count', conversion_factor=1.0),
+    ]
+    for unit in required_units:
+        if not Unit.query.filter_by(name=unit['name']).first():
+            db.session.add(Unit(**unit, is_custom=False, is_mapped=True))
+    db.session.commit()
 
     # Create a test subscription tier
     tier = SubscriptionTier(
@@ -290,6 +300,8 @@ def developer_user(app):
         if role:
             user.assign_role(role)
 
-        yield user
+        from types import SimpleNamespace
+        user_id = user.id
+        yield SimpleNamespace(id=user_id)
 
         # Cleanup is handled by the app fixture dropping all tables
