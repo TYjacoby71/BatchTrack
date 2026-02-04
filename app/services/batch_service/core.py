@@ -224,7 +224,7 @@ class BatchService(BaseService):
                 return False, "Access denied - wrong organization"
 
             # For edit operations, check creator or organization ownership
-            if operation in ['edit', 'complete']:
+            if operation in ['edit', 'cancel', 'complete']:
                 if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
                     return False, "Permission denied - not batch creator"
 
