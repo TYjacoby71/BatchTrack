@@ -149,7 +149,7 @@ def create_solo_tier():
                 'inventory.delete', 'inventory.view_costs',
                 'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete', 
                 'recipes.scale', 'recipes.plan_production',
-                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish',
                 'batches.cancel', 'batches.view_costs',
                 'products.view', 'products.create', 'products.edit', 'products.delete',
                 'products.manage_variants', 'products.sales_tracking',

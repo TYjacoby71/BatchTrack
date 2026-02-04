@@ -7,6 +7,7 @@ from app.utils.permissions import role_required
 
 cancel_batch_bp = Blueprint('cancel_batch', __name__)
 
+
 @cancel_batch_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
 @require_permission('batches.cancel')

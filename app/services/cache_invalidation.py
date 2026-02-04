@@ -27,8 +27,8 @@ __all__ = [
 ]
 
 _INGREDIENT_LIST_KEY = "bootstrap:ingredients:v1:{org_id}"
-_RECIPE_LIST_KEY = "bootstrap:recipes:v1:{org_id}"
-_RECIPE_PAGE_KEY = "bootstrap:recipes:page:v1:{org_id}"
+_RECIPE_LIST_NAMESPACE = "recipe_list_cache"
+_RECIPE_PAGE_NAMESPACE = "recipe_list_page_cache"
 _RECIPE_BOOTSTRAP_KEY = "bootstrap_api:recipes:v1:{org_id}"
 _PRODUCT_LIST_KEY = "bootstrap:products:v1:{org_id}:{sort}"
 _PRODUCT_PAGE_KEY = "bootstrap:products:page:v1:{org_id}:{sort}"
@@ -61,12 +61,16 @@ def invalidate_ingredient_list_cache(org_id: int | None) -> None:
     _safe_delete(ingredient_list_cache_key(org_id))
 
 
-def recipe_list_cache_key(org_id: int | None) -> str:
-    return _RECIPE_LIST_KEY.format(org_id=_org_scope(org_id))
+def recipe_list_cache_key(org_id: int | None, page: int | None = None) -> str:
+    payload = {"org": _org_scope(org_id), "page": int(page or 1)}
+    digest = stable_cache_key("recipe:list", payload)
+    return _versioned_key(_RECIPE_LIST_NAMESPACE, digest)
 
 
-def recipe_list_page_cache_key(org_id: int | None) -> str:
-    return _RECIPE_PAGE_KEY.format(org_id=_org_scope(org_id))
+def recipe_list_page_cache_key(org_id: int | None, page: int | None = None) -> str:
+    payload = {"org": _org_scope(org_id), "page": int(page or 1)}
+    digest = stable_cache_key("recipe:list:page", payload)
+    return _versioned_key(_RECIPE_PAGE_NAMESPACE, digest)
 
 
 def recipe_bootstrap_cache_key(org_id: int | None) -> str:
@@ -74,8 +78,8 @@ def recipe_bootstrap_cache_key(org_id: int | None) -> str:
 
 
 def invalidate_recipe_list_cache(org_id: int | None) -> None:
-    _safe_delete(recipe_list_cache_key(org_id))
-    _safe_delete(recipe_list_page_cache_key(org_id))
+    _bump_namespace(_RECIPE_LIST_NAMESPACE)
+    _bump_namespace(_RECIPE_PAGE_NAMESPACE)
     _safe_delete(recipe_bootstrap_cache_key(org_id))
 
 

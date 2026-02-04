@@ -491,12 +491,12 @@ class BatchOperationsService(BaseService):
                         item_id=container.id,
                         quantity=batch_container.quantity_used,
                         change_type='refunded',
-                        unit=container.unit,
+                        unit=batch_container.unit,
                         notes=f"Container refunded from cancelled batch {batch.label_code}",
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.container_display_name}")
+                    restoration_summary.append(f"{batch_container.quantity_used} {batch_container.unit} of {container.container_display_name}")
 
             # Restore extra containers
             for extra_container in extra_containers:
@@ -506,12 +506,12 @@ class BatchOperationsService(BaseService):
                         item_id=container.id,
                         quantity=extra_container.quantity_used,
                         change_type='refunded',
-                        unit=container.unit,
+                        unit=extra_container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.container_display_name}")
+                    restoration_summary.append(f"{extra_container.quantity_used} {extra_container.unit} of {container.container_display_name}")
 
             # Restore consumables
             for cons in batch_consumables:
