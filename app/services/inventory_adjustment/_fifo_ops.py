@@ -96,17 +96,28 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
 
+        batch_lineage_id = None
+        batch = None
         # For finished_batch operations, use batch-specific label if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
             batch = db.session.get(Batch, batch_id)
             if batch and batch.label_code:
                 fifo_code = batch.label_code
+                batch_lineage_id = batch.lineage_id
             else:
                 fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
         else:
             # For lot creation, this always creates an actual lot
             fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
+            if batch_id and not batch:
+                try:
+                    from app.models import Batch
+                    batch = db.session.get(Batch, batch_id)
+                except Exception:
+                    batch = None
+            if batch:
+                batch_lineage_id = batch.lineage_id
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
@@ -145,6 +156,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             expiration_date=final_expiration_date,
             affected_lot_id=lot.id,  # Link to the actual lot
             batch_id=batch_id,
+            lineage_id=batch_lineage_id,
             fifo_code=fifo_code,  # USE THE SAME FIFO CODE AS THE LOT
             remaining_quantity=None,  # Only the lot object holds remaining quantity, not history events
         )
@@ -239,6 +251,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             lot.remaining_quantity = float(lot.remaining_quantity) - deduct_from_lot
 
             # Generate appropriate event code for this deduction event; prefer batch label when available
+            batch_lineage_id = None
             if change_type == 'batch' and batch_id:
                 try:
                     from app.models import Batch
@@ -248,6 +261,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                         if batch and batch.label_code
                         else generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
                     )
+                    if batch:
+                        batch_lineage_id = batch.lineage_id
                 except Exception:
                     deduction_event_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
             else:
@@ -268,6 +283,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 organization_id=item.organization_id,
                 affected_lot_id=lot.id,  # Link to the specific lot that was affected
                 batch_id=batch_id,
+                lineage_id=batch_lineage_id,
                 fifo_code=deduction_event_code,  # RCN-xxx for recount, other prefixes for other operations
                 valuation_method=valuation_method
 

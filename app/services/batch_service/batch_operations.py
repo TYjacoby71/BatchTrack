@@ -12,6 +12,7 @@ from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
+from app.services.lineage_service import generate_lineage_id
 from app.services.base_service import BaseService
 from app.services.event_emitter import EventEmitter
 
@@ -27,7 +28,8 @@ class BatchOperationsService(BaseService):
 
         try:
             # Trust the plan snapshot exclusively
-            snap_recipe_id = int(plan_snapshot.get('recipe_id'))
+            snap_recipe_id = int(plan_snapshot.get('recipe_id') or plan_snapshot.get('target_version_id'))
+            snap_target_version_id = int(plan_snapshot.get('target_version_id') or snap_recipe_id)
             snap_scale = float(plan_snapshot.get('scale', 1.0))
             snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
             snap_notes = plan_snapshot.get('notes', '')
@@ -38,6 +40,7 @@ class BatchOperationsService(BaseService):
             snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
             snap_portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
+            snap_lineage = plan_snapshot.get('lineage_snapshot')
 
             recipe = None
 
@@ -72,7 +75,7 @@ class BatchOperationsService(BaseService):
 
             batch = None
             for attempt in range(3):
-                recipe = Recipe.query.filter_by(id=snap_recipe_id).with_for_update().first()
+                recipe = Recipe.query.filter_by(id=snap_target_version_id).with_for_update().first()
                 if not recipe:
                     return None, "Recipe not found"
                 # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
@@ -89,8 +92,11 @@ class BatchOperationsService(BaseService):
                     # Create the batch
                     print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning snapshot: {portion_snap}")
                 label_code = generate_batch_label_code(recipe)
+                lineage_id = snap_lineage or generate_lineage_id(recipe)
                 batch = Batch(
                     recipe_id=snap_recipe_id,
+                    target_version_id=snap_target_version_id,
+                    lineage_id=lineage_id,
                     label_code=label_code,
                     batch_type=snap_batch_type,
                     projected_yield=projected_yield,
@@ -198,6 +204,7 @@ class BatchOperationsService(BaseService):
                             'projected_yield': projected_yield,
                             'projected_yield_unit': projected_yield_unit,
                             'label_code': batch.label_code,
+                            'lineage_id': batch.lineage_id,
                             'portioning': portion_snap
                         },
                         organization_id=batch.organization_id,

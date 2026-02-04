@@ -7,13 +7,16 @@ Handles CRUD operations for recipes with proper service integration.
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+import sqlalchemy as sa
+
 from flask_login import current_user
 
 from ...extensions import db
-from ...models import InventoryItem, Recipe, RecipeIngredient
+from ...models import InventoryItem, Recipe, RecipeIngredient, RecipeGroup
 from ...models.recipe import RecipeConsumable
 from ...services.event_emitter import EventEmitter
 from ...utils.code_generator import generate_recipe_prefix
+from ...services.lineage_service import generate_group_prefix, generate_variation_prefix
 from ._constants import _UNSET
 from ._helpers import (
     _derive_label_prefix,
@@ -29,6 +32,75 @@ from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
 
 logger = logging.getLogger(__name__)
+
+def _derive_variation_name(name: str | None, parent_name: str | None) -> str | None:
+    if not name:
+        return None
+    if parent_name:
+        try:
+            parent_lower = parent_name.strip().lower()
+            name_lower = name.strip().lower()
+            if name_lower.startswith(parent_lower):
+                suffix = name.strip()[len(parent_name):].strip(" -:")
+                if suffix:
+                    return suffix
+        except Exception:
+            pass
+    return name
+
+
+def _next_version_number(
+    recipe_group_id: int | None,
+    *,
+    is_master: bool,
+    variation_name: str | None,
+) -> int:
+    if not recipe_group_id:
+        return 1
+    query = Recipe.query.filter(
+        Recipe.recipe_group_id == recipe_group_id,
+        Recipe.is_master.is_(is_master),
+    )
+    if not is_master:
+        query = query.filter(Recipe.variation_name == variation_name)
+    max_ver = query.with_entities(sa.func.max(Recipe.version_number)).scalar()
+    return int(max_ver or 0) + 1
+
+
+def _next_test_sequence(
+    recipe_group_id: int | None,
+    *,
+    is_master: bool,
+    variation_name: str | None,
+) -> int:
+    if not recipe_group_id:
+        return 1
+    query = Recipe.query.filter(
+        Recipe.recipe_group_id == recipe_group_id,
+        Recipe.is_master.is_(is_master),
+        Recipe.test_sequence.isnot(None),
+    )
+    if not is_master:
+        query = query.filter(Recipe.variation_name == variation_name)
+    max_test = query.with_entities(sa.func.max(Recipe.test_sequence)).scalar()
+    return int(max_test or 0) + 1
+
+
+def _ensure_recipe_group(
+    *,
+    recipe_org_id: int,
+    group_name: str,
+    group_prefix: str | None = None,
+) -> RecipeGroup:
+    prefix = group_prefix or generate_group_prefix(group_name, recipe_org_id)
+    recipe_group = RecipeGroup(
+        organization_id=recipe_org_id,
+        name=group_name,
+        prefix=prefix,
+    )
+    db.session.add(recipe_group)
+    db.session.flush()
+    return recipe_group
 
 
 def create_recipe(name: str, description: str = "", instructions: str = "",
@@ -54,7 +126,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  cover_image_url: str | None = None,
                  skin_opt_in: bool | None = None,
                  remove_cover_image: bool = False,
-                 is_sellable: bool | None = None) -> Tuple[bool, Any]:
+                 is_sellable: bool | None = None,
+                 recipe_group_id: int | None = None,
+                 group_name: str | None = None,
+                 group_prefix: str | None = None,
+                 variation_name: str | None = None,
+                 parent_master_id: int | None = None,
+                 test_sequence: int | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -127,6 +205,83 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         recipe_org_id = current_org_id if current_org_id else (1)
 
+        recipe_group = None
+        if recipe_group_id:
+            recipe_group = db.session.get(RecipeGroup, recipe_group_id)
+        if not recipe_group and parent_recipe:
+            recipe_group = parent_recipe.recipe_group if parent_recipe.recipe_group_id else None
+            if not recipe_group:
+                inherited_prefix = parent_recipe.label_prefix or None
+                if inherited_prefix:
+                    collision = RecipeGroup.query.filter_by(
+                        organization_id=recipe_org_id,
+                        prefix=inherited_prefix,
+                    ).first()
+                    if collision:
+                        inherited_prefix = None
+                recipe_group = _ensure_recipe_group(
+                    recipe_org_id=recipe_org_id,
+                    group_name=parent_recipe.name or (group_name or name),
+                    group_prefix=inherited_prefix,
+                )
+                parent_recipe.recipe_group_id = recipe_group.id
+        if not recipe_group:
+            recipe_group = _ensure_recipe_group(
+                recipe_org_id=recipe_org_id,
+                group_name=group_name or name,
+                group_prefix=group_prefix,
+            )
+
+        is_master = not bool(parent_recipe_id or parent_master_id)
+        resolved_variation_name = None
+        resolved_variation_prefix = None
+        if not is_master:
+            resolved_variation_name = variation_name or _derive_variation_name(
+                name, parent_recipe.name if parent_recipe else None
+            )
+            existing_variation = None
+            if recipe_group and resolved_variation_name:
+                existing_variation = Recipe.query.filter(
+                    Recipe.recipe_group_id == recipe_group.id,
+                    Recipe.is_master.is_(False),
+                    Recipe.variation_name == resolved_variation_name,
+                ).order_by(Recipe.version_number.desc()).first()
+            if existing_variation and existing_variation.variation_prefix:
+                resolved_variation_prefix = existing_variation.variation_prefix
+            else:
+                resolved_variation_prefix = generate_variation_prefix(
+                    resolved_variation_name or name,
+                    recipe_group.id if recipe_group else None,
+                )
+
+        version_number = _next_version_number(
+            recipe_group.id if recipe_group else None,
+            is_master=is_master,
+            variation_name=resolved_variation_name,
+        )
+
+        resolved_parent_master = None
+        if not is_master:
+            if parent_master_id:
+                resolved_parent_master = db.session.get(Recipe, parent_master_id)
+            if not resolved_parent_master and parent_recipe:
+                resolved_parent_master = (
+                    parent_recipe if parent_recipe.is_master else parent_recipe.parent_master
+                )
+            if not resolved_parent_master and recipe_group:
+                resolved_parent_master = Recipe.query.filter(
+                    Recipe.recipe_group_id == recipe_group.id,
+                    Recipe.is_master.is_(True),
+                ).order_by(Recipe.version_number.desc()).first()
+
+        resolved_test_sequence = None
+        if normalized_status == 'draft':
+            resolved_test_sequence = test_sequence or _next_test_sequence(
+                recipe_group.id if recipe_group else None,
+                is_master=is_master,
+                variation_name=resolved_variation_name,
+            )
+
         origin_context = _build_org_origin_context(
             target_org_id=recipe_org_id,
             parent_recipe=parent_recipe,
@@ -140,6 +295,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             predicted_yield=derived_yield,
             predicted_yield_unit=derived_unit,
             organization_id=recipe_org_id,
+            recipe_group_id=recipe_group.id if recipe_group else None,
+            is_master=is_master,
+            variation_name=resolved_variation_name,
+            variation_prefix=resolved_variation_prefix,
+            version_number=version_number,
+            parent_master_id=resolved_parent_master.id if resolved_parent_master else None,
+            test_sequence=resolved_test_sequence,
             parent_recipe_id=parent_recipe_id,
             cloned_from_id=cloned_from_id,
             label_prefix=final_label_prefix,
@@ -324,6 +486,63 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         target_status = _normalize_status(status if status is not None else recipe.status)
         allow_partial = target_status == 'draft'
         recipe.status = target_status
+
+        if recipe.parent_recipe_id and recipe.is_master:
+            recipe.is_master = False
+
+        if recipe.recipe_group_id is None and recipe.organization_id:
+            parent_candidate = recipe.parent
+            if not parent_candidate and recipe.parent_recipe_id:
+                parent_candidate = db.session.get(Recipe, recipe.parent_recipe_id)
+            if parent_candidate and parent_candidate.recipe_group_id:
+                recipe.recipe_group_id = parent_candidate.recipe_group_id
+            else:
+                inherited_prefix = getattr(parent_candidate, "label_prefix", None) or recipe.label_prefix
+                if inherited_prefix:
+                    collision = RecipeGroup.query.filter_by(
+                        organization_id=recipe.organization_id,
+                        prefix=inherited_prefix,
+                    ).first()
+                    if collision:
+                        inherited_prefix = None
+                recipe_group = _ensure_recipe_group(
+                    recipe_org_id=recipe.organization_id,
+                    group_name=(parent_candidate.name if parent_candidate else recipe.name),
+                    group_prefix=inherited_prefix,
+                )
+                recipe.recipe_group_id = recipe_group.id
+                if parent_candidate and not parent_candidate.recipe_group_id:
+                    parent_candidate.recipe_group_id = recipe_group.id
+
+        if not recipe.is_master:
+            if not recipe.variation_name:
+                recipe.variation_name = _derive_variation_name(
+                    recipe.name, recipe.parent.name if recipe.parent else None
+                )
+            if not recipe.variation_prefix:
+                recipe.variation_prefix = generate_variation_prefix(
+                    recipe.variation_name or recipe.name,
+                    recipe.recipe_group_id,
+                )
+            if recipe.parent_master_id is None:
+                resolved_parent_master = recipe.parent if recipe.parent and recipe.parent.is_master else recipe.parent_master
+                if not resolved_parent_master and recipe.recipe_group_id:
+                    resolved_parent_master = Recipe.query.filter(
+                        Recipe.recipe_group_id == recipe.recipe_group_id,
+                        Recipe.is_master.is_(True),
+                    ).order_by(Recipe.version_number.desc()).first()
+                if resolved_parent_master:
+                    recipe.parent_master_id = resolved_parent_master.id
+
+        if target_status == 'draft':
+            if recipe.test_sequence is None:
+                recipe.test_sequence = _next_test_sequence(
+                    recipe.recipe_group_id,
+                    is_master=recipe.is_master,
+                    variation_name=recipe.variation_name,
+                )
+        else:
+            recipe.test_sequence = None
 
         # Update basic fields
         if name is not None:
@@ -547,6 +766,8 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
             if (
                 not recipe.is_public
                 or recipe.marketplace_status != "listed"
+                or recipe.status != "published"
+                or recipe.test_sequence is not None
                 or recipe.marketplace_blocked
             ):
                 raise PermissionError("Recipe is not available for import")

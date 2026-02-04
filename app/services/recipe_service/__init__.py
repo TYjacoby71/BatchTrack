@@ -13,6 +13,7 @@ from ._core import (
 # Production planning moved to dedicated service package
 from ..production_planning import plan_production_comprehensive as plan_production
 from ._scaling import scale_recipe
+from ._merge import build_rebased_ingredients
 from ._validation import validate_recipe_data
 from ..stock_check.core import UniversalStockCheckService
 
@@ -25,7 +26,8 @@ def check_recipe_stock(recipe, scale: float = 1.0):
 __all__ = [
     'create_recipe', 'update_recipe', 'delete_recipe', 'get_recipe_details',
     'duplicate_recipe', 'plan_production', 'scale_recipe',
-    'validate_recipe_data', 'check_recipe_stock'
+    'validate_recipe_data', 'check_recipe_stock',
+    'build_rebased_ingredients',
 ]
 
 # LEGACY SHIM: Backwards compatibility wrapper for consumers still importing RecipeService
