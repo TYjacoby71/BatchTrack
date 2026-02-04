@@ -231,11 +231,11 @@ class BaseConfig:
     GOOGLE_OAUTH_CLIENT_SECRET = env.str('GOOGLE_OAUTH_CLIENT_SECRET')
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 15),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
         'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
         'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 900),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 15),
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
         'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
         'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
@@ -312,11 +312,11 @@ class StagingConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
         'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
         'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
         'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
@@ -333,11 +333,11 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 20),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 20),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
         'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 45),
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
         'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
         'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
