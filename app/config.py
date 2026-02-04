@@ -239,6 +239,9 @@ class BaseConfig:
         'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
         'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
     }
+    DB_STATEMENT_TIMEOUT_MS = env.int('DB_STATEMENT_TIMEOUT_MS', 15000)
+    DB_LOCK_TIMEOUT_MS = env.int('DB_LOCK_TIMEOUT_MS', 5000)
+    DB_IDLE_TX_TIMEOUT_MS = env.int('DB_IDLE_TX_TIMEOUT_MS', 60000)
 
     BILLING_CACHE_ENABLED = env.bool('BILLING_CACHE_ENABLED', True)
     BILLING_GATE_CACHE_TTL_SECONDS = env.int('BILLING_GATE_CACHE_TTL_SECONDS', 60)

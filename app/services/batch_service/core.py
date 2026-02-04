@@ -2,6 +2,7 @@
 import logging
 from datetime import datetime
 from sqlalchemy import extract, func
+from sqlalchemy.orm.attributes import set_committed_value
 from flask_login import current_user
 from flask import session
 
@@ -133,7 +134,16 @@ class BatchService(BaseService):
                 except Exception:
                     extra_consumable_total = 0
 
-                batch.total_cost = ingredient_total + container_total + consumable_total + extra_ingredient_total + extra_container_total + extra_consumable_total
+                total_cost = (
+                    ingredient_total
+                    + container_total
+                    + consumable_total
+                    + extra_ingredient_total
+                    + extra_container_total
+                    + extra_consumable_total
+                )
+                # Avoid persisting recalculated cost on read paths.
+                set_committed_value(batch, "total_cost", total_cost)
 
             return batches
 
