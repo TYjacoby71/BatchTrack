@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.extensions import db
 from app.models.batch import BatchLabelCounter
+from app.models.user import User
 from app.models.recipe import Recipe
 from app.models.db_dialect import is_postgres
 from app.utils.timezone_utils import TimezoneUtils
@@ -24,6 +25,18 @@ def generate_batch_label_code(recipe: Recipe) -> str:
     current_year = TimezoneUtils.utc_now().year
 
     org_id = recipe.organization_id
+    if not org_id and getattr(recipe, "organization", None):
+        org_id = getattr(recipe.organization, "id", None)
+    if not org_id and getattr(recipe, "created_by", None):
+        creator = db.session.get(User, recipe.created_by)
+        org_id = getattr(creator, "organization_id", None) if creator else None
+    if not org_id:
+        try:
+            from flask_login import current_user
+            if current_user and current_user.is_authenticated:
+                org_id = current_user.organization_id
+        except Exception:
+            org_id = None
     if not org_id:
         raise ValueError("Batch label generation requires a valid organization id.")
 

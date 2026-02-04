@@ -9,6 +9,8 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.utils.timezone_utils import TimezoneUtils
     from datetime import timedelta
 
+    from app.services.quantity_base import to_base_quantity, sync_lot_quantities_from_base, sync_item_quantity_from_base
+
     # Create perishable inventory item
     item = InventoryItem(
         name="Expired Apple",
@@ -21,6 +23,8 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     )
     db_session.add(item)
     db_session.flush()
+    item.quantity_base = to_base_quantity(0.0, item.unit, ingredient_id=item.id, density=item.density)
+    sync_item_quantity_from_base(item)
 
     # Create an expired lot for the item
     expired_dt = TimezoneUtils.utc_now() - timedelta(days=1)
@@ -35,8 +39,11 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
         source_type="restock",
         organization_id=test_org.id
     )
+    lot.remaining_quantity_base = to_base_quantity(100.0, lot.unit, ingredient_id=item.id, density=item.density)
+    lot.original_quantity_base = lot.remaining_quantity_base
     db_session.add(lot)
     db_session.flush()
+    sync_lot_quantities_from_base(lot, item)
 
     # Minimal recipe and batch
     recipe = Recipe(name="Test Recipe", predicted_yield=100, predicted_yield_unit="g", organization_id=test_org.id)
