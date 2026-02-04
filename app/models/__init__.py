@@ -7,10 +7,11 @@ from .mixins import ScopedModelMixin
 from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
 )
-from .recipe import Recipe, RecipeIngredient, RecipeConsumable, RecipeLineage
+from .recipe import Recipe, RecipeGroup, RecipeIngredient, RecipeConsumable, RecipeLineage
 from .recipe_marketplace import RecipeModerationEvent
 from .batch import (
     Batch,
+    BatchSequence,
     BatchIngredient,
     BatchContainer,
     ExtraBatchContainer,

@@ -31,6 +31,7 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
 
     # Contextual Information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    lineage_id = db.Column(db.String(64), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     quantity_used = db.Column(db.Float, default=0.0)
