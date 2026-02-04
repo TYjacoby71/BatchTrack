@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Tuple
 
 from app.models import Unit
+from sqlalchemy import func
 from app.services.unit_conversion import ConversionEngine
 
 DEFAULT_SCALE = 1_000_000
@@ -39,8 +40,15 @@ def _to_decimal(value: object) -> Decimal:
 def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
     if not unit_name:
         return None
+    unit_key = str(unit_name).strip()
+    if not unit_key:
+        return None
+    unit_key_lower = unit_key.lower()
     return Unit.query.filter(
-        (Unit.name == unit_name) | (Unit.symbol == unit_name)
+        (Unit.name == unit_key) |
+        (Unit.symbol == unit_key) |
+        (func.lower(Unit.name) == unit_key_lower) |
+        (func.lower(Unit.symbol) == unit_key_lower)
     ).first()
 
 

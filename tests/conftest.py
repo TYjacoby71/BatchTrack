@@ -91,9 +91,16 @@ def _create_test_data():
     from app.models.models import Organization, User
     from app.models.product_category import ProductCategory
     from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
+    from app.seeders.unit_seeder import seed_units
+    from app.models import Unit
     from app.extensions import db
 
     seed_consolidated_permissions()
+    seed_units()
+
+    if not Unit.query.filter_by(name='piece').first():
+        db.session.add(Unit(name='piece', symbol='pc', unit_type='count', base_unit='count', conversion_factor=1.0, is_custom=False, is_mapped=True))
+        db.session.commit()
 
     # Create a test subscription tier
     tier = SubscriptionTier(
