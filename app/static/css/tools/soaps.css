@@ -806,16 +806,8 @@ soapToolPage {
   justify-content: center;
 }
 @container soap-stage (max-width: 520px) {
-  #soapToolPage #soapStage2Pane .oil-row,
-  #soapToolPage .fragrance-row {
+  #soapToolPage #soapStage2Pane .oil-row {
     flex-wrap: wrap;
-  }
-  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
-  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
-  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-weight-col,
-  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-remove-col {
-    flex: 0 0 100%;
-    max-width: 100%;
   }
   #soapToolPage .oil-row .oil-name-col {
     flex: 0 0 100%;
@@ -831,11 +823,6 @@ soapToolPage {
     max-width: 100%;
     justify-content: flex-end;
   }
-  #soapToolPage .fragrance-row .fragrance-remove-col {
-    flex: 0 0 100%;
-    max-width: 100%;
-    justify-content: flex-end;
-  }
 }
 @container soap-stage (max-width: 360px) {
   #soapToolPage #soapStage4Pane .additive-row .additive-percent-col,
@@ -847,6 +834,16 @@ soapToolPage {
   }
 }
 @container soap-stage (max-width: 440px) {
+  #soapToolPage .fragrance-row {
+    flex-wrap: wrap;
+  }
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-name-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-percent-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-weight-col,
+  #soapToolPage #soapStage5Pane .fragrance-row .fragrance-remove-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
   #soapToolPage .oil-row .oil-weight-col,
   #soapToolPage .oil-row .oil-percent-col {
     flex: 0 0 100%;
