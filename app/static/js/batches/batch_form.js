@@ -246,23 +246,3 @@ function saveBatchNotes() {
     body: JSON.stringify({ notes, tags })
   });
 }
-
-function cancelBatch() {
-  if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-    const batchId = window.location.pathname.split('/').pop();
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/batches/cancel/${batchId}`;
-
-    // Get CSRF token from the form input element
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
-
-    form.appendChild(csrfInput);
-    document.body.appendChild(form);
-    form.submit();
-  }
-}

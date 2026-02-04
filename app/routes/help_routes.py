@@ -196,7 +196,7 @@ def help_overview():
             "points": [
                 "Plan Production builds an immutable PlanSnapshot, including intermediate components and target SKUs.",
                 "Container auto-selection converts projected yield into vessel capacity; you can override it manually at any time.",
-                "Batch screens track timers, extras, notes, costing, and the finish/cancel/fail workflows that control deductions.",
+                "Batch screens track timers, extras, notes, costing, and the finish/fail workflows that control deductions.",
             ],
             "details": [
                 {
