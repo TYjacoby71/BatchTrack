@@ -109,7 +109,7 @@ def api_debug_expiration():
     sku_lots = db.session.query(InventoryLot).join(
         InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id
     ).filter(and_(
-        InventoryLot.remaining_quantity > 0,
+        InventoryLot.remaining_quantity_base > 0,
         InventoryItem.type == 'product',
         InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
     )).all()

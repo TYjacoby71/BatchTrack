@@ -233,7 +233,7 @@ def get_sku_fifo_status(sku_id):
     fresh_lots = InventoryLot.query.filter(
         InventoryLot.inventory_item_id == inventory_item_id,
         InventoryLot.organization_id == current_user.organization_id,
-        InventoryLot.remaining_quantity > 0,
+        InventoryLot.remaining_quantity_base > 0,
         db.or_(
             InventoryLot.expiration_date.is_(None),
             InventoryLot.expiration_date >= today
@@ -243,7 +243,7 @@ def get_sku_fifo_status(sku_id):
     expired_lots = InventoryLot.query.filter(
         InventoryLot.inventory_item_id == inventory_item_id,
         InventoryLot.organization_id == current_user.organization_id,
-        InventoryLot.remaining_quantity > 0,
+        InventoryLot.remaining_quantity_base > 0,
         InventoryLot.expiration_date.isnot(None),
         InventoryLot.expiration_date < today
     ).order_by(InventoryLot.received_date.asc()).all()
@@ -302,7 +302,7 @@ def dispose_expired_sku(sku_id):
     expired_lots = InventoryLot.query.filter(
         InventoryLot.inventory_item_id == inventory_item_id,
         InventoryLot.organization_id == current_user.organization_id,
-        InventoryLot.remaining_quantity > 0,
+        InventoryLot.remaining_quantity_base > 0,
         InventoryLot.expiration_date.isnot(None),
         InventoryLot.expiration_date < today
     ).all()

@@ -42,22 +42,23 @@ def _expired_quantity_map(item_ids):
     rows = (
         db.session.query(
             InventoryLot.inventory_item_id,
-            func.sum(InventoryLot.remaining_quantity),
+            func.sum(InventoryLot.remaining_quantity_base),
         )
         .filter(
             InventoryLot.inventory_item_id.in_(item_ids),
-            InventoryLot.remaining_quantity > 0,
+            InventoryLot.remaining_quantity_base > 0,
             InventoryLot.expiration_date != None,
             InventoryLot.expiration_date < today,
         )
         .group_by(InventoryLot.inventory_item_id)
         .all()
     )
-    return {row[0]: float(row[1] or 0) for row in rows}
+    return {row[0]: int(row[1] or 0) for row in rows}
 
 
 def _serialize_inventory_items(items):
     from ...blueprints.expiration.services import ExpirationService
+    from app.services.quantity_base import from_base_quantity
 
     serialized = []
     total_value = 0.0
@@ -67,7 +68,13 @@ def _serialize_inventory_items(items):
     for item in items:
         quantity = float(item.quantity or 0.0)
         total_value += quantity * float(item.cost_per_unit or 0.0)
-        expired_qty = expired_map.get(item.id, 0.0)
+        expired_base = expired_map.get(item.id, 0)
+        expired_qty = from_base_quantity(
+            base_amount=expired_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
         available_qty = max(0.0, quantity - expired_qty)
         freshness = (
             ExpirationService.get_weighted_average_freshness(item.id)
@@ -259,6 +266,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='unlink_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
                     created_by=getattr(current_user, 'id', None),
@@ -272,6 +280,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='relink_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Relinked to GlobalItem '{gi.name}'",
                     created_by=getattr(current_user, 'id', None),
@@ -286,6 +295,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='sync_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Re-synced from GlobalItem '{gi.name}'",
                     created_by=getattr(current_user, 'id', None),
@@ -511,7 +521,7 @@ def view_inventory(id):
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )
@@ -544,7 +554,7 @@ def view_inventory(id):
     # When FIFO toggle is OFF, show only active lots
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
     if not fifo_filter:  # fifo_filter=False means show only active lots
-        lots_query = lots_query.filter(InventoryLot.remaining_quantity > 0)
+        lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
     lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
 
     from datetime import datetime
@@ -560,7 +570,7 @@ def view_inventory(id):
         expired_entries = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )

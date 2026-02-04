@@ -189,7 +189,7 @@ class ExpirationService:
             joinedload(InventoryLot.inventory_item)
         ).filter(
             and_(
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryItem.is_perishable == True,
                 InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
@@ -249,7 +249,7 @@ class ExpirationService:
             joinedload(InventoryLot.inventory_item)
         ).filter(
             and_(
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryItem.type == 'product',
                 InventoryItem.is_perishable == True,
                 InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
@@ -369,7 +369,7 @@ class ExpirationService:
         lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == inventory_item_id,
-                InventoryLot.remaining_quantity > 0
+                InventoryLot.remaining_quantity_base > 0
             )
         ).all()
 
@@ -431,7 +431,7 @@ class ExpirationService:
         # Query lots for this item with org scoping
         base_filter = [
             InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.remaining_quantity > 0,
+            InventoryLot.remaining_quantity_base > 0,
             InventoryLot.expiration_date.isnot(None)
         ]
 
@@ -464,7 +464,7 @@ class ExpirationService:
         lots = db.session.query(InventoryLot).filter(
             and_(
                 InventoryLot.inventory_item_id == inventory_item_id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date.isnot(None)
             )
         ).all()
@@ -580,7 +580,7 @@ class ExpirationService:
                     InventoryLot.expiration_date.isnot(None),
                     InventoryLot.expiration_date >= now_utc,
                     InventoryLot.expiration_date <= future_date,
-                    InventoryLot.remaining_quantity > 0,
+                    InventoryLot.remaining_quantity_base > 0,
                     InventoryItem.is_perishable == True,
                     InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
                 )
@@ -624,7 +624,7 @@ class ExpirationService:
 
         query = db.session.query(InventoryLot).join(InventoryItem).filter(
             and_(
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date.isnot(None),
                 InventoryLot.expiration_date < now_utc,
                 InventoryItem.is_perishable == True,
@@ -643,7 +643,7 @@ class ExpirationService:
 
         query = db.session.query(InventoryLot).join(InventoryItem).filter(
             and_(
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date.isnot(None),
                 InventoryLot.expiration_date > now_utc,
                 InventoryLot.expiration_date <= cutoff_date_utc,

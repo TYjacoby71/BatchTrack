@@ -25,7 +25,7 @@ class CombinedInventoryAlertService:
             expired_fifo_entries = db.session.query(InventoryLot).filter(
                 and_(
                     InventoryLot.expiration_date < current_time,
-                    InventoryLot.remaining_quantity > 0,
+                    InventoryLot.remaining_quantity_base > 0,
                     InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
                 )
             ).all()
@@ -35,7 +35,7 @@ class CombinedInventoryAlertService:
                 and_(
                     InventoryLot.expiration_date >= current_time,
                     InventoryLot.expiration_date <= expiration_cutoff,
-                    InventoryLot.remaining_quantity > 0
+                    InventoryLot.remaining_quantity_base > 0
                 ),
                 InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
             ).all()

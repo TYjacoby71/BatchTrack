@@ -79,7 +79,7 @@ def weighted_average_cost_for_item(inventory_item_id: int) -> float:
                 and_(
                     InventoryLot.inventory_item_id == item.id,
                     InventoryLot.organization_id == item.organization_id,
-                    InventoryLot.remaining_quantity > 0
+                    InventoryLot.remaining_quantity_base > 0
                 )
             )
             .all()

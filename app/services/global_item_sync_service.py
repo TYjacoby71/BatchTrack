@@ -163,6 +163,7 @@ class GlobalItemSyncService:
                             inventory_item_id=inv.id,
                             change_type="sync_global",
                             quantity_change=0.0,
+                            quantity_change_base=0,
                             unit=inv.unit or "count",
                             notes=f"Synced fields from GlobalItem '{global_item.name}'",
                             created_by=None,

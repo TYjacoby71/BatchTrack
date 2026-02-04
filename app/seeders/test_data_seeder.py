@@ -93,7 +93,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     def reset_inventory_item(item: InventoryItem):
         UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
         InventoryLot.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
-        item.quantity = 0.0
+        from app.services.quantity_base import sync_item_quantity_from_base
+        item.quantity_base = 0
+        sync_item_quantity_from_base(item)
         db.session.flush()
 
     def remove_existing_batches(labels: List[str]):

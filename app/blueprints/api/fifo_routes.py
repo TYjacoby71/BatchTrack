@@ -15,6 +15,7 @@ from ...models.unified_inventory_history import UnifiedInventoryHistory
 from ...models.inventory_lot import InventoryLot
 from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
+from sqlalchemy import or_
 from ...utils.inventory_event_code_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
@@ -31,7 +32,12 @@ def get_fifo_details(inventory_id):
         
         # Get current FIFO entries (available stock) from UnifiedInventoryHistory
         fifo_entries = UnifiedInventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
-            .filter(UnifiedInventoryHistory.remaining_quantity > 0) \
+            .filter(
+                or_(
+                    UnifiedInventoryHistory.remaining_quantity_base > 0,
+                    UnifiedInventoryHistory.remaining_quantity > 0
+                )
+            ) \
             .order_by(UnifiedInventoryHistory.timestamp.asc()).all()
         
         # Get batch usage if batch_id provided

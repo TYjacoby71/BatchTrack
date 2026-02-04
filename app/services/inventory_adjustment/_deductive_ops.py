@@ -54,7 +54,7 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _handle_deductive_operation(item, quantity, change_type, notes, created_by, customer=None, sale_price=None, order_id=None, batch_id=None):
+def _handle_deductive_operation(item, quantity, quantity_base, change_type, notes, created_by, customer=None, sale_price=None, order_id=None, batch_id=None):
     """
     Universal handler for all deductive operations.
     Returns (success, message, quantity_delta) - does NOT modify item.quantity
@@ -84,11 +84,13 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
 
         # Normalize sign: callers may pass negative numbers for deductions; use absolute for processing
         qty_abs = abs(float(quantity))
+        qty_abs_base = abs(int(quantity_base))
 
         # Use FIFO deduction logic (valuation handled inside based on org/batch method)
         success, message = deduct_fifo_inventory(
             item_id=item.id,
             quantity_to_deduct=qty_abs,
+            quantity_to_deduct_base=qty_abs_base,
             change_type=change_type,
             notes=enhanced_notes,
             created_by=created_by,
@@ -101,13 +103,14 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
 
         # Return the actual quantity delta (negative for deductions)
         quantity_delta = -qty_abs
+        quantity_delta_base = -qty_abs_base
 
         # Get description from mapping or use generic one
         description = DEDUCTION_DESCRIPTIONS.get(change_type, f'Used {quantity} from inventory')
         success_message = description.format(quantity)
 
         logger.info(f"DEDUCTIVE SUCCESS: {change_type} will decrease item {item.id} by {abs(quantity_delta)}")
-        return True, success_message, quantity_delta
+        return True, success_message, quantity_delta, quantity_delta_base
 
     except Exception as e:
         logger.error(f"DEDUCTIVE ERROR: {change_type} operation failed: {str(e)}")

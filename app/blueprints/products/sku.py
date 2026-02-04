@@ -281,9 +281,22 @@ def execute_merge():
             if source_sku:
                 target_sku.is_perishable = source_sku.is_perishable
 
-        # Merge inventory quantities
-        total_quantity = sum(sku.quantity for sku in skus)
-        target_sku.inventory_item.quantity = total_quantity
+        # Merge inventory quantities (base units)
+        from app.services.quantity_base import from_base_quantity, sync_item_quantity_from_base
+
+        total_quantity_base = sum(
+            int(getattr(sku.inventory_item, "quantity_base", 0) or 0)
+            for sku in skus
+            if sku.inventory_item
+        )
+        target_sku.inventory_item.quantity_base = int(total_quantity_base)
+        sync_item_quantity_from_base(target_sku.inventory_item)
+        total_quantity = from_base_quantity(
+            base_amount=total_quantity_base,
+            unit_name=target_sku.inventory_item.unit,
+            ingredient_id=target_sku.inventory_item.id,
+            density=target_sku.inventory_item.density,
+        )
 
         # Calculate weighted average cost
         total_value = sum(sku.quantity * (sku.cost_per_unit or 0) for sku in skus)

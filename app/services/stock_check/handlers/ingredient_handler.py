@@ -42,7 +42,7 @@ class IngredientHandler(BaseInventoryHandler):
         # Get available FIFO lots (we will exclude expired below when perishable)
         available_lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == ingredient.id,
-            InventoryLot.remaining_quantity > 0
+            InventoryLot.remaining_quantity_base > 0
         )
 
         # Filter out expired lots if item is perishable

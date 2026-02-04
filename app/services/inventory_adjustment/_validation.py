@@ -1,6 +1,7 @@
 
 import logging
 from app.models import db, InventoryItem
+from app.services.quantity_base import from_base_quantity
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -22,17 +23,27 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
-            InventoryLot.remaining_quantity > 0
+            InventoryLot.remaining_quantity_base > 0
         )
     ).all()
 
     # Calculate total from actual lot quantities
-    fifo_total = sum(float(lot.remaining_quantity) for lot in active_lots)
-    inventory_qty = float(item.quantity or 0)
+    fifo_total_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
+    inventory_qty_base = int(getattr(item, "quantity_base", 0) or 0)
+    is_valid = inventory_qty_base == fifo_total_base
 
-    # Allow small floating point differences (0.001 tolerance)
-    tolerance = 0.001
-    is_valid = abs(inventory_qty - fifo_total) < tolerance
+    fifo_total = from_base_quantity(
+        base_amount=fifo_total_base,
+        unit_name=item.unit,
+        ingredient_id=item.id,
+        density=item.density,
+    )
+    inventory_qty = from_base_quantity(
+        base_amount=inventory_qty_base,
+        unit_name=item.unit,
+        ingredient_id=item.id,
+        density=item.density,
+    )
 
     if not is_valid:
         logger.error(f"FIFO SYNC MISMATCH for item {item_id} ({item.name}):")

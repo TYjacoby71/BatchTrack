@@ -32,7 +32,7 @@ class GlobalItemStatsService:
 		# Average age in inventory (days) based on lots still holding quantity
 		age_days = db.session.query(
 			func.avg(func.extract('epoch', func.now() - InventoryLot.received_date) / 86400.0)
-		).join(item_ids_subq, InventoryLot.inventory_item_id == item_ids_subq.c.id).filter(InventoryLot.remaining_quantity > 0).scalar()
+		).join(item_ids_subq, InventoryLot.inventory_item_id == item_ids_subq.c.id).filter(InventoryLot.remaining_quantity_base > 0).scalar()
 
 		# Average expired amounts (quantity and time to expiry) based on lots that are expired with remaining qty
 		expired_qty = db.session.query(func.avg(InventoryLot.remaining_quantity)).join(
@@ -40,7 +40,7 @@ class GlobalItemStatsService:
 		).filter(
 			InventoryLot.expiration_date.isnot(None),
 			InventoryLot.expiration_date < func.now(),
-			InventoryLot.remaining_quantity > 0
+			InventoryLot.remaining_quantity_base > 0
 		).scalar()
 
 		# Average days past expiration for expired lots
@@ -49,7 +49,7 @@ class GlobalItemStatsService:
 		).join(item_ids_subq, InventoryLot.inventory_item_id == item_ids_subq.c.id).filter(
 			InventoryLot.expiration_date.isnot(None),
 			InventoryLot.expiration_date < func.now(),
-			InventoryLot.remaining_quantity > 0
+			InventoryLot.remaining_quantity_base > 0
 		).scalar()
 
 		return {

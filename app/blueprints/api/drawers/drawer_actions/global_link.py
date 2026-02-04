@@ -123,6 +123,7 @@ def global_link_confirm():
                 inventory_item_id=inventory_item.id,
                 change_type='link_global',
                 quantity_change=0.0,
+                quantity_change_base=0,
                 unit=inventory_item.unit or 'count',
                 notes=f"Linked to GlobalItem '{global_item.name}' (was '{old_name}')",
                 created_by=getattr(current_user, 'id', None),
