@@ -76,6 +76,7 @@ def recipe_library():
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
             (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
         )
     )
@@ -137,6 +138,7 @@ def recipe_library():
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
             (Organization.recipe_library_blocked.is_(False))
             | (Organization.recipe_library_blocked.is_(None)),
         )
@@ -187,7 +189,9 @@ def recipe_library_detail(recipe_id: int, slug: str):
         .filter(
             Recipe.id == recipe_id,
             Recipe.is_public.is_(True),
+            Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
             (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
         )
         .first_or_404()
@@ -251,6 +255,7 @@ def organization_marketplace(organization_id: int):
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
         )
     )
 

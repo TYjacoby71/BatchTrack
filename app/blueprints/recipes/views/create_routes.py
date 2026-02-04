@@ -474,7 +474,13 @@ def import_recipe(recipe_id: int):
         flash("Select an organization before importing a recipe.", "error")
         return redirect(detail_url)
 
-    if not recipe.is_public or recipe.marketplace_status != 'listed' or recipe.marketplace_blocked:
+    if (
+        not recipe.is_public
+        or recipe.status != 'published'
+        or recipe.test_sequence is not None
+        or recipe.marketplace_status != 'listed'
+        or recipe.marketplace_blocked
+    ):
         flash("This recipe is not available for import right now.", "error")
         return redirect(detail_url)
 

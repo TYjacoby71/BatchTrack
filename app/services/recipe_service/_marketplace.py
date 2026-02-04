@@ -101,6 +101,13 @@ def _apply_marketplace_settings(
         recipe.cover_image_path = None
         recipe.cover_image_url = None
 
+    if getattr(recipe, "status", None) != "published" or getattr(recipe, "test_sequence", None):
+        recipe.sharing_scope = "private"
+        recipe.is_public = False
+        recipe.is_for_sale = False
+        recipe.sale_price = None
+        recipe.marketplace_status = "draft"
+
 
 __all__ = [
     "_apply_marketplace_settings",
