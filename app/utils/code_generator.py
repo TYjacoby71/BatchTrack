@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.extensions import db
 from app.models.batch import BatchLabelCounter
-from app.models.user import User
+from app.models import User
 from app.models.recipe import Recipe
 from app.models.db_dialect import is_postgres
 from app.utils.timezone_utils import TimezoneUtils
