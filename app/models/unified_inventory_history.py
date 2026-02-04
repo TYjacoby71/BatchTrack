@@ -18,12 +18,14 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     timestamp = db.Column(db.DateTime, default=_TZ.utc_now, nullable=False, index=True)
     change_type = db.Column(db.String(50), nullable=False, index=True)
     quantity_change = db.Column(db.Float, nullable=False)
+    quantity_change_base = db.Column(db.BigInteger, nullable=False, default=0)
     unit = db.Column(db.String(50), nullable=False)
     # Lot reference for tracking which lots were affected
     affected_lot_id = db.Column(db.Integer, db.ForeignKey('inventory_lot.id'), nullable=True)
 
     # Legacy FIFO fields (deprecated - use InventoryLot instead)
     remaining_quantity = db.Column(db.Float, nullable=True, default=0.0)  # DEPRECATED
+    remaining_quantity_base = db.Column(db.BigInteger, nullable=True)
     unit_cost = db.Column(db.Float, nullable=True, default=0.0)
     valuation_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('unified_inventory_history.id'), nullable=True)

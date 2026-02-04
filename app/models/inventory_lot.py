@@ -19,6 +19,8 @@ class InventoryLot(ScopedModelMixin, db.Model):
     # Lot tracking
     remaining_quantity = db.Column(db.Float, nullable=False, default=0.0)
     original_quantity = db.Column(db.Float, nullable=False)
+    remaining_quantity_base = db.Column(db.BigInteger, nullable=False, default=0)
+    original_quantity_base = db.Column(db.BigInteger, nullable=False, default=0)
     unit = db.Column(db.String(32), nullable=False)
     unit_cost = db.Column(db.Float, nullable=False, default=0.0)
     
@@ -81,6 +83,9 @@ class InventoryLot(ScopedModelMixin, db.Model):
         db.CheckConstraint('remaining_quantity >= 0', name='check_remaining_quantity_non_negative'),
         db.CheckConstraint('original_quantity > 0', name='check_original_quantity_positive'),
         db.CheckConstraint('remaining_quantity <= original_quantity', name='check_remaining_not_exceeds_original'),
+        db.CheckConstraint('remaining_quantity_base >= 0', name='check_remaining_quantity_base_non_negative'),
+        db.CheckConstraint('original_quantity_base > 0', name='check_original_quantity_base_positive'),
+        db.CheckConstraint('remaining_quantity_base <= original_quantity_base', name='check_remaining_base_not_exceeds_original'),
         db.Index('ix_inventory_lot_org', 'organization_id'),
     )
     
@@ -100,7 +105,7 @@ class InventoryLot(ScopedModelMixin, db.Model):
     @property
     def is_depleted(self):
         """Check if this lot is completely consumed"""
-        return self.remaining_quantity <= 0
+        return int(self.remaining_quantity_base or 0) <= 0
     
     # is_expired defined above (lines 57-63) using date compare;
     # retain a single implementation to avoid confusion.
@@ -119,11 +124,19 @@ class InventoryLot(ScopedModelMixin, db.Model):
         """
         if quantity < 0:
             return False
-        
-        if self.remaining_quantity < quantity:
+
+        from app.services.quantity_base import to_base_quantity, sync_lot_quantities_from_base
+        quantity_base = to_base_quantity(
+            amount=quantity,
+            unit_name=self.unit,
+            ingredient_id=self.inventory_item_id,
+            density=getattr(self.inventory_item, "density", None),
+        )
+        if int(self.remaining_quantity_base or 0) < int(quantity_base):
             return False
-        
-        self.remaining_quantity -= quantity
+
+        self.remaining_quantity_base = int(self.remaining_quantity_base or 0) - int(quantity_base)
+        sync_lot_quantities_from_base(self, self.inventory_item)
         return True
     
     def credit_back(self, quantity: float) -> bool:
@@ -133,9 +146,18 @@ class InventoryLot(ScopedModelMixin, db.Model):
         """
         if quantity < 0:
             return False
-        
-        if (self.remaining_quantity + quantity) > self.original_quantity:
+
+        from app.services.quantity_base import to_base_quantity, sync_lot_quantities_from_base
+        quantity_base = to_base_quantity(
+            amount=quantity,
+            unit_name=self.unit,
+            ingredient_id=self.inventory_item_id,
+            density=getattr(self.inventory_item, "density", None),
+        )
+        new_remaining_base = int(self.remaining_quantity_base or 0) + int(quantity_base)
+        if new_remaining_base > int(self.original_quantity_base or 0):
             return False
-        
-        self.remaining_quantity += quantity
+
+        self.remaining_quantity_base = new_remaining_base
+        sync_lot_quantities_from_base(self, self.inventory_item)
         return True
