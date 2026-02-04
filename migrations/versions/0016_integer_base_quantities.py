@@ -6,8 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0015_integer_base_quantities"
-down_revision = "0014_app_settings"
+revision = "0016_integer_base_quantities"
+down_revision = "0015_batch_label_counter"
 branch_labels = None
 depends_on = None
 
