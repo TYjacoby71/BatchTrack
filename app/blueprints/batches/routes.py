@@ -15,8 +15,8 @@ from ...services.stock_check.core import UniversalStockCheckService
 
 from . import batches_bp
 from .start_batch import start_batch_bp
-from .cancel_batch import cancel_batch_bp
 from .add_extra import add_extra_bp
+from .cancel_batch import cancel_batch_bp
 from .finish_batch import finish_batch_bp
 
 import logging

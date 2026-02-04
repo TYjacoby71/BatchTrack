@@ -88,6 +88,33 @@ class Batch(ScopedModelMixin, db.Model):
     cosm_emulsifier_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric"), nullable=True)
     cosm_preservative_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric"), nullable=True)
 
+
+class BatchLabelCounter(db.Model):
+    __tablename__ = "batch_label_counter"
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=False)
+    prefix = db.Column(db.String(16), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    next_sequence = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id",
+            "prefix",
+            "year",
+            name="uq_batch_label_counter_org_prefix_year",
+        ),
+        db.Index(
+            "ix_batch_label_counter_org_prefix_year",
+            "organization_id",
+            "prefix",
+            "year",
+        ),
+    )
+
 class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
     id = db.Column(db.Integer, primary_key=True)
