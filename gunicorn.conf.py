@@ -88,15 +88,4 @@ limit_request_fields = 100
 limit_request_field_size = 8192
 
 
-def post_worker_init(worker):
-    """Refresh Redis-backed clients after fork to avoid stale pools."""
-    try:
-        app = worker.app.wsgi()
-        from app import refresh_redis_backends
-
-        refresh_redis_backends(app)
-    except Exception as exc:
-        LOGGER.warning("Failed to refresh Redis backends post-fork: %s", exc)
-
-
 _log_runtime_configuration()

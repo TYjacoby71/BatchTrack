@@ -14,7 +14,7 @@ from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
 from .utils.cache_utils import should_bypass_cache
-from .utils.redis_pool import get_redis_pool, reset_redis_pool
+from .utils.redis_pool import LazyRedisClient, get_redis_pool
 
 logger = logging.getLogger(__name__)
 
@@ -203,13 +203,9 @@ def _configure_sessions(app: Flask) -> None:
 
     if session_redis_url:
         try:
-            import redis
+            import redis  # noqa: F401  # ensure package is available
 
-            pool = get_redis_pool(app)
-            if pool is not None:
-                session_redis = redis.Redis(connection_pool=pool)
-            else:
-                session_redis = redis.Redis.from_url(session_redis_url)
+            session_redis = LazyRedisClient(session_redis_url, app)
             session_backend = "redis"
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
@@ -250,23 +246,6 @@ def _configure_rate_limiter(app: Flask) -> None:
     if app.config.get("ENV") == "production" and storage_uri.startswith("memory://"):
         raise RuntimeError("Rate limiter storage must be Redis-backed in production.")
 
-
-def refresh_redis_backends(app: Flask) -> None:
-    """Rebuild Redis-backed clients after worker forks."""
-    if not app.config.get("REDIS_URL"):
-        return
-    try:
-        reset_redis_pool(app)
-        pool = get_redis_pool(app)
-        if pool is None:
-            logger.warning("Redis pool unavailable during refresh; keeping existing clients.")
-            return
-        _configure_cache(app)
-        _configure_sessions(app)
-        _configure_rate_limiter(app)
-        logger.info("Redis-backed clients refreshed after fork.")
-    except Exception as exc:  # pragma: no cover - defensive logging
-        logger.warning("Failed to refresh Redis-backed clients after fork: %s", exc)
 
 
 def _run_optional_create_all(app: Flask) -> None:
