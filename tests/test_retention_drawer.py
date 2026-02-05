@@ -45,6 +45,8 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     db_session.commit()
     recipe_id = recipe.id
 
+    from app.extensions import db
+    db.session.remove()
     # Act: check drawer
     r = client.get('/api/drawers/retention/check')
     assert r.status_code == 200
