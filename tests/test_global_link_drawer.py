@@ -50,7 +50,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
             sess['_user_id'] = str(user_id)
             sess['_fresh'] = True
             # Developer scoping to org
-                sess['dev_selected_org_id'] = org_id
+            sess['dev_selected_org_id'] = org_id
         # Check suggestions
         res = client.get('/api/drawers/global-link/check')
         assert res.status_code == 200
