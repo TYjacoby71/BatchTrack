@@ -92,8 +92,6 @@ class BatchOperationsService(BaseService):
                     return None, "Recipe not found"
                 if getattr(recipe, "is_archived", False):
                     return None, "Archived recipes cannot be used to start batches"
-                if recipe.test_sequence is None and not getattr(recipe, "is_current", False):
-                    return None, "Only current recipe versions can be used to start batches"
                 # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
                 projected_yield = (
                     float(snap_projected_yield)

@@ -75,8 +75,6 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         raise ValueError(f"Recipe {request.recipe_id} not found")
     if recipe.is_archived:
         raise ValueError("Archived recipes cannot be planned for production")
-    if recipe.test_sequence is None and not getattr(recipe, "is_current", False):
-        raise ValueError("Only current recipe versions can be planned for production")
 
     # 2. Validate ingredients using stock validation service
     ingredient_requirements = validate_ingredients_with_uscs(
