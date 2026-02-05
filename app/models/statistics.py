@@ -222,12 +222,14 @@ class OrganizationStats(db.Model):
             Recipe.is_master.is_(True),
             Recipe.test_sequence.is_(None),
             Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         ).count()
         self.total_variation_recipes = Recipe.query.filter(
             Recipe.organization_id == self.organization_id,
             Recipe.is_master.is_(False),
             Recipe.test_sequence.is_(None),
             Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         ).count()
         self.total_test_recipes = Recipe.query.filter(
             Recipe.organization_id == self.organization_id,

@@ -35,6 +35,7 @@ from ._origin import _build_org_origin_context, _resolve_is_sellable
 from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
 from ._current import apply_current_flag
+from ...utils.notes import append_timestamped_note
 
 logger = logging.getLogger(__name__)
 
@@ -311,9 +312,10 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         )
         pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
 
+        stamped_instructions = append_timestamped_note(None, instructions)
         recipe = Recipe(
             name=name,
-            instructions=instructions,
+            instructions=stamped_instructions,
             predicted_yield=derived_yield,
             predicted_yield_unit=derived_unit,
             organization_id=recipe_org_id,
@@ -596,7 +598,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 return False, validation_result
             recipe.name = name
         if instructions is not None:
-            recipe.instructions = instructions
+            recipe.instructions = append_timestamped_note(recipe.instructions, instructions)
         if yield_amount is not None:
             recipe.predicted_yield = yield_amount
         if yield_unit is not None:

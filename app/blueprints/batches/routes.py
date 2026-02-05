@@ -19,6 +19,7 @@ from ...extensions import limiter
 from ...services.batch_service import BatchService, BatchOperationsService, BatchManagementService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
+from ...utils.notes import append_timestamped_note
 from ...models import Product
 from ...services.production_planning.service import PlanProductionService
 from ...services.stock_check.core import UniversalStockCheckService
@@ -262,6 +263,15 @@ def update_batch_notes(batch_id):
         data = request.get_json() if request.is_json else request.form
         notes = data.get('notes', '')
         tags = data.get('tags', '')
+
+        batch = BatchService.get_batch_by_identifier(batch_id)
+        if not batch:
+            message = "Batch not found"
+            if request.is_json:
+                return jsonify({'error': message}), 404
+            flash(message, 'error')
+            return redirect(url_for('batches.list_batches'))
+        notes = append_timestamped_note(batch.notes, notes)
 
         success, message = BatchService.update_batch_notes_and_tags(batch_id, notes, tags)
 

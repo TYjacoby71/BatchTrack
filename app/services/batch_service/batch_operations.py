@@ -22,6 +22,7 @@ from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
+from app.utils.notes import append_timestamped_note
 from app.services.lineage_service import generate_lineage_id
 from app.services.base_service import BaseService
 from app.services.event_emitter import EventEmitter
@@ -46,6 +47,7 @@ class BatchOperationsService(BaseService):
             forced_summary = plan_snapshot.get('forced_start_summary')
             if forced_summary:
                 snap_notes = f"{snap_notes}\n{forced_summary}" if snap_notes else forced_summary
+            snap_notes = append_timestamped_note(None, snap_notes)
             snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
             snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
             snap_portioning = plan_snapshot.get('portioning') or {}
@@ -90,6 +92,8 @@ class BatchOperationsService(BaseService):
                     return None, "Recipe not found"
                 if getattr(recipe, "is_archived", False):
                     return None, "Archived recipes cannot be used to start batches"
+                if recipe.test_sequence is None and not getattr(recipe, "is_current", False):
+                    return None, "Only current recipe versions can be used to start batches"
                 # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
                 projected_yield = (
                     float(snap_projected_yield)
