@@ -69,6 +69,7 @@ def test_create_recipe_sets_authored_origin(app):
 @pytest.mark.usefixtures("app_context")
 def test_clone_from_other_org_marks_purchased_origin(app):
     seller_user, seller_org = _create_user("Seller Org")
+    seller_org_id = seller_org.id
     buyer_user, _ = _create_user("Buyer Org")
     category_id = _get_category_id()
 
@@ -114,7 +115,7 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     assert purchased_recipe.org_origin_purchased is True
     assert purchased_recipe.org_origin_type == "purchased"
     assert purchased_recipe.org_origin_recipe_id == purchased_recipe.id
-    assert purchased_recipe.org_origin_source_org_id == seller_org.id
+    assert purchased_recipe.org_origin_source_org_id == seller_org_id
     assert purchased_recipe.org_origin_source_recipe_id == seller_recipe.root_recipe_id or seller_recipe.id
     assert purchased_recipe.root_recipe_id == seller_recipe.root_recipe_id
     assert purchased_recipe.is_sellable is False

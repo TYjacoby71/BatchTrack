@@ -35,7 +35,10 @@ def configure_login_manager(app):
                 options=[
                     joinedload(User.organization)
                     .joinedload(Organization.tier)
-                    .joinedload(SubscriptionTier.permissions)
+                    .joinedload(SubscriptionTier.permissions),
+                    joinedload(User.organization)
+                    .joinedload(Organization.subscription_tier)
+                    .joinedload(SubscriptionTier.permissions),
                 ],
             )
         except (ValueError, TypeError):
@@ -61,6 +64,10 @@ def configure_login_manager(app):
         if current_app and current_app.config.get("TESTING"):
             try:
                 if user.organization is not None:
+                    if user.organization.tier is not None:
+                        db.session.expunge(user.organization.tier)
+                    if user.organization.subscription_tier is not None:
+                        db.session.expunge(user.organization.subscription_tier)
                     db.session.expunge(user.organization)
                 db.session.expunge(user)
             except Exception:

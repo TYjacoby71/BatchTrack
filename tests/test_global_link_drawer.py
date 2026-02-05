@@ -34,6 +34,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     gi = GlobalItem(name='Milk', item_type='ingredient', default_unit='ml', density=1.03, ingredient_category_id=cat.id)
     db_session.add(gi)
     db_session.commit()
+    global_item_id = gi.id
 
     # Create org inventory items: matchable and non-matchable
     milk_ml = InventoryItem(name='milk', type='ingredient', unit='ml', quantity=0.0, organization_id=org.id)
@@ -61,7 +62,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
             assert data.get('drawer_payload', {}).get('modal_url')
 
         # Force modal for our specific global item
-        res2 = client.get(f'/api/drawers/global-link/modal?global_item_id={gi.id}')
+        res2 = client.get(f'/api/drawers/global-link/modal?global_item_id={global_item_id}')
         assert res2.status_code == 200
         html_payload = res2.get_json() or {}
         assert html_payload.get('success') is True
