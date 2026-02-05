@@ -1,4 +1,14 @@
 """Recipe lineage generators for prefixes, labels, and lineage IDs."""
+"""Lineage and label generation service.
+
+Synopsis:
+Generates recipe group prefixes, variation prefixes, lineage IDs, and batch labels.
+
+Glossary:
+- Prefix: Short code derived from a name for labels.
+- Lineage ID: Dot-notation identifier for version history.
+"""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +18,7 @@ from app.extensions import db
 from app.models.recipe import Recipe, RecipeGroup
 
 
+# Service 1: Normalize and split a name into words.
 def _clean_and_split(name: str) -> List[str]:
     if not name:
         return []
@@ -16,6 +27,7 @@ def _clean_and_split(name: str) -> List[str]:
     return [word for word in cleaned.split() if word]
 
 
+# Service 2: Build candidate prefixes from words.
 def _build_prefix_candidates(words: List[str]) -> List[str]:
     if not words:
         return ["RCP"]
@@ -38,12 +50,14 @@ def _build_prefix_candidates(words: List[str]) -> List[str]:
     return normalized or ["RCP"]
 
 
+# Service 3: Normalize existing prefixes for comparison.
 def _resolve_existing_prefixes(prefixes: Iterable[str] | None) -> Set[str]:
     if not prefixes:
         return set()
     return {str(prefix).upper() for prefix in prefixes if prefix}
 
 
+# Service 4: Choose a unique prefix from candidates.
 def _pick_unique_prefix(candidates: List[str], existing: Set[str]) -> str:
     for candidate in candidates:
         if candidate not in existing:
@@ -58,6 +72,7 @@ def _pick_unique_prefix(candidates: List[str], existing: Set[str]) -> str:
         index += 1
 
 
+# Service 5: Generate a unique group prefix per organization.
 def generate_group_prefix(name: str, org_id: int | None) -> str:
     words = _clean_and_split(name)
     candidates = _build_prefix_candidates(words)
@@ -71,6 +86,7 @@ def generate_group_prefix(name: str, org_id: int | None) -> str:
     return _pick_unique_prefix(candidates, existing)
 
 
+# Service 6: Generate a unique variation prefix per group.
 def generate_variation_prefix(name: str, recipe_group_id: int | None) -> str:
     words = _clean_and_split(name)
     candidates = _build_prefix_candidates(words)
@@ -85,6 +101,7 @@ def generate_variation_prefix(name: str, recipe_group_id: int | None) -> str:
     return _pick_unique_prefix(candidates, existing)
 
 
+# Service 7: Generate a lineage ID for a recipe version.
 def generate_lineage_id(version_obj: Recipe) -> str:
     group_id = getattr(version_obj, "recipe_group_id", None) or 0
     if getattr(version_obj, "is_master", False):
@@ -101,6 +118,7 @@ def generate_lineage_id(version_obj: Recipe) -> str:
     return f"{group_id}.{master_version}.{var_version}{test_suffix}"
 
 
+# Service 8: Generate a human-readable batch label.
 def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
     group = getattr(version_obj, "recipe_group", None)
     group_prefix = getattr(group, "prefix", None)

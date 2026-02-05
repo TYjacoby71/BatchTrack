@@ -1,3 +1,13 @@
+"""Permission and entitlement utilities.
+
+Synopsis:
+Provides decorators, entitlement resolution, and tier/add-on checks.
+
+Glossary:
+- Entitlement: Permission granted by tier or add-on.
+- Scope: Developer vs customer permission namespace.
+"""
+
 from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app
 from flask_login import current_user, login_required
 from functools import wraps, lru_cache

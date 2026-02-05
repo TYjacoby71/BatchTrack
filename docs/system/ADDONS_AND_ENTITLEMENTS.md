@@ -5,6 +5,13 @@ Add-ons extend subscription tiers with optional entitlements. They can grant **R
 
 ---
 
+## Glossary
+- **Add-on**: Optional entitlement that can be purchased or included by a tier.
+- **Permission add-on**: Add-on that grants an RBAC permission when active.
+- **Function-key add-on**: Add-on enforced in service logic (no RBAC permission).
+
+---
+
 ## 1. Data Model
 - **Addon** (`app/models/addon.py`): catalog entry with `permission_name` and/or `function_key`.
 - **OrganizationAddon**: active purchases by organization (Stripe/Whop metadata).

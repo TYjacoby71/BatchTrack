@@ -1,3 +1,13 @@
+"""Tests for recipe service workflows.
+
+Synopsis:
+Validates recipe CRUD and marketplace guardrails for versions.
+
+Glossary:
+- Marketplace: Public listing configuration.
+- Versioning: Master/variation/test behavior.
+"""
+
 import pytest
 from decimal import Decimal
 from uuid import uuid4

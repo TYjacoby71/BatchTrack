@@ -1,16 +1,11 @@
 """Developer routes for subscription tiers and entitlement wiring.
 
-File purpose:
-1) Manage tier limits, permissions, and add-on availability.
+Synopsis:
+Manage tier limits, permissions, and add-on availability for billing.
 
-Route index:
-1. GET /developer/subscription-tiers/ -> list tiers.
-2. GET/POST /developer/subscription-tiers/create -> create tier.
-3. GET/POST /developer/subscription-tiers/edit/<tier_id> -> edit tier.
-4. POST /developer/subscription-tiers/delete/<tier_id> -> delete tier.
-5. POST /developer/subscription-tiers/sync/<tier_id> -> sync Stripe pricing.
-6. POST /developer/subscription-tiers/sync-whop/<tier_id> -> sync Whop pricing.
-7. GET /developer/subscription-tiers/api/tiers -> tier summary API.
+Glossary:
+- Allowed add-on: Purchasable entitlement for a tier.
+- Included add-on: Entitlement granted to all orgs on the tier.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify

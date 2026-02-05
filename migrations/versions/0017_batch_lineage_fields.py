@@ -1,4 +1,12 @@
-"""Add batch lineage tracking fields."""
+"""Add batch lineage tracking fields.
+
+Synopsis:
+Adds lineage_id and target_version_id tracking to batch/history tables.
+
+Glossary:
+- Lineage ID: Recipe version identifier stored with batches.
+- Target version: Recipe version used for a batch run.
+"""
 from __future__ import annotations
 
 from alembic import op

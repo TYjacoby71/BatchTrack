@@ -1,4 +1,12 @@
-"""Add recipe group/version metadata and batch sequences."""
+"""Add recipe group/version metadata and batch sequences.
+
+Synopsis:
+Introduces recipe groups, versioning fields, and batch sequence tracking.
+
+Glossary:
+- Recipe group: Container for master/variation lineages.
+- Batch sequence: Yearly counter for batch labels.
+"""
 from __future__ import annotations
 
 from alembic import op

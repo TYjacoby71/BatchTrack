@@ -1,24 +1,11 @@
 """Billing and subscription routes.
 
-File purpose:
-1) Present upgrade options, manage checkout, and handle billing webhooks.
-2) Expose add-on checkout endpoints and downgrade selection flow.
+Synopsis:
+Handles upgrade flows, checkout initiation, downgrade selection, and billing webhooks.
 
-Route index:
-1. GET /billing/upgrade -> tier upgrade UI.
-2. GET /billing/storage -> storage add-on checkout (legacy flow).
-3. POST /billing/addons/start/<addon_key> -> start add-on checkout.
-4. GET /billing/checkout/<tier> -> start tier checkout.
-5. GET /billing/checkout/<tier>/<billing_cycle> -> start tier checkout (cycle).
-6. GET/POST /billing/downgrade/<tier> -> downgrade recipe selection.
-7. GET/POST /billing/downgrade/<tier>/<billing_cycle> -> downgrade selection (cycle).
-8. GET /billing/whop-checkout/<product_id> -> Whop checkout.
-9. GET /billing/complete-signup-from-stripe -> Stripe post-checkout callback.
-10. GET /billing/complete-signup-from-whop -> Whop post-checkout callback.
-11. GET /billing/customer-portal -> Stripe customer portal.
-12. POST /billing/cancel-subscription -> cancel subscription.
-13. POST /billing/webhooks/stripe -> Stripe webhooks.
-14. GET /billing/debug -> billing debug payload.
+Glossary:
+- Tier: Subscription plan with limits and permissions.
+- Add-on: Optional entitlement purchased or included by tier.
 """
 
 import logging

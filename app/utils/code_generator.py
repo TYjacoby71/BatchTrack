@@ -1,3 +1,13 @@
+"""Code generators for recipes and batches.
+
+Synopsis:
+Generates batch labels and recipe group prefixes via lineage service.
+
+Glossary:
+- Batch label: Human-readable batch identifier.
+- Prefix: Short code derived from a recipe name.
+"""
+
 from __future__ import annotations
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -12,6 +22,7 @@ from app.utils.timezone_utils import TimezoneUtils
 __all__ = ["generate_batch_label_code", "generate_recipe_prefix"]
 
 
+# Service 1: Generate a batch label for a recipe.
 def generate_batch_label_code(recipe: Recipe) -> str:
     """
     Generate a consistent batch label code.
@@ -33,6 +44,7 @@ def generate_batch_label_code(recipe: Recipe) -> str:
     return generate_batch_label(recipe, current_year, sequence)
 
 
+# Service 2: Generate a group prefix from a recipe name.
 def generate_recipe_prefix(recipe_name: str, org_id: int | None = None) -> str:
     """
     Generate a recipe prefix from the recipe name.
@@ -40,6 +52,7 @@ def generate_recipe_prefix(recipe_name: str, org_id: int | None = None) -> str:
     return generate_group_prefix(recipe_name, org_id)
 
 
+# Service 3: Fetch the next batch sequence for org/year.
 def _next_batch_sequence(org_id: int, year: int) -> int:
     if is_postgres():
         now = TimezoneUtils.utc_now()

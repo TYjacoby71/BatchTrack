@@ -1,8 +1,11 @@
-"""
-Recipe service public API.
+"""Recipe service public API.
 
-Import from this module rather than the private helpers so validation,
-marketplace handling, and lineage tracking stay centralized.
+Synopsis:
+Exports the recipe service surface so callers use centralized validation.
+
+Glossary:
+- Public API: Approved service functions for route usage.
+- Helper module: Internal recipe service implementation detail.
 """
 
 # Import the public functions from our internal helper modules

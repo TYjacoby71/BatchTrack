@@ -1,8 +1,11 @@
 """CLI management commands for deployment, seeding, and maintenance.
 
-File purpose:
-1) Provide one-time initialization and update-safe maintenance commands.
-2) Expose production-safe refresh commands for permissions, tiers, and add-ons.
+Synopsis:
+Defines one-time initialization plus update-safe refresh commands for core data.
+
+Glossary:
+- Seeder: Idempotent routine that upserts reference data.
+- Maintenance command: CLI action for production-safe updates.
 """
 import click
 from flask import current_app

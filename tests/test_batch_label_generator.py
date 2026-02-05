@@ -1,3 +1,13 @@
+"""Tests for batch label generation.
+
+Synopsis:
+Validates batch label format and batch sequence usage.
+
+Glossary:
+- Batch label: Human-readable identifier for a batch.
+- Sequence: Global counter for batch labels.
+"""
+
 from app.utils.code_generator import generate_batch_label_code
 from app.services.lineage_service import generate_group_prefix
 from app.models.recipe import Recipe

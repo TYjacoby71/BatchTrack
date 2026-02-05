@@ -1,9 +1,21 @@
+"""Plan snapshot builder service.
+
+Synopsis:
+Builds immutable plan snapshots from recipes and scale inputs.
+
+Glossary:
+- PlanSnapshot: Frozen data used to start a batch.
+- Portioning: Packaging metadata derived from recipe fields.
+"""
+
 from typing import Optional
 from .types import PlanSnapshot, PortioningPlan, IngredientLine, ConsumableLine, ContainerSelection
 from app.services.lineage_service import generate_lineage_id
 
 
 class PlanProductionService:
+    """Service for building plan snapshots."""
+    # Service 1: Build a frozen plan snapshot from a recipe.
     @staticmethod
     def build_plan(recipe, scale: float, batch_type: str, notes: str = '', containers: Optional[list] = None) -> PlanSnapshot:
         """Build a fully frozen plan snapshot from a recipe and scale. No client overrides."""

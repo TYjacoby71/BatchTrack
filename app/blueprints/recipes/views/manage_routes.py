@@ -1,3 +1,13 @@
+"""Recipe management routes.
+
+Synopsis:
+Lists recipes, shows lineage view, and provides promotion/archive actions.
+
+Glossary:
+- Lineage: Versioned recipe history within a group.
+- Promotion: Converting tests or variations to current/master.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -31,6 +41,7 @@ from .. import recipes_bp
 
 logger = logging.getLogger(__name__)
 
+# Route 1: List master recipes for the organization.
 @recipes_bp.route('/')
 @login_required
 @require_permission('recipes.view')
@@ -89,6 +100,7 @@ def list_recipes():
     return rendered
 
 
+# Route 2: View a recipe and its lineage context.
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
 @require_permission('recipes.view')
@@ -174,6 +186,7 @@ def view_recipe(recipe_id):
         return redirect(url_for('recipes.list_recipes'))
 
 
+# Route 3: Delete a recipe (legacy destructive delete).
 @recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
 @login_required
 @require_permission('recipes.delete')
@@ -191,6 +204,7 @@ def delete_recipe_route(recipe_id):
     return redirect(url_for('recipes.list_recipes'))
 
 
+# Route 4: Legacy promote-to-parent flow (kept for compatibility).
 @recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -239,6 +253,7 @@ def make_parent_recipe(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 5: Lock a recipe to prevent edits.
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -250,6 +265,7 @@ def lock_recipe(recipe_id):
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 6: Unlock a recipe for edits.
 @recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -267,6 +283,7 @@ def unlock_recipe(recipe_id):
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 7: Promote a test to current version.
 @recipes_bp.route('/<int:recipe_id>/publish-test', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -285,6 +302,7 @@ def publish_test_version(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 8: Promote a variation to master in the same group.
 @recipes_bp.route('/<int:recipe_id>/promote-to-master', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -303,6 +321,7 @@ def promote_variation_to_master(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 9: Promote a variation to a new recipe group.
 @recipes_bp.route('/<int:recipe_id>/promote-to-new-group', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -322,6 +341,7 @@ def promote_variation_to_new_group(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 10: Archive a recipe (soft-hide + lock).
 @recipes_bp.route('/<int:recipe_id>/archive', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -335,6 +355,7 @@ def archive_recipe_route(recipe_id):
     return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 11: Restore an archived recipe.
 @recipes_bp.route('/<int:recipe_id>/restore', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -348,6 +369,7 @@ def restore_recipe_route(recipe_id):
     return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# Route 12: Deactivate a marketplace listing for the recipe.
 @recipes_bp.route('/<int:recipe_id>/unlist', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')

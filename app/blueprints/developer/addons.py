@@ -1,13 +1,11 @@
 """Developer routes for add-on catalog management.
 
-File purpose:
-1) Expose CRUD routes for add-ons used by tier entitlements.
+Synopsis:
+Create and maintain add-ons with permission and function-key bindings.
 
-Route index:
-1. GET /developer/addons/ -> list add-ons.
-2. GET/POST /developer/addons/create -> create add-on.
-3. GET/POST /developer/addons/edit/<addon_id> -> edit add-on.
-4. POST /developer/addons/delete/<addon_id> -> delete add-on.
+Glossary:
+- Permission add-on: Grants RBAC permission when included or purchased.
+- Function-key add-on: Feature toggle enforced in service logic.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash

@@ -1,12 +1,11 @@
 """Seed add-ons and backfill add-on permissions on tiers.
 
-File purpose:
-1) Maintain the add-on catalog (permission_name and function_key bindings).
-2) Backfill tier entitlements so add-on permissions remain consistent.
+Synopsis:
+Maintains the add-on catalog and aligns tier entitlements with add-on permissions.
 
-Service index:
-1. seed_addons -> upsert add-on catalog rows.
-2. backfill_addon_permissions -> attach add-on permissions to tiers.
+Glossary:
+- Add-on catalog: All purchasable/included entitlements.
+- Backfill: Idempotent sync that reconciles tiers to add-ons.
 """
 
 from app.extensions import db
@@ -14,6 +13,7 @@ from app.models.addon import Addon
 from app.models import Permission, SubscriptionTier
 
 
+# Service 1: Upsert the add-on catalog rows.
 def seed_addons():
     """Seed core add-ons used by the system (idempotent)."""
     core_addons = [
@@ -95,6 +95,7 @@ def seed_addons():
     print('✅ Addons seeded')
 
 
+# Service 2: Backfill tier entitlements for add-on permissions.
 def backfill_addon_permissions():
     """Ensure add-on permissions are attached to tiers (idempotent)."""
     addons = Addon.query.filter_by(is_active=True).all()

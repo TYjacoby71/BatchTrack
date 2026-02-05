@@ -3,6 +3,10 @@
 ## Synopsis
 Billing is centralized in `BillingService` and is the authority for tier checkout, subscription state, and add-on activations.
 
+## Glossary
+- **Checkout session**: Provider-hosted flow for billing acceptance.
+- **Webhook**: Provider callback that updates billing state.
+
 ## 1. Canonical Service
 - **Authority**: `app/services/billing_service.py`
 - Handles Stripe initialization, price lookups, checkout sessions, webhook processing, customer portal sessions, subscription cancellations, and pending-signup provisioning.

@@ -1,3 +1,13 @@
+"""Tests for recipe draft validation.
+
+Synopsis:
+Ensures draft creation rules align with versioning behavior.
+
+Glossary:
+- Draft: Unpublished recipe form state.
+- Test: Versioned, editable recipe draft.
+"""
+
 import pytest
 
 from app.extensions import db

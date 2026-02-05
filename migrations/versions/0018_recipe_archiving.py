@@ -1,4 +1,12 @@
-"""Add recipe archiving fields."""
+"""Add recipe archiving fields.
+
+Synopsis:
+Introduces is_archived, archived_at, and archived_by tracking.
+
+Glossary:
+- Archived: Soft-hidden recipe state.
+- archived_by: User ID that initiated archiving.
+"""
 from __future__ import annotations
 
 from alembic import op

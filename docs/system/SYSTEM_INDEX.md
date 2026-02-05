@@ -1,6 +1,11 @@
 # System Documentation Index
 
+## Synopsis
 This directory is the curated reference library for every master document that explains how BatchTrack works. Start here to understand the architecture, domain concepts, operational runbooks, and developer workflows.
+
+## Glossary
+- **System doc**: Source-of-truth document describing current behavior.
+- **Index**: Entry point that links to system documentation.
 
 ## Product Overview
 

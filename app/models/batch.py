@@ -1,3 +1,12 @@
+"""Batch-related models.
+
+Synopsis:
+Defines batch records, sequences, and related inventory associations.
+
+Glossary:
+- Batch: Production run of a recipe.
+- BatchSequence: Organization-wide batch numbering per year.
+"""
 
 from flask_login import current_user
 from ..extensions import db

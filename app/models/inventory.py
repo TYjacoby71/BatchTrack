@@ -1,3 +1,13 @@
+"""Inventory models.
+
+Synopsis:
+Defines inventory items, history, and lifecycle fields.
+
+Glossary:
+- InventoryItem: Stocked ingredient or material.
+- InventoryHistory: Audit log of inventory changes.
+"""
+
 from datetime import datetime, date, timezone
 
 from flask_login import current_user

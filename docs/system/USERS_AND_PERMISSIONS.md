@@ -7,6 +7,12 @@ BatchTrack uses a **clear, hierarchical user and permission system** designed fo
 
 ---
 
+## Glossary
+- **Permission**: Atomic action allowed in the system.
+- **Role**: Permission bundle assigned to a user.
+
+---
+
 ## 1. User Types (Immutable)
 
 User types are **hard-coded classifications**. They are NOT roles and should never be stored in the same table as roles.

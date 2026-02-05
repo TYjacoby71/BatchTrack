@@ -1,4 +1,12 @@
-"""Recipe versioning helpers for tests and promotions."""
+"""Recipe versioning helpers for tests and promotions.
+
+Synopsis:
+Create tests and promote versions within or across recipe groups.
+
+Glossary:
+- Test: Editable, non-current version.
+- Promotion: Move a version into current/master status.
+"""
 from __future__ import annotations
 
 import logging
@@ -13,6 +21,7 @@ from ._core import create_recipe
 logger = logging.getLogger(__name__)
 
 
+# Service 1: Build a test recipe template from a base.
 def build_test_template(base: Recipe) -> Recipe:
     template = Recipe(
         name=base.name,
@@ -46,6 +55,7 @@ def build_test_template(base: Recipe) -> Recipe:
     return template
 
 
+# Service 2: Create a test version from a base recipe.
 def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: str) -> Tuple[bool, Any]:
     test_payload = dict(payload)
     test_payload.update(
@@ -66,6 +76,7 @@ def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: st
     return create_recipe(**test_payload)
 
 
+# Service 3: Promote a test to the current version.
 def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.test_sequence is None:
@@ -92,6 +103,7 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     return True, recipe
 
 
+# Service 4: Generate a unique recipe name within an org.
 def _unique_recipe_name(base_name: str, org_id: int | None) -> str:
     if not org_id:
         return base_name
@@ -106,6 +118,7 @@ def _unique_recipe_name(base_name: str, org_id: int | None) -> str:
     return candidate
 
 
+# Service 5: Promote a variation to master in the same group.
 def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:
@@ -165,6 +178,7 @@ def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
     )
 
 
+# Service 6: Promote a variation to a new recipe group.
 def promote_variation_to_new_group(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:

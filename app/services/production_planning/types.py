@@ -1,3 +1,13 @@
+"""Production planning data types.
+
+Synopsis:
+Defines immutable plan snapshot structures shared across services.
+
+Glossary:
+- PlanSnapshot: Immutable payload stored with batch start.
+- Line item: Ingredient/consumable/container data in a plan.
+"""
+
 from dataclasses import dataclass, asdict
 from typing import List, Optional, Dict, Any
 

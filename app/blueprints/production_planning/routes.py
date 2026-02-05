@@ -1,3 +1,13 @@
+"""Production planning routes.
+
+Synopsis:
+Serve plan production views and supporting API calls for container planning.
+
+Glossary:
+- Plan: Computed production requirements for a recipe and scale.
+- Container strategy: Suggested container allocation for a plan.
+"""
+
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import production_planning_bp
@@ -12,6 +22,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Route 1: Render and submit the production planning flow.
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -64,6 +75,7 @@ def plan_production_route(recipe_id):
         {'label': 'Plan Production'}
     ])
 
+# Route 2: Auto-fill container options for a plan request.
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')

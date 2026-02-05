@@ -5,6 +5,12 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ---
 
+## Glossary
+- **Entry**: A single term definition within a layer.
+- **Layer**: Application slice used to organize definitions (data, routes, services, UI, operations).
+
+---
+
 ## 1. Data Layer
 **Purpose**: Definitions for database models, schema fields, and invariants.
 

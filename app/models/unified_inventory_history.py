@@ -1,3 +1,13 @@
+"""Unified inventory history model.
+
+Synopsis:
+Central event log for all inventory movements and adjustments.
+
+Glossary:
+- Event log: Immutable record of inventory deltas.
+- Lineage ID: Recipe lineage identifier attached to events.
+"""
+
 from datetime import datetime
 from ..extensions import db
 from .mixins import ScopedModelMixin

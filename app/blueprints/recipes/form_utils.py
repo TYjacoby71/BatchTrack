@@ -1,3 +1,13 @@
+"""Recipe form utilities for parsing, caching, and prefill payloads.
+
+Synopsis:
+Centralizes recipe form parsing and payload building for create/edit flows.
+
+Glossary:
+- Prefill: Serialized form state for ingredients and consumables.
+- Submission: Parsed form data ready for service calls.
+"""
+
 from __future__ import annotations
 
 import logging

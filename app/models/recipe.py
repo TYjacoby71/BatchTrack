@@ -1,3 +1,13 @@
+"""Recipe models and lineage structures.
+
+Synopsis:
+Defines recipes, groups, versioning fields, and ingredient associations.
+
+Glossary:
+- RecipeGroup: Container for master/variation lineages.
+- Test sequence: Numeric identifier for non-current test versions.
+"""
+
 from flask_login import current_user
 import sqlalchemy as sa
 from sqlalchemy import event

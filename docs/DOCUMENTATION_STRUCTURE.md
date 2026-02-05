@@ -1,7 +1,11 @@
 # Documentation Structure
 
-## Overview
+## Synopsis
 This document explains where documentation lives and how updates should be staged across system guides, changelogs, and checklists.
+
+## Glossary
+- **System doc**: Current-state guide for a platform area.
+- **Changelog**: Historical record of changes.
 
 ## Directory Structure
 

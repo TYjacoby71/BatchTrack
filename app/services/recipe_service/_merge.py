@@ -1,4 +1,12 @@
-"""Helpers for re-basing recipe variations onto new masters."""
+"""Helpers for re-basing recipe variations onto new masters.
+
+Synopsis:
+Compute ingredient deltas to rebase a variation on a new master.
+
+Glossary:
+- Delta: Ingredient differences between two recipe versions.
+- Rebase: Apply deltas from old master to a new master.
+"""
 from __future__ import annotations
 
 from typing import Dict, Iterable, List, Tuple
@@ -6,6 +14,7 @@ from typing import Dict, Iterable, List, Tuple
 from ...models import Recipe
 
 
+# Service 1: Build a map of ingredient quantities by item.
 def _ingredient_map(rows: Iterable) -> Dict[int, Dict[str, float | str]]:
     mapping: Dict[int, Dict[str, float | str]] = {}
     for row in rows or []:
@@ -22,6 +31,7 @@ def _ingredient_map(rows: Iterable) -> Dict[int, Dict[str, float | str]]:
     return mapping
 
 
+# Service 2: Build delta rows between variation and base.
 def _build_delta(
     variation_map: Dict[int, Dict[str, float | str]],
     base_map: Dict[int, Dict[str, float | str]],
@@ -37,6 +47,7 @@ def _build_delta(
     return delta
 
 
+# Service 3: Rebase a variation onto a new master.
 def build_rebased_ingredients(
     variation: Recipe,
     old_master: Recipe,

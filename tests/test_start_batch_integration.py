@@ -1,3 +1,13 @@
+"""Integration tests for starting batches.
+
+Synopsis:
+Ensures batch creation uses plan snapshots and lineage IDs.
+
+Glossary:
+- Plan snapshot: Immutable plan payload used to start a batch.
+- Lineage ID: Recipe version identifier stored on batch.
+"""
+
 from flask_login import login_user
 
 from app.extensions import db

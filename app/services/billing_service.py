@@ -1,3 +1,13 @@
+"""Billing service authority.
+
+Synopsis:
+Central service for pricing, checkout, webhooks, and add-on activation.
+
+Glossary:
+- Checkout session: Provider flow for tier or add-on purchase.
+- Webhook: Provider callback used to apply billing state changes.
+"""
+
 import logging
 import os
 from collections import defaultdict
@@ -42,10 +52,12 @@ class BillingService:
     _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
     _pricing_registry_lock = Lock()
 
+    # Service 1: Build cache key for a pricing lookup.
     @classmethod
     def _pricing_cache_key(cls, lookup_key: str) -> str:
         return f"billing:price:{lookup_key}"
 
+    # Service 2: Get a lock for pricing refresh concurrency.
     @classmethod
     def _get_pricing_lock(cls, lookup_key: str) -> Lock:
         with cls._pricing_registry_lock:
@@ -59,6 +71,7 @@ class BillingService:
     # Tier + organization helpers (source of truth for billing access)   #
     # ------------------------------------------------------------------ #
 
+    # Service 3: Resolve the current tier key for an organization.
     @staticmethod
     def get_tier_for_organization(organization):
         """Get the effective subscription tier for an organization."""
@@ -68,6 +81,7 @@ class BillingService:
         tier = db.session.get(SubscriptionTier, organization.subscription_tier_id)
         return str(tier.id) if tier else 'exempt'
 
+    # Service 4: Assign a tier to an organization and restore entitlements.
     @staticmethod
     def assign_tier_to_organization(organization, tier_key):
         """Assign a subscription tier to an organization. tier_key is a tier ID string."""
@@ -91,6 +105,7 @@ class BillingService:
 
         return tier
 
+    # Service 5: Check user limit capacity for a tier.
     @staticmethod
     def can_add_users(organization, count=1):
         """Check if organization can add more users based on subscription tier."""
@@ -105,6 +120,7 @@ class BillingService:
 
         return (current_user_count + count) <= limit
 
+    # Service 6: Check if a tier includes a permission.
     @staticmethod
     def has_tier_permission(organization, permission_name):
         """Check if organization's tier has a specific permission."""
@@ -112,11 +128,13 @@ class BillingService:
             return False
         return organization.subscription_tier_obj.has_permission(permission_name)
 
+    # Service 7: Return available customer-facing tiers.
     @staticmethod
     def get_available_tiers():
         """Get all available customer-facing tiers."""
         return SubscriptionTier.query.filter_by(is_customer_facing=True).all()
 
+    # Service 8: Fetch upgrade options that include a permission.
     @staticmethod
     def get_permission_denied_upgrade_options(permission_name, organization):
         """Return upgrade tiers that include the given permission."""
@@ -139,6 +157,7 @@ class BillingService:
             logger.warning("Upgrade lookup failed for %s: %s", permission_name, exc)
             return []
 
+    # Service 9: Fetch aggregated live pricing from providers.
     @staticmethod
     def get_live_pricing_data():
         """Get live pricing data from active billing providers only."""
@@ -154,6 +173,7 @@ class BillingService:
                 'error': 'Pricing unavailable - check billing provider configuration'
             }
 
+    # Service 10: Build tier pricing data for UI.
     @staticmethod
     def get_comprehensive_pricing_data():
         """Get comprehensive pricing data with tier information."""
@@ -201,6 +221,7 @@ class BillingService:
             logger.error("Error getting comprehensive pricing: %s", exc)
             return {'tiers': {}, 'available': False, 'error': str(exc)}
 
+    # Service 11: Create a provider checkout session for a tier.
     @staticmethod
     def create_checkout_session(
         tier_key,
@@ -241,6 +262,7 @@ class BillingService:
         logger.warning("Billing provider %s not implemented", tier.billing_provider)
         return None
 
+    # Service 12: Dispatch webhook events to provider handlers.
     @staticmethod
     def handle_webhook_event(provider, event_data):
         """Route webhook payloads to the correct billing provider."""
@@ -252,6 +274,7 @@ class BillingService:
         logger.error("Unknown webhook provider: %s", provider)
         return 400
 
+    # Service 13: Validate tier access and billing standing.
     @staticmethod
     def validate_tier_access(organization):
         """Validate that organization has valid tier access."""
@@ -295,11 +318,13 @@ class BillingService:
     # Stripe primitives (single-source of truth)                         #
     # ------------------------------------------------------------------ #
 
+    # Service 14: Verify and construct a Stripe event payload.
     @staticmethod
     def construct_event(payload: bytes, sig_header: str, webhook_secret: str):
         """Construct Stripe event from webhook payload."""
         return stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
 
+    # Service 15: Ensure Stripe SDK is configured.
     @staticmethod
     def ensure_stripe():
         """Ensure Stripe API keys are configured and loaded."""
@@ -310,6 +335,7 @@ class BillingService:
         stripe.api_key = stripe_secret
         return True
 
+    # Service 16: Resolve Stripe secret from config/env.
     @staticmethod
     def _fetch_stripe_secret():
         secret = None
@@ -319,6 +345,7 @@ class BillingService:
             secret = None
         return secret or os.environ.get('STRIPE_SECRET_KEY')
 
+    # Service 17: Retrieve a Stripe customer by ID.
     @staticmethod
     def get_customer(customer_id: str):
         """Get Stripe customer by ID"""
@@ -328,6 +355,7 @@ class BillingService:
             logger.error(f"Failed to retrieve customer {customer_id}: {str(e)}")
             return None
 
+    # Service 18: Retrieve a Stripe checkout session.
     @staticmethod
     def get_checkout_session(session_id: str):
         """Get Stripe checkout session by ID"""
@@ -337,6 +365,7 @@ class BillingService:
             logger.error(f"Failed to retrieve checkout session {session_id}: {str(e)}")
             return None
 
+    # Service 19: Route Stripe webhook events to handlers.
     @staticmethod
     def _handle_stripe_webhook(event: dict) -> int:
         """Handle Stripe webhook event with idempotency"""
@@ -391,6 +420,7 @@ class BillingService:
             db.session.commit()
             return 500
 
+    # Service 20: Handle Stripe checkout.session.completed events.
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
@@ -411,6 +441,7 @@ class BillingService:
             logger.error(f"Error handling checkout.session.completed: {e}")
             return
 
+    # Service 21: Handle subscription.created events.
     @staticmethod
     def _handle_subscription_created(event):
         try:
@@ -484,6 +515,7 @@ class BillingService:
         except Exception as e:
             logger.error(f"Error handling subscription.created: {e}")
 
+    # Service 22: Handle subscription.updated events.
     @staticmethod
     def _handle_subscription_updated(event):
         try:
@@ -529,6 +561,7 @@ class BillingService:
         except Exception as e:
             logger.error(f"Error handling subscription.updated: {e}")
 
+    # Service 23: Handle subscription.deleted events.
     @staticmethod
     def _handle_subscription_deleted(event):
         try:
@@ -565,6 +598,7 @@ class BillingService:
 
     # Removed duplicate stub handlers that previously overwrote real implementations
 
+    # Service 24: Handle payment_intent.succeeded events.
     @staticmethod
     def _handle_payment_succeeded(event):
         """Handle invoice.payment_succeeded event"""
@@ -593,6 +627,7 @@ class BillingService:
             logger.error(f"Error handling payment succeeded: {exc}")
             db.session.rollback()
 
+    # Service 25: Handle payment_intent.payment_failed events.
     @staticmethod
     def _handle_payment_failed(event):
         """Handle invoice.payment_failed event"""
@@ -614,6 +649,7 @@ class BillingService:
             logger.error(f"Error handling payment failed: {exc}")
             db.session.rollback()
 
+    # Service 26: Fetch Stripe pricing for a tier.
     @staticmethod
     def get_live_pricing_for_tier(tier_obj):
         """Get live pricing from Stripe for a subscription tier"""
@@ -680,6 +716,7 @@ class BillingService:
                 app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
                 return None
 
+    # Service 27: Resolve Stripe price for lookup key.
     @staticmethod
     def _resolve_price_for_lookup_key(lookup_key: str):
         """
@@ -721,6 +758,7 @@ class BillingService:
             # Propagate to caller for centralized logging/handling
             raise
 
+    # Service 28: Create a checkout session for a specific tier.
     @staticmethod
     def create_checkout_session_for_tier(
         tier_obj,
@@ -815,6 +853,7 @@ class BillingService:
             )
             return None
 
+    # Service 29: Sync Stripe product metadata into tiers.
     @staticmethod
     def sync_product_from_stripe(lookup_key):
         """Sync a single product from Stripe to local database"""
@@ -859,6 +898,7 @@ class BillingService:
             logger.error(f"Error syncing product from Stripe: {e}")
             return False
 
+    # Service 30: Apply subscription webhook metadata.
     @staticmethod
     def handle_subscription_webhook(event):
         """Handle subscription webhooks - industry standard"""
@@ -920,6 +960,7 @@ class BillingService:
             db.session.rollback()
             return False
 
+    # Service 31: Create a Stripe customer portal session.
     @staticmethod
     def create_customer_portal_session(organization, return_url):
         """Create customer portal session for billing management"""
@@ -941,6 +982,7 @@ class BillingService:
             logger.error(f"Failed to create portal session: {e}")
             return None
 
+    # Service 32: Cancel a Stripe subscription by customer ID.
     @staticmethod
     def cancel_subscription(stripe_customer_id: str) -> bool:
         """Cancel all active subscriptions for a given Stripe customer."""
@@ -962,6 +1004,7 @@ class BillingService:
             logger.error(f"Failed to cancel subscription for customer {stripe_customer_id}: {exc}")
             return False
 
+    # Service 33: Aggregate all available pricing for tiers.
     @staticmethod
     def get_all_available_pricing():
         """Get live pricing for Stripe tiers only"""
@@ -989,6 +1032,7 @@ class BillingService:
 
         return pricing_data
 
+    # Service 34: Update Stripe customer metadata.
     @staticmethod
     def update_customer_metadata(customer_id: str, metadata: dict) -> bool:
         """Merge and update metadata on a Stripe customer."""
@@ -1005,6 +1049,7 @@ class BillingService:
             logger.error(f"Failed to update customer metadata for {customer_id}: {e}")
             return False
 
+    # Service 35: Finalize a checkout session and provision.
     @staticmethod
     def finalize_checkout_session(session_id: str):
         """Finalize (or refinalize) a Stripe checkout session by ID."""
@@ -1019,6 +1064,7 @@ class BillingService:
         )
         return BillingService._provision_checkout_session(checkout)
 
+    # Service 36: Provision org/user after checkout session.
     @staticmethod
     def _provision_checkout_session(checkout_session):
         """Internal helper shared by webhook + success URL to build accounts."""
@@ -1051,6 +1097,7 @@ class BillingService:
             logger.error("Failed provisioning checkout session %s: %s", getattr(checkout_session, 'id', 'unknown'), exc)
             raise
 
+    # Service 37: Apply batchbot refill credits from checkout.
     @staticmethod
     def _apply_batchbot_refill_checkout(checkout_session) -> bool:
         """Grant BatchBot credits when a standalone refill checkout completes."""
@@ -1119,6 +1166,7 @@ class BillingService:
             logger.error("Failed to apply BatchBot refill for checkout %s: %s", getattr(checkout_session, 'id', 'unknown'), exc)
             return False
 
+    # Service 38: Resolve pending signup ID from checkout metadata.
     @staticmethod
     def _get_pending_signup_id_from_session(checkout_session):
         metadata = getattr(checkout_session, 'metadata', {}) or {}
@@ -1131,6 +1179,7 @@ class BillingService:
         except (TypeError, ValueError):
             return None
 
+    # Service 39: Create checkout session using a lookup key.
     @staticmethod
     def _create_checkout_session_by_lookup_key(
         lookup_key,
@@ -1163,6 +1212,7 @@ class BillingService:
             logger.error(f"Stripe {mode} checkout error: {e}")
             return None
 
+    # Service 40: Create one-time checkout by lookup key.
     @staticmethod
     def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
         """Create a one-time checkout session for an add-on using a price lookup key."""
@@ -1175,6 +1225,7 @@ class BillingService:
             mode='payment'
         )
 
+    # Service 41: Create subscription checkout by lookup key.
     @staticmethod
     def create_subscription_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
         """Create a subscription checkout session for a recurring add-on using price lookup key."""

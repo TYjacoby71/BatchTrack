@@ -1,4 +1,12 @@
-"""Subscription downgrade helpers for recipe limits."""
+"""Subscription downgrade helpers for recipe limits.
+
+Synopsis:
+Handles downgrade selection, archiving, and restore-on-upgrade rules.
+
+Glossary:
+- Downgrade selection: User-selected recipes to keep active.
+- Archive: Soft-hide recipes beyond tier limits.
+"""
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
@@ -8,10 +16,12 @@ from app.models import Recipe
 from app.utils.timezone_utils import TimezoneUtils
 
 
+# Service 1: Check if a recipe is locked by listing.
 def _recipe_listing_locked(recipe: Recipe) -> bool:
     return bool(recipe.is_public) and recipe.marketplace_status == "listed"
 
 
+# Service 2: Resolve recipe limit for a tier.
 def _recipe_limit_for_tier(tier) -> int | None:
     if not tier:
         return None
@@ -21,6 +31,7 @@ def _recipe_limit_for_tier(tier) -> int | None:
     return int(limit)
 
 
+# Service 3: Fetch active recipes for an organization.
 def fetch_active_recipes(org_id: int) -> List[Recipe]:
     return (
         Recipe.query.filter(
@@ -32,6 +43,7 @@ def fetch_active_recipes(org_id: int) -> List[Recipe]:
     )
 
 
+# Service 4: Build downgrade UI context for a target tier.
 def build_downgrade_context(org, tier) -> Dict[str, object]:
     limit = _recipe_limit_for_tier(tier)
     active_recipes = fetch_active_recipes(org.id)
@@ -45,6 +57,7 @@ def build_downgrade_context(org, tier) -> Dict[str, object]:
     }
 
 
+# Service 5: Apply downgrade selections and archive remainder.
 def apply_downgrade_selection(org, tier, keep_ids: List[int], user_id: int | None = None) -> Tuple[bool, str]:
     limit = _recipe_limit_for_tier(tier)
     if limit is None:
@@ -84,6 +97,7 @@ def apply_downgrade_selection(org, tier, keep_ids: List[int], user_id: int | Non
     return True, "Recipes archived for downgrade."
 
 
+# Service 6: Restore archived recipes up to tier limits.
 def restore_archived_for_tier(org, tier) -> int:
     limit = _recipe_limit_for_tier(tier)
     if limit is None:

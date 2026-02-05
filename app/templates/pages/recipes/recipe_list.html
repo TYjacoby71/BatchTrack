@@ -1,3 +1,6 @@
+{# File: pages/recipes/recipe_list.html
+   Synopsis: List view for recipes and their variations.
+   Glossary: Master = primary recipe; Archived = hidden from list. #}
 {% extends 'layout.html' %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% block content %}

@@ -1,4 +1,12 @@
-"""Models package - imports all models for the application"""
+"""Models package - imports all models for the application.
+
+Synopsis:
+Central import hub to register models and keep ORM metadata consistent.
+
+Glossary:
+- Model registry: List of ORM classes loaded for the app.
+- Scoped model: ORM class bound to an organization_id.
+"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
