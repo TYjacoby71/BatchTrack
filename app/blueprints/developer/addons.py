@@ -17,8 +17,11 @@ from app.utils.permissions import require_permission
 
 addons_bp = Blueprint('addons', __name__, url_prefix='/addons')
 
-
-# Route 1: List add-ons for entitlement configuration.
+# =========================================================
+# ADD-ON CATALOG
+# =========================================================
+# --- List add-ons ---
+# Purpose: Show all add-ons for entitlement configuration.
 @addons_bp.route('/')
 @login_required
 @require_permission('dev.manage_tiers')
@@ -27,7 +30,8 @@ def list_addons():
     return render_template('developer/addons/list.html', addons=addons)
 
 
-# Route 2: Create a new add-on (permission_name or function_key).
+# --- Create add-on ---
+# Purpose: Create a new add-on record.
 @addons_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -73,7 +77,8 @@ def create_addon():
     return render_template('developer/addons/create.html')
 
 
-# Route 3: Edit an existing add-on and its entitlement wiring.
+# --- Edit add-on ---
+# Purpose: Update add-on metadata and entitlements.
 @addons_bp.route('/edit/<int:addon_id>', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -100,7 +105,8 @@ def edit_addon(addon_id):
     return render_template('developer/addons/edit.html', addon=addon)
 
 
-# Route 4: Delete an add-on (use cautiously in production).
+# --- Delete add-on ---
+# Purpose: Remove an add-on from the catalog.
 @addons_bp.route('/delete/<int:addon_id>', methods=['POST'])
 @login_required
 @require_permission('dev.manage_tiers')

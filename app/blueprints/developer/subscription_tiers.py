@@ -48,7 +48,11 @@ def _base_permissions(addons):
         query = query.filter(Permission.name.not_in(addon_perm_names))
     return query.order_by(Permission.name).all()
 
-# Route 1: List tiers with permission/add-on snapshots.
+# =========================================================
+# TIER MANAGEMENT
+# =========================================================
+# --- List tiers ---
+# Purpose: Show tiers with permission and add-on snapshots.
 @subscription_tiers_bp.route('/')
 @login_required
 @require_permission('dev.manage_tiers')
@@ -115,7 +119,8 @@ def manage_tiers():
                            tiers_dict=tiers_dict,
                            all_permissions=all_permissions)
 
-# Route 2: Create a new tier and assign permissions/add-ons.
+# --- Create tier ---
+# Purpose: Create a new tier with limits and entitlements.
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -261,7 +266,8 @@ def create_tier():
         addon_permissions=addon_permissions,
     )
 
-# Route 3: Edit a tier's limits, permissions, and add-on entitlements.
+# --- Edit tier ---
+# Purpose: Edit tier limits, permissions, and add-on entitlements.
 @subscription_tiers_bp.route('/edit/<int:tier_id>', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -401,7 +407,8 @@ def edit_tier(tier_id):
         addon_permissions=addon_permissions,
     )
 
-# Route 4: Delete a tier when unused.
+# --- Delete tier ---
+# Purpose: Delete an unused tier.
 @subscription_tiers_bp.route('/delete/<int:tier_id>', methods=['POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -437,7 +444,11 @@ def delete_tier(tier_id):
 
     return redirect(url_for('.manage_tiers'))
 
-# Route 5: Sync Stripe pricing metadata for a tier.
+# =========================================================
+# PROVIDER SYNC
+# =========================================================
+# --- Sync Stripe pricing ---
+# Purpose: Pull Stripe pricing metadata for a tier.
 @subscription_tiers_bp.route('/sync/<int:tier_id>', methods=['POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -478,7 +489,8 @@ def sync_tier_with_stripe(tier_id):
         logger.error(f'Error syncing tier {tier_id}: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Route 6: Sync Whop pricing metadata for a tier.
+# --- Sync Whop pricing ---
+# Purpose: Pull Whop pricing metadata for a tier.
 @subscription_tiers_bp.route('/sync-whop/<int:tier_id>', methods=['POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -503,7 +515,11 @@ def sync_tier_with_whop(tier_id):
         logger.error(f'Error syncing tier {tier_id} with Whop: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Route 7: Lightweight tier metadata API for developer UI.
+# =========================================================
+# API
+# =========================================================
+# --- Tier metadata API ---
+# Purpose: Return tier metadata for developer UI.
 @subscription_tiers_bp.route('/api/tiers')
 @login_required
 @require_permission('dev.manage_tiers')

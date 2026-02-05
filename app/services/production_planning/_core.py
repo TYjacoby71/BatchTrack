@@ -24,7 +24,8 @@ from .types import ProductionRequest, ProductionPlan, IngredientRequirement, Cos
 logger = logging.getLogger(__name__)
 
 
-# Service 1: Build a production plan summary for a recipe.
+# --- Build production plan ---
+# Purpose: Build a production plan summary for a recipe.
 def plan_production_comprehensive(
     recipe_id: int,
     scale: float = 1.0,
@@ -62,7 +63,8 @@ def plan_production_comprehensive(
         }
 
 
-# Service 2: Execute the full planning workflow with validation.
+# --- Execute planning workflow ---
+# Purpose: Execute the full planning workflow with validation.
 def execute_production_planning(request: ProductionRequest, include_containers: bool = True) -> ProductionPlan:
     """Execute the production planning workflow"""
     from ._stock_validation import validate_ingredients_with_uscs

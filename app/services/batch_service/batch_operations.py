@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
-    # Service 1: Start a batch from an immutable plan snapshot.
+    # Purpose: Start a batch from an immutable plan snapshot.
     @classmethod
     def start_batch(cls, plan_snapshot: dict):
         """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
@@ -236,7 +236,7 @@ class BatchOperationsService(BaseService):
 
 
 
-    # Service 2: Attach container usage records to a batch.
+    # Purpose: Attach container usage records to a batch.
     @classmethod
     def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
         """Process container deductions for batch start"""
@@ -292,7 +292,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
-    # Service 3: Attach ingredient usage records to a batch.
+    # Purpose: Attach ingredient usage records to a batch.
     @classmethod
     def _process_batch_ingredients(cls, batch, recipe, scale, skip_ingredient_ids=None, defer_commit=False):
         """Process ingredient deductions for batch start"""
@@ -362,7 +362,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
-    # Service 4: Attach consumable usage records to a batch.
+    # Purpose: Attach consumable usage records to a batch.
     @classmethod
     def _process_batch_consumables(cls, batch, recipe, scale, skip_consumable_ids=None, defer_commit=False):
         """Process consumable deductions and snapshot for batch start"""
@@ -435,7 +435,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
-    # Service 5: Cancel a batch and roll back allocations.
+    # Purpose: Cancel a batch and roll back allocations.
     @classmethod
     def cancel_batch(cls, batch_id):
         """Cancel a batch and restore inventory"""
@@ -594,7 +594,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error cancelling batch: {str(e)}")
             return False, str(e)
 
-    # Service 6: Complete a batch and finalize inventory effects.
+    # Purpose: Complete a batch and finalize inventory effects.
     @classmethod
     def complete_batch(cls, batch_id, form_data):
         """Complete a batch and create final products/ingredients"""
@@ -674,7 +674,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error completing batch: {str(e)}")
             return False, str(e)
 
-    # Service 7: Mark a batch as failed with optional reason.
+    # Purpose: Mark a batch as failed with optional reason.
     @classmethod
     def fail_batch(cls, batch_id, reason: str | None = None):
         """Mark an in-progress batch as failed. Does not attempt inventory restoration.
@@ -724,7 +724,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error failing batch: {str(e)}")
             return False, str(e)
 
-    # Service 8: Append extra ingredients/containers/consumables to a batch.
+    # Purpose: Append extra ingredients/containers/consumables to a batch.
     @classmethod
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""

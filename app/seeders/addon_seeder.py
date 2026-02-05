@@ -13,7 +13,8 @@ from app.models.addon import Addon
 from app.models import Permission, SubscriptionTier
 
 
-# Service 1: Upsert the add-on catalog rows.
+# --- Seed add-on catalog ---
+# Purpose: Upsert the add-on catalog rows.
 def seed_addons():
     """Seed core add-ons used by the system (idempotent)."""
     core_addons = [
@@ -95,7 +96,8 @@ def seed_addons():
     print('✅ Addons seeded')
 
 
-# Service 2: Backfill tier entitlements for add-on permissions.
+# --- Backfill add-on permissions ---
+# Purpose: Backfill tier entitlements for add-on permissions.
 def backfill_addon_permissions():
     """Ensure add-on permissions are attached to tiers (idempotent)."""
     addons = Addon.query.filter_by(is_active=True).all()

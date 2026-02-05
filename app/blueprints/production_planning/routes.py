@@ -22,7 +22,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Route 1: Render and submit the production planning flow.
+# =========================================================
+# PRODUCTION PLANNING
+# =========================================================
+# --- Plan production ---
+# Purpose: Render and submit the production planning flow.
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -75,7 +79,8 @@ def plan_production_route(recipe_id):
         {'label': 'Plan Production'}
     ])
 
-# Route 2: Auto-fill container options for a plan request.
+# --- Auto-fill containers ---
+# Purpose: Suggest container options for a plan request.
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')

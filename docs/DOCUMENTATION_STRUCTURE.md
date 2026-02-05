@@ -174,7 +174,8 @@ Made a code change?
 - [ ] Updated system docs for feature changes (docs/system/)
 - [ ] Added/updated changelog entry (docs/changelog/)
 - [ ] Updated add-on entitlements doc if tiers/add-ons changed
-- [ ] Updated route/service synopses in touched files
+- [ ] Added/updated file Synopsis + Glossary blocks
+- [ ] Added route/service Purpose headings (no sequential numbering)
 - [ ] Updated APP_DICTIONARY.md if new terms were introduced
 
 ## Cross-References

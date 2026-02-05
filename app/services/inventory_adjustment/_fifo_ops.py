@@ -19,7 +19,8 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-# Service 1: Fetch FIFO lots for an item.
+# --- Fetch FIFO lots ---
+# Purpose: Fetch FIFO lots for an item.
 def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     """
     Retrieve lots for an inventory item using the proper InventoryLot model.
@@ -64,7 +65,8 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     return lots
 
 
-# Service 2: Create a new FIFO lot and history entry.
+# --- Create FIFO lot ---
+# Purpose: Create a new FIFO lot and history entry.
 def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
     Create a new FIFO lot with complete tracking and audit trail.
@@ -184,7 +186,8 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         return False, f"Error creating inventory lot: {str(e)}", None
 
 
-# Service 3: Deduct inventory using FIFO ordering.
+# --- Deduct FIFO inventory ---
+# Purpose: Deduct inventory using FIFO ordering.
 def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
     """
     CONSOLIDATED: Single function to handle FIFO deduction using proper InventoryLot model.
@@ -317,7 +320,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
         return False, f"Error processing FIFO deduction: {str(e)}"
 
 
-# Service 4: Calculate total available inventory across lots.
+# --- Total available inventory ---
+# Purpose: Calculate total available inventory across lots.
 def calculate_total_available_inventory(item_id):
     """
     Calculate total available inventory from all active lots for an item.
@@ -347,7 +351,8 @@ def calculate_total_available_inventory(item_id):
     return total_available
 
 
-# Service 5: Estimate unit cost for FIFO deduction.
+# --- Estimate FIFO unit cost ---
+# Purpose: Estimate unit cost for FIFO deduction.
 def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, change_type: str | None = None) -> float:
     """
     Estimate the weighted average unit cost for a prospective FIFO deduction without mutating state.
@@ -398,7 +403,8 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
         return 0.0
 
 
-# Service 6: Credit inventory back to a specific lot.
+# --- Credit specific lot ---
+# Purpose: Credit inventory back to a specific lot.
 def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     """
     Credit inventory back to a specific FIFO lot.

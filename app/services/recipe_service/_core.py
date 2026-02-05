@@ -37,7 +37,8 @@ from ._validation import validate_recipe_data
 
 logger = logging.getLogger(__name__)
 
-# Service 1: Derive a variation display name.
+# --- Derive variation name ---
+# Purpose: Derive a variation display name.
 def _derive_variation_name(name: str | None, parent_name: str | None) -> str | None:
     if not name:
         return None
@@ -54,7 +55,8 @@ def _derive_variation_name(name: str | None, parent_name: str | None) -> str | N
     return name
 
 
-# Service 2: Compute next version number for a branch.
+# --- Next version number ---
+# Purpose: Compute next version number for a branch.
 def _next_version_number(
     recipe_group_id: int | None,
     *,
@@ -74,7 +76,8 @@ def _next_version_number(
     return int(max_ver or 0) + 1
 
 
-# Service 3: Compute next test sequence for a branch.
+# --- Next test sequence ---
+# Purpose: Compute next test sequence for a branch.
 def _next_test_sequence(
     recipe_group_id: int | None,
     *,
@@ -94,7 +97,8 @@ def _next_test_sequence(
     return int(max_test or 0) + 1
 
 
-# Service 4: Ensure recipe group exists for a recipe.
+# --- Ensure recipe group ---
+# Purpose: Ensure recipe group exists for a recipe.
 def _ensure_recipe_group(
     *,
     recipe_org_id: int,
@@ -112,7 +116,8 @@ def _ensure_recipe_group(
     return recipe_group
 
 
-# Service 5: Create a recipe with group/version metadata.
+# --- Create recipe ---
+# Purpose: Create a recipe with group/version metadata.
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
@@ -453,7 +458,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         return False, str(e)
 
 
-# Service 6: Update a recipe with lock/version safeguards.
+# --- Update recipe ---
+# Purpose: Update a recipe with lock/version safeguards.
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
@@ -694,7 +700,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
 
 
-# Service 7: Delete a recipe and related rows.
+# --- Delete recipe ---
+# Purpose: Delete a recipe and related rows.
 def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
     """
     Delete a recipe and its ingredients.
@@ -751,7 +758,8 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
 
 
 
-# Service 8: Fetch a recipe with access checks.
+# --- Fetch recipe details ---
+# Purpose: Fetch a recipe with access checks.
 def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Optional[Recipe]:
     """
     Get detailed recipe information with all relationships loaded.
@@ -808,7 +816,8 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
         raise
 
 
-# Service 9: Duplicate a recipe for legacy clone flow.
+# --- Duplicate recipe ---
+# Purpose: Duplicate a recipe for legacy clone flow.
 def duplicate_recipe(
     recipe_id: int,
     *,

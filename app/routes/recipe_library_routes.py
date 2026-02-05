@@ -45,7 +45,11 @@ def _marketplace_display_enabled() -> bool:
     return is_feature_enabled(RECIPE_MARKETPLACE_DISPLAY_FLAG)
 
 
-# Route 1: Public recipe library landing page.
+# =========================================================
+# PUBLIC LIBRARY
+# =========================================================
+# --- Library index ---
+# Purpose: Render the public recipe library landing page.
 @recipe_library_bp.route("/recipes/library")
 @limiter.limit("60000/hour;5000/minute")
 def recipe_library():
@@ -189,7 +193,8 @@ def recipe_library():
     return rendered
 
 
-# Route 2: Public recipe detail page.
+# --- Recipe detail ---
+# Purpose: Render public recipe detail page.
 @recipe_library_bp.route("/recipes/library/<int:recipe_id>-<slug>")
 def recipe_library_detail(recipe_id: int, slug: str):
     if not _marketplace_display_enabled():
@@ -246,7 +251,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
     )
 
 
-# Route 3: Public recipe list for a specific organization.
+# --- Organization library ---
+# Purpose: Render public recipe list for a specific organization.
 @recipe_library_bp.route("/recipes/library/organizations/<int:organization_id>")
 def organization_marketplace(organization_id: int):
     if not _marketplace_display_enabled():

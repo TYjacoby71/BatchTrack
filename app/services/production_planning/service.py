@@ -15,7 +15,8 @@ from app.services.lineage_service import generate_lineage_id
 
 class PlanProductionService:
     """Service for building plan snapshots."""
-    # Service 1: Build a frozen plan snapshot from a recipe.
+    # --- Build plan snapshot ---
+    # Purpose: Build a frozen plan snapshot from a recipe.
     @staticmethod
     def build_plan(recipe, scale: float, batch_type: str, notes: str = '', containers: Optional[list] = None) -> PlanSnapshot:
         """Build a fully frozen plan snapshot from a recipe and scale. No client overrides."""

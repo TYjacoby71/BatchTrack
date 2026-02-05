@@ -17,7 +17,8 @@ from ...models import Recipe
 from ._constants import _CENTS, _UNSET
 
 
-# Service 1: Normalize sharing scope input.
+# --- Normalize sharing scope ---
+# Purpose: Normalize sharing scope input.
 def _normalize_sharing_scope(value: str | None) -> str:
     """Clamp sharing scope to supported values."""
     if not value:
@@ -28,12 +29,14 @@ def _normalize_sharing_scope(value: str | None) -> str:
     return 'private'
 
 
-# Service 2: Choose default marketplace status.
+# --- Default marketplace status ---
+# Purpose: Choose default marketplace status.
 def _default_marketplace_status(is_public: bool) -> str:
     return 'listed' if is_public else 'draft'
 
 
-# Service 3: Normalize sale price input.
+# --- Normalize sale price ---
+# Purpose: Normalize sale price input.
 def _normalize_sale_price(value: Any) -> Optional[Decimal]:
     if value in (None, '', _UNSET):
         return None
@@ -46,7 +49,8 @@ def _normalize_sale_price(value: Any) -> Optional[Decimal]:
     return price.quantize(_CENTS)
 
 
-# Service 4: Apply marketplace rules to a recipe.
+# --- Apply marketplace rules ---
+# Purpose: Apply marketplace rules to a recipe.
 def _apply_marketplace_settings(
     recipe: Recipe,
     *,

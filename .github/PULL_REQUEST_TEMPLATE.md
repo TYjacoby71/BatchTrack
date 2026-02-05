@@ -22,7 +22,8 @@
 - [ ] Added changelog entry in `docs/changelog/`
 - [ ] Updated feature guides (if usage changed)
 - [ ] Updated add-on entitlements docs (if tiers/add-ons changed)
-- [ ] Updated route/service synopses in touched files
+- [ ] Added/updated file Synopsis + Glossary blocks
+- [ ] Added route/service Purpose headings (no sequential numbering)
 - [ ] Updated APP_DICTIONARY.md for new terms
 
 ## Checklist

@@ -103,7 +103,11 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
             )
 
 
-# Route 1: Create a new master recipe.
+# =========================================================
+# RECIPE CREATION
+# =========================================================
+# --- New recipe ---
+# Purpose: Create a new master recipe.
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.create')
@@ -261,7 +265,11 @@ def new_recipe():
     return render_recipe_form(recipe=prefill)
 
 
-# Route 2: Create a variation from a published master.
+# =========================================================
+# VARIATIONS & TESTS
+# =========================================================
+# --- Create variation ---
+# Purpose: Create a variation from a published master.
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -375,7 +383,8 @@ def create_variation(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
-# Route 3: Create a test version for master/variation.
+# --- Create test version ---
+# Purpose: Create a test version for master/variation.
 @recipes_bp.route('/<int:recipe_id>/test', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -454,7 +463,11 @@ def create_test_version(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
-# Route 4: Edit a recipe (blocked if published/locked/archived).
+# =========================================================
+# EDITING
+# =========================================================
+# --- Edit recipe ---
+# Purpose: Edit a recipe (blocked if published/locked/archived).
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -537,7 +550,11 @@ def edit_recipe(recipe_id):
     )
 
 
-# Route 5: Deprecated clone route (redirect with warning).
+# =========================================================
+# LEGACY & IMPORT
+# =========================================================
+# --- Clone recipe (deprecated) ---
+# Purpose: Redirect clone requests to new version flow.
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 @require_permission('recipes.create')
@@ -553,7 +570,8 @@ def clone_recipe(recipe_id):
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
-# Route 6: Import a recipe into the org library.
+# --- Import recipe ---
+# Purpose: Import a public recipe into the org library.
 @recipes_bp.route('/<int:recipe_id>/import', methods=['GET'])
 @login_required
 @require_permission('recipes.view')
