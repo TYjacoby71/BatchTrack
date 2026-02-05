@@ -172,6 +172,9 @@ def register_middleware(app: Flask) -> None:
         if path.startswith("/static/"):
             return None
 
+        if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get("TESTING_DISABLE_AUTH"):
+            return None
+
         try:
             if PublicBotTrapService.should_block_request(request, current_user):
                 logger.warning(

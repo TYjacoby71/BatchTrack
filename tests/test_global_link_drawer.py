@@ -89,9 +89,9 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
         assert result.get('updated') == 1
 
         # Reload items and verify link applied, unit unchanged, density set
-        db_session.refresh(milk_ml)
-        db_session.refresh(milk_g)
-        assert milk_ml.global_item_id == gi.id
+        milk_ml = db_session.get(InventoryItem, milk_ml_id)
+        milk_g = db_session.get(InventoryItem, milk_g_id)
+        assert milk_ml.global_item_id == global_item_id
         assert milk_g.global_item_id is None
         assert milk_ml.unit == 'ml'  # unchanged
         assert milk_g.unit == 'g'    # unchanged
@@ -99,6 +99,6 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
         assert milk_g.density in (None, 0.0)
 
         # Ensure non-convertible was not linked
-        db_session.refresh(milk_count)
+        milk_count = db_session.get(InventoryItem, milk_count_id)
         assert milk_count.global_item_id is None
 

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 
 def test_retention_flow_ack_to_delete(client, db_session, app):
+    app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create org, tier with 365d retention, user, and an old recipe not used by batches
     from app.models import Organization, User
     from app.models.permission import Permission

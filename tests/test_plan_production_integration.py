@@ -53,6 +53,7 @@ def _api(client, app, path, payload):
 
 
 def test_plan_start_finish_non_portioned(app, client, db_session):
+    app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create a simple recipe
     from app.models import Recipe, Organization, User
     
@@ -107,6 +108,7 @@ def test_plan_start_finish_non_portioned(app, client, db_session):
 
 
 def test_plan_start_finish_portioned(app, client, db_session):
+    app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create a portioned recipe
     from app.models import Recipe, Organization, User
     

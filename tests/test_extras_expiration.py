@@ -27,6 +27,7 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     )
     db_session.add(item)
     db_session.flush()
+    item_id = item.id
     item.quantity_base = to_base_quantity(0.0, item.unit, ingredient_id=item.id, density=item.density)
     sync_item_quantity_from_base(item)
 
@@ -67,9 +68,9 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from flask_login import login_user
     with app.test_request_context():
         login_user(db.session.get(User, user_id), force=True)
-        success, message, err_list = BatchOperationsService.add_extra_items_to_batch(
+            success, message, err_list = BatchOperationsService.add_extra_items_to_batch(
             batch_id=batch_id,
-            extra_ingredients=[{"item_id": item.id, "quantity": 10, "unit": "g"}],
+                extra_ingredients=[{"item_id": item_id, "quantity": 10, "unit": "g"}],
             extra_containers=[],
             extra_consumables=[]
         )
