@@ -1,7 +1,11 @@
-"""
-Ingredient-specific stock checking handler
+"""Ingredient stock check handler.
 
-Integrates with FIFO operations and unit conversion engine.
+Synopsis:
+Check ingredient availability using FIFO lots and unit conversions.
+
+Glossary:
+- Stock check: Availability evaluation for planned usage.
+- FIFO lot: Available inventory lot considered in checks.
 """
 
 import logging

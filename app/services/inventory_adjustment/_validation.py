@@ -1,3 +1,12 @@
+"""Inventory FIFO validation helpers.
+
+Synopsis:
+Validate inventory quantities against FIFO lot totals.
+
+Glossary:
+- FIFO sync: Match between inventory quantity and lot totals.
+- Validation: Check performed before committing adjustments.
+"""
 
 import logging
 from app.models import db, InventoryItem

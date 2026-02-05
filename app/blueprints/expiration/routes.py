@@ -1,3 +1,13 @@
+"""Expiration API routes.
+
+Synopsis:
+Expose endpoints for expiration summaries and calculations.
+
+Glossary:
+- Expired items: Inventory lots past their expiration date.
+- Expiring soon: Items nearing expiration within a window.
+"""
+
 from flask import render_template, jsonify, request
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission

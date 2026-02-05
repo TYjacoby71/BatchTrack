@@ -1,3 +1,13 @@
+"""Costing helpers for inventory and batches.
+
+Synopsis:
+Compute weighted unit costs based on inventory history or lots.
+
+Glossary:
+- Weighted average: Cost weighted by quantities consumed.
+- Unit cost: Cost per unit of inventory item.
+"""
+
 import logging
 from typing import Optional
 

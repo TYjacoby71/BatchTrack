@@ -1,3 +1,13 @@
+"""Global item statistics service.
+
+Synopsis:
+Aggregate adoption, cost, and expiration metrics for global items.
+
+Glossary:
+- Global item rollup: Aggregate metrics across all orgs.
+- Cost distribution: Unit cost spread across lots.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import func

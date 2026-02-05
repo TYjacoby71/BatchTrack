@@ -1,3 +1,13 @@
+"""Flask extensions and shared instances.
+
+Synopsis:
+Initialize shared extensions (DB, cache, limiter, sessions) for the app.
+
+Glossary:
+- Extension: Flask add-on providing shared infrastructure (DB, cache, auth).
+- Limiter key: Identifier used to rate-limit requests.
+"""
+
 from __future__ import annotations
 
 from flask_caching import Cache

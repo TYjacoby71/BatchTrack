@@ -1,3 +1,12 @@
+"""Inventory lot model.
+
+Synopsis:
+Defines FIFO inventory lots with base quantities and expiration data.
+
+Glossary:
+- Inventory lot: Physical stock unit tracked for FIFO.
+- Base quantity: Integer quantity stored in canonical units.
+"""
 
 from datetime import datetime, timezone
 from flask_login import current_user

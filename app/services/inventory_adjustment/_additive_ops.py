@@ -1,7 +1,11 @@
-"""
-Additive operations handler - operations that increase inventory quantity.
-These handlers calculate what needs to happen and return deltas.
-They should NEVER directly modify item.quantity.
+"""Additive inventory adjustment handlers.
+
+Synopsis:
+Calculate additive inventory deltas and create FIFO lots where required.
+
+Glossary:
+- Additive operation: Adjustment that increases inventory.
+- Lot creation: FIFO lot creation for stock additions.
 """
 
 import logging

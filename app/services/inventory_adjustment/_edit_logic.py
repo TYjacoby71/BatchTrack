@@ -1,3 +1,13 @@
+"""Inventory edit handlers.
+
+Synopsis:
+Update inventory metadata and handle unit changes with base quantities.
+
+Glossary:
+- Metadata edit: Change to item fields excluding quantity.
+- Unit change: Update item unit with quantity conversion.
+"""
+
 from flask import session
 from flask_login import current_user
 from sqlalchemy import and_

@@ -1,3 +1,13 @@
+"""Product models.
+
+Synopsis:
+Defines products and related metadata for SKUs and variants.
+
+Glossary:
+- Product: Parent entity grouping variants and SKUs.
+- Variant: Option set under a product (size, scent, etc.).
+"""
+
 from datetime import datetime, date, timezone
 
 from flask_login import current_user, UserMixin

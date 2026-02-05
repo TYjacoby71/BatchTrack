@@ -1,3 +1,13 @@
+"""Inventory routes and views.
+
+Synopsis:
+Render inventory pages and handle inventory adjustments via services.
+
+Glossary:
+- Inventory item: Stocked ingredient or product.
+- FIFO lot: Individual inventory lot tracked by FIFO.
+"""
+
 from datetime import datetime, timezone
 
 from types import SimpleNamespace

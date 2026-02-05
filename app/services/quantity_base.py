@@ -1,3 +1,13 @@
+"""Base quantity conversion utilities.
+
+Synopsis:
+Convert between float quantities and integer base quantities by unit type.
+
+Glossary:
+- Base quantity: Integer quantity stored in canonical base units.
+- Base scale: Multiplier used to store fractional units precisely.
+"""
+
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP

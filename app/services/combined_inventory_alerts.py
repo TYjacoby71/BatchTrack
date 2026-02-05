@@ -1,3 +1,13 @@
+"""Combined inventory alert service.
+
+Synopsis:
+Compute expiration and low-stock alerts for ingredients and products.
+
+Glossary:
+- Expiration alert: Warning for expired or expiring lots.
+- Low stock: Inventory below configured thresholds.
+"""
+
 from ..models import db, InventoryItem, ProductSKU
 from ..models.inventory_lot import InventoryLot
 from sqlalchemy import and_

@@ -1,3 +1,13 @@
+"""Global link drawer actions.
+
+Synopsis:
+Surface global-item linking suggestions and render the link modal.
+
+Glossary:
+- Global item: Canonical catalog entry for ingredients.
+- Suggestion drawer: UI prompt to link local items to global items.
+"""
+
 from flask import jsonify, render_template, request, url_for
 from flask_login import login_required, current_user
 

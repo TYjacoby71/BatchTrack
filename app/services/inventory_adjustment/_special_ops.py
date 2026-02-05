@@ -1,9 +1,11 @@
-"""
-Special Operations Handler
+"""Special inventory operation handlers.
 
-Handles special inventory operations that don't follow standard FIFO patterns:
-- Cost override operations
-- Unit conversion operations
+Synopsis:
+Handle cost overrides, unit conversions, and recount adjustments.
+
+Glossary:
+- Cost override: Update cost without changing quantity.
+- Recount: Set inventory to a target quantity and re-sync lots.
 """
 
 import logging

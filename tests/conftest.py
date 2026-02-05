@@ -1,5 +1,11 @@
-"""
-Pytest configuration and shared fixtures for BatchTrack tests.
+"""Pytest configuration and shared fixtures.
+
+Synopsis:
+Provides app, client, and database fixtures for BatchTrack tests.
+
+Glossary:
+- Fixture: Pytest helper for shared setup and teardown.
+- App context: Flask context used to access app resources.
 """
 import os
 import tempfile

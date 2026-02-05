@@ -1,3 +1,13 @@
+"""Retention drawer actions.
+
+Synopsis:
+Expose retention acknowledgment drawer endpoints and payloads.
+
+Glossary:
+- Retention drawer: UI prompt for acknowledging retention actions.
+- Retention queue: Scheduled deletions for aged records.
+"""
+
 from flask import jsonify, render_template, request, url_for
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission

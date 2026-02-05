@@ -1,3 +1,13 @@
+"""Request middleware for security and permissions.
+
+Synopsis:
+Applies security headers, access checks, and bot trap defenses.
+
+Glossary:
+- Security headers: HTTP headers that harden browser behavior.
+- Route access: Permission and role gating for endpoints.
+"""
+
 from __future__ import annotations
 
 import logging

@@ -1,6 +1,11 @@
-"""
-Deductive operations handler - operations that decrease inventory quantity.
-Unified to use single handler with operation type delegation.
+"""Deductive inventory adjustment handlers.
+
+Synopsis:
+Calculate deductive inventory deltas and apply FIFO deductions.
+
+Glossary:
+- Deductive operation: Adjustment that decreases inventory.
+- FIFO deduction: Deduction applied across lots in FIFO order.
 """
 
 import logging

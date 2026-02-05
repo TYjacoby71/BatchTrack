@@ -1,3 +1,13 @@
+"""Inventory adjustment core delegator.
+
+Synopsis:
+Normalize inventory adjustments, delegate to handlers, and sync FIFO.
+
+Glossary:
+- Adjustment: Inventory change event (add, deduct, recount).
+- Delegator: Central entry point for inventory changes.
+"""
+
 import logging
 from typing import Any, Dict, Optional
 

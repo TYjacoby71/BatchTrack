@@ -1,3 +1,13 @@
+"""Product inventory adjustment routes.
+
+Synopsis:
+Handle SKU inventory adjustments through the centralized service.
+
+Glossary:
+- SKU: Stock-keeping unit tied to an inventory item.
+- Adjustment: Inventory change recorded via inventory adjustment service.
+"""
+
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...utils.permissions import require_permission

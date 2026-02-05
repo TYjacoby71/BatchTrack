@@ -1,3 +1,13 @@
+"""Global item synchronization service.
+
+Synopsis:
+Sync linked inventory items with updates to global catalog entries.
+
+Glossary:
+- Global item: Canonical ingredient entry in the global catalog.
+- Ownership: Flag indicating whether an item is globally managed.
+"""
+
 from __future__ import annotations
 
 import logging

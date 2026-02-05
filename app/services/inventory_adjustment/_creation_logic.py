@@ -1,6 +1,11 @@
-"""
-Creation logic handler - handles initial stock entries for new items.
-This handler should work with the centralized quantity update system.
+"""Inventory creation logic handlers.
+
+Synopsis:
+Create initial inventory items and seed starting stock entries.
+
+Glossary:
+- Initial stock: First inventory quantity recorded for an item.
+- Creation logic: Validation and setup for new inventory items.
 """
 
 import logging

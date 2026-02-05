@@ -1,3 +1,13 @@
+"""Expiration calculation services.
+
+Synopsis:
+Compute expiration dates, remaining life, and expiration summaries.
+
+Glossary:
+- Shelf life: Days an item remains valid after receipt.
+- Expiration date: Timestamp when an item becomes expired.
+"""
+
 from datetime import datetime, timedelta, date, timezone
 from ...models import db, InventoryItem, InventoryHistory, UnifiedInventoryHistory, ProductSKU, Batch, InventoryLot
 from sqlalchemy import and_, or_

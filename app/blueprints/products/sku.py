@@ -1,3 +1,13 @@
+"""SKU routes and management flows.
+
+Synopsis:
+Render SKU pages and manage SKU inventory history and merges.
+
+Glossary:
+- SKU: Stock-keeping unit linked to an inventory item.
+- Variant: Product option associated with a SKU.
+"""
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ...utils.permissions import require_permission

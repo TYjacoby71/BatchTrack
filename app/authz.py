@@ -1,3 +1,13 @@
+"""Authentication and user-loading helpers.
+
+Synopsis:
+Configure Flask-Login handlers and load users with required relationships.
+
+Glossary:
+- User loader: Function used by Flask-Login to hydrate current_user.
+- Session token: Server-side value used to validate active sessions.
+"""
+
 from __future__ import annotations
 
 from flask import jsonify, redirect, request, url_for

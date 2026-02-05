@@ -1,3 +1,12 @@
+"""FIFO detail API routes.
+
+Synopsis:
+Provide FIFO lot details and batch usage summaries for inventory items.
+
+Glossary:
+- FIFO entry: A lot event displayed in FIFO ordering.
+- Batch usage: Lot consumption tied to a batch.
+"""
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required

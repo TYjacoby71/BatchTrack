@@ -1,3 +1,13 @@
+"""Test data seeder for demo scenarios.
+
+Synopsis:
+Seeds a rich dataset for end-to-end inventory and batch workflows.
+
+Glossary:
+- Seeder: Script that inserts baseline or demo data.
+- Living dataset: Realistic data used for manual QA.
+"""
+
 from datetime import timedelta, timezone as dt_timezone
 from typing import Dict, List, Optional
 
