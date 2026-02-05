@@ -100,6 +100,7 @@
 </div>
 {% endif %}
 
+{% if can_create_variations %}
 <!-- New Version Modal -->
 <div class="modal fade" id="newVersionModal" tabindex="-1">
   <div class="modal-dialog">
@@ -180,6 +181,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="row g-4">
   <!-- Left Column -->
@@ -313,6 +315,7 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
+    {% if can_create_variations %}
     <div class="card mb-4">
       <div class="card-header">
         <h5 class="card-title mb-0"><i class="fas fa-sitemap"></i> Lineage Selector</h5>
@@ -349,6 +352,7 @@
         </p>
       </div>
     </div>
+    {% endif %}
 
     <!-- Actions Card -->
     <div class="card mb-4">
@@ -370,6 +374,7 @@
           <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
             <i class="fas fa-edit"></i> {% if is_test %}Edit Test{% else %}Edit Recipe{% endif %}
           </a>
+          {% if can_create_variations %}
           <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newVersionModal">
             <i class="fas fa-plus-circle"></i> Create New Version
           </button>
@@ -387,6 +392,7 @@
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newGroupModal">
               <i class="fas fa-seedling"></i> Start New Recipe Group
             </button>
+          {% endif %}
           {% endif %}
           {% if lineage_enabled %}
           <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark">

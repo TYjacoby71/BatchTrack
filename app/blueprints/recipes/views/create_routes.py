@@ -15,7 +15,9 @@ from app.models.batch import Batch
 from app.models.product_category import ProductCategory
 from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
+    build_test_template,
     create_recipe,
+    create_test_version as create_test_version_service,
     duplicate_recipe,
     get_recipe_details,
     update_recipe,
@@ -360,7 +362,7 @@ def create_variation(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/test', methods=['GET', 'POST'])
 @login_required
-@require_permission('recipes.create')
+@require_permission('recipes.create_variations')
 def create_test_version(recipe_id):
     try:
         base = get_recipe_details(recipe_id)
@@ -387,24 +389,11 @@ def create_test_version(recipe_id):
                     form_values=request.form,
                 )
 
-            payload = dict(submission.kwargs)
-            payload.update(
-                {
-                    'status': target_status,
-                    'is_test': True,
-                    'recipe_group_id': base.recipe_group_id,
-                    'variation_name': base.variation_name,
-                    'parent_master_id': base.parent_master_id,
-                    'parent_recipe_id': base.parent_recipe_id,
-                    'version_number_override': base.version_number,
-                    'sharing_scope': 'private',
-                    'is_public': False,
-                    'is_for_sale': False,
-                    'marketplace_status': 'draft',
-                }
+            success, result = create_test_version_service(
+                base=base,
+                payload=submission.kwargs,
+                target_status=target_status,
             )
-
-            success, result = create_recipe(**payload)
             if success:
                 if target_status == 'draft':
                     flash('Test saved as a draft.', 'info')
@@ -427,35 +416,7 @@ def create_test_version(recipe_id):
                 draft_prompt=draft_prompt,
             )
 
-        test_template = Recipe(
-            name=base.name,
-            instructions=base.instructions,
-            label_prefix=base.label_prefix,
-            predicted_yield=base.predicted_yield,
-            predicted_yield_unit=base.predicted_yield_unit,
-            category_id=base.category_id,
-        )
-        test_template.recipe_group_id = base.recipe_group_id
-        test_template.is_master = base.is_master
-        test_template.variation_name = base.variation_name
-        test_template.variation_prefix = base.variation_prefix
-        test_template.parent_recipe_id = base.parent_recipe_id
-        test_template.parent_master_id = base.parent_master_id
-        test_template.portioning_data = (
-            base.portioning_data.copy() if isinstance(base.portioning_data, dict) else base.portioning_data
-        )
-        test_template.is_portioned = base.is_portioned
-        test_template.portion_name = base.portion_name
-        test_template.portion_count = base.portion_count
-        test_template.portion_unit_id = base.portion_unit_id
-        if base.category_data:
-            test_template.category_data = (
-                base.category_data.copy() if isinstance(base.category_data, dict) else base.category_data
-            )
-        test_template.skin_opt_in = base.skin_opt_in
-        test_template.sharing_scope = 'private'
-        test_template.is_public = False
-        test_template.is_for_sale = False
+        test_template = build_test_template(base)
 
         ingredient_prefill = serialize_assoc_rows(base.recipe_ingredients)
         consumable_prefill = serialize_assoc_rows(base.recipe_consumables)
