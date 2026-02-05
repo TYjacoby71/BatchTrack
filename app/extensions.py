@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from flask import current_app
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -70,13 +69,4 @@ def load_user(user_id: str):
     except (TypeError, ValueError):
         return None
     user = db.session.get(User, user_id_int, options=[joinedload(User.organization)])
-    if user and current_app and current_app.config.get("TESTING"):
-        try:
-            _ = user.is_active
-            _ = user.organization_id
-            if user.organization is not None:
-                db.session.expunge(user.organization)
-            db.session.expunge(user)
-        except Exception:
-            pass
     return user
