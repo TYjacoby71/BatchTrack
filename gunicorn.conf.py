@@ -1,3 +1,13 @@
+"""Gunicorn runtime configuration for BatchTrack.
+
+Synopsis:
+Defines worker counts, timeouts, and logging defaults for Gunicorn.
+
+Glossary:
+- Worker: Gunicorn process handling requests.
+- Preload: Load the app before forking workers.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +27,13 @@ def _env_int(key: str, default: int) -> int:
         return default
 
 
+def _env_bool(key: str, default: bool) -> bool:
+    value = os.environ.get(key)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _configured_workers() -> int:
     """Respect explicit worker counts while preventing overcommit."""
     cpu_count = max(multiprocessing.cpu_count(), 1)
@@ -26,7 +43,7 @@ def _configured_workers() -> int:
     if "GUNICORN_WORKERS" in os.environ:
         return _env_int("GUNICORN_WORKERS", auto_workers)
     if "WEB_CONCURRENCY" in os.environ:
-        return _env_int("WEB_CONCURRENCY", auto_workers)
+        LOGGER.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
 
     max_auto = _env_int("GUNICORN_MAX_WORKERS", auto_workers)
     return min(auto_workers, max_auto)
@@ -63,8 +80,8 @@ keepalive = _env_int("GUNICORN_KEEPALIVE", 5)
 max_requests = _env_int("GUNICORN_MAX_REQUESTS", 2000)
 max_requests_jitter = _env_int("GUNICORN_MAX_REQUESTS_JITTER", 100)
 
-# Preload application for memory efficiency
-preload_app = True
+# Preload application for memory efficiency (opt-in; safer to default off)
+preload_app = _env_bool("GUNICORN_PRELOAD_APP", False)
 
 # Logging
 access_log_format = '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
@@ -79,5 +96,6 @@ proc_name = "batchtrack"
 limit_request_line = 8192
 limit_request_fields = 100
 limit_request_field_size = 8192
+
 
 _log_runtime_configuration()

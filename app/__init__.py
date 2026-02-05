@@ -1,3 +1,13 @@
+"""Application factory and core configuration wiring.
+
+Synopsis:
+Builds the Flask app, initializes extensions, and applies environment overrides.
+
+Glossary:
+- App factory: Function that constructs and configures the Flask app.
+- Extension: Flask subsystem (db, cache, sessions, limiter) initialized per app.
+"""
+
 import logging
 import os
 from typing import Any
@@ -14,7 +24,7 @@ from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
 from .utils.cache_utils import should_bypass_cache
-from .utils.redis_pool import get_redis_pool
+from .utils.redis_pool import LazyRedisClient, get_redis_pool
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +122,59 @@ def _apply_sqlalchemy_env_overrides(app: Flask) -> None:
     if changed:
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
 
+    _warn_sqlalchemy_pool_settings(app, engine_opts)
+
+
+def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
+    env_name = (app.config.get("ENV") or app.config.get("FLASK_ENV") or "").lower()
+    if env_name not in {"production", "staging"}:
+        return
+
+    pool_size = engine_opts.get("pool_size")
+    max_overflow = engine_opts.get("max_overflow")
+    pool_timeout = engine_opts.get("pool_timeout")
+    pool_recycle = engine_opts.get("pool_recycle")
+
+    if isinstance(pool_size, int) and pool_size < 10:
+        logger.warning(
+            "SQLALCHEMY_POOL_SIZE=%s is low for production (per worker). Expect queueing under load.",
+            pool_size,
+        )
+    if isinstance(max_overflow, int) and max_overflow < 5:
+        logger.warning(
+            "SQLALCHEMY_MAX_OVERFLOW=%s is low for production (per worker).",
+            max_overflow,
+        )
+    if isinstance(pool_timeout, (int, float)) and pool_timeout < 30:
+        logger.warning(
+            "SQLALCHEMY_POOL_TIMEOUT=%ss is aggressive for production; expect timeouts under load.",
+            pool_timeout,
+        )
+    if isinstance(pool_recycle, (int, float)) and pool_recycle < 900:
+        logger.warning(
+            "SQLALCHEMY_POOL_RECYCLE=%ss is low; expect extra connection churn.",
+            pool_recycle,
+        )
+
+    if os.environ.get("WEB_CONCURRENCY") not in (None, ""):
+        logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
+
+    try:
+        worker_count = int(
+            os.environ.get("GUNICORN_WORKERS")
+            or os.environ.get("WORKERS")
+            or 1
+        )
+    except (TypeError, ValueError):
+        worker_count = 1
+    if isinstance(pool_size, int) and worker_count > 1:
+        logger.info(
+            "SQLAlchemy pool sizing: workers=%s, per-worker pool_size=%s, total base=%s",
+            worker_count,
+            pool_size,
+            worker_count * pool_size,
+        )
+
 
 def _sync_env_overrides(app: Flask) -> None:
     redis_url_env = os.environ.get("REDIS_URL")
@@ -152,13 +215,9 @@ def _configure_sessions(app: Flask) -> None:
 
     if session_redis_url:
         try:
-            import redis
+            import redis  # noqa: F401  # ensure package is available
 
-            pool = get_redis_pool(app)
-            if pool is not None:
-                session_redis = redis.Redis(connection_pool=pool)
-            else:
-                session_redis = redis.Redis.from_url(session_redis_url)
+            session_redis = LazyRedisClient(session_redis_url, app)
             session_backend = "redis"
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
@@ -198,6 +257,7 @@ def _configure_rate_limiter(app: Flask) -> None:
 
     if app.config.get("ENV") == "production" and storage_uri.startswith("memory://"):
         raise RuntimeError("Rate limiter storage must be Redis-backed in production.")
+
 
 
 def _run_optional_create_all(app: Flask) -> None:
