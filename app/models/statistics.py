@@ -217,25 +217,25 @@ class OrganizationStats(db.Model):
 
             # Recipe statistics - scoped by organization
             self.total_recipes = Recipe.query.filter(Recipe.organization_id == self.organization_id).count()
-        self.total_master_recipes = Recipe.query.filter(
-            Recipe.organization_id == self.organization_id,
-            Recipe.is_master.is_(True),
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-        ).count()
-        self.total_variation_recipes = Recipe.query.filter(
-            Recipe.organization_id == self.organization_id,
-            Recipe.is_master.is_(False),
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-        ).count()
-        self.total_test_recipes = Recipe.query.filter(
-            Recipe.organization_id == self.organization_id,
-            Recipe.test_sequence.is_not(None),
-            Recipe.is_archived.is_(False),
-        ).count()
+            self.total_master_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(True),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_variation_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(False),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_test_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.test_sequence.is_not(None),
+                Recipe.is_archived.is_(False),
+            ).count()
 
             # Inventory statistics - already scoped by organization
             self.total_inventory_items = InventoryItem.query.filter(InventoryItem.organization_id == self.organization_id).count()
