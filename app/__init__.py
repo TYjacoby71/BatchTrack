@@ -110,6 +110,57 @@ def _apply_sqlalchemy_env_overrides(app: Flask) -> None:
     if changed:
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
 
+    _warn_sqlalchemy_pool_settings(app, engine_opts)
+
+
+def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
+    env_name = (app.config.get("ENV") or app.config.get("FLASK_ENV") or "").lower()
+    if env_name not in {"production", "staging"}:
+        return
+
+    pool_size = engine_opts.get("pool_size")
+    max_overflow = engine_opts.get("max_overflow")
+    pool_timeout = engine_opts.get("pool_timeout")
+    pool_recycle = engine_opts.get("pool_recycle")
+
+    if isinstance(pool_size, int) and pool_size < 10:
+        logger.warning(
+            "SQLALCHEMY_POOL_SIZE=%s is low for production (per worker). Expect queueing under load.",
+            pool_size,
+        )
+    if isinstance(max_overflow, int) and max_overflow < 5:
+        logger.warning(
+            "SQLALCHEMY_MAX_OVERFLOW=%s is low for production (per worker).",
+            max_overflow,
+        )
+    if isinstance(pool_timeout, (int, float)) and pool_timeout < 30:
+        logger.warning(
+            "SQLALCHEMY_POOL_TIMEOUT=%ss is aggressive for production; expect timeouts under load.",
+            pool_timeout,
+        )
+    if isinstance(pool_recycle, (int, float)) and pool_recycle < 900:
+        logger.warning(
+            "SQLALCHEMY_POOL_RECYCLE=%ss is low; expect extra connection churn.",
+            pool_recycle,
+        )
+
+    try:
+        worker_count = int(
+            os.environ.get("WEB_CONCURRENCY")
+            or os.environ.get("GUNICORN_WORKERS")
+            or os.environ.get("WORKERS")
+            or 1
+        )
+    except (TypeError, ValueError):
+        worker_count = 1
+    if isinstance(pool_size, int) and worker_count > 1:
+        logger.info(
+            "SQLAlchemy pool sizing: workers=%s, per-worker pool_size=%s, total base=%s",
+            worker_count,
+            pool_size,
+            worker_count * pool_size,
+        )
+
 
 def _sync_env_overrides(app: Flask) -> None:
     redis_url_env = os.environ.get("REDIS_URL")

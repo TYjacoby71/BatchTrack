@@ -13,6 +13,14 @@ This runbook provides step-by-step instructions for scaling BatchTrack to handle
 
 All guidance below reflects what is currently shipping in the repository—disregard older refactor docs that may contradict these instructions.
 
+> Baseline note: if you are targeting ~500 concurrent users, start with the
+> pool settings in `docs/operations/env.production.example` (`SQLALCHEMY_POOL_SIZE=20`,
+> `SQLALCHEMY_MAX_OVERFLOW=20`, `SQLALCHEMY_POOL_RECYCLE=1800`,
+> `SQLALCHEMY_POOL_TIMEOUT=45`, `REDIS_MAX_CONNECTIONS` set to your plan limit,
+> and `REDIS_POOL_MAX_CONNECTIONS` left on auto unless you need a per-worker cap).
+> These pool sizes are per worker process—avoid shrinking them below 10/10 in
+> production or you will hit pool queueing and 60s gunicorn timeouts.
+
 ## Prerequisites
 
 ### Infrastructure Requirements
