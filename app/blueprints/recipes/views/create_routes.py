@@ -76,6 +76,7 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
         .filter(
             Recipe.organization_id == org_id,
             Recipe.org_origin_purchased.is_(True),
+            Recipe.test_sequence.is_(None),
         )
         .all()
     )
