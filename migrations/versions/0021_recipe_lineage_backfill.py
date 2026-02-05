@@ -49,6 +49,23 @@ def _next_prefix(org_id: int, existing: dict[int, set[str]], counters: dict[int,
         counter += 1
 
 
+def _unique_group_name(name: str, org_id: int, existing: dict[int, set[str]], counters: dict[int, int]) -> str:
+    candidate = name.strip() or "Recipe Group"
+    name_set = existing.setdefault(org_id, set())
+    if candidate not in name_set:
+        name_set.add(candidate)
+        return candidate
+
+    counter = counters.get(org_id, 2)
+    while True:
+        alt = f"{candidate} (Group {counter})"
+        if alt not in name_set:
+            name_set.add(alt)
+            counters[org_id] = counter + 1
+            return alt
+        counter += 1
+
+
 def _compute_lineage_id(recipe: dict, recipes: dict[int, dict]) -> str:
     group_id = int(recipe.get("recipe_group_id") or 0)
     is_master = bool(recipe.get("is_master"))
@@ -92,12 +109,16 @@ def upgrade():
                 recipe_group_tbl.c.id,
                 recipe_group_tbl.c.organization_id,
                 recipe_group_tbl.c.prefix,
+                recipe_group_tbl.c.name,
             )
         )
     )
     existing_prefixes: dict[int, set[str]] = {}
+    existing_group_names: dict[int, set[str]] = {}
     for row in group_rows:
-        existing_prefixes.setdefault(int(row.organization_id), set()).add(str(row.prefix or "").upper())
+        org_id = int(row.organization_id)
+        existing_prefixes.setdefault(org_id, set()).add(str(row.prefix or "").upper())
+        existing_group_names.setdefault(org_id, set()).add(str(getattr(row, "name", "") or "").strip())
 
     recipe_rows = list(
         bind.execute(
@@ -133,6 +154,7 @@ def upgrade():
             root_group_map.setdefault(root_map[recipe_id], int(group_id))
 
     prefix_counters: dict[int, int] = {}
+    name_counters: dict[int, int] = {}
     created_group_ids: set[int] = set()
 
     for recipe_id, recipe in recipes.items():
@@ -143,7 +165,8 @@ def upgrade():
             continue
         root_recipe = recipes.get(root_id) or recipe
         org_id = int(root_recipe.get("organization_id") or 0)
-        group_name = (root_recipe.get("name") or f"Recipe Group {root_id}").strip()
+        base_name = (root_recipe.get("name") or f"Recipe Group {root_id}").strip()
+        group_name = _unique_group_name(base_name, org_id, existing_group_names, name_counters)
         label_prefix = (root_recipe.get("label_prefix") or "").strip().upper()
         prefix = None
         if label_prefix:
