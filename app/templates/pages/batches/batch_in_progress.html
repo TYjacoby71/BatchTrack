@@ -1,3 +1,6 @@
+{# File: pages/batches/batch_in_progress.html
+   Synopsis: In-progress batch view and finish form.
+   Glossary: Lineage ID = recipe version identifier; Target version = recipe used for batch. #}
 {% extends 'layout.html' %}
 
 {% block head %}
@@ -48,6 +51,12 @@
                     <div class="col-md-6">
                         <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
                         <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                        {% if batch.target_version %}
+                        <p><strong>Recipe Version:</strong> {{ batch.target_version.name }} (v{{ batch.target_version.version_number }})</p>
+                        {% endif %}
+                        {% if batch.lineage_id %}
+                        <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
+                        {% endif %}
                         <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
                         <p><strong>Batch Type:</strong> {{ batch.batch_type|title if batch.batch_type else 'Not Set' }}</p>
 

@@ -17,6 +17,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **RecipeGroup** → See [DATABASE_MODELS.md](DATABASE_MODELS.md)
 - **OrganizationAddon** → See [ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md)
+- **UserStats.tests_created** → Test recipe count used for badges (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **OrganizationStats.total_master_recipes** → Active master recipe count (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **OrganizationStats.total_variation_recipes** → Active variation count (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **OrganizationLeaderboardStats.most_testing_user_id** → Top tester for badge awarding (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 
 ---
 
@@ -35,6 +39,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
+- **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 
 ---
 
@@ -44,6 +49,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
+- **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 
 ---
 

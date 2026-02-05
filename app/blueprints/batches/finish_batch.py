@@ -1,3 +1,13 @@
+"""Finish batch routes.
+
+Synopsis:
+Completes or fails batches via service delegation.
+
+Glossary:
+- Completion: Finalizes batch outputs and inventory effects.
+- Failure: Marks a batch as failed without output creation.
+"""
+
 import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
@@ -12,6 +22,11 @@ from app.utils.permissions import role_required
 finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)
 
+# =========================================================
+# FINISH BATCH
+# =========================================================
+# --- Complete batch ---
+# Purpose: Complete a batch and create final outputs.
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 @require_permission('batches.finish')
@@ -40,6 +55,8 @@ def complete_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
 
+# --- Fail batch ---
+# Purpose: Mark a batch as failed via service.
 @finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
 @login_required
 @require_permission('batches.finish')

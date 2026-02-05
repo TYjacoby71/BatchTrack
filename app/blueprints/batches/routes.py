@@ -1,3 +1,13 @@
+"""Batch list and API routes.
+
+Synopsis:
+Provides batch list views and API endpoints for in-progress operations.
+
+Glossary:
+- Batch record: Completed batch report view.
+- In-progress batch: Active batch with finish flow.
+"""
+
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from ...utils.permissions import require_permission
@@ -74,6 +84,11 @@ def _build_forced_start_note(stock_issues):
         return None
     return "Started batch without: " + "; ".join(parts)
 
+# =========================================================
+# API: INVENTORY DETAILS
+# =========================================================
+# --- Batch remaining details ---
+# Purpose: Return remaining inventory details for a batch.
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
 @require_permission('batches.view')
@@ -88,6 +103,8 @@ def get_batch_remaining_details(batch_id):
         logger.error(f"Error in get_batch_remaining_details: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# --- Batch inventory summary ---
+# Purpose: Return FIFO inventory summary for a batch.
 @batches_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
 @require_permission('batches.view')
@@ -105,6 +122,11 @@ def get_batch_inventory_summary(batch_id):
         logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# =========================================================
+# PREFERENCES
+# =========================================================
+# --- Column visibility ---
+# Purpose: Persist batch list column preferences.
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
 @require_permission('batches.view')
@@ -115,6 +137,11 @@ def set_column_visibility():
     flash('Column preferences updated')
     return redirect(url_for('batches.list_batches'))
 
+# =========================================================
+# LIST & VIEWS
+# =========================================================
+# --- Batch list ---
+# Purpose: List batches for the organization.
 @batches_bp.route('/')
 @login_required
 @require_permission('batches.view')
@@ -178,6 +205,8 @@ def list_batches():
             visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
 
+# --- Batch record ---
+# Purpose: View a completed batch record.
 @batches_bp.route('/<batch_identifier>')
 @login_required
 @require_permission('batches.view')
@@ -222,6 +251,8 @@ def view_batch_record(batch_identifier):
         flash(f'Error viewing batch: {str(e)}', 'error')
         return redirect(url_for('batches.list_batches'))
 
+# --- Update notes ---
+# Purpose: Update notes on an existing batch.
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
 @require_permission('batches.edit')
@@ -253,6 +284,8 @@ def update_batch_notes(batch_id):
         flash(f'Error updating batch: {str(e)}', 'error')
         return redirect(url_for('batches.list_batches'))
 
+# --- In-progress batch ---
+# Purpose: View an in-progress batch.
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
 @require_permission('batches.view')
@@ -309,6 +342,11 @@ def view_batch_in_progress(batch_identifier):
         flash(f'Error viewing batch: {str(e)}', 'error')
         return redirect(url_for('batches.list_batches'))
 
+# =========================================================
+# API: START FLOW
+# =========================================================
+# --- Available ingredients ---
+# Purpose: Return available ingredients for batch start.
 @batches_bp.route('/api/available-ingredients/<int:recipe_id>')
 @login_required
 @require_permission('batches.create')
@@ -327,6 +365,8 @@ def get_available_ingredients_for_batch(recipe_id):
         logger.error(f"Error getting available ingredients: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# --- Start batch (API) ---
+# Purpose: Build plan snapshot and start a batch.
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
 @limiter.limit("100/minute")
