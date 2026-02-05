@@ -1,3 +1,13 @@
+"""Developer routes for add-on catalog management.
+
+Synopsis:
+Create and maintain add-ons with permission and function-key bindings.
+
+Glossary:
+- Permission add-on: Grants RBAC permission when included or purchased.
+- Function-key add-on: Feature toggle enforced in service logic.
+"""
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from app.extensions import db
@@ -7,7 +17,11 @@ from app.utils.permissions import require_permission
 
 addons_bp = Blueprint('addons', __name__, url_prefix='/addons')
 
-
+# =========================================================
+# ADD-ON CATALOG
+# =========================================================
+# --- List add-ons ---
+# Purpose: Show all add-ons for entitlement configuration.
 @addons_bp.route('/')
 @login_required
 @require_permission('dev.manage_tiers')
@@ -16,6 +30,8 @@ def list_addons():
     return render_template('developer/addons/list.html', addons=addons)
 
 
+# --- Create add-on ---
+# Purpose: Create a new add-on record.
 @addons_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -61,6 +77,8 @@ def create_addon():
     return render_template('developer/addons/create.html')
 
 
+# --- Edit add-on ---
+# Purpose: Update add-on metadata and entitlements.
 @addons_bp.route('/edit/<int:addon_id>', methods=['GET', 'POST'])
 @login_required
 @require_permission('dev.manage_tiers')
@@ -87,6 +105,8 @@ def edit_addon(addon_id):
     return render_template('developer/addons/edit.html', addon=addon)
 
 
+# --- Delete add-on ---
+# Purpose: Remove an add-on from the catalog.
 @addons_bp.route('/delete/<int:addon_id>', methods=['POST'])
 @login_required
 @require_permission('dev.manage_tiers')

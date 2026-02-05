@@ -8,13 +8,41 @@ def _api(client, app, path, payload):
     user = User.query.first()
     if not user:
         from app.models import Organization
+        from app.models.permission import Permission
+        from app.models.role import Role
+        from app.models.subscription_tier import SubscriptionTier
         org = Organization(name='Test Org')
         db.session.add(org)
         db.session.flush()
-        
-        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
+
+        perm = Permission.query.filter_by(name='batches.create').first()
+        if not perm:
+            perm = Permission(name='batches.create', description='Start production batches')
+            db.session.add(perm)
+            db.session.flush()
+
+        tier = SubscriptionTier(
+            name='Integration Tier',
+            billing_provider='exempt',
+            user_limit=5
+        )
+        db.session.add(tier)
+        db.session.flush()
+        tier.permissions.append(perm)
+        org.subscription_tier_id = tier.id
+
+        user = User(
+            username='apitester',
+            email='apitester@example.com',
+            is_active=True,
+            is_verified=True,
+            organization_id=org.id
+        )
         db.session.add(user)
         db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user.id)

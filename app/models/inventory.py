@@ -1,3 +1,13 @@
+"""Inventory models.
+
+Synopsis:
+Defines inventory items, history, and lifecycle fields.
+
+Glossary:
+- InventoryItem: Stocked ingredient or material.
+- InventoryHistory: Audit log of inventory changes.
+"""
+
 from datetime import datetime, date, timezone
 
 from flask_login import current_user
@@ -228,6 +238,7 @@ class InventoryHistory(ScopedModelMixin, db.Model):
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)
     fifo_code = db.Column(db.String(32), nullable=True)  # Base32 encoded unique identifier
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    lineage_id = db.Column(db.String(64), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     quantity_used = db.Column(db.Float, default=0.0)  # Track actual consumption vs deduction

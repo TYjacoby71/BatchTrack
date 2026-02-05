@@ -144,7 +144,8 @@ def test_permission_required_denies_user_without_permission(app, client, db_sess
 
     assert response.status_code == 403
     payload = response.get_json()
-    assert payload["error"].startswith("Permission denied")
+    assert payload["error"] == "permission_denied"
+    assert payload["permission"] == perm_name
 
     # Control: privileged user should still pass
     privileged = db_session.get(User, privileged_user_id)

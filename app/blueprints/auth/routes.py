@@ -21,6 +21,7 @@ from ...services.signup_service import SignupService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.billing_service import BillingService
 from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 import re
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ def login():
         return redirect(url_for('app_routes.dashboard'))
 
     form = LoginForm()
+    oauth_available = OAuthService.is_oauth_configured()
     # Persist "next" param for OAuth/alternate login flows
     try:
         if request.method == 'GET':
@@ -73,15 +75,30 @@ def login():
                 session['login_next'] = next_param
     except Exception:
         pass
-    if request.method == 'POST' and form.validate_on_submit():
+    try:
+        form_is_valid = request.method == 'POST' and form.validate_on_submit()
+    except Exception as exc:
+        logger.exception("Login form validation failed: %s", exc)
+        _log_loadtest_login_context("form_validation_error", {"error": str(exc)})
+        flash('Unable to process login right now. Please try again.')
+        return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available), 503
+
+    if form_is_valid:
         username = request.form.get('username')
         password = request.form.get('password')
 
         if not username or not password:
             flash('Please provide both username and password')
-            return render_template('pages/auth/login.html', form=form)
+            return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available)
 
-        user = User.query.filter_by(username=username).first()
+        try:
+            user = User.query.filter_by(username=username).first()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            logger.exception("Login query failed for %s: %s", username, exc)
+            _log_loadtest_login_context("db_query_error", {"username": username})
+            flash('Login temporarily unavailable. Please try again.')
+            return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available), 503
 
         if username and username.startswith("loadtest_user"):
             logger.info(
@@ -100,14 +117,22 @@ def login():
                     password_valid,
                 )
 
-        if user and user.check_password(password):
+        try:
+            password_ok = user.check_password(password) if user else False
+        except Exception as exc:
+            logger.exception("Login password check failed for %s: %s", username, exc)
+            _log_loadtest_login_context("password_check_error", {"username": username})
+            flash('Login temporarily unavailable. Please try again.')
+            return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available), 503
+
+        if user and password_ok:
             # Ensure user is active
             if not user.is_active:
                 if username and username.startswith("loadtest_user"):
                     logger.warning("Load test user %s is inactive", username)
                 _log_loadtest_login_context("inactive_user", {"username": username})
                 flash('Account is inactive. Please contact administrator.')
-                return render_template('pages/auth/login.html', form=form)
+                return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available)
 
             # Log the user in
             login_user(user)
@@ -118,7 +143,14 @@ def login():
 
             # Update last login
             user.last_login = TimezoneUtils.utc_now()
-            db.session.commit()
+            try:
+                db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                logger.exception("Login commit failed for %s: %s", username, exc)
+                _log_loadtest_login_context("db_commit_error", {"username": username})
+                flash('Login temporarily unavailable. Please try again.')
+                return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available), 503
 
             # Redirect based on user type and optional next parameter
             if user.user_type == 'developer':
@@ -137,9 +169,9 @@ def login():
             if username and username.startswith("loadtest_user"):
                 logger.warning("Load test login failed: invalid credentials for %s", username)
             flash('Invalid username or password')
-            return render_template('pages/auth/login.html', form=form)
+            return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available)
 
-    return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
+    return render_template('pages/auth/login.html', form=form, oauth_available=oauth_available)
 
 
 def _safe_next_path(value: str | None):

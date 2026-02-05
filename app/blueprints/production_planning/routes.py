@@ -1,3 +1,13 @@
+"""Production planning routes.
+
+Synopsis:
+Serve plan production views and supporting API calls for container planning.
+
+Glossary:
+- Plan: Computed production requirements for a recipe and scale.
+- Container strategy: Suggested container allocation for a plan.
+"""
+
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import production_planning_bp
@@ -12,6 +22,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# =========================================================
+# PRODUCTION PLANNING
+# =========================================================
+# --- Plan production ---
+# Purpose: Render and submit the production planning flow.
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -21,6 +36,9 @@ def plan_production_route(recipe_id):
     if not recipe:
         flash('Recipe not found.', 'error')
         return redirect(url_for('recipes.list_recipes'))
+    if recipe.is_archived:
+        flash('Archived recipes cannot be planned for production.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
     if request.method == 'POST':
         try:
@@ -61,6 +79,8 @@ def plan_production_route(recipe_id):
         {'label': 'Plan Production'}
     ])
 
+# --- Auto-fill containers ---
+# Purpose: Suggest container options for a plan request.
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -71,6 +91,8 @@ def auto_fill_containers(recipe_id):
         scale = data.get('scale', 1.0)
 
         recipe = Recipe.query.get_or_404(recipe_id)
+        if recipe.is_archived:
+            return jsonify({'success': False, 'error': 'Archived recipes cannot be planned for production.'}), 400
 
         # Use the simplified container management
         # Allow optional product_density to be passed for cross-type conversions

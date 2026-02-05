@@ -1,4 +1,12 @@
-"""Marketplace helpers for recipes."""
+"""Marketplace helpers for recipes.
+
+Synopsis:
+Normalizes marketplace fields and enforces listing rules.
+
+Glossary:
+- Sharing scope: Visibility rule for a recipe.
+- Listing: Marketplace visibility for a recipe version.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +17,8 @@ from ...models import Recipe
 from ._constants import _CENTS, _UNSET
 
 
+# --- Normalize sharing scope ---
+# Purpose: Normalize sharing scope input.
 def _normalize_sharing_scope(value: str | None) -> str:
     """Clamp sharing scope to supported values."""
     if not value:
@@ -19,10 +29,14 @@ def _normalize_sharing_scope(value: str | None) -> str:
     return 'private'
 
 
+# --- Default marketplace status ---
+# Purpose: Choose default marketplace status.
 def _default_marketplace_status(is_public: bool) -> str:
     return 'listed' if is_public else 'draft'
 
 
+# --- Normalize sale price ---
+# Purpose: Normalize sale price input.
 def _normalize_sale_price(value: Any) -> Optional[Decimal]:
     if value in (None, '', _UNSET):
         return None
@@ -35,6 +49,8 @@ def _normalize_sale_price(value: Any) -> Optional[Decimal]:
     return price.quantize(_CENTS)
 
 
+# --- Apply marketplace rules ---
+# Purpose: Apply marketplace rules to a recipe.
 def _apply_marketplace_settings(
     recipe: Recipe,
     *,
@@ -100,6 +116,44 @@ def _apply_marketplace_settings(
     if remove_cover_image:
         recipe.cover_image_path = None
         recipe.cover_image_url = None
+
+    if (
+        getattr(recipe, "status", None) != "published"
+        or getattr(recipe, "test_sequence", None)
+        or getattr(recipe, "is_archived", False)
+        or not getattr(recipe, "is_current", False)
+    ):
+        recipe.sharing_scope = "private"
+        recipe.is_public = False
+        recipe.is_for_sale = False
+        recipe.sale_price = None
+        recipe.marketplace_status = "draft"
+        return
+
+    if recipe.is_public and recipe.marketplace_status == "listed":
+        if not recipe.org_origin_purchased:
+            recipe.org_origin_recipe_id = recipe.id
+            if recipe.org_origin_type in (None, "authored"):
+                recipe.org_origin_type = "published"
+
+        if recipe.recipe_group_id:
+            query = Recipe.query.filter(
+                Recipe.recipe_group_id == recipe.recipe_group_id,
+                Recipe.id != recipe.id,
+                Recipe.test_sequence.is_(None),
+            )
+            if recipe.is_master:
+                query = query.filter(Recipe.is_master.is_(True))
+            else:
+                query = query.filter(
+                    Recipe.is_master.is_(False),
+                    Recipe.variation_name == recipe.variation_name,
+                )
+            for other in query.all():
+                other.is_public = False
+                other.is_for_sale = False
+                other.sale_price = None
+                other.marketplace_status = "draft"
 
 
 __all__ = [

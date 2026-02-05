@@ -1,6 +1,11 @@
-"""Updated management commands for better error handling, database checks, and unit seeding."""
-"""
-Management commands for deployment and maintenance
+"""CLI management commands for deployment, seeding, and maintenance.
+
+Synopsis:
+Defines one-time initialization plus update-safe refresh commands for core data.
+
+Glossary:
+- Seeder: Idempotent routine that upserts reference data.
+- Maintenance command: CLI action for production-safe updates.
 """
 import click
 from flask import current_app
@@ -98,6 +103,11 @@ def init_production_command():
         try:
             seed_addons()
             print("✅ Add-ons seeded")
+            try:
+                from .seeders.addon_seeder import backfill_addon_permissions
+                backfill_addon_permissions()
+            except Exception as e:
+                print(f"⚠️  Add-on permission backfill issue: {e}")
         except Exception as e:
             print(f"⚠️  Add-on seeding issue: {e}")
             print("   Continuing with remaining steps...")
@@ -210,6 +220,28 @@ def update_permissions_command():
 
     except Exception as e:
         print(f'❌ Permission update failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+
+@click.command('update-addons')
+@with_appcontext
+def update_addons_command():
+    """Update add-ons from addon_seeder (production-safe)"""
+    try:
+        print("🔄 Updating add-ons from addon_seeder...")
+
+        from .seeders.addon_seeder import seed_addons, backfill_addon_permissions
+        seed_addons()
+        backfill_addon_permissions()
+
+        print('✅ Add-ons updated successfully!')
+        print('   - New add-ons added')
+        print('   - Existing add-ons updated')
+        print('   - Tier add-on permissions backfilled')
+
+    except Exception as e:
+        print(f'❌ Add-on update failed: {str(e)}')
         db.session.rollback()
         raise
 
@@ -1053,6 +1085,7 @@ def register_commands(app):
 
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
+    app.cli.add_command(update_addons_command)
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
     app.cli.add_command(dispatch_domain_events_command)

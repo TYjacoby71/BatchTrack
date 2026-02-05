@@ -1,3 +1,13 @@
+"""Billing and subscription routes.
+
+Synopsis:
+Handles upgrade flows, checkout initiation, downgrade selection, and billing webhooks.
+
+Glossary:
+- Tier: Subscription plan with limits and permissions.
+- Add-on: Optional entitlement purchased or included by tier.
+"""
+
 import logging
 import os
 import json
@@ -5,6 +15,10 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, render_template, flash, redirect, url_for, session, jsonify, current_app
 from flask_login import login_required, current_user, login_user
 from ...services.billing_service import BillingService
+from ...services.subscription_downgrade_service import (
+    build_downgrade_context,
+    apply_downgrade_selection,
+)
 from ...utils.permissions import require_permission
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
@@ -21,6 +35,11 @@ logger = logging.getLogger(__name__)
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
+# =========================================================
+# UPGRADE & CHECKOUT
+# =========================================================
+# --- Upgrade page ---
+# Purpose: Show upgrade options and current tier context.
 @billing_bp.route('/upgrade')
 @login_required
 @require_permission('organization.manage_billing')
@@ -73,6 +92,8 @@ def upgrade():
                          current_tier=current_tier,
                          subscription_details=subscription_details)
 
+# --- Storage add-on checkout ---
+# Purpose: Start the legacy storage add-on checkout if allowed.
 @billing_bp.route('/storage')
 @login_required
 @require_permission('organization.manage_billing')
@@ -112,6 +133,8 @@ def storage_addon():
         flash('Checkout failed. Please try again later.', 'error')
     return redirect(url_for('billing.upgrade'))
 
+# --- Add-on checkout ---
+# Purpose: Start checkout for an allowed add-on.
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
 @require_permission('organization.manage_billing')
@@ -156,6 +179,11 @@ def start_addon_checkout(addon_key):
         flash('Checkout failed. Please try again later.', 'error')
     return redirect(url_for('settings.index') + '#billing')
 
+# =========================================================
+# TIER CHECKOUT & DOWNGRADE
+# =========================================================
+# --- Tier checkout ---
+# Purpose: Start tier checkout (optionally with billing cycle).
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required
@@ -168,6 +196,18 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
     try:
+        target_tier = SubscriptionTier.find_by_identifier(tier)
+        if not target_tier:
+            flash('Checkout not available for this tier', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+        downgrade_context = build_downgrade_context(organization, target_tier)
+        limit = downgrade_context.get("limit")
+        if limit is not None:
+            active_count = len(downgrade_context.get("active_recipes") or [])
+            if active_count > limit:
+                return redirect(url_for('billing.downgrade', tier=tier, billing_cycle=billing_cycle))
+
         # Use unified billing service for checkout
         checkout_session = BillingService.create_checkout_session(
             tier,
@@ -190,6 +230,59 @@ def checkout(tier, billing_cycle='month'):
         flash('Checkout failed. Please try again.', 'error')
         return redirect(url_for('billing.upgrade'))
 
+
+# --- Downgrade selection ---
+# Purpose: Collect recipe selections before downgrade checkout.
+@billing_bp.route('/downgrade/<tier>', methods=['GET', 'POST'])
+@billing_bp.route('/downgrade/<tier>/<billing_cycle>', methods=['GET', 'POST'])
+@login_required
+@require_permission('organization.manage_billing')
+def downgrade(tier, billing_cycle='month'):
+    organization = current_user.organization
+    if not organization:
+        flash('No organization found', 'error')
+        return redirect(url_for('billing.upgrade'))
+
+    target_tier = SubscriptionTier.find_by_identifier(tier)
+    if not target_tier:
+        flash('Invalid subscription tier selected', 'error')
+        return redirect(url_for('billing.upgrade'))
+
+    context = build_downgrade_context(organization, target_tier)
+    limit = context.get("limit")
+    if limit is None:
+        return redirect(url_for('billing.checkout', tier=tier, billing_cycle=billing_cycle))
+
+    if request.method == 'POST':
+        selected_ids = request.form.getlist('keep_recipe_ids')
+        success, message = apply_downgrade_selection(
+            organization,
+            target_tier,
+            [int(val) for val in selected_ids if str(val).isdigit()],
+            user_id=getattr(current_user, 'id', None),
+        )
+        if not success:
+            flash(message, 'error')
+        else:
+            flash(message, 'success')
+            return redirect(url_for('billing.checkout', tier=tier, billing_cycle=billing_cycle))
+
+    return render_template(
+        'billing/downgrade_recipes.html',
+        organization=organization,
+        target_tier=target_tier,
+        required_count=context.get("required_count"),
+        limit=limit,
+        active_recipes=context.get("active_recipes"),
+        locked_ids=set(context.get("locked_ids") or []),
+        billing_cycle=billing_cycle,
+    )
+
+# =========================================================
+# PROVIDER CHECKOUTS & CALLBACKS
+# =========================================================
+# --- Whop checkout ---
+# Purpose: Redirect to Whop checkout flow.
 @billing_bp.route('/whop-checkout/<product_id>')
 @login_required
 @require_permission('organization.manage_billing')
@@ -217,6 +310,8 @@ def whop_checkout(product_id):
         flash('Checkout failed. Please try again.', 'error')
         return redirect(url_for('billing.upgrade'))
 
+# --- Stripe signup completion ---
+# Purpose: Finalize signup after Stripe checkout.
 @billing_bp.route('/complete-signup-from-stripe')
 def complete_signup_from_stripe():
     """Complete signup process after Stripe payment"""
@@ -253,6 +348,8 @@ def complete_signup_from_stripe():
     flash(f'Welcome to BatchTrack! Your {tier_name} account is ready to use.', 'success')
     return redirect(url_for('onboarding.welcome'))
 
+# --- Whop signup completion ---
+# Purpose: Finalize signup after Whop checkout.
 @billing_bp.route('/complete-signup-from-whop')
 @login_required
 def complete_signup_from_whop():
@@ -278,6 +375,11 @@ def complete_signup_from_whop():
         flash('Signup completion failed', 'error')
         return redirect(url_for('billing.upgrade'))
 
+# =========================================================
+# ACCOUNT MANAGEMENT
+# =========================================================
+# --- Customer portal ---
+# Purpose: Redirect to the Stripe customer portal.
 @billing_bp.route('/customer-portal')
 @login_required
 @require_permission('organization.manage_billing')
@@ -301,6 +403,8 @@ def customer_portal():
         flash('Billing portal unavailable', 'error')
     return redirect(url_for('app_routes.dashboard'))
 
+# --- Cancel subscription ---
+# Purpose: Cancel the current subscription.
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
 @require_permission('organization.manage_billing')
@@ -331,6 +435,11 @@ def cancel_subscription():
 
     return redirect(url_for('app_routes.dashboard'))
 
+# =========================================================
+# WEBHOOKS & DEBUG
+# =========================================================
+# --- Stripe webhooks ---
+# Purpose: Process Stripe webhooks for billing + add-ons.
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
 @csrf.exempt
 @limiter.limit("60/minute")
@@ -415,6 +524,8 @@ def handle_subscription_deleted(event):
         logger.error(f"Error handling subscription deletion: {e}")
         return jsonify({'error': 'Processing failed'}), 500
 
+# --- Billing debug ---
+# Purpose: Provide developer billing debug payload.
 @billing_bp.route('/debug')
 @login_required
 @require_permission('organization.manage_billing')

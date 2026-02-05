@@ -1,3 +1,12 @@
+"""Recipe lineage routes.
+
+Synopsis:
+Renders lineage tree views for recipe versions and branches.
+
+Glossary:
+- Lineage tree: Graph of recipe versions and variations.
+- Current version: Flagged active recipe in a branch.
+"""
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, url_for
@@ -14,6 +23,11 @@ from .. import recipes_bp
 from ..lineage_utils import build_lineage_path, serialize_lineage_tree
 
 
+# =========================================================
+# LINEAGE VIEW
+# =========================================================
+# --- Recipe lineage ---
+# Purpose: Render the lineage tree for a recipe.
 @recipes_bp.route('/<int:recipe_id>/lineage')
 @login_required
 @require_permission('recipes.view')
@@ -57,7 +71,7 @@ def recipe_lineage(recipe_id):
             nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
 
     root_recipe = nodes.get(root_id, {'recipe': recipe})
-    lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes, recipe.id)
+    lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes)
     lineage_path = build_lineage_path(recipe.id, nodes, root_id)
     events = (
         RecipeLineage.query.filter_by(recipe_id=recipe.id)

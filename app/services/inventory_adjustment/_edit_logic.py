@@ -43,35 +43,33 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'unit' in form_data and form_data['unit'] and form_data['unit'] != item.unit:
             new_unit = form_data['unit']
             old_unit = item.unit
+            conversion_precision = 6
 
             # Determine convertibility
             try:
                 # Probe convertibility with a value of 1.0
-                ConversionEngine.convert_units(
+                probe = ConversionEngine.convert_units(
                     amount=1.0,
                     from_unit=old_unit,
                     to_unit=new_unit,
                     ingredient_id=item.id,
-                    density=item.density
+                    density=item.density,
+                    rounding_decimals=conversion_precision
                 )
             except Exception as e:
+                db.session.rollback()
                 return False, f"Cannot change base unit from {old_unit} to {new_unit}: {str(e)}"
 
-            # Convert item.quantity to new unit
-            try:
-                qconv = ConversionEngine.convert_units(
-                    amount=float(item.quantity or 0.0),
-                    from_unit=old_unit,
-                    to_unit=new_unit,
-                    ingredient_id=item.id,
-                    density=item.density
-                )
-                item.quantity = qconv['converted_value']
-            except Exception as e:
-                return False, f"Error converting item quantity to {new_unit}: {str(e)}"
+            if not probe or not probe.get('success'):
+                db.session.rollback()
+                err_msg = None
+                if isinstance(probe, dict):
+                    err_msg = probe.get('error_data', {}).get('message')
+                return False, f"Cannot change base unit from {old_unit} to {new_unit}: {err_msg or 'Invalid conversion'}"
 
             # Convert each lot quantities and unit to the new unit
             lots = InventoryLot.query.filter_by(inventory_item_id=item.id).all()
+            total_remaining = None
             for lot in lots:
                 try:
                     rem_conv = ConversionEngine.convert_units(
@@ -79,20 +77,53 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                         from_unit=lot.unit,
                         to_unit=new_unit,
                         ingredient_id=item.id,
-                        density=item.density
+                        density=item.density,
+                        rounding_decimals=conversion_precision
                     )
                     orig_conv = ConversionEngine.convert_units(
                         amount=float(lot.original_quantity or 0.0),
                         from_unit=lot.unit,
                         to_unit=new_unit,
                         ingredient_id=item.id,
-                        density=item.density
+                        density=item.density,
+                        rounding_decimals=conversion_precision
                     )
+                    if not rem_conv or not rem_conv.get('success') or rem_conv.get('converted_value') is None:
+                        db.session.rollback()
+                        return False, f"Error converting lot #{lot.id} remaining quantity to {new_unit}"
+                    if not orig_conv or not orig_conv.get('success') or orig_conv.get('converted_value') is None:
+                        db.session.rollback()
+                        return False, f"Error converting lot #{lot.id} original quantity to {new_unit}"
                     lot.remaining_quantity = rem_conv['converted_value']
                     lot.original_quantity = orig_conv['converted_value']
                     lot.unit = new_unit
+                    if total_remaining is None:
+                        total_remaining = 0.0
+                    total_remaining += float(lot.remaining_quantity or 0.0)
                 except Exception as e:
+                    db.session.rollback()
                     return False, f"Error converting lot #{lot.id} to {new_unit}: {str(e)}"
+
+            # Convert item.quantity to new unit; if lots exist, use their total to stay in sync
+            if total_remaining is None:
+                try:
+                    qconv = ConversionEngine.convert_units(
+                        amount=float(item.quantity or 0.0),
+                        from_unit=old_unit,
+                        to_unit=new_unit,
+                        ingredient_id=item.id,
+                        density=item.density,
+                        rounding_decimals=conversion_precision
+                    )
+                    if not qconv or not qconv.get('success') or qconv.get('converted_value') is None:
+                        db.session.rollback()
+                        return False, f"Error converting item quantity to {new_unit}"
+                    item.quantity = qconv['converted_value']
+                except Exception as e:
+                    db.session.rollback()
+                    return False, f"Error converting item quantity to {new_unit}: {str(e)}"
+            else:
+                item.quantity = float(total_remaining)
 
             # Persist the unit change on the item after converting all data
             item.unit = new_unit

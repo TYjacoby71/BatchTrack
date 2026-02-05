@@ -1,8 +1,11 @@
-"""
-Recipe service public API.
+"""Recipe service public API.
 
-Import from this module rather than the private helpers so validation,
-marketplace handling, and lineage tracking stay centralized.
+Synopsis:
+Exports the recipe service surface so callers use centralized validation.
+
+Glossary:
+- Public API: Approved service functions for route usage.
+- Helper module: Internal recipe service implementation detail.
 """
 
 # Import the public functions from our internal helper modules
@@ -13,6 +16,16 @@ from ._core import (
 # Production planning moved to dedicated service package
 from ..production_planning import plan_production_comprehensive as plan_production
 from ._scaling import scale_recipe
+from ._merge import build_rebased_ingredients
+from ._archive import archive_recipe, restore_recipe, unlist_recipe, is_marketplace_listed
+from ._current import set_current_version, ensure_current_versions_for_org
+from ._versioning import (
+    build_test_template,
+    create_test_version,
+    promote_test_to_current,
+    promote_variation_to_master,
+    promote_variation_to_new_group,
+)
 from ._validation import validate_recipe_data
 from ..stock_check.core import UniversalStockCheckService
 
@@ -25,7 +38,15 @@ def check_recipe_stock(recipe, scale: float = 1.0):
 __all__ = [
     'create_recipe', 'update_recipe', 'delete_recipe', 'get_recipe_details',
     'duplicate_recipe', 'plan_production', 'scale_recipe',
-    'validate_recipe_data', 'check_recipe_stock'
+    'validate_recipe_data', 'check_recipe_stock',
+    'build_rebased_ingredients',
+    'archive_recipe', 'restore_recipe', 'unlist_recipe', 'is_marketplace_listed',
+    'set_current_version', 'ensure_current_versions_for_org',
+    'build_test_template',
+    'create_test_version',
+    'promote_test_to_current',
+    'promote_variation_to_master',
+    'promote_variation_to_new_group',
 ]
 
 # LEGACY SHIM: Backwards compatibility wrapper for consumers still importing RecipeService

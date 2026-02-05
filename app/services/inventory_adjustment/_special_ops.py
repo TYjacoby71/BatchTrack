@@ -117,9 +117,25 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
 
         current_quantity = float(item.quantity)
         target_qty = float(target_quantity)
-        delta = target_qty - current_quantity
+        if target_qty < 0:
+            return False, "Recount target quantity must be zero or greater"
 
-        logger.info(f"RECOUNT: Item {item.id} current={current_quantity}, target={target_qty}, delta={delta}")
+        # Use FIFO totals for reconciliation to handle desyncs
+        active_lots = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item.id,
+                InventoryLot.organization_id == item.organization_id,
+                InventoryLot.remaining_quantity > 0
+            )
+        ).order_by(InventoryLot.received_date.asc()).all()
+        fifo_total = sum(float(lot.remaining_quantity) for lot in active_lots)
+        delta = target_qty - fifo_total
+        if abs(delta) < 1e-9:
+            delta = 0.0
+
+        logger.info(
+            f"RECOUNT: Item {item.id} current={current_quantity}, fifo_total={fifo_total}, target={target_qty}, delta={delta}"
+        )
 
         recount_notes = f"Inventory recount: {current_quantity} -> {target_qty}"
         if notes:
@@ -136,17 +152,8 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
             abs_delta = abs(delta)
             logger.info(f"RECOUNT: Deducting {abs_delta} using recount-specific FIFO drainage")
 
-            # Get active lots ordered by FIFO (oldest first)
-            active_lots = InventoryLot.query.filter(
-                and_(
-                    InventoryLot.inventory_item_id == item.id,
-                    InventoryLot.organization_id == item.organization_id,
-                    InventoryLot.remaining_quantity > 0
-                )
-            ).order_by(InventoryLot.received_date.asc()).all()
-
-            # Calculate total available quantity
-            total_available = sum(float(lot.remaining_quantity) for lot in active_lots)
+            # Calculate total available quantity (FIFO total already computed)
+            total_available = fifo_total
             
             if total_available < abs_delta:
                 return False, f"Cannot recount: need to deduct {abs_delta}, but only {total_available} available"

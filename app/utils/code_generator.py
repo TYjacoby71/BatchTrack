@@ -1,61 +1,102 @@
+"""Code generators for recipes and batches.
+
+Synopsis:
+Generates batch labels and recipe group prefixes via lineage service.
+
+Glossary:
+- Batch label: Human-readable batch identifier.
+- Prefix: Short code derived from a recipe name.
+"""
+
 from __future__ import annotations
 
-from sqlalchemy import extract
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.models.batch import Batch
+from app.extensions import db
+from app.models.batch import BatchSequence
 from app.models.recipe import Recipe
+from app.models.db_dialect import is_postgres
+from app.services.lineage_service import generate_batch_label, generate_group_prefix
 from app.utils.timezone_utils import TimezoneUtils
 
 __all__ = ["generate_batch_label_code", "generate_recipe_prefix"]
 
 
-def generate_batch_label_code(
-    recipe: Recipe,
-    organization_id: int | None = None,
-    *,
-    sequence_offset: int = 0,
-    suffix: str | None = None,
-) -> str:
+# --- Batch label generator ---
+# Purpose: Generate a batch label for a recipe.
+def generate_batch_label_code(recipe: Recipe) -> str:
     """
     Generate a consistent batch label code.
 
-    Format: {PREFIX}-{YEAR}-{SEQUENCE}
-    - PREFIX: recipe.label_prefix uppercased, or generated from recipe name if missing
-    - YEAR: current UTC year
-    - SEQUENCE: 3-digit, zero-padded count of batches for this recipe in the year
+    Format: {GROUP}{MASTER}-[{VAR}{VER}]-[T{TEST}]-{YEAR}-{SEQUENCE}
+    - GROUP: recipe_group.prefix (or fallback prefix)
+    - MASTER: master branch version number
+    - VAR/VER: variation prefix and version (if applicable)
+    - TEST: test sequence (if applicable)
+    - SEQUENCE: 3-digit, zero-padded org-wide counter for the year
     """
-    prefix = (recipe.label_prefix or generate_recipe_prefix(recipe.name)).upper()
     current_year = TimezoneUtils.utc_now().year
 
-    query = Batch.query.filter(extract("year", Batch.started_at) == current_year)
-    if organization_id is not None:
-        query = query.filter(Batch.organization_id == organization_id)
-    query = query.filter(Batch.label_code.like(f"{prefix}-{current_year}-%"))
+    org_id = recipe.organization_id
+    if not org_id:
+        raise ValueError("Batch label generation requires a valid organization id.")
 
-    year_batches = query.count() or 0
-    sequence = max(1, year_batches + 1 + max(sequence_offset, 0))
-    base_label = f"{prefix}-{current_year}-{sequence:03d}"
-    if suffix:
-        return f"{base_label}-{suffix}".upper()
-    return base_label
+    sequence = _next_batch_sequence(org_id, current_year)
+    return generate_batch_label(recipe, current_year, sequence)
 
 
-def generate_recipe_prefix(recipe_name: str) -> str:
+# --- Recipe prefix generator ---
+# Purpose: Generate a group prefix from a recipe name.
+def generate_recipe_prefix(recipe_name: str, org_id: int | None = None) -> str:
     """
     Generate a recipe prefix from the recipe name.
     """
-    if not recipe_name:
-        return "RCP"
+    return generate_group_prefix(recipe_name, org_id)
 
-    words = recipe_name.replace("_", " ").replace("-", " ").split()
-    initials = "".join(word[0].upper() for word in words if word)
 
-    if not initials:
-        return "RCP"
+# --- Batch sequence allocator ---
+# Purpose: Fetch the next batch sequence for org/year.
+def _next_batch_sequence(org_id: int, year: int) -> int:
+    if is_postgres():
+        now = TimezoneUtils.utc_now()
+        table = BatchSequence.__table__
+        stmt = (
+            pg_insert(table)
+            .values(
+                organization_id=org_id,
+                year=year,
+                current_sequence=1,
+                created_at=now,
+                updated_at=now,
+            )
+            .on_conflict_do_update(
+                index_elements=["organization_id", "year"],
+                set_={
+                    "current_sequence": table.c.current_sequence + 1,
+                    "updated_at": now,
+                },
+            )
+            .returning(table.c.current_sequence)
+        )
+        return int(db.session.execute(stmt).scalar_one())
 
-    if len(initials) > 4:
-        initials = initials[:4]
-    elif len(initials) < 2:
-        initials = (recipe_name.upper().replace(" ", ""))[:4] or "RCP"
+    counter = BatchSequence.query.filter_by(
+        organization_id=org_id,
+        year=year,
+    ).first()
+    if not counter:
+        counter = BatchSequence(
+            organization_id=org_id,
+            year=year,
+            current_sequence=1,
+            created_at=TimezoneUtils.utc_now(),
+            updated_at=TimezoneUtils.utc_now(),
+        )
+        db.session.add(counter)
+        db.session.flush()
+        return 1
 
-    return initials
+    counter.current_sequence = int(counter.current_sequence or 0) + 1
+    counter.updated_at = TimezoneUtils.utc_now()
+    db.session.flush()
+    return int(counter.current_sequence)

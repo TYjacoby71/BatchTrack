@@ -1,3 +1,12 @@
+"""Lineage utilities for recipe trees.
+
+Synopsis:
+Serializes lineage trees and builds navigation paths.
+
+Glossary:
+- Lineage tree: Hierarchy of versions, variations, and clones.
+- Current node: Version flagged as current for a branch.
+"""
 from __future__ import annotations
 
 from typing import Dict, List, Optional
@@ -5,7 +14,9 @@ from typing import Dict, List, Optional
 from app.models import Recipe
 
 
-def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict], current_id: int) -> dict:
+# --- Serialize lineage tree ---
+# Purpose: Build a lineage tree payload for UI rendering.
+def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
     node_payload = {
         'id': node_recipe.id,
         'name': node_recipe.name,
@@ -13,7 +24,7 @@ def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict], current_
         'organization_id': node_recipe.organization_id,
         'origin_type': node_recipe.org_origin_type,
         'origin_purchased': node_recipe.org_origin_purchased,
-        'is_current': node_recipe.id == current_id,
+        'is_current': bool(getattr(node_recipe, "is_current", False)),
         'status': node_recipe.status,
         'children': [],
     }
@@ -23,13 +34,15 @@ def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict], current_
         node_payload['children'].append(
             {
                 'edge_type': child['edge'],
-                'node': serialize_lineage_tree(child_recipe, nodes, current_id),
+                'node': serialize_lineage_tree(child_recipe, nodes),
             }
         )
 
     return node_payload
 
 
+# --- Build lineage path ---
+# Purpose: Build a path list from root to selected node.
 def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional[int]) -> List[int]:
     path: List[int] = []
     seen: set[int] = set()

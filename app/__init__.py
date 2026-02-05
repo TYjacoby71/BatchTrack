@@ -4,6 +4,7 @@ from typing import Any
 
 from flask import Flask, current_app, redirect, render_template, request, url_for
 from flask_login import current_user
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 
 from .authz import configure_login_manager
@@ -28,6 +29,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     _sync_env_overrides(app)
 
     db.init_app(app)
+    _configure_db_timeouts(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
 
@@ -310,6 +312,41 @@ def _configure_sqlite_engine_options(app):
             opts["connect_args"] = {"check_same_thread": False}
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
 
+
+def _configure_db_timeouts(app: Flask) -> None:
+    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "") or ""
+    if not uri or uri.startswith("sqlite"):
+        return
+
+    timeouts = {
+        "statement_timeout": app.config.get("DB_STATEMENT_TIMEOUT_MS"),
+        "lock_timeout": app.config.get("DB_LOCK_TIMEOUT_MS"),
+        "idle_in_transaction_session_timeout": app.config.get("DB_IDLE_TX_TIMEOUT_MS"),
+    }
+    settings = {}
+    for key, value in timeouts.items():
+        if value is None:
+            continue
+        try:
+            int_value = int(value)
+        except (TypeError, ValueError):
+            continue
+        if int_value > 0:
+            settings[key] = int_value
+
+    if not settings:
+        return
+
+    with app.app_context():
+        @event.listens_for(db.engine, "connect")
+        def _set_session_timeouts(dbapi_connection, _connection_record):
+            cursor = dbapi_connection.cursor()
+            try:
+                for key, value in settings.items():
+                    cursor.execute(f"SET {key} = {value}")
+            finally:
+                cursor.close()
+
 def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""
     from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
@@ -319,9 +356,14 @@ def _install_global_resilience_handlers(app):
 
     @app.teardown_request
     def _rollback_on_error(exc):
-        if exc is not None:
-            try:
+        try:
+            if exc is not None:
                 db.session.rollback()
+        except Exception:
+            pass
+        finally:
+            try:
+                db.session.remove()
             except Exception:
                 pass
 

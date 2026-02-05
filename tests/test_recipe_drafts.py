@@ -1,3 +1,13 @@
+"""Tests for recipe draft validation.
+
+Synopsis:
+Ensures draft creation rules align with versioning behavior.
+
+Glossary:
+- Draft: Unpublished recipe form state.
+- Test: Versioned, editable recipe draft.
+"""
+
 import pytest
 
 from app.extensions import db
@@ -29,6 +39,7 @@ def test_create_draft_allows_missing_required_fields():
 
     assert ok, f"Expected draft creation to succeed, got error: {recipe}"
     assert recipe.status == 'draft'
+    assert recipe.test_sequence is None
     assert (recipe.predicted_yield or 0) == 0
     assert len(recipe.recipe_ingredients) == 0
 
@@ -82,6 +93,7 @@ def test_validate_recipe_data_uses_existing_portioning_state():
     assert ok, f"Failed to create draft recipe: {recipe}"
     assert recipe.is_portioned
     assert recipe.portion_count in (None, 0)
+    assert recipe.test_sequence is None
 
     validation = validate_recipe_data(
         name=recipe.name,

@@ -31,10 +31,29 @@
 
   function resetStage(stageId){
     if (stageId === 1) {
-      const lyeNaoh = document.getElementById('lyeTypeNaoh');
-      if (lyeNaoh) lyeNaoh.checked = true;
       const unitGrams = document.getElementById('unitGrams');
       if (unitGrams) unitGrams.checked = true;
+      SoapTool.units.setUnit('g', { skipAutoCalc: true });
+      document.getElementById('moldWaterWeight').value = '';
+      document.getElementById('moldOilPct').value = '65';
+      document.getElementById('oilTotalTarget').value = '';
+      document.getElementById('moldShape').value = 'loaf';
+      const correction = document.getElementById('moldCylinderCorrection');
+      if (correction) correction.checked = false;
+      document.getElementById('moldCylinderFactor').value = '0.85';
+      SoapTool.mold.updateMoldShapeUI();
+    }
+    if (stageId === 2) {
+      const oilRows = document.getElementById('oilRows');
+      if (oilRows) {
+        oilRows.innerHTML = '';
+        oilRows.appendChild(SoapTool.oils.buildOilRow());
+      }
+      SoapTool.oils.updateOilTotals();
+    }
+    if (stageId === 3) {
+      const lyeNaoh = document.getElementById('lyeTypeNaoh');
+      if (lyeNaoh) lyeNaoh.checked = true;
       const waterMethod = document.getElementById('waterMethod');
       if (waterMethod) waterMethod.value = 'percent';
       const superfat = document.getElementById('lyeSuperfat');
@@ -47,28 +66,9 @@
       if (lyeConcentration) lyeConcentration.value = '33';
       const waterRatio = document.getElementById('waterRatio');
       if (waterRatio) waterRatio.value = '2';
-      SoapTool.units.setUnit('g', { skipAutoCalc: true });
       SoapTool.runner.applyLyeSelection();
       SoapTool.runner.setWaterMethod();
       SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
-    }
-    if (stageId === 2) {
-      document.getElementById('moldWaterWeight').value = '';
-      document.getElementById('moldOilPct').value = '65';
-      document.getElementById('oilTotalTarget').value = '';
-      document.getElementById('moldShape').value = 'loaf';
-      const correction = document.getElementById('moldCylinderCorrection');
-      if (correction) correction.checked = false;
-      document.getElementById('moldCylinderFactor').value = '0.85';
-      SoapTool.mold.updateMoldSuggested();
-    }
-    if (stageId === 3) {
-      const oilRows = document.getElementById('oilRows');
-      if (oilRows) {
-        oilRows.innerHTML = '';
-        oilRows.appendChild(SoapTool.oils.buildOilRow());
-      }
-      SoapTool.oils.updateOilTotals();
     }
     if (stageId === 4) {
       document.getElementById('additiveLactatePct').value = '1';
@@ -101,21 +101,14 @@
 
   function getStageCompletion(stageId){
     if (stageId === 1) {
-      const superfat = toNumber(document.getElementById('lyeSuperfat').value);
-      const method = document.getElementById('waterMethod')?.value;
-      const hasLye = !!document.querySelector('input[name="lye_type"]:checked');
-      const hasUnit = !!document.querySelector('input[name="weight_unit"]:checked');
-      const complete = hasLye && hasUnit && !!method && superfat >= 0;
-      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set basics' };
-    }
-    if (stageId === 2) {
       const moldWeight = toNumber(document.getElementById('moldWaterWeight').value);
       const oilTarget = toNumber(document.getElementById('oilTotalTarget').value);
       const moldPct = toNumber(document.getElementById('moldOilPct').value);
-      const complete = (moldWeight > 0 || oilTarget > 0) && moldPct > 0;
-      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Complete' : 'Needs target' };
+      const hasUnit = !!document.querySelector('input[name="weight_unit"]:checked');
+      const complete = hasUnit && (moldWeight > 0 || oilTarget > 0) && moldPct > 0;
+      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Sized' : 'Needs target' };
     }
-    if (stageId === 3) {
+    if (stageId === 2) {
       const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
       const hasOil = rows.some(row => {
         const name = row.querySelector('.oil-typeahead')?.value?.trim();
@@ -124,6 +117,13 @@
         return name && (grams > 0 || pct > 0);
       });
       return { state: hasOil ? 'complete' : 'incomplete', label: hasOil ? 'Oils added' : 'Add oils' };
+    }
+    if (stageId === 3) {
+      const superfat = toNumber(document.getElementById('lyeSuperfat').value);
+      const method = document.getElementById('waterMethod')?.value;
+      const hasLye = !!document.querySelector('input[name="lye_type"]:checked');
+      const complete = hasLye && !!method && superfat >= 0;
+      return { state: complete ? 'complete' : 'incomplete', label: complete ? 'Configured' : 'Set lye' };
     }
     if (stageId === 4) {
       const hasAdditive = ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']

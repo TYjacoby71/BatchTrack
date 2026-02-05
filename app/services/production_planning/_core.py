@@ -1,11 +1,11 @@
-"""
-Production Planning Core
+"""Production planning core service.
 
-Main orchestration logic that coordinates:
-- Recipe requirements via USCS
-- Container analysis  
-- Cost calculation
-- Data prep for batch handoff
+Synopsis:
+Orchestrates recipe requirements, container analysis, and cost modeling.
+
+Glossary:
+- Plan: Computed production requirements for a recipe.
+- USCS: Universal Stock Check Service used for validation.
 """
 
 import logging
@@ -24,6 +24,8 @@ from .types import ProductionRequest, ProductionPlan, IngredientRequirement, Cos
 logger = logging.getLogger(__name__)
 
 
+# --- Build production plan ---
+# Purpose: Build a production plan summary for a recipe.
 def plan_production_comprehensive(
     recipe_id: int,
     scale: float = 1.0,
@@ -61,6 +63,8 @@ def plan_production_comprehensive(
         }
 
 
+# --- Execute planning workflow ---
+# Purpose: Execute the full planning workflow with validation.
 def execute_production_planning(request: ProductionRequest, include_containers: bool = True) -> ProductionPlan:
     """Execute the production planning workflow"""
     from ._stock_validation import validate_ingredients_with_uscs
@@ -69,6 +73,8 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     recipe = db.session.get(Recipe, request.recipe_id)
     if not recipe:
         raise ValueError(f"Recipe {request.recipe_id} not found")
+    if recipe.is_archived:
+        raise ValueError("Archived recipes cannot be planned for production")
 
     # 2. Validate ingredients using stock validation service
     ingredient_requirements = validate_ingredients_with_uscs(

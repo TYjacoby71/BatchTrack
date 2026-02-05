@@ -1,3 +1,13 @@
+"""Public recipe library routes.
+
+Synopsis:
+Serve public marketplace listings, recipe detail, and org storefront views.
+
+Glossary:
+- Marketplace listing: Published recipe visible in the public library.
+- Origin org: Organization that published the recipe.
+"""
+
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, redirect, url_for, abort, session, current_app
@@ -35,6 +45,11 @@ def _marketplace_display_enabled() -> bool:
     return is_feature_enabled(RECIPE_MARKETPLACE_DISPLAY_FLAG)
 
 
+# =========================================================
+# PUBLIC LIBRARY
+# =========================================================
+# --- Library index ---
+# Purpose: Render the public recipe library landing page.
 @recipe_library_bp.route("/recipes/library")
 @limiter.limit("60000/hour;5000/minute")
 def recipe_library():
@@ -76,6 +91,9 @@ def recipe_library():
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
             (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
         )
     )
@@ -94,7 +112,7 @@ def recipe_library():
         query = query.filter(Recipe.org_origin_purchased.is_(True))
     elif origin_filter == "authored":
         query = query.filter(
-            (Recipe.org_origin_type == "authored") | (Recipe.org_origin_type.is_(None))
+            (Recipe.org_origin_type.in_(["authored", "published"])) | (Recipe.org_origin_type.is_(None))
         )
 
     if search_query:
@@ -137,6 +155,9 @@ def recipe_library():
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
             (Organization.recipe_library_blocked.is_(False))
             | (Organization.recipe_library_blocked.is_(None)),
         )
@@ -174,6 +195,8 @@ def recipe_library():
     return rendered
 
 
+# --- Recipe detail ---
+# Purpose: Render public recipe detail page.
 @recipe_library_bp.route("/recipes/library/<int:recipe_id>-<slug>")
 def recipe_library_detail(recipe_id: int, slug: str):
     if not _marketplace_display_enabled():
@@ -187,7 +210,11 @@ def recipe_library_detail(recipe_id: int, slug: str):
         .filter(
             Recipe.id == recipe_id,
             Recipe.is_public.is_(True),
+            Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
             (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
         )
         .first_or_404()
@@ -227,6 +254,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
     )
 
 
+# --- Organization library ---
+# Purpose: Render public recipe list for a specific organization.
 @recipe_library_bp.route("/recipes/library/organizations/<int:organization_id>")
 def organization_marketplace(organization_id: int):
     if not _marketplace_display_enabled():
@@ -251,6 +280,9 @@ def organization_marketplace(organization_id: int):
             Recipe.is_public.is_(True),
             Recipe.status == "published",
             Recipe.marketplace_status == "listed",
+            Recipe.test_sequence.is_(None),
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         )
     )
 

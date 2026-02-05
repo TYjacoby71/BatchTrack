@@ -1,3 +1,6 @@
+{# File: templates/dashboard.html
+   Synopsis: Main dashboard with start batch flow modal.
+   Glossary: Start flow = recipe selection modal; Variation = optional recipe branch. #}
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -54,7 +57,7 @@
       <form id="recipeForm" method="get" action="#" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
-          <label for="recipe_id" class="form-label">Select Recipe:</label>
+          <label for="recipe_id" class="form-label">Select Master Recipe:</label>
           <select class="form-select" id="recipe_id" name="recipe_id" required disabled>
             <option value="">Choose a recipe...</option>
           </select>
@@ -63,9 +66,9 @@
 
         <!-- Variant Selection (hidden by default) -->
         <div id="variantSection" class="mb-3" style="display: none;">
-          <label for="variant_id" class="form-label">Select Variation:</label>
+          <label for="variant_id" class="form-label">Select Variation (optional):</label>
           <select class="form-select" id="variant_id" name="variant_id">
-            <option value="">Choose a variation...</option>
+            <option value="">Use master only</option>
           </select>
         </div>
 
@@ -157,11 +160,11 @@
     const variants = recipeVariantMap.get(String(recipeId)) || [];
     if (variants.length === 0) {
       variantSection.style.display = 'none';
-      variantSelect.innerHTML = '<option value="">No variant</option>';
+      variantSelect.innerHTML = '<option value="">Use master only</option>';
       return;
     }
     variantSection.style.display = 'block';
-    variantSelect.innerHTML = '<option value="">No variant</option>';
+    variantSelect.innerHTML = '<option value="">Use master only</option>';
     variants.forEach(variant => {
       const option = document.createElement('option');
       option.value = variant.id;
@@ -200,8 +203,10 @@
 
   window.goToPlanProduction = function() {
     const selectedRecipeId = recipeSelect.value;
-    if (selectedRecipeId) {
-      window.location.href = `/production-planning/recipe/${selectedRecipeId}/plan`;
+    const selectedVariantId = variantSelect && variantSelect.value;
+    const targetId = selectedVariantId || selectedRecipeId;
+    if (targetId) {
+      window.location.href = `/production-planning/recipe/${targetId}/plan`;
     } else {
       alert('Please select a recipe first.');
     }
@@ -225,7 +230,7 @@
         updateVariantSection(recipeId);
       } else {
         variantSection.style.display = 'none';
-        variantSelect.innerHTML = '<option value="">No variant</option>';
+        variantSelect.innerHTML = '<option value="">Use master only</option>';
       }
     });
   }
