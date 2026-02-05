@@ -213,7 +213,7 @@ def integrations_checklist():
         ),
         _section(
             "Database & Persistence",
-            "Configure a managed Postgres instance before launch. Defaults are tuned for ~90 users unless overridden.",
+            "Configure a managed Postgres instance before launch. Defaults are tuned for ~500 concurrent users unless overridden.",
             [
                 _make_item("DATABASE_INTERNAL_URL", "Primary database connection string.", required=True, is_secret=True),
                 _make_item("DATABASE_URL", "Fallback database connection string.", required=False, is_secret=True),
@@ -225,27 +225,27 @@ def integrations_checklist():
                 ),
                 _make_item(
                     "SQLALCHEMY_POOL_SIZE",
-                    "SQLAlchemy connection pool size (per instance).",
+                    "SQLAlchemy connection pool size (per worker process).",
                     required=False,
-                    recommended="20 (baseline for ~90 users; scale with workers)",
+                    recommended="5 (baseline for ~500 concurrent users; scale with workers)",
                 ),
                 _make_item(
                     "SQLALCHEMY_MAX_OVERFLOW",
                     "Additional connections allowed past pool_size.",
                     required=False,
-                    recommended="20",
+                    recommended="5",
                 ),
                 _make_item(
                     "SQLALCHEMY_POOL_TIMEOUT",
                     "Seconds to wait for a database connection before failing.",
                     required=False,
-                    recommended="45",
+                    recommended="10",
                 ),
                 _make_item(
                     "SQLALCHEMY_POOL_RECYCLE",
                     "Seconds before recycling idle DB connections.",
                     required=False,
-                    recommended="1800",
+                    recommended="300",
                 ),
                 _make_item(
                     "SQLALCHEMY_POOL_USE_LIFO",
@@ -283,13 +283,13 @@ def integrations_checklist():
                     "REDIS_MAX_CONNECTIONS",
                     "Max clients allowed by your Redis plan (used to auto-budget pool per worker).",
                     required=False,
-                    recommended="225 (example)",
+                    recommended="Set to your plan limit (example: 250)",
                 ),
                 _make_item(
                     "REDIS_POOL_MAX_CONNECTIONS",
                     "Shared Redis connection pool size (across cache/sessions/limiter).",
                     required=False,
-                    recommended="auto (set REDIS_MAX_CONNECTIONS; optional override is per worker)",
+                    recommended="20 (per worker, if you need a hard cap)",
                 ),
                 _make_item(
                     "REDIS_POOL_TIMEOUT",
