@@ -46,6 +46,7 @@ def test_start_batch_uses_generator_and_persists_label(app):
             )
             db.session.add(recipe)
             db.session.commit()
+            recipe_id = recipe.id
 
             snapshot = PlanProductionService.build_plan(
                 recipe=recipe,
@@ -64,7 +65,7 @@ def test_start_batch_uses_generator_and_persists_label(app):
         assert fresh_batch is not None
         assert fresh_batch.label_code.startswith(f"SOAP1-{current_year}-")
         assert fresh_batch.label_code.endswith("001")
-        assert fresh_batch.recipe_id == recipe.id
-        assert fresh_batch.target_version_id == recipe.id
+        assert fresh_batch.recipe_id == recipe_id
+        assert fresh_batch.target_version_id == recipe_id
         assert fresh_batch.lineage_id is not None
         assert fresh_batch.batch_type == 'ingredient'
