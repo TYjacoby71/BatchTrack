@@ -43,9 +43,10 @@ def _api(client, app, path, payload):
         org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
         if org_owner_role:
             user.assign_role(org_owner_role)
+    user_id = user.id
 
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
+        sess['_user_id'] = str(user_id)
         sess['_fresh'] = True
 
     return client.post(path, data=json.dumps(payload), content_type='application/json', headers={'Accept': 'application/json'})

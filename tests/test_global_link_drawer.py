@@ -23,6 +23,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     user = User(email='test@example.com', user_type='developer', is_active=True, organization_id=org.id)
     db_session.add(user)
     db_session.commit()
+    user_id = user.id
 
     # Create a curated category and global item 'Milk' stored in volume (ml) with density
     cat = IngredientCategory(name='Liquids', default_density=1.0, organization_id=None, is_global_category=True)
@@ -45,7 +46,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     with app.test_client() as client:
         # Login helper: set session org and auth
         with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
+            sess['_user_id'] = str(user_id)
             sess['_fresh'] = True
             # Developer scoping to org
             sess['dev_selected_org_id'] = org.id

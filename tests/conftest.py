@@ -30,7 +30,8 @@ def app():
         'STRIPE_SECRET_KEY': 'sk_test_fake',
         'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
         'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
-        'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+        'TESTING_DISABLE_AUTH': False,  # Disable any test-specific auth bypass
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
         # Don't disable login - we need to test permissions properly
     })
 

@@ -24,12 +24,14 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     db_session.add(org)
     db_session.flush()
     org.subscription_tier_id = tier.id
+    org_id = org.id
 
     user = User(username='ret_user', email='ret@example.com')
     user.organization_id = org.id
     user.set_password('password')
     db_session.add(user)
     db_session.commit()
+    user_id = user.id
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
     if org_owner_role:
         user.assign_role(org_owner_role)
@@ -38,9 +40,10 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     client.post('/auth/login', data={'username': 'ret_user', 'password': 'password'})
 
     old_date = datetime.now(timezone.utc) - timedelta(days=366)
-    recipe = Recipe(name='Old Draft', organization_id=org.id, created_at=old_date)
+    recipe = Recipe(name='Old Draft', organization_id=org_id, created_at=old_date)
     db_session.add(recipe)
     db_session.commit()
+    recipe_id = recipe.id
 
     # Act: check drawer
     r = client.get('/api/drawers/retention/check')
@@ -67,7 +70,7 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
 
     # Fast-forward: make eligible for deletion now
     from app.models.retention import RetentionDeletionQueue
-    q = RetentionDeletionQueue.query.filter_by(organization_id=org.id, recipe_id=recipe.id).first()
+    q = RetentionDeletionQueue.query.filter_by(organization_id=org_id, recipe_id=recipe_id).first()
     assert q is not None
     q.delete_after_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     db_session.commit()
@@ -77,6 +80,6 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     assert deleted >= 1
 
     # Ensure recipe is gone
-    gone = db_session.get(Recipe, recipe.id)
+    gone = db_session.get(Recipe, recipe_id)
     assert gone is None
 

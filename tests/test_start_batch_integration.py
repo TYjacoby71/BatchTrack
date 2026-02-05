@@ -39,12 +39,14 @@ def test_start_batch_uses_generator_and_persists_label(app):
             )
             batch, errors = BatchOperationsService.start_batch(snapshot.to_dict())
 
-            assert errors == []
-            assert batch is not None
-            from app.models import Batch
-            fresh_batch = db.session.get(Batch, batch.id)
-            assert fresh_batch is not None
-            assert fresh_batch.label_code.startswith(f"SOAP-{current_year}-")
-        assert batch.label_code.endswith("001")
-        assert batch.recipe_id == recipe.id
+                assert errors == []
+                assert batch is not None
+                from app.models import Batch
+                fresh_batch = db.session.get(Batch, batch.id)
+                assert fresh_batch is not None
+                assert fresh_batch.label_code.startswith(f"SOAP-{current_year}-")
+                assert fresh_batch.label_code.endswith("001")
+                recipe_id = recipe.id
+                batch_recipe_id = fresh_batch.recipe_id
+            assert batch_recipe_id == recipe_id
         assert batch.batch_type == 'ingredient'

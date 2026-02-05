@@ -86,6 +86,7 @@ class TestBillingAndTierEnforcement:
             # Get fresh objects from the database
             fresh_user = db.session.get(User, test_user.id)
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
+            fresh_user_id = fresh_user.id
 
             # Update the organization's billing status
             fresh_org.billing_status = billing_status
@@ -120,7 +121,7 @@ class TestBillingAndTierEnforcement:
             # ACT
             # Log the user in and try to access the protected route
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(fresh_user.id)
+                sess['_user_id'] = str(fresh_user_id)
                 sess['_fresh'] = True
 
             # Debug: Verify the org and tier are set up correctly
@@ -149,6 +150,8 @@ class TestBillingAndTierEnforcement:
                 organization_id=None  # Developers have no organization
             )
             db.session.add(developer)
+            db.session.flush()
+            developer_id = developer.id
 
             # Create a customer org with bad billing
             customer_tier = SubscriptionTier(
@@ -164,6 +167,7 @@ class TestBillingAndTierEnforcement:
             )
             db.session.add(customer_org)
             db.session.flush()  # Get the ID
+            customer_org_id = customer_org.id
 
             customer = User(
                 email='customer@example.com',
@@ -181,9 +185,9 @@ class TestBillingAndTierEnforcement:
             # ACT: Developer accesses customer route
             with client:
                 with client.session_transaction() as sess:
-                    sess['_user_id'] = str(developer.id)
+                    sess['_user_id'] = str(developer_id)
                     sess['_fresh'] = True
-                    sess['masquerade_org_id'] = customer_org.id  # Masquerading
+                    sess['masquerade_org_id'] = customer_org_id  # Masquerading
 
                 response = client.get('/_masquerade_test')
 
