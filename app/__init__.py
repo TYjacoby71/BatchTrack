@@ -1,3 +1,13 @@
+"""Application factory and core configuration wiring.
+
+Synopsis:
+Builds the Flask app, initializes extensions, and applies environment overrides.
+
+Glossary:
+- App factory: Function that constructs and configures the Flask app.
+- Extension: Flask subsystem (db, cache, sessions, limiter) initialized per app.
+"""
+
 import logging
 import os
 from typing import Any
@@ -146,10 +156,12 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
             pool_recycle,
         )
 
+    if os.environ.get("WEB_CONCURRENCY") not in (None, ""):
+        logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
+
     try:
         worker_count = int(
-            os.environ.get("WEB_CONCURRENCY")
-            or os.environ.get("GUNICORN_WORKERS")
+            os.environ.get("GUNICORN_WORKERS")
             or os.environ.get("WORKERS")
             or 1
         )

@@ -1,3 +1,13 @@
+"""Gunicorn runtime configuration for BatchTrack.
+
+Synopsis:
+Defines worker counts, timeouts, and logging defaults for Gunicorn.
+
+Glossary:
+- Worker: Gunicorn process handling requests.
+- Preload: Load the app before forking workers.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -33,7 +43,7 @@ def _configured_workers() -> int:
     if "GUNICORN_WORKERS" in os.environ:
         return _env_int("GUNICORN_WORKERS", auto_workers)
     if "WEB_CONCURRENCY" in os.environ:
-        return _env_int("WEB_CONCURRENCY", auto_workers)
+        LOGGER.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
 
     max_auto = _env_int("GUNICORN_MAX_WORKERS", auto_workers)
     return min(auto_workers, max_auto)

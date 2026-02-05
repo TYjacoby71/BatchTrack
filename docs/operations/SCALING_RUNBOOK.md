@@ -1,6 +1,15 @@
 
 # Scaling Runbook: 10k Concurrent Users
 
+## Synopsis
+
+Guidance for scaling BatchTrack across app, database, and Redis tiers.
+
+## Glossary
+
+- Worker: Gunicorn process handling requests.
+- Pool: Shared connection pool for Postgres or Redis.
+
 ## Overview
 
 This runbook provides step-by-step instructions for scaling BatchTrack to handle 5,000–10,000 concurrent users. The stack is:
@@ -218,7 +227,7 @@ Redis handles:
 - Session storage (if configured)
 - Application logs warn if `RATELIMIT_STORAGE_URI` falls back to `memory://` in production—treat that as a misconfiguration.
 - Redis connections are pooled and shared across sessions, caching, and rate limiting; set `REDIS_POOL_MAX_CONNECTIONS` to cap per-worker usage.
-- If your Redis plan publishes a max clients limit, set `REDIS_MAX_CONNECTIONS` and the app will auto-budget the pool based on `GUNICORN_WORKERS` (or `WEB_CONCURRENCY`). If unset, the app assumes a total budget of 200 and splits it per worker.
+- If your Redis plan publishes a max clients limit, set `REDIS_MAX_CONNECTIONS` and the app will auto-budget the pool based on `GUNICORN_WORKERS`. If unset, the app assumes a total budget of 200 and splits it per worker.
 
 **Minimum Redis Configuration:**
 
