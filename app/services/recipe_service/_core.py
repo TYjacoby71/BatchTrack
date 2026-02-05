@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from flask_login import current_user
 
 from ...extensions import db
-from ...models import InventoryItem, Recipe, RecipeIngredient, RecipeGroup
+from ...models import InventoryItem, Recipe, RecipeIngredient, RecipeGroup, Batch
 from ...models.recipe import RecipeConsumable
 from ...services.event_emitter import EventEmitter
 from ...utils.code_generator import generate_recipe_prefix
@@ -60,6 +60,7 @@ def _next_version_number(
     query = Recipe.query.filter(
         Recipe.recipe_group_id == recipe_group_id,
         Recipe.is_master.is_(is_master),
+        Recipe.test_sequence.is_(None),
     )
     if not is_master:
         query = query.filter(Recipe.variation_name == variation_name)
@@ -132,7 +133,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  group_prefix: str | None = None,
                  variation_name: str | None = None,
                  parent_master_id: int | None = None,
-                 test_sequence: int | None = None) -> Tuple[bool, Any]:
+                 test_sequence: int | None = None,
+                 is_test: bool | None = None,
+                 version_number_override: int | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -154,6 +157,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
     try:
         # Validate input data
         normalized_status = _normalize_status(status)
+        is_test_flag = bool(is_test or test_sequence is not None)
+        if is_test_flag and normalized_status == 'draft':
+            normalized_status = 'published'
         allow_partial = normalized_status == 'draft'
 
         current_org_id = _resolve_current_org_id()
@@ -254,11 +260,14 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                     recipe_group.id if recipe_group else None,
                 )
 
-        version_number = _next_version_number(
-            recipe_group.id if recipe_group else None,
-            is_master=is_master,
-            variation_name=resolved_variation_name,
-        )
+        if version_number_override is not None:
+            version_number = int(version_number_override)
+        else:
+            version_number = _next_version_number(
+                recipe_group.id if recipe_group else None,
+                is_master=is_master,
+                variation_name=resolved_variation_name,
+            )
 
         resolved_parent_master = None
         if not is_master:
@@ -275,7 +284,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                 ).order_by(Recipe.version_number.desc()).first()
 
         resolved_test_sequence = None
-        if normalized_status == 'draft':
+        if is_test_flag:
             resolved_test_sequence = test_sequence or _next_test_sequence(
                 recipe_group.id if recipe_group else None,
                 is_master=is_master,
@@ -457,7 +466,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  cover_image_path: Any = _UNSET,
                  cover_image_url: Any = _UNSET,
                  skin_opt_in: bool | None = None,
-                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
+                 remove_cover_image: bool = False,
+                 is_test: bool | None = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -482,6 +492,12 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be modified"
+
+        has_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
+        if recipe.status == 'published' and recipe.test_sequence is None:
+            return False, "Published versions are locked. Create a test to make edits."
+        if recipe.test_sequence is not None and has_batches > 0:
+            return False, "Tests cannot be edited after running batches."
 
         target_status = _normalize_status(status if status is not None else recipe.status)
         allow_partial = target_status == 'draft'
@@ -534,7 +550,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 if resolved_parent_master:
                     recipe.parent_master_id = resolved_parent_master.id
 
-        if target_status == 'draft':
+        effective_is_test = is_test if is_test is not None else (recipe.test_sequence is not None)
+        if effective_is_test:
             if recipe.test_sequence is None:
                 recipe.test_sequence = _next_test_sequence(
                     recipe.recipe_group_id,

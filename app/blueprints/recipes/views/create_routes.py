@@ -256,6 +256,9 @@ def create_variation(recipe_id):
         if not parent:
             flash('Parent recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
+        if not parent.is_master or parent.test_sequence is not None:
+            flash('Variations can only be created from a published master recipe.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
         if request.method == 'POST':
             target_status = get_submission_status(request.form)
@@ -334,6 +337,9 @@ def create_variation(recipe_id):
             )
 
         new_variation = create_variation_template(parent)
+        requested_name = (request.args.get('variation_name') or '').strip()
+        if requested_name:
+            new_variation.name = f"{parent.name} - {requested_name}"
         ingredient_prefill = serialize_assoc_rows(parent.recipe_ingredients)
         consumable_prefill = serialize_assoc_rows(parent.recipe_consumables)
 
@@ -351,6 +357,114 @@ def create_variation(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+@recipes_bp.route('/<int:recipe_id>/test', methods=['GET', 'POST'])
+@login_required
+@require_permission('recipes.create')
+def create_test_version(recipe_id):
+    try:
+        base = get_recipe_details(recipe_id)
+        if not base:
+            flash('Recipe not found.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+        if base.status != 'published':
+            flash('Publish the recipe before creating tests.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        if request.method == 'POST':
+            submission = build_recipe_submission(request.form, request.files, defaults=base)
+            if not submission.ok:
+                flash(submission.error, 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                test_draft = recipe_from_form(request.form, base_recipe=base)
+                return render_recipe_form(
+                    recipe=test_draft,
+                    is_test=True,
+                    test_base_id=base.id,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
+            payload = dict(submission.kwargs)
+            payload.update(
+                {
+                    'status': 'published',
+                    'is_test': True,
+                    'recipe_group_id': base.recipe_group_id,
+                    'variation_name': base.variation_name,
+                    'parent_master_id': base.parent_master_id,
+                    'parent_recipe_id': base.parent_recipe_id,
+                    'version_number_override': base.version_number,
+                }
+            )
+
+            success, result = create_recipe(**payload)
+            if success:
+                flash('Test version created successfully.', 'success')
+                return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+
+            error_message, missing_fields = parse_service_error(result)
+            draft_prompt = build_draft_prompt(missing_fields, 'published', error_message)
+            flash(f'Error creating test: {error_message}', 'error')
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            test_draft = recipe_from_form(request.form, base_recipe=base)
+            return render_recipe_form(
+                recipe=test_draft,
+                is_test=True,
+                test_base_id=base.id,
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                form_values=request.form,
+                draft_prompt=draft_prompt,
+            )
+
+        test_template = Recipe(
+            name=base.name,
+            instructions=base.instructions,
+            label_prefix=base.label_prefix,
+            predicted_yield=base.predicted_yield,
+            predicted_yield_unit=base.predicted_yield_unit,
+            category_id=base.category_id,
+        )
+        test_template.recipe_group_id = base.recipe_group_id
+        test_template.is_master = base.is_master
+        test_template.variation_name = base.variation_name
+        test_template.variation_prefix = base.variation_prefix
+        test_template.parent_recipe_id = base.parent_recipe_id
+        test_template.parent_master_id = base.parent_master_id
+        test_template.portioning_data = (
+            base.portioning_data.copy() if isinstance(base.portioning_data, dict) else base.portioning_data
+        )
+        test_template.is_portioned = base.is_portioned
+        test_template.portion_name = base.portion_name
+        test_template.portion_count = base.portion_count
+        test_template.portion_unit_id = base.portion_unit_id
+        if base.category_data:
+            test_template.category_data = (
+                base.category_data.copy() if isinstance(base.category_data, dict) else base.category_data
+            )
+        test_template.skin_opt_in = base.skin_opt_in
+        test_template.sharing_scope = 'private'
+        test_template.is_public = False
+        test_template.is_for_sale = False
+
+        ingredient_prefill = serialize_assoc_rows(base.recipe_ingredients)
+        consumable_prefill = serialize_assoc_rows(base.recipe_consumables)
+
+        return render_recipe_form(
+            recipe=test_template,
+            is_test=True,
+            test_base_id=base.id,
+            ingredient_prefill=ingredient_prefill,
+            consumable_prefill=consumable_prefill,
+        )
+
+    except Exception as exc:
+        flash(f"Error creating test: {exc}", "error")
+        logger.exception("Error creating test: %s", exc)
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -360,8 +474,15 @@ def edit_recipe(recipe_id):
         flash('Recipe not found.', 'error')
         return redirect(url_for('recipes.list_recipes'))
 
+    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.status == 'published' and recipe.test_sequence is None:
+        flash('Published versions are locked. Create a test to make edits.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.test_sequence is not None and existing_batches > 0:
+        flash('Tests cannot be edited after running batches.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
     draft_prompt = None
@@ -410,12 +531,11 @@ def edit_recipe(recipe_id):
 
     form_data = get_recipe_form_data()
 
-    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
-
     return render_template(
         'pages/recipes/recipe_form.html',
         recipe=recipe,
         edit_mode=True,
+        is_test=bool(recipe.test_sequence),
         existing_batches=existing_batches,
         draft_prompt=draft_prompt,
         form_values=form_override,
@@ -428,27 +548,11 @@ def edit_recipe(recipe_id):
 @require_permission('recipes.create')
 def clone_recipe(recipe_id):
     try:
-        success, payload = duplicate_recipe(recipe_id)
-
-        if success:
-            template_recipe = payload['template']
-            ingredient_prefill = serialize_prefill_rows(payload['ingredients'])
-            consumable_prefill = serialize_prefill_rows(payload['consumables'])
-
-            return render_recipe_form(
-                recipe=template_recipe,
-                is_clone=True,
-                ingredient_prefill=ingredient_prefill,
-                consumable_prefill=consumable_prefill,
-                cloned_from_id=payload.get('cloned_from_id'),
-                form_values=None,
-            )
-        else:
-            flash(f"Error cloning recipe: {payload}", "error")
+        flash("Cloning recipes has been retired. Use Create New Version instead.", "warning")
 
     except Exception as exc:
         db.session.rollback()
-        flash(f"Error cloning recipe: {exc}", "error")
+        flash(f"Error handling clone request: {exc}", "error")
         logger.exception("Error cloning recipe: %s", exc)
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))

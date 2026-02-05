@@ -16,23 +16,35 @@
       <div class="flex-grow-1">
         <h2 class="mb-1">{{ recipe.name }}</h2>
         <div class="d-flex gap-2 align-items-center mb-2">
-          {% if recipe.is_locked %}
+          {% if is_published_locked or (is_test and has_batches) %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
           {% endif %}
-            {% if recipe.status == 'draft' %}
-              <span class="badge bg-warning text-dark"><i class="fas fa-file-alt"></i> Draft</span>
-            {% endif %}
-          {% if recipe.parent_recipe_id %}
+          {% if is_test %}
+            <span class="badge bg-info text-dark"><i class="fas fa-flask"></i> Test {{ recipe.test_sequence }}</span>
+          {% elif recipe.status == 'draft' %}
+            <span class="badge bg-warning text-dark"><i class="fas fa-file-alt"></i> Draft</span>
+          {% endif %}
+          {% if recipe.is_master %}
+            <span class="badge bg-dark"><i class="fas fa-crown"></i> Master</span>
+          {% else %}
             <span class="badge bg-info"><i class="fas fa-code-branch"></i> Variation</span>
           {% endif %}
-          {% if recipe.label_prefix %}
-            <span class="badge bg-primary">{{ recipe.label_prefix }}</span>
+          {% if lineage_id %}
+            <span class="badge bg-light text-dark">Lineage {{ lineage_id }}</span>
           {% endif %}
         </div>
 
         <!-- Merged Details -->
         <div class="row g-3 mb-3">
           <div class="col-md-6">
+            <p class="mb-1">
+              <strong>Recipe Group:</strong>
+              {% if recipe.recipe_group %}
+                {{ recipe.recipe_group.name }} ({{ recipe.recipe_group.prefix }})
+              {% else %}
+                {{ recipe.name }}
+              {% endif %}
+            </p>
             <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ recipe.label_prefix or 'BTH' }}</span></p>
             {% if recipe.predicted_yield %}
             <p class="mb-1"><strong>Predicted Yield:</strong> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</p>
@@ -45,64 +57,102 @@
             {% if recipe.is_portioned and recipe.portion_name and recipe.portion_count %}
             <p class="mb-1"><strong>Portions:</strong> {{ recipe.portion_count }} {{ recipe.portion_name }}</p>
             {% endif %}
+            <p class="mb-1">
+              <strong>Version:</strong>
+              {% if recipe.is_master %}
+                Master v{{ recipe.version_number }}
+              {% else %}
+                {{ recipe.variation_name or 'Variation' }} v{{ recipe.version_number }} (Base v{{ recipe.parent_master.version_number if recipe.parent_master else '—' }})
+              {% endif %}
+            </p>
           </div>
         </div>
 
-        {% if recipe.parent_recipe_id %}
+        {% if recipe.parent_master %}
           <p class="text-muted mb-0">
             <i class="fas fa-arrow-up"></i> Variation of:
-            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_recipe_id) }}" class="text-decoration-none">
-              {{ recipe.parent.name }}
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_master.id) }}" class="text-decoration-none">
+              {{ recipe.parent_master.name }}
             </a>
           </p>
         {% endif %}
       </div>
 
       <div class="d-flex gap-2 align-items-start">
-        {% if recipe.is_locked %}
-          <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
-            <i class="fas fa-unlock"></i> {% if recipe.parent_recipe_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
-          </button>
-        {% else %}
-          <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" class="d-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-warning">
-              <i class="fas fa-lock"></i> {% if recipe.parent_recipe_id %}Lock Variation{% else %}Lock Recipe{% endif %}
-            </button>
-          </form>
+        {% if is_published_locked %}
+          <span class="text-muted small mt-1"><i class="fas fa-lock"></i> Published versions are read-only.</span>
+        {% elif is_test and has_batches %}
+          <span class="text-muted small mt-1"><i class="fas fa-lock"></i> Tests lock after batches run.</span>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-{% if recipe.status == 'draft' %}
+{% if is_test %}
+<div class="alert alert-info mb-4">
+  <i class="fas fa-flask"></i> This is a test version. It will not appear in the marketplace until published as the current version.
+</div>
+{% elif recipe.status == 'draft' %}
 <div class="alert alert-warning mb-4">
   <i class="fas fa-info-circle"></i> This recipe is saved as a draft. Complete the required fields and publish it before planning production or starting batches.
 </div>
 {% endif %}
 
-<!-- Unlock Modal -->
-<div class="modal fade" id="unlockModal" tabindex="-1">
+<!-- New Version Modal -->
+<div class="modal fade" id="newVersionModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-key"></i> Enter Password to Unlock</h5>
+        <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Create New Version</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="post" action="{{ url_for('recipes.unlock_recipe', recipe_id=recipe.id) }}">
-        <div class="modal-body">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="mb-3">
-            <label for="unlock_password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="unlock_password" name="unlock_password" required>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Select what you want to create from this lineage branch.</p>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-primary" href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}">
+            <i class="fas fa-flask"></i>
+            {% if recipe.is_master %}Create Test of Master{% else %}Create Test of Variation{% endif %}
+          </a>
+          {% if recipe.is_master %}
+          <div class="border rounded p-3">
+            <label class="form-label small text-muted">New Variation Name</label>
+            <form method="get" action="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="d-flex gap-2">
+              <input type="text" name="variation_name" class="form-control" placeholder="e.g., Lavender" required>
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-code-branch"></i> Create Variation
+              </button>
+            </form>
           </div>
+          {% endif %}
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Unlock</button>
-        </div>
-      </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Promote Variation Modal -->
+<div class="modal fade" id="promoteVariationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-warning"></i> Promote Variation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>You are about to make <strong>{{ recipe.name }}</strong> the new master recipe for this group.</p>
+        <p class="text-muted mb-0">This will create a new master version using the variation's formula.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{{ url_for('recipes.promote_variation_to_master', recipe_id=recipe.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-warning">Confirm Promotion</button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -239,6 +289,43 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-sitemap"></i> Lineage Selector</h5>
+      </div>
+      <div class="card-body">
+        <label class="form-label small text-muted">Jump to a version</label>
+        <select class="form-select mb-2" onchange="if (this.value) { window.location = this.value; }">
+          <option value="">Select a lineage version</option>
+          {% for master in master_versions %}
+            <option value="{{ url_for('recipes.view_recipe', recipe_id=master.id) }}" {% if master.id == recipe.id %}selected{% endif %}>
+              Master v{{ master.version_number }}
+            </option>
+          {% endfor %}
+          {% for test in master_tests %}
+            <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
+              Master v{{ test.version_number }} · Test {{ test.test_sequence }}
+            </option>
+          {% endfor %}
+          {% for var_name, bucket in variation_versions.items() %}
+            {% for version in bucket.published %}
+              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
+                Variation {{ var_name }} v{{ version.version_number }}
+              </option>
+            {% endfor %}
+            {% for version in bucket.tests %}
+              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
+                Variation {{ var_name }} v{{ version.version_number }} · Test {{ version.test_sequence }}
+              </option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+        <p class="text-muted small mb-0">
+          Select a version to view its lineage-specific ingredients, yield, and batches.
+        </p>
+      </div>
+    </div>
+
     <!-- Actions Card -->
     <div class="card mb-4">
       <div class="card-header">
@@ -246,6 +333,7 @@
       </div>
       <div class="card-body">
         {% set plan_disabled = (recipe.status == 'draft') %}
+        {% set edit_disabled = (not is_editable) %}
         <div class="d-grid gap-2">
           <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Back to List
@@ -255,26 +343,24 @@
              {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning production"{% endif %}>
             <i class="fas fa-play"></i> Plan Production
           </a>
-          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
-            <i class="fas fa-edit"></i> Edit Recipe
+          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
+            <i class="fas fa-edit"></i> {% if is_test %}Edit Test{% else %}Edit Recipe{% endif %}
           </a>
-          {% if recipe.parent_recipe_id %}
-            <form method="POST" action="{{ url_for('recipes.make_parent_recipe', recipe_id=recipe.id) }}" onsubmit="return confirm('This will convert this variation into a standalone parent recipe. This action cannot be undone. Continue?')">
+          <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newVersionModal">
+            <i class="fas fa-plus-circle"></i> Create New Version
+          </button>
+          {% if is_test %}
+            <form method="post" action="{{ url_for('recipes.publish_test_version', recipe_id=recipe.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-success">
-                <i class="fas fa-level-up-alt"></i> Make New Parent
+              <button type="submit" class="btn btn-warning">
+                <i class="fas fa-upload"></i> Publish as Current Version
               </button>
             </form>
-          {% else %}
-            {% if can_create_variations %}
-              <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
-                <i class="fas fa-code-branch"></i> New Variation
-              </a>
-            {% endif %}
+          {% elif not recipe.is_master %}
+            <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#promoteVariationModal">
+              <i class="fas fa-exchange-alt"></i> Make This the Master
+            </button>
           {% endif %}
-          <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
-            <i class="fas fa-copy"></i> Clone Recipe
-          </a>
           {% if lineage_enabled %}
           <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark">
             <i class="fas fa-project-diagram"></i> View Lineage

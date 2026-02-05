@@ -462,6 +462,7 @@ def test_update_recipe_toggles_public_private_controls():
         is_for_sale=True,
         sale_price='8.50',
         status='published',
+        is_test=True,
     )
     assert ok, f"Failed to create recipe: {recipe}"
 

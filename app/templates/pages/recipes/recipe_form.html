@@ -4,15 +4,30 @@
 {% set preselect_ingredient_id = session.pop('preselect_ingredient_id', None) %}
 {% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
 {% set field_values = form_values if form_values is defined else None %}
+{% set is_test_mode = is_test or (recipe and recipe.test_sequence) %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="d-flex align-items-center gap-2">
         {% if recipe %}
-            {% if recipe.parent_recipe_id %}Edit Variation{% else %}Edit Recipe{% endif %}
+            {% if is_test_mode %}
+                Edit Test
+            {% elif recipe.parent_recipe_id %}
+                Edit Variation
+            {% else %}
+                Edit Recipe
+            {% endif %}
         {% else %}
-            {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+            {% if is_test_mode %}
+                New Test
+            {% elif is_variation %}
+                New Variation
+            {% else %}
+                New Recipe
+            {% endif %}
         {% endif %}
-        {% if recipe and recipe.status == 'draft' %}
+        {% if is_test_mode %}
+            <span class="badge bg-info text-dark">Test{% if recipe and recipe.test_sequence %} {{ recipe.test_sequence }}{% endif %}</span>
+        {% elif recipe and recipe.status == 'draft' %}
             <span class="badge bg-warning text-dark">Draft</span>
         {% endif %}
     </h2>
@@ -31,9 +46,9 @@
 <div class="alert alert-info mb-4">
     <i class="fas fa-plus-circle"></i> <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
-{% elif is_clone and recipe %}
+{% elif is_import and recipe %}
 <div class="alert alert-info mb-4">
-    <i class="fas fa-copy"></i> <strong>Creating a copy of:</strong> {{ recipe.name }}
+    <i class="fas fa-file-import"></i> <strong>Imported recipe:</strong> Review details before saving.
 </div>
 {% endif %}
 
@@ -52,16 +67,17 @@
         <button type="button" class="btn btn-warning" data-role="dismiss-draft-prompt">
             <i class="fas fa-edit"></i> I'll fix it
         </button>
+        {% if not is_test_mode %}
         <button type="button" class="btn btn-outline-primary" id="promptSaveDraftButton">
             <i class="fas fa-file-alt"></i> Save Draft
         </button>
+        {% endif %}
     </div>
 </div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
+<form method="post" enctype="multipart/form-data" action="{% if is_test_mode and not edit_mode %}{{ url_for('recipes.create_test_version', recipe_id=test_base_id) }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
     {% if cloned_from_id %}<input type="hidden" name="cloned_from_id" value="{{ cloned_from_id }}">{% endif %}
     <input type="hidden" name="save_mode" id="saveModeInput" value="publish">
 
