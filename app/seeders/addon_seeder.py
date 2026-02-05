@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.addon import Addon
+from app.models import Permission, SubscriptionTier
 
 
 def seed_addons():
@@ -39,6 +40,17 @@ def seed_addons():
             'is_active': True
         },
         {
+            'key': 'batchbot_access',
+            'name': 'Batchbot Access',
+            'description': 'Enable the Batchbot assistant for your organization.',
+            'permission_name': 'ai.batchbot',
+            'function_key': 'batchbot_access',
+            'billing_type': 'subscription',
+            'stripe_lookup_key': None,
+            'batchbot_credit_amount': 0,
+            'is_active': True
+        },
+        {
             'key': 'batchbot_refill_100',
             'name': 'Batchley Refill - 100 Actions',
             'description': 'Adds 100 Batchley automation requests to the organization quota.',
@@ -70,4 +82,62 @@ def seed_addons():
 
     db.session.commit()
     print('✅ Addons seeded')
+
+
+def backfill_addon_permissions():
+    """Ensure add-on permissions are attached to tiers (idempotent)."""
+    addons = Addon.query.filter_by(is_active=True).all()
+    retention_addon = next((a for a in addons if a.function_key == 'retention'), None)
+    perm_names = [a.permission_name for a in addons if a.permission_name]
+    if not perm_names:
+        print('ℹ️  No add-on permissions to backfill')
+        return
+
+    permissions = Permission.query.filter(
+        Permission.is_active.is_(True),
+        Permission.name.in_(perm_names),
+    ).all()
+    perm_by_name = {p.name: p for p in permissions}
+
+    updated_tiers = 0
+    for tier in SubscriptionTier.query.all():
+        tier_perm_names = {p.name for p in tier.permissions}
+        allowed_ids = {a.id for a in getattr(tier, 'allowed_addons', []) or []}
+        included_ids = {a.id for a in getattr(tier, 'included_addons', []) or []}
+        changed = False
+
+        if retention_addon and getattr(tier, 'retention_policy', None) == 'subscribed':
+            if retention_addon.id not in included_ids:
+                tier.included_addons.append(retention_addon)
+                included_ids.add(retention_addon.id)
+                changed = True
+
+        for addon in addons:
+            perm_name = addon.permission_name
+            if not perm_name:
+                continue
+            perm = perm_by_name.get(perm_name)
+            if not perm:
+                continue
+
+            is_selected = addon.id in allowed_ids or addon.id in included_ids
+            has_perm = perm_name in tier_perm_names
+
+            if has_perm and not is_selected:
+                tier.included_addons.append(addon)
+                included_ids.add(addon.id)
+                is_selected = True
+                changed = True
+
+            if is_selected and not has_perm:
+                tier.permissions.append(perm)
+                tier_perm_names.add(perm_name)
+                changed = True
+
+        if changed:
+            updated_tiers += 1
+
+    if updated_tiers:
+        db.session.commit()
+    print(f'✅ Add-on permission backfill complete (tiers updated: {updated_tiers})')
 

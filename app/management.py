@@ -98,6 +98,11 @@ def init_production_command():
         try:
             seed_addons()
             print("✅ Add-ons seeded")
+            try:
+                from .seeders.addon_seeder import backfill_addon_permissions
+                backfill_addon_permissions()
+            except Exception as e:
+                print(f"⚠️  Add-on permission backfill issue: {e}")
         except Exception as e:
             print(f"⚠️  Add-on seeding issue: {e}")
             print("   Continuing with remaining steps...")
@@ -221,12 +226,14 @@ def update_addons_command():
     try:
         print("🔄 Updating add-ons from addon_seeder...")
 
-        from .seeders.addon_seeder import seed_addons
+        from .seeders.addon_seeder import seed_addons, backfill_addon_permissions
         seed_addons()
+        backfill_addon_permissions()
 
         print('✅ Add-ons updated successfully!')
         print('   - New add-ons added')
         print('   - Existing add-ons updated')
+        print('   - Tier add-on permissions backfilled')
 
     except Exception as e:
         print(f'❌ Add-on update failed: {str(e)}')
