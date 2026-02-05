@@ -23,9 +23,11 @@ def configure_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models import User
+        from flask import current_app
+        from sqlalchemy.orm import joinedload
 
         try:
-            user = db.session.get(User, int(user_id))
+            user = db.session.get(User, int(user_id), options=[joinedload(User.organization)])
         except (ValueError, TypeError):
             return None
         except SQLAlchemyError:
@@ -41,13 +43,20 @@ def configure_login_manager(app):
                 SessionService.clear_session_state()
                 return None
 
-        if user.user_type == "developer":
-            return user
+        if user.user_type != "developer":
+            org = getattr(user, "organization", None)
+            if not org or not org.is_active:
+                return None
 
-        if getattr(user, "organization", None) and user.organization.is_active:
-            return user
+        if current_app and current_app.config.get("TESTING"):
+            try:
+                if user.organization is not None:
+                    db.session.expunge(user.organization)
+                db.session.expunge(user)
+            except Exception:
+                pass
 
-        return None
+        return user
 
 
 def _expects_json() -> bool:
