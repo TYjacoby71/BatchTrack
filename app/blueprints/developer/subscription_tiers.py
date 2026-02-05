@@ -14,6 +14,30 @@ def load_tiers_config():
 
 subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/subscription-tiers')
 
+
+def _addon_permission_map(addons):
+    addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
+    if not addon_perm_names:
+        return {}
+    permissions = Permission.query.filter(
+        Permission.is_active.is_(True),
+        Permission.name.in_(addon_perm_names),
+    ).all()
+    perm_by_name = {p.name: p for p in permissions}
+    return {
+        addon.id: perm_by_name.get(addon.permission_name)
+        for addon in addons
+        if addon.permission_name and perm_by_name.get(addon.permission_name)
+    }
+
+
+def _base_permissions(addons):
+    addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
+    query = Permission.query.filter(Permission.is_active.is_(True))
+    if addon_perm_names:
+        query = query.filter(Permission.name.not_in(addon_perm_names))
+    return query.order_by(Permission.name).all()
+
 @subscription_tiers_bp.route('/')
 @login_required
 @require_permission('dev.manage_tiers')
@@ -179,10 +203,8 @@ def create_tier():
             is_customer_facing=is_customer_facing
         )
 
-        # Add permissions
-        permission_ids = request.form.getlist('permissions', type=int)
-        if permission_ids:
-            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        # Add permissions (merge with addon-linked permissions)
+        permission_ids = set(request.form.getlist('permissions', type=int))
 
         db.session.add(tier)
         db.session.flush()
@@ -190,6 +212,18 @@ def create_tier():
         # Allowed and Included add-ons
         addon_ids = request.form.getlist('allowed_addons', type=int)
         included_ids = request.form.getlist('included_addons', type=int)
+        selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
+        if selected_addon_ids:
+            selected_addons = Addon.query.filter(Addon.id.in_(selected_addon_ids)).all()
+            addon_perm_names = [a.permission_name for a in selected_addons if a.permission_name]
+            if addon_perm_names:
+                addon_perms = Permission.query.filter(
+                    Permission.is_active.is_(True),
+                    Permission.name.in_(addon_perm_names),
+                ).all()
+                permission_ids.update({p.id for p in addon_perms})
+        if permission_ids:
+            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
         if addon_ids is not None:
             tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
         if included_ids is not None:
@@ -205,9 +239,15 @@ def create_tier():
         return redirect(url_for('.manage_tiers'))
 
     # For GET request
-    all_permissions = Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
     all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
-    return render_template('developer/create_tier.html', all_permissions=all_permissions, all_addons=all_addons)
+    addon_permissions = _addon_permission_map(all_addons)
+    all_permissions = _base_permissions(all_addons)
+    return render_template(
+        'developer/create_tier.html',
+        all_permissions=all_permissions,
+        all_addons=all_addons,
+        addon_permissions=addon_permissions,
+    )
 
 @subscription_tiers_bp.route('/edit/<int:tier_id>', methods=['GET', 'POST'])
 @login_required
@@ -301,10 +341,6 @@ def edit_tier(tier_id):
                 tier.data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else 365
             tier.retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
 
-            # Update permissions
-            permission_ids = request.form.getlist('permissions', type=int)
-            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
-
             # Update allowed and included add-ons
             addon_ids = request.form.getlist('allowed_addons', type=int)
             included_ids = request.form.getlist('included_addons', type=int)
@@ -313,6 +349,20 @@ def edit_tier(tier_id):
                 tier.included_addons = Addon.query.filter(Addon.id.in_(included_ids)).all() if included_ids else []
             except Exception:
                 pass
+
+            # Update permissions (merge with addon-linked permissions)
+            permission_ids = set(request.form.getlist('permissions', type=int))
+            selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
+            if selected_addon_ids:
+                selected_addons = Addon.query.filter(Addon.id.in_(selected_addon_ids)).all()
+                addon_perm_names = [a.permission_name for a in selected_addons if a.permission_name]
+                if addon_perm_names:
+                    addon_perms = Permission.query.filter(
+                        Permission.is_active.is_(True),
+                        Permission.name.in_(addon_perm_names),
+                    ).all()
+                    permission_ids.update({p.id for p in addon_perms})
+            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
             db.session.commit()
 
@@ -327,12 +377,16 @@ def edit_tier(tier_id):
             return redirect(url_for('.edit_tier', tier_id=tier_id))
 
     # For GET request
-    all_permissions = Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
     all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
-    return render_template('developer/edit_tier.html',
-                           tier=tier,
-                           all_permissions=all_permissions,
-                           all_addons=all_addons)
+    addon_permissions = _addon_permission_map(all_addons)
+    all_permissions = _base_permissions(all_addons)
+    return render_template(
+        'developer/edit_tier.html',
+        tier=tier,
+        all_permissions=all_permissions,
+        all_addons=all_addons,
+        addon_permissions=addon_permissions,
+    )
 
 @subscription_tiers_bp.route('/delete/<int:tier_id>', methods=['POST'])
 @login_required

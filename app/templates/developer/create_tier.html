@@ -133,6 +133,34 @@
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if addon_permissions %}
+                            <div class="mt-3">
+                                <label class="form-label">Add-on Permissions (read-only)</label>
+                                <div class="row">
+                                    {% for addon in all_addons %}
+                                        {% set perm = addon_permissions.get(addon.id) %}
+                                        {% if perm %}
+                                        <div class="col-md-4 mb-2 addon-permission" data-addon-id="{{ addon.id }}" style="display: none;">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" checked disabled>
+                                                <input type="hidden"
+                                                       class="addon-permission-input"
+                                                       data-addon-id="{{ addon.id }}"
+                                                       name="permissions"
+                                                       value="{{ perm.id }}"
+                                                       disabled>
+                                                <label class="form-check-label">
+                                                    {{ perm.display_name or perm.name }}
+                                                    <small class="text-muted">(via {{ addon.name }})</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="form-text">Add-on permissions appear only when the add-on is selected.</div>
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="mb-3">
@@ -259,5 +287,26 @@ function toggleRetentionFields() {
     }
 }
 document.addEventListener('DOMContentLoaded', toggleRetentionFields);
+
+function syncAddonPermissions() {
+    const selected = new Set();
+    document.querySelectorAll('input[name="allowed_addons"]:checked, input[name="included_addons"]:checked')
+        .forEach((el) => selected.add(el.value));
+    document.querySelectorAll('.addon-permission').forEach((el) => {
+        const addonId = el.getAttribute('data-addon-id');
+        const enabled = selected.has(addonId);
+        el.style.display = enabled ? '' : 'none';
+        const hiddenInput = el.querySelector('.addon-permission-input');
+        if (hiddenInput) {
+            hiddenInput.disabled = !enabled;
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[name="allowed_addons"], input[name="included_addons"]')
+        .forEach((el) => el.addEventListener('change', syncAddonPermissions));
+    syncAddonPermissions();
+});
 </script>
 {% endblock %}

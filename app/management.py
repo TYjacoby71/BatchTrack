@@ -213,6 +213,26 @@ def update_permissions_command():
         db.session.rollback()
         raise
 
+
+@click.command('update-addons')
+@with_appcontext
+def update_addons_command():
+    """Update add-ons from addon_seeder (production-safe)"""
+    try:
+        print("🔄 Updating add-ons from addon_seeder...")
+
+        from .seeders.addon_seeder import seed_addons
+        seed_addons()
+
+        print('✅ Add-ons updated successfully!')
+        print('   - New add-ons added')
+        print('   - Existing add-ons updated')
+
+    except Exception as e:
+        print(f'❌ Add-on update failed: {str(e)}')
+        db.session.rollback()
+        raise
+
 @click.command('update-subscription-tiers')
 @with_appcontext
 def update_subscription_tiers_command():
@@ -1053,6 +1073,7 @@ def register_commands(app):
 
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
+    app.cli.add_command(update_addons_command)
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
     app.cli.add_command(dispatch_domain_events_command)
