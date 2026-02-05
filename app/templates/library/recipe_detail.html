@@ -77,10 +77,12 @@
                         {% endif %}
                         {% if recipe.origin %}
                         <li><strong>Origin:</strong>
-                            {% if recipe.origin.type == 'batchtrack_native' %}
+                        {% if recipe.origin.type == 'batchtrack_native' %}
                                 BatchTrack Native
                             {% elif recipe.origin.purchased %}
                                 Purchased (from {{ recipe.origin.source_org_name or 'another organization' }})
+                        {% elif recipe.origin.type == 'published' %}
+                                Published by creator
                             {% else %}
                                 Org Authored
                             {% endif %}

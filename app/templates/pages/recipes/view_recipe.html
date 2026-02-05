@@ -21,7 +21,8 @@
           {% endif %}
           {% if is_test %}
             <span class="badge bg-info text-dark"><i class="fas fa-flask"></i> Test {{ recipe.test_sequence }}</span>
-          {% elif recipe.status == 'draft' %}
+          {% endif %}
+          {% if recipe.status == 'draft' %}
             <span class="badge bg-warning text-dark"><i class="fas fa-file-alt"></i> Draft</span>
           {% endif %}
           {% if recipe.is_master %}
@@ -151,6 +152,29 @@
         <form method="post" action="{{ url_for('recipes.promote_variation_to_master', recipe_id=recipe.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-warning">Confirm Promotion</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal fade" id="newGroupModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-seedling text-success"></i> Start New Recipe Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>You are about to start a new recipe group using <strong>{{ recipe.name }}</strong> as the master recipe.</p>
+        <p class="text-muted mb-0">This keeps your current group intact and creates a fresh lineage tree.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{{ url_for('recipes.promote_variation_to_new_group', recipe_id=recipe.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-success">Create New Group</button>
         </form>
       </div>
     </div>
@@ -359,6 +383,9 @@
           {% elif not recipe.is_master %}
             <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#promoteVariationModal">
               <i class="fas fa-exchange-alt"></i> Make This the Master
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newGroupModal">
+              <i class="fas fa-seedling"></i> Start New Recipe Group
             </button>
           {% endif %}
           {% if lineage_enabled %}

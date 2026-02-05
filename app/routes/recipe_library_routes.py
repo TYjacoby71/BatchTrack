@@ -95,7 +95,7 @@ def recipe_library():
         query = query.filter(Recipe.org_origin_purchased.is_(True))
     elif origin_filter == "authored":
         query = query.filter(
-            (Recipe.org_origin_type == "authored") | (Recipe.org_origin_type.is_(None))
+            (Recipe.org_origin_type.in_(["authored", "published"])) | (Recipe.org_origin_type.is_(None))
         )
 
     if search_query:

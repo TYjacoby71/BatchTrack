@@ -371,6 +371,7 @@ def create_test_version(recipe_id):
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
         if request.method == 'POST':
+            target_status = get_submission_status(request.form)
             submission = build_recipe_submission(request.form, request.files, defaults=base)
             if not submission.ok:
                 flash(submission.error, 'error')
@@ -388,23 +389,30 @@ def create_test_version(recipe_id):
             payload = dict(submission.kwargs)
             payload.update(
                 {
-                    'status': 'published',
+                    'status': target_status,
                     'is_test': True,
                     'recipe_group_id': base.recipe_group_id,
                     'variation_name': base.variation_name,
                     'parent_master_id': base.parent_master_id,
                     'parent_recipe_id': base.parent_recipe_id,
                     'version_number_override': base.version_number,
+                    'sharing_scope': 'private',
+                    'is_public': False,
+                    'is_for_sale': False,
+                    'marketplace_status': 'draft',
                 }
             )
 
             success, result = create_recipe(**payload)
             if success:
-                flash('Test version created successfully.', 'success')
+                if target_status == 'draft':
+                    flash('Test saved as a draft.', 'info')
+                else:
+                    flash('Test version created successfully.', 'success')
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
 
             error_message, missing_fields = parse_service_error(result)
-            draft_prompt = build_draft_prompt(missing_fields, 'published', error_message)
+            draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
             flash(f'Error creating test: {error_message}', 'error')
             ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
             test_draft = recipe_from_form(request.form, base_recipe=base)
@@ -507,6 +515,7 @@ def edit_recipe(recipe_id):
 
             payload = dict(submission.kwargs)
             payload['status'] = target_status
+            payload['is_test'] = str(request.form.get('is_test') or '').lower() == 'true'
 
             success, result = update_recipe(
                 recipe_id=recipe_id,

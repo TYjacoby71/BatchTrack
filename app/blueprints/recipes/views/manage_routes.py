@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.extensions import db, cache
 from app.models import Recipe, RecipeLineage, RecipeIngredient, RecipeConsumable, Batch
 from app.services.lineage_service import generate_lineage_id
-from app.services.recipe_service import delete_recipe, get_recipe_details
+from app.services.recipe_service import create_recipe, delete_recipe, get_recipe_details
 from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
@@ -378,4 +378,76 @@ def promote_variation_to_master(recipe_id):
         db.session.rollback()
         logger.error("Error promoting variation %s to master: %s", recipe_id, exc)
         flash('An error occurred while promoting the variation.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+@recipes_bp.route('/<int:recipe_id>/promote-to-new-group', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def promote_variation_to_new_group(recipe_id):
+    try:
+        recipe = db.session.get(Recipe, recipe_id)
+        if not recipe or recipe.is_master or recipe.test_sequence is not None:
+            flash('Only published variations can start a new recipe group.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+
+        base_name = recipe.name or "New Recipe Group"
+        candidate_name = base_name
+        suffix = 1
+        while Recipe.query.filter(
+            Recipe.organization_id == recipe.organization_id,
+            Recipe.name == candidate_name,
+        ).first():
+            suffix += 1
+            candidate_name = f"{base_name} (New Group {suffix})"
+
+        ingredients_payload = [
+            {
+                "item_id": assoc.inventory_item_id,
+                "quantity": assoc.quantity,
+                "unit": assoc.unit,
+            }
+            for assoc in recipe.recipe_ingredients
+        ]
+        consumables_payload = [
+            {
+                "item_id": assoc.inventory_item_id,
+                "quantity": assoc.quantity,
+                "unit": assoc.unit,
+            }
+            for assoc in recipe.recipe_consumables
+        ]
+
+        ok, new_master = create_recipe(
+            name=candidate_name,
+            instructions=recipe.instructions,
+            yield_amount=recipe.predicted_yield or 0.0,
+            yield_unit=recipe.predicted_yield_unit or '',
+            ingredients=ingredients_payload,
+            consumables=consumables_payload,
+            allowed_containers=list(recipe.allowed_containers or []),
+            label_prefix='',
+            category_id=recipe.category_id,
+            portioning_data=recipe.portioning_data,
+            is_portioned=recipe.is_portioned,
+            portion_name=recipe.portion_name,
+            portion_count=recipe.portion_count,
+            portion_unit_id=recipe.portion_unit_id,
+            status='published',
+            sharing_scope='private',
+            is_public=False,
+            is_for_sale=False,
+            marketplace_status='draft',
+        )
+        if not ok:
+            message = new_master.get('error') if isinstance(new_master, dict) else str(new_master)
+            flash(f"Unable to start new group: {message}", 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        flash('Variation promoted into a new recipe group.', 'success')
+        return redirect(url_for('recipes.view_recipe', recipe_id=new_master.id))
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Error promoting variation %s to new group: %s", recipe_id, exc)
+        flash('An error occurred while creating the new recipe group.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))

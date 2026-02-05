@@ -18,6 +18,16 @@ def _recipe_or_404(recipe_id: int) -> Recipe:
     user_org = getattr(current_user, "organization_id", None)
     if user_org and recipe.organization_id != user_org:
         abort(403)
+    if user_org and recipe.organization_id == user_org and not recipe.org_origin_purchased:
+        updated = False
+        if recipe.org_origin_recipe_id != recipe.id:
+            recipe.org_origin_recipe_id = recipe.id
+            updated = True
+        if recipe.org_origin_type in (None, "authored"):
+            recipe.org_origin_type = "published"
+            updated = True
+        if updated:
+            db.session.commit()
     return recipe
 
 

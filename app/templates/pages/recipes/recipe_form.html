@@ -27,7 +27,8 @@
         {% endif %}
         {% if is_test_mode %}
             <span class="badge bg-info text-dark">Test{% if recipe and recipe.test_sequence %} {{ recipe.test_sequence }}{% endif %}</span>
-        {% elif recipe and recipe.status == 'draft' %}
+        {% endif %}
+        {% if recipe and recipe.status == 'draft' %}
             <span class="badge bg-warning text-dark">Draft</span>
         {% endif %}
     </h2>
@@ -79,6 +80,7 @@
 <form method="post" enctype="multipart/form-data" action="{% if is_test_mode and not edit_mode %}{{ url_for('recipes.create_test_version', recipe_id=test_base_id) }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if cloned_from_id %}<input type="hidden" name="cloned_from_id" value="{{ cloned_from_id }}">{% endif %}
+    {% if is_test_mode %}<input type="hidden" name="is_test" value="true">{% endif %}
     <input type="hidden" name="save_mode" id="saveModeInput" value="publish">
 
     <!-- Basic Information Card -->

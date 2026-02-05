@@ -158,8 +158,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         # Validate input data
         normalized_status = _normalize_status(status)
         is_test_flag = bool(is_test or test_sequence is not None)
-        if is_test_flag and normalized_status == 'draft':
-            normalized_status = 'published'
         allow_partial = normalized_status == 'draft'
 
         current_org_id = _resolve_current_org_id()

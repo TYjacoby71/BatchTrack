@@ -107,6 +107,32 @@ def _apply_marketplace_settings(
         recipe.is_for_sale = False
         recipe.sale_price = None
         recipe.marketplace_status = "draft"
+        return
+
+    if recipe.is_public and recipe.marketplace_status == "listed":
+        if not recipe.org_origin_purchased:
+            recipe.org_origin_recipe_id = recipe.id
+            if recipe.org_origin_type in (None, "authored"):
+                recipe.org_origin_type = "published"
+
+        if recipe.recipe_group_id:
+            query = Recipe.query.filter(
+                Recipe.recipe_group_id == recipe.recipe_group_id,
+                Recipe.id != recipe.id,
+                Recipe.test_sequence.is_(None),
+            )
+            if recipe.is_master:
+                query = query.filter(Recipe.is_master.is_(True))
+            else:
+                query = query.filter(
+                    Recipe.is_master.is_(False),
+                    Recipe.variation_name == recipe.variation_name,
+                )
+            for other in query.all():
+                other.is_public = False
+                other.is_for_sale = False
+                other.sale_price = None
+                other.marketplace_status = "draft"
 
 
 __all__ = [
