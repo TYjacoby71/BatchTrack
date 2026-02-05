@@ -1,6 +1,8 @@
-"""Updated management commands for better error handling, database checks, and unit seeding."""
-"""
-Management commands for deployment and maintenance
+"""CLI management commands for deployment, seeding, and maintenance.
+
+File purpose:
+1) Provide one-time initialization and update-safe maintenance commands.
+2) Expose production-safe refresh commands for permissions, tiers, and add-ons.
 """
 import click
 from flask import current_app

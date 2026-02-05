@@ -1,3 +1,26 @@
+"""Billing and subscription routes.
+
+File purpose:
+1) Present upgrade options, manage checkout, and handle billing webhooks.
+2) Expose add-on checkout endpoints and downgrade selection flow.
+
+Route index:
+1. GET /billing/upgrade -> tier upgrade UI.
+2. GET /billing/storage -> storage add-on checkout (legacy flow).
+3. POST /billing/addons/start/<addon_key> -> start add-on checkout.
+4. GET /billing/checkout/<tier> -> start tier checkout.
+5. GET /billing/checkout/<tier>/<billing_cycle> -> start tier checkout (cycle).
+6. GET/POST /billing/downgrade/<tier> -> downgrade recipe selection.
+7. GET/POST /billing/downgrade/<tier>/<billing_cycle> -> downgrade selection (cycle).
+8. GET /billing/whop-checkout/<product_id> -> Whop checkout.
+9. GET /billing/complete-signup-from-stripe -> Stripe post-checkout callback.
+10. GET /billing/complete-signup-from-whop -> Whop post-checkout callback.
+11. GET /billing/customer-portal -> Stripe customer portal.
+12. POST /billing/cancel-subscription -> cancel subscription.
+13. POST /billing/webhooks/stripe -> Stripe webhooks.
+14. GET /billing/debug -> billing debug payload.
+"""
+
 import logging
 import os
 import json
@@ -25,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
+# Route 1: Show upgrade options and current tier context.
 @billing_bp.route('/upgrade')
 @login_required
 @require_permission('organization.manage_billing')
@@ -77,6 +101,7 @@ def upgrade():
                          current_tier=current_tier,
                          subscription_details=subscription_details)
 
+# Route 2: Start storage add-on checkout (legacy storage add-on).
 @billing_bp.route('/storage')
 @login_required
 @require_permission('organization.manage_billing')
@@ -116,6 +141,7 @@ def storage_addon():
         flash('Checkout failed. Please try again later.', 'error')
     return redirect(url_for('billing.upgrade'))
 
+# Route 3: Start add-on checkout for allowed add-ons.
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
 @require_permission('organization.manage_billing')
@@ -160,6 +186,7 @@ def start_addon_checkout(addon_key):
         flash('Checkout failed. Please try again later.', 'error')
     return redirect(url_for('settings.index') + '#billing')
 
+# Route 4-5: Start tier checkout (optionally with billing cycle).
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required
@@ -207,6 +234,7 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
 
+# Route 6-7: Downgrade selection flow for recipe limits.
 @billing_bp.route('/downgrade/<tier>', methods=['GET', 'POST'])
 @billing_bp.route('/downgrade/<tier>/<billing_cycle>', methods=['GET', 'POST'])
 @login_required
@@ -252,6 +280,7 @@ def downgrade(tier, billing_cycle='month'):
         billing_cycle=billing_cycle,
     )
 
+# Route 8: Redirect to Whop checkout.
 @billing_bp.route('/whop-checkout/<product_id>')
 @login_required
 @require_permission('organization.manage_billing')
@@ -279,6 +308,7 @@ def whop_checkout(product_id):
         flash('Checkout failed. Please try again.', 'error')
         return redirect(url_for('billing.upgrade'))
 
+# Route 9: Finalize signup after Stripe checkout.
 @billing_bp.route('/complete-signup-from-stripe')
 def complete_signup_from_stripe():
     """Complete signup process after Stripe payment"""
@@ -315,6 +345,7 @@ def complete_signup_from_stripe():
     flash(f'Welcome to BatchTrack! Your {tier_name} account is ready to use.', 'success')
     return redirect(url_for('onboarding.welcome'))
 
+# Route 10: Finalize signup after Whop checkout.
 @billing_bp.route('/complete-signup-from-whop')
 @login_required
 def complete_signup_from_whop():
@@ -340,6 +371,7 @@ def complete_signup_from_whop():
         flash('Signup completion failed', 'error')
         return redirect(url_for('billing.upgrade'))
 
+# Route 11: Redirect to the Stripe customer portal.
 @billing_bp.route('/customer-portal')
 @login_required
 @require_permission('organization.manage_billing')
@@ -363,6 +395,7 @@ def customer_portal():
         flash('Billing portal unavailable', 'error')
     return redirect(url_for('app_routes.dashboard'))
 
+# Route 12: Cancel the current subscription.
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
 @require_permission('organization.manage_billing')
@@ -393,6 +426,7 @@ def cancel_subscription():
 
     return redirect(url_for('app_routes.dashboard'))
 
+# Route 13: Stripe webhook ingestion for billing + add-ons.
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
 @csrf.exempt
 @limiter.limit("60/minute")
@@ -477,6 +511,7 @@ def handle_subscription_deleted(event):
         logger.error(f"Error handling subscription deletion: {e}")
         return jsonify({'error': 'Processing failed'}), 500
 
+# Route 14: Billing debug payload (developer-only).
 @billing_bp.route('/debug')
 @login_required
 @require_permission('organization.manage_billing')

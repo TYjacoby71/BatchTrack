@@ -1,3 +1,14 @@
+"""Seed add-ons and backfill add-on permissions on tiers.
+
+File purpose:
+1) Maintain the add-on catalog (permission_name and function_key bindings).
+2) Backfill tier entitlements so add-on permissions remain consistent.
+
+Service index:
+1. seed_addons -> upsert add-on catalog rows.
+2. backfill_addon_permissions -> attach add-on permissions to tiers.
+"""
+
 from app.extensions import db
 from app.models.addon import Addon
 from app.models import Permission, SubscriptionTier

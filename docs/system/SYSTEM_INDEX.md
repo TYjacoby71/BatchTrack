@@ -28,6 +28,7 @@ This directory is the curated reference library for every master document that e
 ## Product Programs & Feature Toggles
 
 - **[FREE_TIER.md](FREE_TIER.md)** – Subscription tier allowances and gating rules
+- **[ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md)** – Add-on catalog, entitlements, and update scripts
 - **[TRACKING_PLAN.md](TRACKING_PLAN.md)** – Analytics instrumentation map and event taxonomy
 - **[recipe_library_marketplace.md](recipe_library_marketplace.md)** – Global recipe library, marketplace toggles, sharing controls, moderation policy, and purchase options
 - **[CURRENTLY_STUBBED.md](CURRENTLY_STUBBED.md)** – Feature stubs with implementation status
@@ -46,6 +47,10 @@ This directory is the curated reference library for every master document that e
 - **[TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md)** – Complete timezone handling guide
 - **[STORAGE_VS_DISPLAY.md](STORAGE_VS_DISPLAY.md)** – DateTime storage vs display best practices
 - **[USERS_AND_PERMISSIONS.md](USERS_AND_PERMISSIONS.md)** – User management and permission system
+
+## Dictionary & Glossary
+
+- **[APP_DICTIONARY.md](APP_DICTIONARY.md)** – Layered glossary and cross-linked definitions
 
 ---
 

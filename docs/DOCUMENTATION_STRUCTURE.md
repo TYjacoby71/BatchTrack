@@ -1,8 +1,7 @@
 # Documentation Structure
 
 ## Overview
-
-This document explains the organization of BatchTrack documentation.
+This document explains where documentation lives and how updates should be staged across system guides, changelogs, and checklists.
 
 ## Directory Structure
 
@@ -10,6 +9,8 @@ This document explains the organization of BatchTrack documentation.
 docs/
 ├── system/              Master documentation for every platform system and concept
 │   ├── ARCHITECTURE.md
+│   ├── ADDONS_AND_ENTITLEMENTS.md
+│   ├── APP_DICTIONARY.md
 │   ├── SERVICES.md
 │   ├── DATABASE_MODELS.md
 │   ├── PLAN_SNAPSHOT.md
@@ -164,6 +165,13 @@ Made a code change?
     - DOCUMENTATION_STRUCTURE.md when map or ownership shifts
     - FUTURE_ROADMAP.md and other planning docs when strategy evolves
 ```
+
+## PR Documentation Checklist (keep in sync with PR template)
+- [ ] Updated system docs for feature changes (docs/system/)
+- [ ] Added/updated changelog entry (docs/changelog/)
+- [ ] Updated add-on entitlements doc if tiers/add-ons changed
+- [ ] Updated route/service synopses in touched files
+- [ ] Updated APP_DICTIONARY.md if new terms were introduced
 
 ## Cross-References
 

@@ -1,3 +1,5 @@
+<!-- PR template for required summaries + checklists -->
+
 ## Description
 <!-- Brief description of the changes -->
 
@@ -19,6 +21,9 @@
 - [ ] Updated architecture docs (if design changed)
 - [ ] Added changelog entry in `docs/changelog/`
 - [ ] Updated feature guides (if usage changed)
+- [ ] Updated add-on entitlements docs (if tiers/add-ons changed)
+- [ ] Updated route/service synopses in touched files
+- [ ] Updated APP_DICTIONARY.md for new terms
 
 ## Checklist
 - [ ] Code follows project patterns
@@ -26,3 +31,4 @@
 - [ ] Organization scoping maintained
 - [ ] Timezone handling correct (STORAGE ≠ DISPLAY)
 - [ ] Permission checks in place
+- [ ] Update scripts considered (`update-permissions`, `update-addons`)
