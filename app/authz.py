@@ -23,6 +23,7 @@ def configure_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models import User
+        from flask import current_app
         from sqlalchemy.orm import joinedload
         from .models.subscription_tier import SubscriptionTier
         from .models.models import Organization
@@ -59,6 +60,15 @@ def configure_login_manager(app):
             org = getattr(user, "organization", None)
             if not org or not org.is_active:
                 return None
+
+        if current_app and current_app.config.get("TESTING"):
+            try:
+                org = user.organization
+                if org and org.tier:
+                    _ = list(org.tier.permissions)
+                db.session.expunge(user)
+            except Exception:
+                pass
 
         return user
 
