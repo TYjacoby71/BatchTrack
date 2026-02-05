@@ -5,6 +5,10 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, render_template, flash, redirect, url_for, session, jsonify, current_app
 from flask_login import login_required, current_user, login_user
 from ...services.billing_service import BillingService
+from ...services.subscription_downgrade_service import (
+    build_downgrade_context,
+    apply_downgrade_selection,
+)
 from ...utils.permissions import require_permission
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
@@ -168,6 +172,18 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
     try:
+        target_tier = SubscriptionTier.find_by_identifier(tier)
+        if not target_tier:
+            flash('Checkout not available for this tier', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+        downgrade_context = build_downgrade_context(organization, target_tier)
+        limit = downgrade_context.get("limit")
+        if limit is not None:
+            active_count = len(downgrade_context.get("active_recipes") or [])
+            if active_count > limit:
+                return redirect(url_for('billing.downgrade', tier=tier, billing_cycle=billing_cycle))
+
         # Use unified billing service for checkout
         checkout_session = BillingService.create_checkout_session(
             tier,
@@ -189,6 +205,52 @@ def checkout(tier, billing_cycle='month'):
         logger.error(f"Checkout error: {e}")
         flash('Checkout failed. Please try again.', 'error')
         return redirect(url_for('billing.upgrade'))
+
+
+@billing_bp.route('/downgrade/<tier>', methods=['GET', 'POST'])
+@billing_bp.route('/downgrade/<tier>/<billing_cycle>', methods=['GET', 'POST'])
+@login_required
+@require_permission('organization.manage_billing')
+def downgrade(tier, billing_cycle='month'):
+    organization = current_user.organization
+    if not organization:
+        flash('No organization found', 'error')
+        return redirect(url_for('billing.upgrade'))
+
+    target_tier = SubscriptionTier.find_by_identifier(tier)
+    if not target_tier:
+        flash('Invalid subscription tier selected', 'error')
+        return redirect(url_for('billing.upgrade'))
+
+    context = build_downgrade_context(organization, target_tier)
+    limit = context.get("limit")
+    if limit is None:
+        return redirect(url_for('billing.checkout', tier=tier, billing_cycle=billing_cycle))
+
+    if request.method == 'POST':
+        selected_ids = request.form.getlist('keep_recipe_ids')
+        success, message = apply_downgrade_selection(
+            organization,
+            target_tier,
+            [int(val) for val in selected_ids if str(val).isdigit()],
+            user_id=getattr(current_user, 'id', None),
+        )
+        if not success:
+            flash(message, 'error')
+        else:
+            flash(message, 'success')
+            return redirect(url_for('billing.checkout', tier=tier, billing_cycle=billing_cycle))
+
+    return render_template(
+        'billing/downgrade_recipes.html',
+        organization=organization,
+        target_tier=target_tier,
+        required_count=context.get("required_count"),
+        limit=limit,
+        active_recipes=context.get("active_recipes"),
+        locked_ids=set(context.get("locked_ids") or []),
+        billing_cycle=billing_cycle,
+    )
 
 @billing_bp.route('/whop-checkout/<product_id>')
 @login_required

@@ -6,6 +6,17 @@ def seed_addons():
     """Seed core add-ons used by the system (idempotent)."""
     core_addons = [
         {
+            'key': 'recipe_variations',
+            'name': 'Recipe Variations',
+            'description': 'Enable master/variation/test versioning workflows',
+            'permission_name': 'recipes.create_variations',
+            'function_key': 'recipe_variations',
+            'billing_type': 'subscription',
+            'stripe_lookup_key': None,
+            'batchbot_credit_amount': 0,
+            'is_active': True
+        },
+        {
             'key': 'data_retention',
             'name': 'Data Retention',
             'description': 'Enable indefinite data retention while active',

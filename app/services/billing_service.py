@@ -83,6 +83,11 @@ class BillingService:
             organization.subscription_tier_id = tier.id
             db.session.commit()
             logger.info("Assigned tier %s to organization %s", tier_key, organization.id)
+            try:
+                from .subscription_downgrade_service import restore_archived_for_tier
+                restore_archived_for_tier(organization, tier)
+            except Exception:
+                logger.debug("Skipping recipe restore for tier assignment", exc_info=True)
 
         return tier
 
