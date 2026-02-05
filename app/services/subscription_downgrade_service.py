@@ -6,6 +6,7 @@ Handles downgrade selection, archiving, and restore-on-upgrade rules.
 Glossary:
 - Downgrade selection: User-selected recipes to keep active.
 - Archive: Soft-hide recipes beyond tier limits.
+- Current version: Active recipe for a branch.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from typing import Dict, List, Tuple
 
 from app.extensions import db
 from app.models import Recipe
+from app.services.recipe_service import ensure_current_versions_for_org
 from app.utils.timezone_utils import TimezoneUtils
 
 
@@ -98,6 +100,7 @@ def apply_downgrade_selection(org, tier, keep_ids: List[int], user_id: int | Non
         recipe.sale_price = None
         recipe.marketplace_status = "draft"
 
+    ensure_current_versions_for_org(org.id)
     db.session.commit()
     return True, "Recipes archived for downgrade."
 
@@ -140,6 +143,7 @@ def restore_archived_for_tier(org, tier) -> int:
         recipe.archived_by = None
         restored += 1
     if restored:
+        ensure_current_versions_for_org(org.id)
         db.session.commit()
     return restored
 

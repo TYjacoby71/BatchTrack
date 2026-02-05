@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
+import sqlalchemy as sa
+
 from ...extensions import db
 from ...models import Recipe
 
@@ -64,7 +66,67 @@ def set_current_version(recipe_id: int) -> Tuple[bool, Any]:
     return True, recipe
 
 
+# --- Ensure current versions ---
+# Purpose: Ensure each branch has exactly one current version.
+def ensure_current_versions_for_org(org_id: int | None) -> int:
+    if not org_id:
+        return 0
+
+    db.session.flush()
+    Recipe.query.filter(
+        Recipe.organization_id == org_id,
+        Recipe.is_current.is_(True),
+        sa.or_(
+            Recipe.test_sequence.isnot(None),
+            Recipe.status != "published",
+            Recipe.is_archived.is_(True),
+        ),
+    ).update({Recipe.is_current: False}, synchronize_session=False)
+
+    candidates = (
+        Recipe.query.filter(
+            Recipe.organization_id == org_id,
+            Recipe.test_sequence.is_(None),
+            Recipe.status == "published",
+            Recipe.is_archived.is_(False),
+        )
+        .order_by(
+            Recipe.recipe_group_id.asc().nullsfirst(),
+            Recipe.is_master.desc(),
+            Recipe.variation_name.asc().nullsfirst(),
+            Recipe.version_number.desc(),
+        )
+        .all()
+    )
+
+    branches: dict[tuple, list[Recipe]] = {}
+    for recipe in candidates:
+        if recipe.recipe_group_id is None:
+            key = ("ungrouped", recipe.id)
+        else:
+            key = (recipe.recipe_group_id, recipe.is_master, recipe.variation_name)
+        branches.setdefault(key, []).append(recipe)
+
+    touched = 0
+    for recipes in branches.values():
+        current_recipes = [r for r in recipes if r.is_current]
+        if len(current_recipes) == 1:
+            chosen = current_recipes[0]
+        elif len(current_recipes) > 1:
+            chosen = max(current_recipes, key=lambda r: (r.version_number or 0))
+        else:
+            chosen = max(recipes, key=lambda r: (r.version_number or 0))
+        for recipe in recipes:
+            target = recipe.id == chosen.id
+            if recipe.is_current != target:
+                recipe.is_current = target
+                touched += 1
+
+    return touched
+
+
 __all__ = [
     "apply_current_flag",
     "set_current_version",
+    "ensure_current_versions_for_org",
 ]
