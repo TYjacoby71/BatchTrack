@@ -100,7 +100,29 @@ def _build_pool(app: Flask | None, redis_url: str):
     return pool, max_conns, pool_timeout
 
 
-def get_redis_pool(app: Flask | None = None):
+def reset_redis_pool(app: Flask | None = None) -> None:
+    """Drop any cached Redis pool so it can be rebuilt safely."""
+    if app is None and has_app_context():
+        try:
+            app = current_app._get_current_object()
+        except RuntimeError:
+            app = None
+
+    extensions = app.extensions if app is not None else _STANDALONE_EXTENSIONS
+    cached = extensions.get(_POOL_INFO_KEY)
+    if not cached:
+        return
+
+    pool = cached.get("pool")
+    if pool is not None:
+        try:
+            pool.disconnect()
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("Failed to disconnect Redis pool during reset: %s", exc)
+    extensions.pop(_POOL_INFO_KEY, None)
+
+
+def get_redis_pool(app: Flask | None = None, *, force_refresh: bool = False):
     """Provision a Redis connection pool and refresh it after each worker fork."""
     if app is None and has_app_context():
         try:
@@ -116,6 +138,9 @@ def get_redis_pool(app: Flask | None = None):
 
     if not redis_url:
         return None
+
+    if force_refresh:
+        reset_redis_pool(app)
 
     extensions = app.extensions if app is not None else _STANDALONE_EXTENSIONS
     current_pid = os.getpid()

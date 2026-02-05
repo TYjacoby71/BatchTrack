@@ -1,6 +1,8 @@
 import logging
+import random
 from datetime import date, datetime, timezone
 from sqlalchemy import extract
+from sqlalchemy.exc import IntegrityError
 from flask_login import current_user
 
 from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient, InventoryLot
@@ -44,8 +46,10 @@ class BatchOperationsService(BaseService):
 
             containers_data = containers_data or []
 
-            # Generate batch label via centralized generator
-            label_code = generate_batch_label_code(recipe)
+            created_by = getattr(current_user, 'id', None) or getattr(recipe, 'created_by', None) or 1
+            organization_id = (
+                getattr(current_user, 'organization_id', None) or getattr(recipe, 'organization_id', None) or 1
+            )
 
             # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
             projected_yield = (
@@ -86,31 +90,52 @@ class BatchOperationsService(BaseService):
                     except Exception:
                         serializable_plan_snapshot = plan_snapshot
 
-            batch = Batch(
-                recipe_id=snap_recipe_id,
-                label_code=generate_batch_label_code(recipe),
-                batch_type=snap_batch_type,
-                projected_yield=projected_yield,
-                projected_yield_unit=projected_yield_unit,
-                scale=snap_scale,
-                status='in_progress',
-                notes=snap_notes,
-                is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
-                portion_name=portion_snap.get('portion_name') if portion_snap else None,
-                projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
-                portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
-                plan_snapshot=serializable_plan_snapshot,
-                created_by=(getattr(current_user, 'id', None) or getattr(recipe, 'created_by', None) or 1),
-                organization_id=(getattr(current_user, 'organization_id', None) or getattr(recipe, 'organization_id', None) or 1),
-                started_at=TimezoneUtils.utc_now()
-            )
+            batch = None
+            label_code = None
+            max_label_attempts = 5
+            for attempt in range(max_label_attempts):
+                suffix = None
+                if attempt:
+                    suffix = f"{random.randint(1000, 9999)}"
+                label_code = generate_batch_label_code(
+                    recipe,
+                    organization_id=organization_id,
+                    sequence_offset=attempt,
+                    suffix=suffix,
+                )
+                batch = Batch(
+                    recipe_id=snap_recipe_id,
+                    label_code=label_code,
+                    batch_type=snap_batch_type,
+                    projected_yield=projected_yield,
+                    projected_yield_unit=projected_yield_unit,
+                    scale=snap_scale,
+                    status='in_progress',
+                    notes=snap_notes,
+                    is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                    portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                    projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                    portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
+                    plan_snapshot=serializable_plan_snapshot,
+                    created_by=created_by,
+                    organization_id=organization_id,
+                    started_at=TimezoneUtils.utc_now(),
+                )
 
-            db.session.add(batch)
-            # Ensure batch is INSERTed so FK references in inventory history succeed
-            try:
-                db.session.flush()
-            except Exception:
-                pass
+                db.session.add(batch)
+                # Ensure batch is INSERTed so FK references in inventory history succeed
+                try:
+                    db.session.flush()
+                    break
+                except IntegrityError:
+                    db.session.rollback()
+                    if attempt >= max_label_attempts - 1:
+                        logger.warning(
+                            "Batch label collision after retries (recipe_id=%s, label=%s)",
+                            recipe.id,
+                            label_code,
+                        )
+                        return None, "Unable to generate a unique batch label. Please retry."
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
             try:
                 pass

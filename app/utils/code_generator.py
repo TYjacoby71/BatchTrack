@@ -9,7 +9,13 @@ from app.utils.timezone_utils import TimezoneUtils
 __all__ = ["generate_batch_label_code", "generate_recipe_prefix"]
 
 
-def generate_batch_label_code(recipe: Recipe) -> str:
+def generate_batch_label_code(
+    recipe: Recipe,
+    organization_id: int | None = None,
+    *,
+    sequence_offset: int = 0,
+    suffix: str | None = None,
+) -> str:
     """
     Generate a consistent batch label code.
 
@@ -21,14 +27,17 @@ def generate_batch_label_code(recipe: Recipe) -> str:
     prefix = (recipe.label_prefix or generate_recipe_prefix(recipe.name)).upper()
     current_year = TimezoneUtils.utc_now().year
 
-    year_batches = (
-        Batch.query.filter(
-            Batch.recipe_id == recipe.id, extract("year", Batch.started_at) == current_year
-        ).count()
-        or 0
-    )
+    query = Batch.query.filter(extract("year", Batch.started_at) == current_year)
+    if organization_id is not None:
+        query = query.filter(Batch.organization_id == organization_id)
+    query = query.filter(Batch.label_code.like(f"{prefix}-{current_year}-%"))
 
-    return f"{prefix}-{current_year}-{year_batches + 1:03d}"
+    year_batches = query.count() or 0
+    sequence = max(1, year_batches + 1 + max(sequence_offset, 0))
+    base_label = f"{prefix}-{current_year}-{sequence:03d}"
+    if suffix:
+        return f"{base_label}-{suffix}".upper()
+    return base_label
 
 
 def generate_recipe_prefix(recipe_name: str) -> str:
