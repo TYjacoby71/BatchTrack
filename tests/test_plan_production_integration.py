@@ -85,14 +85,11 @@ def test_plan_start_finish_non_portioned(app, client, db_session):
     assert data['success'] is True
     batch_id = data['batch_id']
 
-    from app.extensions import db
-    db.session.remove()
     # Assert: batch in progress page renders and shows projected yield
     page = client.get(f'/batches/in-progress/{batch_id}')
     assert page.status_code == 200
     assert b'Projected Yield' in page.data
 
-    db.session.remove()
     # Finish batch
     finish = client.post(f'/batches/finish-batch/{batch_id}/complete', data={
         'final_quantity': '10',
@@ -101,7 +98,6 @@ def test_plan_start_finish_non_portioned(app, client, db_session):
     })
     assert finish.status_code in (200, 302)
 
-    db.session.remove()
     # View record page
     rec = client.get(f'/batches/{batch_id}')
     assert rec.status_code in (200, 302)
@@ -153,15 +149,12 @@ def test_plan_start_finish_portioned(app, client, db_session):
     assert data['success'] is True
     batch_id = data['batch_id']
 
-    from app.extensions import db
-    db.session.remove()
     # Assert: batch in progress shows projected portions
     page = client.get(f'/batches/in-progress/{batch_id}')
     assert page.status_code == 200
     assert b'Projected Portions' in page.data
     assert b'bars' in page.data
 
-    db.session.remove()
     # Finish batch with final portions
     finish = client.post(f'/batches/finish-batch/{batch_id}/complete', data={
         'final_quantity': '10',
@@ -173,7 +166,6 @@ def test_plan_start_finish_portioned(app, client, db_session):
     })
     assert finish.status_code in (200, 302)
 
-    db.session.remove()
     # View record page after completion or redirect fallback
     rec = client.get(f'/batches/{batch_id}')
     assert rec.status_code in (200, 302)
