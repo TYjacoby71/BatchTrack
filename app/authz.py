@@ -25,9 +25,19 @@ def configure_login_manager(app):
         from .models import User
         from flask import current_app
         from sqlalchemy.orm import joinedload
+        from .models.subscription_tier import SubscriptionTier
+        from .models.models import Organization
 
         try:
-            user = db.session.get(User, int(user_id), options=[joinedload(User.organization)])
+            user = db.session.get(
+                User,
+                int(user_id),
+                options=[
+                    joinedload(User.organization)
+                    .joinedload(Organization.tier)
+                    .joinedload(SubscriptionTier.permissions)
+                ],
+            )
         except (ValueError, TypeError):
             return None
         except SQLAlchemyError:
