@@ -19,6 +19,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     org = Organization(name='Test Org')
     db_session.add(org)
     db_session.flush()
+    org_id = org.id
 
     user = User(email='test@example.com', user_type='developer', is_active=True, organization_id=org.id)
     db_session.add(user)
@@ -49,7 +50,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
             sess['_user_id'] = str(user_id)
             sess['_fresh'] = True
             # Developer scoping to org
-            sess['dev_selected_org_id'] = org.id
+                sess['dev_selected_org_id'] = org_id
         # Check suggestions
         res = client.get('/api/drawers/global-link/check')
         assert res.status_code == 200

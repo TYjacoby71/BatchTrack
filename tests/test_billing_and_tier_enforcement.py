@@ -125,8 +125,9 @@ class TestBillingAndTierEnforcement:
                 sess['_fresh'] = True
 
             # Debug: Verify the org and tier are set up correctly
-            print(f"DEBUG: User {fresh_user.id}, Org billing_status={verification_org.billing_status}")
-            print(f"DEBUG: Tier exempt={verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'}")
+            print(f"DEBUG: User {fresh_user_id}, Org billing_status={verification_org.billing_status}")
+            tier_exempt = verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'
+            print(f"DEBUG: Tier exempt={tier_exempt}")
 
             response = client.get('/_protected_dashboard')
 

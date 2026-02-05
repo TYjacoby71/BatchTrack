@@ -62,9 +62,21 @@ login_manager.login_message_category = "info"
 @login_manager.user_loader
 def load_user(user_id: str):
     from .models import User
+    from flask import current_app
+    from sqlalchemy.orm import joinedload
 
     try:
         user_id_int = int(user_id)
     except (TypeError, ValueError):
         return None
-    return db.session.get(User, user_id_int)
+    user = db.session.get(User, user_id_int, options=[joinedload(User.organization)])
+    if user and current_app and current_app.config.get("TESTING"):
+        try:
+            _ = user.is_active
+            _ = user.organization_id
+            if user.organization is not None:
+                db.session.expunge(user.organization)
+            db.session.expunge(user)
+        except Exception:
+            pass
+    return user

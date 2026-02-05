@@ -55,10 +55,11 @@ def test_create_recipe_sets_authored_origin(app):
             category_id=category_id,
             status="draft",
         )
+        recipe_id = recipe.id
         logout_user()
 
     assert ok, f"Recipe creation failed: {recipe}"
-    fresh_recipe = db.session.get(Recipe, recipe.id)
+    fresh_recipe = db.session.get(Recipe, recipe_id)
     assert fresh_recipe.org_origin_recipe_id == fresh_recipe.id
     assert fresh_recipe.org_origin_type == "authored"
     assert fresh_recipe.org_origin_purchased is False
@@ -85,9 +86,10 @@ def test_clone_from_other_org_marks_purchased_origin(app):
             category_id=category_id,
             status="draft",
         )
+        seller_recipe_id = seller_recipe.id
         logout_user()
     assert ok, f"Seller recipe creation failed: {seller_recipe}"
-    seller_recipe = db.session.get(Recipe, seller_recipe.id)
+    seller_recipe = db.session.get(Recipe, seller_recipe_id)
 
     with app.test_request_context():
         login_user(db.session.get(User, buyer_user.id))
@@ -104,10 +106,11 @@ def test_clone_from_other_org_marks_purchased_origin(app):
             status="draft",
             cloned_from_id=seller_recipe.id,
         )
+        purchased_recipe_id = purchased_recipe.id
         logout_user()
 
     assert ok, f"Purchased recipe creation failed: {purchased_recipe}"
-    purchased_recipe = db.session.get(Recipe, purchased_recipe.id)
+    purchased_recipe = db.session.get(Recipe, purchased_recipe_id)
     assert purchased_recipe.org_origin_purchased is True
     assert purchased_recipe.org_origin_type == "purchased"
     assert purchased_recipe.org_origin_recipe_id == purchased_recipe.id
@@ -151,11 +154,13 @@ def test_variation_inherits_org_origin(app):
             status="draft",
             parent_recipe_id=parent_recipe.id,
         )
+        parent_recipe_id = parent_recipe.id
+        variation_id = variation.id
         logout_user()
 
     assert ok, f"Variation creation failed: {variation}"
-    parent_recipe = db.session.get(Recipe, parent_recipe.id)
-    variation = db.session.get(Recipe, variation.id)
+    parent_recipe = db.session.get(Recipe, parent_recipe_id)
+    variation = db.session.get(Recipe, variation_id)
     assert variation.org_origin_recipe_id == parent_recipe.org_origin_recipe_id
     assert variation.org_origin_type == parent_recipe.org_origin_type
     assert variation.org_origin_purchased == parent_recipe.org_origin_purchased
