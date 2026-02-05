@@ -1,3 +1,13 @@
+"""Production planning data types.
+
+Synopsis:
+Defines immutable plan snapshot structures shared across services.
+
+Glossary:
+- PlanSnapshot: Immutable payload stored with batch start.
+- Line item: Ingredient/consumable/container data in a plan.
+"""
+
 from dataclasses import dataclass, asdict
 from typing import List, Optional, Dict, Any
 
@@ -45,6 +55,8 @@ class ContainerSelection:
 @dataclass(frozen=True)
 class PlanSnapshot:
     recipe_id: int
+    target_version_id: Optional[int]
+    lineage_snapshot: Optional[str]
     scale: float
     batch_type: str
     notes: str
@@ -60,6 +72,8 @@ class PlanSnapshot:
     def to_dict(self) -> dict:
         return {
             "recipe_id": self.recipe_id,
+            "target_version_id": self.target_version_id,
+            "lineage_snapshot": self.lineage_snapshot,
             "scale": self.scale,
             "batch_type": self.batch_type,
             "notes": self.notes,

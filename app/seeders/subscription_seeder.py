@@ -1,6 +1,14 @@
 
 #!/usr/bin/env python3
-"""Seed subscription tiers and data"""
+"""Subscription tier seeding utilities.
+
+Synopsis:
+Creates and updates subscription tiers plus migrated org metadata.
+
+Glossary:
+- Tier: Subscription plan with limits and permissions.
+- Seeder: Idempotent routine that upserts reference data.
+"""
 
 import json
 import os
@@ -11,6 +19,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Purpose: Run a DB operation with rollback safety.
 def safe_db_operation(operation_name, operation_func):
     """Safely execute a database operation with error handling"""
     try:
@@ -22,6 +31,7 @@ def safe_db_operation(operation_name, operation_func):
         logger.warning(f"⚠️ {operation_name} failed: {e}")
         return None, str(e)
 
+# Purpose: Create the exempt system tier.
 def create_exempt_tier():
     """Create the only hardcoded tier - exempt tier for system use"""
     def _create():
@@ -68,6 +78,7 @@ def create_exempt_tier():
     tier, error = safe_db_operation("Exempt tier creation", _create)
     return tier
 
+# Purpose: Create the free tier.
 def create_free_tier():
     """Create the free tier"""
     def _create():
@@ -113,6 +124,7 @@ def create_free_tier():
     tier, error = safe_db_operation("Free tier creation", _create)
     return tier
 
+# Purpose: Create the solo tier.
 def create_solo_tier():
     """Create the solo tier"""
     def _create():
@@ -170,6 +182,7 @@ def create_solo_tier():
     tier, error = safe_db_operation("Solo tier creation", _create)
     return tier
 
+# Purpose: Create the team tier.
 def create_team_tier():
     """Create the team tier"""
     def _create():
@@ -214,6 +227,7 @@ def create_team_tier():
     tier, error = safe_db_operation("Team tier creation", _create)
     return tier
 
+# Purpose: Create the enterprise tier.
 def create_enterprise_tier():
     """Create the enterprise tier"""
     def _create():
@@ -259,6 +273,7 @@ def create_enterprise_tier():
     tier, error = safe_db_operation("Enterprise tier creation", _create)
     return tier
 
+# Purpose: Seed all default subscription tiers.
 def seed_subscription_tiers():
     """Create all subscription tiers with proper schema"""
     if not current_app:
@@ -290,6 +305,7 @@ def seed_subscription_tiers():
         print(f"⚠️ Subscription tiers failed: {e}")
         db.session.rollback()
 
+# Purpose: Normalize existing org tier metadata.
 def migrate_existing_organizations():
     """Migrate existing organizations to use tier IDs"""
     if not current_app:
@@ -319,6 +335,7 @@ def migrate_existing_organizations():
     else:
         print(f"⚠️ Organization migration had issues: {error}")
 
+# Purpose: Entry point to seed tiers and migrate orgs.
 def seed_subscriptions():
     """Seed all subscription tiers and migrate organizations"""
     if not current_app:

@@ -1,3 +1,13 @@
+"""Redis pool helpers and fork-safe lazy clients.
+
+Synopsis:
+Centralizes Redis pool sizing and defers client creation until first use.
+
+Glossary:
+- Pool: Shared Redis connection pool used across app subsystems.
+- Lazy client: Proxy that creates the Redis client on first access.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -16,6 +26,37 @@ _DEFAULT_POOL_TOTAL_CONNECTIONS = 50
 _DEFAULT_POOL_PER_WORKER_CAP = 10
 
 
+class LazyRedisClient:
+    """Defer Redis client creation until first use (fork-safe)."""
+
+    def __init__(self, redis_url: str, app: Flask | None = None):
+        self._redis_url = redis_url
+        self._app = app
+        self._client = None
+        self._lock = Lock()
+
+    def _get_client(self):
+        if self._client is not None:
+            return self._client
+        with self._lock:
+            if self._client is not None:
+                return self._client
+            try:
+                import redis
+            except ImportError as exc:  # pragma: no cover - optional dependency
+                raise RuntimeError("redis package not available") from exc
+
+            pool = get_redis_pool(self._app)
+            if pool is not None:
+                self._client = redis.Redis(connection_pool=pool)
+            else:
+                self._client = redis.Redis.from_url(self._redis_url)
+        return self._client
+
+    def __getattr__(self, name: str):
+        return getattr(self._get_client(), name)
+
+
 def _float_setting(value: Any, default: float) -> float:
     try:
         return float(value)
@@ -30,16 +71,6 @@ def _int_setting(value: Any, default: int | None) -> int | None:
         return default
 
 
-def _resolve_worker_count(app: Flask | None) -> int:
-    worker_count = (
-        _int_setting(_get_setting(app, "WEB_CONCURRENCY"), None)
-        or _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
-        or _int_setting(_get_setting(app, "WORKERS"), 1)
-        or 1
-    )
-    return max(worker_count, 1)
-
-
 def _get_setting(app: Flask | None, key: str) -> Any:
     if app is not None and key in app.config:
         return app.config.get(key)
@@ -47,9 +78,10 @@ def _get_setting(app: Flask | None, key: str) -> Any:
 
 
 def _resolve_worker_count(app: Flask | None) -> int:
+    if _get_setting(app, "WEB_CONCURRENCY") not in (None, ""):
+        logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
     worker_count = (
-        _int_setting(_get_setting(app, "WEB_CONCURRENCY"), None)
-        or _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
+        _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
         or _int_setting(_get_setting(app, "WORKERS"), None)
         or 1
     )

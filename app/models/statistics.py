@@ -1,3 +1,13 @@
+"""Statistics models for reporting and leaderboards.
+
+Synopsis:
+Tracks user and organization stats for reporting and badges.
+
+Glossary:
+- UserStats: Per-user counts used for performance tracking.
+- OrganizationStats: Aggregated org counts for dashboards.
+"""
+
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract
 from ..extensions import db
@@ -21,6 +31,9 @@ class UserStats(ScopedModelMixin, db.Model):
     # Recipe statistics
     total_recipes = db.Column(db.Integer, default=0)
     recipes_created = db.Column(db.Integer, default=0)
+    master_recipes_created = db.Column(db.Integer, default=0)
+    variation_recipes_created = db.Column(db.Integer, default=0)
+    tests_created = db.Column(db.Integer, default=0)
 
     # Inventory statistics
     inventory_adjustments = db.Column(db.Integer, default=0)
@@ -69,6 +82,17 @@ class UserStats(ScopedModelMixin, db.Model):
         )
         self.total_recipes = user_recipes.count()
         self.recipes_created = user_recipes.count()
+        self.master_recipes_created = user_recipes.filter(
+            Recipe.is_master.is_(True),
+            Recipe.test_sequence.is_(None),
+        ).count()
+        self.variation_recipes_created = user_recipes.filter(
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+        ).count()
+        self.tests_created = user_recipes.filter(
+            Recipe.test_sequence.is_not(None),
+        ).count()
 
         # Inventory statistics - use explicit column references for consistency
         user_inventory = InventoryItem.query.filter(
@@ -137,6 +161,9 @@ class OrganizationStats(db.Model):
 
     # Recipe statistics
     total_recipes = db.Column(db.Integer, default=0)
+    total_master_recipes = db.Column(db.Integer, default=0)
+    total_variation_recipes = db.Column(db.Integer, default=0)
+    total_test_recipes = db.Column(db.Integer, default=0)
 
     # Inventory statistics
     total_inventory_items = db.Column(db.Integer, default=0)
@@ -190,6 +217,25 @@ class OrganizationStats(db.Model):
 
             # Recipe statistics - scoped by organization
             self.total_recipes = Recipe.query.filter(Recipe.organization_id == self.organization_id).count()
+            self.total_master_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(True),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_variation_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(False),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_test_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.test_sequence.is_not(None),
+                Recipe.is_archived.is_(False),
+            ).count()
 
             # Inventory statistics - already scoped by organization
             self.total_inventory_items = InventoryItem.query.filter(InventoryItem.organization_id == self.organization_id).count()
@@ -562,6 +608,8 @@ class OrganizationLeaderboardStats(db.Model):
     active_users_count = db.Column(db.Integer, default=0)
     most_productive_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     avg_batches_per_user = db.Column(db.Float, default=0.0)
+    most_testing_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    most_tests_created = db.Column(db.Integer, default=0)
 
     # Container Usage
     most_used_container_size = db.Column(db.Float, default=0.0)
@@ -589,6 +637,7 @@ class OrganizationLeaderboardStats(db.Model):
     organization = db.relationship('Organization')
     most_popular_recipe = db.relationship('Recipe', foreign_keys=[most_popular_recipe_id])
     most_productive_user = db.relationship('User', foreign_keys=[most_productive_user_id])
+    most_testing_user = db.relationship('User', foreign_keys=[most_testing_user_id])
     most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
 
     @classmethod

@@ -1,11 +1,29 @@
+"""Start batch routes.
+
+Synopsis:
+Starts a new batch from a server-built plan snapshot.
+
+Glossary:
+- Plan snapshot: Immutable payload used to start a batch.
+- Batch start: Creates an in-progress batch and inventory deductions.
+"""
+
 from flask import Blueprint, request, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
 from app.utils.permissions import require_permission
+from app.extensions import db
+from app.models import Recipe
+from app.services.production_planning.service import PlanProductionService
 
 start_batch_bp = Blueprint('start_batch', __name__)
 
+# =========================================================
+# START BATCH
+# =========================================================
+# --- Start batch ---
+# Purpose: Build a plan snapshot and create a new batch.
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
 @require_permission('batches.create')
@@ -45,16 +63,20 @@ def start_batch():
         else:
             batch_data = data.get('batch_data')
 
-        # Delegate to service
-        batch, errors = BatchOperationsService.start_batch(
-            recipe_id=recipe_id,
+        recipe = db.session.get(Recipe, recipe_id)
+        if not recipe:
+            flash('Recipe not found.', 'error')
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        snapshot_obj = PlanProductionService.build_plan(
+            recipe=recipe,
             scale=scale,
             batch_type=batch_type,
             notes=notes,
-            containers_data=containers_data,
-            requires_containers=requires_containers,
-            portioning_data=portioning_data
+            containers=containers_data,
         )
+        plan_dict = snapshot_obj.to_dict()
+        batch, errors = BatchOperationsService.start_batch(plan_dict)
 
         if not batch:
             # If batch is None, errors contains the error message

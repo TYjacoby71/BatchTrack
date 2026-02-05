@@ -1,3 +1,13 @@
+"""Recipe form utilities for parsing, caching, and prefill payloads.
+
+Synopsis:
+Centralizes recipe form parsing and payload building for create/edit flows.
+
+Glossary:
+- Prefill: Serialized form state for ingredients and consumables.
+- Submission: Parsed form data ready for service calls.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -16,6 +26,7 @@ from app.models.product_category import ProductCategory
 from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
+from app.services.lineage_service import generate_variation_prefix
 from app.utils.cache_manager import app_cache
 from app.utils.permissions import has_permission
 from app.utils.settings import is_feature_enabled
@@ -719,6 +730,13 @@ def create_variation_template(parent: Recipe) -> Recipe:
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit,
         category_id=parent.category_id,
+    )
+    template.recipe_group_id = parent.recipe_group_id
+    template.is_master = False
+    template.variation_name = "Variation"
+    template.variation_prefix = generate_variation_prefix(
+        template.variation_name,
+        parent.recipe_group_id,
     )
 
     template.allowed_containers = list(parent.allowed_containers or [])

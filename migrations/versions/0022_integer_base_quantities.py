@@ -1,4 +1,12 @@
-"""Add integer base quantity columns for inventory tables."""
+"""Integer base quantity columns for inventory tables.
+
+Synopsis:
+Adds base quantity columns and backfills from float quantities.
+
+Glossary:
+- Base quantity: Integer quantity stored in canonical base units.
+- Base scale: Multiplier used to store fractional units.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0016_integer_base_quantities"
-down_revision = "0015_batch_label_counter"
+revision = "0022_integer_base_quantities"
+down_revision = "0021_recipe_lineage_backfill"
 branch_labels = None
 depends_on = None
 

@@ -1,8 +1,19 @@
+"""Tests for batch label generation.
+
+Synopsis:
+Validates batch label format and batch sequence usage.
+
+Glossary:
+- Batch label: Human-readable identifier for a batch.
+- Sequence: Global counter for batch labels.
+"""
+
 from app.utils.code_generator import generate_batch_label_code
+from app.services.lineage_service import generate_group_prefix
 from app.models.recipe import Recipe
-from app.models import Organization
 from app.extensions import db
 from app.utils.timezone_utils import TimezoneUtils
+from app.models.models import Organization
 
 
 def test_generate_batch_label_code_defaults(app):
@@ -17,8 +28,8 @@ def test_generate_batch_label_code_defaults(app):
         db.session.commit()
 
         code = generate_batch_label_code(recipe)
-        assert code.startswith(f"TEST-{current_year}-")
-        assert code.endswith("001")
+        prefix = generate_group_prefix("Test", org.id if org else None)
+        assert code == f"{prefix}1-{current_year}-001"
 
 
 def test_generate_batch_label_code_with_prefix_and_sequence(app):
@@ -36,7 +47,7 @@ def test_generate_batch_label_code_with_prefix_and_sequence(app):
         first = generate_batch_label_code(recipe)
         second = generate_batch_label_code(recipe)
         third = generate_batch_label_code(recipe)
-        assert first == f"SOAP-{current_year}-001"
-        assert second == f"SOAP-{current_year}-002"
-        assert third == f"SOAP-{current_year}-003"
+        assert first == f"SOAP1-{current_year}-001"
+        assert second == f"SOAP1-{current_year}-002"
+        assert third == f"SOAP1-{current_year}-003"
 
