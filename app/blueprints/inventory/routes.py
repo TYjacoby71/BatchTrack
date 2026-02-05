@@ -517,6 +517,7 @@ def view_inventory(id):
     # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
+        from app.services.quantity_base import from_base_quantity
         # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
@@ -526,12 +527,31 @@ def view_inventory(id):
                 InventoryLot.expiration_date < today
             )
         ).all()
-
-        item.temp_expired_quantity = sum(float(lot.remaining_quantity) for lot in expired_lots_for_calc)
-        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+        expired_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc)
+        total_base = int(getattr(item, "quantity_base", 0) or 0)
+        available_base = max(0, total_base - expired_base)
+        item.temp_expired_quantity = from_base_quantity(
+            base_amount=expired_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        item.temp_available_quantity = from_base_quantity(
+            base_amount=available_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
     else:
         item.temp_expired_quantity = 0
-        item.temp_available_quantity = float(item.quantity)
+        from app.services.quantity_base import from_base_quantity
+        total_base = int(getattr(item, "quantity_base", 0) or 0)
+        item.temp_available_quantity = from_base_quantity(
+            base_amount=total_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
 
     # Ensure these attributes are always set for template display
     if not hasattr(item, 'temp_expired_quantity'):
@@ -566,6 +586,7 @@ def view_inventory(id):
     expired_total = 0
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
+        from app.services.quantity_base import from_base_quantity
         # Only check InventoryLot for expired entries
         expired_entries = InventoryLot.query.filter(
             and_(
@@ -575,8 +596,13 @@ def view_inventory(id):
                 InventoryLot.expiration_date < today
             )
         ).order_by(InventoryLot.expiration_date.asc()).all()
-
-        expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
+        expired_total_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_entries)
+        expired_total = from_base_quantity(
+            base_amount=expired_total_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
