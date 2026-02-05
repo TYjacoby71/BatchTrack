@@ -259,6 +259,9 @@ def create_variation(recipe_id):
         if not parent:
             flash('Parent recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
+        if parent.is_archived:
+            flash('Archived recipes cannot accept new variations.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
         if not parent.is_master or parent.test_sequence is not None:
             flash('Variations can only be created from a published master recipe.', 'error')
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
@@ -369,6 +372,9 @@ def create_test_version(recipe_id):
         if not base:
             flash('Recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
+        if base.is_archived:
+            flash('Archived recipes cannot be tested.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
         if base.status != 'published':
             flash('Publish the recipe before creating tests.', 'error')
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
@@ -447,6 +453,9 @@ def edit_recipe(recipe_id):
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.is_archived:
+        flash('Archived recipes cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     if recipe.status == 'published' and recipe.test_sequence is None:
         flash('Published versions are locked. Create a test to make edits.', 'error')

@@ -490,6 +490,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be modified"
+        if recipe.is_archived:
+            return False, "Archived recipes cannot be modified"
 
         has_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
         if recipe.status == 'published' and recipe.test_sequence is None:

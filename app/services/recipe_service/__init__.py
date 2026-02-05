@@ -14,6 +14,7 @@ from ._core import (
 from ..production_planning import plan_production_comprehensive as plan_production
 from ._scaling import scale_recipe
 from ._merge import build_rebased_ingredients
+from ._archive import archive_recipe, restore_recipe, unlist_recipe, is_marketplace_listed
 from ._versioning import (
     build_test_template,
     create_test_version,
@@ -35,6 +36,7 @@ __all__ = [
     'duplicate_recipe', 'plan_production', 'scale_recipe',
     'validate_recipe_data', 'check_recipe_stock',
     'build_rebased_ingredients',
+    'archive_recipe', 'restore_recipe', 'unlist_recipe', 'is_marketplace_listed',
     'build_test_template',
     'create_test_version',
     'promote_test_to_current',

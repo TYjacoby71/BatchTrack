@@ -19,6 +19,9 @@
           {% if is_published_locked or (is_test and has_batches) %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
           {% endif %}
+          {% if is_archived %}
+            <span class="badge bg-secondary"><i class="fas fa-archive"></i> Archived</span>
+          {% endif %}
           {% if is_test %}
             <span class="badge bg-info text-dark"><i class="fas fa-flask"></i> Test {{ recipe.test_sequence }}</span>
           {% endif %}
@@ -360,36 +363,47 @@
         <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Actions</h5>
       </div>
       <div class="card-body">
-        {% set plan_disabled = (recipe.status == 'draft') %}
+        {% set plan_disabled = (recipe.status == 'draft') or is_archived %}
+        {% set plan_title = "Archived recipes cannot be planned" if is_archived else "Publish this recipe before planning production" %}
         {% set edit_disabled = (not is_editable) %}
+        {% set version_disabled = is_archived %}
         <div class="d-grid gap-2">
           <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Back to List
           </a>
           <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
              class="btn btn-success{% if plan_disabled %} disabled{% endif %}"
-             {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning production"{% endif %}>
+             {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="{{ plan_title }}"{% endif %}>
             <i class="fas fa-play"></i> Plan Production
           </a>
           <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
             <i class="fas fa-edit"></i> {% if is_test %}Edit Test{% else %}Edit Recipe{% endif %}
           </a>
           {% if can_create_variations %}
-          <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newVersionModal">
+          <button type="button"
+                  class="btn btn-outline-primary{% if version_disabled %} disabled{% endif %}"
+                  {% if not version_disabled %}data-bs-toggle="modal" data-bs-target="#newVersionModal"{% endif %}
+                  {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot create new versions"{% endif %}>
             <i class="fas fa-plus-circle"></i> Create New Version
           </button>
           {% if is_test %}
             <form method="post" action="{{ url_for('recipes.publish_test_version', recipe_id=recipe.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-warning">
+              <button type="submit" class="btn btn-warning{% if version_disabled %} disabled{% endif %}" {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot be promoted"{% endif %}>
                 <i class="fas fa-upload"></i> Publish as Current Version
               </button>
             </form>
           {% elif not recipe.is_master %}
-            <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#promoteVariationModal">
+            <button type="button"
+                    class="btn btn-outline-warning{% if version_disabled %} disabled{% endif %}"
+                    {% if not version_disabled %}data-bs-toggle="modal" data-bs-target="#promoteVariationModal"{% endif %}
+                    {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot be promoted"{% endif %}>
               <i class="fas fa-exchange-alt"></i> Make This the Master
             </button>
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newGroupModal">
+            <button type="button"
+                    class="btn btn-outline-secondary{% if version_disabled %} disabled{% endif %}"
+                    {% if not version_disabled %}data-bs-toggle="modal" data-bs-target="#newGroupModal"{% endif %}
+                    {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot be promoted"{% endif %}>
               <i class="fas fa-seedling"></i> Start New Recipe Group
             </button>
           {% endif %}
@@ -398,6 +412,30 @@
           <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark">
             <i class="fas fa-project-diagram"></i> View Lineage
           </a>
+          {% endif %}
+          {% if not is_archived %}
+            {% if has_listing %}
+              <form method="post" action="{{ url_for('recipes.unlist_recipe_route', recipe_id=recipe.id, next=request.path) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-warning">
+                  <i class="fas fa-store-slash"></i> Deactivate Listing
+                </button>
+              </form>
+            {% else %}
+              <form method="post" action="{{ url_for('recipes.archive_recipe_route', recipe_id=recipe.id, next=request.path) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-secondary">
+                  <i class="fas fa-archive"></i> Archive Recipe
+                </button>
+              </form>
+            {% endif %}
+          {% else %}
+            <form method="post" action="{{ url_for('recipes.restore_recipe_route', recipe_id=recipe.id, next=request.path) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-secondary">
+                <i class="fas fa-undo"></i> Restore Recipe
+              </button>
+            </form>
           {% endif %}
         </div>
       </div>

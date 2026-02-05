@@ -78,6 +78,8 @@ class BatchOperationsService(BaseService):
                 recipe = Recipe.query.filter_by(id=snap_target_version_id).with_for_update().first()
                 if not recipe:
                     return None, "Recipe not found"
+                if getattr(recipe, "is_archived", False):
+                    return None, "Archived recipes cannot be used to start batches"
                 # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
                 projected_yield = (
                     float(snap_projected_yield)

@@ -69,6 +69,8 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     recipe = db.session.get(Recipe, request.recipe_id)
     if not recipe:
         raise ValueError(f"Recipe {request.recipe_id} not found")
+    if recipe.is_archived:
+        raise ValueError("Archived recipes cannot be planned for production")
 
     # 2. Validate ingredients using stock validation service
     ingredient_requirements = validate_ingredients_with_uscs(

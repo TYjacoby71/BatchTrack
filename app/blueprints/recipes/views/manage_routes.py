@@ -11,11 +11,15 @@ from app.extensions import db, cache
 from app.models import Recipe, RecipeLineage, Batch
 from app.services.lineage_service import generate_lineage_id
 from app.services.recipe_service import (
+    archive_recipe,
     delete_recipe,
     get_recipe_details,
+    is_marketplace_listed,
     promote_test_to_current,
     promote_variation_to_master,
     promote_variation_to_new_group,
+    restore_recipe,
+    unlist_recipe,
 )
 from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.utils.cache_utils import should_bypass_cache
@@ -54,6 +58,7 @@ def list_recipes():
     query = Recipe.query.filter(
         Recipe.parent_recipe_id.is_(None),
         Recipe.test_sequence.is_(None),
+        Recipe.is_archived.is_(False),
     )
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
@@ -101,7 +106,9 @@ def view_recipe(recipe_id):
         has_batches = Batch.query.filter_by(recipe_id=recipe.id).count() > 0
         is_test = recipe.test_sequence is not None
         is_published_locked = recipe.status == 'published' and not is_test
-        is_editable = (not is_published_locked) and (not (is_test and has_batches))
+        is_archived = bool(recipe.is_archived)
+        is_editable = (not is_published_locked) and (not (is_test and has_batches)) and (not is_archived)
+        has_listing = is_marketplace_listed(recipe)
 
         group_versions = []
         master_versions = []
@@ -153,6 +160,8 @@ def view_recipe(recipe_id):
             is_published_locked=is_published_locked,
             is_editable=is_editable,
             has_batches=has_batches,
+            is_archived=is_archived,
+            has_listing=has_listing,
             master_versions=master_versions,
             master_tests=master_tests,
             variation_versions=variation_versions,
@@ -311,3 +320,42 @@ def promote_variation_to_new_group(recipe_id):
         logger.error("Error promoting variation %s to new group: %s", recipe_id, exc)
         flash('An error occurred while creating the new recipe group.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+@recipes_bp.route('/<int:recipe_id>/archive', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def archive_recipe_route(recipe_id):
+    try:
+        success, message = archive_recipe(recipe_id, user_id=getattr(current_user, 'id', None))
+        flash(message, 'success' if success else 'error')
+    except Exception as exc:
+        logger.error("Error archiving recipe %s: %s", recipe_id, exc)
+        flash('Unable to archive recipe.', 'error')
+    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+@recipes_bp.route('/<int:recipe_id>/restore', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def restore_recipe_route(recipe_id):
+    try:
+        success, message = restore_recipe(recipe_id)
+        flash(message, 'success' if success else 'error')
+    except Exception as exc:
+        logger.error("Error restoring recipe %s: %s", recipe_id, exc)
+        flash('Unable to restore recipe.', 'error')
+    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+@recipes_bp.route('/<int:recipe_id>/unlist', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def unlist_recipe_route(recipe_id):
+    try:
+        success, message = unlist_recipe(recipe_id)
+        flash(message, 'success' if success else 'error')
+    except Exception as exc:
+        logger.error("Error unlisting recipe %s: %s", recipe_id, exc)
+        flash('Unable to remove listing.', 'error')
+    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))

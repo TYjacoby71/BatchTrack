@@ -21,6 +21,9 @@ def plan_production_route(recipe_id):
     if not recipe:
         flash('Recipe not found.', 'error')
         return redirect(url_for('recipes.list_recipes'))
+    if recipe.is_archived:
+        flash('Archived recipes cannot be planned for production.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
     if request.method == 'POST':
         try:
@@ -71,6 +74,8 @@ def auto_fill_containers(recipe_id):
         scale = data.get('scale', 1.0)
 
         recipe = Recipe.query.get_or_404(recipe_id)
+        if recipe.is_archived:
+            return jsonify({'success': False, 'error': 'Archived recipes cannot be planned for production.'}), 400
 
         # Use the simplified container management
         # Allow optional product_density to be passed for cross-type conversions

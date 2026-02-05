@@ -52,6 +52,9 @@ class Recipe(ScopedModelMixin, db.Model):
     cloned_from_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     root_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     is_locked = db.Column(db.Boolean, default=False)
+    is_archived = db.Column(db.Boolean, default=False, nullable=False, server_default=sa.text("false"))
+    archived_at = db.Column(db.DateTime, nullable=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
@@ -187,6 +190,7 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_is_master', 'is_master'),
         db.Index('ix_recipe_version_number', 'version_number'),
         db.Index('ix_recipe_test_sequence', 'test_sequence'),
+        db.Index('ix_recipe_is_archived', 'is_archived'),
         *([db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
         db.Index('ix_recipe_soap_superfat', 'soap_superfat'),
         db.Index('ix_recipe_soap_water_pct', 'soap_water_pct'),
