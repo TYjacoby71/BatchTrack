@@ -1,3 +1,13 @@
+"""Permission and entitlement utilities.
+
+Synopsis:
+Provides decorators, entitlement resolution, and tier/add-on checks.
+
+Glossary:
+- Entitlement: Permission granted by tier or add-on.
+- Scope: Developer vs customer permission namespace.
+"""
+
 from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app
 from flask_login import current_user, login_required
 from functools import wraps, lru_cache
@@ -545,7 +555,18 @@ class AuthorizationHierarchy:
             return []
 
         # Get permissions directly from the database tier relationship
-        return [p.name for p in organization.tier.permissions if p.is_active]
+        permissions = [p.name for p in organization.tier.permissions if p.is_active]
+        try:
+            allowed_addons = getattr(organization.tier, 'allowed_addons', []) or []
+            included_addons = getattr(organization.tier, 'included_addons', []) or []
+            addon_perm_names = {a.permission_name for a in allowed_addons if a and a.permission_name}
+            addon_perm_names |= {a.permission_name for a in included_addons if a and a.permission_name}
+            included_perm_names = {a.permission_name for a in included_addons if a and a.permission_name}
+            if addon_perm_names:
+                permissions = [p for p in permissions if p not in addon_perm_names or p in included_perm_names]
+        except Exception:
+            pass
+        return permissions
 
     @staticmethod
     def check_user_authorization(user, permission_name):

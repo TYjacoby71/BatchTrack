@@ -1,3 +1,13 @@
+"""Tests for recipe service workflows.
+
+Synopsis:
+Validates recipe CRUD and marketplace guardrails for versions.
+
+Glossary:
+- Marketplace: Public listing configuration.
+- Versioning: Master/variation/test behavior.
+"""
+
 import pytest
 from decimal import Decimal
 from uuid import uuid4
@@ -462,6 +472,7 @@ def test_update_recipe_toggles_public_private_controls():
         is_for_sale=True,
         sale_price='8.50',
         status='published',
+        is_test=True,
     )
     assert ok, f"Failed to create recipe: {recipe}"
 

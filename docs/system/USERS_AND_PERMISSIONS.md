@@ -1,6 +1,15 @@
 # Users & Permissions System
 
+## Synopsis
+Users inherit permissions through roles and subscription tiers, with add-ons providing optional entitlements and feature toggles.
+
 BatchTrack uses a **clear, hierarchical user and permission system** designed for multi-tenant SaaS. This guide explains how users, roles, and subscription tiers interact.
+
+---
+
+## Glossary
+- **Permission**: Atomic action allowed in the system.
+- **Role**: Permission bundle assigned to a user.
 
 ---
 
@@ -79,7 +88,19 @@ Subscription tiers determine which permissions can even be granted to users in t
 
 ---
 
-## 5. User Management Workflow
+## 5. Add-ons & Entitlements
+
+Add-ons extend subscription tiers with optional permissions or feature toggles.
+
+- **Permission add-ons** (`permission_name`) are granted only when the add-on is included on the tier or purchased.
+- **Function-key add-ons** (`function_key`) are enforced in service logic (no RBAC permission).
+- Tier permission pickers hide add-on permissions until the add-on is selected.
+
+See [ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md) for the full workflow and update scripts.
+
+---
+
+## 6. User Management Workflow
 
 ### Developer Workflow
 1. Developer logs into developer dashboard (separate from SaaS UI).
@@ -98,7 +119,7 @@ Subscription tiers determine which permissions can even be granted to users in t
 
 ---
 
-## 6. Data Scoping Rules
+## 7. Data Scoping Rules
 
 ### Scoped Models
 All models except Developers are scoped by `organization_id`.
@@ -126,7 +147,7 @@ else:
 
 ---
 
-## 7. Permission Checking
+## 8. Permission Checking
 
 ### Route Example
 ```python
@@ -144,7 +165,7 @@ def adjust_inventory_route():
 
 ---
 
-## 8. Best Practices
+## 9. Best Practices
 
 ✔ Developers NEVER receive roles or organization IDs.  
 ✔ Always filter by `organization_id` for customer data.  

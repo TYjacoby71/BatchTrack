@@ -1,4 +1,12 @@
-"""Models package - imports all models for the application"""
+"""Models package - imports all models for the application.
+
+Synopsis:
+Central import hub to register models and keep ORM metadata consistent.
+
+Glossary:
+- Model registry: List of ORM classes loaded for the app.
+- Scoped model: ORM class bound to an organization_id.
+"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
@@ -7,10 +15,11 @@ from .mixins import ScopedModelMixin
 from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
 )
-from .recipe import Recipe, RecipeIngredient, RecipeConsumable, RecipeLineage
+from .recipe import Recipe, RecipeGroup, RecipeIngredient, RecipeConsumable, RecipeLineage
 from .recipe_marketplace import RecipeModerationEvent
 from .batch import (
     Batch,
+    BatchSequence,
     BatchIngredient,
     BatchContainer,
     ExtraBatchContainer,

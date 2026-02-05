@@ -1,3 +1,12 @@
+"""Batch-related models.
+
+Synopsis:
+Defines batch records, sequences, and related inventory associations.
+
+Glossary:
+- Batch: Production run of a recipe.
+- BatchSequence: Organization-wide batch numbering per year.
+"""
 
 from flask_login import current_user
 from ..extensions import db
@@ -15,7 +24,9 @@ class Batch(ScopedModelMixin, db.Model):
     __tablename__ = 'batch'
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    target_version_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     label_code = db.Column(db.String(32))
+    lineage_id = db.Column(db.String(64), nullable=True)
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
     projected_yield = db.Column(db.Float)
     projected_yield_unit = db.Column(db.String(50))
@@ -53,13 +64,16 @@ class Batch(ScopedModelMixin, db.Model):
     cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'
     cost_method_locked_at = db.Column(db.DateTime, nullable=True)
 
-    recipe = db.relationship('Recipe', backref='batches')
+    recipe = db.relationship('Recipe', foreign_keys=[recipe_id], backref='batches')
+    target_version = db.relationship('Recipe', foreign_keys=[target_version_id])
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
     __table_args__ = (
         db.UniqueConstraint('organization_id', 'label_code', name='uq_batch_org_label'),
         db.Index('ix_batch_org', 'organization_id'),
         db.Index('ix_batch_org_status_started_at', 'organization_id', 'status', 'started_at'),
+        db.Index('ix_batch_target_version_id', 'target_version_id'),
+        db.Index('ix_batch_lineage_id', 'lineage_id'),
         db.Index('ix_batch_vessel_fill_pct', 'vessel_fill_pct'),
         db.Index('ix_batch_candle_fragrance_pct', 'candle_fragrance_pct'),
         db.Index('ix_batch_candle_vessel_ml', 'candle_vessel_ml'),
@@ -111,6 +125,29 @@ class BatchLabelCounter(db.Model):
             "ix_batch_label_counter_org_prefix_year",
             "organization_id",
             "prefix",
+            "year",
+        ),
+    )
+
+class BatchSequence(db.Model):
+    __tablename__ = "batch_sequence"
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    current_sequence = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id",
+            "year",
+            name="uq_batch_sequence_org_year",
+        ),
+        db.Index(
+            "ix_batch_sequence_org_year",
+            "organization_id",
             "year",
         ),
     )

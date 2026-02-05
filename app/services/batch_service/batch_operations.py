@@ -1,3 +1,13 @@
+"""Batch operations service.
+
+Synopsis:
+Coordinates batch lifecycle operations and inventory side effects.
+
+Glossary:
+- Batch: Production run created from a plan snapshot.
+- Snapshot: Immutable plan payload used to start a batch.
+"""
+
 import logging
 from datetime import date, datetime, timezone
 from sqlalchemy import extract
@@ -12,6 +22,8 @@ from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
+from app.utils.notes import append_timestamped_note
+from app.services.lineage_service import generate_lineage_id
 from app.services.base_service import BaseService
 from app.services.event_emitter import EventEmitter
 
@@ -20,24 +32,27 @@ logger = logging.getLogger(__name__)
 class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
+    # Purpose: Start a batch from an immutable plan snapshot.
     @classmethod
-
     def start_batch(cls, plan_snapshot: dict):
         """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
 
         try:
             # Trust the plan snapshot exclusively
-            snap_recipe_id = int(plan_snapshot.get('recipe_id'))
+            snap_recipe_id = int(plan_snapshot.get('recipe_id') or plan_snapshot.get('target_version_id'))
+            snap_target_version_id = int(plan_snapshot.get('target_version_id') or snap_recipe_id)
             snap_scale = float(plan_snapshot.get('scale', 1.0))
             snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
             snap_notes = plan_snapshot.get('notes', '')
             forced_summary = plan_snapshot.get('forced_start_summary')
             if forced_summary:
                 snap_notes = f"{snap_notes}\n{forced_summary}" if snap_notes else forced_summary
+            snap_notes = append_timestamped_note(None, snap_notes)
             snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
             snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
             snap_portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
+            snap_lineage = plan_snapshot.get('lineage_snapshot')
 
             recipe = None
 
@@ -72,9 +87,11 @@ class BatchOperationsService(BaseService):
 
             batch = None
             for attempt in range(3):
-                recipe = Recipe.query.filter_by(id=snap_recipe_id).with_for_update().first()
+                recipe = Recipe.query.filter_by(id=snap_target_version_id).with_for_update().first()
                 if not recipe:
                     return None, "Recipe not found"
+                if getattr(recipe, "is_archived", False):
+                    return None, "Archived recipes cannot be used to start batches"
                 # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
                 projected_yield = (
                     float(snap_projected_yield)
@@ -89,8 +106,11 @@ class BatchOperationsService(BaseService):
                     # Create the batch
                     print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning snapshot: {portion_snap}")
                 label_code = generate_batch_label_code(recipe)
+                lineage_id = snap_lineage or generate_lineage_id(recipe)
                 batch = Batch(
                     recipe_id=snap_recipe_id,
+                    target_version_id=snap_target_version_id,
+                    lineage_id=lineage_id,
                     label_code=label_code,
                     batch_type=snap_batch_type,
                     projected_yield=projected_yield,
@@ -198,6 +218,7 @@ class BatchOperationsService(BaseService):
                             'projected_yield': projected_yield,
                             'projected_yield_unit': projected_yield_unit,
                             'label_code': batch.label_code,
+                            'lineage_id': batch.lineage_id,
                             'portioning': portion_snap
                         },
                         organization_id=batch.organization_id,
@@ -217,6 +238,7 @@ class BatchOperationsService(BaseService):
 
 
 
+    # Purpose: Attach container usage records to a batch.
     @classmethod
     def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
         """Process container deductions for batch start"""
@@ -272,6 +294,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
+    # Purpose: Attach ingredient usage records to a batch.
     @classmethod
     def _process_batch_ingredients(cls, batch, recipe, scale, skip_ingredient_ids=None, defer_commit=False):
         """Process ingredient deductions for batch start"""
@@ -341,6 +364,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
+    # Purpose: Attach consumable usage records to a batch.
     @classmethod
     def _process_batch_consumables(cls, batch, recipe, scale, skip_consumable_ids=None, defer_commit=False):
         """Process consumable deductions and snapshot for batch start"""
@@ -413,6 +437,7 @@ class BatchOperationsService(BaseService):
 
         return errors
 
+    # Purpose: Cancel a batch and roll back allocations.
     @classmethod
     def cancel_batch(cls, batch_id):
         """Cancel a batch and restore inventory"""
@@ -571,6 +596,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error cancelling batch: {str(e)}")
             return False, str(e)
 
+    # Purpose: Complete a batch and finalize inventory effects.
     @classmethod
     def complete_batch(cls, batch_id, form_data):
         """Complete a batch and create final products/ingredients"""
@@ -650,6 +676,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error completing batch: {str(e)}")
             return False, str(e)
 
+    # Purpose: Mark a batch as failed with optional reason.
     @classmethod
     def fail_batch(cls, batch_id, reason: str | None = None):
         """Mark an in-progress batch as failed. Does not attempt inventory restoration.
@@ -699,6 +726,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error failing batch: {str(e)}")
             return False, str(e)
 
+    # Purpose: Append extra ingredients/containers/consumables to a batch.
     @classmethod
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""

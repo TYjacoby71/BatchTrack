@@ -1,3 +1,6 @@
+{# File: pages/recipes/recipe_list.html
+   Synopsis: List view for recipes and their variations.
+   Glossary: Master = primary recipe; Archived = hidden from list. #}
 {% extends 'layout.html' %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% block content %}
@@ -81,7 +84,8 @@
 <div class="row" id="recipesContainer">
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
+    {% set published_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ published_variations|length }}" data-origin="{{ origin_tag }}">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ recipe.name }}</h5>
@@ -90,6 +94,7 @@
                       {% if recipe.status == 'draft' %}
                       <span class="badge bg-warning text-dark">Draft</span>
                       {% endif %}
+                      <span class="badge bg-dark">Master</span>
                       {% if recipe.org_origin_purchased %}
                       <span class="badge bg-warning text-dark">Purchased Origin</span>
                       {% else %}
@@ -123,7 +128,7 @@
                         </div>
                         <div class="col-4">
                             <div class="stat-box">
-                                <strong>{{ recipe.variations|length }}</strong>
+                                <strong>{{ published_variations|length }}</strong>
                                 <br><small class="text-muted">Variations</small>
                             </div>
                         </div>
@@ -139,11 +144,12 @@
                 <!-- Action Buttons -->
                 <div class="mt-auto">
                       {% set plan_disabled = (recipe.status == 'draft') %}
+                      {% set edit_disabled = (recipe.status == 'published' and recipe.test_sequence is none) %}
                       <div class="btn-group w-100 mb-2" role="group">
                         <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-eye"></i> View
                         </a>
-                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
                             <i class="fas fa-edit"></i> Edit
                         </a>
                           <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
@@ -153,9 +159,6 @@
                           </a>
                     </div>
                     <div class="btn-group w-100" role="group">
-                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-copy"></i> Clone
-                        </a>
                         {% if can_create_variations %}
                         <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-code-branch"></i> Variation
@@ -166,23 +169,24 @@
             </div>
 
             <!-- Variations Section -->
-            {% if recipe.variations %}
+                    {% if published_variations %}
             <div class="card-footer">
                 <button class="btn btn-link btn-sm p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#variations-{{ recipe.id }}">
-                    <i class="fas fa-chevron-right"></i> {{ recipe.variations|length }} Variation{{ 's' if recipe.variations|length != 1 else '' }}
+                            <i class="fas fa-chevron-right"></i> {{ published_variations|length }} Variation{{ 's' if published_variations|length != 1 else '' }}
                 </button>
                 <div class="collapse variations-list" id="variations-{{ recipe.id }}">
                     <div class="mt-2">
-                        {% for variation in recipe.variations %}
+                        {% for variation in published_variations %}
                         <div class="variation-item d-flex justify-content-between align-items-center py-2 border-bottom">
                             <div>
                                 <strong>{{ variation.name }}</strong>
                                 <br><small class="text-muted">{{ variation.label_prefix or 'BTH' }}</small>
                             </div>
                           {% set variation_plan_disabled = (variation.status == 'draft') %}
+                          {% set variation_edit_disabled = (variation.status == 'published' and variation.test_sequence is none) %}
                           <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs{% if variation_edit_disabled %} disabled{% endif %}" {% if variation_edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>Edit</a>
                               <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
                                  class="btn btn-primary btn-xs {% if variation_plan_disabled %}disabled{% endif %}"
                                  {% if variation_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
