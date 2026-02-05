@@ -93,6 +93,7 @@ def test_clone_from_other_org_marks_purchased_origin(app):
         logout_user()
     assert ok, f"Seller recipe creation failed: {seller_recipe}"
     seller_recipe = db.session.get(Recipe, seller_recipe_id)
+    seller_root_recipe_id = seller_recipe.root_recipe_id or seller_recipe.id
 
     with app.test_request_context():
         login_user(db.session.get(User, buyer_user_id), force=True)
@@ -107,7 +108,7 @@ def test_clone_from_other_org_marks_purchased_origin(app):
             allowed_containers=[],
             category_id=category_id,
             status="draft",
-            cloned_from_id=seller_recipe.id,
+            cloned_from_id=seller_recipe_id,
         )
         purchased_recipe_id = purchased_recipe.id
         logout_user()
@@ -118,8 +119,8 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     assert purchased_recipe.org_origin_type == "purchased"
     assert purchased_recipe.org_origin_recipe_id == purchased_recipe.id
     assert purchased_recipe.org_origin_source_org_id == seller_org_id
-    assert purchased_recipe.org_origin_source_recipe_id == seller_recipe.root_recipe_id or seller_recipe.id
-    assert purchased_recipe.root_recipe_id == seller_recipe.root_recipe_id
+    assert purchased_recipe.org_origin_source_recipe_id in {seller_root_recipe_id, seller_recipe_id}
+    assert purchased_recipe.root_recipe_id == seller_root_recipe_id
     assert purchased_recipe.is_sellable is False
 
 

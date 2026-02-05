@@ -2,6 +2,8 @@ from flask import jsonify, render_template, request, url_for
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission
 
+from app.extensions import db
+from app.models import Organization
 from app.services.drawers.payloads import build_drawer_payload
 from app.services.retention_service import RetentionService
 
@@ -28,8 +30,21 @@ def _build_retention_payload(count: int | None = None):
     return payload
 
 
+def _resolve_current_org():
+    try:
+        org_id = getattr(current_user, 'organization_id', None)
+    except Exception:
+        org_id = None
+    if not org_id:
+        return None
+    try:
+        return db.session.get(Organization, org_id)
+    except Exception:
+        return None
+
+
 def _get_retention_items():
-    org = getattr(current_user, 'organization', None)
+    org = _resolve_current_org()
     if not org:
         return []
     return RetentionService.get_pending_drawer_items(org)
@@ -63,7 +78,7 @@ def retention_check():
 @login_required
 @require_permission('recipes.delete')
 def retention_modal():
-    org = getattr(current_user, 'organization', None)
+    org = _resolve_current_org()
     items = RetentionService.get_pending_drawer_items(org) if org else []
     html = render_template('components/drawer/retention_modal.html', items=items)
     return jsonify({'success': True, 'modal_html': html})
@@ -73,7 +88,7 @@ def retention_modal():
 @login_required
 @require_permission('recipes.delete')
 def retention_acknowledge():
-    org = getattr(current_user, 'organization', None)
+    org = _resolve_current_org()
     items = RetentionService.get_pending_drawer_items(org) if org else []
     ids = [recipe.id for recipe in items]
     created, skipped = RetentionService.acknowledge_and_queue(org, ids)
@@ -84,7 +99,7 @@ def retention_acknowledge():
 @login_required
 @require_permission('recipes.delete')
 def retention_export():
-    org = getattr(current_user, 'organization', None)
+    org = _resolve_current_org()
     export_format = request.args.get('format', 'json')
     mimetype, content = RetentionService.export_at_risk(org, export_format)
     return content, 200, {'Content-Type': mimetype}
