@@ -93,6 +93,7 @@ def recipe_library():
             Recipe.marketplace_status == "listed",
             Recipe.test_sequence.is_(None),
             Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
             (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
         )
     )

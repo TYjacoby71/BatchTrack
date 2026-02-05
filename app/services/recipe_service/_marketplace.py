@@ -121,6 +121,7 @@ def _apply_marketplace_settings(
         getattr(recipe, "status", None) != "published"
         or getattr(recipe, "test_sequence", None)
         or getattr(recipe, "is_archived", False)
+        or not getattr(recipe, "is_current", False)
     ):
         recipe.sharing_scope = "private"
         recipe.is_public = False

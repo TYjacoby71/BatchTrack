@@ -6,6 +6,7 @@ Defines recipes, groups, versioning fields, and ingredient associations.
 Glossary:
 - RecipeGroup: Container for master/variation lineages.
 - Test sequence: Numeric identifier for non-current test versions.
+- Current version: Active master/variation used for production.
 """
 
 from flask_login import current_user
@@ -54,6 +55,7 @@ class Recipe(ScopedModelMixin, db.Model):
     version_number = db.Column(db.Integer, default=1, nullable=False, server_default="1")
     parent_master_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
     test_sequence = db.Column(db.Integer, nullable=True)
+    is_current = db.Column(db.Boolean, default=False, nullable=False, server_default=sa.text("false"))
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
@@ -200,6 +202,8 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_is_master', 'is_master'),
         db.Index('ix_recipe_version_number', 'version_number'),
         db.Index('ix_recipe_test_sequence', 'test_sequence'),
+        db.Index('ix_recipe_is_current', 'is_current'),
+        db.Index('ix_recipe_current_branch', 'recipe_group_id', 'is_master', 'variation_name', 'is_current'),
         db.Index('ix_recipe_is_archived', 'is_archived'),
         *([db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
         db.Index('ix_recipe_soap_superfat', 'soap_superfat'),

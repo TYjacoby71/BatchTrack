@@ -84,7 +84,7 @@
 <div class="row" id="recipesContainer">
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
-    {% set published_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | list %}
+    {% set published_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
     <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ published_variations|length }}" data-origin="{{ origin_tag }}">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">

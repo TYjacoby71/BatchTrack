@@ -25,9 +25,10 @@ from app.services.recipe_service import (
     delete_recipe,
     get_recipe_details,
     is_marketplace_listed,
+    set_current_version as set_current_version_service,
     promote_test_to_current,
-    promote_variation_to_master,
-    promote_variation_to_new_group,
+    promote_variation_to_master as promote_variation_to_master_service,
+    promote_variation_to_new_group as promote_variation_to_new_group_service,
     restore_recipe,
     unlist_recipe,
 )
@@ -74,6 +75,7 @@ def list_recipes():
         Recipe.parent_recipe_id.is_(None),
         Recipe.test_sequence.is_(None),
         Recipe.is_archived.is_(False),
+        Recipe.is_current.is_(True),
     )
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
@@ -321,6 +323,26 @@ def publish_test_version(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# --- Set current version ---
+# Purpose: Make a published version the current recipe.
+@recipes_bp.route('/<int:recipe_id>/set-current', methods=['POST'])
+@login_required
+@require_permission('recipes.create_variations')
+def set_current_version_route(recipe_id):
+    try:
+        success, result = set_current_version_service(recipe_id)
+        if not success:
+            flash(str(result), 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash('Version set as current.', 'success')
+        return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Error setting current version %s: %s", recipe_id, exc)
+        flash('An error occurred while setting the current version.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
 # --- Promote to master ---
 # Purpose: Promote a variation to master in the same group.
 @recipes_bp.route('/<int:recipe_id>/promote-to-master', methods=['POST'])
@@ -328,7 +350,7 @@ def publish_test_version(recipe_id):
 @require_permission('recipes.create_variations')
 def promote_variation_to_master(recipe_id):
     try:
-        success, result = promote_variation_to_master(recipe_id)
+        success, result = promote_variation_to_master_service(recipe_id)
         if not success:
             flash(str(result), 'error')
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
@@ -348,7 +370,7 @@ def promote_variation_to_master(recipe_id):
 @require_permission('recipes.create_variations')
 def promote_variation_to_new_group(recipe_id):
     try:
-        success, result = promote_variation_to_new_group(recipe_id)
+        success, result = promote_variation_to_new_group_service(recipe_id)
         if not success:
             flash(str(result), 'error')
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))

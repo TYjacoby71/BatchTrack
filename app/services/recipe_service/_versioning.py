@@ -17,6 +17,7 @@ import sqlalchemy as sa
 from ...extensions import db
 from ...models import Recipe, RecipeIngredient, RecipeConsumable
 from ._core import create_recipe
+from ._current import apply_current_flag
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,7 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe.is_for_sale = False
     recipe.sale_price = None
     recipe.marketplace_status = "draft"
+    apply_current_flag(recipe)
     db.session.commit()
     return True, recipe
 

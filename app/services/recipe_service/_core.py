@@ -34,6 +34,7 @@ from ._marketplace import _apply_marketplace_settings
 from ._origin import _build_org_origin_context, _resolve_is_sellable
 from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
+from ._current import apply_current_flag
 
 logger = logging.getLogger(__name__)
 
@@ -422,6 +423,11 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             )
             db.session.add(recipe_consumable)
 
+        if normalized_status == "published" and not is_test_flag and not recipe.is_archived:
+            apply_current_flag(recipe)
+        else:
+            recipe.is_current = False
+
         db.session.commit()
 
         # Log lineage metadata after commit to ensure recipe.id is available
@@ -674,6 +680,11 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         category_data_payload = _extract_category_data_from_request()
         if category_data_payload:
             recipe.category_data = category_data_payload
+
+        if recipe.status == "published" and recipe.test_sequence is None and not recipe.is_archived:
+            apply_current_flag(recipe)
+        else:
+            recipe.is_current = False
 
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")

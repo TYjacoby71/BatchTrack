@@ -13,8 +13,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from flask import session
 import logging
-import sqlalchemy as sa
-from sqlalchemy.orm import selectinload, load_only
+from sqlalchemy.orm import load_only
 from app.models import InventoryItem, Recipe, Product  # Added for get_ingredients endpoint
 from app.models.product import ProductSKU
 from app import db  # Assuming db is imported from app
@@ -415,78 +414,32 @@ def bootstrap_recipes():
         if cached is not None:
             return jsonify({'recipes': cached, 'count': len(cached), 'cache': 'hit', 'version': 1})
 
-    master_subq = (
-        db.session.query(
-            Recipe.recipe_group_id.label("group_id"),
-            sa.func.max(Recipe.version_number).label("max_version"),
-        )
-        .filter(
-            Recipe.organization_id == org_id,
-            Recipe.is_master.is_(True),
-            Recipe.test_sequence.is_(None),
-            Recipe.status == "published",
-            Recipe.is_archived.is_(False),
-        )
-        .group_by(Recipe.recipe_group_id)
-        .subquery()
-    )
-
     masters = (
         Recipe.query.options(
             load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id),
         )
-        .join(
-            master_subq,
-            sa.and_(
-                Recipe.recipe_group_id == master_subq.c.group_id,
-                Recipe.version_number == master_subq.c.max_version,
-            ),
-        )
         .filter(
             Recipe.organization_id == org_id,
             Recipe.is_master.is_(True),
             Recipe.test_sequence.is_(None),
             Recipe.status == "published",
             Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         )
         .order_by(Recipe.name.asc())
-    )
-
-    variation_subq = (
-        db.session.query(
-            Recipe.recipe_group_id.label("group_id"),
-            Recipe.variation_name.label("variation_name"),
-            sa.func.max(Recipe.version_number).label("max_version"),
-        )
-        .filter(
-            Recipe.organization_id == org_id,
-            Recipe.is_master.is_(False),
-            Recipe.test_sequence.is_(None),
-            Recipe.status == "published",
-            Recipe.is_archived.is_(False),
-        )
-        .group_by(Recipe.recipe_group_id, Recipe.variation_name)
-        .subquery()
     )
 
     variations_query = (
         Recipe.query.options(
             load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id, Recipe.parent_recipe_id),
         )
-        .join(
-            variation_subq,
-            sa.and_(
-                Recipe.recipe_group_id == variation_subq.c.group_id,
-                Recipe.variation_name == variation_subq.c.variation_name,
-                Recipe.version_number == variation_subq.c.max_version,
-            ),
-        )
         .filter(
             Recipe.organization_id == org_id,
             Recipe.is_master.is_(False),
             Recipe.test_sequence.is_(None),
             Recipe.status == "published",
             Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         )
     )
 
