@@ -71,10 +71,12 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     seller_user, seller_org = _create_user("Seller Org")
     seller_org_id = seller_org.id
     buyer_user, _ = _create_user("Buyer Org")
+    seller_user_id = db.session.merge(seller_user).id
+    buyer_user_id = db.session.merge(buyer_user).id
     category_id = _get_category_id()
 
     with app.test_request_context():
-        login_user(db.session.get(User, seller_user.id))
+        login_user(db.session.get(User, seller_user_id))
         ok, seller_recipe = create_recipe(
             name="Seller Recipe",
             description="",
@@ -93,7 +95,7 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     seller_recipe = db.session.get(Recipe, seller_recipe_id)
 
     with app.test_request_context():
-        login_user(db.session.get(User, buyer_user.id))
+        login_user(db.session.get(User, buyer_user_id))
         ok, purchased_recipe = create_recipe(
             name="Purchased Copy",
             description="",

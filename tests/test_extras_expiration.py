@@ -13,7 +13,7 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.models import User
     from app.extensions import db
 
-    user_id = test_user.id
+    user_id = db.session.merge(test_user).id
 
     # Create perishable inventory item
     item = InventoryItem(

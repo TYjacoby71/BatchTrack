@@ -76,7 +76,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
 
         # Confirm linking for ml and g
         payload = {
-            'global_item_id': gi.id,
+            'global_item_id': global_item_id,
             'item_ids': [milk_ml.id]
         }
         res3 = client.post('/api/drawers/global-link/confirm', data=json.dumps(payload), content_type='application/json')
