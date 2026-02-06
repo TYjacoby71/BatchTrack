@@ -1,18 +1,22 @@
 """Lineage and label generation service.
 
 Synopsis:
-Generates recipe group prefixes, variation prefixes, lineage IDs, and batch labels.
-This module powers recipe lineage generators for prefixes, labels, and lineage IDs.
+Generates recipe group, label, and variation prefixes plus lineage IDs and batch labels.
+Lineage IDs use organization-scoped group sequencing to stay stable within a tenant.
 
 Glossary:
 - Prefix: Short code derived from a name for labels.
+- Label prefix: Recipe-level prefix used in batch labels.
 - Lineage ID: Dot-notation identifier for version history.
+- Group number: Organization-scoped sequence for recipe groups.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Iterable, List, Optional, Set
+
+import sqlalchemy as sa
 
 from app.extensions import db
 from app.models.recipe import Recipe, RecipeGroup
@@ -107,22 +111,77 @@ def generate_variation_prefix(name: str, recipe_group_id: int | None) -> str:
     return _pick_unique_prefix(candidates, existing)
 
 
+# --- Generate label prefix ---
+# Purpose: Generate a unique label prefix per organization.
+def generate_label_prefix(name: str, org_id: int | None) -> str:
+    words = _clean_and_split(name)
+    candidates = _build_prefix_candidates(words)
+    existing: Set[str] = set()
+    if org_id:
+        existing = _resolve_existing_prefixes(
+            row[0]
+            for row in db.session.query(RecipeGroup.prefix)
+            .filter(RecipeGroup.organization_id == org_id)
+        )
+        existing.update(
+            _resolve_existing_prefixes(
+                row[0]
+                for row in db.session.query(Recipe.label_prefix)
+                .filter(
+                    Recipe.organization_id == org_id,
+                    Recipe.label_prefix.isnot(None),
+                )
+            )
+        )
+    return _pick_unique_prefix(candidates, existing)
+
+
+# --- Resolve group number ---
+# Purpose: Map recipe_group_id to org-scoped sequence number.
+def _resolve_group_number(version_obj: Recipe) -> int:
+    group_id = getattr(version_obj, "recipe_group_id", None)
+    if not group_id:
+        return 0
+    org_id = getattr(version_obj, "organization_id", None)
+    if not org_id:
+        group = getattr(version_obj, "recipe_group", None)
+        org_id = getattr(group, "organization_id", None) if group else None
+    if not org_id:
+        return int(group_id)
+    count = (
+        db.session.query(sa.func.count(RecipeGroup.id))
+        .filter(
+            RecipeGroup.organization_id == org_id,
+            RecipeGroup.id <= group_id,
+        )
+        .scalar()
+    )
+    resolved = int(count or 0)
+    return resolved if resolved > 0 else int(group_id)
+
+
 # --- Generate lineage ID ---
 # Purpose: Generate a lineage ID for a recipe version.
 def generate_lineage_id(version_obj: Recipe) -> str:
-    group_id = getattr(version_obj, "recipe_group_id", None) or 0
-    if getattr(version_obj, "is_master", False):
+    group_number = _resolve_group_number(version_obj)
+    is_master = getattr(version_obj, "is_master", False)
+    if is_master:
         master_version = getattr(version_obj, "version_number", None) or 0
     else:
         parent_master = getattr(version_obj, "parent_master", None)
         master_version = getattr(parent_master, "version_number", None) if parent_master else None
         master_version = master_version or getattr(version_obj, "version_number", None) or 0
 
-    var_version = 0 if getattr(version_obj, "is_master", False) else (getattr(version_obj, "version_number", None) or 0)
-    test_sequence = getattr(version_obj, "test_sequence", None)
-    test_suffix = f"t{test_sequence}" if test_sequence else ""
+    parts = [str(group_number), str(master_version)]
+    if not is_master:
+        variation_version = getattr(version_obj, "version_number", None) or 0
+        parts.append(str(variation_version))
 
-    return f"{group_id}.{master_version}.{var_version}{test_suffix}"
+    test_sequence = getattr(version_obj, "test_sequence", None)
+    if test_sequence:
+        parts.append(f"t{test_sequence}")
+
+    return ".".join(parts)
 
 
 # --- Generate batch label ---
@@ -165,6 +224,7 @@ def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
 
 __all__ = [
     "generate_group_prefix",
+    "generate_label_prefix",
     "generate_variation_prefix",
     "generate_lineage_id",
     "generate_batch_label",

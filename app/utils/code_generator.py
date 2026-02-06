@@ -1,11 +1,11 @@
 """Code generators for recipes and batches.
 
 Synopsis:
-Generates batch labels and recipe group prefixes via lineage service.
+Generates batch labels and recipe label prefixes via the lineage service.
 
 Glossary:
 - Batch label: Human-readable batch identifier.
-- Prefix: Short code derived from a recipe name.
+- Label prefix: Recipe-level prefix used in batch labels.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from app.models.batch import BatchSequence
 from app.models import User
 from app.models.recipe import Recipe
 from app.models.db_dialect import is_postgres
-from app.services.lineage_service import generate_batch_label, generate_group_prefix
+from app.services.lineage_service import generate_batch_label, generate_label_prefix
 from app.utils.timezone_utils import TimezoneUtils
 
 __all__ = ["generate_batch_label_code", "generate_recipe_prefix"]
@@ -59,12 +59,12 @@ def generate_batch_label_code(recipe: Recipe) -> str:
 
 
 # --- Recipe prefix generator ---
-# Purpose: Generate a group prefix from a recipe name.
+# Purpose: Generate a label prefix from a recipe name.
 def generate_recipe_prefix(recipe_name: str, org_id: int | None = None) -> str:
     """
     Generate a recipe prefix from the recipe name.
     """
-    return generate_group_prefix(recipe_name, org_id)
+    return generate_label_prefix(recipe_name, org_id)
 
 
 # --- Batch sequence allocator ---

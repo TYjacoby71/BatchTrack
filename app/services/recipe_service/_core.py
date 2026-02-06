@@ -1,7 +1,7 @@
 """Recipe core operations.
 
 Synopsis:
-Implements recipe CRUD with versioning, group assignment, and locks.
+Implements recipe CRUD with versioning, group assignment, locks, and edit audit notes.
 
 Glossary:
 - Master: Primary recipe version in a group.
@@ -177,6 +177,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         allow_partial = normalized_status == 'draft'
 
         current_org_id = _resolve_current_org_id()
+        recipe_org_id = current_org_id if current_org_id else (1)
 
         validation_result = validate_recipe_data(
             name=name,
@@ -203,7 +204,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             clone_source = clone_source or None
 
         # Create recipe with proper label prefix
-        final_label_prefix = _derive_label_prefix(name, label_prefix, parent_recipe_id, parent_recipe)
+        final_label_prefix = _derive_label_prefix(
+            name,
+            label_prefix,
+            parent_recipe_id,
+            parent_recipe,
+            org_id=recipe_org_id,
+        )
 
         # Derive predicted yield from portioning bulk if provided and > 0
         derived_yield = yield_amount
@@ -222,8 +229,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                             derived_unit = u.name
         except Exception:
             pass
-
-        recipe_org_id = current_org_id if current_org_id else (1)
 
         recipe_group = None
         if recipe_group_id:
@@ -467,7 +472,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
 
 # --- Update recipe ---
-# Purpose: Update a recipe with lock/version safeguards.
+# Purpose: Update a recipe with lock/version safeguards and audit notes.
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
@@ -489,7 +494,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  cover_image_url: Any = _UNSET,
                  skin_opt_in: bool | None = None,
                  remove_cover_image: bool = False,
-                 is_test: bool | None = None) -> Tuple[bool, Any]:
+                 is_test: bool | None = None,
+                 allow_published_edit: bool = False) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -512,13 +518,61 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         if not recipe:
             return False, "Recipe not found"
 
+        def _normalize_items(items: List[Dict] | None) -> List[tuple]:
+            if not items:
+                return []
+            normalized = []
+            for entry in items:
+                try:
+                    normalized.append((
+                        int(entry.get('item_id')),
+                        float(entry.get('quantity')),
+                        str(entry.get('unit') or '').strip(),
+                    ))
+                except Exception:
+                    continue
+            return sorted(normalized)
+
+        original_snapshot = {
+            "name": recipe.name or "",
+            "instructions": recipe.instructions or "",
+            "yield_amount": float(recipe.predicted_yield or 0),
+            "yield_unit": recipe.predicted_yield_unit or "",
+            "label_prefix": recipe.label_prefix or "",
+            "category_id": recipe.category_id,
+            "status": recipe.status or "",
+            "allowed_containers": sorted(list(recipe.allowed_containers or [])),
+            "portioning": (
+                bool(recipe.is_portioned),
+                recipe.portion_name or "",
+                int(recipe.portion_count or 0),
+                recipe.portion_unit_id,
+            ),
+            "ingredients": sorted(
+                (
+                    int(row.inventory_item_id),
+                    float(row.quantity),
+                    str(row.unit or '').strip(),
+                )
+                for row in (recipe.recipe_ingredients or [])
+            ),
+            "consumables": sorted(
+                (
+                    int(row.inventory_item_id),
+                    float(row.quantity),
+                    str(row.unit or '').strip(),
+                )
+                for row in (recipe.recipe_consumables or [])
+            ),
+        }
+
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be modified"
         if recipe.is_archived:
             return False, "Archived recipes cannot be modified"
 
         has_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
-        if recipe.status == 'published' and recipe.test_sequence is None:
+        if recipe.status == 'published' and recipe.test_sequence is None and not allow_published_edit:
             return False, "Published versions are locked. Create a test to make edits."
         if recipe.test_sequence is not None and has_batches > 0:
             return False, "Tests cannot be edited after running batches."
@@ -687,6 +741,43 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             cover_image_url=cover_image_url,
             remove_cover_image=remove_cover_image,
         )
+
+        change_fields = []
+        if name is not None and name.strip() != original_snapshot["name"]:
+            change_fields.append("name")
+        if instructions is not None and instructions.strip() and instructions.strip() != original_snapshot["instructions"].strip():
+            change_fields.append("instructions")
+        if yield_amount is not None and float(yield_amount or 0) != original_snapshot["yield_amount"]:
+            change_fields.append("yield amount")
+        if yield_unit is not None and (yield_unit or "") != original_snapshot["yield_unit"]:
+            change_fields.append("yield unit")
+        if label_prefix is not None and (label_prefix or "") != original_snapshot["label_prefix"]:
+            change_fields.append("label prefix")
+        if category_id is not None and category_id != original_snapshot["category_id"]:
+            change_fields.append("category")
+        if status is not None and (recipe.status or "") != original_snapshot["status"]:
+            change_fields.append("status")
+        if allowed_containers is not None and sorted(list(allowed_containers or [])) != original_snapshot["allowed_containers"]:
+            change_fields.append("containers")
+        if ingredients is not None and _normalize_items(ingredients) != original_snapshot["ingredients"]:
+            change_fields.append("ingredients")
+        if consumables is not None and _normalize_items(consumables) != original_snapshot["consumables"]:
+            change_fields.append("consumables")
+
+        updated_portioning = (
+            bool(recipe.is_portioned),
+            recipe.portion_name or "",
+            int(recipe.portion_count or 0),
+            recipe.portion_unit_id,
+        )
+        if updated_portioning != original_snapshot["portioning"]:
+            change_fields.append("portioning")
+
+        if change_fields:
+            summary = "Updated: " + ", ".join(change_fields) + "."
+            stamped = append_timestamped_note(None, summary)
+            event_type = "EDIT_OVERRIDE" if allow_published_edit else "EDIT"
+            _log_lineage_event(recipe, event_type, notes=stamped)
 
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")

@@ -1,3 +1,14 @@
+"""Core organization and user models plus legacy re-exports.
+
+Synopsis:
+Defines Organization/User models and safely re-exports legacy model symbols.
+Includes lifecycle helpers and defaulting hooks used across the app.
+
+Glossary:
+- Organization: Tenant owning recipes, inventory, and users.
+- User: Authenticated account tied to an organization or developer role.
+"""
+
 # app/models/models.py
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
 import importlib
@@ -7,6 +18,8 @@ from datetime import datetime
 import re
 import secrets
 
+# --- Export model symbols ---
+# Purpose: Safely re-export models for legacy imports without crashing.
 def _export(targets):
     g = globals()
     for module, name, alias in targets:
@@ -70,6 +83,8 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
+# --- Organization model ---
+# Purpose: Represent a tenant organization and its core relationships.
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
@@ -117,7 +132,7 @@ class Organization(db.Model):
     recipe_policy_notes = db.Column(db.Text, nullable=True)
 
     # Relationships
-    users = db.relationship('User', backref='organization')
+    users = db.relationship('User', back_populates='organization')
     subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
     tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id], overlaps="subscription_tier")  # Alias for backward compatibility
 
@@ -216,6 +231,8 @@ class Organization(db.Model):
         from ..utils.permissions import _has_tier_permission
         return _has_tier_permission(self, permission_name)
 
+# --- User model ---
+# Purpose: Represent an authenticated user and role permissions.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -225,6 +242,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # NULL for developers
+    organization = db.relationship('Organization', foreign_keys=[organization_id], back_populates='users')
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
 
@@ -594,6 +612,8 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
+# --- Default username hook ---
+# Purpose: Ensure a username exists before inserting a user record.
 @event.listens_for(User, "before_insert")
 def _default_username_before_insert(mapper, connection, target):
     """Auto-generate username if not provided (for test compatibility)"""

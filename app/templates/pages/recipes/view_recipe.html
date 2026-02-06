@@ -1,5 +1,5 @@
 {# File: pages/recipes/view_recipe.html
-   Synopsis: Recipe detail view with lineage and version actions.
+   Synopsis: Recipe detail view with lineage, notes, and version actions.
    Glossary: Lineage ID = version identifier; Promotion = make current/master. #}
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
@@ -9,6 +9,7 @@
     {'label': recipe.name, 'url': None}
 ] %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
+{% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
 
 {% block content %}
 
@@ -179,18 +180,55 @@
       <div class="modal-body">
         <p>You are about to start a new recipe group using <strong>{{ recipe.name }}</strong> as the master recipe.</p>
         <p class="text-muted mb-0">This keeps your current group intact and creates a fresh lineage tree.</p>
+        <form method="post" action="{{ url_for('recipes.promote_variation_to_new_group', recipe_id=recipe.id) }}" id="newGroupForm" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="form-label">New group name</label>
+          <input type="text" name="group_name" class="form-control" value="{{ recipe.name }}" maxlength="128" required>
+          <div class="form-text">Name the new master recipe and group.</div>
+        </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <form method="post" action="{{ url_for('recipes.promote_variation_to_new_group', recipe_id=recipe.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-success">Create New Group</button>
-        </form>
+        <button type="submit" class="btn btn-success" form="newGroupForm">Create New Group</button>
       </div>
     </div>
   </div>
 </div>
 {% endif %}
+
+<!-- Edit Published Recipe Modal -->
+<div class="modal fade" id="editUnlockModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-warning"></i> Edit Published Recipe</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">
+          You are about to edit a published recipe. Since your subscription tier allows you to variate and test,
+          editing can break the lineage and ruin formula history.
+        </p>
+        <p class="mb-2">Please be sure you do <strong>not</strong> mean to do one of the following:</p>
+        <ol class="mb-3">
+          <li>Make a test version of this recipe to try something new.</li>
+          <li>Make a variation of this current master recipe to add a new flavor or scent (for example: <strong>{{ base_master_name }} - Lavender</strong>).</li>
+        </ol>
+        <p class="mb-0">
+          If neither of those are what you want, only edit details you forgot or missed,
+          like instructions, quantities, missing ingredients, or batch configuration. Changes will be recorded
+          in the recipe notes with a timestamp.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id, force='1') }}" class="btn btn-warning">
+          Proceed to Edit
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="row g-4">
   <!-- Left Column -->
@@ -208,6 +246,51 @@
       </div>
     </div>
     {% endif %}
+
+    <!-- Notes Card -->
+    <div class="card mb-4" id="recipeNotes">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0"><i class="fas fa-sticky-note"></i> Notes</h5>
+        <span class="badge bg-light text-dark border">{{ recipe_notes|length if recipe_notes else 0 }} notes</span>
+      </div>
+      <div class="card-body">
+        {% if can_add_notes %}
+        <form method="post" action="{{ url_for('recipes.add_recipe_note', recipe_id=recipe.id) }}" class="mb-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="form-label">Add a note</label>
+          <textarea name="note" rows="3" class="form-control" placeholder="Capture corrections or context..."></textarea>
+          <div class="d-flex justify-content-end mt-2">
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-plus-circle"></i> Save Note
+            </button>
+          </div>
+        </form>
+        <hr>
+        {% endif %}
+        {% if recipe_notes %}
+        <ul class="list-group list-group-flush">
+          {% for note in recipe_notes %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold text-uppercase text-muted">
+                {% if note.event_type in ['EDIT', 'EDIT_OVERRIDE'] %}Edit{% else %}Note{% endif %}
+              </span>
+              <small class="text-muted">{{ note.created_at.strftime('%b %d, %Y %H:%M') if note.created_at else '—' }}</small>
+            </div>
+            {% if note.notes %}
+            <div class="small mt-1">{{ note.notes|nl2br }}</div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center py-3 text-muted">
+          <i class="fas fa-info-circle mb-2"></i>
+          <p class="mb-0">No notes recorded yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
     <!-- Components Card (Ingredients, Consumables, Packaging) -->
     <div class="card mb-4">
@@ -371,7 +454,7 @@
       <div class="card-body">
         {% set plan_disabled = (recipe.status == 'draft') or is_archived %}
         {% set plan_title = "Archived recipes cannot be planned" if is_archived else "Publish this recipe before planning production" %}
-        {% set edit_disabled = (not is_editable) %}
+        {% set edit_disabled = (not is_editable) and (not force_edit_allowed) %}
         {% set version_disabled = is_archived %}
         <div class="d-grid gap-2">
           <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
@@ -382,9 +465,24 @@
              {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="{{ plan_title }}"{% endif %}>
             <i class="fas fa-play"></i> Plan Production
           </a>
-          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
+          {% if is_editable %}
+          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
             <i class="fas fa-edit"></i> {% if is_test %}Edit Test{% else %}Edit Recipe{% endif %}
           </a>
+          {% elif force_edit_allowed %}
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUnlockModal">
+            <i class="fas fa-edit"></i> Edit Recipe
+          </button>
+          {% else %}
+          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}"
+             class="btn btn-primary disabled"
+             tabindex="-1"
+             aria-disabled="true"
+             onclick="return false;"
+             title="Published versions are locked. Create a test to edit.">
+            <i class="fas fa-edit"></i> {% if is_test %}Edit Test{% else %}Edit Recipe{% endif %}
+          </a>
+          {% endif %}
           {% if can_create_variations %}
           <button type="button"
                   class="btn btn-outline-primary{% if version_disabled %} disabled{% endif %}"

@@ -49,6 +49,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
+- **/api/recipes/prefix** → Generate a unique label prefix for recipe names (see `app/blueprints/api/routes.py`)
 - **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-stripe** → Stripe connectivity check (see `app/blueprints/developer/views/integration_routes.py`)
@@ -81,6 +82,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/inventory/bulk-updates** → Bulk inventory update UI (see `app/blueprints/inventory/routes.py`)
 - **/inventory/api/bulk-adjustments** → Bulk inventory adjustment API (see `app/blueprints/inventory/routes.py`)
 - **/products/inventory/adjust/<inventory_item_id>** → Product SKU inventory adjust (see `app/blueprints/products/product_inventory_routes.py`)
+- **/recipes/<recipe_id>/notes** → Add a timestamped recipe note (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/sku/<inventory_item_id>** → SKU detail view (see `app/blueprints/products/sku.py`)
 - **/sku/<inventory_item_id>/edit** → SKU edit (see `app/blueprints/products/sku.py`)
 - **/sku/merge/select** → SKU merge selection (see `app/blueprints/products/sku.py`)
@@ -97,6 +99,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
 - **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
@@ -126,6 +129,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
+- **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
+- **Recipe Notes Panel** → Add and review timestamped recipe notes (see `app/templates/pages/recipes/view_recipe.html`)
+- **Auto Label Prefix Field** → Locked prefix auto-generation on recipe forms (see `app/templates/pages/recipes/recipe_form.html`)
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
 - **Global Link Drawer** → Link local items to global catalog (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)

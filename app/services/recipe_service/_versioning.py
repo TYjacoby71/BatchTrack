@@ -1,7 +1,7 @@
 """Recipe versioning helpers for tests and promotions.
 
 Synopsis:
-Create tests and promote versions within or across recipe groups.
+Create tests and promote versions within or across recipe groups with explicit naming.
 
 Glossary:
 - Test: Editable, non-current version.
@@ -120,7 +120,7 @@ def _unique_recipe_name(base_name: str, org_id: int | None) -> str:
         Recipe.name == candidate,
     ).first():
         suffix += 1
-        candidate = f"{base_name} (New Group {suffix})"
+        candidate = f"{base_name} ({suffix})"
     return candidate
 
 
@@ -187,7 +187,7 @@ def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
 
 # --- Promote to new group ---
 # Purpose: Promote a variation to a new recipe group.
-def promote_variation_to_new_group(recipe_id: int) -> Tuple[bool, Any]:
+def promote_variation_to_new_group(recipe_id: int, group_name: str | None = None) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:
         return False, "Only published variations can start a new recipe group."
@@ -208,7 +208,11 @@ def promote_variation_to_new_group(recipe_id: int) -> Tuple[bool, Any]:
         }
         for assoc in recipe.recipe_consumables
     ]
-    candidate_name = _unique_recipe_name(recipe.name or "New Recipe Group", recipe.organization_id)
+    requested_name = (group_name or "").strip()
+    if requested_name:
+        candidate_name = requested_name
+    else:
+        candidate_name = _unique_recipe_name(recipe.name or "New Recipe Group", recipe.organization_id)
 
     return create_recipe(
         name=candidate_name,

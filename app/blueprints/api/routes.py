@@ -1,11 +1,12 @@
 """API routes for client bootstrap and batchbot features.
 
 Synopsis:
-Provides JSON endpoints for dashboard widgets and bootstrap payloads.
+Provides JSON endpoints for dashboard widgets, bootstrap payloads, and recipe prefix generation.
 
 Glossary:
 - Bootstrap: Lightweight payload for client selection lists.
 - Dashboard alerts: Aggregated warning or status indicators.
+- Recipe prefix: Unique label prefix derived from a recipe name.
 """
 
 from flask import Blueprint, jsonify, request, current_app
@@ -33,6 +34,7 @@ from app.services.cache_invalidation import (
     recipe_bootstrap_cache_key,
 )
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.code_generator import generate_recipe_prefix
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -40,10 +42,14 @@ logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+# --- Batchbot flag ---
+# Purpose: Check if BatchBot features are enabled in config.
 def _is_batchbot_enabled() -> bool:
     return bool(current_app.config.get('FEATURE_BATCHBOT', False))
 
 
+# --- Resolve org scope ---
+# Purpose: Determine the request organization scope (supports developer masquerade).
 def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.
@@ -84,6 +90,22 @@ def server_time():
         'timestamp': user_time.isoformat(),
         'timezone': str(TimezoneUtils.get_user_timezone())
     })
+
+# =========================================================
+# RECIPES
+# =========================================================
+# --- Recipe label prefix ---
+# Purpose: Generate a unique label prefix for a recipe name.
+@api_bp.route('/recipes/prefix', methods=['GET'])
+@login_required
+@require_permission('recipes.create')
+def recipe_prefix():
+    name = (request.args.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Recipe name is required'}), 400
+    org_id = _resolve_org_id()
+    prefix = generate_recipe_prefix(name, org_id)
+    return jsonify({'prefix': prefix})
 
 # =========================================================
 # ALERTS
