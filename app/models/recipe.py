@@ -205,6 +205,16 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_is_current', 'is_current'),
         db.Index('ix_recipe_current_branch', 'recipe_group_id', 'is_master', 'variation_name', 'is_current'),
         db.Index('ix_recipe_is_archived', 'is_archived'),
+        db.Index(
+            'ix_recipe_list_page',
+            'organization_id',
+            'is_archived',
+            'is_current',
+            'parent_recipe_id',
+            'test_sequence',
+            'name',
+        ),
+        db.Index('ix_recipe_root_created_at', 'root_recipe_id', 'created_at'),
         *([db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
         db.Index('ix_recipe_soap_superfat', 'soap_superfat'),
         db.Index('ix_recipe_soap_water_pct', 'soap_water_pct'),
@@ -347,4 +357,6 @@ class RecipeLineage(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_lineage_recipe_id', 'recipe_id'),
         db.Index('ix_recipe_lineage_source_recipe_id', 'source_recipe_id'),
         db.Index('ix_recipe_lineage_event_type', 'event_type'),
+        db.Index('ix_recipe_lineage_recipe_created_at', 'recipe_id', 'created_at'),
+        db.Index('ix_recipe_lineage_recipe_event_created_at', 'recipe_id', 'event_type', 'created_at'),
     )

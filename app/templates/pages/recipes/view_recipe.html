@@ -404,13 +404,13 @@
           </div>
           <div class="col-3">
             <div class="stat-item p-3 bg-light rounded">
-              <div class="h4 text-success mb-1">{{ recipe.batches|length if recipe.batches else 0 }}</div>
+              <div class="h4 text-success mb-1">{{ batch_count }}</div>
               <small class="text-muted">Batches Made</small>
             </div>
           </div>
           <div class="col-3">
             <div class="stat-item p-3 bg-light rounded">
-              <div class="h4 text-warning mb-1">{{ recipe.variations|length if recipe.variations else 0 }}</div>
+              <div class="h4 text-warning mb-1">{{ variation_count }}</div>
               <small class="text-muted">Variations</small>
             </div>
           </div>

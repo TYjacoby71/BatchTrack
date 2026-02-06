@@ -15,10 +15,11 @@ import logging
 
 from flask import flash, redirect, request, url_for, render_template, current_app
 from flask_login import current_user, login_required
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
-
+ 
 from app.extensions import db, cache
-from app.models import Recipe, RecipeLineage, Batch
+from app.models import Recipe, RecipeIngredient, RecipeLineage, Batch
 from app.services.lineage_service import format_label_prefix, generate_lineage_id
 from app.services.recipe_service import (
     archive_recipe,
@@ -73,11 +74,38 @@ def list_recipes():
         if cached_page is not None:
             return cached_page
 
-    query = Recipe.query.filter(
-        Recipe.parent_recipe_id.is_(None),
-        Recipe.test_sequence.is_(None),
-        Recipe.is_archived.is_(False),
-        Recipe.is_current.is_(True),
+    ingredient_counts = (
+        db.session.query(
+            RecipeIngredient.recipe_id.label("recipe_id"),
+            func.count(RecipeIngredient.id).label("ingredient_count"),
+        )
+        .group_by(RecipeIngredient.recipe_id)
+        .subquery()
+    )
+    batch_counts = (
+        db.session.query(
+            Batch.recipe_id.label("recipe_id"),
+            func.count(Batch.id).label("batch_count"),
+        )
+        .group_by(Batch.recipe_id)
+        .subquery()
+    )
+
+    query = (
+        Recipe.query.outerjoin(
+            ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id
+        )
+        .outerjoin(batch_counts, batch_counts.c.recipe_id == Recipe.id)
+        .add_columns(
+            ingredient_counts.c.ingredient_count,
+            batch_counts.c.batch_count,
+        )
+        .filter(
+            Recipe.parent_recipe_id.is_(None),
+            Recipe.test_sequence.is_(None),
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
+        )
     )
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
@@ -85,15 +113,17 @@ def list_recipes():
     pagination = (
         query.options(
             selectinload(Recipe.variations),
-            selectinload(Recipe.recipe_ingredients),
-            selectinload(Recipe.batches),
         )
         .order_by(Recipe.name.asc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
     if pagination.pages and page > pagination.pages:
         return redirect(url_for('recipes.list_recipes', page=pagination.pages))
-    recipes = pagination.items
+    recipes = []
+    for recipe, ingredient_count, batch_count in pagination.items:
+        recipe.ingredient_count = int(ingredient_count or 0)
+        recipe.batch_count = int(batch_count or 0)
+        recipes.append(recipe)
     inventory_units = get_global_unit_list()
     rendered = render_template(
         'pages/recipes/recipe_list.html',
@@ -123,7 +153,9 @@ def view_recipe(recipe_id):
         inventory_units = get_global_unit_list()
         can_create_variations = has_permission(current_user, "recipes.create_variations")
         lineage_id = generate_lineage_id(recipe)
-        has_batches = Batch.query.filter_by(recipe_id=recipe.id).count() > 0
+        batch_count = Batch.query.filter_by(recipe_id=recipe.id).count()
+        has_batches = batch_count > 0
+        variation_count = Recipe.query.filter_by(parent_recipe_id=recipe.id).count()
         is_test = recipe.test_sequence is not None
         is_published_locked = recipe.status == 'published' and not is_test
         is_archived = bool(recipe.is_archived)
@@ -213,6 +245,8 @@ def view_recipe(recipe_id):
             can_add_notes=can_add_notes,
             recipe_notes=recipe_notes,
             has_batches=has_batches,
+            batch_count=batch_count,
+            variation_count=variation_count,
             is_archived=is_archived,
             has_listing=has_listing,
             master_branches=master_branches,
