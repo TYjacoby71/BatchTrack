@@ -15,6 +15,8 @@ from typing import List, Dict
 from datetime import timedelta
 from flask_login import current_user
 
+# --- Combined inventory alerts ---
+# Purpose: Compute unified expiration and product alerts.
 class CombinedInventoryAlertService:
     """Unified service for all inventory alerts - raw materials and products"""
 

@@ -14,6 +14,11 @@ from app.utils.permissions import require_permission
 from .services import ExpirationService
 from . import expiration_bp
 
+# =========================================================
+# EXPIRATION APIs
+# =========================================================
+# --- Expired items ---
+# Purpose: Return expired inventory items summary.
 @expiration_bp.route('/api/expired-items')
 @login_required
 @require_permission('inventory.view')
@@ -22,6 +27,9 @@ def api_expired_items():
     expired = ExpirationService.get_expired_inventory_items()
     return jsonify(expired)
 
+
+# --- Expiring soon ---
+# Purpose: Return inventory items expiring within a window.
 @expiration_bp.route('/api/expiring-soon')
 @login_required
 @require_permission('inventory.view')
@@ -31,6 +39,9 @@ def api_expiring_soon():
     expiring = ExpirationService.get_expiring_soon_items(days_ahead)
     return jsonify(expiring)
 
+
+# --- Expiration summary ---
+# Purpose: Return aggregated expiration counts.
 @expiration_bp.route('/api/summary')
 @login_required
 @require_permission('inventory.view')
@@ -54,6 +65,9 @@ def api_summary():
         'expiring_soon_total': expiration_data['expiring_soon_total']
     })
 
+
+# --- Calculate expiration ---
+# Purpose: Calculate expiration date from entry data.
 @expiration_bp.route('/api/calculate-expiration', methods=['POST'])
 @login_required
 @require_permission('inventory.view')

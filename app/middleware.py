@@ -132,6 +132,8 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
     return "unknown"
 
 
+# --- Register middleware ---
+# Purpose: Attach security and access middleware to the Flask app.
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 

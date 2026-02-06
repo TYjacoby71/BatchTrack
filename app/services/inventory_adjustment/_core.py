@@ -33,6 +33,8 @@ ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
     ADDITIVE_OPERATIONS.update(group.get('operations', []))
 
+# --- Inventory adjustment ---
+# Purpose: Central entry point for inventory adjustments.
 def process_inventory_adjustment(
     item_id,
     change_type,

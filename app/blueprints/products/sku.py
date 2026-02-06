@@ -28,6 +28,11 @@ sku_bp = Blueprint('sku', __name__)
 def _merge_skus_enabled() -> bool:
     return is_feature_enabled("FEATURE_MERGE_SKUS")
 
+# =========================================================
+# SKU VIEWS
+# =========================================================
+# --- SKU view ---
+# Purpose: Render SKU detail page and history.
 @sku_bp.route('/<int:inventory_item_id>')
 @login_required
 @require_permission('products.view')
@@ -66,6 +71,8 @@ def view_sku(inventory_item_id):
                             {'label': sku.size_label + ' SKU'}
                          ])
 
+# --- SKU edit ---
+# Purpose: Update SKU attributes from form data.
 @sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -174,6 +181,12 @@ def edit_sku(inventory_item_id):
 
 # Legacy adjustment route removed - all adjustments must go through centralized service
 
+# =========================================================
+# SKU MERGE
+# =========================================================
+# --- Merge select ---
+# Purpose: Render SKU merge selection UI.
+
 @sku_bp.route('/merge/select')
 @login_required
 @require_permission('products.manage_variants')
@@ -191,6 +204,8 @@ def select_skus_to_merge():
 
     return render_template('pages/products/merge_select.html', skus=skus)
 
+# --- Merge configure ---
+# Purpose: Prepare merge configuration for selected SKUs.
 @sku_bp.route('/merge/configure', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -243,6 +258,8 @@ def configure_merge():
 
     return render_template('pages/products/merge_configure.html', **merge_config)
 
+# --- Merge execute ---
+# Purpose: Execute SKU merge and consolidate inventory.
 @sku_bp.route('/merge/execute', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -359,6 +376,8 @@ def execute_merge():
         flash(f'Error merging SKUs: {str(e)}', 'error')
         return redirect(url_for('sku.select_skus_to_merge'))
 
+# --- Merge preview API ---
+# Purpose: Return a preview of SKU merge impact.
 @sku_bp.route('/api/sku/<int:sku_id>/merge_preview')
 @login_required
 @require_permission('products.manage_variants')

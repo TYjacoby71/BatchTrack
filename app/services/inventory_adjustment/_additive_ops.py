@@ -15,6 +15,8 @@ from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
 
+# --- Operation groups ---
+# Purpose: Define additive operation grouping rules.
 # Define operation groups and their processing logic
 ADDITIVE_OPERATION_GROUPS = {
     'lot_creation': {
@@ -31,6 +33,8 @@ ADDITIVE_OPERATION_GROUPS = {
     }
 }
 
+# --- Operation group lookup ---
+# Purpose: Resolve the additive operation group for a change type.
 def _get_operation_group(change_type):
     """Get the operation group for a given change type"""
     for group_name, group_config in ADDITIVE_OPERATION_GROUPS.items():
@@ -38,6 +42,8 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
+# --- Additive handler ---
+# Purpose: Process additive operations and return quantity deltas.
 def _universal_additive_handler(item, quantity, quantity_base, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None, **kwargs):
     """
     Universal handler for all additive operations.
@@ -123,6 +129,8 @@ def _universal_additive_handler(item, quantity, quantity_base, change_type, note
 
 
 
+# --- Lot creation ---
+# Purpose: Create FIFO lots for additive operations.
 def _handle_lot_creation_operation(item, quantity, quantity_base, change_type, notes, created_by, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None, cost_override=None):
     """
     Handle operations that create new lots (restock, returns, etc.)
@@ -164,6 +172,8 @@ def _handle_lot_creation_operation(item, quantity, quantity_base, change_type, n
         logger.error(f"Error in lot creation operation: {str(e)}")
         return False, f"Lot creation failed: {str(e)}", 0
 
+# --- Lot crediting ---
+# Purpose: Credit quantities back to existing FIFO lots.
 def _handle_lot_crediting_operation(item, quantity, quantity_base, change_type, unit, notes, final_cost, created_by, batch_id=None, customer=None, order_id=None, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from app.models.inventory_lot import InventoryLot

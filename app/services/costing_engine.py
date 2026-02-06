@@ -16,6 +16,8 @@ from app.models import db, UnifiedInventoryHistory, InventoryItem
 logger = logging.getLogger(__name__)
 
 
+# --- Weighted unit cost ---
+# Purpose: Compute weighted unit cost for a batch-item pair.
 def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> float:
     """
     Compute the weighted-average unit cost of all negative inventory history events
@@ -64,6 +66,8 @@ def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> 
 
 
 # New: organization-agnostic weighted average cost for an inventory item based on active lots
+# --- Weighted average cost ---
+# Purpose: Compute weighted average unit cost across active lots.
 def weighted_average_cost_for_item(inventory_item_id: int) -> float:
     """
     Compute the quantity-weighted average unit cost across all active lots

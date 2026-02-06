@@ -19,6 +19,8 @@ from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
 logger = logging.getLogger(__name__)
 
 
+# --- Global item sync ---
+# Purpose: Sync linked inventory items to global item updates.
 class GlobalItemSyncService:
     """Keep org inventory items in sync with their linked GlobalItem.
 

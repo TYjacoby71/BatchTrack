@@ -29,6 +29,11 @@ from ...utils.inventory_event_code_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 
+# =========================================================
+# FIFO DETAILS
+# =========================================================
+# --- FIFO details ---
+# Purpose: Return FIFO lot details for an inventory item.
 @fifo_api_bp.route('/api/fifo-details/<int:inventory_id>')
 @login_required
 @require_permission('inventory.view')
@@ -92,6 +97,9 @@ def get_fifo_details(inventory_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# --- Batch inventory summary ---
+# Purpose: Return FIFO usage summary for a batch.
 @fifo_api_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
 @require_permission('batches.view')

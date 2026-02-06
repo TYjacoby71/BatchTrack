@@ -42,6 +42,8 @@ from ..services.inventory_adjustment import process_inventory_adjustment
 from ..services.unit_conversion import ConversionEngine
 
 
+# --- Seed test data ---
+# Purpose: Seed a living dataset for QA workflows.
 def seed_test_data(organization_id: Optional[int] = None):
     """Seed a rich "living" dataset for a milk & honey workflow using core services."""
 

@@ -30,6 +30,8 @@ from app.services.quantity_base import (
 logger = logging.getLogger(__name__)
 
 
+# --- Inventory edit ---
+# Purpose: Update inventory metadata and handle unit changes.
 def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
     """
     Update inventory item details.

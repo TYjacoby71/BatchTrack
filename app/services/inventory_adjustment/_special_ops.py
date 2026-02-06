@@ -17,6 +17,8 @@ from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
+# --- Cost override ---
+# Purpose: Update item cost without changing quantity.
 def handle_cost_override(item, quantity, quantity_base=None, change_type=None, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
     Handle cost override operations.
@@ -54,6 +56,8 @@ def handle_cost_override(item, quantity, quantity_base=None, change_type=None, n
         logger.error(f"COST OVERRIDE ERROR: {str(e)}")
         return False, str(e)
 
+# --- Unit conversion ---
+# Purpose: Log conversion intent without changing stock levels.
 def handle_unit_conversion(item, quantity, quantity_base=None, change_type=None, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
     Handle unit conversion operations via the canonical ConversionEngine (UUCS).
@@ -100,6 +104,8 @@ def handle_unit_conversion(item, quantity, quantity_base=None, change_type=None,
         logger.error(f"UNIT CONVERSION ERROR: {str(e)}")
         return False, str(e)
 
+# --- Recount ---
+# Purpose: Force inventory quantities to target and resync lots.
 def handle_recount(item, quantity, quantity_base=None, change_type=None, notes=None, created_by=None, target_quantity=None, target_quantity_base=None, **kwargs):
     """
     Handle inventory recount with complete FIFO reconciliation.

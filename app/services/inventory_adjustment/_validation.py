@@ -16,6 +16,8 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
+# --- FIFO sync validation ---
+# Purpose: Validate inventory quantity against FIFO totals.
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validate that inventory quantity matches FIFO totals using proper InventoryLot model.

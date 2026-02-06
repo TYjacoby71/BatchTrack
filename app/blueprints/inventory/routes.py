@@ -161,6 +161,11 @@ def can_edit_inventory_item(item):
         return True
     return item.organization_id == current_user.organization_id
 
+# =========================================================
+# INVENTORY APIs
+# =========================================================
+# --- Inventory search ---
+# Purpose: Search inventory items for typeahead results.
 @inventory_bp.route('/api/search')
 @login_required
 @limiter.limit("2000/minute")
@@ -192,6 +197,8 @@ def api_search_inventory():
         logger.exception('Inventory search failed')
         return jsonify({'results': [], 'error': str(e)}), 500
 
+# --- Inventory detail ---
+# Purpose: Return inventory item details for the edit modal.
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 @permission_required('inventory.view')
@@ -232,6 +239,8 @@ def api_get_inventory_item(item_id):
         return jsonify({'error': str(e)}), 500
 
 
+# --- Global link toggle ---
+# Purpose: Link/unlink a local item to a global item.
 @inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -331,6 +340,8 @@ def api_toggle_global_link(item_id: int):
         logger.exception("Failed to toggle global link")
         return jsonify({'success': False, 'error': str(exc)}), 500
 
+# --- Quick create ---
+# Purpose: Create a new inventory item from a minimal payload.
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -384,6 +395,11 @@ def api_quick_create_inventory():
         logging.exception('Quick-create inventory failed')
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# =========================================================
+# INVENTORY VIEWS
+# =========================================================
+# --- Inventory list ---
+# Purpose: Render the inventory list page.
 @inventory_bp.route('/')
 @login_required
 @permission_required('inventory.view')
@@ -492,6 +508,8 @@ def list_inventory():
         get_global_unit_list=get_global_unit_list,
     )
 
+# --- Inventory column visibility ---
+# Purpose: Persist column visibility preferences.
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 @permission_required('inventory.view')
@@ -500,6 +518,8 @@ def set_column_visibility():
     session['inventory_columns'] = columns
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory detail view ---
+# Purpose: Render the inventory item detail page.
 @inventory_bp.route('/view/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -635,6 +655,8 @@ def view_inventory(id):
                              {'label': item.name}
                          ])
 
+# --- Inventory add ---
+# Purpose: Create a new inventory item from form data.
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -665,6 +687,8 @@ def add_inventory():
         flash(f'System error creating inventory: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory adjust ---
+# Purpose: Apply inventory adjustments via central service.
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')
@@ -778,6 +802,8 @@ def adjust_inventory(item_id):
         logger.error(f"Error in adjust_inventory route: {str(e)}")
         return respond(False, f'System error during adjustment: {str(e)}', status_code=500, flash_category='error')
 
+# --- Inventory edit ---
+# Purpose: Update inventory item metadata.
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -923,6 +949,8 @@ def edit_inventory(id):
         flash(f'System error during edit: {str(e)}', 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
 
+# --- Inventory archive ---
+# Purpose: Archive an inventory item.
 @inventory_bp.route('/archive/<int:id>')
 @login_required
 @permission_required('inventory.delete')
@@ -937,6 +965,8 @@ def archive_inventory(id):
         flash(f'Error archiving item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory restore ---
+# Purpose: Restore an archived inventory item.
 @inventory_bp.route('/restore/<int:id>')
 @login_required
 @permission_required('inventory.edit')
@@ -951,6 +981,8 @@ def restore_inventory(id):
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory debug ---
+# Purpose: Render debug information for inventory and FIFO sync.
 @inventory_bp.route('/debug/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -986,6 +1018,8 @@ def debug_inventory(id):
         }), 500
 
 
+# --- Bulk update view ---
+# Purpose: Render the bulk inventory update page.
 @inventory_bp.route('/bulk-updates')
 @login_required
 @permission_required('inventory.edit')
@@ -1030,6 +1064,8 @@ def bulk_inventory_updates():
     )
 
 
+# --- Bulk adjustments API ---
+# Purpose: Apply bulk inventory adjustments.
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')

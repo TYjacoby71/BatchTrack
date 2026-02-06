@@ -21,6 +21,8 @@ from .base_handler import BaseInventoryHandler
 logger = logging.getLogger(__name__)
 
 
+# --- Ingredient stock handler ---
+# Purpose: Check ingredient availability using FIFO lots.
 class IngredientHandler(BaseInventoryHandler):
     """Handler for ingredient stock checking with FIFO support"""
 

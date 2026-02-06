@@ -52,6 +52,8 @@ DEDUCTION_DESCRIPTIONS = {
     'batch': 'Used {} in batch production'
 }
 
+# --- Operation group lookup ---
+# Purpose: Resolve the deductive operation group for a change type.
 def _get_operation_group(change_type):
     """Determine which operation group a change_type belongs to"""
     for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
@@ -59,6 +61,8 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
+# --- Deductive handler ---
+# Purpose: Process deductive operations and return quantity deltas.
 def _handle_deductive_operation(item, quantity, quantity_base, change_type, notes, created_by, customer=None, sale_price=None, order_id=None, batch_id=None):
     """
     Universal handler for all deductive operations.
@@ -121,6 +125,8 @@ def _handle_deductive_operation(item, quantity, quantity_base, change_type, note
         logger.error(f"DEDUCTIVE ERROR: {change_type} operation failed: {str(e)}")
         return False, f"{change_type.title()} operation failed: {str(e)}", 0
 
+# --- Deductive operation info ---
+# Purpose: Return metadata for a deductive operation.
 def get_deductive_operation_info(change_type):
     """Get information about a deductive operation"""
     group_name, group_config = _get_operation_group(change_type)

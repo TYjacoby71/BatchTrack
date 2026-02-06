@@ -15,6 +15,8 @@ from sqlalchemy import func
 from app.models import db, InventoryItem, InventoryLot, RecipeIngredient
 
 
+# --- Global item stats ---
+# Purpose: Aggregate global item adoption and cost metrics.
 class GlobalItemStatsService:
 	@staticmethod
 	def get_rollup(global_item_id: int):

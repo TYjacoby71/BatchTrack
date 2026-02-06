@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products/inventory')
 
+# =========================================================
+# PRODUCT INVENTORY
+# =========================================================
+# --- SKU adjustment ---
+# Purpose: Adjust product SKU inventory via inventory adjustment service.
 @product_inventory_bp.route('/adjust/<int:inventory_item_id>', methods=['POST'])
 @login_required
 @require_permission('inventory.adjust')

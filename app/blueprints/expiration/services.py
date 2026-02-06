@@ -22,6 +22,8 @@ from app.services.inventory_adjustment import process_inventory_adjustment
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# --- Expiration service ---
+# Purpose: Provide expiration calculations and inventory queries.
 class ExpirationService:
     """Centralized service for expiration calculations and data fetching using InventoryLot objects where possible"""
 

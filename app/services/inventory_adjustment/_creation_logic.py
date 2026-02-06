@@ -22,6 +22,8 @@ from app.services.quantity_base import to_base_quantity, sync_item_quantity_from
 logger = logging.getLogger(__name__)
 
 
+# --- Resolve unit cost ---
+# Purpose: Normalize form inputs into per-unit cost.
 def _resolve_cost_per_unit(form_data, initial_quantity):
     """Convert form inputs into a per-unit cost."""
     try:
@@ -66,6 +68,8 @@ def _apply_string_match(query, column, value):
     return query.filter(func.lower(column) == normalized)
 
 
+# --- Find matching container ---
+# Purpose: Identify an existing container with matching attributes.
 def _find_matching_container(candidate: InventoryItem | None):
     """Return an existing container with matching attributes (same org)."""
     if not candidate or candidate.type != 'container':
@@ -89,6 +93,8 @@ def _find_matching_container(candidate: InventoryItem | None):
 
     return query.first()
 
+# --- Create inventory item ---
+# Purpose: Create inventory item with initial metadata.
 def create_inventory_item(form_data, organization_id, created_by, auto_commit: bool = True):
     """
     Create a new inventory item from form data.
@@ -426,6 +432,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         logger.error(f"Error creating inventory item: {str(e)}")
         return False, f"Failed to create inventory item: {str(e)}", None
 
+# --- Initial stock ---
+# Purpose: Handle initial stock entries for new items.
 def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.

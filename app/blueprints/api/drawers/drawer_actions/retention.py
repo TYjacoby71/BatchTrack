@@ -60,6 +60,11 @@ def _get_retention_items():
     return RetentionService.get_pending_drawer_items(org)
 
 
+# =========================================================
+# RETENTION DRAWER
+# =========================================================
+# --- Cadence check ---
+# Purpose: Provide drawer payload for retention cadence checks.
 @register_cadence_check('retention')
 def retention_cadence_check():
     """Return a drawer payload if retention items need acknowledgement."""
@@ -74,6 +79,8 @@ def retention_cadence_check():
     return payload
 
 
+# --- Drawer check ---
+# Purpose: Report whether the retention drawer should display.
 @drawers_bp.route('/retention/check', methods=['GET'])
 @login_required
 @require_permission('recipes.delete')
@@ -84,6 +91,8 @@ def retention_check():
     return jsonify({'needs_drawer': bool(items), 'count': len(items), 'drawer_payload': payload})
 
 
+# --- Drawer modal ---
+# Purpose: Render the retention modal with pending items.
 @drawers_bp.route('/retention/modal', methods=['GET'])
 @login_required
 @require_permission('recipes.delete')
@@ -94,6 +103,8 @@ def retention_modal():
     return jsonify({'success': True, 'modal_html': html})
 
 
+# --- Drawer acknowledge ---
+# Purpose: Acknowledge retention items and queue deletions.
 @drawers_bp.route('/retention/acknowledge', methods=['POST'])
 @login_required
 @require_permission('recipes.delete')
@@ -105,6 +116,8 @@ def retention_acknowledge():
     return jsonify({'success': True, 'queued': created, 'skipped': skipped})
 
 
+# --- Drawer export ---
+# Purpose: Export retention at-risk items in requested format.
 @drawers_bp.route('/retention/export', methods=['GET'])
 @login_required
 @require_permission('recipes.delete')

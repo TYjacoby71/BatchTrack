@@ -39,6 +39,8 @@ DISPLAY_DECIMALS = {
 }
 
 
+# --- Decimal normalize ---
+# Purpose: Normalize values into Decimal for accurate scaling.
 def _to_decimal(value: object) -> Decimal:
     if isinstance(value, Decimal):
         return value
@@ -47,6 +49,8 @@ def _to_decimal(value: object) -> Decimal:
     return Decimal(str(value))
 
 
+# --- Resolve unit ---
+# Purpose: Resolve a unit record by name or symbol.
 def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
     if not unit_name:
         return None
@@ -75,24 +79,32 @@ def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
     ).first()
 
 
+# --- Base unit name ---
+# Purpose: Resolve canonical base unit name from unit metadata.
 def _base_unit_name(unit_obj: Optional[Unit], unit_name: str | None) -> str | None:
     if unit_obj:
         return unit_obj.base_unit or unit_obj.name
     return unit_name
 
 
+# --- Scale lookup ---
+# Purpose: Resolve integer scale for a unit type.
 def _scale_for_unit_type(unit_type: Optional[str]) -> int:
     if not unit_type:
         return DEFAULT_SCALE
     return BASE_SCALES.get(unit_type, DEFAULT_SCALE)
 
 
+# --- Display decimals ---
+# Purpose: Resolve display precision for a unit type.
 def _display_decimals_for_unit_type(unit_type: Optional[str]) -> int:
     if not unit_type:
         return 6
     return DISPLAY_DECIMALS.get(unit_type, 6)
 
 
+# --- Convert to base unit ---
+# Purpose: Convert quantities to canonical base units.
 def _convert_to_base_unit_decimal(
     amount: Decimal,
     unit_name: str | None,
@@ -123,6 +135,8 @@ def _convert_to_base_unit_decimal(
     return _to_decimal(result["converted_value"]), base_unit, unit_type
 
 
+# --- To base quantity ---
+# Purpose: Convert a quantity to integer base units.
 def to_base_quantity(
     amount: object,
     unit_name: str | None,
@@ -142,6 +156,8 @@ def to_base_quantity(
     return int(scaled.to_integral_value(rounding=ROUND_HALF_UP))
 
 
+# --- From base quantity ---
+# Purpose: Convert integer base units to display quantity.
 def from_base_quantity(
     base_amount: int | None,
     unit_name: str | None,
@@ -181,6 +197,8 @@ def from_base_quantity(
     return float(rounded)
 
 
+# --- Sync item quantity ---
+# Purpose: Update item.quantity from quantity_base.
 def sync_item_quantity_from_base(item) -> None:
     item.quantity = from_base_quantity(
         base_amount=getattr(item, "quantity_base", 0),
@@ -190,6 +208,8 @@ def sync_item_quantity_from_base(item) -> None:
     )
 
 
+# --- Sync lot quantities ---
+# Purpose: Update lot quantities from base fields.
 def sync_lot_quantities_from_base(lot, item=None) -> None:
     ingredient_id = item.id if item else getattr(lot, "inventory_item_id", None)
     density = item.density if item else getattr(lot, "inventory_item", None) and lot.inventory_item.density
