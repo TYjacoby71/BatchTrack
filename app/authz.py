@@ -35,23 +35,10 @@ def configure_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models import User
-        from sqlalchemy.orm import joinedload
-        from .models.subscription_tier import SubscriptionTier
-        from .models.models import Organization
 
         try:
-            user = db.session.get(
-                User,
-                int(user_id),
-                options=[
-                    joinedload(User.organization)
-                    .joinedload(Organization.tier)
-                    .joinedload(SubscriptionTier.permissions),
-                    joinedload(User.organization)
-                    .joinedload(Organization.subscription_tier)
-                    .joinedload(SubscriptionTier.permissions),
-                ],
-            )
+            # Avoid eager-loading heavy permission joins on every request.
+            user = db.session.get(User, int(user_id))
         except (ValueError, TypeError):
             return None
         except SQLAlchemyError:
