@@ -69,6 +69,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
 - **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
+- **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
 - **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)
 
 ---
