@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                          yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
-                         portioning_data: Dict | None = None, allow_partial: bool = False, organization_id: int | None = None) -> Dict[str, Any]:
+                         portioning_data: Dict | None = None, allow_partial: bool = False, organization_id: int | None = None,
+                         allow_duplicate_name: bool = False) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
 
@@ -34,7 +35,12 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
     """
     try:
         # Validate name - pass recipe_id for edit validation
-        is_valid, error = validate_recipe_name(name, recipe_id, organization_id=organization_id)
+        is_valid, error = validate_recipe_name(
+            name,
+            recipe_id,
+            organization_id=organization_id,
+            allow_duplicate=allow_duplicate_name,
+        )
         if not is_valid:
             return {'valid': False, 'error': error, 'missing_fields': []}
 
@@ -109,7 +115,13 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         return {'valid': False, 'error': "Validation error occurred", 'missing_fields': []}
 
 
-def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int | None = None) -> Tuple[bool, str]:
+def validate_recipe_name(
+    name: str,
+    recipe_id: int = None,
+    organization_id: int | None = None,
+    *,
+    allow_duplicate: bool = False,
+) -> Tuple[bool, str]:
     """
     Validate recipe name for uniqueness and format.
 
@@ -133,6 +145,9 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
             return False, "Recipe name must be less than 100 characters"
 
         # Check for uniqueness - exclude current recipe if editing
+        if allow_duplicate:
+            return True, ""
+
         from flask_login import current_user
         from flask import session
 

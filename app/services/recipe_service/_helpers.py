@@ -67,6 +67,7 @@ def _derive_label_prefix(
         base_prefix = parent_recipe.label_prefix
         existing_variations = Recipe.query.filter(
             Recipe.parent_recipe_id == parent_recipe_id,
+            Recipe.test_sequence.is_(None),
             Recipe.label_prefix.like(f"{base_prefix}%")
         ).count()
         suffix = existing_variations + 1
