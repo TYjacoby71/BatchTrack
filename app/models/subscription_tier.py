@@ -69,12 +69,24 @@ class SubscriptionTier(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
-    permissions = db.relationship('Permission', secondary=subscription_tier_permission,
-                                 backref=db.backref('tiers', lazy='dynamic'))
-    allowed_addons = db.relationship('Addon', secondary=tier_allowed_addon,
-                                     backref=backref('allowed_on_tiers', lazy='dynamic'))
-    included_addons = db.relationship('Addon', secondary=tier_included_addon,
-                                      backref=backref('included_on_tiers', lazy='dynamic'))
+    permissions = db.relationship(
+        'Permission',
+        secondary=subscription_tier_permission,
+        lazy="selectin",
+        backref=db.backref('tiers', lazy='dynamic'),
+    )
+    allowed_addons = db.relationship(
+        'Addon',
+        secondary=tier_allowed_addon,
+        lazy="selectin",
+        backref=backref('allowed_on_tiers', lazy='dynamic'),
+    )
+    included_addons = db.relationship(
+        'Addon',
+        secondary=tier_included_addon,
+        lazy="selectin",
+        backref=backref('included_on_tiers', lazy='dynamic'),
+    )
 
     # Explicitly named constraints to avoid SQLite batch mode issues
     __table_args__ = (
