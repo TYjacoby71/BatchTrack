@@ -13,6 +13,9 @@
         {% if node.is_current %}
             <span class="badge bg-primary">Current</span>
         {% endif %}
+        {% if node.test_sequence %}
+            <span class="badge bg-info text-dark">Test {{ node.test_sequence }}</span>
+        {% endif %}
     </span>
     {% if node.organization_name %}
         <span class="badge bg-light text-dark border">
@@ -70,6 +73,14 @@
                     <h5 class="mb-0"><i class="fas fa-stream me-2 text-primary"></i>Lineage Tree</h5>
                 </div>
                 <div class="card-body">
+                    {% if can_create_variations and recipe.org_origin_source_recipe %}
+                        <div class="alert alert-light py-2">
+                            <strong>Origin Recipe:</strong>
+                            <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.org_origin_source_recipe.id, slug=slugify(recipe.org_origin_source_recipe.name)) }}" class="text-decoration-none">
+                                {{ recipe.org_origin_source_recipe.name }}
+                            </a>
+                        </div>
+                    {% endif %}
                     {{ draw_node(lineage_tree, lineage_path) }}
                 </div>
             </div>
@@ -80,55 +91,36 @@
                     <h5 class="mb-0"><i class="fas fa-certificate me-2 text-success"></i>Origin Summary</h5>
                 </div>
                 <div class="card-body">
+                    {% set is_marketplace_origin = recipe.org_origin_source_org or recipe.org_origin_source_recipe or recipe.org_origin_type == 'purchased' %}
+                    {% set origin_label = 'Authored' %}
+                    {% if recipe.org_origin_type == 'batchtrack_native' %}
+                        {% set origin_label = 'BatchTrack Native' %}
+                    {% elif is_marketplace_origin %}
+                        {% if recipe.org_origin_purchased %}
+                            {% set origin_label = 'Marketplace (Purchased)' %}
+                        {% else %}
+                            {% set origin_label = 'Marketplace (Free)' %}
+                        {% endif %}
+                    {% endif %}
                     <dl class="row mb-0">
-                        <dt class="col-5">Organization</dt>
-                        <dd class="col-7">{{ recipe.organization.name if recipe.organization else 'Unassigned' }}</dd>
-                        <dt class="col-5">Origin Type</dt>
-                        <dd class="col-7 text-capitalize">{{ recipe.org_origin_type.replace('_', ' ') }}</dd>
-                        <dt class="col-5">Purchased Origin</dt>
+                        <dt class="col-5">Origin</dt>
                         <dd class="col-7">
-                            {% if recipe.org_origin_purchased %}
-                                <span class="badge bg-warning text-dark">Yes</span>
-                                {% if origin_source_org %}
-                                    <div class="mt-2">
-                                        <small class="text-muted d-block">Source Organization</small>
-                                        <span class="fw-semibold">{{ origin_source_org.name }}</span>
-                                        <div class="mt-1">
-                                            <a href="{{ url_for('recipe_library_bp.recipe_library', organization=origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
-                                                Browse this creator
-                                            </a>
-                                            {% if show_origin_marketplace %}
-                                                <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=origin_source_org.id) }}" class="btn btn-link btn-sm px-0 ms-3">
-                                                    Marketplace dashboard
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <span class="badge bg-success">No</span>
-                            {% endif %}
+                            <span class="badge bg-light text-dark border">{{ origin_label }}</span>
                         </dd>
-                        <dt class="col-5">Org Origin Recipe</dt>
+                        {% if is_marketplace_origin and origin_source_org %}
+                        <dt class="col-5">Author</dt>
                         <dd class="col-7">
-                            {% if recipe.org_origin_recipe %}
-                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.org_origin_recipe.id) }}">
-                                    {{ recipe.org_origin_recipe.name }}
+                            {% if recipe.org_origin_source_recipe %}
+                                <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.org_origin_source_recipe.id, slug=slugify(recipe.org_origin_source_recipe.name)) }}" class="text-decoration-none">
+                                    {{ origin_source_org.name }}
                                 </a>
                             {% else %}
-                                {{ recipe.name }}
-                            {% endif %}
-                        </dd>
-                        <dt class="col-5">Root Recipe</dt>
-                        <dd class="col-7">
-                            {% if recipe.root_recipe %}
-                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.root_recipe.id) }}">
-                                    {{ recipe.root_recipe.name }}
+                                <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=origin_source_org.id) }}" class="text-decoration-none">
+                                    {{ origin_source_org.name }}
                                 </a>
-                            {% else %}
-                                {{ recipe.name }}
                             {% endif %}
                         </dd>
+                        {% endif %}
                     </dl>
                 </div>
             </div>

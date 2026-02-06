@@ -10,6 +10,7 @@
 ] %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
+{% set display_label_prefix = label_prefix_display if label_prefix_display else (recipe.label_prefix or 'BTH') %}
 
 {% block content %}
 
@@ -56,7 +57,7 @@
                 {{ recipe.name }}
               {% endif %}
             </p>
-            <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ recipe.label_prefix or 'BTH' }}</span></p>
+            <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ display_label_prefix }}</span></p>
             {% if recipe.predicted_yield %}
             <p class="mb-1"><strong>Predicted Yield:</strong> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</p>
             {% endif %}
@@ -423,7 +424,7 @@
           {% endfor %}
           {% for test in master_tests %}
             <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
-              Master v{{ test.version_number }} · Test {{ test.test_sequence }}
+              Master v{{ test.version_number }} - Test {{ test.test_sequence }}
             </option>
           {% endfor %}
           {% for var_name, bucket in variation_versions.items() %}
@@ -434,7 +435,7 @@
             {% endfor %}
             {% for version in bucket.tests %}
               <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
-                Variation {{ var_name }} v{{ version.version_number }} · Test {{ version.test_sequence }}
+                Variation {{ var_name }} v{{ version.version_number }} - Test {{ version.test_sequence }}
               </option>
             {% endfor %}
           {% endfor %}
@@ -558,59 +559,39 @@
     <!-- Origin Details -->
     <div class="card mb-4">
       <div class="card-header">
-        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin & Ownership</h5>
+        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin</h5>
       </div>
       <div class="card-body">
+        {% set is_marketplace_origin = recipe.org_origin_source_org or recipe.org_origin_source_recipe or recipe.org_origin_type == 'purchased' %}
+        {% set origin_label = 'Authored' %}
+        {% if recipe.org_origin_type == 'batchtrack_native' %}
+          {% set origin_label = 'BatchTrack Native' %}
+        {% elif is_marketplace_origin %}
+          {% if recipe.org_origin_purchased %}
+            {% set origin_label = 'Marketplace (Purchased)' %}
+          {% else %}
+            {% set origin_label = 'Marketplace (Free)' %}
+          {% endif %}
+        {% endif %}
         <dl class="row mb-0">
-          <dt class="col-5">Organization</dt>
-          <dd class="col-7">{{ recipe.organization.name if recipe.organization else 'Unassigned' }}</dd>
-          <dt class="col-5">Origin Type</dt>
-          <dd class="col-7 text-capitalize">
-            {% if recipe.org_origin_type == 'batchtrack_native' %}
-              <span class="badge bg-dark">BatchTrack Native</span>
-            {% else %}
-              {{ recipe.org_origin_type.replace('_', ' ') }}
-            {% endif %}
-          </dd>
-          <dt class="col-5">Org Origin Recipe</dt>
+          <dt class="col-5">Origin</dt>
           <dd class="col-7">
-            {% if recipe.org_origin_recipe %}
-              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.org_origin_recipe.id) }}">{{ recipe.org_origin_recipe.name }}</a>
-            {% else %}
-              {{ recipe.name }}
-            {% endif %}
+            <span class="badge bg-light text-dark border">{{ origin_label }}</span>
           </dd>
-          <dt class="col-5">Global Origin</dt>
+          {% if is_marketplace_origin and recipe.org_origin_source_org %}
+          <dt class="col-5">Author</dt>
           <dd class="col-7">
-            {% if recipe.root_recipe %}
-              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.root_recipe.id) }}">{{ recipe.root_recipe.name }}</a>
+            {% if recipe.org_origin_source_recipe %}
+              <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.org_origin_source_recipe.id, slug=slugify(recipe.org_origin_source_recipe.name)) }}" class="text-decoration-none">
+                {{ recipe.org_origin_source_org.name }}
+              </a>
             {% else %}
-              {{ recipe.name }}
+              <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.org_origin_source_org.id) }}" class="text-decoration-none">
+                {{ recipe.org_origin_source_org.name }}
+              </a>
             {% endif %}
           </dd>
-          <dt class="col-5">Purchased Origin</dt>
-          <dd class="col-7">
-            {% if recipe.org_origin_purchased %}
-              <span class="badge bg-warning text-dark">Yes</span>
-              {% if recipe.origin_source_org %}
-                <div class="small mt-2">
-                  Source: <strong>{{ recipe.origin_source_org.name }}</strong>
-                  <div class="mt-1">
-                    <a href="{{ url_for('recipe_library_bp.recipe_library', organization=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
-                      View public listings
-                    </a>
-                    {% if show_origin_marketplace %}
-                      <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-2">
-                        Marketplace dashboard
-                      </a>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
-            {% else %}
-              <span class="badge bg-success">No</span>
-            {% endif %}
-          </dd>
+          {% endif %}
         </dl>
       </div>
     </div>
