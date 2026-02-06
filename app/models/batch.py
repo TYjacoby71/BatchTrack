@@ -8,7 +8,13 @@ Glossary:
 - BatchSequence: Organization-wide batch numbering per year.
 """
 
+import logging
+import os
+import traceback
+
+from flask import current_app, has_app_context
 from flask_login import current_user
+from sqlalchemy import event, inspect
 from ..extensions import db
 import sqlalchemy as sa
 from .mixins import ScopedModelMixin
@@ -16,9 +22,22 @@ from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 
 _IS_PG = is_postgres()
+logger = logging.getLogger(__name__)
 
 def _pg_computed(expr: str):
     return sa.Computed(expr, persisted=True) if _IS_PG else None
+
+
+def _config_flag(name: str, default: bool = False) -> bool:
+    if has_app_context():
+        value = current_app.config.get(name, default)
+    else:
+        value = os.getenv(name, default)
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 class Batch(ScopedModelMixin, db.Model):
     __tablename__ = 'batch'
@@ -101,6 +120,32 @@ class Batch(ScopedModelMixin, db.Model):
     baker_yeast_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric"), nullable=True)
     cosm_emulsifier_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric"), nullable=True)
     cosm_preservative_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric"), nullable=True)
+
+
+@event.listens_for(Batch, "before_update")
+def _log_batch_cost_update(mapper, connection, target):
+    if not _config_flag("LOG_BATCH_COST_UPDATES"):
+        return
+    try:
+        state = inspect(target)
+        history = state.attrs.total_cost.history
+        if not history.has_changes():
+            return
+        old_value = history.deleted[0] if history.deleted else None
+        new_value = history.added[0] if history.added else getattr(target, "total_cost", None)
+        logger.warning(
+            "Batch total_cost update batch_id=%s old=%s new=%s",
+            getattr(target, "id", None),
+            old_value,
+            new_value,
+        )
+        if _config_flag("LOG_BATCH_COST_UPDATE_STACK"):
+            logger.warning(
+                "Batch total_cost update stack:\n%s",
+                "".join(traceback.format_stack(limit=12)),
+            )
+    except Exception:
+        logger.exception("Failed to log batch total_cost update")
 
 
 class BatchLabelCounter(db.Model):
