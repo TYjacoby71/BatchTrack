@@ -12,7 +12,7 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import get_recipe_details
@@ -74,7 +74,10 @@ def recipe_lineage(recipe_id):
     lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes)
     lineage_path = build_lineage_path(recipe.id, nodes, root_id)
     events = (
-        RecipeLineage.query.filter_by(recipe_id=recipe.id)
+        RecipeLineage.query.options(
+            selectinload(RecipeLineage.source_recipe)
+        )
+        .filter_by(recipe_id=recipe.id)
         .order_by(RecipeLineage.created_at.asc())
         .all()
     )
