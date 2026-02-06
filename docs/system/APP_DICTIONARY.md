@@ -3,11 +3,20 @@
 ## Synopsis
 This is the living glossary for BatchTrack. It is organized by application layers so new concepts can be placed where they belong and cross-linked to the source of truth.
 
+## Update Standard (Agent Instructions)
+- For every file touched, add or update the **Synopsis** (max 5 sentences).
+- For every top-level functional unit touched in a file, add a **Purpose** block (max 5 sentences).
+- If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
+- Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
+
 ---
 
 ## Glossary
 - **Entry**: A single term definition within a layer.
 - **Layer**: Application slice used to organize definitions (data, routes, services, UI, operations).
+- **Top-Level Functional Unit**: A primary unit of logic in a file (route handler, service method, model, or script).
+- **Route Handler**: A function decorated with a route that handles a request/response cycle.
+- **Service Method**: A function or class method encapsulating business logic.
 
 ---
 
