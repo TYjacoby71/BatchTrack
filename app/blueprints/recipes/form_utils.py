@@ -26,7 +26,7 @@ from app.models.product_category import ProductCategory
 from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
-from app.services.lineage_service import generate_variation_prefix
+from app.services.lineage_service import format_label_prefix, generate_variation_prefix
 from app.utils.cache_manager import app_cache
 from app.utils.permissions import has_permission
 from app.utils.settings import is_feature_enabled
@@ -347,7 +347,16 @@ def coerce_float(value: Any, *, fallback: float = 0.0) -> float:
 # Purpose: Render recipe create/edit form with context data.
 def render_recipe_form(recipe=None, **context):
     form_data = get_recipe_form_data()
-    payload = {**form_data, **context}
+    label_prefix_display = context.get("label_prefix_display")
+    if label_prefix_display is None and recipe is not None:
+        try:
+            label_prefix_display = format_label_prefix(
+                recipe,
+                test_sequence=context.get("test_sequence_hint"),
+            )
+        except Exception:
+            label_prefix_display = None
+    payload = {**form_data, **context, "label_prefix_display": label_prefix_display}
     return render_template('pages/recipes/recipe_form.html', recipe=recipe, **payload)
 
 
@@ -785,7 +794,10 @@ def _marketplace_payload_from_existing(existing: Optional[Recipe]) -> Dict[str, 
 def create_variation_template(parent: Recipe) -> Recipe:
     variation_prefix = ""
     if parent.label_prefix:
-        existing_variations = Recipe.query.filter_by(parent_recipe_id=parent.id).count()
+        existing_variations = Recipe.query.filter(
+            Recipe.parent_recipe_id == parent.id,
+            Recipe.test_sequence.is_(None),
+        ).count()
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
 
     template = Recipe(
@@ -798,12 +810,15 @@ def create_variation_template(parent: Recipe) -> Recipe:
         category_id=parent.category_id,
     )
     template.recipe_group_id = parent.recipe_group_id
+    template.recipe_group = parent.recipe_group
+    template.version_number = 1
     template.is_master = False
     template.variation_name = "Variation"
     template.variation_prefix = generate_variation_prefix(
         template.variation_name,
         parent.recipe_group_id,
     )
+    template.parent_master = parent
 
     template.allowed_containers = list(parent.allowed_containers or [])
     if getattr(parent, 'org_origin_purchased', False):

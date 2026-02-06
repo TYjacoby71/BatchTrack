@@ -25,6 +25,8 @@ def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
         'origin_type': node_recipe.org_origin_type,
         'origin_purchased': node_recipe.org_origin_purchased,
         'is_current': bool(getattr(node_recipe, "is_current", False)),
+        'test_sequence': getattr(node_recipe, "test_sequence", None),
+        'is_master': bool(getattr(node_recipe, "is_master", False)),
         'status': node_recipe.status,
         'children': [],
     }

@@ -222,10 +222,70 @@ def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
     return label
 
 
+# --- Format label prefix for display ---
+# Purpose: Build a lineage-aware label prefix string for UI.
+def format_label_prefix(
+    version_obj: Recipe,
+    *,
+    test_sequence: int | None = None,
+    include_master_version_for_master: bool = False,
+) -> str:
+    group = getattr(version_obj, "recipe_group", None)
+    resolved_test = test_sequence if test_sequence is not None else getattr(version_obj, "test_sequence", None)
+    is_master = bool(getattr(version_obj, "is_master", False))
+
+    master_source = version_obj
+    if not is_master:
+        master_source = getattr(version_obj, "parent_master", None) or version_obj
+
+    base_prefix = (
+        getattr(master_source, "label_prefix", None)
+        or getattr(group, "prefix", None)
+        or getattr(version_obj, "label_prefix", None)
+        or ""
+    )
+    if not base_prefix:
+        base_prefix = _build_prefix_candidates(
+            _clean_and_split(getattr(version_obj, "name", "") or "")
+        )[0]
+    base_prefix = str(base_prefix).upper()
+    if is_master and not resolved_test and not include_master_version_for_master:
+        return base_prefix
+
+    if is_master:
+        master_version = getattr(version_obj, "version_number", None) or 0
+    else:
+        parent_master = getattr(version_obj, "parent_master", None)
+        master_version = getattr(parent_master, "version_number", None) if parent_master else None
+        master_version = master_version or getattr(version_obj, "version_number", None) or 0
+
+    label = f"{base_prefix}{master_version}"
+
+    if not is_master:
+        var_prefix = getattr(version_obj, "variation_prefix", None)
+        if not var_prefix:
+            var_prefix = _build_prefix_candidates(
+                _clean_and_split(
+                    getattr(version_obj, "variation_name", "")
+                    or getattr(version_obj, "name", "")
+                    or ""
+                )
+            )[0]
+        var_prefix = str(var_prefix).upper()
+        var_version = getattr(version_obj, "version_number", None) or 0
+        label += f"-{var_prefix}{var_version}"
+
+    if resolved_test:
+        label += f"-T{resolved_test}"
+
+    return label
+
+
 __all__ = [
     "generate_group_prefix",
     "generate_label_prefix",
     "generate_variation_prefix",
     "generate_lineage_id",
     "generate_batch_label",
+    "format_label_prefix",
 ]

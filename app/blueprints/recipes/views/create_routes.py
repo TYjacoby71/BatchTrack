@@ -24,15 +24,18 @@ from app.models import InventoryItem, Recipe
 from app.models.batch import Batch
 from app.models.product_category import ProductCategory
 from app.services.recipe_proportionality_service import RecipeProportionalityService
+from app.services.lineage_service import format_label_prefix, generate_variation_prefix
 from app.services.recipe_service import (
     build_test_template,
     create_recipe,
     create_test_version as create_test_version_service,
     duplicate_recipe,
     get_recipe_details,
+    get_next_test_sequence,
     update_recipe,
 )
-from app.utils.permissions import get_effective_organization_id, require_permission
+from app.services.recipe_service._core import _derive_variation_name
+from app.utils.permissions import get_effective_organization_id, has_permission, require_permission
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -79,10 +82,52 @@ def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
         )
 
 
+# --- Hydrate variation draft ---
+# Purpose: Ensure variation drafts have lineage metadata for display.
+def _hydrate_variation_draft(draft, parent_recipe):
+    draft.is_master = False
+    draft.recipe_group_id = parent_recipe.recipe_group_id
+    draft.recipe_group = parent_recipe.recipe_group
+    draft.parent_master = parent_recipe
+    draft.version_number = 1
+    if not getattr(draft, "variation_name", None):
+        draft.variation_name = _derive_variation_name(draft.name, parent_recipe.name)
+    if not getattr(draft, "variation_prefix", None):
+        draft.variation_prefix = generate_variation_prefix(
+            draft.variation_name or draft.name,
+            parent_recipe.recipe_group_id,
+        )
+
+
+# --- Ensure test changes ---
+# Purpose: Require tests to change ingredients, yield, or instructions.
+def _ensure_test_has_changes(base_recipe, payload):
+    submitted_ingredients = payload.get("ingredients") or []
+    ingredients_same = RecipeProportionalityService.are_recipes_proportionally_identical(
+        submitted_ingredients,
+        base_recipe.recipe_ingredients,
+    )
+    submitted_instructions = (payload.get("instructions") or "").strip()
+    base_instructions = (base_recipe.instructions or "").strip()
+    instructions_same = submitted_instructions == base_instructions
+    submitted_yield = payload.get("yield_amount")
+    submitted_unit = (payload.get("yield_unit") or "").strip()
+    base_yield = float(base_recipe.predicted_yield or 0)
+    base_unit = (base_recipe.predicted_yield_unit or "").strip()
+    yield_same = (float(submitted_yield or 0) == base_yield) and (submitted_unit == base_unit)
+
+    if ingredients_same and instructions_same and yield_same:
+        raise ValidationError(
+            "Tests must change ingredients, yield, or instructions to create a new version."
+        )
+
+
 # --- Enforce anti-plagiarism ---
 # Purpose: Block recipes that duplicate purchased formulas.
 def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
     if skip_check or not ingredients:
+        return
+    if not has_permission(current_user, "recipes.create_variations"):
         return
 
     org_id = _resolve_active_org_id()
@@ -302,6 +347,7 @@ def create_variation(recipe_id):
                 ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
+                _hydrate_variation_draft(variation_draft, parent)
                 return render_recipe_form(
                     recipe=variation_draft,
                     is_variation=True,
@@ -329,6 +375,7 @@ def create_variation(recipe_id):
                 ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
+                _hydrate_variation_draft(variation_draft, parent)
                 return render_recipe_form(
                     recipe=variation_draft,
                     is_variation=True,
@@ -358,6 +405,7 @@ def create_variation(recipe_id):
             ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
             variation_draft = recipe_from_form(request.form, base_recipe=parent)
             variation_draft.parent_recipe_id = parent.id
+            _hydrate_variation_draft(variation_draft, parent)
             return render_recipe_form(
                 recipe=variation_draft,
                 is_variation=True,
@@ -372,6 +420,11 @@ def create_variation(recipe_id):
         requested_name = (request.args.get('variation_name') or '').strip()
         if requested_name:
             new_variation.name = f"{parent.name} - {requested_name}"
+            new_variation.variation_name = requested_name
+            new_variation.variation_prefix = generate_variation_prefix(
+                requested_name,
+                parent.recipe_group_id,
+            )
         ingredient_prefill = serialize_assoc_rows(parent.recipe_ingredients)
         consumable_prefill = serialize_assoc_rows(parent.recipe_consumables)
 
@@ -414,10 +467,32 @@ def create_test_version(recipe_id):
                 flash(submission.error, 'error')
                 ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
                 test_draft = recipe_from_form(request.form, base_recipe=base)
+                next_sequence = get_next_test_sequence(base)
                 return render_recipe_form(
                     recipe=test_draft,
                     is_test=True,
                     test_base_id=base.id,
+                    test_sequence_hint=next_sequence,
+                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
+            payload = dict(submission.kwargs)
+            try:
+                _ensure_test_has_changes(base, payload)
+            except ValidationError as exc:
+                flash(str(exc), 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                test_draft = recipe_from_form(request.form, base_recipe=base)
+                next_sequence = get_next_test_sequence(base)
+                return render_recipe_form(
+                    recipe=test_draft,
+                    is_test=True,
+                    test_base_id=base.id,
+                    test_sequence_hint=next_sequence,
+                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
                     ingredient_prefill=ingredient_prefill,
                     consumable_prefill=consumable_prefill,
                     form_values=request.form,
@@ -425,7 +500,7 @@ def create_test_version(recipe_id):
 
             success, result = create_test_version_service(
                 base=base,
-                payload=submission.kwargs,
+                payload=payload,
                 target_status=target_status,
             )
             if success:
@@ -440,17 +515,21 @@ def create_test_version(recipe_id):
             flash(f'Error creating test: {error_message}', 'error')
             ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
             test_draft = recipe_from_form(request.form, base_recipe=base)
+            next_sequence = get_next_test_sequence(base)
             return render_recipe_form(
                 recipe=test_draft,
                 is_test=True,
                 test_base_id=base.id,
+                test_sequence_hint=next_sequence,
+                label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
                 ingredient_prefill=ingredient_prefill,
                 consumable_prefill=consumable_prefill,
                 form_values=request.form,
                 draft_prompt=draft_prompt,
             )
 
-        test_template = build_test_template(base)
+        next_sequence = get_next_test_sequence(base)
+        test_template = build_test_template(base, test_sequence=next_sequence)
 
         ingredient_prefill = serialize_assoc_rows(base.recipe_ingredients)
         consumable_prefill = serialize_assoc_rows(base.recipe_consumables)
@@ -459,6 +538,8 @@ def create_test_version(recipe_id):
             recipe=test_template,
             is_test=True,
             test_base_id=base.id,
+            test_sequence_hint=next_sequence,
+            label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
             ingredient_prefill=ingredient_prefill,
             consumable_prefill=consumable_prefill,
         )

@@ -59,7 +59,7 @@ def recipe_lineage(recipe_id):
         edge_type = None
         if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
             parent_id = rel.parent_recipe_id
-            edge_type = 'variation'
+            edge_type = 'test' if rel.test_sequence else 'variation'
         elif rel.cloned_from_id and rel.cloned_from_id in nodes:
             parent_id = rel.cloned_from_id
             edge_type = 'clone'

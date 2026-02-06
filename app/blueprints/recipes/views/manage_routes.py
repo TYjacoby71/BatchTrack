@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from app.extensions import db, cache
 from app.models import Recipe, RecipeLineage, Batch
-from app.services.lineage_service import generate_lineage_id
+from app.services.lineage_service import format_label_prefix, generate_lineage_id
 from app.services.recipe_service import (
     archive_recipe,
     delete_recipe,
@@ -120,7 +120,6 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         inventory_units = get_global_unit_list()
-        lineage_enabled = True
         can_create_variations = has_permission(current_user, "recipes.create_variations")
         lineage_id = generate_lineage_id(recipe)
         has_batches = Batch.query.filter_by(recipe_id=recipe.id).count() > 0
@@ -128,6 +127,7 @@ def view_recipe(recipe_id):
         is_published_locked = recipe.status == 'published' and not is_test
         is_archived = bool(recipe.is_archived)
         can_edit = has_permission(current_user, "recipes.edit")
+        lineage_enabled = can_edit
         is_editable = (
             can_edit
             and (not is_published_locked)
@@ -194,11 +194,13 @@ def view_recipe(recipe_id):
             and origin_marketplace_enabled
             and has_permission(current_user, "recipes.marketplace_dashboard")
         )
+        label_prefix_display = format_label_prefix(recipe)
         return render_template(
             'pages/recipes/view_recipe.html',
             recipe=recipe,
             inventory_units=inventory_units,
             lineage_enabled=lineage_enabled,
+            label_prefix_display=label_prefix_display,
             show_origin_marketplace=show_origin_marketplace,
             lineage_id=lineage_id,
             is_test=is_test,
@@ -214,6 +216,7 @@ def view_recipe(recipe_id):
             master_tests=master_tests,
             variation_versions=variation_versions,
             can_create_variations=can_create_variations,
+            can_edit=can_edit,
         )
 
     except Exception as exc:
