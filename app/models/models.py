@@ -225,6 +225,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # NULL for developers
+    organization = db.relationship('Organization', foreign_keys=[organization_id])
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
 

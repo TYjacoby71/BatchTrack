@@ -34,6 +34,7 @@ from app.services.recipe_service import (
 )
 from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.notes import append_timestamped_note
 from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.settings import is_feature_enabled
@@ -126,8 +127,33 @@ def view_recipe(recipe_id):
         is_test = recipe.test_sequence is not None
         is_published_locked = recipe.status == 'published' and not is_test
         is_archived = bool(recipe.is_archived)
-        is_editable = (not is_published_locked) and (not (is_test and has_batches)) and (not is_archived)
+        can_edit = has_permission(current_user, "recipes.edit")
+        is_editable = (
+            can_edit
+            and (not is_published_locked)
+            and (not (is_test and has_batches))
+            and (not is_archived)
+        )
+        force_edit_allowed = (
+            can_edit
+            and is_published_locked
+            and (not recipe.is_locked)
+            and (not is_archived)
+        )
         has_listing = is_marketplace_listed(recipe)
+        can_add_notes = can_edit
+
+        note_types = ("NOTE", "EDIT", "EDIT_OVERRIDE")
+        recipe_notes = (
+            RecipeLineage.query.filter(
+                RecipeLineage.recipe_id == recipe.id,
+                RecipeLineage.notes.isnot(None),
+                RecipeLineage.event_type.in_(note_types),
+            )
+            .order_by(RecipeLineage.created_at.desc())
+            .limit(25)
+            .all()
+        )
 
         group_versions = []
         master_versions = []
@@ -178,6 +204,9 @@ def view_recipe(recipe_id):
             is_test=is_test,
             is_published_locked=is_published_locked,
             is_editable=is_editable,
+            force_edit_allowed=force_edit_allowed,
+            can_add_notes=can_add_notes,
+            recipe_notes=recipe_notes,
             has_batches=has_batches,
             is_archived=is_archived,
             has_listing=has_listing,
@@ -191,6 +220,42 @@ def view_recipe(recipe_id):
         flash(f"Error loading recipe: {exc}", "error")
         logger.exception("Error viewing recipe: %s", exc)
         return redirect(url_for('recipes.list_recipes'))
+
+
+# --- Add recipe note ---
+# Purpose: Store timestamped notes for a recipe.
+@recipes_bp.route('/<int:recipe_id>/notes', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def add_recipe_note(recipe_id):
+    recipe = db.session.get(Recipe, recipe_id)
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+
+    note_text = (request.form.get('note') or '').strip()
+    if not note_text:
+        flash('Note cannot be empty.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id) + "#recipeNotes")
+
+    try:
+        stamped = append_timestamped_note(None, note_text)
+        lineage_entry = RecipeLineage(
+            recipe_id=recipe.id,
+            event_type='NOTE',
+            organization_id=recipe.organization_id,
+            user_id=getattr(current_user, 'id', None),
+            notes=stamped,
+        )
+        db.session.add(lineage_entry)
+        db.session.commit()
+        flash('Note added.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Error adding recipe note %s: %s", recipe_id, exc)
+        flash('Unable to save note.', 'error')
+
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id) + "#recipeNotes")
 
 
 # =========================================================
@@ -370,9 +435,16 @@ def promote_variation_to_master(recipe_id):
 @require_permission('recipes.create_variations')
 def promote_variation_to_new_group(recipe_id):
     try:
-        success, result = promote_variation_to_new_group_service(recipe_id)
+        group_name = (request.form.get("group_name") or "").strip() or None
+        success, result = promote_variation_to_new_group_service(
+            recipe_id,
+            group_name=group_name,
+        )
         if not success:
-            flash(str(result), 'error')
+            if isinstance(result, dict):
+                flash(result.get('error') or 'Unable to create a new recipe group.', 'error')
+            else:
+                flash(str(result), 'error')
             return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
         flash('Variation promoted into a new recipe group.', 'success')

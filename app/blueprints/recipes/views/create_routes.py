@@ -478,13 +478,16 @@ def edit_recipe(recipe_id):
         return redirect(url_for('recipes.list_recipes'))
 
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
+    force_edit = (
+        str(request.args.get('force') or request.form.get('force_edit') or '').lower() in {'1', 'true', 'yes'}
+    )
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     if recipe.is_archived:
         flash('Archived recipes cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-    if recipe.status == 'published' and recipe.test_sequence is None:
+    if recipe.status == 'published' and recipe.test_sequence is None and not force_edit:
         flash('Published versions are locked. Create a test to make edits.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     if recipe.test_sequence is not None and existing_batches > 0:
@@ -509,6 +512,7 @@ def edit_recipe(recipe_id):
                     ingredient_prefill=ingredient_prefill,
                     consumable_prefill=consumable_prefill,
                     form_values=form_override,
+                    force_edit=force_edit,
                 )
 
             payload = dict(submission.kwargs)
@@ -517,6 +521,7 @@ def edit_recipe(recipe_id):
 
             success, result = update_recipe(
                 recipe_id=recipe_id,
+                allow_published_edit=force_edit,
                 **payload,
             )
 
@@ -546,6 +551,7 @@ def edit_recipe(recipe_id):
         existing_batches=existing_batches,
         draft_prompt=draft_prompt,
         form_values=form_override,
+        force_edit=force_edit,
         **form_data,
     )
 
