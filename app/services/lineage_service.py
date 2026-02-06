@@ -1,11 +1,14 @@
 """Lineage and label generation service.
 
 Synopsis:
-Generates recipe group prefixes, variation prefixes, lineage IDs, and batch labels.
+Generates recipe group, label, and variation prefixes plus lineage IDs and batch labels.
+Lineage IDs use organization-scoped group sequencing to stay stable within a tenant.
 
 Glossary:
 - Prefix: Short code derived from a name for labels.
+- Label prefix: Recipe-level prefix used in batch labels.
 - Lineage ID: Dot-notation identifier for version history.
+- Group number: Organization-scoped sequence for recipe groups.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Recipe management routes.
 
 Synopsis:
-Lists recipes, shows lineage view, and provides promotion/archive actions.
+Lists recipes, shows lineage view, captures recipe notes, and provides promotion/archive actions.
 
 Glossary:
 - Lineage: Versioned recipe history within a group.
@@ -108,7 +108,7 @@ def list_recipes():
 
 
 # --- View recipe ---
-# Purpose: View a recipe and its lineage context.
+# Purpose: View a recipe, its lineage context, and note history.
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
 @require_permission('recipes.view')

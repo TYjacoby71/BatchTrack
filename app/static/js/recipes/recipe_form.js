@@ -1,12 +1,19 @@
+/* File: recipes/recipe_form.js
+   Synopsis: Handles recipe form behaviors, auto-prefix generation, and UI helpers.
+   Glossary: Prefix = label prefix derived from recipe name; Portion = discrete unit. */
 
 // Recipe form handling
 (function(window){
 	'use strict';
 
+	// --- Debounce ---
+	// Purpose: Delay execution for bursty input events.
 	function debounce(fn, wait){
 		var t; return function(){ clearTimeout(t); var ctx=this, args=arguments; t=setTimeout(function(){ fn.apply(ctx,args); }, wait); };
 	}
 
+	// --- Build local prefix ---
+	// Purpose: Generate a fast fallback prefix from a recipe name.
 	function buildLocalPrefix(name){
 		var cleaned = String(name || '')
 			.replace(/[^A-Za-z0-9\s]+/g, ' ')
@@ -36,6 +43,8 @@
 		return candidate.slice(0, 8);
 	}
 
+	// --- Attach auto label prefix ---
+	// Purpose: Auto-fill the label prefix after name input changes.
 	function attachAutoLabelPrefix(){
 		var nameInput = document.querySelector('input[name="name"]');
 		var prefixInput = document.getElementById('label_prefix');
@@ -74,6 +83,8 @@
 		}
 	}
 
+	// --- Attach portion typeahead ---
+	// Purpose: Provide count-unit suggestions for portion names.
 	function attachPortionNameTypeahead(){
 		var input = document.getElementById('portion_name');
 		if (!input) return;

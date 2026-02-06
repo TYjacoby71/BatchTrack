@@ -1,11 +1,12 @@
 """API routes for client bootstrap and batchbot features.
 
 Synopsis:
-Provides JSON endpoints for dashboard widgets and bootstrap payloads.
+Provides JSON endpoints for dashboard widgets, bootstrap payloads, and recipe prefix generation.
 
 Glossary:
 - Bootstrap: Lightweight payload for client selection lists.
 - Dashboard alerts: Aggregated warning or status indicators.
+- Recipe prefix: Unique label prefix derived from a recipe name.
 """
 
 from flask import Blueprint, jsonify, request, current_app
@@ -41,10 +42,14 @@ logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+# --- Batchbot flag ---
+# Purpose: Check if BatchBot features are enabled in config.
 def _is_batchbot_enabled() -> bool:
     return bool(current_app.config.get('FEATURE_BATCHBOT', False))
 
 
+# --- Resolve org scope ---
+# Purpose: Determine the request organization scope (supports developer masquerade).
 def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.

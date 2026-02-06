@@ -11,6 +11,13 @@ This directory contains the complete history of all fixes, improvements, and cha
 
 ## Change Logs
 
+### 2026
+
+#### February
+- **[2026-02-06: Recipe Lineage Notes, Prefix Auto-Generation, and Edit Overrides](2026-02-06-recipe-lineage-notes-and-prefixes.md)**
+  - Auto-generated recipe prefixes and org-scoped lineage IDs.
+  - Recipe notes panel, published-edit confirmation, and new group naming control.
+
 ### 2025
 
 #### November

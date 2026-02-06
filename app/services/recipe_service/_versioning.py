@@ -1,7 +1,7 @@
 """Recipe versioning helpers for tests and promotions.
 
 Synopsis:
-Create tests and promote versions within or across recipe groups.
+Create tests and promote versions within or across recipe groups with explicit naming.
 
 Glossary:
 - Test: Editable, non-current version.

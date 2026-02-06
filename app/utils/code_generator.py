@@ -1,11 +1,11 @@
 """Code generators for recipes and batches.
 
 Synopsis:
-Generates batch labels and recipe group prefixes via lineage service.
+Generates batch labels and recipe label prefixes via the lineage service.
 
 Glossary:
 - Batch label: Human-readable batch identifier.
-- Prefix: Short code derived from a recipe name.
+- Label prefix: Recipe-level prefix used in batch labels.
 """
 
 from __future__ import annotations

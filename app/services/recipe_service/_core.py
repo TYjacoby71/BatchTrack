@@ -1,7 +1,7 @@
 """Recipe core operations.
 
 Synopsis:
-Implements recipe CRUD with versioning, group assignment, and locks.
+Implements recipe CRUD with versioning, group assignment, locks, and edit audit notes.
 
 Glossary:
 - Master: Primary recipe version in a group.
@@ -472,7 +472,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
 
 # --- Update recipe ---
-# Purpose: Update a recipe with lock/version safeguards.
+# Purpose: Update a recipe with lock/version safeguards and audit notes.
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,

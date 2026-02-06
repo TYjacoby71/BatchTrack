@@ -156,6 +156,22 @@ Converts a quantity from one unit to another using `ConversionEngine.convert_uni
 }
 ```
 
+## Recipes
+
+### Generate Label Prefix
+```
+GET /api/recipes/prefix?name=Milk%20and%20Honey
+```
+
+Returns a unique label prefix for the given recipe name, scoped to the active organization.
+
+**Response:**
+```json
+{
+  "prefix": "MAH"
+}
+```
+
 ## Organization Management
 
 ### Get Organization Dashboard Data

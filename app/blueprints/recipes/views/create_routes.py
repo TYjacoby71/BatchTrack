@@ -1,7 +1,7 @@
 """Recipe create/edit routes.
 
 Synopsis:
-Handles new recipe creation, variation/test creation, edits, and retired clone flow.
+Handles new recipe creation, variation/test creation, edits, and forced-edit overrides.
 
 Glossary:
 - Variation: Branch off a master recipe with its own version line.
@@ -55,6 +55,8 @@ from ..form_utils import (
 logger = logging.getLogger(__name__)
 
 
+# --- Resolve active org ---
+# Purpose: Determine the active organization for recipe operations.
 def _resolve_active_org_id():
     org_id = get_effective_organization_id()
     if org_id:
@@ -65,6 +67,8 @@ def _resolve_active_org_id():
         return None
 
 
+# --- Ensure variation changes ---
+# Purpose: Reject variations without ingredient-level changes.
 def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
     if RecipeProportionalityService.are_recipes_proportionally_identical(
         variation_ingredients,
@@ -75,6 +79,8 @@ def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
         )
 
 
+# --- Enforce anti-plagiarism ---
+# Purpose: Block recipes that duplicate purchased formulas.
 def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
     if skip_check or not ingredients:
         return
@@ -467,7 +473,7 @@ def create_test_version(recipe_id):
 # EDITING
 # =========================================================
 # --- Edit recipe ---
-# Purpose: Edit a recipe (blocked if published/locked/archived).
+# Purpose: Edit a recipe, allowing forced overrides for published masters.
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.edit')
