@@ -17,7 +17,7 @@ from flask import flash, redirect, request, url_for, render_template, current_ap
 from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
- 
+
 from app.extensions import db, cache
 from app.models import Recipe, RecipeIngredient, RecipeLineage, Batch
 from app.services.lineage_service import format_label_prefix, generate_lineage_id
