@@ -18,6 +18,7 @@ from ...extensions import db
 from ...models import Recipe, RecipeIngredient, RecipeConsumable
 from ._core import create_recipe, _next_test_sequence
 from ._current import apply_current_flag
+from ._lineage import _log_lineage_event
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,12 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     parent_recipe = None
     if recipe.parent_recipe_id:
         parent_recipe = db.session.get(Recipe, recipe.parent_recipe_id)
+    promoted_from_id = recipe.parent_recipe_id
+    promoted_from_version = recipe.version_number
+    promoted_from_test = recipe.test_sequence
+    base_master_version = (
+        recipe.parent_master.version_number if recipe.parent_master else None
+    )
 
     base_query = Recipe.query.filter(
         Recipe.recipe_group_id == recipe.recipe_group_id,
@@ -146,6 +153,27 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe.sale_price = None
     recipe.marketplace_status = "draft"
     apply_current_flag(recipe)
+    if promoted_from_test:
+        if recipe.is_master:
+            notes = f"Promoted from Master v{promoted_from_version} Test {promoted_from_test}"
+        else:
+            variation_label = recipe.variation_name or "Variation"
+            if base_master_version:
+                notes = (
+                    f"Promoted from {variation_label} v{promoted_from_version} "
+                    f"Test {promoted_from_test} (Base M{base_master_version})"
+                )
+            else:
+                notes = (
+                    f"Promoted from {variation_label} v{promoted_from_version} "
+                    f"Test {promoted_from_test}"
+                )
+        _log_lineage_event(
+            recipe,
+            "PROMOTE_TEST",
+            source_recipe_id=promoted_from_id,
+            notes=notes,
+        )
     db.session.commit()
     return True, recipe
 

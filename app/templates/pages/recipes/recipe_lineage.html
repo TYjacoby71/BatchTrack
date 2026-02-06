@@ -251,7 +251,8 @@
                             {% for event in lineage_events %}
                             <li class="list-group-item">
                                 <div class="d-flex justify-content-between">
-                                    <span class="fw-semibold text-uppercase text-muted">{{ event.event_type }}</span>
+                                    {% set event_label = 'Promoted' if event.event_type == 'PROMOTE_TEST' else event.event_type %}
+                                    <span class="fw-semibold text-uppercase text-muted">{{ event_label }}</span>
                                     <small class="text-muted">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '—' }}</small>
                                 </div>
                                 {% if event.source_recipe %}
