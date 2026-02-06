@@ -74,41 +74,49 @@ def list_recipes():
         if cached_page is not None:
             return cached_page
 
-    ingredient_counts = (
+    ingredient_counts_query = (
         db.session.query(
             RecipeIngredient.recipe_id.label("recipe_id"),
             func.count(RecipeIngredient.id).label("ingredient_count"),
         )
         .group_by(RecipeIngredient.recipe_id)
-        .subquery()
     )
-    batch_counts = (
+    batch_counts_query = (
         db.session.query(
             Batch.recipe_id.label("recipe_id"),
             func.count(Batch.id).label("batch_count"),
         )
         .group_by(Batch.recipe_id)
-        .subquery()
     )
+    if current_user.organization_id:
+        ingredient_counts_query = ingredient_counts_query.filter(
+            RecipeIngredient.organization_id == current_user.organization_id
+        )
+        batch_counts_query = batch_counts_query.filter(
+            Batch.organization_id == current_user.organization_id
+        )
+
+    ingredient_counts = ingredient_counts_query.subquery()
+    batch_counts = batch_counts_query.subquery()
+
+    base_filters = [
+        Recipe.parent_recipe_id.is_(None),
+        Recipe.test_sequence.is_(None),
+        Recipe.is_archived.is_(False),
+        Recipe.is_current.is_(True),
+    ]
+    if current_user.organization_id:
+        base_filters.append(Recipe.organization_id == current_user.organization_id)
 
     query = (
-        Recipe.query.outerjoin(
-            ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id
-        )
+        Recipe.query.filter(*base_filters)
+        .outerjoin(ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id)
         .outerjoin(batch_counts, batch_counts.c.recipe_id == Recipe.id)
         .add_columns(
             ingredient_counts.c.ingredient_count,
             batch_counts.c.batch_count,
         )
-        .filter(
-            Recipe.parent_recipe_id.is_(None),
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-        )
     )
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
 
     pagination = (
         query.options(
