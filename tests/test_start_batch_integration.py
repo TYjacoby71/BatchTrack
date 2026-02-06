@@ -46,6 +46,7 @@ def test_start_batch_uses_generator_and_persists_label(app):
             )
             db.session.add(recipe)
             db.session.commit()
+            recipe_id = recipe.id
 
             snapshot = PlanProductionService.build_plan(
                 recipe=recipe,
@@ -55,12 +56,16 @@ def test_start_batch_uses_generator_and_persists_label(app):
                 containers=[]
             )
             batch, errors = BatchOperationsService.start_batch(snapshot.to_dict())
+            batch_id = batch.id if batch else None
 
         assert errors == []
-        assert batch is not None
-        assert batch.label_code.startswith(f"SOAP1-{current_year}-")
-        assert batch.label_code.endswith("001")
-        assert batch.recipe_id == recipe.id
-        assert batch.target_version_id == recipe.id
-        assert batch.lineage_id is not None
-        assert batch.batch_type == 'ingredient'
+        assert batch_id is not None
+        from app.models import Batch
+        fresh_batch = db.session.get(Batch, batch_id)
+        assert fresh_batch is not None
+        assert fresh_batch.label_code.startswith(f"SOAP1-{current_year}-")
+        assert fresh_batch.label_code.endswith("001")
+        assert fresh_batch.recipe_id == recipe_id
+        assert fresh_batch.target_version_id == recipe_id
+        assert fresh_batch.lineage_id is not None
+        assert fresh_batch.batch_type == 'ingredient'

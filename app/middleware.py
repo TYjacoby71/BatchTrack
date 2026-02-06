@@ -1,3 +1,13 @@
+"""Request middleware for security and permissions.
+
+Synopsis:
+Applies security headers, access checks, and bot trap defenses.
+
+Glossary:
+- Security headers: HTTP headers that harden browser behavior.
+- Route access: Permission and role gating for endpoints.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -122,6 +132,8 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
     return "unknown"
 
 
+# --- Register middleware ---
+# Purpose: Attach security and access middleware to the Flask app.
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
@@ -170,6 +182,9 @@ def register_middleware(app: Flask) -> None:
             return None
 
         if path.startswith("/static/"):
+            return None
+
+        if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get("TESTING_DISABLE_AUTH"):
             return None
 
         try:

@@ -8,6 +8,7 @@ from app.models import InventoryItem, Reservation
 from app.models.inventory_lot import InventoryLot
 from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
+from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base, sync_lot_quantities_from_base
 
 
 @pytest.mark.usefixtures("app", "db_session")
@@ -29,6 +30,8 @@ class TestReservationCanonicalService:
             )
             db_session.add(product)
             db_session.flush()
+            product.quantity_base = to_base_quantity(20.0, product.unit, ingredient_id=product.id, density=product.density)
+            sync_item_quantity_from_base(product)
 
             lot = InventoryLot(
                 inventory_item_id=product.id,
@@ -41,8 +44,11 @@ class TestReservationCanonicalService:
                 organization_id=product.organization_id,
                 fifo_code=f"LOT-{uuid4().hex[:8]}",
             )
+            lot.remaining_quantity_base = to_base_quantity(20.0, lot.unit, ingredient_id=product.id, density=product.density)
+            lot.original_quantity_base = lot.remaining_quantity_base
             db_session.add(lot)
             db_session.commit()
+            sync_lot_quantities_from_base(lot, product)
 
             reservation, error = ReservationService.create_reservation(
                 inventory_item_id=product.id,
@@ -79,9 +85,12 @@ class TestReservationCanonicalService:
             )
             db_session.add(product)
             db_session.flush()
+            product.quantity_base = to_base_quantity(10.0, product.unit, ingredient_id=product.id, density=product.density)
+            sync_item_quantity_from_base(product)
 
             reserved_item = ReservationService.get_reserved_item_for_product(product.id)
-            reserved_item.quantity = 5.0
+            reserved_item.quantity_base = to_base_quantity(5.0, reserved_item.unit, ingredient_id=reserved_item.id, density=reserved_item.density)
+            sync_item_quantity_from_base(reserved_item)
 
             lot = InventoryLot(
                 inventory_item_id=product.id,
@@ -94,8 +103,11 @@ class TestReservationCanonicalService:
                 organization_id=product.organization_id,
                 fifo_code=f"LOT-{uuid4().hex[:8]}",
             )
+            lot.remaining_quantity_base = to_base_quantity(10.0, lot.unit, ingredient_id=product.id, density=product.density)
+            lot.original_quantity_base = lot.remaining_quantity_base
             db_session.add(lot)
             db_session.flush()
+            sync_lot_quantities_from_base(lot, product)
 
             reservation = Reservation(
                 order_id="ORD-RELEASE-001",
@@ -143,6 +155,8 @@ class TestReservationCanonicalService:
             )
             db_session.add(product)
             db_session.flush()
+            product.quantity_base = to_base_quantity(30.0, product.unit, ingredient_id=product.id, density=product.density)
+            sync_item_quantity_from_base(product)
 
             reserved_item = ReservationService.get_reserved_item_for_product(product.id)
             db_session.flush()

@@ -1,4 +1,3 @@
-"""Recipe lineage generators for prefixes, labels, and lineage IDs."""
 """Lineage and label generation service.
 
 Synopsis:

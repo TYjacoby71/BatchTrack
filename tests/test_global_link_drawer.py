@@ -19,10 +19,12 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     org = Organization(name='Test Org')
     db_session.add(org)
     db_session.flush()
+    org_id = org.id
 
     user = User(email='test@example.com', user_type='developer', is_active=True, organization_id=org.id)
     db_session.add(user)
     db_session.commit()
+    user_id = user.id
 
     # Create a curated category and global item 'Milk' stored in volume (ml) with density
     cat = IngredientCategory(name='Liquids', default_density=1.0, organization_id=None, is_global_category=True)
@@ -32,6 +34,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     gi = GlobalItem(name='Milk', item_type='ingredient', default_unit='ml', density=1.03, ingredient_category_id=cat.id)
     db_session.add(gi)
     db_session.commit()
+    global_item_id = gi.id
 
     # Create org inventory items: matchable and non-matchable
     milk_ml = InventoryItem(name='milk', type='ingredient', unit='ml', quantity=0.0, organization_id=org.id)
@@ -39,16 +42,19 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     milk_count = InventoryItem(name='milk (units)', type='ingredient', unit='count', quantity=0.0, organization_id=org.id)
     db_session.add_all([milk_ml, milk_g, milk_count])
     db_session.commit()
+    milk_ml_id = milk_ml.id
+    milk_g_id = milk_g.id
+    milk_count_id = milk_count.id
 
     # Create flask client with the provided app fixture to share the same DB
     app.config['SKIP_PERMISSIONS'] = True
     with app.test_client() as client:
         # Login helper: set session org and auth
         with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
+            sess['_user_id'] = str(user_id)
             sess['_fresh'] = True
             # Developer scoping to org
-            sess['dev_selected_org_id'] = org.id
+            sess['dev_selected_org_id'] = org_id
         # Check suggestions
         res = client.get('/api/drawers/global-link/check')
         assert res.status_code == 200
@@ -59,7 +65,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
             assert data.get('drawer_payload', {}).get('modal_url')
 
         # Force modal for our specific global item
-        res2 = client.get(f'/api/drawers/global-link/modal?global_item_id={gi.id}')
+        res2 = client.get(f'/api/drawers/global-link/modal?global_item_id={global_item_id}')
         assert res2.status_code == 200
         html_payload = res2.get_json() or {}
         assert html_payload.get('success') is True
@@ -67,14 +73,14 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
         # The modal should list ml and g items but not count
         html = html_payload['modal_html']
         assert 'MILK' in html or 'Milk' in html  # will become name
-        assert f'value="{milk_ml.id}"' in html
-        assert f'value="{milk_g.id}"' in html
-        assert f'value="{milk_count.id}"' not in html  # non-convertible count excluded
+        assert f'value="{milk_ml_id}"' in html
+        assert f'value="{milk_g_id}"' in html
+        assert f'value="{milk_count_id}"' not in html  # non-convertible count excluded
 
         # Confirm linking for ml and g
         payload = {
-            'global_item_id': gi.id,
-            'item_ids': [milk_ml.id]
+            'global_item_id': global_item_id,
+            'item_ids': [milk_ml_id]
         }
         res3 = client.post('/api/drawers/global-link/confirm', data=json.dumps(payload), content_type='application/json')
         assert res3.status_code == 200
@@ -83,9 +89,9 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
         assert result.get('updated') == 1
 
         # Reload items and verify link applied, unit unchanged, density set
-        db_session.refresh(milk_ml)
-        db_session.refresh(milk_g)
-        assert milk_ml.global_item_id == gi.id
+        milk_ml = db_session.get(InventoryItem, milk_ml_id)
+        milk_g = db_session.get(InventoryItem, milk_g_id)
+        assert milk_ml.global_item_id == global_item_id
         assert milk_g.global_item_id is None
         assert milk_ml.unit == 'ml'  # unchanged
         assert milk_g.unit == 'g'    # unchanged
@@ -93,6 +99,6 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
         assert milk_g.density in (None, 0.0)
 
         # Ensure non-convertible was not linked
-        db_session.refresh(milk_count)
+        milk_count = db_session.get(InventoryItem, milk_count_id)
         assert milk_count.global_item_id is None
 

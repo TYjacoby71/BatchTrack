@@ -1,6 +1,11 @@
-"""
-Creation logic handler - handles initial stock entries for new items.
-This handler should work with the centralized quantity update system.
+"""Inventory creation logic handlers.
+
+Synopsis:
+Create initial inventory items and seed starting stock entries.
+
+Glossary:
+- Initial stock: First inventory quantity recorded for an item.
+- Creation logic: Validation and setup for new inventory items.
 """
 
 import logging
@@ -12,10 +17,13 @@ from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInven
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
+from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base
 
 logger = logging.getLogger(__name__)
 
 
+# --- Resolve unit cost ---
+# Purpose: Normalize form inputs into per-unit cost.
 def _resolve_cost_per_unit(form_data, initial_quantity):
     """Convert form inputs into a per-unit cost."""
     try:
@@ -60,6 +68,8 @@ def _apply_string_match(query, column, value):
     return query.filter(func.lower(column) == normalized)
 
 
+# --- Find matching container ---
+# Purpose: Identify an existing container with matching attributes.
 def _find_matching_container(candidate: InventoryItem | None):
     """Return an existing container with matching attributes (same org)."""
     if not candidate or candidate.type != 'container':
@@ -83,6 +93,8 @@ def _find_matching_container(candidate: InventoryItem | None):
 
     return query.first()
 
+# --- Create inventory item ---
+# Purpose: Create inventory item with initial metadata.
 def create_inventory_item(form_data, organization_id, created_by, auto_commit: bool = True):
     """
     Create a new inventory item from form data.
@@ -383,7 +395,7 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
                     custom_expiration_date = None
 
             # Use the local initial stock handler (no circular dependency)
-            success, adjustment_message, quantity_delta = handle_initial_stock(
+            success, adjustment_message, quantity_delta, quantity_delta_base = handle_initial_stock(
                 item=new_item,
                 quantity=initial_quantity,
                 change_type='initial',
@@ -398,7 +410,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
                 return False, f"Item created but initial stock failed: {adjustment_message}", None
 
             # Apply the quantity delta to the item
-            new_item.quantity = float(quantity_delta)
+            new_item.quantity_base = int(quantity_delta_base)
+            sync_item_quantity_from_base(new_item)
 
         # Commit or defer the transaction
         if auto_commit:
@@ -419,6 +432,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         logger.error(f"Error creating inventory item: {str(e)}")
         return False, f"Failed to create inventory item: {str(e)}", None
 
+# --- Initial stock ---
+# Purpose: Handle initial stock entries for new items.
 def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.
@@ -432,11 +447,19 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
+        quantity_base = to_base_quantity(
+            amount=quantity,
+            unit_name=unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+
         # Create the initial FIFO entry - works for any quantity including 0
         # The custom_shelf_life_days parameter is removed as per the requirement.
         success, message, lot_id = create_new_fifo_lot(
             item_id=item.id,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type='initial_stock',
             unit=unit,
             notes=notes or "Initial stock entry",
@@ -447,20 +470,21 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         )
 
         if not success:
-            return False, f"Failed to create initial stock entry: {message}", 0
+            return False, f"Failed to create initial stock entry: {message}", 0, 0
 
         # The create_new_fifo_lot already created the history record
         # No need to create a duplicate here
 
         # Return delta for core to apply - works for 0 quantity too
         quantity_delta = float(quantity)
+        quantity_delta_base = int(quantity_base)
         logger.info(f"INITIAL_STOCK SUCCESS: Will set item {item.id} quantity to {quantity}")
 
         if quantity == 0:
-            return True, f"Initial stock entry created with 0 {unit}", quantity_delta
+            return True, f"Initial stock entry created with 0 {unit}", quantity_delta, quantity_delta_base
         else:
-            return True, f"Initial stock of {quantity} {unit} added", quantity_delta
+            return True, f"Initial stock of {quantity} {unit} added", quantity_delta, quantity_delta_base
 
     except Exception as e:
         logger.error(f"Error in initial stock operation: {str(e)}")
-        return False, f"Initial stock failed: {str(e)}", 0
+        return False, f"Initial stock failed: {str(e)}", 0, 0

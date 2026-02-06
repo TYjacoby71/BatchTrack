@@ -23,7 +23,7 @@
 - [ ] Updated feature guides (if usage changed)
 - [ ] Updated add-on entitlements docs (if tiers/add-ons changed)
 - [ ] Added/updated file Synopsis + Glossary blocks
-- [ ] Added route/service Purpose headings (no sequential numbering)
+- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences)
 - [ ] Updated APP_DICTIONARY.md for new terms
 
 ## Checklist
