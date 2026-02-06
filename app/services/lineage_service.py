@@ -160,6 +160,35 @@ def _resolve_group_number(version_obj: Recipe) -> int:
     return resolved if resolved > 0 else int(group_id)
 
 
+# --- Resolve variation number ---
+# Purpose: Map variation name to a group-scoped index.
+def _resolve_variation_number(version_obj: Recipe) -> int:
+    group_id = getattr(version_obj, "recipe_group_id", None)
+    variation_name = getattr(version_obj, "variation_name", None)
+    if not group_id or not variation_name:
+        return 0
+
+    rows = (
+        db.session.query(
+            Recipe.variation_name,
+            sa.func.min(Recipe.created_at),
+        )
+        .filter(
+            Recipe.recipe_group_id == group_id,
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+            Recipe.variation_name.isnot(None),
+        )
+        .group_by(Recipe.variation_name)
+        .order_by(sa.func.min(Recipe.created_at).asc())
+        .all()
+    )
+    for idx, row in enumerate(rows, start=1):
+        if row[0] == variation_name:
+            return idx
+    return 0
+
+
 # --- Generate lineage ID ---
 # Purpose: Generate a lineage ID for a recipe version.
 def generate_lineage_id(version_obj: Recipe) -> str:
@@ -174,7 +203,9 @@ def generate_lineage_id(version_obj: Recipe) -> str:
 
     parts = [str(group_number), str(master_version)]
     if not is_master:
+        variation_number = _resolve_variation_number(version_obj)
         variation_version = getattr(version_obj, "version_number", None) or 0
+        parts.append(str(variation_number or 0))
         parts.append(str(variation_version))
 
     test_sequence = getattr(version_obj, "test_sequence", None)
@@ -222,10 +253,60 @@ def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
     return label
 
 
+# --- Format label prefix for display ---
+# Purpose: Build a lineage-aware label prefix string for UI.
+def format_label_prefix(
+    version_obj: Recipe,
+    *,
+    test_sequence: int | None = None,
+    include_master_version_for_master: bool = False,
+) -> str:
+    group = getattr(version_obj, "recipe_group", None)
+    resolved_test = test_sequence if test_sequence is not None else getattr(version_obj, "test_sequence", None)
+    is_master = bool(getattr(version_obj, "is_master", False))
+
+    if not is_master:
+        var_prefix = getattr(version_obj, "variation_prefix", None)
+        if not var_prefix:
+            var_prefix = _build_prefix_candidates(
+                _clean_and_split(
+                    getattr(version_obj, "variation_name", "")
+                    or getattr(version_obj, "name", "")
+                    or ""
+                )
+            )[0]
+        var_prefix = str(var_prefix).upper()
+        var_version = getattr(version_obj, "version_number", None) or 0
+        label = f"{var_prefix}{var_version}"
+        if resolved_test:
+            label += f"-T{resolved_test}"
+        return label
+
+    base_prefix = (
+        getattr(version_obj, "label_prefix", None)
+        or getattr(group, "prefix", None)
+        or ""
+    )
+    if not base_prefix:
+        base_prefix = _build_prefix_candidates(
+            _clean_and_split(getattr(version_obj, "name", "") or "")
+        )[0]
+    base_prefix = str(base_prefix).upper()
+    if not resolved_test and not include_master_version_for_master:
+        return base_prefix
+
+    master_version = getattr(version_obj, "version_number", None) or 0
+    label = f"{base_prefix}{master_version}"
+    if resolved_test:
+        label += f"-T{resolved_test}"
+    return label
+
+
 __all__ = [
     "generate_group_prefix",
     "generate_label_prefix",
     "generate_variation_prefix",
     "generate_lineage_id",
     "generate_batch_label",
+    "format_label_prefix",
 ]

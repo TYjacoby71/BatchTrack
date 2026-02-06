@@ -151,6 +151,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  parent_master_id: int | None = None,
                  test_sequence: int | None = None,
                  is_test: bool | None = None,
+                 is_master_override: bool | None = None,
                  version_number_override: int | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
@@ -179,13 +180,20 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         current_org_id = _resolve_current_org_id()
         recipe_org_id = current_org_id if current_org_id else (1)
 
+        allow_duplicate_name = bool(
+            is_test_flag
+            or parent_recipe_id
+            or parent_master_id
+            or (is_master_override is False)
+        )
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
             yield_amount=yield_amount,
             portioning_data=portioning_data,
             allow_partial=allow_partial,
-            organization_id=current_org_id
+            organization_id=current_org_id,
+            allow_duplicate_name=allow_duplicate_name,
         )
 
         if not validation_result['valid']:
@@ -257,7 +265,11 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                 group_prefix=group_prefix,
             )
 
-        is_master = not bool(parent_recipe_id or parent_master_id)
+        is_master = (
+            is_master_override
+            if is_master_override is not None
+            else not bool(parent_recipe_id or parent_master_id)
+        )
         resolved_variation_name = None
         resolved_variation_prefix = None
         if not is_master:
@@ -440,7 +452,10 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         # Log lineage metadata after commit to ensure recipe.id is available
         lineage_event = 'CREATE'
         lineage_source_id = None
-        if parent_recipe_id:
+        if is_test_flag:
+            lineage_event = 'TEST'
+            lineage_source_id = parent_recipe_id or parent_master_id
+        elif parent_recipe_id:
             lineage_event = 'VARIATION'
             lineage_source_id = parent_recipe_id
         elif cloned_from_id:
@@ -581,7 +596,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         allow_partial = target_status == 'draft'
         recipe.status = target_status
 
-        if recipe.parent_recipe_id and recipe.is_master:
+        if recipe.parent_recipe_id and recipe.is_master and recipe.test_sequence is None:
             recipe.is_master = False
 
         if recipe.recipe_group_id is None and recipe.organization_id:
@@ -646,11 +661,27 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 name=name,
                 recipe_id=recipe_id,
                 allow_partial=True,
-                organization_id=recipe.organization_id
+                organization_id=recipe.organization_id,
+                allow_duplicate_name=bool(recipe.test_sequence) or (not recipe.is_master),
             )
             if not validation_result['valid']:
                 return False, validation_result
             recipe.name = name
+            if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
+                group_name = name.strip() if name else ""
+                if group_name and recipe.recipe_group and recipe.recipe_group.name != group_name:
+                    conflict = RecipeGroup.query.filter(
+                        RecipeGroup.organization_id == recipe.organization_id,
+                        RecipeGroup.name == group_name,
+                        RecipeGroup.id != recipe.recipe_group_id,
+                    ).first()
+                    if conflict:
+                        return False, {
+                            "valid": False,
+                            "error": "Recipe group name already exists",
+                            "missing_fields": [],
+                        }
+                    recipe.recipe_group.name = group_name
         if instructions is not None:
             recipe.instructions = append_timestamped_note(recipe.instructions, instructions)
         if yield_amount is not None:

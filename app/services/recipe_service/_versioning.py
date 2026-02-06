@@ -16,29 +16,40 @@ import sqlalchemy as sa
 
 from ...extensions import db
 from ...models import Recipe, RecipeIngredient, RecipeConsumable
-from ._core import create_recipe
+from ._core import create_recipe, _next_test_sequence
 from ._current import apply_current_flag
+from ._lineage import _log_lineage_event
 
 logger = logging.getLogger(__name__)
 
 
 # --- Build test template ---
 # Purpose: Build a test recipe template from a base.
-def build_test_template(base: Recipe) -> Recipe:
+def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Recipe:
+    test_name = base.name
+    if not base.is_master and base.variation_name:
+        test_name = base.variation_name
+    if test_sequence:
+        test_name = f"{test_name} - Test {test_sequence}"
     template = Recipe(
-        name=base.name,
+        name=test_name,
         instructions=base.instructions,
         label_prefix=base.label_prefix,
         predicted_yield=base.predicted_yield,
         predicted_yield_unit=base.predicted_yield_unit,
         category_id=base.category_id,
     )
+    if test_sequence:
+        template.test_sequence = test_sequence
+    template.version_number = base.version_number
     template.recipe_group_id = base.recipe_group_id
+    template.recipe_group = base.recipe_group
     template.is_master = base.is_master
     template.variation_name = base.variation_name
     template.variation_prefix = base.variation_prefix
-    template.parent_recipe_id = base.parent_recipe_id
+    template.parent_recipe_id = base.id
     template.parent_master_id = base.parent_master_id
+    template.parent_master = base.parent_master
     template.portioning_data = (
         base.portioning_data.copy() if isinstance(base.portioning_data, dict) else base.portioning_data
     )
@@ -60,16 +71,29 @@ def build_test_template(base: Recipe) -> Recipe:
 # --- Create test version ---
 # Purpose: Create a test version from a base recipe.
 def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: str) -> Tuple[bool, Any]:
+    next_test_sequence = _next_test_sequence(
+        base.recipe_group_id,
+        is_master=base.is_master,
+        variation_name=base.variation_name,
+    )
+    base_name = base.name
+    if not base.is_master and base.variation_name:
+        base_name = base.variation_name
+    test_name = f"{base_name} - Test {next_test_sequence}"
     test_payload = dict(payload)
     test_payload.update(
         {
+            "name": test_name,
             "status": target_status,
             "is_test": True,
             "recipe_group_id": base.recipe_group_id,
             "variation_name": base.variation_name,
             "parent_master_id": base.parent_master_id,
-            "parent_recipe_id": base.parent_recipe_id,
+            "parent_recipe_id": base.id,
+            "root_recipe_id": base.root_recipe_id or base.id,
             "version_number_override": base.version_number,
+            "test_sequence": next_test_sequence,
+            "is_master_override": base.is_master,
             "sharing_scope": "private",
             "is_public": False,
             "is_for_sale": False,
@@ -79,12 +103,32 @@ def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: st
     return create_recipe(**test_payload)
 
 
+# --- Next test sequence ---
+# Purpose: Expose next test sequence for a base recipe.
+def get_next_test_sequence(base: Recipe) -> int:
+    return _next_test_sequence(
+        base.recipe_group_id,
+        is_master=base.is_master,
+        variation_name=base.variation_name,
+    )
+
+
 # --- Promote test ---
 # Purpose: Promote a test to the current version.
 def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.test_sequence is None:
         return False, "Test version not found."
+
+    parent_recipe = None
+    if recipe.parent_recipe_id:
+        parent_recipe = db.session.get(Recipe, recipe.parent_recipe_id)
+    promoted_from_id = recipe.parent_recipe_id
+    promoted_from_version = recipe.version_number
+    promoted_from_test = recipe.test_sequence
+    base_master_version = (
+        recipe.parent_master.version_number if recipe.parent_master else None
+    )
 
     base_query = Recipe.query.filter(
         Recipe.recipe_group_id == recipe.recipe_group_id,
@@ -97,6 +141,11 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
 
     recipe.version_number = int(max_version) + 1
     recipe.test_sequence = None
+    if parent_recipe:
+        if recipe.is_master:
+            recipe.parent_recipe_id = None
+        else:
+            recipe.parent_recipe_id = parent_recipe.parent_recipe_id or parent_recipe.id
     recipe.status = "published"
     recipe.sharing_scope = "private"
     recipe.is_public = False
@@ -104,6 +153,27 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe.sale_price = None
     recipe.marketplace_status = "draft"
     apply_current_flag(recipe)
+    if promoted_from_test:
+        if recipe.is_master:
+            notes = f"Promoted from Master v{promoted_from_version} Test {promoted_from_test}"
+        else:
+            variation_label = recipe.variation_name or "Variation"
+            if base_master_version:
+                notes = (
+                    f"Promoted from {variation_label} v{promoted_from_version} "
+                    f"Test {promoted_from_test} (Base M{base_master_version})"
+                )
+            else:
+                notes = (
+                    f"Promoted from {variation_label} v{promoted_from_version} "
+                    f"Test {promoted_from_test}"
+                )
+        _log_lineage_event(
+            recipe,
+            "PROMOTE_TEST",
+            source_recipe_id=promoted_from_id,
+            notes=notes,
+        )
     db.session.commit()
     return True, recipe
 
@@ -240,6 +310,7 @@ def promote_variation_to_new_group(recipe_id: int, group_name: str | None = None
 __all__ = [
     "build_test_template",
     "create_test_version",
+    "get_next_test_sequence",
     "promote_test_to_current",
     "promote_variation_to_master",
     "promote_variation_to_new_group",

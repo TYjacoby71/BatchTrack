@@ -22,6 +22,7 @@ from ._current import set_current_version, ensure_current_versions_for_org
 from ._versioning import (
     build_test_template,
     create_test_version,
+    get_next_test_sequence,
     promote_test_to_current,
     promote_variation_to_master,
     promote_variation_to_new_group,
@@ -44,6 +45,7 @@ __all__ = [
     'set_current_version', 'ensure_current_versions_for_org',
     'build_test_template',
     'create_test_version',
+    'get_next_test_sequence',
     'promote_test_to_current',
     'promote_variation_to_master',
     'promote_variation_to_new_group',

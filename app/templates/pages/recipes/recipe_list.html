@@ -6,7 +6,7 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Recipes</h2>
+    <h2>{{ 'Recipe Groups' if can_create_variations else 'Recipes' }}</h2>
     <div class="d-flex gap-2">
         <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Recipe
@@ -29,8 +29,16 @@
     <div class="card">
         <div class="card-body">
             <i class="fas fa-book fa-4x text-muted mb-4"></i>
-            <h4 class="text-muted mb-3">No Recipes Yet</h4>
-            <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
+            <h4 class="text-muted mb-3">
+                {% if can_create_variations %}No Recipe Groups Yet{% else %}No Recipes Yet{% endif %}
+            </h4>
+            <p class="text-muted mb-4">
+                {% if can_create_variations %}
+                    Create your first recipe group to start tracking batches and managing production!
+                {% else %}
+                    Create your first recipe to start tracking batches and managing production!
+                {% endif %}
+            </p>
             <div class="d-flex gap-3 justify-content-center">
                 <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
                     <i class="fas fa-plus"></i> Create Your First Recipe
@@ -85,8 +93,61 @@
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
     {% set published_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ published_variations|length }}" data-origin="{{ origin_tag }}">
+    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
         <div class="card h-100 shadow-sm">
+            {% if can_create_variations %}
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">{{ recipe.name }} <small class="text-muted">v{{ recipe.version_number }}</small></h5>
+                    <small class="text-muted">Current Master</small>
+                </div>
+                <span class="badge bg-dark">Group</span>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <div class="mb-3">
+                    <h6 class="text-muted text-uppercase small mb-2">Current Variations</h6>
+                    {% if current_variations %}
+                    <ul class="list-group list-group-flush">
+                        {% for variation in current_variations %}
+                        {% set variation_plan_disabled = (variation.status == 'draft') %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <strong>{{ variation.variation_name or variation.name }}</strong>
+                                <small class="text-muted ms-2">v{{ variation.version_number }}</small>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">
+                                    View
+                                </a>
+                                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
+                                   class="btn btn-primary btn-xs {% if variation_plan_disabled %}disabled{% endif %}"
+                                   {% if variation_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
+                                    Plan
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No variations yet.</p>
+                    {% endif %}
+                </div>
+                <div class="mt-auto">
+                    {% set plan_disabled = (recipe.status == 'draft') %}
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
+                           class="btn btn-primary btn-sm {% if plan_disabled %}disabled{% endif %}"
+                           {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning"{% endif %}>
+                            <i class="fas fa-play"></i> Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ recipe.name }}</h5>
                   <div class="d-flex gap-2 align-items-center">
@@ -183,10 +244,8 @@
                                 <br><small class="text-muted">{{ variation.label_prefix or 'BTH' }}</small>
                             </div>
                           {% set variation_plan_disabled = (variation.status == 'draft') %}
-                          {% set variation_edit_disabled = (variation.status == 'published' and variation.test_sequence is none) %}
                           <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs{% if variation_edit_disabled %} disabled{% endif %}" {% if variation_edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>Edit</a>
                               <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
                                  class="btn btn-primary btn-xs {% if variation_plan_disabled %}disabled{% endif %}"
                                  {% if variation_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
@@ -198,6 +257,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>
@@ -211,6 +271,12 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        {% if can_create_variations %}
+                        <th>Recipe Group</th>
+                        <th>Master Version</th>
+                        <th>Current Variations</th>
+                        <th>Actions</th>
+                        {% else %}
                         <th>Recipe Name</th>
                         <th>Label Prefix</th>
                         <th>Ingredients</th>
@@ -219,12 +285,54 @@
                         <th>Variations</th>
                         <th>Containers</th>
                         <th>Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for recipe in recipes if not recipe.parent_recipe_id %}
                     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
-                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
+                    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+                    {% set table_variations = recipe.variations | selectattr('test_sequence', 'none') | list %}
+                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
+                        {% if can_create_variations %}
+                        <td>
+                            <strong>{{ recipe.name }}</strong>
+                        </td>
+                        <td>Master v{{ recipe.version_number }}</td>
+                        <td>
+                            {% if current_variations %}
+                                {% for variation in current_variations %}
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span>{{ variation.variation_name or variation.name }} <small class="text-muted">v{{ variation.version_number }}</small></span>
+                                        <span class="btn-group btn-group-sm" role="group">
+                                            {% set table_variation_disabled = (variation.status == 'draft') %}
+                                            <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                            <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
+                                               class="btn btn-primary btn-xs {% if table_variation_disabled %}disabled{% endif %}"
+                                               {% if table_variation_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
+                                                Plan
+                                            </a>
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No variations yet.</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                {% set table_plan_disabled = (recipe.status == 'draft') %}
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
+                                   class="btn btn-primary btn-sm {% if table_plan_disabled %}disabled{% endif %}"
+                                   {% if table_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning"{% endif %}>
+                                    <i class="fas fa-play"></i> Plan
+                                </a>
+                            </div>
+                        </td>
+                        {% else %}
                         <td>
                             <strong>{{ recipe.name }}</strong>
                             {% if recipe.instructions %}
@@ -254,8 +362,8 @@
                         </td>
                         <td>{{ recipe.batches|length }}</td>
                         <td>
-                            {{ recipe.variations|length }}
-                            {% if recipe.variations %}
+                            {{ table_variations|length }}
+                            {% if table_variations %}
                             <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ recipe.id }}">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
@@ -287,10 +395,6 @@
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-edit"></i> Edit
                                         </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
-                                            <i class="fas fa-copy"></i> Clone
-                                        </a></li>
                                         {% if can_create_variations %}
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
                                             <i class="fas fa-code-branch"></i> Create Variation
@@ -300,14 +404,15 @@
                                 </div>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
-                    {% if recipe.variations %}
+                    {% if table_variations and not can_create_variations %}
                     <tr class="collapse" id="table-variations-{{ recipe.id }}">
                         <td colspan="8">
                             <div class="ps-4">
                                 <strong>Variations:</strong>
                                 <div class="mt-2">
-                                    {% for variation in recipe.variations %}
+                                    {% for variation in table_variations %}
                                       <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                                         <div>
                                             <span class="fw-bold">{{ variation.name }}</span>
@@ -316,7 +421,6 @@
                                           {% set table_variation_disabled = (variation.status == 'draft') %}
                                           <div class="btn-group" role="group">
                                             <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                            <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
                                               <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
                                                  class="btn btn-primary btn-xs {% if table_variation_disabled %}disabled{% endif %}"
                                                  {% if table_variation_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
@@ -382,7 +486,7 @@
     <div class="card">
         <div class="card-body">
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h5>No recipes found</h5>
+            <h5>{% if can_create_variations %}No recipe groups found{% else %}No recipes found{% endif %}</h5>
             <p class="text-muted">Try adjusting your search criteria</p>
         </div>
     </div>

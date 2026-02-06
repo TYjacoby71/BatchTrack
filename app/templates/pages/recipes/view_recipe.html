@@ -1,16 +1,30 @@
 {# File: pages/recipes/view_recipe.html
-   Synopsis: Recipe detail view with lineage, notes, and version actions.
+   Synopsis: Recipe detail view with lineage selectors, notes, and version actions.
    Glossary: Lineage ID = version identifier; Promotion = make current/master. #}
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
 
-{% set breadcrumb_items = [
-    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
-    {'label': recipe.name, 'url': None}
-] %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
+{% set display_recipe_name = recipe.name %}
+{% if not recipe.is_master %}
+  {% set base_name = recipe.variation_name or recipe.name %}
+  {% if is_test %}
+    {% set display_recipe_name = base_name ~ ' - Test ' ~ recipe.test_sequence %}
+  {% else %}
+    {% set display_recipe_name = base_name %}
+  {% endif %}
+{% elif is_test %}
+  {% set display_recipe_name = recipe.name ~ ' - Test ' ~ recipe.test_sequence %}
+{% endif %}
+{% set breadcrumb_items = [
+    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
+    {'label': display_recipe_name, 'url': None}
+] %}
+{% set display_label_prefix = label_prefix_display if label_prefix_display else (recipe.label_prefix or 'BTH') %}
 
+{# --- Content block ---
+   Purpose: Render recipe details, lineage navigation, and action controls. #}
 {% block content %}
 
 <!-- Recipe Header Card with merged details -->
@@ -18,7 +32,7 @@
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start mb-3">
       <div class="flex-grow-1">
-        <h2 class="mb-1">{{ recipe.name }}</h2>
+        <h2 class="mb-1">{{ display_recipe_name }}</h2>
         <div class="d-flex gap-2 align-items-center mb-2">
           {% if is_published_locked or (is_test and has_batches) %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
@@ -56,7 +70,7 @@
                 {{ recipe.name }}
               {% endif %}
             </p>
-            <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ recipe.label_prefix or 'BTH' }}</span></p>
+            <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ display_label_prefix }}</span></p>
             {% if recipe.predicted_yield %}
             <p class="mb-1"><strong>Predicted Yield:</strong> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</p>
             {% endif %}
@@ -73,7 +87,7 @@
               {% if recipe.is_master %}
                 Master v{{ recipe.version_number }}
               {% else %}
-                {{ recipe.variation_name or 'Variation' }} v{{ recipe.version_number }} (Base v{{ recipe.parent_master.version_number if recipe.parent_master else '—' }})
+                {{ recipe.variation_name or 'Variation' }} v{{ recipe.version_number }}
               {% endif %}
             </p>
           </div>
@@ -407,43 +421,110 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
-    {% if can_create_variations %}
+    {% if can_create_variations and (master_branches or variation_branches) %}
+    {% set current_variation_name = recipe.variation_name or recipe.name %}
     <div class="card mb-4">
       <div class="card-header">
         <h5 class="card-title mb-0"><i class="fas fa-sitemap"></i> Lineage Selector</h5>
       </div>
       <div class="card-body">
-        <label class="form-label small text-muted">Jump to a version</label>
-        <select class="form-select mb-2" onchange="if (this.value) { window.location = this.value; }">
-          <option value="">Select a lineage version</option>
-          {% for master in master_versions %}
-            <option value="{{ url_for('recipes.view_recipe', recipe_id=master.id) }}" {% if master.id == recipe.id %}selected{% endif %}>
-              Master v{{ master.version_number }}{% if master.is_current %} · Current{% endif %}
-            </option>
-          {% endfor %}
-          {% for test in master_tests %}
-            <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
-              Master v{{ test.version_number }} · Test {{ test.test_sequence }}
-            </option>
-          {% endfor %}
-          {% for var_name, bucket in variation_versions.items() %}
-            {% for version in bucket.published %}
-              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
-                Variation {{ var_name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
-              </option>
-            {% endfor %}
-            {% for version in bucket.tests %}
-              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
-                Variation {{ var_name }} v{{ version.version_number }} · Test {{ version.test_sequence }}
-              </option>
-            {% endfor %}
-          {% endfor %}
+        <label class="form-label small text-muted">Browse lineage</label>
+        <select id="lineageBranchSelect" class="form-select mb-2">
+          <option value="master" {% if recipe.is_master %}selected{% endif %}>Master</option>
+          <option value="variation" {% if not recipe.is_master %}selected{% endif %} {% if not variation_branches %}disabled{% endif %}>Variations</option>
         </select>
+
+        <div id="masterLineageSelectWrap">
+          <label class="form-label small text-muted">Master versions</label>
+          <select id="masterLineageSelect" class="form-select mb-2" onchange="if (this.value) { window.location = this.value; }">
+            {% for branch in master_branches %}
+              {% set master = branch.version %}
+              <option value="{{ url_for('recipes.view_recipe', recipe_id=master.id) }}" {% if master.id == recipe.id %}selected{% endif %}>
+                Master v{{ master.version_number }}{% if master.is_current %} · Current{% endif %}
+              </option>
+              {% for test in branch.tests %}
+                <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
+                  ↳ Test {{ test.test_sequence }}
+                </option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="variationLineageSelectWrap" style="display:none;">
+          <label class="form-label small text-muted">Variation</label>
+          <select id="variationNameSelect" class="form-select mb-2">
+            {% for branch in variation_branches %}
+              <option value="{{ branch.name }}" {% if branch.name == current_variation_name %}selected{% endif %}>{{ branch.name }}</option>
+            {% endfor %}
+          </select>
+          {% for branch in variation_branches %}
+            <select class="form-select variation-lineage-select mb-2"
+                    data-variation="{{ branch.name }}"
+                    onchange="if (this.value) { window.location = this.value; }"
+                    style="display:none;">
+              {% for entry in branch.versions %}
+                {% set version = entry.version %}
+                <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
+                  {{ branch.name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
+                </option>
+                {% for test in entry.tests %}
+                  <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
+                    ↳ Test {{ test.test_sequence }}
+                  </option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          {% endfor %}
+        </div>
+
         <p class="text-muted small mb-0">
           Select a version to view its lineage-specific ingredients, yield, and batches.
         </p>
       </div>
     </div>
+    <script>
+      (function() {
+        const branchSelect = document.getElementById('lineageBranchSelect');
+        const masterWrap = document.getElementById('masterLineageSelectWrap');
+        const variationWrap = document.getElementById('variationLineageSelectWrap');
+        const variationNameSelect = document.getElementById('variationNameSelect');
+        const variationSelects = document.querySelectorAll('.variation-lineage-select');
+
+        function syncVariationSelect() {
+          if (!variationNameSelect) return;
+          const name = variationNameSelect.value;
+          let active = null;
+          variationSelects.forEach(select => {
+            const match = select.getAttribute('data-variation') === name;
+            select.style.display = match ? 'block' : 'none';
+            if (match) active = select;
+          });
+          if (!active && variationSelects.length) {
+            variationSelects[0].style.display = 'block';
+          }
+        }
+
+        function syncBranch() {
+          if (!branchSelect) return;
+          const branch = branchSelect.value;
+          const showMaster = branch === 'master';
+          if (masterWrap) masterWrap.style.display = showMaster ? 'block' : 'none';
+          if (variationWrap) variationWrap.style.display = showMaster ? 'none' : 'block';
+          if (!showMaster) {
+            syncVariationSelect();
+          }
+        }
+
+        if (variationNameSelect) {
+          variationNameSelect.addEventListener('change', syncVariationSelect);
+        }
+        if (branchSelect) {
+          branchSelect.addEventListener('change', syncBranch);
+        }
+        syncBranch();
+      })();
+    </script>
     {% endif %}
 
     <!-- Actions Card -->
@@ -558,59 +639,55 @@
     <!-- Origin Details -->
     <div class="card mb-4">
       <div class="card-header">
-        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin & Ownership</h5>
+        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin</h5>
       </div>
       <div class="card-body">
+        {% set is_marketplace_origin = recipe.org_origin_source_org or recipe.org_origin_source_recipe or recipe.org_origin_type == 'purchased' %}
+        {% set origin_label = 'Authored' %}
+        {% if recipe.org_origin_type == 'batchtrack_native' %}
+          {% set origin_label = 'BatchTrack Native' %}
+        {% elif is_marketplace_origin %}
+          {% if recipe.org_origin_purchased %}
+            {% set origin_label = 'Marketplace (Purchased)' %}
+          {% else %}
+            {% set origin_label = 'Marketplace (Free)' %}
+          {% endif %}
+        {% endif %}
         <dl class="row mb-0">
-          <dt class="col-5">Organization</dt>
-          <dd class="col-7">{{ recipe.organization.name if recipe.organization else 'Unassigned' }}</dd>
-          <dt class="col-5">Origin Type</dt>
-          <dd class="col-7 text-capitalize">
-            {% if recipe.org_origin_type == 'batchtrack_native' %}
-              <span class="badge bg-dark">BatchTrack Native</span>
-            {% else %}
-              {{ recipe.org_origin_type.replace('_', ' ') }}
-            {% endif %}
-          </dd>
-          <dt class="col-5">Org Origin Recipe</dt>
+          <dt class="col-5">Origin</dt>
           <dd class="col-7">
-            {% if recipe.org_origin_recipe %}
-              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.org_origin_recipe.id) }}">{{ recipe.org_origin_recipe.name }}</a>
-            {% else %}
-              {{ recipe.name }}
-            {% endif %}
+            <span class="badge bg-light text-dark border">{{ origin_label }}</span>
           </dd>
-          <dt class="col-5">Global Origin</dt>
+          <dt class="col-5">Origin Recipe</dt>
           <dd class="col-7">
-            {% if recipe.root_recipe %}
-              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.root_recipe.id) }}">{{ recipe.root_recipe.name }}</a>
-            {% else %}
-              {{ recipe.name }}
-            {% endif %}
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_root_recipe.id) }}" class="text-decoration-none">
+              {{ origin_root_recipe.name }}
+            </a>
           </dd>
-          <dt class="col-5">Purchased Origin</dt>
+          <dt class="col-5">Root Recipe</dt>
           <dd class="col-7">
-            {% if recipe.org_origin_purchased %}
-              <span class="badge bg-warning text-dark">Yes</span>
-              {% if recipe.origin_source_org %}
-                <div class="small mt-2">
-                  Source: <strong>{{ recipe.origin_source_org.name }}</strong>
-                  <div class="mt-1">
-                    <a href="{{ url_for('recipe_library_bp.recipe_library', organization=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
-                      View public listings
-                    </a>
-                    {% if show_origin_marketplace %}
-                      <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-2">
-                        Marketplace dashboard
-                      </a>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
+            {% if origin_parent_recipe %}
+              <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_parent_recipe.id) }}" class="text-decoration-none">
+                {{ origin_parent_recipe.name }}
+              </a>
             {% else %}
-              <span class="badge bg-success">No</span>
+              <span class="text-muted">—</span>
             {% endif %}
           </dd>
+          {% if is_marketplace_origin and recipe.org_origin_source_org %}
+          <dt class="col-5">Author</dt>
+          <dd class="col-7">
+            {% if recipe.org_origin_source_recipe %}
+              <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.org_origin_source_recipe.id, slug=slugify(recipe.org_origin_source_recipe.name)) }}" class="text-decoration-none">
+                {{ recipe.org_origin_source_org.name }}
+              </a>
+            {% else %}
+              <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.org_origin_source_org.id) }}" class="text-decoration-none">
+                {{ recipe.org_origin_source_org.name }}
+              </a>
+            {% endif %}
+          </dd>
+          {% endif %}
         </dl>
       </div>
     </div>
