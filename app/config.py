@@ -27,6 +27,8 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 
+# --- EnvironmentInfo ---
+# Purpose: Hold the resolved runtime environment metadata.
 @dataclass(frozen=True)
 class EnvironmentInfo:
     name: str
@@ -34,6 +36,8 @@ class EnvironmentInfo:
     raw_value: str
 
 
+# --- EnvReader ---
+# Purpose: Read and coerce environment values with warnings.
 class EnvReader:
     def __init__(self, data: Mapping[str, str] | None = None):
         self._data = dict(data or os.environ)
@@ -89,18 +93,24 @@ class EnvReader:
         return self._data.get(key)
 
 
+# --- Normalize environment ---
+# Purpose: Coerce the environment name into a supported value.
 def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
     if not value:
         return default
     return value.strip().lower() or default
 
 
+# --- Normalize DB URL ---
+# Purpose: Normalize postgres:// URLs into sqlalchemy-friendly formats.
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
     return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
 
 
+# --- Extract host ---
+# Purpose: Pull the hostname from a URL or host string.
 def _extract_host(value: str | None) -> str | None:
     if not value:
         return None
@@ -109,6 +119,8 @@ def _extract_host(value: str | None) -> str | None:
     return host or None
 
 
+# --- Derive scheme ---
+# Purpose: Infer the scheme (http/https) from a base URL.
 def _derive_scheme(base_url: str | None) -> str | None:
     if not base_url:
         return None
@@ -116,6 +128,8 @@ def _derive_scheme(base_url: str | None) -> str | None:
     return parsed.scheme or None
 
 
+# --- Resolve rate limit URI ---
+# Purpose: Choose the rate limiter storage URI from settings.
 def _resolve_ratelimit_uri(settings: Mapping[str, Any]) -> str:
     candidate = settings.get("RATELIMIT_STORAGE_URI")
     if candidate:
@@ -126,6 +140,8 @@ def _resolve_ratelimit_uri(settings: Mapping[str, Any]) -> str:
     return "memory://"
 
 
+# --- Resolve environment ---
+# Purpose: Validate the configured environment and return metadata.
 def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
     for key in _FORBIDDEN_ENV_KEYS:
         if reader.raw(key) not in (None, ""):
@@ -142,6 +158,8 @@ def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
     return EnvironmentInfo(name=normalized, source=_ENV_KEY, raw_value=raw_value)
 
 
+# --- Resolve base URL ---
+# Purpose: Determine APP_BASE_URL for the active environment.
 def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
     value = reader.str('APP_BASE_URL')
     if value:
@@ -155,6 +173,8 @@ def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
     raise RuntimeError('APP_BASE_URL must be set for staging and production environments.')
 
 
+# --- Preferred scheme ---
+# Purpose: Pick the canonical scheme for redirects and links.
 def _preferred_scheme(base_url: str, env_name: str) -> str:
     scheme = _derive_scheme(base_url)
     if scheme:
@@ -180,6 +200,8 @@ _CANONICAL_HOST = SETTINGS.get("APP_HOST") or _extract_host(_BASE_URL)
 _PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
 
 
+# --- BaseConfig ---
+# Purpose: Define shared configuration defaults for all environments.
 class BaseConfig:
     FLASK_ENV = ENV_INFO.name
     SECRET_KEY = SETTINGS.get("FLASK_SECRET_KEY")
@@ -288,6 +310,8 @@ class BaseConfig:
     DOMAIN_EVENT_WEBHOOK_URL = SETTINGS.get("DOMAIN_EVENT_WEBHOOK_URL")
 
 
+# --- DevelopmentConfig ---
+# Purpose: Override settings for local development defaults.
 class DevelopmentConfig(BaseConfig):
     ENV = 'development'
     DEBUG = True
@@ -310,6 +334,8 @@ class DevelopmentConfig(BaseConfig):
     }
 
 
+# --- TestingConfig ---
+# Purpose: Override settings for tests and in-memory databases.
 class TestingConfig(BaseConfig):
     ENV = 'testing'
     TESTING = True
@@ -324,6 +350,8 @@ class TestingConfig(BaseConfig):
     SESSION_TYPE = 'filesystem'
 
 
+# --- StagingConfig ---
+# Purpose: Override settings for staging deployments.
 class StagingConfig(BaseConfig):
     ENV = 'staging'
     SESSION_COOKIE_SECURE = True
@@ -333,6 +361,8 @@ class StagingConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
 
 
+# --- ProductionConfig ---
+# Purpose: Override settings for production deployments.
 class ProductionConfig(BaseConfig):
     ENV = 'production'
     SESSION_COOKIE_SECURE = True
@@ -350,10 +380,14 @@ config_map = {
 }
 
 
+# --- Active config name ---
+# Purpose: Return the resolved environment name.
 def get_active_config_name() -> str:
     return ENV_INFO.name
 
 
+# --- Get config ---
+# Purpose: Return the config class for the active environment.
 def get_config():
     return config_map[get_active_config_name()]
 

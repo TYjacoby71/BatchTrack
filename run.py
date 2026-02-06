@@ -22,12 +22,16 @@ app = create_app()
 _TRUTHY = {"1", "true", "on", "yes"}
 
 
+# --- Env flag ---
+# Purpose: Interpret truthy/falsey environment flags.
 def _env_flag(name: str, default: bool = False) -> bool:
     """Return True when the named environment variable is truthy."""
     value = os.environ.get(name)
     return default if value is None else value.strip().lower() in _TRUTHY
 
 
+# --- Configure logging ---
+# Purpose: Configure console logging for the dev server.
 def _configure_logging(debug_enabled: bool) -> None:
     logging.basicConfig(
         level=logging.DEBUG if debug_enabled else logging.INFO,
@@ -38,6 +42,8 @@ def _configure_logging(debug_enabled: bool) -> None:
         app.logger.setLevel(logging.DEBUG)
 
 
+# --- Main ---
+# Purpose: Start the Flask dev server with safety checks.
 def main() -> None:
     env = os.environ.get("FLASK_ENV", "development").lower()
     debug_enabled = env != "production"

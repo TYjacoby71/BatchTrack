@@ -40,6 +40,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+# --- SimpleCache ---
+# Purpose: Provide a thread-safe in-memory cache with TTL support.
 class SimpleCache:
     """Thread-safe in-memory cache with TTL and simple capacity eviction."""
 
@@ -85,12 +87,16 @@ class SimpleCache:
                 del self._cache[k]
 
 
+# --- Resolve Redis URL ---
+# Purpose: Look up the Redis URL from app config or environment.
 def _resolve_redis_url() -> str | None:
     if has_app_context():
         return current_app.config.get("REDIS_URL")
     return os.environ.get("REDIS_URL")
 
 
+# --- RedisCache ---
+# Purpose: Provide a Redis-backed cache with TTL and fallback.
 class RedisCache:
     """Redis-backed cache with TTL and namespace scoping."""
 

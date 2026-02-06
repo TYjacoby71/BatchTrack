@@ -26,6 +26,8 @@ _DEFAULT_POOL_TOTAL_CONNECTIONS = 50
 _DEFAULT_POOL_PER_WORKER_CAP = 10
 
 
+# --- LazyRedisClient ---
+# Purpose: Defer Redis client creation until first use.
 class LazyRedisClient:
     """Defer Redis client creation until first use (fork-safe)."""
 
@@ -57,6 +59,8 @@ class LazyRedisClient:
         return getattr(self._get_client(), name)
 
 
+# --- Float setting ---
+# Purpose: Coerce config values into floats with defaults.
 def _float_setting(value: Any, default: float) -> float:
     try:
         return float(value)
@@ -64,6 +68,8 @@ def _float_setting(value: Any, default: float) -> float:
         return default
 
 
+# --- Int setting ---
+# Purpose: Coerce config values into integers with defaults.
 def _int_setting(value: Any, default: int | None) -> int | None:
     try:
         return int(value)
@@ -71,12 +77,16 @@ def _int_setting(value: Any, default: int | None) -> int | None:
         return default
 
 
+# --- Get setting ---
+# Purpose: Read config values from Flask app or environment.
 def _get_setting(app: Flask | None, key: str) -> Any:
     if app is not None and key in app.config:
         return app.config.get(key)
     return os.environ.get(key)
 
 
+# --- Resolve worker count ---
+# Purpose: Compute worker count for Redis pool budgeting.
 def _resolve_worker_count(app: Flask | None) -> int:
     if _get_setting(app, "WEB_CONCURRENCY") not in (None, ""):
         logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
@@ -89,6 +99,8 @@ def _resolve_worker_count(app: Flask | None) -> int:
     return max(worker_count, 1)
 
 
+# --- Resolve pool max ---
+# Purpose: Compute Redis pool max connections per worker.
 def _resolve_pool_max_connections(app: Flask | None) -> int:
     explicit = _int_setting(_get_setting(app, "REDIS_POOL_MAX_CONNECTIONS"), None)
     if explicit is None:
@@ -110,6 +122,8 @@ def _resolve_pool_max_connections(app: Flask | None) -> int:
     return max(5, int(default_total_budget / worker_count))
 
 
+# --- Build pool ---
+# Purpose: Construct the Redis connection pool with timeouts.
 def _build_pool(app: Flask | None, redis_url: str):
     try:
         import redis
@@ -133,6 +147,8 @@ def _build_pool(app: Flask | None, redis_url: str):
     return pool, max_conns, pool_timeout
 
 
+# --- Get Redis pool ---
+# Purpose: Return a cached Redis pool or build a new one.
 def get_redis_pool(app: Flask | None = None):
     """Provision a Redis connection pool and refresh it after each worker fork."""
     if app is None and has_app_context():

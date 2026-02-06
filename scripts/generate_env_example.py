@@ -15,6 +15,8 @@ from pathlib import Path
 import sys
 
 
+# --- Load schema ---
+# Purpose: Dynamically load the config schema module from disk.
 def _load_schema():
     schema_path = Path(__file__).resolve().parents[1] / "app" / "config_schema.py"
     spec = importlib.util.spec_from_file_location("config_schema", schema_path)
@@ -26,6 +28,8 @@ def _load_schema():
     return module
 
 
+# --- Format value ---
+# Purpose: Format values for .env output.
 def _format_value(value) -> str:
     if value is None:
         return ""
@@ -34,6 +38,8 @@ def _format_value(value) -> str:
     return str(value)
 
 
+# --- Example value ---
+# Purpose: Pick example values from recommended or default settings.
 def _example_value(field, env_name: str, *, use_recommended: bool) -> str:
     if use_recommended and field.recommended is not None:
         return field.recommended
@@ -43,6 +49,8 @@ def _example_value(field, env_name: str, *, use_recommended: bool) -> str:
     return _format_value(default)
 
 
+# --- Generate env example ---
+# Purpose: Render an env template for the chosen environment.
 def generate_env_example(env_name: str = "production", *, use_recommended: bool = True) -> str:
     header = "Production" if env_name == "production" else "Development"
     lines = [
@@ -71,6 +79,8 @@ def generate_env_example(env_name: str = "production", *, use_recommended: bool 
     return "\n".join(lines).rstrip() + "\n"
 
 
+# --- Main ---
+# Purpose: Write generated env templates to disk.
 def main() -> None:
     production_target = Path("docs/operations/env.production.example")
     production_target.write_text(

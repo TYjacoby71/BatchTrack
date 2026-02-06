@@ -53,6 +53,8 @@ DEFAULT_SECURITY_HEADERS = {
 }
 
 
+# --- Config flag ---
+# Purpose: Resolve boolean config values from app config.
 def _config_flag(name: str, default: bool = False) -> bool:
     value = current_app.config.get(name, default)
     if isinstance(value, bool):
@@ -62,6 +64,8 @@ def _config_flag(name: str, default: bool = False) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+# --- Config int ---
+# Purpose: Resolve integer config values from app config.
 def _config_int(name: str, default: int) -> int:
     raw = current_app.config.get(name, default)
     if raw is None:
@@ -73,6 +77,8 @@ def _config_int(name: str, default: int) -> int:
         return default
 
 
+# --- Wants JSON response ---
+# Purpose: Detect when a request should return JSON instead of HTML.
 def _wants_json_response() -> bool:
     accepts = request.accept_mimetypes
     return request.path.startswith("/api/") or (
@@ -80,6 +86,8 @@ def _wants_json_response() -> bool:
     )
 
 
+# --- Developer action logging ---
+# Purpose: Decide whether a developer action should be logged.
 def _should_log_developer_action(path: str, method: str) -> bool:
     if method not in {"POST", "PUT", "DELETE", "PATCH"}:
         return False
@@ -90,6 +98,8 @@ def _should_log_developer_action(path: str, method: str) -> bool:
     return True
 
 
+# --- Route permissions ---
+# Purpose: Look up required permissions for the given endpoint.
 def _get_route_required_permissions(endpoint: str | None) -> set[str]:
     if not endpoint:
         return set()
@@ -105,6 +115,8 @@ def _get_route_required_permissions(endpoint: str | None) -> set[str]:
         return {str(required)}
 
 
+# --- Route permission scope ---
+# Purpose: Map endpoints to permission scopes for auditing.
 def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | None:
     required_permissions = _get_route_required_permissions(endpoint)
     if not required_permissions:
@@ -121,6 +133,8 @@ def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | N
         return None
 
 
+# --- Route category ---
+# Purpose: Classify routes for analytics and logging.
 def _classify_route_category(path: str, permission_scope: PermissionScope | None) -> str:
     if permission_scope:
         if permission_scope.is_dev_only:
@@ -133,6 +147,8 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
     return "unknown"
 
 
+# --- Register middleware ---
+# Purpose: Attach request/response hooks to the Flask app.
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
@@ -291,6 +307,8 @@ def register_middleware(app: Flask) -> None:
         return response
 
 
+# --- Handle developer context ---
+# Purpose: Emit dev-context payloads for audit and UI diagnostics.
 def _handle_developer_context(
     path: str,
     endpoint: str | None,
@@ -335,6 +353,8 @@ def _handle_developer_context(
         return None
 
 
+# --- Enforce billing ---
+# Purpose: Gate routes based on billing status and entitlements.
 def _enforce_billing() -> Response | None:
     try:
         from .models import Organization

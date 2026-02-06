@@ -31,6 +31,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
+- **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
+- **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
+- **/integrations/test-stripe** → Stripe connectivity check (see `app/blueprints/developer/views/integration_routes.py`)
 
 ---
 
@@ -41,6 +44,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
+- **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
+- **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 
 ---
 
@@ -51,6 +57,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
+- **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
 
 ---
 
@@ -61,6 +68,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
+- **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
+- **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)
 
 ---
 

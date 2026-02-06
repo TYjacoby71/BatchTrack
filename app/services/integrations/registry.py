@@ -16,6 +16,8 @@ from typing import Dict, Iterable, List, Optional
 from flask import current_app
 
 
+# --- IntegrationSpec ---
+# Purpose: Describe required metadata for one integration.
 @dataclass(frozen=True)
 class IntegrationSpec:
     key: str
@@ -31,10 +33,14 @@ class IntegrationSpec:
     notes: Optional[str] = None
 
 
+# --- Resolve config value ---
+# Purpose: Fetch config values for integration checks.
 def _env_or_config_value(key: str) -> Optional[str]:
     return current_app.config.get(key)
 
 
+# --- Integration specs ---
+# Purpose: Enumerate known integrations and their requirements.
 def _specs() -> Iterable[IntegrationSpec]:
     return [
         IntegrationSpec(
@@ -81,6 +87,8 @@ def _specs() -> Iterable[IntegrationSpec]:
     ]
 
 
+# --- Build integration categories ---
+# Purpose: Group integrations for UI display by category.
 def build_integration_categories(
     *, auto_backup_enabled: bool = False
 ) -> List[Dict[str, object]]:

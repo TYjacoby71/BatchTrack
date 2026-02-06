@@ -24,6 +24,8 @@ from app.models.domain_event import DomainEvent
 logger = logging.getLogger(__name__)
 
 
+# --- DomainEventDispatcher ---
+# Purpose: Deliver queued domain events to external webhooks.
 class DomainEventDispatcher:
     """Outbox dispatcher for processing DomainEvent records asynchronously."""
 

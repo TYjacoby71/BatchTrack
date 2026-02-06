@@ -29,6 +29,8 @@ from ..routes import developer_bp
 
 @developer_bp.route("/integrations")
 @require_developer_permission("dev.system_admin")
+# --- Integrations checklist ---
+# Purpose: Render the integrations checklist and diagnostics dashboard.
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
@@ -279,6 +281,8 @@ def integrations_checklist():
 
 @developer_bp.route("/integrations/test-email", methods=["POST"])
 @require_developer_permission("dev.system_admin")
+# --- Test email integration ---
+# Purpose: Send a test email to confirm provider credentials.
 def integrations_test_email():
     """Send a test email to current user's email if configured."""
     try:
@@ -304,6 +308,8 @@ def integrations_test_email():
 
 @developer_bp.route("/integrations/test-stripe", methods=["POST"])
 @require_developer_permission("dev.system_admin")
+# --- Test Stripe integration ---
+# Purpose: Validate Stripe connectivity without exposing secrets.
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
@@ -324,6 +330,8 @@ def integrations_test_stripe():
 
 @developer_bp.route("/integrations/stripe-events", methods=["GET"])
 @require_developer_permission("dev.system_admin")
+# --- Stripe event audit ---
+# Purpose: Summarize recent Stripe webhook events for diagnostics.
 def integrations_stripe_events():
     """Summarize recent Stripe webhook events from the database."""
     try:
@@ -348,6 +356,8 @@ def integrations_stripe_events():
 
 @developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
 @require_developer_permission("dev.system_admin")
+# --- Set feature flags ---
+# Purpose: Update feature flags from the integrations UI.
 def integrations_set_feature_flags():
     """Set feature flags via AJAX."""
     from app.extensions import db
@@ -383,6 +393,8 @@ def integrations_set_feature_flags():
 
 @developer_bp.route("/integrations/auto-backup", methods=["POST"])
 @require_developer_permission("dev.system_admin")
+# --- Set auto backup ---
+# Purpose: Persist the auto-backup toggle from the UI.
 def integrations_set_auto_backup():
     """Persist the auto-backup toggle (stubbed)."""
     try:
@@ -396,6 +408,8 @@ def integrations_set_auto_backup():
 
 @developer_bp.route("/integrations/check-webhook", methods=["GET"])
 @require_developer_permission("dev.system_admin")
+# --- Check webhook ---
+# Purpose: Verify webhook reachability for Stripe endpoints.
 def integrations_check_webhook():
     """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
     try:

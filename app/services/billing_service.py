@@ -43,6 +43,8 @@ else:
 
 logger = logging.getLogger(__name__)
 
+# --- BillingService ---
+# Purpose: Coordinate billing workflows, pricing, and Stripe integration.
 class BillingService:
     """Consolidated billing + Stripe orchestration service."""
 

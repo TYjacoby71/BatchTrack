@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 
+# --- ConfigField ---
+# Purpose: Define the metadata and defaults for one config key.
 @dataclass(frozen=True)
 class ConfigField:
     key: str
@@ -39,6 +41,8 @@ class ConfigField:
         return self.required or (self.required_in and env_name in self.required_in)
 
 
+# --- ConfigSection ---
+# Purpose: Group config fields into a named checklist section.
 @dataclass(frozen=True)
 class ConfigSection:
     key: str
@@ -47,6 +51,8 @@ class ConfigSection:
     fields: tuple[ConfigField, ...]
 
 
+# --- ResolvedField ---
+# Purpose: Capture resolved config values with source metadata.
 @dataclass(frozen=True)
 class ResolvedField:
     field: ConfigField
@@ -69,6 +75,8 @@ DEPRECATED_ENV_KEYS: dict[str, str] = {
 }
 
 
+# --- Parse string ---
+# Purpose: Convert raw string values while honoring empty defaults.
 def _parse_str(value: str | None, default: Any, *, allow_empty: bool = False) -> Any:
     if value is None:
         return default
@@ -78,6 +86,8 @@ def _parse_str(value: str | None, default: Any, *, allow_empty: bool = False) ->
     return stripped
 
 
+# --- Parse integer ---
+# Purpose: Convert raw string values into integers with fallback messaging.
 def _parse_int(value: str | None, default: Any) -> tuple[Any, str | None]:
     if value is None or value.strip() == "":
         return default, None
@@ -87,6 +97,8 @@ def _parse_int(value: str | None, default: Any) -> tuple[Any, str | None]:
         return default, "expected integer"
 
 
+# --- Parse float ---
+# Purpose: Convert raw string values into floats with fallback messaging.
 def _parse_float(value: str | None, default: Any) -> tuple[Any, str | None]:
     if value is None or value.strip() == "":
         return default, None
@@ -96,6 +108,8 @@ def _parse_float(value: str | None, default: Any) -> tuple[Any, str | None]:
         return default, "expected float"
 
 
+# --- Parse boolean ---
+# Purpose: Convert raw string values into booleans with fallback messaging.
 def _parse_bool(value: str | None, default: Any) -> tuple[Any, str | None]:
     if value is None or value.strip() == "":
         return default, None
@@ -107,6 +121,8 @@ def _parse_bool(value: str | None, default: Any) -> tuple[Any, str | None]:
     return default, "expected boolean"
 
 
+# --- Parse value ---
+# Purpose: Dispatch raw values to the appropriate type parser.
 def _parse_value(field: ConfigField, raw: str | None, default: Any) -> tuple[Any, str | None]:
     if field.cast == "int":
         return _parse_int(raw, default)
@@ -117,6 +133,8 @@ def _parse_value(field: ConfigField, raw: str | None, default: Any) -> tuple[Any
     return _parse_str(raw, default), None
 
 
+# --- Resolve settings ---
+# Purpose: Convert raw env values into typed config values and warnings.
 def resolve_settings(env: Mapping[str, str], env_name: str) -> tuple[dict[str, Any], dict[str, ResolvedField], list[str]]:
     warnings: list[str] = []
     values: dict[str, Any] = {}
@@ -150,10 +168,14 @@ def resolve_settings(env: Mapping[str, str], env_name: str) -> tuple[dict[str, A
     return values, resolved, warnings
 
 
+# --- Iterate sections ---
+# Purpose: Return the ordered config sections for docs and checklists.
 def iter_sections() -> Iterable[ConfigSection]:
     return CONFIG_SECTIONS
 
 
+# --- Build checklist sections ---
+# Purpose: Transform schema fields into the integrations checklist payload.
 def build_integration_sections(env: Mapping[str, str], env_name: str) -> list[dict[str, Any]]:
     _, resolved, _ = resolve_settings(env, env_name)
     sections: list[dict[str, Any]] = []
@@ -181,6 +203,8 @@ def build_integration_sections(env: Mapping[str, str], env_name: str) -> list[di
     return sections
 
 
+# --- Field helper ---
+# Purpose: Build ConfigField instances with shared defaults.
 def _field(
     key: str,
     cast: str,
@@ -1251,6 +1275,8 @@ CONFIG_FIELDS: tuple[ConfigField, ...] = (
 )
 
 
+# --- Section field selector ---
+# Purpose: Collect fields assigned to a given schema section.
 def _section_fields(section_key: str) -> tuple[ConfigField, ...]:
     return tuple(field for field in CONFIG_FIELDS if field.section == section_key)
 
