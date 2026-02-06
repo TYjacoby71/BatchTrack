@@ -257,7 +257,7 @@ def _run_optional_create_all(app: Flask) -> None:
 # Purpose: Remove invalid SQLAlchemy pool settings for SQLite.
 def _configure_sqlite_engine_options(app):
     """Configure SQLite engine options for testing/memory databases"""
-    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    uri = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
     if app.config.get("TESTING") or uri.startswith("sqlite"):
         opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}))
         # Remove pool args that SQLite memory + StaticPool don't accept
