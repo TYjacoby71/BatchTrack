@@ -9,7 +9,7 @@ Glossary:
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from app.models import Recipe
 
@@ -73,3 +73,71 @@ def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional
         path.append(root_id)
 
     return list(reversed(path))
+
+
+# --- Build version branches ---
+# Purpose: Group masters/variations with their tests for UI.
+def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict]]:
+    masters = [
+        r for r in recipes
+        if getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is None
+    ]
+    masters.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
+
+    master_tests = [
+        r for r in recipes
+        if getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is not None
+    ]
+    master_tests_by_parent: Dict[int, List[Recipe]] = {}
+    for test in master_tests:
+        parent_id = getattr(test, "parent_recipe_id", None) or getattr(test, "parent_master_id", None)
+        if parent_id:
+            master_tests_by_parent.setdefault(int(parent_id), []).append(test)
+    for tests in master_tests_by_parent.values():
+        tests.sort(key=lambda r: int(getattr(r, "test_sequence", 0) or 0))
+
+    master_branches: List[dict] = [
+        {
+            "version": master,
+            "tests": master_tests_by_parent.get(master.id, []),
+        }
+        for master in masters
+    ]
+
+    variations = [
+        r for r in recipes
+        if not getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is None
+    ]
+    variations.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
+
+    variation_tests = [
+        r for r in recipes
+        if not getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is not None
+    ]
+    variation_tests_by_parent: Dict[int, List[Recipe]] = {}
+    for test in variation_tests:
+        parent_id = getattr(test, "parent_recipe_id", None)
+        if parent_id:
+            variation_tests_by_parent.setdefault(int(parent_id), []).append(test)
+    for tests in variation_tests_by_parent.values():
+        tests.sort(key=lambda r: int(getattr(r, "test_sequence", 0) or 0))
+
+    variation_map: Dict[str, dict] = {}
+    for version in variations:
+        variation_name = (
+            getattr(version, "variation_name", None)
+            or getattr(version, "name", None)
+            or "Variation"
+        )
+        branch = variation_map.setdefault(
+            variation_name,
+            {"name": variation_name, "versions": []},
+        )
+        branch["versions"].append(
+            {
+                "version": version,
+                "tests": variation_tests_by_parent.get(version.id, []),
+            }
+        )
+    variation_branches = sorted(variation_map.values(), key=lambda b: b["name"].lower())
+    return master_branches, variation_branches

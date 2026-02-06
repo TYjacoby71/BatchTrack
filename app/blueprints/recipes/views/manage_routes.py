@@ -38,6 +38,7 @@ from app.utils.notes import append_timestamped_note
 from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.settings import is_feature_enabled
+from ..lineage_utils import build_version_branches
 
 from .. import recipes_bp
 
@@ -156,9 +157,8 @@ def view_recipe(recipe_id):
         )
 
         group_versions = []
-        master_versions = []
-        master_tests = []
-        variation_versions = {}
+        master_branches = []
+        variation_branches = []
         if recipe.recipe_group_id:
             group_versions = (
                 Recipe.query.filter(Recipe.recipe_group_id == recipe.recipe_group_id)
@@ -170,20 +170,7 @@ def view_recipe(recipe_id):
                 )
                 .all()
             )
-            for version in group_versions:
-                if version.is_master:
-                    if version.test_sequence:
-                        master_tests.append(version)
-                    else:
-                        master_versions.append(version)
-                else:
-                    key = version.variation_name or version.name
-                    if key not in variation_versions:
-                        variation_versions[key] = {"published": [], "tests": []}
-                    if version.test_sequence:
-                        variation_versions[key]["tests"].append(version)
-                    else:
-                        variation_versions[key]["published"].append(version)
+            master_branches, variation_branches = build_version_branches(group_versions)
         origin_marketplace_enabled = False
         if recipe.org_origin_source_org:
             origin_marketplace_enabled = _org_tier_includes_permission(
@@ -194,7 +181,10 @@ def view_recipe(recipe_id):
             and origin_marketplace_enabled
             and has_permission(current_user, "recipes.marketplace_dashboard")
         )
-        label_prefix_display = format_label_prefix(recipe)
+        label_prefix_display = format_label_prefix(
+            recipe,
+            include_master_version_for_master=True,
+        )
         return render_template(
             'pages/recipes/view_recipe.html',
             recipe=recipe,
@@ -212,9 +202,8 @@ def view_recipe(recipe_id):
             has_batches=has_batches,
             is_archived=is_archived,
             has_listing=has_listing,
-            master_versions=master_versions,
-            master_tests=master_tests,
-            variation_versions=variation_versions,
+            master_branches=master_branches,
+            variation_branches=variation_branches,
             can_create_variations=can_create_variations,
             can_edit=can_edit,
         )

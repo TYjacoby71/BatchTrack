@@ -74,7 +74,7 @@
               {% if recipe.is_master %}
                 Master v{{ recipe.version_number }}
               {% else %}
-                {{ recipe.variation_name or 'Variation' }} v{{ recipe.version_number }} (Base v{{ recipe.parent_master.version_number if recipe.parent_master else '—' }})
+                {{ recipe.variation_name or 'Variation' }} v{{ recipe.version_number }}
               {% endif %}
             </p>
           </div>
@@ -408,43 +408,110 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
-    {% if can_create_variations %}
+    {% if can_create_variations and (master_branches or variation_branches) %}
+    {% set current_variation_name = recipe.variation_name or recipe.name %}
     <div class="card mb-4">
       <div class="card-header">
         <h5 class="card-title mb-0"><i class="fas fa-sitemap"></i> Lineage Selector</h5>
       </div>
       <div class="card-body">
-        <label class="form-label small text-muted">Jump to a version</label>
-        <select class="form-select mb-2" onchange="if (this.value) { window.location = this.value; }">
-          <option value="">Select a lineage version</option>
-          {% for master in master_versions %}
-            <option value="{{ url_for('recipes.view_recipe', recipe_id=master.id) }}" {% if master.id == recipe.id %}selected{% endif %}>
-              Master v{{ master.version_number }}{% if master.is_current %} · Current{% endif %}
-            </option>
-          {% endfor %}
-          {% for test in master_tests %}
-            <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
-              Master v{{ test.version_number }} - Test {{ test.test_sequence }}
-            </option>
-          {% endfor %}
-          {% for var_name, bucket in variation_versions.items() %}
-            {% for version in bucket.published %}
-              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
-                Variation {{ var_name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
-              </option>
-            {% endfor %}
-            {% for version in bucket.tests %}
-              <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
-                Variation {{ var_name }} v{{ version.version_number }} - Test {{ version.test_sequence }}
-              </option>
-            {% endfor %}
-          {% endfor %}
+        <label class="form-label small text-muted">Browse lineage</label>
+        <select id="lineageBranchSelect" class="form-select mb-2">
+          <option value="master" {% if recipe.is_master %}selected{% endif %}>Master</option>
+          <option value="variation" {% if not recipe.is_master %}selected{% endif %} {% if not variation_branches %}disabled{% endif %}>Variations</option>
         </select>
+
+        <div id="masterLineageSelectWrap">
+          <label class="form-label small text-muted">Master versions</label>
+          <select id="masterLineageSelect" class="form-select mb-2" onchange="if (this.value) { window.location = this.value; }">
+            {% for branch in master_branches %}
+              {% set master = branch.version %}
+              <option value="{{ url_for('recipes.view_recipe', recipe_id=master.id) }}" {% if master.id == recipe.id %}selected{% endif %}>
+                Master v{{ master.version_number }}{% if master.is_current %} · Current{% endif %}
+              </option>
+              {% for test in branch.tests %}
+                <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
+                  ↳ Test {{ test.test_sequence }}
+                </option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="variationLineageSelectWrap" style="display:none;">
+          <label class="form-label small text-muted">Variation</label>
+          <select id="variationNameSelect" class="form-select mb-2">
+            {% for branch in variation_branches %}
+              <option value="{{ branch.name }}" {% if branch.name == current_variation_name %}selected{% endif %}>{{ branch.name }}</option>
+            {% endfor %}
+          </select>
+          {% for branch in variation_branches %}
+            <select class="form-select variation-lineage-select mb-2"
+                    data-variation="{{ branch.name }}"
+                    onchange="if (this.value) { window.location = this.value; }"
+                    style="display:none;">
+              {% for entry in branch.versions %}
+                {% set version = entry.version %}
+                <option value="{{ url_for('recipes.view_recipe', recipe_id=version.id) }}" {% if version.id == recipe.id %}selected{% endif %}>
+                  {{ branch.name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
+                </option>
+                {% for test in entry.tests %}
+                  <option value="{{ url_for('recipes.view_recipe', recipe_id=test.id) }}" {% if test.id == recipe.id %}selected{% endif %}>
+                    ↳ Test {{ test.test_sequence }}
+                  </option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          {% endfor %}
+        </div>
+
         <p class="text-muted small mb-0">
           Select a version to view its lineage-specific ingredients, yield, and batches.
         </p>
       </div>
     </div>
+    <script>
+      (function() {
+        const branchSelect = document.getElementById('lineageBranchSelect');
+        const masterWrap = document.getElementById('masterLineageSelectWrap');
+        const variationWrap = document.getElementById('variationLineageSelectWrap');
+        const variationNameSelect = document.getElementById('variationNameSelect');
+        const variationSelects = document.querySelectorAll('.variation-lineage-select');
+
+        function syncVariationSelect() {
+          if (!variationNameSelect) return;
+          const name = variationNameSelect.value;
+          let active = null;
+          variationSelects.forEach(select => {
+            const match = select.getAttribute('data-variation') === name;
+            select.style.display = match ? 'block' : 'none';
+            if (match) active = select;
+          });
+          if (!active && variationSelects.length) {
+            variationSelects[0].style.display = 'block';
+          }
+        }
+
+        function syncBranch() {
+          if (!branchSelect) return;
+          const branch = branchSelect.value;
+          const showMaster = branch === 'master';
+          if (masterWrap) masterWrap.style.display = showMaster ? 'block' : 'none';
+          if (variationWrap) variationWrap.style.display = showMaster ? 'none' : 'block';
+          if (!showMaster) {
+            syncVariationSelect();
+          }
+        }
+
+        if (variationNameSelect) {
+          variationNameSelect.addEventListener('change', syncVariationSelect);
+        }
+        if (branchSelect) {
+          branchSelect.addEventListener('change', syncBranch);
+        }
+        syncBranch();
+      })();
+    </script>
     {% endif %}
 
     <!-- Actions Card -->

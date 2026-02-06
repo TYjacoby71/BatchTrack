@@ -114,6 +114,10 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     if not recipe or recipe.test_sequence is None:
         return False, "Test version not found."
 
+    parent_recipe = None
+    if recipe.parent_recipe_id:
+        parent_recipe = db.session.get(Recipe, recipe.parent_recipe_id)
+
     base_query = Recipe.query.filter(
         Recipe.recipe_group_id == recipe.recipe_group_id,
         Recipe.is_master.is_(recipe.is_master),
@@ -125,6 +129,11 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
 
     recipe.version_number = int(max_version) + 1
     recipe.test_sequence = None
+    if parent_recipe:
+        if recipe.is_master:
+            recipe.parent_recipe_id = None
+        else:
+            recipe.parent_recipe_id = parent_recipe.parent_recipe_id or parent_recipe.id
     recipe.status = "published"
     recipe.sharing_scope = "private"
     recipe.is_public = False

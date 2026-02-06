@@ -20,7 +20,7 @@ from app.utils.permissions import _org_tier_includes_permission, has_permission,
 from app.utils.settings import is_feature_enabled
 
 from .. import recipes_bp
-from ..lineage_utils import build_lineage_path, serialize_lineage_tree
+from ..lineage_utils import build_lineage_path, build_version_branches, serialize_lineage_tree
 
 
 # =========================================================
@@ -73,6 +73,20 @@ def recipe_lineage(recipe_id):
     root_recipe = nodes.get(root_id, {'recipe': recipe})
     lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes)
     lineage_path = build_lineage_path(recipe.id, nodes, root_id)
+    master_branches = []
+    variation_branches = []
+    if recipe.recipe_group_id:
+        group_versions = (
+            Recipe.query.filter(Recipe.recipe_group_id == recipe.recipe_group_id)
+            .order_by(
+                Recipe.is_master.desc(),
+                Recipe.variation_name.asc().nullsfirst(),
+                Recipe.version_number.desc(),
+                Recipe.test_sequence.asc().nullsfirst(),
+            )
+            .all()
+        )
+        master_branches, variation_branches = build_version_branches(group_versions)
     events = (
         RecipeLineage.query.filter_by(recipe_id=recipe.id)
         .order_by(RecipeLineage.created_at.asc())
@@ -102,4 +116,6 @@ def recipe_lineage(recipe_id):
         lineage_path=lineage_path,
         lineage_events=events,
         show_origin_marketplace=show_origin_marketplace,
+        master_branches=master_branches,
+        variation_branches=variation_branches,
     )
