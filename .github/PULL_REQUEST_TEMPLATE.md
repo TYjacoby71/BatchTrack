@@ -18,13 +18,12 @@
 - [ ] Tested multi-tenant scenarios (if applicable)
 
 ## Documentation
-- [ ] Updated architecture docs (if design changed)
-- [ ] Added changelog entry in `docs/changelog/`
-- [ ] Updated feature guides (if usage changed)
-- [ ] Updated add-on entitlements docs (if tiers/add-ons changed)
+- [ ] Updated system docs for feature changes (`docs/system/`)
+- [ ] Added/updated changelog entry (`docs/changelog/`)
+- [ ] Updated add-on entitlements doc if tiers/add-ons changed
 - [ ] Added/updated file Synopsis + Glossary blocks
 - [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences)
-- [ ] Updated APP_DICTIONARY.md for new terms
+- [ ] Updated APP_DICTIONARY.md if new terms were introduced
 
 ## Checklist
 - [ ] Code follows project patterns
