@@ -5,73 +5,78 @@ from app.extensions import db
 
 def _api(client, app, path, payload):
     # Ensure an authenticated client session by setting flask-login keys
-    user = User.query.first()
-    if not user:
-        from app.models import Organization
-        from app.models.permission import Permission
-        from app.models.role import Role
-        from app.models.subscription_tier import SubscriptionTier
-        org = Organization(name='Test Org')
-        db.session.add(org)
-        db.session.flush()
-
-        perm = Permission.query.filter_by(name='batches.create').first()
-        if not perm:
-            perm = Permission(name='batches.create', description='Start production batches')
-            db.session.add(perm)
+    with app.app_context():
+        user = User.query.first()
+        if not user:
+            from app.models import Organization
+            from app.models.permission import Permission
+            from app.models.role import Role
+            from app.models.subscription_tier import SubscriptionTier
+            org = Organization(name='Test Org')
+            db.session.add(org)
             db.session.flush()
 
-        tier = SubscriptionTier(
-            name='Integration Tier',
-            billing_provider='exempt',
-            user_limit=5
-        )
-        db.session.add(tier)
-        db.session.flush()
-        tier.permissions.append(perm)
-        org.subscription_tier_id = tier.id
+            perm = Permission.query.filter_by(name='batches.create').first()
+            if not perm:
+                perm = Permission(name='batches.create', description='Start production batches')
+                db.session.add(perm)
+                db.session.flush()
 
-        user = User(
-            username='apitester',
-            email='apitester@example.com',
-            is_active=True,
-            is_verified=True,
-            organization_id=org.id
-        )
-        db.session.add(user)
-        db.session.commit()
-        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-        if org_owner_role:
-            user.assign_role(org_owner_role)
+            tier = SubscriptionTier(
+                name='Integration Tier',
+                billing_provider='exempt',
+                user_limit=5
+            )
+            db.session.add(tier)
+            db.session.flush()
+            tier.permissions.append(perm)
+            org.subscription_tier_id = tier.id
+
+            user = User(
+                username='apitester',
+                email='apitester@example.com',
+                is_active=True,
+                is_verified=True,
+                organization_id=org.id
+            )
+            db.session.add(user)
+            db.session.commit()
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                user.assign_role(org_owner_role)
+        user_id = user.id
 
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
+        sess['_user_id'] = str(user_id)
         sess['_fresh'] = True
 
     return client.post(path, data=json.dumps(payload), content_type='application/json', headers={'Accept': 'application/json'})
 
 
-def test_plan_start_finish_non_portioned(app, client, db_session):
+def test_plan_start_finish_non_portioned(app, client):
+    app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create a simple recipe
     from app.models import Recipe, Organization, User
-    
-    # Get or create user with organization
-    user = User.query.first()
-    if not user:
-        org = Organization(name='Test Org')
-        db_session.add(org)
-        db_session.flush()
-        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
-        db_session.add(user)
-        db_session.commit()
-    
-    r = Recipe(name='Simple Syrup', predicted_yield=10.0, predicted_yield_unit='oz', category_id=1, organization_id=user.organization_id)
-    db_session.add(r)
-    db_session.commit()
+
+    with app.app_context():
+        # Get or create user with organization
+        user = User.query.first()
+        if not user:
+            org = Organization(name='Test Org')
+            db.session.add(org)
+            db.session.flush()
+            user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
+            db.session.add(user)
+            db.session.commit()
+
+        r = Recipe(name='Simple Syrup', predicted_yield=10.0, predicted_yield_unit='oz', category_id=1, organization_id=user.organization_id)
+        db.session.add(r)
+        db.session.commit()
+        recipe_id = r.id
 
     # Act: start batch with no portioning
     resp = _api(client, app, '/batches/api/start-batch', {
-        'recipe_id': r.id,
+        'recipe_id': recipe_id,
         'scale': 1,
         'batch_type': 'ingredient',
         'notes': '',
@@ -101,37 +106,40 @@ def test_plan_start_finish_non_portioned(app, client, db_session):
     assert rec.status_code in (200, 302)
 
 
-def test_plan_start_finish_portioned(app, client, db_session):
+def test_plan_start_finish_portioned(app, client):
+    app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create a portioned recipe
     from app.models import Recipe, Organization, User
-    
-    # Get or create user with organization
-    user = User.query.first()
-    if not user:
-        org = Organization(name='Test Org')
-        db_session.add(org)
-        db_session.flush()
-        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
-        db_session.add(user)
-        db_session.commit()
-    
-    r = Recipe(
-        name='Goat Milk Soap',
-        predicted_yield=10.0,
-        predicted_yield_unit='oz',
-        category_id=1,
-        organization_id=user.organization_id,
-        portioning_data={'is_portioned': True, 'portion_name': 'bars', 'portion_count': 20},
-        is_portioned=True,
-        portion_name='bars',
-        portion_count=20
-    )
-    db_session.add(r)
-    db_session.commit()
+
+    with app.app_context():
+        # Get or create user with organization
+        user = User.query.first()
+        if not user:
+            org = Organization(name='Test Org')
+            db.session.add(org)
+            db.session.flush()
+            user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
+            db.session.add(user)
+            db.session.commit()
+
+        r = Recipe(
+            name='Goat Milk Soap',
+            predicted_yield=10.0,
+            predicted_yield_unit='oz',
+            category_id=1,
+            organization_id=user.organization_id,
+            portioning_data={'is_portioned': True, 'portion_name': 'bars', 'portion_count': 20},
+            is_portioned=True,
+            portion_name='bars',
+            portion_count=20
+        )
+        db.session.add(r)
+        db.session.commit()
+        recipe_id = r.id
 
     # Act: start batch with flat portion fields
     resp = _api(client, app, '/batches/api/start-batch', {
-        'recipe_id': r.id,
+        'recipe_id': recipe_id,
         'scale': 1,
         'batch_type': 'product',
         'notes': '',

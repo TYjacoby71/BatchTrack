@@ -1,11 +1,11 @@
-"""Application middleware and request hooks.
+"""Request middleware for security and permissions.
 
 Synopsis:
-Registers Flask before/after request handlers and security middleware.
+Applies security headers, access checks, and bot trap defenses.
 
 Glossary:
-- Middleware: Request/response hooks applied across routes.
-- ProxyFix: Werkzeug wrapper that trusts proxy headers.
+- Security headers: HTTP headers that harden browser behavior.
+- Route access: Permission and role gating for endpoints.
 """
 
 from __future__ import annotations
@@ -148,7 +148,7 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
 
 
 # --- Register middleware ---
-# Purpose: Attach request/response hooks to the Flask app.
+# Purpose: Attach security and access middleware to the Flask app.
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
@@ -197,6 +197,9 @@ def register_middleware(app: Flask) -> None:
             return None
 
         if path.startswith("/static/"):
+            return None
+
+        if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get("TESTING_DISABLE_AUTH"):
             return None
 
         try:

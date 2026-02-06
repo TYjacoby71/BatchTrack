@@ -1,3 +1,13 @@
+"""Product models.
+
+Synopsis:
+Defines products and related metadata for SKUs and variants.
+
+Glossary:
+- Product: Parent entity grouping variants and SKUs.
+- Variant: Option set under a product (size, scent, etc.).
+"""
+
 from datetime import datetime, date, timezone
 
 from flask_login import current_user, UserMixin
@@ -243,7 +253,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
         lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == self.inventory_item_id,
-            InventoryLot.remaining_quantity > 0
+            InventoryLot.remaining_quantity_base > 0
         ).order_by(InventoryLot.received_date.asc()).all()
 
         if not lots:

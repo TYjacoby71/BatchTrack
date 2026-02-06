@@ -1,3 +1,13 @@
+"""Authentication and user-loading helpers.
+
+Synopsis:
+Configure Flask-Login handlers and load users with required relationships.
+
+Glossary:
+- User loader: Function used by Flask-Login to hydrate current_user.
+- Session token: Server-side value used to validate active sessions.
+"""
+
 from __future__ import annotations
 
 from flask import jsonify, redirect, request, url_for
@@ -7,6 +17,8 @@ from .extensions import db, login_manager
 from .services.session_service import SessionService
 
 
+# --- Configure login manager ---
+# Purpose: Attach Flask-Login handlers and user loader.
 def configure_login_manager(app):
     """Attach Flask-Login handlers with API-aware responses and session validation."""
     login_manager.init_app(app)
@@ -23,9 +35,23 @@ def configure_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models import User
+        from sqlalchemy.orm import joinedload
+        from .models.subscription_tier import SubscriptionTier
+        from .models.models import Organization
 
         try:
-            user = db.session.get(User, int(user_id))
+            user = db.session.get(
+                User,
+                int(user_id),
+                options=[
+                    joinedload(User.organization)
+                    .joinedload(Organization.tier)
+                    .joinedload(SubscriptionTier.permissions),
+                    joinedload(User.organization)
+                    .joinedload(Organization.subscription_tier)
+                    .joinedload(SubscriptionTier.permissions),
+                ],
+            )
         except (ValueError, TypeError):
             return None
         except SQLAlchemyError:
@@ -41,15 +67,16 @@ def configure_login_manager(app):
                 SessionService.clear_session_state()
                 return None
 
-        if user.user_type == "developer":
-            return user
+        if user.user_type != "developer":
+            org = getattr(user, "organization", None)
+            if not org or not org.is_active:
+                return None
 
-        if getattr(user, "organization", None) and user.organization.is_active:
-            return user
-
-        return None
+        return user
 
 
+# --- JSON expectation ---
+# Purpose: Determine whether a request expects JSON output.
 def _expects_json() -> bool:
     accepts = request.headers.get("Accept", "")
     content_type = request.headers.get("Content-Type", "")
@@ -61,6 +88,8 @@ def _expects_json() -> bool:
     )
 
 
+# --- Safe rollback ---
+# Purpose: Roll back session without raising during auth handling.
 def _rollback_safely() -> None:
     try:
         db.session.rollback()

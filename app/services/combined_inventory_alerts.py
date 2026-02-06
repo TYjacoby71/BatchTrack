@@ -1,3 +1,13 @@
+"""Combined inventory alert service.
+
+Synopsis:
+Compute expiration and low-stock alerts for ingredients and products.
+
+Glossary:
+- Expiration alert: Warning for expired or expiring lots.
+- Low stock: Inventory below configured thresholds.
+"""
+
 from ..models import db, InventoryItem, ProductSKU
 from ..models.inventory_lot import InventoryLot
 from sqlalchemy import and_
@@ -5,6 +15,8 @@ from typing import List, Dict
 from datetime import timedelta
 from flask_login import current_user
 
+# --- Combined inventory alerts ---
+# Purpose: Compute unified expiration and product alerts.
 class CombinedInventoryAlertService:
     """Unified service for all inventory alerts - raw materials and products"""
 
@@ -25,7 +37,7 @@ class CombinedInventoryAlertService:
             expired_fifo_entries = db.session.query(InventoryLot).filter(
                 and_(
                     InventoryLot.expiration_date < current_time,
-                    InventoryLot.remaining_quantity > 0,
+                    InventoryLot.remaining_quantity_base > 0,
                     InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
                 )
             ).all()
@@ -35,7 +47,7 @@ class CombinedInventoryAlertService:
                 and_(
                     InventoryLot.expiration_date >= current_time,
                     InventoryLot.expiration_date <= expiration_cutoff,
-                    InventoryLot.remaining_quantity > 0
+                    InventoryLot.remaining_quantity_base > 0
                 ),
                 InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
             ).all()

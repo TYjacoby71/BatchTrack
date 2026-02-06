@@ -1,7 +1,11 @@
-"""
-Ingredient-specific stock checking handler
+"""Ingredient stock check handler.
 
-Integrates with FIFO operations and unit conversion engine.
+Synopsis:
+Check ingredient availability using FIFO lots and unit conversions.
+
+Glossary:
+- Stock check: Availability evaluation for planned usage.
+- FIFO lot: Available inventory lot considered in checks.
 """
 
 import logging
@@ -17,6 +21,8 @@ from .base_handler import BaseInventoryHandler
 logger = logging.getLogger(__name__)
 
 
+# --- Ingredient stock handler ---
+# Purpose: Check ingredient availability using FIFO lots.
 class IngredientHandler(BaseInventoryHandler):
     """Handler for ingredient stock checking with FIFO support"""
 
@@ -42,7 +48,7 @@ class IngredientHandler(BaseInventoryHandler):
         # Get available FIFO lots (we will exclude expired below when perishable)
         available_lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == ingredient.id,
-            InventoryLot.remaining_quantity > 0
+            InventoryLot.remaining_quantity_base > 0
         )
 
         # Filter out expired lots if item is perishable

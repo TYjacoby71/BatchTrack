@@ -12,6 +12,12 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
+from app.services.quantity_base import (
+    to_base_quantity,
+    from_base_quantity,
+    sync_item_quantity_from_base,
+    sync_lot_quantities_from_base,
+)
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.inventory_event_code_generator import generate_inventory_event_code
 from sqlalchemy import and_
@@ -50,7 +56,7 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
 
     # Filter to active lots only if requested
     if active_only:
-        query = query.filter(InventoryLot.remaining_quantity > 0)
+        query = query.filter(InventoryLot.remaining_quantity_base > 0)
 
     # Apply ordering - FIFO uses received_date ascending
     if order == 'asc':
@@ -67,7 +73,7 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
 
 # --- Create FIFO lot ---
 # Purpose: Create a new FIFO lot and history entry.
-def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, quantity_base=None, **kwargs):
     """
     Create a new FIFO lot with complete tracking and audit trail.
     This is the primary function for creating new inventory lots.
@@ -133,11 +139,28 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             if batch:
                 batch_lineage_id = batch.lineage_id
 
+        if quantity_base is None:
+            quantity_base = to_base_quantity(
+                amount=quantity,
+                unit_name=unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+
+        quantity_float = from_base_quantity(
+            base_amount=quantity_base,
+            unit_name=unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
             inventory_item_id=item_id,
-            remaining_quantity=float(quantity),
-            original_quantity=float(quantity),
+            remaining_quantity=quantity_float,
+            original_quantity=quantity_float,
+            remaining_quantity_base=int(quantity_base),
+            original_quantity_base=int(quantity_base),
             unit=unit,
             unit_cost=float(cost_per_unit),
             received_date=TimezoneUtils.utc_now(),
@@ -159,7 +182,8 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         history_record = UnifiedInventoryHistory(
             inventory_item_id=item.id,
             change_type=change_type,
-            quantity_change=quantity,
+            quantity_change=quantity_float,
+            quantity_change_base=int(quantity_base),
             unit=unit,
             unit_cost=cost_per_unit,
             notes=notes,
@@ -188,7 +212,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
 
 # --- Deduct FIFO inventory ---
 # Purpose: Deduct inventory using FIFO ordering.
-def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
+def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=None, change_type=None, notes=None, created_by=None, batch_id=None):
     """
     CONSOLIDATED: Single function to handle FIFO deduction using proper InventoryLot model.
     This function now properly uses the lot-based system instead of history entries.
@@ -229,7 +253,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity > 0
+                InventoryLot.remaining_quantity_base > 0
             )
         )
 
@@ -243,28 +267,53 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
 
         active_lots = query.order_by(InventoryLot.received_date.asc()).all()
 
-        # Calculate total available quantity from actual lots
-        total_available = sum(float(lot.remaining_quantity) for lot in active_lots)
-        quantity_needed = abs(float(quantity_to_deduct))
+        # Calculate total available quantity from actual lots (base units)
+        total_available_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
+        quantity_needed_base = abs(int(quantity_to_deduct_base)) if quantity_to_deduct_base is not None else to_base_quantity(
+            amount=quantity_to_deduct,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        total_available = from_base_quantity(
+            base_amount=total_available_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        quantity_needed = from_base_quantity(
+            base_amount=quantity_needed_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
 
         logger.info(f"FIFO DEDUCT: Need {quantity_needed}, have {total_available} from {len(active_lots)} active lots")
 
-        if total_available < quantity_needed:
+        if total_available_base < quantity_needed_base:
             return False, f"Insufficient inventory: need {quantity_needed}, have {total_available}"
 
         # Execute deduction across lots using FIFO order
-        remaining_to_deduct = quantity_needed
+        remaining_to_deduct_base = quantity_needed_base
         lots_affected = 0
 
         for lot in active_lots:
-            if remaining_to_deduct <= 0:
+            if remaining_to_deduct_base <= 0:
                 break
 
             # Calculate how much to deduct from this lot
-            deduct_from_lot = min(float(lot.remaining_quantity), remaining_to_deduct)
+            lot_remaining_base = int(lot.remaining_quantity_base or 0)
+            deduct_from_lot_base = min(lot_remaining_base, remaining_to_deduct_base)
+            deduct_from_lot = from_base_quantity(
+                base_amount=deduct_from_lot_base,
+                unit_name=lot.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
 
             # Update the lot's remaining quantity
-            lot.remaining_quantity = float(lot.remaining_quantity) - deduct_from_lot
+            lot.remaining_quantity_base = lot_remaining_base - deduct_from_lot_base
+            sync_lot_quantities_from_base(lot, item)
 
             # Generate appropriate event code for this deduction event; prefer batch label when available
             batch_lineage_id = None
@@ -291,6 +340,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 inventory_item_id=item_id,
                 change_type=change_type,
                 quantity_change=-deduct_from_lot,
+                quantity_change_base=-deduct_from_lot_base,
                 remaining_quantity=None,  # N/A - this is an event record
                 unit=lot.unit,
                 unit_cost=event_unit_cost,
@@ -306,7 +356,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             )
             db.session.add(history_record)
 
-            remaining_to_deduct -= deduct_from_lot
+            remaining_to_deduct_base -= deduct_from_lot_base
             lots_affected += 1
 
             logger.info(f"FIFO DEDUCT: Consumed {deduct_from_lot} from lot {lot.id} ({lot.fifo_code}), remaining: {lot.remaining_quantity}")
@@ -340,11 +390,17 @@ def calculate_total_available_inventory(item_id):
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
-            InventoryLot.remaining_quantity > 0
+            InventoryLot.remaining_quantity_base > 0
         )
     ).all()
 
-    total_available = sum(float(lot.remaining_quantity) for lot in active_lots)
+    total_available_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
+    total_available = from_base_quantity(
+        base_amount=total_available_base,
+        unit_name=item.unit,
+        ingredient_id=item.id,
+        density=item.density,
+    )
 
     logger.info(f"FIFO CALC: Item {item_id} has {total_available} units available across {len(active_lots)} active lots")
 
@@ -371,7 +427,7 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity > 0
+                InventoryLot.remaining_quantity_base > 0
             )
         )
 
@@ -418,13 +474,21 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
         if not lot:
             return False, "FIFO lot not found"
 
-        # Add back to the specific lot
-        lot.remaining_quantity = float(lot.remaining_quantity) + float(quantity)
+        # Add back to the specific lot (base units)
+        quantity_base = to_base_quantity(
+            amount=quantity,
+            unit_name=lot.unit,
+            ingredient_id=lot.inventory_item_id,
+            density=getattr(lot.inventory_item, "density", None),
+        )
+        lot.remaining_quantity_base = int(lot.remaining_quantity_base or 0) + int(quantity_base)
+        sync_lot_quantities_from_base(lot, lot.inventory_item)
 
         # Update item quantity
         item = db.session.get(InventoryItem, lot.inventory_item_id)
         if item:
-            item.quantity = float(item.quantity) + float(quantity)
+            item.quantity_base = int(item.quantity_base or 0) + int(quantity_base)
+            sync_item_quantity_from_base(item)
 
         db.session.commit()
         return True, f"Credited {quantity} back to lot {lot_id}"

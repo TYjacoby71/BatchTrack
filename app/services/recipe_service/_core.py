@@ -351,22 +351,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if skin_opt_in is None:
             recipe.skin_opt_in = True
 
-        _apply_marketplace_settings(
-            recipe,
-            sharing_scope=sharing_scope,
-            is_public=is_public,
-            is_for_sale=is_for_sale,
-            sale_price=sale_price,
-            marketplace_status=marketplace_status,
-            marketplace_notes=marketplace_notes,
-            public_description=public_description,
-            product_store_url=product_store_url,
-            skin_opt_in=skin_opt_in,
-            cover_image_path=cover_image_path,
-            cover_image_url=cover_image_url,
-            remove_cover_image=remove_cover_image,
-        )
-
         portion_ok, portion_error = _apply_portioning_settings(
             recipe,
             portioning_data=portioning_data,
@@ -429,6 +413,22 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             apply_current_flag(recipe)
         else:
             recipe.is_current = False
+
+        _apply_marketplace_settings(
+            recipe,
+            sharing_scope=sharing_scope,
+            is_public=is_public,
+            is_for_sale=is_for_sale,
+            sale_price=sale_price,
+            marketplace_status=marketplace_status,
+            marketplace_notes=marketplace_notes,
+            public_description=public_description,
+            product_store_url=product_store_url,
+            skin_opt_in=skin_opt_in,
+            cover_image_path=cover_image_path,
+            cover_image_url=cover_image_url,
+            remove_cover_image=remove_cover_image,
+        )
 
         db.session.commit()
 
@@ -623,22 +623,6 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             db.session.rollback()
             return False, portion_error
 
-        _apply_marketplace_settings(
-            recipe,
-            sharing_scope=sharing_scope,
-            is_public=is_public,
-            is_for_sale=is_for_sale,
-            sale_price=sale_price,
-            marketplace_status=marketplace_status,
-            marketplace_notes=marketplace_notes,
-            public_description=public_description,
-            product_store_url=product_store_url,
-            skin_opt_in=skin_opt_in,
-            cover_image_path=cover_image_path,
-            cover_image_url=cover_image_url,
-            remove_cover_image=remove_cover_image,
-        )
-
         # Update ingredients if provided
         if ingredients is not None:
             validation_result = validate_recipe_data(
@@ -687,6 +671,22 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             apply_current_flag(recipe)
         else:
             recipe.is_current = False
+
+        _apply_marketplace_settings(
+            recipe,
+            sharing_scope=sharing_scope,
+            is_public=is_public,
+            is_for_sale=is_for_sale,
+            sale_price=sale_price,
+            marketplace_status=marketplace_status,
+            marketplace_notes=marketplace_notes,
+            public_description=public_description,
+            product_store_url=product_store_url,
+            skin_opt_in=skin_opt_in,
+            cover_image_path=cover_image_path,
+            cover_image_url=cover_image_url,
+            remove_cover_image=remove_cover_image,
+        )
 
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")

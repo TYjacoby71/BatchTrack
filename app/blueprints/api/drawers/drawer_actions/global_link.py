@@ -1,3 +1,13 @@
+"""Global link drawer actions.
+
+Synopsis:
+Surface global-item linking suggestions and render the link modal.
+
+Glossary:
+- Global item: Canonical catalog entry for ingredients.
+- Suggestion drawer: UI prompt to link local items to global items.
+"""
+
 from flask import jsonify, render_template, request, url_for
 from flask_login import login_required, current_user
 
@@ -42,6 +52,11 @@ def _global_link_drawer_payload():
     return payload
 
 
+# =========================================================
+# GLOBAL LINK DRAWER
+# =========================================================
+# --- Cadence check ---
+# Purpose: Provide drawer payload for cadence checks.
 @register_cadence_check('global_link')
 def global_link_cadence_check():
     if not current_user.is_authenticated:
@@ -49,6 +64,8 @@ def global_link_cadence_check():
     return _global_link_drawer_payload()
 
 
+# --- Drawer check ---
+# Purpose: Report whether the global link drawer should display.
 @drawers_bp.route('/global-link/check', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -58,6 +75,8 @@ def global_link_check():
     return jsonify({'needs_drawer': payload is not None, 'drawer_payload': payload})
 
 
+# --- Drawer modal ---
+# Purpose: Render the global link modal for suggested items.
 @drawers_bp.route('/global-link/modal', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -74,6 +93,8 @@ def global_link_modal():
     return jsonify({'success': True, 'modal_html': html})
 
 
+# --- Drawer confirm ---
+# Purpose: Link selected inventory items to a global item.
 @drawers_bp.route('/global-link/confirm', methods=['POST'])
 @login_required
 @require_permission('inventory.edit')
@@ -123,6 +144,7 @@ def global_link_confirm():
                 inventory_item_id=inventory_item.id,
                 change_type='link_global',
                 quantity_change=0.0,
+                quantity_change_base=0,
                 unit=inventory_item.unit or 'count',
                 notes=f"Linked to GlobalItem '{global_item.name}' (was '{old_name}')",
                 created_by=getattr(current_user, 'id', None),

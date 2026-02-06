@@ -1,3 +1,12 @@
+"""FIFO detail API routes.
+
+Synopsis:
+Provide FIFO lot details and batch usage summaries for inventory items.
+
+Glossary:
+- FIFO entry: A lot event displayed in FIFO ordering.
+- Batch usage: Lot consumption tied to a batch.
+"""
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
@@ -15,10 +24,16 @@ from ...models.unified_inventory_history import UnifiedInventoryHistory
 from ...models.inventory_lot import InventoryLot
 from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
+from sqlalchemy import or_
 from ...utils.inventory_event_code_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 
+# =========================================================
+# FIFO DETAILS
+# =========================================================
+# --- FIFO details ---
+# Purpose: Return FIFO lot details for an inventory item.
 @fifo_api_bp.route('/api/fifo-details/<int:inventory_id>')
 @login_required
 @require_permission('inventory.view')
@@ -31,7 +46,12 @@ def get_fifo_details(inventory_id):
         
         # Get current FIFO entries (available stock) from UnifiedInventoryHistory
         fifo_entries = UnifiedInventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
-            .filter(UnifiedInventoryHistory.remaining_quantity > 0) \
+            .filter(
+                or_(
+                    UnifiedInventoryHistory.remaining_quantity_base > 0,
+                    UnifiedInventoryHistory.remaining_quantity > 0
+                )
+            ) \
             .order_by(UnifiedInventoryHistory.timestamp.asc()).all()
         
         # Get batch usage if batch_id provided
@@ -77,6 +97,9 @@ def get_fifo_details(inventory_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# --- Batch inventory summary ---
+# Purpose: Return FIFO usage summary for a batch.
 @fifo_api_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
 @require_permission('batches.view')

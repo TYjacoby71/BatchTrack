@@ -15,6 +15,7 @@ def test_batchbot_recipe_draft_tool_creates_items_and_recipe(app, test_user):
         app.config["GOOGLE_AI_API_KEY"] = "test-key"
         user = _reload_user(test_user.id)
         service = BatchBotService(user)
+        user_org_id = user.organization_id
 
         payload = {
             "recipe_name": "BatchBot Truffle Base",
@@ -49,7 +50,7 @@ def test_batchbot_recipe_draft_tool_creates_items_and_recipe(app, test_user):
         recipe = db.session.get(Recipe, result["recipe_id"])
         assert recipe is not None
         assert recipe.status == "draft"
-        assert recipe.organization_id == user.organization_id
+        assert recipe.organization_id == user_org_id
 
         ingredient_names = sorted(
             ingredient.inventory_item.name for ingredient in recipe.recipe_ingredients
@@ -73,6 +74,7 @@ def test_batchbot_bulk_inventory_tool_handles_restock_and_create(app, test_user)
         )
         db.session.add(existing_item)
         db.session.commit()
+        existing_item_id = existing_item.id
 
         payload = {
             "lines": [
@@ -103,8 +105,8 @@ def test_batchbot_bulk_inventory_tool_handles_restock_and_create(app, test_user)
         assert len(result["results"]) == 2
         assert all(entry["success"] for entry in result["results"])
 
-        db.session.refresh(existing_item)
-        assert existing_item.quantity == pytest.approx(4.0)
+        refreshed_item = db.session.get(InventoryItem, existing_item_id)
+        assert refreshed_item.quantity == pytest.approx(4.0)
 
         new_item = (
             InventoryItem.query.filter_by(

@@ -32,6 +32,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Inventory category (separate taxonomy aligned to item type)
     inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
     quantity = db.Column(db.Float, default=0.0)
+    quantity_base = db.Column(db.BigInteger, default=0, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
@@ -135,17 +136,24 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from sqlalchemy import and_
         from app.models.inventory_lot import InventoryLot
+        from app.services.quantity_base import from_base_quantity
 
         today = datetime.now(timezone.utc).date()
-        expired_total = db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
+        expired_total_base = db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))\
             .filter(and_(
                 InventoryLot.inventory_item_id == self.id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )).scalar() or 0
 
-        return max(0, self.quantity - expired_total)
+        available_base = max(0, int(self.quantity_base or 0) - int(expired_total_base or 0))
+        return from_base_quantity(
+            base_amount=available_base,
+            unit_name=self.unit,
+            ingredient_id=self.id,
+            density=self.density,
+        )
 
     @property
     def expired_quantity(self):
@@ -155,15 +163,22 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from sqlalchemy import and_
         from app.models.inventory_lot import InventoryLot
+        from app.services.quantity_base import from_base_quantity
 
         today = datetime.now(timezone.utc).date()
-        return db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
+        expired_total_base = db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))\
             .filter(and_(
                 InventoryLot.inventory_item_id == self.id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )).scalar() or 0
+        return from_base_quantity(
+            base_amount=expired_total_base or 0,
+            unit_name=self.unit,
+            ingredient_id=self.id,
+            density=self.density,
+        )
 
 
 @event.listens_for(InventoryItem, "before_insert")
