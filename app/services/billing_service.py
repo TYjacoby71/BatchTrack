@@ -9,7 +9,6 @@ Glossary:
 """
 
 import logging
-import os
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
@@ -44,6 +43,8 @@ else:
 
 logger = logging.getLogger(__name__)
 
+# --- BillingService ---
+# Purpose: Coordinate billing workflows, pricing, and Stripe integration.
 class BillingService:
     """Consolidated billing + Stripe orchestration service."""
 
@@ -343,7 +344,7 @@ class BillingService:
             secret = current_app.config.get('STRIPE_SECRET_KEY')
         except Exception:
             secret = None
-        return secret or os.environ.get('STRIPE_SECRET_KEY')
+        return secret
 
     # Purpose: Retrieve a Stripe customer by ID.
     @staticmethod

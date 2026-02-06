@@ -1,5 +1,14 @@
+"""Domain event outbox dispatcher.
+
+Synopsis:
+Dispatches pending DomainEvent rows to an external webhook endpoint.
+
+Glossary:
+- Outbox: Persisted events queued for delivery.
+- Dispatcher: Worker that sends events to external systems.
+"""
+
 import logging
-import os
 import time
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
@@ -7,12 +16,16 @@ from typing import Dict, Any, Optional
 import requests
 from sqlalchemy import select
 
+from flask import current_app, has_app_context
+
 from app.extensions import db
 from app.models.domain_event import DomainEvent
 
 logger = logging.getLogger(__name__)
 
 
+# --- DomainEventDispatcher ---
+# Purpose: Deliver queued domain events to external webhooks.
 class DomainEventDispatcher:
     """Outbox dispatcher for processing DomainEvent records asynchronously."""
 
@@ -23,7 +36,12 @@ class DomainEventDispatcher:
         batch_size: int = 100,
         max_retry_attempts: int = 6,
     ) -> None:
-        self.webhook_url = webhook_url or os.environ.get("DOMAIN_EVENT_WEBHOOK_URL")
+        if webhook_url:
+            self.webhook_url = webhook_url
+        elif has_app_context():
+            self.webhook_url = current_app.config.get("DOMAIN_EVENT_WEBHOOK_URL")
+        else:
+            self.webhook_url = None
         self.batch_size = max(1, batch_size)
         self.max_retry_attempts = max_retry_attempts
 

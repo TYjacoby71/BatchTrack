@@ -67,13 +67,15 @@ Copy and populate the production environment template:
 cp docs/operations/env.production.example .env.production
 ```
 
+> This file is generated from `app/config_schema.py` via
+> `scripts/generate_env_example.py`. Update the schema first, then regenerate.
+
 **Critical settings to configure (minimum for the 5k Locust run):**
 
 ```bash
 # Core Flask
 FLASK_ENV=production
-ENV=production
-SECRET_KEY=32+char-random-value
+FLASK_SECRET_KEY=32+char-random-value
 
 # Database connection pool (prevents QueuePool exhaustion)
 SQLALCHEMY_POOL_SIZE=80
@@ -84,19 +86,16 @@ SQLALCHEMY_POOL_USE_LIFO=true
 SQLALCHEMY_POOL_RESET_ON_RETURN=commit
 
 # PostgreSQL (Render/Neon/etc.)
-DATABASE_INTERNAL_URL=postgresql://internal-user:...        # Preferred when present
-DATABASE_URL=postgresql://external-user:...                 # Fallback for CLI tools
+DATABASE_URL=postgresql://internal-user:...                 # Prefer internal/private URL
 
 # Redis for rate limiting, caching, and sessions (REQUIRED)
 REDIS_URL=redis://your-redis-host:6379/0
 RATELIMIT_STORAGE_URI=${REDIS_URL}
-RATELIMIT_STORAGE_URL=${REDIS_URL}
 RATELIMIT_ENABLED=true
 RATELIMIT_DEFAULT="5000 per hour;1000 per minute"            # Matches app/extensions defaults
 SESSION_TYPE=redis
 SESSION_LIFETIME_MINUTES=60
 CACHE_TYPE=RedisCache
-CACHE_REDIS_URL=${REDIS_URL}
 CACHE_DEFAULT_TIMEOUT=120
 # Redis connection pooling (shared across sessions/cache/limiter)
 REDIS_POOL_TIMEOUT=5
@@ -129,7 +128,6 @@ LOCUST_CACHE_TTL=120
 # Domain events & observability
 DOMAIN_EVENT_WEBHOOK_URL=https://your-domain-event-endpoint.example
 LOG_LEVEL=INFO
-SENTRY_DSN=https://your-sentry-dsn
 ```
 
 > ℹ️ `app/config.py` automatically normalizes `postgres://` URLs to `postgresql://`, so the higher pool sizes above work with Render’s managed PostgreSQL out of the box.
@@ -142,17 +140,17 @@ Use the following table when preparing staging/pre-production for a 5,000-user L
 
 | Category | Variables | Recommended values | Why it matters |
 | --- | --- | --- | --- |
-| Core Flask runtime | `FLASK_ENV`, `ENV`, `SECRET_KEY` | `production`, `production`, 32+ char key | Enables production config + disables unsafe dev server options. |
-| Database connectivity | `DATABASE_INTERNAL_URL`, `DATABASE_URL` | Internal Render URL, fallback external URL | `_normalize_db_url` prefers internal networking for lower latency. |
+| Core Flask runtime | `FLASK_ENV`, `FLASK_SECRET_KEY` | `production`, 32+ char key | Enables production config + disables unsafe dev server options. |
+| Database connectivity | `DATABASE_URL` | Internal Render URL preferred | `_normalize_db_url` normalizes legacy postgres:// prefixes. |
 | SQLAlchemy pooling | `SQLALCHEMY_POOL_SIZE=80`, `SQLALCHEMY_MAX_OVERFLOW=40`, `SQLALCHEMY_POOL_TIMEOUT=45`, `SQLALCHEMY_POOL_RECYCLE=1800`, `SQLALCHEMY_POOL_USE_LIFO=true`, `SQLALCHEMY_POOL_RESET_ON_RETURN=commit` | Ship these verbatim | Prevents the `QueuePool limit of size 5 overflow 10 reached` errors observed in the latest load test logs. |
-| Redis + rate limiting | `REDIS_URL`, `RATELIMIT_STORAGE_URI`, `RATELIMIT_STORAGE_URL`, `RATELIMIT_ENABLED=true`, `RATELIMIT_DEFAULT="5000 per hour;1000 per minute"` | Point at HA Redis | Keeps Flask-Limiter aligned with the in-code defaults in `app/extensions.py`. |
+| Redis + rate limiting | `REDIS_URL`, `RATELIMIT_STORAGE_URI`, `RATELIMIT_ENABLED=true`, `RATELIMIT_DEFAULT="5000 per hour;1000 per minute"` | Point at HA Redis | Keeps Flask-Limiter aligned with the in-code defaults in `app/extensions.py`. |
 | Redis pooling | `REDIS_MAX_CONNECTIONS=225`, `REDIS_POOL_TIMEOUT=5`, `REDIS_SOCKET_TIMEOUT=5`, `REDIS_CONNECT_TIMEOUT=5` | Let the app auto-budget per worker | Prevents run-away Redis client creation under bursty load. |
-| Sessions & cache | `SESSION_TYPE=redis`, `SESSION_LIFETIME_MINUTES=60`, `CACHE_TYPE=RedisCache`, `CACHE_REDIS_URL=${REDIS_URL}`, `CACHE_DEFAULT_TIMEOUT=120` | Use Redis for shared state | 60-minute lifetime keeps Locust logins valid through multi-hour tests. |
+| Sessions & cache | `SESSION_TYPE=redis`, `SESSION_LIFETIME_MINUTES=60`, `CACHE_TYPE=RedisCache`, `CACHE_DEFAULT_TIMEOUT=120` | Use Redis for shared state | 60-minute lifetime keeps Locust logins valid through multi-hour tests. |
 | Billing cache tuning | `BILLING_CACHE_ENABLED=true`, `BILLING_GATE_CACHE_TTL_SECONDS=60`, `BILLING_STATUS_CACHE_TTL=120` | Enabled | Cuts repeated billing queries during recipe dashboards. |
 | Worker / Gunicorn | `GUNICORN_WORKERS=8`, `GUNICORN_WORKER_CLASS=gevent`, `GUNICORN_WORKER_CONNECTIONS=1000`, `GUNICORN_TIMEOUT=30`, `GUNICORN_KEEPALIVE=2`, `GUNICORN_MAX_REQUESTS=2000` | Matches `gunicorn.conf.py` | Provides 8×1k concurrent sockets (8k connections) before queueing. |
 | Locust credentials | `LOCUST_USER_BASE`, `LOCUST_USER_PASSWORD`, `LOCUST_USER_COUNT`, optional `LOCUST_USER_CREDENTIALS` JSON | `loadtest_user`, `loadtest123`, `5000` | Ensures credential pool has a unique login per virtual user. |
 | Locust cache TTL | `LOCUST_CACHE_TTL=120` | 120 seconds | Balances upstream churn with per-user cache hits. |
-| Observability | `LOG_LEVEL=INFO`, `SENTRY_DSN`, `ANON_REQUEST_LOG_LEVEL=DEBUG` | As needed | Surface 401/500 spikes quickly during the run. |
+| Observability | `LOG_LEVEL=INFO`, `ANON_REQUEST_LOG_LEVEL=DEBUG` | As needed | Surface 401/500 spikes quickly during the run. |
 | Domain events | `DOMAIN_EVENT_WEBHOOK_URL` | Real webhook or leave blank | When blank, dispatcher logs events but skips HTTP POSTs. |
 
 ### 3. Database Optimization

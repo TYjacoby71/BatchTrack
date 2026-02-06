@@ -29,14 +29,15 @@ from .utils.redis_pool import LazyRedisClient, get_redis_pool
 logger = logging.getLogger(__name__)
 
 
+# --- Create app ---
+# Purpose: Build and configure the Flask application instance.
 def create_app(config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, static_folder="static", static_url_path="/static")
     os.makedirs(app.instance_path, exist_ok=True)
 
     _load_base_config(app, config)
-    _apply_sqlalchemy_env_overrides(app)
     _configure_sqlite_engine_options(app)
-    _sync_env_overrides(app)
+    _warn_sqlalchemy_pool_settings(app, app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}))
 
     db.init_app(app)
     _configure_db_timeouts(app)
@@ -69,6 +70,8 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     return app
 
 
+# --- Load base config ---
+# Purpose: Apply base configuration and environment diagnostics.
 def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.from_object("app.config.Config")
     if config:
@@ -89,42 +92,8 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.setdefault("BATCHTRACK_ORG_ID", 1)
 
 
-def _apply_sqlalchemy_env_overrides(app: Flask) -> None:
-    engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}) or {})
-    changed = False
-
-    def _apply_int(env_key: str, option_key: str):
-        nonlocal changed
-        value = os.environ.get(env_key)
-        if value in (None, ""):
-            return
-        try:
-            engine_opts[option_key] = int(value)
-            changed = True
-        except ValueError:
-            logger.warning("Invalid integer for %s: %s", env_key, value)
-
-    def _apply_float(env_key: str, option_key: str):
-        nonlocal changed
-        value = os.environ.get(env_key)
-        if value in (None, ""):
-            return
-        try:
-            engine_opts[option_key] = float(value)
-            changed = True
-        except ValueError:
-            logger.warning("Invalid float for %s: %s", env_key, value)
-
-    _apply_int("SQLALCHEMY_POOL_SIZE", "pool_size")
-    _apply_int("SQLALCHEMY_MAX_OVERFLOW", "max_overflow")
-    _apply_float("SQLALCHEMY_POOL_TIMEOUT", "pool_timeout")
-
-    if changed:
-        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
-
-    _warn_sqlalchemy_pool_settings(app, engine_opts)
-
-
+# --- Warn pool settings ---
+# Purpose: Emit warnings for risky SQLAlchemy pool configurations.
 def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
     env_name = (app.config.get("ENV") or app.config.get("FLASK_ENV") or "").lower()
     if env_name not in {"production", "staging"}:
@@ -160,11 +129,7 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
         logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
 
     try:
-        worker_count = int(
-            os.environ.get("GUNICORN_WORKERS")
-            or os.environ.get("WORKERS")
-            or 1
-        )
+        worker_count = int(os.environ.get("GUNICORN_WORKERS") or 1)
     except (TypeError, ValueError):
         worker_count = 1
     if isinstance(pool_size, int) and worker_count > 1:
@@ -176,12 +141,8 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
         )
 
 
-def _sync_env_overrides(app: Flask) -> None:
-    redis_url_env = os.environ.get("REDIS_URL")
-    if redis_url_env and not app.config.get("REDIS_URL"):
-        app.config["REDIS_URL"] = redis_url_env
-
-
+# --- Configure cache ---
+# Purpose: Initialize Flask-Caching with Redis or fallback cache.
 def _configure_cache(app: Flask) -> None:
     redis_url = app.config.get("REDIS_URL")
     cache_config = {
@@ -208,6 +169,8 @@ def _configure_cache(app: Flask) -> None:
         raise RuntimeError("Redis cache not configured; SimpleCache is not permitted in production.")
 
 
+# --- Configure sessions ---
+# Purpose: Initialize server-side session storage.
 def _configure_sessions(app: Flask) -> None:
     session_backend = None
     session_redis = None
@@ -240,12 +203,10 @@ def _configure_sessions(app: Flask) -> None:
     server_session.init_app(app)
 
 
+# --- Configure rate limiter ---
+# Purpose: Initialize Flask-Limiter and its Redis backing store.
 def _configure_rate_limiter(app: Flask) -> None:
-    storage_uri = (
-        app.config.get("RATELIMIT_STORAGE_URI")
-        or app.config.get("RATELIMIT_STORAGE_URL")
-        or "memory://"
-    )
+    storage_uri = app.config.get("RATELIMIT_STORAGE_URI") or "memory://"
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     if storage_uri.startswith("redis"):
         pool = get_redis_pool(app)
@@ -260,6 +221,8 @@ def _configure_rate_limiter(app: Flask) -> None:
 
 
 
+# --- Optional create_all ---
+# Purpose: Allow optional db.create_all() for local setups.
 def _run_optional_create_all(app: Flask) -> None:
     def _env_flag(key: str):
         value = os.environ.get(key)
@@ -290,9 +253,11 @@ def _run_optional_create_all(app: Flask) -> None:
         return
     _execute_create_all("SQLALCHEMY_CREATE_ALL")
 
+# --- Configure SQLite options ---
+# Purpose: Remove invalid SQLAlchemy pool settings for SQLite.
 def _configure_sqlite_engine_options(app):
     """Configure SQLite engine options for testing/memory databases"""
-    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    uri = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
     if app.config.get("TESTING") or uri.startswith("sqlite"):
         opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}))
         # Remove pool args that SQLite memory + StaticPool don't accept
@@ -304,6 +269,8 @@ def _configure_sqlite_engine_options(app):
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
 
 
+# --- Configure DB timeouts ---
+# Purpose: Apply statement and lock timeouts to the DB engine.
 def _configure_db_timeouts(app: Flask) -> None:
     uri = app.config.get("SQLALCHEMY_DATABASE_URI", "") or ""
     if not uri or uri.startswith("sqlite"):
@@ -338,6 +305,8 @@ def _configure_db_timeouts(app: Flask) -> None:
             finally:
                 cursor.close()
 
+# --- Install resilience handlers ---
+# Purpose: Add global error handlers for known failure modes.
 def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""
     from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
@@ -391,6 +360,8 @@ def _install_global_resilience_handlers(app):
             return rendered, 400
         return "CSRF validation failed. Please refresh and try again.", 400
 
+# --- Add core routes ---
+# Purpose: Register basic app-wide routes like health checks.
 def _add_core_routes(app):
     """Add core application routes"""
     def _render_public_homepage_response():
@@ -447,6 +418,8 @@ def _add_core_routes(app):
         """Alternative public page"""
         return _render_public_homepage_response()
 
+# --- Setup logging ---
+# Purpose: Configure log levels and app log formatters.
 def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass

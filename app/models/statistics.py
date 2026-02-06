@@ -14,6 +14,8 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
+# --- UserStats ---
+# Purpose: Track per-user statistics for reporting and gamification.
 class UserStats(ScopedModelMixin, db.Model):
     """Track user statistics for reporting and gamification"""
     __tablename__ = 'user_stats'
@@ -142,6 +144,8 @@ class UserStats(ScopedModelMixin, db.Model):
             'user_id': self.user_id
         }
 
+# --- OrganizationStats ---
+# Purpose: Track organization-level aggregates for dashboards and reports.
 class OrganizationStats(db.Model):
     """Track organization-wide statistics"""
     __tablename__ = 'organization_stats'
@@ -284,6 +288,8 @@ class OrganizationStats(db.Model):
             'organization_id': self.organization_id
         }
 
+# --- Leaderboard ---
+# Purpose: Provide leaderboard queries for user/org metrics.
 class Leaderboard:
     """Service class for generating leaderboards and competitions"""
 
@@ -355,6 +361,8 @@ class Leaderboard:
         return monthly_stats
 
 
+# --- BatchStats ---
+# Purpose: Store batch statistics snapshots for reporting.
 class BatchStats(ScopedModelMixin, db.Model):
     """Track detailed statistics for each batch"""
     __tablename__ = 'batch_stats'
@@ -455,6 +463,8 @@ class BatchStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- RecipeStats ---
+# Purpose: Store recipe statistics snapshots for reporting.
 class RecipeStats(ScopedModelMixin, db.Model):
     """Track performance statistics for recipes across all batches"""
     __tablename__ = 'recipe_stats'
@@ -534,6 +544,8 @@ class RecipeStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- InventoryEfficiencyStats ---
+# Purpose: Track inventory efficiency and wastage metrics.
 class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
     """Track inventory usage efficiency and spoilage"""
     __tablename__ = 'inventory_efficiency_stats'
@@ -585,6 +597,8 @@ class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- OrganizationLeaderboardStats ---
+# Purpose: Store leaderboard stats used for organization badges.
 class OrganizationLeaderboardStats(db.Model):
     """Track organization-level statistics for leaderboards"""
     __tablename__ = 'organization_leaderboard_stats'
@@ -650,6 +664,8 @@ class OrganizationLeaderboardStats(db.Model):
         return stats
 
 
+# --- InventoryChangeLog ---
+# Purpose: Record inventory changes for analytics and audits.
 class InventoryChangeLog(ScopedModelMixin, db.Model):
     """Log all inventory changes with detailed categorization"""
     __tablename__ = 'inventory_change_log'

@@ -9,10 +9,12 @@ Glossary:
 #}
 
 {% block head %}
+{# Purpose: Inject CSRF metadata for integrations actions. #}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 {% endblock %}
 
 {% block content %}
+{# Purpose: Render the integrations checklist and diagnostics panels. #}
 <div class="container my-4">
   <h2 class="mb-2">Integrations & Launch Checklist</h2>
   <p class="text-muted">Use this single matrix to verify every environment variable and secret. Once a row shows “Detected,” move on to the quick actions below.</p>
@@ -67,7 +69,7 @@ Glossary:
   <div class="alert alert-warning mt-4">
     <strong>Redis provisioning & presets:</strong>
     <ul class="mb-2">
-      <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code> once. The app mirrors it into <code>RATELIMIT_STORAGE_URL</code> automatically unless you override it.</li>
+      <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code> once. The app mirrors it into <code>RATELIMIT_STORAGE_URI</code> automatically unless you override it.</li>
       <li>Use <code>REDIS_POOL_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
       <li>Set <code>GUNICORN_WORKERS</code> only as high as the Redis/Postgres plans can handle. During testing, keep it at <code>1</code>–<code>2</code>; raise both concurrency and Redis limits together when upgrading.</li>
       <li>For high-usage tiers (10k+ active users), a single well-sized Redis node normally suffices—scale memory and <code>maxclients</code> before considering sharding.</li>
