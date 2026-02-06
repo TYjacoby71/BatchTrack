@@ -1,5 +1,5 @@
 {# File: pages/recipes/view_recipe.html
-   Synopsis: Recipe detail view with lineage, notes, and version actions.
+   Synopsis: Recipe detail view with lineage selectors, notes, and version actions.
    Glossary: Lineage ID = version identifier; Promotion = make current/master. #}
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
@@ -23,6 +23,8 @@
 ] %}
 {% set display_label_prefix = label_prefix_display if label_prefix_display else (recipe.label_prefix or 'BTH') %}
 
+{# --- Content block ---
+   Purpose: Render recipe details, lineage navigation, and action controls. #}
 {% block content %}
 
 <!-- Recipe Header Card with merged details -->

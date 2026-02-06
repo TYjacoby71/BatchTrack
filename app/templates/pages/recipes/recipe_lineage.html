@@ -1,3 +1,6 @@
+{# File: pages/recipes/recipe_lineage.html
+   Synopsis: Lineage view with tree, history filters, and origin context.
+   Glossary: Lineage tree = version graph; History selector = master/variation timeline view. #}
 {% extends 'layout.html' %}
 {% set breadcrumb_items = [
     {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
@@ -6,6 +9,8 @@
 ] %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 
+{# --- draw_node macro ---
+   Purpose: Render a lineage node with child branches. #}
 {% macro draw_node(node, lineage_path) -%}
 <div class="d-flex flex-wrap align-items-center gap-2">
     <span class="fw-semibold {% if node.id in lineage_path %}text-primary{% endif %}">
@@ -41,6 +46,8 @@
 {% endif %}
 {%- endmacro %}
 
+{# --- Content block ---
+   Purpose: Show lineage tree, history selector, and origin/event summaries. #}
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row mb-4">

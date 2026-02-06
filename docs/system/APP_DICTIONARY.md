@@ -25,6 +25,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **RecipeGroup** → See [DATABASE_MODELS.md](DATABASE_MODELS.md)
+- **RecipeLineage.event_type = PROMOTE_TEST** → Audit event logged when a test is promoted (see `app/services/recipe_service/_versioning.py`)
 - **OrganizationAddon** → See [ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md)
 - **UserStats.tests_created** → Test recipe count used for badges (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **OrganizationStats.total_master_recipes** → Active master recipe count (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
@@ -47,6 +48,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: Public and internal route definitions with intent and permissions.
 
 ### Entries (placeholder)
+- **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
+- **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
+- **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
+- **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
 - **/api/recipes/prefix** → Generate a unique label prefix for recipe names (see `app/blueprints/api/routes.py`)
@@ -100,6 +105,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
+- **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
+- **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)
+- **RecipeVersioning.promote_test_to_current** → Promote a test and log lineage event (see `app/services/recipe_service/_versioning.py`)
 - **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
 - **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
@@ -132,6 +140,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
 - **Recipe Notes Panel** → Add and review timestamped recipe notes (see `app/templates/pages/recipes/view_recipe.html`)
 - **Auto Label Prefix Field** → Locked prefix auto-generation on recipe forms (see `app/templates/pages/recipes/recipe_form.html`)
+- **Lineage Selector (Master/Variation)** → Filtered lineage navigation (see `app/templates/pages/recipes/view_recipe.html`)
+- **Lineage History Panel** → Master/variation version timelines with tests (see `app/templates/pages/recipes/recipe_lineage.html`)
+- **Origin Summary (Origin/Root Recipe)** → Origin + predecessor display (see `app/templates/pages/recipes/view_recipe.html`)
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
 - **Global Link Drawer** → Link local items to global catalog (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
