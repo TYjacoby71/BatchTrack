@@ -395,10 +395,6 @@
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-edit"></i> Edit
                                         </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
-                                            <i class="fas fa-copy"></i> Clone
-                                        </a></li>
                                         {% if can_create_variations %}
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
                                             <i class="fas fa-code-branch"></i> Create Variation
