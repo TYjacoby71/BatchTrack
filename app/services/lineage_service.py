@@ -1,8 +1,8 @@
-"""Recipe lineage generators for prefixes, labels, and lineage IDs."""
 """Lineage and label generation service.
 
 Synopsis:
 Generates recipe group prefixes, variation prefixes, lineage IDs, and batch labels.
+This module powers recipe lineage generators for prefixes, labels, and lineage IDs.
 
 Glossary:
 - Prefix: Short code derived from a name for labels.
