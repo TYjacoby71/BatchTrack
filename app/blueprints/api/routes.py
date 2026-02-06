@@ -33,6 +33,7 @@ from app.services.cache_invalidation import (
     recipe_bootstrap_cache_key,
 )
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.code_generator import generate_recipe_prefix
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -84,6 +85,22 @@ def server_time():
         'timestamp': user_time.isoformat(),
         'timezone': str(TimezoneUtils.get_user_timezone())
     })
+
+# =========================================================
+# RECIPES
+# =========================================================
+# --- Recipe label prefix ---
+# Purpose: Generate a unique label prefix for a recipe name.
+@api_bp.route('/recipes/prefix', methods=['GET'])
+@login_required
+@require_permission('recipes.create')
+def recipe_prefix():
+    name = (request.args.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Recipe name is required'}), 400
+    org_id = _resolve_org_id()
+    prefix = generate_recipe_prefix(name, org_id)
+    return jsonify({'prefix': prefix})
 
 # =========================================================
 # ALERTS

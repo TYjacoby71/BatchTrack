@@ -8,6 +8,9 @@
 {% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
 {% set field_values = form_values if form_values is defined else None %}
 {% set is_test_mode = is_test or (recipe and recipe.test_sequence) %}
+{% set is_edit_mode = edit_mode if edit_mode is defined else false %}
+{% set force_edit_mode = force_edit if force_edit is defined else false %}
+{% set should_auto_prefix = (not is_edit_mode) and (not is_variation) and (not is_test_mode) %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="d-flex align-items-center gap-2">
@@ -41,6 +44,13 @@
         <small class="text-danger">Save or data may be lost</small>
     </a>
 </div>
+
+{% if force_edit_mode %}
+<div class="alert alert-warning mb-4">
+    <i class="fas fa-exclamation-triangle"></i>
+    You are editing a published recipe. Changes will be recorded in recipe notes with a timestamp.
+</div>
+{% endif %}
 
 {% if recipe and recipe.parent %}
 <div class="alert alert-info mb-4">
@@ -85,6 +95,7 @@
     {% if cloned_from_id %}<input type="hidden" name="cloned_from_id" value="{{ cloned_from_id }}">{% endif %}
     {% if is_test_mode %}<input type="hidden" name="is_test" value="true">{% endif %}
     <input type="hidden" name="save_mode" id="saveModeInput" value="publish">
+    {% if force_edit_mode %}<input type="hidden" name="force_edit" value="1">{% endif %}
 
     <!-- Basic Information Card -->
     <div class="card mb-4">
@@ -103,9 +114,17 @@
                 </div>
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="label_prefix" class="form-label">Label Prefix <span class="text-danger">*</span></label>
+                        <label for="label_prefix" class="form-label">Label Prefix{% if not should_auto_prefix %} <span class="text-danger">*</span>{% endif %}</label>
                         <div class="d-flex align-items-center">
-                            <input type="text" id="label_prefix" name="label_prefix" value="{{ field_values.get('label_prefix') if field_values else (recipe.label_prefix if recipe else '') }}" maxlength="8" required class="form-control me-2">
+                            <input type="text"
+                                   id="label_prefix"
+                                   name="label_prefix"
+                                   value="{{ field_values.get('label_prefix') if field_values else (recipe.label_prefix if recipe else '') }}"
+                                   maxlength="8"
+                                   class="form-control me-2{% if should_auto_prefix %} bg-light{% endif %}"
+                                   data-auto-prefix="{{ 'true' if should_auto_prefix else 'false' }}"
+                                   data-prefix-endpoint="{{ url_for('api.recipe_prefix') }}"
+                                   {% if should_auto_prefix %}readonly{% else %}required{% endif %}>
                             <i class="fas fa-info-circle text-muted" 
                                data-bs-toggle="popover" 
                                data-bs-placement="right"
@@ -124,6 +143,9 @@
                                style="cursor: pointer;">
                             </i>
                         </div>
+                        {% if should_auto_prefix %}
+                        <div class="form-text">Auto-generated from the recipe name.</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

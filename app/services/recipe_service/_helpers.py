@@ -36,11 +36,18 @@ def _derive_label_prefix(
     requested_prefix: Optional[str],
     parent_recipe_id: Optional[int],
     parent_recipe: Optional[Recipe],
+    org_id: Optional[int] = None,
 ) -> str:
     if requested_prefix not in (None, ''):
         return requested_prefix
 
-    final_prefix = generate_recipe_prefix(name)
+    resolved_org_id = org_id
+    if resolved_org_id is None and parent_recipe is not None:
+        resolved_org_id = getattr(parent_recipe, "organization_id", None)
+    if resolved_org_id is None:
+        resolved_org_id = _resolve_current_org_id()
+
+    final_prefix = generate_recipe_prefix(name, resolved_org_id)
     if parent_recipe_id and parent_recipe and parent_recipe.label_prefix:
         base_prefix = parent_recipe.label_prefix
         existing_variations = Recipe.query.filter(
