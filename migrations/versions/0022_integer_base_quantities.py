@@ -22,6 +22,23 @@ depends_on = None
 
 BASE_SCALE = 1_000_000
 COUNT_SCALE = 32
+BIGINT_MAX = 9223372036854775807
+BIGINT_MIN = -9223372036854775808
+SCALE_SQL = f"CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END"
+
+
+def _clamped_bigint_sql(expr: str, *, allow_negative: bool) -> str:
+    lower_bound = BIGINT_MIN if allow_negative else 0
+    return (
+        "CAST("
+        f"LEAST(GREATEST({expr}, {lower_bound}::numeric), {BIGINT_MAX}::numeric)"
+        " AS BIGINT)"
+    )
+
+
+def _base_quantity_sql(quantity_expr: str, *, allow_negative: bool) -> str:
+    rounded_expr = f"ROUND(({quantity_expr})::numeric)"
+    return _clamped_bigint_sql(rounded_expr, allow_negative=allow_negative)
 
 
 def upgrade():
@@ -91,6 +108,10 @@ def downgrade():
 
 
 def _backfill_inventory_item_base() -> None:
+    quantity_base_expr = _base_quantity_sql(
+        f"COALESCE(i.quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        allow_negative=True,
+    )
     op.execute(
         f"""
         WITH resolved_units AS (
@@ -103,12 +124,7 @@ def _backfill_inventory_item_base() -> None:
               AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
         )
         UPDATE inventory_item i
-        SET quantity_base = CAST(
-            ROUND(
-                COALESCE(i.quantity, 0) * ru.conversion_factor *
-                CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END
-            ) AS BIGINT
-        )
+        SET quantity_base = {quantity_base_expr}
         FROM resolved_units ru
         WHERE ru.unit_key = i.unit
         """
@@ -116,6 +132,14 @@ def _backfill_inventory_item_base() -> None:
 
 
 def _backfill_inventory_lot_base() -> None:
+    remaining_base_expr = _base_quantity_sql(
+        f"COALESCE(l.remaining_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        allow_negative=False,
+    )
+    original_base_expr = _base_quantity_sql(
+        f"COALESCE(l.original_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        allow_negative=False,
+    )
     op.execute(
         f"""
         WITH resolved_units AS (
@@ -128,18 +152,8 @@ def _backfill_inventory_lot_base() -> None:
               AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
         )
         UPDATE inventory_lot l
-        SET remaining_quantity_base = CAST(
-                ROUND(
-                    COALESCE(l.remaining_quantity, 0) * ru.conversion_factor *
-                    CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END
-                ) AS BIGINT
-            ),
-            original_quantity_base = CAST(
-                ROUND(
-                    COALESCE(l.original_quantity, 0) * ru.conversion_factor *
-                    CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END
-                ) AS BIGINT
-            )
+        SET remaining_quantity_base = {remaining_base_expr},
+            original_quantity_base = {original_base_expr}
         FROM resolved_units ru
         WHERE ru.unit_key = l.unit
         """
@@ -147,6 +161,14 @@ def _backfill_inventory_lot_base() -> None:
 
 
 def _backfill_unified_history_base() -> None:
+    quantity_change_expr = _base_quantity_sql(
+        f"COALESCE(h.quantity_change, 0) * ru.conversion_factor * {SCALE_SQL}",
+        allow_negative=True,
+    )
+    remaining_expr = _base_quantity_sql(
+        f"COALESCE(h.remaining_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        allow_negative=False,
+    )
     op.execute(
         f"""
         WITH resolved_units AS (
@@ -159,20 +181,10 @@ def _backfill_unified_history_base() -> None:
               AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
         )
         UPDATE unified_inventory_history h
-        SET quantity_change_base = CAST(
-                ROUND(
-                    COALESCE(h.quantity_change, 0) * ru.conversion_factor *
-                    CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END
-                ) AS BIGINT
-            ),
+        SET quantity_change_base = {quantity_change_expr},
             remaining_quantity_base = CASE
                 WHEN h.remaining_quantity IS NULL THEN NULL
-                ELSE CAST(
-                    ROUND(
-                        COALESCE(h.remaining_quantity, 0) * ru.conversion_factor *
-                        CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END
-                    ) AS BIGINT
-                )
+                ELSE {remaining_expr}
             END
         FROM resolved_units ru
         WHERE ru.unit_key = h.unit
