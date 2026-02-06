@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Application entry point for local development and ad-hoc runs."""
+"""Local development entry point.
+
+Synopsis:
+Runs the Flask dev server for local/ad-hoc use (not production).
+
+Glossary:
+- Dev server: Flask's built-in server for local debugging.
+- WSGI: Production server interface (e.g., Gunicorn).
+"""
 
 import logging
 import os
@@ -31,13 +39,13 @@ def _configure_logging(debug_enabled: bool) -> None:
 
 
 def main() -> None:
-    env = os.environ.get("ENV", "development").lower()
-    debug_enabled = env != "production" and _env_flag("FLASK_DEBUG", default=True)
+    env = os.environ.get("FLASK_ENV", "development").lower()
+    debug_enabled = env != "production"
 
     if env == "production" and not _env_flag("ALLOW_DEV_SERVER_IN_PRODUCTION"):
         logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
         LOG.error(
-            "Refusing to start the Flask dev server while ENV=production. "
+            "Refusing to start the Flask dev server while FLASK_ENV=production. "
             "Run a WSGI server instead, e.g. `gunicorn wsgi:app`.",
         )
         raise SystemExit(2)

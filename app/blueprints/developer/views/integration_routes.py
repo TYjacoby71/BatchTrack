@@ -1,3 +1,13 @@
+"""Developer integrations checklist views.
+
+Synopsis:
+Renders environment readiness and integration diagnostics for developers.
+
+Glossary:
+- Checklist: The environment variable matrix shown on the integrations page.
+- Section: Grouped config fields within the checklist UI.
+"""
+
 from __future__ import annotations
 
 import os
@@ -7,6 +17,7 @@ from flask import jsonify, render_template, request
 from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
+from app.config_schema import build_integration_sections
 from app.services.email_service import EmailService
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.integrations.registry import build_integration_categories
@@ -71,8 +82,6 @@ def integrations_checklist():
     backend = "PostgreSQL" if uri.startswith("postgres") else ("SQLite" if "sqlite" in uri else "Other")
     if "sqlite" in uri:
         source = "fallback"
-    elif os.environ.get("DATABASE_INTERNAL_URL"):
-        source = "DATABASE_INTERNAL_URL"
     elif os.environ.get("DATABASE_URL"):
         source = "DATABASE_URL"
     else:
@@ -81,12 +90,11 @@ def integrations_checklist():
         "uri": _mask_url(uri),
         "backend": backend,
         "source": source,
-        "DATABASE_INTERNAL_URL_present": bool(os.environ.get("DATABASE_INTERNAL_URL")),
         "DATABASE_URL_present": bool(os.environ.get("DATABASE_URL")),
     }
 
     cache_info = {
-        "RATELIMIT_STORAGE_URL": current_app.config.get("RATELIMIT_STORAGE_URL", "memory://"),
+        "RATELIMIT_STORAGE_URI": current_app.config.get("RATELIMIT_STORAGE_URI", "memory://"),
         "REDIS_URL_present": bool(os.environ.get("REDIS_URL")),
     }
 
@@ -105,357 +113,10 @@ def integrations_checklist():
         "WHOP_APP_ID_present": bool(current_app.config.get("WHOP_APP_ID")),
     }
 
-    def _env_status(key, *, allow_config=False, config_key=None):
-        raw = os.environ.get(key)
-        if raw not in (None, ""):
-            return True, "env"
-        if allow_config:
-            cfg_val = current_app.config.get(config_key or key)
-            if cfg_val not in (None, ""):
-                return True, "config"
-        return False, "missing"
-
-    def _make_item(
-        key,
-        description,
-        *,
-        required=True,
-        recommended=None,
-        allow_config=False,
-        config_key=None,
-        is_secret=False,
-        note=None,
-    ):
-        present, source = _env_status(key, allow_config=allow_config, config_key=config_key)
-        return {
-            "key": key,
-            "description": description,
-            "present": present,
-            "source": source,
-            "required": required,
-            "recommended": recommended,
-            "is_secret": is_secret,
-            "note": note,
-            "allow_config": allow_config,
-        }
-
-    def _section(title, note, items):
-        rows = []
-        for item in items:
-            rows.append(
-                {
-                    "category": title,
-                    "key": item["key"],
-                    "present": item["present"],
-                    "required": item["required"],
-                    "recommended": item.get("recommended"),
-                    "description": item["description"],
-                    "note": item.get("note"),
-                    "is_secret": item.get("is_secret", False),
-                    "source": item.get("source", "missing"),
-                }
-            )
-        return {"title": title, "note": note, "rows": rows}
-
-    launch_env_sections = [
-        _section(
-            "Core Runtime & Platform",
-            "Set these to lock the app into production mode before launch.",
-            [
-                _make_item(
-                    "FLASK_ENV",
-                    'Runtime environment selector.',
-                    required=True,
-                    recommended="production",
-                    note="Allowed values: development, testing, staging, production. Controls which config class loads.",
-                ),
-                _make_item(
-                    "FLASK_SECRET_KEY",
-                    "Flask session signing secret.",
-                    required=True,
-                    allow_config=True,
-                    config_key="SECRET_KEY",
-                    is_secret=True,
-                    note="32+ bytes of cryptographically secure random data. Shared across all workers for cookie signing.",
-                ),
-                _make_item(
-                    "FLASK_DEBUG",
-                    "Flask debug flag. Must stay false/unset in production.",
-                    required=False,
-                    recommended="false / unset",
-                    note="Set to 1/true only for local troubleshooting. Enabling this in staging/prod is a security risk.",
-                ),
-                _make_item(
-                    "LOG_LEVEL",
-                    "Application logging level.",
-                    required=True,
-                    recommended="INFO",
-                    allow_config=True,
-                    note="Common values: DEBUG, INFO, WARNING, ERROR. Influences both Flask logger and structured diagnostics.",
-                ),
-                _make_item(
-                    "APP_BASE_URL",
-                    "Canonical public base URL (https://app.example.com).",
-                    required=True,
-                    allow_config=True,
-                    config_key="EXTERNAL_BASE_URL",
-                    note="Must be a full absolute URL (scheme + host). Used for CSRF, absolute redirects, and template helpers.",
-                ),
-                _make_item(
-                    "APP_HOST",
-                    "Optional explicit host override for CSRF/proxy checks.",
-                    required=False,
-                    allow_config=True,
-                    config_key="CANONICAL_HOST",
-                    note="Defaults to the host portion of APP_BASE_URL. Override only when the ingress host differs from the public URL.",
-                ),
-            ],
-        ),
-        _section(
-            "Database & Persistence",
-            "Configure a managed Postgres instance before launch. Defaults are tuned for ~500 concurrent users unless overridden.",
-            [
-                _make_item("DATABASE_INTERNAL_URL", "Primary database connection string.", required=True, is_secret=True),
-                _make_item("DATABASE_URL", "Fallback database connection string.", required=False, is_secret=True),
-                _make_item(
-                    "SQLALCHEMY_CREATE_ALL",
-                    "Run db.create_all() during startup (set 1 to enable, 0 to skip).",
-                    required=False,
-                    recommended="0 (prod) / 1 (local seeding)",
-                ),
-                _make_item(
-                    "SQLALCHEMY_POOL_SIZE",
-                    "SQLAlchemy connection pool size (per worker process).",
-                    required=False,
-                    recommended="5 (baseline for ~500 concurrent users; scale with workers)",
-                ),
-                _make_item(
-                    "SQLALCHEMY_MAX_OVERFLOW",
-                    "Additional connections allowed past pool_size.",
-                    required=False,
-                    recommended="5",
-                ),
-                _make_item(
-                    "SQLALCHEMY_POOL_TIMEOUT",
-                    "Seconds to wait for a database connection before failing.",
-                    required=False,
-                    recommended="10",
-                ),
-                _make_item(
-                    "SQLALCHEMY_POOL_RECYCLE",
-                    "Seconds before recycling idle DB connections.",
-                    required=False,
-                    recommended="300",
-                ),
-                _make_item(
-                    "SQLALCHEMY_POOL_USE_LIFO",
-                    "Prefer most recently used connections in the pool.",
-                    required=False,
-                    recommended="true",
-                ),
-                _make_item(
-                    "SQLALCHEMY_POOL_RESET_ON_RETURN",
-                    "Reset behavior when returning a connection to the pool.",
-                    required=False,
-                    recommended="commit",
-                ),
-            ],
-        ),
-        _section(
-            "Caching & Rate Limits",
-            "Provision a managed Redis instance.",
-            [
-                _make_item("REDIS_URL", "Redis connection string.", required=True, recommended="redis://", allow_config=True),
-                _make_item("SESSION_TYPE", "Server-side session backend.", required=True, recommended="redis", allow_config=True),
-                _make_item(
-                    "SESSION_LIFETIME_MINUTES",
-                    "Session lifetime in minutes.",
-                    required=False,
-                    recommended="60",
-                ),
-                _make_item(
-                    "CACHE_DEFAULT_TIMEOUT",
-                    "Default cache TTL in seconds.",
-                    required=False,
-                    recommended="120",
-                ),
-                _make_item(
-                    "REDIS_MAX_CONNECTIONS",
-                    "Max clients allowed by your Redis plan (used to auto-budget pool per worker).",
-                    required=False,
-                    recommended="Set to your plan limit (example: 250)",
-                ),
-                _make_item(
-                    "REDIS_POOL_MAX_CONNECTIONS",
-                    "Shared Redis connection pool size (across cache/sessions/limiter).",
-                    required=False,
-                    recommended="20 (per worker, if you need a hard cap)",
-                ),
-                _make_item(
-                    "REDIS_POOL_TIMEOUT",
-                    "Seconds to wait for a Redis connection before erroring.",
-                    required=False,
-                    recommended="5",
-                ),
-                _make_item(
-                    "REDIS_SOCKET_TIMEOUT",
-                    "Redis socket timeout in seconds.",
-                    required=False,
-                    recommended="5",
-                ),
-                _make_item(
-                    "REDIS_CONNECT_TIMEOUT",
-                    "Redis connect timeout in seconds.",
-                    required=False,
-                    recommended="5",
-                ),
-            ],
-        ),
-        _section(
-            "Security & Networking",
-            "Enable proxy awareness and security headers behind your load balancer.",
-            [
-                _make_item(
-                    "ENABLE_PROXY_FIX",
-                    "Wrap the app in Werkzeug ProxyFix.",
-                    required=True,
-                    recommended="true",
-                    note="Keeps remote_addr, scheme, and host accurate when behind a load balancer. Always true in hosted environments.",
-                ),
-                _make_item(
-                    "TRUST_PROXY_HEADERS",
-                    "Legacy proxy toggle.",
-                    required=False,
-                    recommended="true",
-                    note="Set to true when running behind Render/NGINX/Cloudflare so Flask trusts X-Forwarded-* headers.",
-                ),
-                _make_item(
-                    "PROXY_FIX_X_FOR",
-                    "Number of X-Forwarded-For headers to trust.",
-                    required=False,
-                    recommended="1",
-                    note="Set equal to the number of proxies in front of the app. 1 is typical for Render + CDN.",
-                ),
-                _make_item(
-                    "FORCE_SECURITY_HEADERS",
-                    "Force security headers.",
-                    required=False,
-                    recommended="true",
-                    note="When true, middleware adds HSTS, X-Frame-Options, and related headers on every response.",
-                ),
-            ],
-        ),
-        _section(
-            "Load Testing Diagnostics",
-            "Optional flags for observing synthetic traffic. Legacy bypass envs (ALLOW_LOADTEST_LOGIN_BYPASS / LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF) are now blocked entirely.",
-            [
-                _make_item(
-                    "LOCUST_LOG_LOGIN_FAILURE_CONTEXT",
-                    "Set to 1 to log structured auth.login failures (username, headers, cookie state).",
-                    required=False,
-                    recommended="unset / 0 (enable only when debugging)",
-                    note="Keep disabled once the load test is green to reduce noise. Logs remain available from Locust via LOCUST_LOG_LOGIN_FAILURE_CONTEXT.",
-                ),
-            ],
-        ),
-        _section(
-            "Email & Notifications",
-            "Configure exactly one provider for transactional email.",
-            [
-                _make_item("EMAIL_PROVIDER", "Email provider selector.", required=True, allow_config=True),
-                _make_item("MAIL_SERVER", "SMTP server hostname.", required=False),
-                _make_item("MAIL_USERNAME", "SMTP username.", required=False, is_secret=True),
-                _make_item("SENDGRID_API_KEY", "SendGrid API key.", required=False, is_secret=True),
-            ],
-        ),
-        _section(
-            "AI Studio & BatchBot",
-            "These keys and knobs control Batchley (paid bot), the public help bot, and refill economics.",
-            [
-                _make_item("FEATURE_BATCHBOT", "Master toggle for exposing Batchley endpoints.", required=False, recommended="true", allow_config=True, note="Set to false to completely disable the AI copilot and its routes."),
-                _make_item("GOOGLE_AI_API_KEY", "Gemini API key used by Batchley + public bot.", required=True, is_secret=True, note="Create in Google AI Studio → API Key. Rotate if compromised."),
-                _make_item("GOOGLE_AI_DEFAULT_MODEL", "Fallback Gemini model when per-bot overrides are unset.", required=False, recommended="gemini-1.5-flash"),
-                _make_item("GOOGLE_AI_BATCHBOT_MODEL", "Model used by the paid Batchley bot.", required=False, recommended="gemini-1.5-pro"),
-                _make_item("GOOGLE_AI_PUBLICBOT_MODEL", "Model used by the public help bot.", required=False, recommended="gemini-1.5-flash"),
-                _make_item("GOOGLE_AI_ENABLE_SEARCH", "Enable Google Search grounding for Batchley.", required=False, recommended="true"),
-                _make_item("GOOGLE_AI_ENABLE_FILE_SEARCH", "Enable File Search (uploaded docs) for prompts.", required=False, recommended="true"),
-                _make_item("GOOGLE_AI_SEARCH_TOOL", "Search tool identifier sent to Gemini.", required=False, recommended="google_search"),
-                _make_item("BATCHBOT_REQUEST_TIMEOUT_SECONDS", "Gemini request timeout. Increase for long-running jobs.", required=False, recommended="45"),
-                _make_item("BATCHBOT_DEFAULT_MAX_REQUESTS", "Base allowance per org per window. Use -1 for unlimited tiers.", required=True, note="Tier-specific overrides live on Subscription Tiers → Max BatchBot Requests."),
-                _make_item("BATCHBOT_REQUEST_WINDOW_DAYS", "Length of the usage window (credits reset after this).", required=True, recommended="30"),
-                _make_item("BATCHBOT_CHAT_MAX_MESSAGES", "Max chat-only prompts per window.", required=False, recommended="60", note="≈15 conversations. Raise for higher tiers or set -1 for unlimited."),
-                _make_item("BATCHBOT_COST_PER_MILLION_INPUT", "Reference compute cost for inbound tokens (USD).", required=False, recommended="0.35"),
-                _make_item("BATCHBOT_COST_PER_MILLION_OUTPUT", "Reference compute cost for outbound tokens (USD).", required=False, recommended="0.53"),
-                _make_item("BATCHBOT_SIGNUP_BONUS_REQUESTS", "Promo credits granted to new orgs.", required=False, recommended="20"),
-                _make_item("BATCHBOT_REFILL_LOOKUP_KEY", "Stripe price lookup key for Batchley refill add-on.", required=False, recommended="batchbot_refill_100", note="Must match the Stripe price ID tied to the refill add-on."),
-            ],
-        ),
-        _section(
-            "OAuth & Marketplace",
-            "Optional integrations for single sign-on and marketplace licensing.",
-            [
-                _make_item("GOOGLE_OAUTH_CLIENT_ID", "Google OAuth 2.0 client ID for login.", required=False, is_secret=True),
-                _make_item("GOOGLE_OAUTH_CLIENT_SECRET", "Google OAuth 2.0 client secret.", required=False, is_secret=True),
-                _make_item("WHOP_API_KEY", "Whop API key (if using Whop).", required=False, is_secret=True),
-                _make_item("WHOP_APP_ID", "Whop app ID (if using Whop).", required=False, is_secret=True),
-            ],
-        ),
-        _section(
-            "Maintenance & Utilities",
-            "Rarely used toggles for seeding or one-off maintenance scripts.",
-            [
-                _make_item("SEED_PRESETS", "Enable preset data seeding during migrations.", required=False, recommended="unset"),
-            ],
-        ),
-        _section(
-            "Load Testing Features & Inputs",
-            "Environment-driven knobs consumed by loadtests/locustfile.py. All users must behave like real clients (no CSRF bypass).",
-            [
-                _make_item(
-                    "LOCUST_USER_BASE",
-                    "Username prefix for generated test accounts.",
-                    required=False,
-                    note="Defaults to loadtest_user. The script appends sequential numbers (e.g., loadtest_user1..N).",
-                ),
-                _make_item(
-                    "LOCUST_USER_PASSWORD",
-                    "Password shared by generated load-test users.",
-                    required=False,
-                    note="Defaults to loadtest123. Must match credentials created via loadtests/test_user_generator.py.",
-                ),
-                _make_item(
-                    "LOCUST_USER_COUNT",
-                    "Number of sequential users to generate.",
-                    required=False,
-                    note="Defaults to 10000. Set to your planned Locust concurrency (e.g., 100) so the credential pool matches the run.",
-                ),
-                _make_item(
-                    "LOCUST_CACHE_TTL",
-                    "Seconds before Locust refreshes cached IDs.",
-                    required=False,
-                    note="Defaults to 120 seconds. Lower for high churn data; higher to reduce bootstrap calls.",
-                ),
-                _make_item(
-                    "LOCUST_REQUIRE_HTTPS",
-                    "Require Locust host to use HTTPS (1/0).",
-                    required=False,
-                    note="Defaults to 1 (true). Keeps Secure cookies from being discarded if someone points Locust at http://.",
-                ),
-                _make_item(
-                    "LOCUST_LOG_LOGIN_FAILURE_CONTEXT",
-                    "Emit structured diagnostics when login fails.",
-                    required=False,
-                    note="Defaults to 1. Set to 0 to silence verbose JSON logs once the load test is stable.",
-                ),
-                _make_item(
-                    "LOCUST_USER_CREDENTIALS",
-                    "Optional JSON list of explicit username/password pairs.",
-                    required=False,
-                    note='Example: [{"username":"user1","password":"pass"}]. Overrides sequential generation when provided.',
-                ),
-            ],
-        ),
-    ]
+    launch_env_sections = build_integration_sections(
+        os.environ,
+        ENV_DIAGNOSTICS.get("active", "development"),
+    )
 
     rate_limiters = [
         {

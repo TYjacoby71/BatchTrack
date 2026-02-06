@@ -1,10 +1,22 @@
+"""Application configuration resolution and defaults.
+
+Synopsis:
+Loads environment values via the config schema and exposes Flask config classes.
+
+Glossary:
+- Env schema: Canonical list of env keys and defaults.
+- Config class: Environment-specific configuration class for Flask.
+"""
+
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Mapping
+from typing import Any, Mapping
 from urllib.parse import urlparse
+
+from .config_schema import resolve_settings
 
 _DEFAULT_ENV = "development"
 _ENV_KEY = "FLASK_ENV"
@@ -104,14 +116,14 @@ def _derive_scheme(base_url: str | None) -> str | None:
     return parsed.scheme or None
 
 
-def _resolve_ratelimit_uri(reader: EnvReader) -> str:
-    candidate = reader.str('RATELIMIT_STORAGE_URI') or reader.str('RATELIMIT_STORAGE_URL')
+def _resolve_ratelimit_uri(settings: Mapping[str, Any]) -> str:
+    candidate = settings.get("RATELIMIT_STORAGE_URI")
     if candidate:
         return candidate
-    redis_url = reader.str('REDIS_URL')
+    redis_url = settings.get("REDIS_URL")
     if redis_url:
         return redis_url
-    return 'memory://'
+    return "memory://"
 
 
 def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
@@ -152,6 +164,8 @@ def _preferred_scheme(base_url: str, env_name: str) -> str:
 
 env = EnvReader()
 ENV_INFO = _resolve_environment(env)
+SETTINGS, SETTINGS_META, SCHEMA_WARNINGS = resolve_settings(env._data, ENV_INFO.name)
+env.warnings.extend(SCHEMA_WARNINGS)
 
 for flag in _FORBIDDEN_FLAGS:
     if env.raw(flag) not in (None, ""):
@@ -159,19 +173,21 @@ for flag in _FORBIDDEN_FLAGS:
             f"{flag} has been removed. Load tests must behave like real clients and supply CSRF tokens."
         )
 
-_BASE_URL = _resolve_base_url(env, ENV_INFO.name)
-_CANONICAL_HOST = env.str('APP_HOST') or _extract_host(_BASE_URL)
+_BASE_URL = SETTINGS.get("APP_BASE_URL")
+if not _BASE_URL:
+    _BASE_URL = _resolve_base_url(env, ENV_INFO.name)
+_CANONICAL_HOST = SETTINGS.get("APP_HOST") or _extract_host(_BASE_URL)
 _PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
 
 
 class BaseConfig:
     FLASK_ENV = ENV_INFO.name
-    SECRET_KEY = env.str('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
+    SECRET_KEY = SETTINGS.get("FLASK_SECRET_KEY")
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
 
-    SESSION_LIFETIME_MINUTES = env.int('SESSION_LIFETIME_MINUTES', 60)
+    SESSION_LIFETIME_MINUTES = SETTINGS.get("SESSION_LIFETIME_MINUTES", 60)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=SESSION_LIFETIME_MINUTES)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
@@ -187,83 +203,89 @@ class BaseConfig:
     CANONICAL_HOST = _CANONICAL_HOST
     PREFERRED_URL_SCHEME = _PREFERRED_SCHEME
 
-    RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri(env)
+    RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri(SETTINGS)
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
-    RATELIMIT_ENABLED = env.bool('RATELIMIT_ENABLED', True)
-    RATELIMIT_DEFAULT = env.str('RATELIMIT_DEFAULT', '5000 per hour;1000 per minute')
-    RATELIMIT_SWALLOW_ERRORS = env.bool('RATELIMIT_SWALLOW_ERRORS', True)
+    RATELIMIT_ENABLED = SETTINGS.get("RATELIMIT_ENABLED", True)
+    RATELIMIT_DEFAULT = SETTINGS.get("RATELIMIT_DEFAULT", "5000 per hour;1000 per minute")
+    RATELIMIT_SWALLOW_ERRORS = SETTINGS.get("RATELIMIT_SWALLOW_ERRORS", True)
 
-    CACHE_TYPE = env.str('CACHE_TYPE', 'SimpleCache')
-    CACHE_REDIS_URL = env.str('CACHE_REDIS_URL') or env.str('REDIS_URL')
-    CACHE_DEFAULT_TIMEOUT = env.int('CACHE_DEFAULT_TIMEOUT', 120)
-    INGREDIENT_LIST_CACHE_TTL = env.int('INGREDIENT_LIST_CACHE_TTL', 120)
-    RECIPE_LIST_CACHE_TTL = env.int('RECIPE_LIST_CACHE_TTL', 180)
-    RECIPE_LIST_PAGE_SIZE = env.int('RECIPE_LIST_PAGE_SIZE', 10)
-    PRODUCT_LIST_CACHE_TTL = env.int('PRODUCT_LIST_CACHE_TTL', 180)
-    GLOBAL_LIBRARY_CACHE_TTL = env.int('GLOBAL_LIBRARY_CACHE_TTL', 300)
-    RECIPE_LIBRARY_CACHE_TTL = env.int('RECIPE_LIBRARY_CACHE_TTL', 180)
+    REDIS_URL = SETTINGS.get("REDIS_URL")
+    CACHE_TYPE = SETTINGS.get("CACHE_TYPE", "SimpleCache")
+    CACHE_REDIS_URL = SETTINGS.get("REDIS_URL")
+    CACHE_DEFAULT_TIMEOUT = SETTINGS.get("CACHE_DEFAULT_TIMEOUT", 120)
+    INGREDIENT_LIST_CACHE_TTL = SETTINGS.get("INGREDIENT_LIST_CACHE_TTL", 120)
+    RECIPE_LIST_CACHE_TTL = SETTINGS.get("RECIPE_LIST_CACHE_TTL", 180)
+    RECIPE_LIST_PAGE_SIZE = SETTINGS.get("RECIPE_LIST_PAGE_SIZE", 10)
+    PRODUCT_LIST_CACHE_TTL = SETTINGS.get("PRODUCT_LIST_CACHE_TTL", 180)
+    GLOBAL_LIBRARY_CACHE_TTL = SETTINGS.get("GLOBAL_LIBRARY_CACHE_TTL", 300)
+    RECIPE_LIBRARY_CACHE_TTL = SETTINGS.get("RECIPE_LIBRARY_CACHE_TTL", 180)
+    RECIPE_FORM_CACHE_TTL = SETTINGS.get("RECIPE_FORM_CACHE_TTL", 60)
 
-    BILLING_STATUS_CACHE_TTL = env.int('BILLING_STATUS_CACHE_TTL', 120)
+    BILLING_STATUS_CACHE_TTL = SETTINGS.get("BILLING_STATUS_CACHE_TTL", 120)
 
-    LOG_LEVEL = env.str('LOG_LEVEL', 'WARNING') or 'WARNING'
-    ANON_REQUEST_LOG_LEVEL = env.str('ANON_REQUEST_LOG_LEVEL', 'DEBUG') or 'DEBUG'
+    LOG_LEVEL = SETTINGS.get("LOG_LEVEL") or "WARNING"
+    ANON_REQUEST_LOG_LEVEL = SETTINGS.get("ANON_REQUEST_LOG_LEVEL") or "DEBUG"
+    LOG_REDACT_PII = SETTINGS.get("LOG_REDACT_PII", True)
+    DISABLE_SECURITY_HEADERS = SETTINGS.get("DISABLE_SECURITY_HEADERS", False)
 
-    EMAIL_PROVIDER = (env.str('EMAIL_PROVIDER', 'smtp') or 'smtp').lower()
-    MAIL_SERVER = env.str('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = env.int('MAIL_PORT', 587)
-    MAIL_USE_TLS = env.bool('MAIL_USE_TLS', True)
-    MAIL_USE_SSL = env.bool('MAIL_USE_SSL', False)
-    MAIL_USERNAME = env.str('MAIL_USERNAME')
-    MAIL_PASSWORD = env.str('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = env.str('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
+    EMAIL_PROVIDER = (SETTINGS.get("EMAIL_PROVIDER", "smtp") or "smtp").lower()
+    MAIL_SERVER = SETTINGS.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = SETTINGS.get("MAIL_PORT", 587)
+    MAIL_USE_TLS = SETTINGS.get("MAIL_USE_TLS", True)
+    MAIL_USE_SSL = SETTINGS.get("MAIL_USE_SSL", False)
+    MAIL_USERNAME = SETTINGS.get("MAIL_USERNAME")
+    MAIL_PASSWORD = SETTINGS.get("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = SETTINGS.get("MAIL_DEFAULT_SENDER", "noreply@batchtrack.app")
 
-    SENDGRID_API_KEY = env.str('SENDGRID_API_KEY')
-    POSTMARK_SERVER_TOKEN = env.str('POSTMARK_SERVER_TOKEN')
-    MAILGUN_API_KEY = env.str('MAILGUN_API_KEY')
-    MAILGUN_DOMAIN = env.str('MAILGUN_DOMAIN')
+    SENDGRID_API_KEY = SETTINGS.get("SENDGRID_API_KEY")
+    POSTMARK_SERVER_TOKEN = SETTINGS.get("POSTMARK_SERVER_TOKEN")
+    MAILGUN_API_KEY = SETTINGS.get("MAILGUN_API_KEY")
+    MAILGUN_DOMAIN = SETTINGS.get("MAILGUN_DOMAIN")
 
-    STRIPE_PUBLISHABLE_KEY = env.str('STRIPE_PUBLISHABLE_KEY')
-    STRIPE_SECRET_KEY = env.str('STRIPE_SECRET_KEY')
-    STRIPE_WEBHOOK_SECRET = env.str('STRIPE_WEBHOOK_SECRET')
-    WHOP_API_KEY = env.str('WHOP_API_KEY')
-    WHOP_APP_ID = env.str('WHOP_APP_ID')
-    GOOGLE_OAUTH_CLIENT_ID = env.str('GOOGLE_OAUTH_CLIENT_ID')
-    GOOGLE_OAUTH_CLIENT_SECRET = env.str('GOOGLE_OAUTH_CLIENT_SECRET')
+    STRIPE_PUBLISHABLE_KEY = SETTINGS.get("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_SECRET_KEY = SETTINGS.get("STRIPE_SECRET_KEY")
+    STRIPE_WEBHOOK_SECRET = SETTINGS.get("STRIPE_WEBHOOK_SECRET")
+    WHOP_API_KEY = SETTINGS.get("WHOP_API_KEY")
+    WHOP_APP_ID = SETTINGS.get("WHOP_APP_ID")
+    GOOGLE_OAUTH_CLIENT_ID = SETTINGS.get("GOOGLE_OAUTH_CLIENT_ID")
+    GOOGLE_OAUTH_CLIENT_SECRET = SETTINGS.get("GOOGLE_OAUTH_CLIENT_SECRET")
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
+        'pool_size': SETTINGS.get("SQLALCHEMY_POOL_SIZE", 15),
+        'max_overflow': SETTINGS.get("SQLALCHEMY_MAX_OVERFLOW", 5),
         'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
-        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
-        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
+        'pool_recycle': SETTINGS.get("SQLALCHEMY_POOL_RECYCLE", 900),
+        'pool_timeout': SETTINGS.get("SQLALCHEMY_POOL_TIMEOUT", 15),
+        'pool_use_lifo': SETTINGS.get("SQLALCHEMY_POOL_USE_LIFO", True),
+        'pool_reset_on_return': SETTINGS.get("SQLALCHEMY_POOL_RESET_ON_RETURN", "commit") or "commit",
     }
-    DB_STATEMENT_TIMEOUT_MS = env.int('DB_STATEMENT_TIMEOUT_MS', 15000)
-    DB_LOCK_TIMEOUT_MS = env.int('DB_LOCK_TIMEOUT_MS', 5000)
-    DB_IDLE_TX_TIMEOUT_MS = env.int('DB_IDLE_TX_TIMEOUT_MS', 60000)
+    DB_STATEMENT_TIMEOUT_MS = SETTINGS.get("DB_STATEMENT_TIMEOUT_MS", 15000)
+    DB_LOCK_TIMEOUT_MS = SETTINGS.get("DB_LOCK_TIMEOUT_MS", 5000)
+    DB_IDLE_TX_TIMEOUT_MS = SETTINGS.get("DB_IDLE_TX_TIMEOUT_MS", 60000)
 
-    BILLING_CACHE_ENABLED = env.bool('BILLING_CACHE_ENABLED', True)
-    BILLING_GATE_CACHE_TTL_SECONDS = env.int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
+    BILLING_CACHE_ENABLED = SETTINGS.get("BILLING_CACHE_ENABLED", True)
+    BILLING_GATE_CACHE_TTL_SECONDS = SETTINGS.get("BILLING_GATE_CACHE_TTL_SECONDS", 60)
 
-    FEATURE_INVENTORY_ANALYTICS = env.bool('FEATURE_INVENTORY_ANALYTICS', True)
-    FEATURE_BATCHBOT = env.bool('FEATURE_BATCHBOT', True)
+    FEATURE_INVENTORY_ANALYTICS = SETTINGS.get("FEATURE_INVENTORY_ANALYTICS", True)
+    FEATURE_BATCHBOT = SETTINGS.get("FEATURE_BATCHBOT", True)
 
-    GOOGLE_AI_API_KEY = env.str('GOOGLE_AI_API_KEY') or env.str('GOOGLE_GENERATIVE_AI_API_KEY')
-    GOOGLE_AI_DEFAULT_MODEL = env.str('GOOGLE_AI_DEFAULT_MODEL', 'gemini-1.5-flash') or 'gemini-1.5-flash'
-    GOOGLE_AI_BATCHBOT_MODEL = env.str('GOOGLE_AI_BATCHBOT_MODEL') or GOOGLE_AI_DEFAULT_MODEL or 'gemini-1.5-pro'
-    GOOGLE_AI_PUBLICBOT_MODEL = env.str('GOOGLE_AI_PUBLICBOT_MODEL', 'gemini-1.5-flash') or 'gemini-1.5-flash'
-    GOOGLE_AI_ENABLE_SEARCH = env.bool('GOOGLE_AI_ENABLE_SEARCH', True)
-    GOOGLE_AI_ENABLE_FILE_SEARCH = env.bool('GOOGLE_AI_ENABLE_FILE_SEARCH', True)
-    GOOGLE_AI_SEARCH_TOOL = env.str('GOOGLE_AI_SEARCH_TOOL', 'google_search') or 'google_search'
-    BATCHBOT_REQUEST_TIMEOUT_SECONDS = env.int('BATCHBOT_REQUEST_TIMEOUT_SECONDS', 45)
-    BATCHBOT_DEFAULT_MAX_REQUESTS = env.int('BATCHBOT_DEFAULT_MAX_REQUESTS', 0)
-    BATCHBOT_REQUEST_WINDOW_DAYS = env.int('BATCHBOT_REQUEST_WINDOW_DAYS', 30)
-    BATCHBOT_CHAT_MAX_MESSAGES = env.int('BATCHBOT_CHAT_MAX_MESSAGES', 60)
-    BATCHBOT_COST_PER_MILLION_INPUT = env.float('BATCHBOT_COST_PER_MILLION_INPUT', 0.35)
-    BATCHBOT_COST_PER_MILLION_OUTPUT = env.float('BATCHBOT_COST_PER_MILLION_OUTPUT', 0.53)
-    BATCHBOT_SIGNUP_BONUS_REQUESTS = env.int('BATCHBOT_SIGNUP_BONUS_REQUESTS', 20)
-    BATCHBOT_REFILL_LOOKUP_KEY = env.str('BATCHBOT_REFILL_LOOKUP_KEY', 'batchbot_refill_100') or 'batchbot_refill_100'
+    GOOGLE_AI_API_KEY = SETTINGS.get("GOOGLE_AI_API_KEY")
+    GOOGLE_AI_DEFAULT_MODEL = SETTINGS.get("GOOGLE_AI_DEFAULT_MODEL") or "gemini-1.5-flash"
+    GOOGLE_AI_BATCHBOT_MODEL = SETTINGS.get("GOOGLE_AI_BATCHBOT_MODEL") or GOOGLE_AI_DEFAULT_MODEL or "gemini-1.5-pro"
+    GOOGLE_AI_PUBLICBOT_MODEL = SETTINGS.get("GOOGLE_AI_PUBLICBOT_MODEL") or "gemini-1.5-flash"
+    GOOGLE_AI_ENABLE_SEARCH = SETTINGS.get("GOOGLE_AI_ENABLE_SEARCH", True)
+    GOOGLE_AI_ENABLE_FILE_SEARCH = SETTINGS.get("GOOGLE_AI_ENABLE_FILE_SEARCH", True)
+    GOOGLE_AI_SEARCH_TOOL = SETTINGS.get("GOOGLE_AI_SEARCH_TOOL") or "google_search"
+    BATCHBOT_REQUEST_TIMEOUT_SECONDS = SETTINGS.get("BATCHBOT_REQUEST_TIMEOUT_SECONDS", 45)
+    BATCHBOT_DEFAULT_MAX_REQUESTS = SETTINGS.get("BATCHBOT_DEFAULT_MAX_REQUESTS", 0)
+    BATCHBOT_REQUEST_WINDOW_DAYS = SETTINGS.get("BATCHBOT_REQUEST_WINDOW_DAYS", 30)
+    BATCHBOT_CHAT_MAX_MESSAGES = SETTINGS.get("BATCHBOT_CHAT_MAX_MESSAGES", 60)
+    BATCHBOT_COST_PER_MILLION_INPUT = SETTINGS.get("BATCHBOT_COST_PER_MILLION_INPUT", 0.35)
+    BATCHBOT_COST_PER_MILLION_OUTPUT = SETTINGS.get("BATCHBOT_COST_PER_MILLION_OUTPUT", 0.53)
+    BATCHBOT_SIGNUP_BONUS_REQUESTS = SETTINGS.get("BATCHBOT_SIGNUP_BONUS_REQUESTS", 20)
+    BATCHBOT_REFILL_LOOKUP_KEY = SETTINGS.get("BATCHBOT_REFILL_LOOKUP_KEY") or "batchbot_refill_100"
+
+    DOMAIN_EVENT_WEBHOOK_URL = SETTINGS.get("DOMAIN_EVENT_WEBHOOK_URL")
 
 
 class DevelopmentConfig(BaseConfig):
@@ -272,7 +294,7 @@ class DevelopmentConfig(BaseConfig):
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
 
-    _db_url = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
+    _db_url = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
     if _db_url:
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
@@ -286,8 +308,6 @@ class DevelopmentConfig(BaseConfig):
         'pool_recycle': 3600,
         'echo': False,
     }
-    RATELIMIT_STORAGE_URI = env.str('RATELIMIT_STORAGE_URI') or env.str('RATELIMIT_STORAGE_URL') or 'memory://'
-    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
 
 
 class TestingConfig(BaseConfig):
@@ -299,7 +319,7 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
     }
-    RATELIMIT_STORAGE_URI = env.str('RATELIMIT_STORAGE_URI', 'memory://') or 'memory://'
+    RATELIMIT_STORAGE_URI = SETTINGS.get("RATELIMIT_STORAGE_URI") or 'memory://'
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
     SESSION_TYPE = 'filesystem'
 
@@ -310,19 +330,7 @@ class StagingConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
-    SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
-        'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
-        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
-        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
-    }
-    _staging_ratelimit_uri = env.str('RATELIMIT_STORAGE_URI') or env.str('REDIS_URL') or 'memory://'
-    RATELIMIT_STORAGE_URI = _staging_ratelimit_uri
-    RATELIMIT_STORAGE_URL = _staging_ratelimit_uri
+    SQLALCHEMY_DATABASE_URI = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
 
 
 class ProductionConfig(BaseConfig):
@@ -331,25 +339,7 @@ class ProductionConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
-    SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 5),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
-        'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 300),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 10),
-        'pool_use_lifo': env.bool('SQLALCHEMY_POOL_USE_LIFO', True),
-        'pool_reset_on_return': env.str('SQLALCHEMY_POOL_RESET_ON_RETURN', 'commit') or 'commit',
-    }
-    _prod_ratelimit_uri = (
-        env.str('RATELIMIT_STORAGE_URI')
-        or env.str('REDIS_URL')
-        or env.str('RATELIMIT_STORAGE_URL')
-        or _resolve_ratelimit_uri(env)
-    )
-    RATELIMIT_STORAGE_URI = _prod_ratelimit_uri
-    RATELIMIT_STORAGE_URL = _prod_ratelimit_uri
-    LOG_LEVEL = env.str('LOG_LEVEL', 'INFO') or 'INFO'
+    SQLALCHEMY_DATABASE_URI = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
 
 
 config_map = {

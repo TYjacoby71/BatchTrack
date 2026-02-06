@@ -1,3 +1,13 @@
+"""Database dialect detection helpers.
+
+Synopsis:
+Infers the active database dialect based on configured SQLAlchemy URLs.
+
+Glossary:
+- Dialect: Database backend type (e.g., PostgreSQL, SQLite).
+- Override: Environment variable used to force a specific value.
+"""
+
 import os
 from typing import Final
 
@@ -20,8 +30,7 @@ def _resolve_active_database_url() -> str:
     precedence = (
         "SQLALCHEMY_TEST_DATABASE_URI",  # pytest / local overrides
         "SQLALCHEMY_DATABASE_URI",       # explicit SQLAlchemy config
-        "DATABASE_INTERNAL_URL",         # render-internal URL if provided
-        "DATABASE_URL",                  # legacy Heroku-style
+        "DATABASE_URL",                  # canonical env var
     )
 
     for key in precedence:

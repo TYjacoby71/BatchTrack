@@ -34,9 +34,8 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     os.makedirs(app.instance_path, exist_ok=True)
 
     _load_base_config(app, config)
-    _apply_sqlalchemy_env_overrides(app)
     _configure_sqlite_engine_options(app)
-    _sync_env_overrides(app)
+    _warn_sqlalchemy_pool_settings(app, app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}))
 
     db.init_app(app)
     _configure_db_timeouts(app)
@@ -89,42 +88,6 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.setdefault("BATCHTRACK_ORG_ID", 1)
 
 
-def _apply_sqlalchemy_env_overrides(app: Flask) -> None:
-    engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}) or {})
-    changed = False
-
-    def _apply_int(env_key: str, option_key: str):
-        nonlocal changed
-        value = os.environ.get(env_key)
-        if value in (None, ""):
-            return
-        try:
-            engine_opts[option_key] = int(value)
-            changed = True
-        except ValueError:
-            logger.warning("Invalid integer for %s: %s", env_key, value)
-
-    def _apply_float(env_key: str, option_key: str):
-        nonlocal changed
-        value = os.environ.get(env_key)
-        if value in (None, ""):
-            return
-        try:
-            engine_opts[option_key] = float(value)
-            changed = True
-        except ValueError:
-            logger.warning("Invalid float for %s: %s", env_key, value)
-
-    _apply_int("SQLALCHEMY_POOL_SIZE", "pool_size")
-    _apply_int("SQLALCHEMY_MAX_OVERFLOW", "max_overflow")
-    _apply_float("SQLALCHEMY_POOL_TIMEOUT", "pool_timeout")
-
-    if changed:
-        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
-
-    _warn_sqlalchemy_pool_settings(app, engine_opts)
-
-
 def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
     env_name = (app.config.get("ENV") or app.config.get("FLASK_ENV") or "").lower()
     if env_name not in {"production", "staging"}:
@@ -160,11 +123,7 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
         logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
 
     try:
-        worker_count = int(
-            os.environ.get("GUNICORN_WORKERS")
-            or os.environ.get("WORKERS")
-            or 1
-        )
+        worker_count = int(os.environ.get("GUNICORN_WORKERS") or 1)
     except (TypeError, ValueError):
         worker_count = 1
     if isinstance(pool_size, int) and worker_count > 1:
@@ -174,12 +133,6 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
             pool_size,
             worker_count * pool_size,
         )
-
-
-def _sync_env_overrides(app: Flask) -> None:
-    redis_url_env = os.environ.get("REDIS_URL")
-    if redis_url_env and not app.config.get("REDIS_URL"):
-        app.config["REDIS_URL"] = redis_url_env
 
 
 def _configure_cache(app: Flask) -> None:
@@ -241,11 +194,7 @@ def _configure_sessions(app: Flask) -> None:
 
 
 def _configure_rate_limiter(app: Flask) -> None:
-    storage_uri = (
-        app.config.get("RATELIMIT_STORAGE_URI")
-        or app.config.get("RATELIMIT_STORAGE_URL")
-        or "memory://"
-    )
+    storage_uri = app.config.get("RATELIMIT_STORAGE_URI") or "memory://"
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     if storage_uri.startswith("redis"):
         pool = get_redis_pool(app)

@@ -9,7 +9,6 @@ Glossary:
 """
 
 import logging
-import os
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
@@ -343,7 +342,7 @@ class BillingService:
             secret = current_app.config.get('STRIPE_SECRET_KEY')
         except Exception:
             secret = None
-        return secret or os.environ.get('STRIPE_SECRET_KEY')
+        return secret
 
     # Purpose: Retrieve a Stripe customer by ID.
     @staticmethod

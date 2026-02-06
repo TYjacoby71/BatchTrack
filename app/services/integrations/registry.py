@@ -1,6 +1,15 @@
+"""Integration registry definitions.
+
+Synopsis:
+Defines known integrations and their configuration requirements.
+
+Glossary:
+- Integration: External system connected to BatchTrack.
+- Spec: Metadata describing integration requirements.
+"""
+
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional
 
@@ -23,9 +32,6 @@ class IntegrationSpec:
 
 
 def _env_or_config_value(key: str) -> Optional[str]:
-    raw = os.environ.get(key)
-    if raw not in (None, ""):
-        return raw
     return current_app.config.get(key)
 
 

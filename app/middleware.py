@@ -1,7 +1,16 @@
+"""Application middleware and request hooks.
+
+Synopsis:
+Registers Flask before/after request handlers and security middleware.
+
+Glossary:
+- Middleware: Request/response hooks applied across routes.
+- ProxyFix: Werkzeug wrapper that trusts proxy headers.
+"""
+
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Mapping
 
 from flask import (
@@ -44,15 +53,17 @@ DEFAULT_SECURITY_HEADERS = {
 }
 
 
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
+def _config_flag(name: str, default: bool = False) -> bool:
+    value = current_app.config.get(name, default)
+    if isinstance(value, bool):
+        return value
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.environ.get(name)
+def _config_int(name: str, default: int) -> int:
+    raw = current_app.config.get(name, default)
     if raw is None:
         return default
     try:
@@ -125,7 +136,7 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
-    trust_proxy_headers = _env_flag("ENABLE_PROXY_FIX") or _env_flag("TRUST_PROXY_HEADERS")
+    trust_proxy_headers = _config_flag("ENABLE_PROXY_FIX") or _config_flag("TRUST_PROXY_HEADERS")
     if trust_proxy_headers and not getattr(app.wsgi_app, "_batchtrack_proxyfix", False):
         try:
             from werkzeug.middleware.proxy_fix import ProxyFix
@@ -133,19 +144,19 @@ def register_middleware(app: Flask) -> None:
             logger.warning("ProxyFix unavailable; unable to honor proxy header trust: %s", exc)
         else:
             proxy_fix_kwargs = {
-                "x_for": _env_int("PROXY_FIX_X_FOR", 1),
-                "x_proto": _env_int("PROXY_FIX_X_PROTO", 1),
-                "x_host": _env_int("PROXY_FIX_X_HOST", 1),
-                "x_port": _env_int("PROXY_FIX_X_PORT", 1),
-                "x_prefix": _env_int("PROXY_FIX_X_PREFIX", 0),
+                "x_for": _config_int("PROXY_FIX_X_FOR", 1),
+                "x_proto": _config_int("PROXY_FIX_X_PROTO", 1),
+                "x_host": _config_int("PROXY_FIX_X_HOST", 1),
+                "x_port": _config_int("PROXY_FIX_X_PORT", 1),
+                "x_prefix": _config_int("PROXY_FIX_X_PREFIX", 0),
             }
             wrapped = ProxyFix(app.wsgi_app, **proxy_fix_kwargs)
             setattr(wrapped, "_batchtrack_proxyfix", True)
             app.wsgi_app = wrapped
 
     secure_env = not app.debug and not app.testing
-    force_security_headers = _env_flag("FORCE_SECURITY_HEADERS")
-    disable_security_headers = _env_flag("DISABLE_SECURITY_HEADERS")
+    force_security_headers = _config_flag("FORCE_SECURITY_HEADERS")
+    disable_security_headers = _config_flag("DISABLE_SECURITY_HEADERS")
 
     configured_headers = app.config.get("SECURITY_HEADERS")
     security_headers = dict(DEFAULT_SECURITY_HEADERS)

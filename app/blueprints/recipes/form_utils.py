@@ -11,7 +11,7 @@ Glossary:
 from __future__ import annotations
 
 import logging
-import os
+from flask import current_app
 from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Any, Dict, Optional, Tuple
@@ -34,7 +34,11 @@ from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
 
-_FORM_DATA_CACHE_TTL = int(os.getenv("RECIPE_FORM_CACHE_TTL", "60"))
+def _form_cache_ttl() -> int:
+    try:
+        return int(current_app.config.get("RECIPE_FORM_CACHE_TTL", 60))
+    except Exception:
+        return 60
 
 
 def _serialize_product_category(cat: ProductCategory) -> Dict[str, Any]:
@@ -645,7 +649,7 @@ def get_recipe_form_data():
     if cached is None:
         payload = _build_recipe_form_payload(org_id)
         try:
-            app_cache.set(cache_key, payload, ttl=_FORM_DATA_CACHE_TTL)
+            app_cache.set(cache_key, payload, ttl=_form_cache_ttl())
         except Exception as exc:
             logger.debug("Unable to cache recipe form payload: %s", exc)
     else:
