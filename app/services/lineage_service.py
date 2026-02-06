@@ -160,6 +160,35 @@ def _resolve_group_number(version_obj: Recipe) -> int:
     return resolved if resolved > 0 else int(group_id)
 
 
+# --- Resolve variation number ---
+# Purpose: Map variation name to a group-scoped index.
+def _resolve_variation_number(version_obj: Recipe) -> int:
+    group_id = getattr(version_obj, "recipe_group_id", None)
+    variation_name = getattr(version_obj, "variation_name", None)
+    if not group_id or not variation_name:
+        return 0
+
+    rows = (
+        db.session.query(
+            Recipe.variation_name,
+            sa.func.min(Recipe.created_at),
+        )
+        .filter(
+            Recipe.recipe_group_id == group_id,
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+            Recipe.variation_name.isnot(None),
+        )
+        .group_by(Recipe.variation_name)
+        .order_by(sa.func.min(Recipe.created_at).asc())
+        .all()
+    )
+    for idx, row in enumerate(rows, start=1):
+        if row[0] == variation_name:
+            return idx
+    return 0
+
+
 # --- Generate lineage ID ---
 # Purpose: Generate a lineage ID for a recipe version.
 def generate_lineage_id(version_obj: Recipe) -> str:
@@ -174,7 +203,9 @@ def generate_lineage_id(version_obj: Recipe) -> str:
 
     parts = [str(group_number), str(master_version)]
     if not is_master:
+        variation_number = _resolve_variation_number(version_obj)
         variation_version = getattr(version_obj, "version_number", None) or 0
+        parts.append(str(variation_number or 0))
         parts.append(str(variation_version))
 
     test_sequence = getattr(version_obj, "test_sequence", None)

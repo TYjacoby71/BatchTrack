@@ -4,12 +4,23 @@
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
 
-{% set breadcrumb_items = [
-    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
-    {'label': recipe.name, 'url': None}
-] %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
+{% set display_recipe_name = recipe.name %}
+{% if not recipe.is_master %}
+  {% set base_name = recipe.variation_name or recipe.name %}
+  {% if is_test %}
+    {% set display_recipe_name = base_name ~ ' - Test ' ~ recipe.test_sequence %}
+  {% else %}
+    {% set display_recipe_name = base_name %}
+  {% endif %}
+{% elif is_test %}
+  {% set display_recipe_name = recipe.name ~ ' - Test ' ~ recipe.test_sequence %}
+{% endif %}
+{% set breadcrumb_items = [
+    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
+    {'label': display_recipe_name, 'url': None}
+] %}
 {% set display_label_prefix = label_prefix_display if label_prefix_display else (recipe.label_prefix or 'BTH') %}
 
 {% block content %}
@@ -19,7 +30,7 @@
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start mb-3">
       <div class="flex-grow-1">
-        <h2 class="mb-1">{{ recipe.name }}</h2>
+        <h2 class="mb-1">{{ display_recipe_name }}</h2>
         <div class="d-flex gap-2 align-items-center mb-2">
           {% if is_published_locked or (is_test and has_batches) %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
@@ -644,6 +655,22 @@
           <dt class="col-5">Origin</dt>
           <dd class="col-7">
             <span class="badge bg-light text-dark border">{{ origin_label }}</span>
+          </dd>
+          <dt class="col-5">Origin Recipe</dt>
+          <dd class="col-7">
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_root_recipe.id) }}" class="text-decoration-none">
+              {{ origin_root_recipe.name }}
+            </a>
+          </dd>
+          <dt class="col-5">Root Recipe</dt>
+          <dd class="col-7">
+            {% if origin_parent_recipe %}
+              <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_parent_recipe.id) }}" class="text-decoration-none">
+                {{ origin_parent_recipe.name }}
+              </a>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
           </dd>
           {% if is_marketplace_origin and recipe.org_origin_source_org %}
           <dt class="col-5">Author</dt>

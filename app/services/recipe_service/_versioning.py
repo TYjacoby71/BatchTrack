@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 # Purpose: Build a test recipe template from a base.
 def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Recipe:
     test_name = base.name
+    if not base.is_master and base.variation_name:
+        test_name = base.variation_name
     if test_sequence:
-        test_name = f"{base.name} - Test {test_sequence}"
+        test_name = f"{test_name} - Test {test_sequence}"
     template = Recipe(
         name=test_name,
         instructions=base.instructions,
@@ -73,7 +75,10 @@ def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: st
         is_master=base.is_master,
         variation_name=base.variation_name,
     )
-    test_name = f"{base.name} - Test {next_test_sequence}"
+    base_name = base.name
+    if not base.is_master and base.variation_name:
+        base_name = base.variation_name
+    test_name = f"{base_name} - Test {next_test_sequence}"
     test_payload = dict(payload)
     test_payload.update(
         {

@@ -185,6 +185,19 @@ def view_recipe(recipe_id):
             recipe,
             include_master_version_for_master=True,
         )
+        origin_root_recipe = recipe.root_recipe or recipe
+        origin_parent_recipe = recipe.parent
+        if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
+            origin_parent_recipe = (
+                Recipe.query.filter(
+                    Recipe.recipe_group_id == recipe.recipe_group_id,
+                    Recipe.is_master.is_(True),
+                    Recipe.test_sequence.is_(None),
+                    Recipe.version_number < recipe.version_number,
+                )
+                .order_by(Recipe.version_number.desc())
+                .first()
+            )
         return render_template(
             'pages/recipes/view_recipe.html',
             recipe=recipe,
@@ -206,6 +219,8 @@ def view_recipe(recipe_id):
             variation_branches=variation_branches,
             can_create_variations=can_create_variations,
             can_edit=can_edit,
+            origin_root_recipe=origin_root_recipe,
+            origin_parent_recipe=origin_parent_recipe,
         )
 
     except Exception as exc:

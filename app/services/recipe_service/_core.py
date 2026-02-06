@@ -180,6 +180,12 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         current_org_id = _resolve_current_org_id()
         recipe_org_id = current_org_id if current_org_id else (1)
 
+        allow_duplicate_name = bool(
+            is_test_flag
+            or parent_recipe_id
+            or parent_master_id
+            or (is_master_override is False)
+        )
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
@@ -187,7 +193,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             portioning_data=portioning_data,
             allow_partial=allow_partial,
             organization_id=current_org_id,
-            allow_duplicate_name=is_test_flag,
+            allow_duplicate_name=allow_duplicate_name,
         )
 
         if not validation_result['valid']:
@@ -656,7 +662,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 recipe_id=recipe_id,
                 allow_partial=True,
                 organization_id=recipe.organization_id,
-                allow_duplicate_name=bool(recipe.test_sequence),
+                allow_duplicate_name=bool(recipe.test_sequence) or (not recipe.is_master),
             )
             if not validation_result['valid']:
                 return False, validation_result

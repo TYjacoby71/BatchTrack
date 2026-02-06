@@ -87,6 +87,20 @@ def recipe_lineage(recipe_id):
             .all()
         )
         master_branches, variation_branches = build_version_branches(group_versions)
+
+    origin_root_recipe = recipe.root_recipe or recipe
+    origin_parent_recipe = recipe.parent
+    if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
+        origin_parent_recipe = (
+            Recipe.query.filter(
+                Recipe.recipe_group_id == recipe.recipe_group_id,
+                Recipe.is_master.is_(True),
+                Recipe.test_sequence.is_(None),
+                Recipe.version_number < recipe.version_number,
+            )
+            .order_by(Recipe.version_number.desc())
+            .first()
+        )
     events = (
         RecipeLineage.query.filter_by(recipe_id=recipe.id)
         .order_by(RecipeLineage.created_at.asc())
@@ -118,4 +132,6 @@ def recipe_lineage(recipe_id):
         show_origin_marketplace=show_origin_marketplace,
         master_branches=master_branches,
         variation_branches=variation_branches,
+        origin_root_recipe=origin_root_recipe,
+        origin_parent_recipe=origin_parent_recipe,
     )

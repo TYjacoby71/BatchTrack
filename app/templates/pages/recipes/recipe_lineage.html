@@ -123,6 +123,7 @@
                                         <li class="mb-2">
                                             <div class="fw-semibold">
                                                 {{ branch.name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
+                                                <small class="text-muted ms-2">(Base M{{ version.parent_master.version_number if version.parent_master else '—' }})</small>
                                             </div>
                                             {% if entry.tests %}
                                                 <ul class="list-unstyled ms-4 mt-2">
@@ -178,9 +179,8 @@
                             syncHistory();
                           })();
                         </script>
-                    {% else %}
-                        {{ draw_node(lineage_tree, lineage_path) }}
                     {% endif %}
+                    {{ draw_node(lineage_tree, lineage_path) }}
                 </div>
             </div>
         </div>
@@ -205,6 +205,22 @@
                         <dt class="col-5">Origin</dt>
                         <dd class="col-7">
                             <span class="badge bg-light text-dark border">{{ origin_label }}</span>
+                        </dd>
+                        <dt class="col-5">Origin Recipe</dt>
+                        <dd class="col-7">
+                            <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_root_recipe.id) }}" class="text-decoration-none">
+                                {{ origin_root_recipe.name }}
+                            </a>
+                        </dd>
+                        <dt class="col-5">Root Recipe</dt>
+                        <dd class="col-7">
+                            {% if origin_parent_recipe %}
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_parent_recipe.id) }}" class="text-decoration-none">
+                                    {{ origin_parent_recipe.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
                         </dd>
                         {% if is_marketplace_origin and origin_source_org %}
                         <dt class="col-5">Author</dt>

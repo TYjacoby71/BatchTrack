@@ -120,10 +120,14 @@
                 <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label for="name" class="form-label">{% if is_variation_mode %}Variation Name{% else %}Recipe Name{% endif %}</label>
+                        {% set name_value = field_values.get('name') if field_values else (recipe.name if recipe else '') %}
+                        {% if is_variation_mode and recipe and recipe.variation_name %}
+                            {% set name_value = recipe.variation_name %}
+                        {% endif %}
                         <input type="text"
                                name="name"
                                class="form-control{% if lock_name %} bg-light{% endif %}"
-                               value="{{ field_values.get('name') if field_values else (recipe.name if recipe else '') }}"
+                               value="{{ name_value }}"
                                {% if lock_name %}readonly{% endif %}
                                required>
                     </div>

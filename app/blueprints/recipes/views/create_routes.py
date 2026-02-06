@@ -419,7 +419,7 @@ def create_variation(recipe_id):
         new_variation = create_variation_template(parent)
         requested_name = (request.args.get('variation_name') or '').strip()
         if requested_name:
-            new_variation.name = f"{parent.name} - {requested_name}"
+            new_variation.name = requested_name
             new_variation.variation_name = requested_name
             new_variation.variation_prefix = generate_variation_prefix(
                 requested_name,

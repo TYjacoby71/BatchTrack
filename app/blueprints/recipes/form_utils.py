@@ -801,7 +801,7 @@ def create_variation_template(parent: Recipe) -> Recipe:
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
 
     template = Recipe(
-        name=f"{parent.name} Variation",
+        name="Variation",
         instructions=parent.instructions,
         label_prefix=variation_prefix,
         parent_recipe_id=parent.id,
