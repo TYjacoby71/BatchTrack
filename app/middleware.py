@@ -11,7 +11,6 @@ Glossary:
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Mapping
 
 from flask import (
@@ -54,15 +53,21 @@ DEFAULT_SECURITY_HEADERS = {
 }
 
 
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
+# --- Config flag ---
+# Purpose: Resolve boolean config values from app config.
+def _config_flag(name: str, default: bool = False) -> bool:
+    value = current_app.config.get(name, default)
+    if isinstance(value, bool):
+        return value
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.environ.get(name)
+# --- Config int ---
+# Purpose: Resolve integer config values from app config.
+def _config_int(name: str, default: int) -> int:
+    raw = current_app.config.get(name, default)
     if raw is None:
         return default
     try:
@@ -72,6 +77,8 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+# --- Wants JSON response ---
+# Purpose: Detect when a request should return JSON instead of HTML.
 def _wants_json_response() -> bool:
     accepts = request.accept_mimetypes
     return request.path.startswith("/api/") or (
@@ -79,6 +86,8 @@ def _wants_json_response() -> bool:
     )
 
 
+# --- Developer action logging ---
+# Purpose: Decide whether a developer action should be logged.
 def _should_log_developer_action(path: str, method: str) -> bool:
     if method not in {"POST", "PUT", "DELETE", "PATCH"}:
         return False
@@ -89,6 +98,8 @@ def _should_log_developer_action(path: str, method: str) -> bool:
     return True
 
 
+# --- Route permissions ---
+# Purpose: Look up required permissions for the given endpoint.
 def _get_route_required_permissions(endpoint: str | None) -> set[str]:
     if not endpoint:
         return set()
@@ -104,6 +115,8 @@ def _get_route_required_permissions(endpoint: str | None) -> set[str]:
         return {str(required)}
 
 
+# --- Route permission scope ---
+# Purpose: Map endpoints to permission scopes for auditing.
 def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | None:
     required_permissions = _get_route_required_permissions(endpoint)
     if not required_permissions:
@@ -120,6 +133,8 @@ def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | N
         return None
 
 
+# --- Route category ---
+# Purpose: Classify routes for analytics and logging.
 def _classify_route_category(path: str, permission_scope: PermissionScope | None) -> str:
     if permission_scope:
         if permission_scope.is_dev_only:
@@ -137,7 +152,7 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
-    trust_proxy_headers = _env_flag("ENABLE_PROXY_FIX") or _env_flag("TRUST_PROXY_HEADERS")
+    trust_proxy_headers = _config_flag("ENABLE_PROXY_FIX") or _config_flag("TRUST_PROXY_HEADERS")
     if trust_proxy_headers and not getattr(app.wsgi_app, "_batchtrack_proxyfix", False):
         try:
             from werkzeug.middleware.proxy_fix import ProxyFix
@@ -145,19 +160,19 @@ def register_middleware(app: Flask) -> None:
             logger.warning("ProxyFix unavailable; unable to honor proxy header trust: %s", exc)
         else:
             proxy_fix_kwargs = {
-                "x_for": _env_int("PROXY_FIX_X_FOR", 1),
-                "x_proto": _env_int("PROXY_FIX_X_PROTO", 1),
-                "x_host": _env_int("PROXY_FIX_X_HOST", 1),
-                "x_port": _env_int("PROXY_FIX_X_PORT", 1),
-                "x_prefix": _env_int("PROXY_FIX_X_PREFIX", 0),
+                "x_for": _config_int("PROXY_FIX_X_FOR", 1),
+                "x_proto": _config_int("PROXY_FIX_X_PROTO", 1),
+                "x_host": _config_int("PROXY_FIX_X_HOST", 1),
+                "x_port": _config_int("PROXY_FIX_X_PORT", 1),
+                "x_prefix": _config_int("PROXY_FIX_X_PREFIX", 0),
             }
             wrapped = ProxyFix(app.wsgi_app, **proxy_fix_kwargs)
             setattr(wrapped, "_batchtrack_proxyfix", True)
             app.wsgi_app = wrapped
 
     secure_env = not app.debug and not app.testing
-    force_security_headers = _env_flag("FORCE_SECURITY_HEADERS")
-    disable_security_headers = _env_flag("DISABLE_SECURITY_HEADERS")
+    force_security_headers = _config_flag("FORCE_SECURITY_HEADERS")
+    disable_security_headers = _config_flag("DISABLE_SECURITY_HEADERS")
 
     configured_headers = app.config.get("SECURITY_HEADERS")
     security_headers = dict(DEFAULT_SECURITY_HEADERS)
@@ -295,6 +310,8 @@ def register_middleware(app: Flask) -> None:
         return response
 
 
+# --- Handle developer context ---
+# Purpose: Emit dev-context payloads for audit and UI diagnostics.
 def _handle_developer_context(
     path: str,
     endpoint: str | None,
@@ -339,6 +356,8 @@ def _handle_developer_context(
         return None
 
 
+# --- Enforce billing ---
+# Purpose: Gate routes based on billing status and entitlements.
 def _enforce_billing() -> Response | None:
     try:
         from .models import Organization

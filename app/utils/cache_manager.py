@@ -1,3 +1,13 @@
+"""Cache helpers and Redis-backed cache adapters.
+
+Synopsis:
+Provides SimpleCache and RedisCache implementations used across the app.
+
+Glossary:
+- Cache: Storage layer for frequently accessed data.
+- Redis cache: Cache backed by Redis with TTL support.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -6,6 +16,8 @@ import pickle
 import time
 from threading import Lock
 from typing import Any, Dict
+
+from flask import current_app, has_app_context
 
 from .redis_pool import get_redis_pool
 
@@ -28,6 +40,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+# --- SimpleCache ---
+# Purpose: Provide a thread-safe in-memory cache with TTL support.
 class SimpleCache:
     """Thread-safe in-memory cache with TTL and simple capacity eviction."""
 
@@ -73,6 +87,16 @@ class SimpleCache:
                 del self._cache[k]
 
 
+# --- Resolve Redis URL ---
+# Purpose: Look up the Redis URL from app config or environment.
+def _resolve_redis_url() -> str | None:
+    if has_app_context():
+        return current_app.config.get("REDIS_URL")
+    return os.environ.get("REDIS_URL")
+
+
+# --- RedisCache ---
+# Purpose: Provide a Redis-backed cache with TTL and fallback.
 class RedisCache:
     """Redis-backed cache with TTL and namespace scoping."""
 
@@ -81,7 +105,7 @@ class RedisCache:
             raise RuntimeError("redis package not available")
         self._namespace = namespace.strip(":")
         self._default_ttl = default_ttl
-        self._url = url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._url = url or _resolve_redis_url() or "redis://localhost:6379/0"
         self._client = None
         self._pool = None
         self._fallback = SimpleCache(max_size=1000, default_ttl=default_ttl)
@@ -183,7 +207,7 @@ class RedisCache:
         self._fallback.clear_prefix(prefix)
 
 
-USE_REDIS = bool(os.environ.get("REDIS_URL")) and redis is not None
+USE_REDIS = bool(_resolve_redis_url()) and redis is not None
 
 if USE_REDIS:
     conversion_cache = RedisCache(namespace="conversion", default_ttl=3600)

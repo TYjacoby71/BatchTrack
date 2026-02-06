@@ -49,6 +49,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
+- **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
+- **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
+- **/integrations/test-stripe** → Stripe connectivity check (see `app/blueprints/developer/views/integration_routes.py`)
 - **/api/drawers/global-link/check** → Global link drawer availability (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/modal** → Render global link modal (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/confirm** → Link inventory to global items (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
@@ -94,6 +97,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
+- **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
+- **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
 - **CostingEngine** → Weighted unit cost helpers (see `app/services/costing_engine.py`)
@@ -121,6 +127,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
+- **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
 - **Global Link Drawer** → Link local items to global catalog (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **Retention Drawer** → Acknowledge retention deletions (see `app/blueprints/api/drawers/drawer_actions/retention.py`)
 - **SKU Merge Flow** → Merge SKUs into a single inventory item (see `app/blueprints/products/sku.py`)
@@ -135,6 +142,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
+- **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
+- **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
+- **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)
 - **seed_test_data** → Seed living demo dataset (see `app/seeders/test_data_seeder.py`)
 
 ---

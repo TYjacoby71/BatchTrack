@@ -11,7 +11,7 @@ Glossary:
 from __future__ import annotations
 
 import logging
-import os
+from flask import current_app
 from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Any, Dict, Optional, Tuple
@@ -34,9 +34,17 @@ from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
 
-_FORM_DATA_CACHE_TTL = int(os.getenv("RECIPE_FORM_CACHE_TTL", "60"))
+# --- Form cache TTL ---
+# Purpose: Resolve the recipe form cache TTL from app config.
+def _form_cache_ttl() -> int:
+    try:
+        return int(current_app.config.get("RECIPE_FORM_CACHE_TTL", 60))
+    except Exception:
+        return 60
 
 
+# --- Serialize product category ---
+# Purpose: Convert ProductCategory objects into JSON-safe payloads.
 def _serialize_product_category(cat: ProductCategory) -> Dict[str, Any]:
     return {
         'id': cat.id,
@@ -46,6 +54,8 @@ def _serialize_product_category(cat: ProductCategory) -> Dict[str, Any]:
     }
 
 
+# --- Serialize inventory item ---
+# Purpose: Convert InventoryItem objects into JSON-safe payloads.
 def _serialize_inventory_item(item: InventoryItem, *, include_container_meta: bool = False) -> Dict[str, Any]:
     payload = {
         'id': item.id,
@@ -64,6 +74,8 @@ def _serialize_inventory_item(item: InventoryItem, *, include_container_meta: bo
     return payload
 
 
+# --- Serialize unit ---
+# Purpose: Convert Unit objects into JSON-safe payloads.
 def _serialize_unit(unit: Unit) -> Dict[str, Any]:
     return {
         'id': unit.id,
@@ -75,9 +87,13 @@ def _serialize_unit(unit: Unit) -> Dict[str, Any]:
     }
 
 
+# --- Recipe form cache key ---
+# Purpose: Build the cache key for recipe form data per org.
 def _recipe_form_cache_key(org_id: Optional[int]) -> str:
     return f"recipes:form_data:{org_id or 'global'}"
 
+# --- Effective org id ---
+# Purpose: Resolve the current organization id for form caching.
 def _effective_org_id() -> Optional[int]:
     """Resolve organization scope for recipe form inventory lists.
 
@@ -95,6 +111,8 @@ def _effective_org_id() -> Optional[int]:
     return None
 
 
+# --- Build recipe form payload ---
+# Purpose: Assemble recipe form metadata for create/edit pages.
 def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
     # Safety: avoid cross-organization leakage if org_id cannot be resolved
     if not org_id:
@@ -167,6 +185,8 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
 
 
 @dataclass
+# --- RecipeFormSubmission ---
+# Purpose: Capture parsed form submission payloads for service calls.
 class RecipeFormSubmission:
     kwargs: Dict[str, Any]
     error: Optional[str] = None
@@ -176,6 +196,8 @@ class RecipeFormSubmission:
         return self.error is None
 
 
+# --- Build recipe submission ---
+# Purpose: Parse recipe form data into a submission object.
 def build_recipe_submission(
     form,
     files,
@@ -233,6 +255,8 @@ def build_recipe_submission(
     return RecipeFormSubmission(kwargs)
 
 
+# --- Collect allowed containers ---
+# Purpose: Extract allowed container ids from form data.
 def collect_allowed_containers(form) -> list[int]:
     containers: list[int] = []
     for raw in form.getlist('allowed_containers[]'):
@@ -242,6 +266,8 @@ def collect_allowed_containers(form) -> list[int]:
     return containers
 
 
+# --- Parse portioning ---
+# Purpose: Extract portioning metadata and validation errors.
 def parse_portioning_from_form(form) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     truthy = {'true', '1', 'yes', 'on'}
     flag = str(form.get('is_portioned') or '').strip().lower() in truthy
@@ -267,6 +293,8 @@ def parse_portioning_from_form(form) -> Tuple[Optional[Dict[str, Any]], Dict[str
     return payload, payload.copy()
 
 
+# --- Ensure portion unit ---
+# Purpose: Ensure a portion unit exists for portioning forms.
 def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
     if not portion_name:
         return None
@@ -304,6 +332,8 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
         return None
 
 
+# --- Coerce float ---
+# Purpose: Safely coerce values to float with fallback.
 def coerce_float(value: Any, *, fallback: float = 0.0) -> float:
     if value in (None, ''):
         return fallback
@@ -313,12 +343,16 @@ def coerce_float(value: Any, *, fallback: float = 0.0) -> float:
         return fallback
 
 
+# --- Render recipe form ---
+# Purpose: Render recipe create/edit form with context data.
 def render_recipe_form(recipe=None, **context):
     form_data = get_recipe_form_data()
     payload = {**form_data, **context}
     return render_template('pages/recipes/recipe_form.html', recipe=recipe, **payload)
 
 
+# --- Recipe from form ---
+# Purpose: Map submitted form fields onto a Recipe object.
 def recipe_from_form(form, base_recipe=None):
     recipe = Recipe()
     recipe.name = form.get('name') or (base_recipe.name if base_recipe else '')
@@ -391,6 +425,8 @@ def recipe_from_form(form, base_recipe=None):
     return recipe
 
 
+# --- Build prefill ---
+# Purpose: Build prefill payloads from raw form data.
 def build_prefill_from_form(form):
     ingredient_ids = [safe_int(val) for val in form.getlist('ingredient_ids[]')]
     amounts = form.getlist('amounts[]')
@@ -438,6 +474,8 @@ def build_prefill_from_form(form):
     return ingredient_rows, consumable_rows
 
 
+# --- Serialize prefill rows ---
+# Purpose: Normalize prefill rows for JSON serialization.
 def serialize_prefill_rows(rows):
     ids = [row.get('item_id') for row in rows if row.get('item_id')]
     name_lookup = lookup_inventory_names(ids)
@@ -456,6 +494,8 @@ def serialize_prefill_rows(rows):
     return serialized
 
 
+# --- Serialize association rows ---
+# Purpose: Normalize association rows for JSON serialization.
 def serialize_assoc_rows(associations):
     serialized = []
     for assoc in associations:
@@ -470,6 +510,8 @@ def serialize_assoc_rows(associations):
     return serialized
 
 
+# --- Lookup inventory names ---
+# Purpose: Resolve inventory item names for UI display.
 def lookup_inventory_names(item_ids):
     if not item_ids:
         return {}
@@ -480,6 +522,8 @@ def lookup_inventory_names(item_ids):
     return {item.id: item.name for item in items}
 
 
+# --- Safe int ---
+# Purpose: Coerce values into integers with guardrails.
 def safe_int(value):
     try:
         return int(value) if value not in (None, '', []) else None
@@ -487,6 +531,8 @@ def safe_int(value):
         return None
 
 
+# --- Extract ingredients ---
+# Purpose: Parse ingredient rows from the recipe form.
 def extract_ingredients_from_form(form):
     ingredients = []
     ingredient_ids = form.getlist('ingredient_ids[]')
@@ -598,6 +644,8 @@ def extract_ingredients_from_form(form):
     return ingredients
 
 
+# --- Extract consumables ---
+# Purpose: Parse consumable rows from the recipe form.
 def extract_consumables_from_form(form):
     consumables = []
     ids = form.getlist('consumable_ids[]')
@@ -619,11 +667,15 @@ def extract_consumables_from_form(form):
     return consumables
 
 
+# --- Get submission status ---
+# Purpose: Determine the desired recipe status from form input.
 def get_submission_status(form):
     mode = (form.get('save_mode') or '').strip().lower()
     return 'draft' if mode == 'draft' else 'published'
 
 
+# --- Parse service error ---
+# Purpose: Normalize service exceptions into display messages.
 def parse_service_error(error):
     if isinstance(error, dict):
         message = error.get('error') or error.get('message') or 'An error occurred'
@@ -632,12 +684,16 @@ def parse_service_error(error):
     return str(error), []
 
 
+# --- Build draft prompt ---
+# Purpose: Build user-facing messages for draft prompts.
 def build_draft_prompt(missing_fields, attempted_status, message):
     if missing_fields and attempted_status != 'draft':
         return {'missing_fields': missing_fields, 'message': message}
     return None
 
 
+# --- Get recipe form data ---
+# Purpose: Retrieve or build cached recipe form payloads.
 def get_recipe_form_data():
     org_id = _effective_org_id()
     cache_key = _recipe_form_cache_key(org_id)
@@ -645,7 +701,7 @@ def get_recipe_form_data():
     if cached is None:
         payload = _build_recipe_form_payload(org_id)
         try:
-            app_cache.set(cache_key, payload, ttl=_FORM_DATA_CACHE_TTL)
+            app_cache.set(cache_key, payload, ttl=_form_cache_ttl())
         except Exception as exc:
             logger.debug("Unable to cache recipe form payload: %s", exc)
     else:
@@ -657,6 +713,8 @@ def get_recipe_form_data():
     return data
 
 
+# --- Recipe sharing enabled ---
+# Purpose: Check feature flag for recipe sharing.
 def is_recipe_sharing_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
@@ -665,6 +723,8 @@ def is_recipe_sharing_enabled():
     return has_permission(current_user, 'recipes.sharing_controls')
 
 
+# --- Recipe purchase enabled ---
+# Purpose: Check feature flag for recipe purchasing.
 def is_recipe_purchase_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
@@ -673,6 +733,8 @@ def is_recipe_purchase_enabled():
     return has_permission(current_user, 'recipes.purchase_options')
 
 
+# --- Sanitize marketplace submission ---
+# Purpose: Clean marketplace-specific fields for recipes.
 def _sanitize_marketplace_submission(
     marketplace_payload: Dict[str, Any],
     cover_payload: Dict[str, Any],
@@ -692,6 +754,8 @@ def _sanitize_marketplace_submission(
     return sanitized, cover_payload
 
 
+# --- Marketplace payload ---
+# Purpose: Build marketplace payloads from existing recipes.
 def _marketplace_payload_from_existing(existing: Optional[Recipe]) -> Dict[str, Any]:
     if not existing:
         return {
@@ -716,6 +780,8 @@ def _marketplace_payload_from_existing(existing: Optional[Recipe]) -> Dict[str, 
     }
 
 
+# --- Create variation template ---
+# Purpose: Build a variation template from a parent recipe.
 def create_variation_template(parent: Recipe) -> Recipe:
     variation_prefix = ""
     if parent.label_prefix:
