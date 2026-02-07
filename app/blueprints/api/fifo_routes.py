@@ -26,6 +26,7 @@ from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
 from sqlalchemy import or_
 from ...utils.inventory_event_code_generator import int_to_base36
+from app.utils.recipe_display import format_recipe_lineage_name
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 
@@ -158,7 +159,7 @@ def get_batch_inventory_summary(batch_id):
         return jsonify({
             'batch': {
                 'label_code': batch.label_code,
-                'recipe_name': batch.recipe.name,
+                'recipe_name': format_recipe_lineage_name(batch.target_version or batch.recipe),
                 'scale': batch.scale
             },
             'ingredient_summary': ingredient_summary,

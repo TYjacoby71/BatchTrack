@@ -13,6 +13,7 @@ from flask_login import login_required, current_user
 from . import production_planning_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
+from app.utils.recipe_display import format_recipe_lineage_name
 from app.utils.permissions import require_permission
 
 from app.services.production_planning import plan_production_comprehensive
@@ -72,10 +73,11 @@ def plan_production_route(recipe_id):
             return jsonify({'success': False, 'error': 'Production planning failed'}), 500
 
     # GET request - show planning form
+    display_name = format_recipe_lineage_name(recipe)
     return render_template('pages/production_planning/plan_production.html', recipe=recipe, breadcrumb_items=[
         {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
         {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
-        {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
+        {'label': display_name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
         {'label': 'Plan Production'}
     ])
 
@@ -162,9 +164,10 @@ def debug_recipe_containers(recipe_id):
             ).all()
             all_containers = [{'id': c.id, 'name': c.container_display_name, 'capacity': getattr(c, 'capacity', 0)} for c in containers]
 
+        display_name = format_recipe_lineage_name(recipe)
         return jsonify({
             'recipe_id': recipe_id,
-            'recipe_name': recipe.name,
+            'recipe_name': display_name,
             'allowed_containers': allowed,
             'all_containers': all_containers,
             'container_category_found': container_category is not None
@@ -267,11 +270,12 @@ def check_stock():
             all_ok = False
             status = 'error'
 
+        display_name = format_recipe_lineage_name(recipe)
         return jsonify({
             "stock_check": stock_check,
             "status": status,
             "all_ok": all_ok,
-            "recipe_name": recipe.name,
+            "recipe_name": display_name,
             "success": result.get('success', False),
             "error": result.get('error'),
             # Bubble any drawer instructions to the frontend for DrawerProtocol
