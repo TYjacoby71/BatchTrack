@@ -487,9 +487,18 @@
       (function() {
         const branchSelect = document.getElementById('lineageBranchSelect');
         const masterWrap = document.getElementById('masterLineageSelectWrap');
+        const masterSelect = document.getElementById('masterLineageSelect');
         const variationWrap = document.getElementById('variationLineageSelectWrap');
         const variationNameSelect = document.getElementById('variationNameSelect');
         const variationSelects = document.querySelectorAll('.variation-lineage-select');
+
+        function navigateToSelected(selectEl) {
+          if (!selectEl) return;
+          const value = selectEl.value;
+          if (value) {
+            window.location = value;
+          }
+        }
 
         function syncVariationSelect() {
           if (!variationNameSelect) return;
@@ -502,25 +511,35 @@
           });
           if (!active && variationSelects.length) {
             variationSelects[0].style.display = 'block';
+            active = variationSelects[0];
           }
+          return active;
         }
 
-        function syncBranch() {
+        function syncBranch(shouldNavigate = false) {
           if (!branchSelect) return;
           const branch = branchSelect.value;
           const showMaster = branch === 'master';
           if (masterWrap) masterWrap.style.display = showMaster ? 'block' : 'none';
           if (variationWrap) variationWrap.style.display = showMaster ? 'none' : 'block';
           if (!showMaster) {
-            syncVariationSelect();
+            const activeVariation = syncVariationSelect();
+            if (shouldNavigate) {
+              navigateToSelected(activeVariation);
+            }
+          } else if (shouldNavigate) {
+            navigateToSelected(masterSelect);
           }
         }
 
         if (variationNameSelect) {
-          variationNameSelect.addEventListener('change', syncVariationSelect);
+          variationNameSelect.addEventListener('change', () => {
+            const activeVariation = syncVariationSelect();
+            navigateToSelected(activeVariation);
+          });
         }
         if (branchSelect) {
-          branchSelect.addEventListener('change', syncBranch);
+          branchSelect.addEventListener('change', () => syncBranch(true));
         }
         syncBranch();
       })();
