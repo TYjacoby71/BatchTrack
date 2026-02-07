@@ -43,20 +43,13 @@
         <div class="batch-info">
             <div class="batch-info-left">
                 <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-                {% if batch.target_version %}
-                <p><strong>Recipe Version:</strong> {{ batch.target_version.name }} (v{{ batch.target_version.version_number }})</p>
-                {% endif %}
-                {% if batch.lineage_id %}
-                <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
-                {% endif %}
-                {% if batch.target_version %}
-                <p><strong>Recipe Version:</strong> {{ batch.target_version.name }} (v{{ batch.target_version.version_number }})</p>
-                {% endif %}
+                {% set batch_recipe = batch.target_version or batch.recipe %}
+                <p><strong>Recipe:</strong> {{ batch_recipe|lineage_recipe_name }}</p>
                 {% if batch.lineage_id %}
                 <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
                 {% endif %}
                 <p><strong>Scale:</strong> {{ batch.scale }}</p>
+                <p><strong>Batch Type:</strong> {{ batch.batch_type|title if batch.batch_type else 'Not Set' }}</p>
                 <p><strong>Status:</strong> <span class="badge">{{ batch.status|title }}</span></p>
             </div>
             <div class="batch-info-right">
@@ -87,8 +80,13 @@
         <div class="collapse show" id="batchDetailsCollapse">
             <div class="card-body">
                 <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                {% set batch_recipe = batch.target_version or batch.recipe %}
+                <p><strong>Recipe:</strong> {{ batch_recipe|lineage_recipe_name }}</p>
+                {% if batch.lineage_id %}
+                <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
+                {% endif %}
                 <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+                <p><strong>Batch Type:</strong> {{ batch.batch_type|title if batch.batch_type else 'Not Set' }}</p>
                 <p><strong>Started:</strong> {{ TimezoneUtils.format_for_user(batch.started_at, '%Y-%m-%d %H:%M:%S') if batch.started_at else 'Not started' }}</p>
                 <p><strong>Completed:</strong> {{ TimezoneUtils.format_for_user(batch.completed_at, '%Y-%m-%d %H:%M:%S') if batch.completed_at else 'Not completed' }}</p>
                 {% if batch.failed_at %}
@@ -96,6 +94,7 @@
                 {% elif batch.cancelled_at %}
                 <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
                 {% endif %}
+                <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
                 <p><strong>Status:</strong> 
                     <span class="badge {% if batch.status == 'completed' %}bg-success
                                 {% elif batch.status == 'failed' %}bg-danger

@@ -24,6 +24,7 @@ from app.filters.product_filters import (
     register_product_filters,
     safe_float,
 )
+from app.utils.recipe_display import format_recipe_lineage_name
 
 __all__ = ["register_template_filters"]
 
@@ -171,6 +172,10 @@ def _humanize_days_filter(value: Any, include_days: bool = True) -> str:
     return humanize_duration_days(value, include_days=include_days)
 
 
+def _recipe_lineage_name_filter(recipe: Any, include_test_number: bool = False) -> str:
+    return format_recipe_lineage_name(recipe, include_test_number=include_test_number)
+
+
 # ---------------------------------------------------------------------------
 # Template globals
 # ---------------------------------------------------------------------------
@@ -314,6 +319,7 @@ def register_template_filters(app) -> None:
         "attr_multiply": _attr_multiply_filter,
         "format_datetime": _format_datetime_filter,
         "humanize_days": _humanize_days_filter,
+        "lineage_recipe_name": _recipe_lineage_name_filter,
         # Product-specific filters registered via shared module
         "product_variant_name": product_variant_name,
         "ingredient_cost_currency": ingredient_cost_currency,

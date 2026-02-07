@@ -50,10 +50,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                        <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-                        {% if batch.target_version %}
-                        <p><strong>Recipe Version:</strong> {{ batch.target_version.name }} (v{{ batch.target_version.version_number }})</p>
-                        {% endif %}
+                        {% set batch_recipe = batch.target_version or batch.recipe %}
+                        <p><strong>Recipe:</strong> {{ batch_recipe|lineage_recipe_name }}</p>
                         {% if batch.lineage_id %}
                         <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
                         {% endif %}
