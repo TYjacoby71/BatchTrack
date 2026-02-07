@@ -1,3 +1,6 @@
+{# File: developer/addons/edit.html
+   Synopsis: Edit add-on catalog entry and entitlement metadata.
+   Glossary: Permission name = RBAC grant; Function key = feature toggle. #}
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container-fluid">
@@ -22,10 +25,12 @@
             <div class="mb-3">
               <label class="form-label" for="permission_name">Permission Name</label>
               <input class="form-control" id="permission_name" name="permission_name" value="{{ addon.permission_name or '' }}">
+              <div class="form-text">RBAC entitlement. If set, this add-on grants a permission.</div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="function_key">Function Key</label>
               <input class="form-control" id="function_key" name="function_key" value="{{ addon.function_key or '' }}">
+              <div class="form-text">Feature toggle for service logic (no RBAC).</div>
             </div>
           </div>
           <div class="col-md-6">

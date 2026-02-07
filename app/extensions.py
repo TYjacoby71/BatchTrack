@@ -1,6 +1,15 @@
+"""Flask extensions and shared instances.
+
+Synopsis:
+Initialize shared extensions (DB, cache, limiter, sessions) for the app.
+
+Glossary:
+- Extension: Flask add-on providing shared infrastructure (DB, cache, auth).
+- Limiter key: Identifier used to rate-limit requests.
+"""
+
 from __future__ import annotations
 
-from flask import current_app
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -27,6 +36,8 @@ csrf = CSRFProtect()
 cache = Cache()
 
 
+# --- Limiter key ---
+# Purpose: Determine rate limiting key for a request.
 def _limiter_key_func():
     """Use per-user keys for authenticated traffic; fall back to IP address."""
     try:
@@ -59,12 +70,17 @@ login_manager.login_message = "Please log in to access this page."
 login_manager.login_message_category = "info"
 
 
+# --- Login manager loader ---
+# Purpose: Load user for Flask-Login sessions.
 @login_manager.user_loader
 def load_user(user_id: str):
     from .models import User
+    from flask import current_app
+    from sqlalchemy.orm import joinedload
 
     try:
         user_id_int = int(user_id)
     except (TypeError, ValueError):
         return None
-    return db.session.get(User, user_id_int)
+    user = db.session.get(User, user_id_int, options=[joinedload(User.organization)])
+    return user

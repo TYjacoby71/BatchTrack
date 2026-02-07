@@ -1,3 +1,13 @@
+"""Inventory routes and views.
+
+Synopsis:
+Render inventory pages and handle inventory adjustments via services.
+
+Glossary:
+- Inventory item: Stocked ingredient or product.
+- FIFO lot: Individual inventory lot tracked by FIFO.
+"""
+
 from datetime import datetime, timezone
 
 from types import SimpleNamespace
@@ -42,22 +52,23 @@ def _expired_quantity_map(item_ids):
     rows = (
         db.session.query(
             InventoryLot.inventory_item_id,
-            func.sum(InventoryLot.remaining_quantity),
+            func.sum(InventoryLot.remaining_quantity_base),
         )
         .filter(
             InventoryLot.inventory_item_id.in_(item_ids),
-            InventoryLot.remaining_quantity > 0,
+            InventoryLot.remaining_quantity_base > 0,
             InventoryLot.expiration_date != None,
             InventoryLot.expiration_date < today,
         )
         .group_by(InventoryLot.inventory_item_id)
         .all()
     )
-    return {row[0]: float(row[1] or 0) for row in rows}
+    return {row[0]: int(row[1] or 0) for row in rows}
 
 
 def _serialize_inventory_items(items):
     from ...blueprints.expiration.services import ExpirationService
+    from app.services.quantity_base import from_base_quantity
 
     serialized = []
     total_value = 0.0
@@ -67,7 +78,13 @@ def _serialize_inventory_items(items):
     for item in items:
         quantity = float(item.quantity or 0.0)
         total_value += quantity * float(item.cost_per_unit or 0.0)
-        expired_qty = expired_map.get(item.id, 0.0)
+        expired_base = expired_map.get(item.id, 0)
+        expired_qty = from_base_quantity(
+            base_amount=expired_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
         available_qty = max(0.0, quantity - expired_qty)
         freshness = (
             ExpirationService.get_weighted_average_freshness(item.id)
@@ -144,6 +161,11 @@ def can_edit_inventory_item(item):
         return True
     return item.organization_id == current_user.organization_id
 
+# =========================================================
+# INVENTORY APIs
+# =========================================================
+# --- Inventory search ---
+# Purpose: Search inventory items for typeahead results.
 @inventory_bp.route('/api/search')
 @login_required
 @limiter.limit("2000/minute")
@@ -175,6 +197,8 @@ def api_search_inventory():
         logger.exception('Inventory search failed')
         return jsonify({'results': [], 'error': str(e)}), 500
 
+# --- Inventory detail ---
+# Purpose: Return inventory item details for the edit modal.
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 @permission_required('inventory.view')
@@ -215,6 +239,8 @@ def api_get_inventory_item(item_id):
         return jsonify({'error': str(e)}), 500
 
 
+# --- Global link toggle ---
+# Purpose: Link/unlink a local item to a global item.
 @inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -259,6 +285,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='unlink_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
                     created_by=getattr(current_user, 'id', None),
@@ -272,6 +299,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='relink_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Relinked to GlobalItem '{gi.name}'",
                     created_by=getattr(current_user, 'id', None),
@@ -286,6 +314,7 @@ def api_toggle_global_link(item_id: int):
                     inventory_item_id=item.id,
                     change_type='sync_global',
                     quantity_change=0.0,
+                    quantity_change_base=0,
                     unit=item.unit or 'count',
                     notes=f"Re-synced from GlobalItem '{gi.name}'",
                     created_by=getattr(current_user, 'id', None),
@@ -311,6 +340,8 @@ def api_toggle_global_link(item_id: int):
         logger.exception("Failed to toggle global link")
         return jsonify({'success': False, 'error': str(exc)}), 500
 
+# --- Quick create ---
+# Purpose: Create a new inventory item from a minimal payload.
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -364,6 +395,11 @@ def api_quick_create_inventory():
         logging.exception('Quick-create inventory failed')
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# =========================================================
+# INVENTORY VIEWS
+# =========================================================
+# --- Inventory list ---
+# Purpose: Render the inventory list page.
 @inventory_bp.route('/')
 @login_required
 @permission_required('inventory.view')
@@ -472,6 +508,8 @@ def list_inventory():
         get_global_unit_list=get_global_unit_list,
     )
 
+# --- Inventory column visibility ---
+# Purpose: Persist column visibility preferences.
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 @permission_required('inventory.view')
@@ -480,6 +518,8 @@ def set_column_visibility():
     session['inventory_columns'] = columns
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory detail view ---
+# Purpose: Render the inventory item detail page.
 @inventory_bp.route('/view/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -507,21 +547,41 @@ def view_inventory(id):
     # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
+        from app.services.quantity_base import from_base_quantity
         # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )
         ).all()
-
-        item.temp_expired_quantity = sum(float(lot.remaining_quantity) for lot in expired_lots_for_calc)
-        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+        expired_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc)
+        total_base = int(getattr(item, "quantity_base", 0) or 0)
+        available_base = max(0, total_base - expired_base)
+        item.temp_expired_quantity = from_base_quantity(
+            base_amount=expired_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        item.temp_available_quantity = from_base_quantity(
+            base_amount=available_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
     else:
         item.temp_expired_quantity = 0
-        item.temp_available_quantity = float(item.quantity)
+        from app.services.quantity_base import from_base_quantity
+        total_base = int(getattr(item, "quantity_base", 0) or 0)
+        item.temp_available_quantity = from_base_quantity(
+            base_amount=total_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
 
     # Ensure these attributes are always set for template display
     if not hasattr(item, 'temp_expired_quantity'):
@@ -544,7 +604,7 @@ def view_inventory(id):
     # When FIFO toggle is OFF, show only active lots
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
     if not fifo_filter:  # fifo_filter=False means show only active lots
-        lots_query = lots_query.filter(InventoryLot.remaining_quantity > 0)
+        lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
     lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
 
     from datetime import datetime
@@ -556,17 +616,23 @@ def view_inventory(id):
     expired_total = 0
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
+        from app.services.quantity_base import from_base_quantity
         # Only check InventoryLot for expired entries
         expired_entries = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == id,
-                InventoryLot.remaining_quantity > 0,
+                InventoryLot.remaining_quantity_base > 0,
                 InventoryLot.expiration_date != None,
                 InventoryLot.expiration_date < today
             )
         ).order_by(InventoryLot.expiration_date.asc()).all()
-
-        expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
+        expired_total_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_entries)
+        expired_total = from_base_quantity(
+            base_amount=expired_total_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
@@ -589,6 +655,8 @@ def view_inventory(id):
                              {'label': item.name}
                          ])
 
+# --- Inventory add ---
+# Purpose: Create a new inventory item from form data.
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -619,6 +687,8 @@ def add_inventory():
         flash(f'System error creating inventory: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory adjust ---
+# Purpose: Apply inventory adjustments via central service.
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')
@@ -732,6 +802,8 @@ def adjust_inventory(item_id):
         logger.error(f"Error in adjust_inventory route: {str(e)}")
         return respond(False, f'System error during adjustment: {str(e)}', status_code=500, flash_category='error')
 
+# --- Inventory edit ---
+# Purpose: Update inventory item metadata.
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -877,6 +949,8 @@ def edit_inventory(id):
         flash(f'System error during edit: {str(e)}', 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
 
+# --- Inventory archive ---
+# Purpose: Archive an inventory item.
 @inventory_bp.route('/archive/<int:id>')
 @login_required
 @permission_required('inventory.delete')
@@ -891,6 +965,8 @@ def archive_inventory(id):
         flash(f'Error archiving item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory restore ---
+# Purpose: Restore an archived inventory item.
 @inventory_bp.route('/restore/<int:id>')
 @login_required
 @permission_required('inventory.edit')
@@ -905,6 +981,8 @@ def restore_inventory(id):
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
+# --- Inventory debug ---
+# Purpose: Render debug information for inventory and FIFO sync.
 @inventory_bp.route('/debug/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -940,6 +1018,8 @@ def debug_inventory(id):
         }), 500
 
 
+# --- Bulk update view ---
+# Purpose: Render the bulk inventory update page.
 @inventory_bp.route('/bulk-updates')
 @login_required
 @permission_required('inventory.edit')
@@ -984,6 +1064,8 @@ def bulk_inventory_updates():
     )
 
 
+# --- Bulk adjustments API ---
+# Purpose: Apply bulk inventory adjustments.
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')

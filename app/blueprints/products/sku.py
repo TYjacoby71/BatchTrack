@@ -1,3 +1,13 @@
+"""SKU routes and management flows.
+
+Synopsis:
+Render SKU pages and manage SKU inventory history and merges.
+
+Glossary:
+- SKU: Stock-keeping unit linked to an inventory item.
+- Variant: Product option associated with a SKU.
+"""
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ...utils.permissions import require_permission
@@ -18,6 +28,11 @@ sku_bp = Blueprint('sku', __name__)
 def _merge_skus_enabled() -> bool:
     return is_feature_enabled("FEATURE_MERGE_SKUS")
 
+# =========================================================
+# SKU VIEWS
+# =========================================================
+# --- SKU view ---
+# Purpose: Render SKU detail page and history.
 @sku_bp.route('/<int:inventory_item_id>')
 @login_required
 @require_permission('products.view')
@@ -56,6 +71,8 @@ def view_sku(inventory_item_id):
                             {'label': sku.size_label + ' SKU'}
                          ])
 
+# --- SKU edit ---
+# Purpose: Update SKU attributes from form data.
 @sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -164,6 +181,12 @@ def edit_sku(inventory_item_id):
 
 # Legacy adjustment route removed - all adjustments must go through centralized service
 
+# =========================================================
+# SKU MERGE
+# =========================================================
+# --- Merge select ---
+# Purpose: Render SKU merge selection UI.
+
 @sku_bp.route('/merge/select')
 @login_required
 @require_permission('products.manage_variants')
@@ -181,6 +204,8 @@ def select_skus_to_merge():
 
     return render_template('pages/products/merge_select.html', skus=skus)
 
+# --- Merge configure ---
+# Purpose: Prepare merge configuration for selected SKUs.
 @sku_bp.route('/merge/configure', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -233,6 +258,8 @@ def configure_merge():
 
     return render_template('pages/products/merge_configure.html', **merge_config)
 
+# --- Merge execute ---
+# Purpose: Execute SKU merge and consolidate inventory.
 @sku_bp.route('/merge/execute', methods=['POST'])
 @login_required
 @require_permission('products.manage_variants')
@@ -281,9 +308,22 @@ def execute_merge():
             if source_sku:
                 target_sku.is_perishable = source_sku.is_perishable
 
-        # Merge inventory quantities
-        total_quantity = sum(sku.quantity for sku in skus)
-        target_sku.inventory_item.quantity = total_quantity
+        # Merge inventory quantities (base units)
+        from app.services.quantity_base import from_base_quantity, sync_item_quantity_from_base
+
+        total_quantity_base = sum(
+            int(getattr(sku.inventory_item, "quantity_base", 0) or 0)
+            for sku in skus
+            if sku.inventory_item
+        )
+        target_sku.inventory_item.quantity_base = int(total_quantity_base)
+        sync_item_quantity_from_base(target_sku.inventory_item)
+        total_quantity = from_base_quantity(
+            base_amount=total_quantity_base,
+            unit_name=target_sku.inventory_item.unit,
+            ingredient_id=target_sku.inventory_item.id,
+            density=target_sku.inventory_item.density,
+        )
 
         # Calculate weighted average cost
         total_value = sum(sku.quantity * (sku.cost_per_unit or 0) for sku in skus)
@@ -336,6 +376,8 @@ def execute_merge():
         flash(f'Error merging SKUs: {str(e)}', 'error')
         return redirect(url_for('sku.select_skus_to_merge'))
 
+# --- Merge preview API ---
+# Purpose: Return a preview of SKU merge impact.
 @sku_bp.route('/api/sku/<int:sku_id>/merge_preview')
 @login_required
 @require_permission('products.manage_variants')

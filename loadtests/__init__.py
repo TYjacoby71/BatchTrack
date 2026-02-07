@@ -1,3 +1,4 @@
+"""Load testing helpers and user classes."""
 
 """
 Load Testing Package

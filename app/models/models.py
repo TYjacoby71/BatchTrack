@@ -1,12 +1,27 @@
+"""Core organization and user models plus legacy re-exports.
+
+Synopsis:
+Defines Organization/User models and safely re-exports legacy model symbols.
+Includes lifecycle helpers and defaulting hooks used across the app.
+
+Glossary:
+- Organization: Tenant owning recipes, inventory, and users.
+- User: Authenticated account tied to an organization or developer role.
+"""
+
 # app/models/models.py
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
 import importlib
+from flask import g, has_app_context
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import event
 from datetime import datetime
 import re
 import secrets
 
+# --- Export model symbols ---
+# Purpose: Safely re-export models for legacy imports without crashing.
 def _export(targets):
     g = globals()
     for module, name, alias in targets:
@@ -63,6 +78,25 @@ _export([
 # Build __all__ from whatever successfully imported
 __all__ = [k for k, v in globals().items() if k[0].isupper() and hasattr(v, "__mro__")]
 
+# --- Request cache helpers ---
+# Purpose: Cache role lookups within a request.
+def _get_request_cache() -> dict[str, object] | None:
+    if not has_app_context():
+        return None
+    cache = getattr(g, "_user_role_cache", None)
+    if cache is None:
+        cache = {}
+        g._user_role_cache = cache
+    return cache
+
+
+def _rollback_if_inactive() -> None:
+    try:
+        if not getattr(db.session, "is_active", True):
+            db.session.rollback()
+    except Exception:
+        pass
+
 # Keep the core models that are defined in this file
 from datetime import datetime, date
 from flask_login import current_user, UserMixin
@@ -70,6 +104,8 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
+# --- Organization model ---
+# Purpose: Represent a tenant organization and its core relationships.
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
@@ -117,7 +153,7 @@ class Organization(db.Model):
     recipe_policy_notes = db.Column(db.Text, nullable=True)
 
     # Relationships
-    users = db.relationship('User', backref='organization')
+    users = db.relationship('User', back_populates='organization')
     subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
     tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id], overlaps="subscription_tier")  # Alias for backward compatibility
 
@@ -216,6 +252,8 @@ class Organization(db.Model):
         from ..utils.permissions import _has_tier_permission
         return _has_tier_permission(self, permission_name)
 
+# --- User model ---
+# Purpose: Represent an authenticated user and role permissions.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -225,6 +263,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # NULL for developers
+    organization = db.relationship('Organization', foreign_keys=[organization_id], back_populates='users')
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
 
@@ -366,28 +405,40 @@ class User(UserMixin, db.Model):
             from .user_role_assignment import UserRoleAssignment
             from .role import Role
             from .developer_role import DeveloperRole
-            from ..extensions import db
+            cache = _get_request_cache()
+            cache_key = None
+            if cache is not None:
+                cache_key = ("active_roles", self.id)
+                cached_roles = cache.get(cache_key)
+                if cached_roles is not None:
+                    return cached_roles
 
-            # Force rollback before attempting query
-            db.session.rollback()
+            _rollback_if_inactive()
 
             assignments = UserRoleAssignment.query.filter_by(
                 user_id=self.id,
                 is_active=True
             ).all()
 
+            role_ids = [a.role_id for a in assignments if a.role_id]
+            dev_role_ids = [a.developer_role_id for a in assignments if a.developer_role_id]
+
             roles = []
-            for assignment in assignments:
-                if assignment.role_id:
-                    # Organization role
-                    role = db.session.get(Role, assignment.role_id)
-                    if role and role.is_active:
-                        roles.append(role)
-                elif assignment.developer_role_id:
-                    # Developer role
-                    dev_role = db.session.get(DeveloperRole, assignment.developer_role_id)
-                    if dev_role and dev_role.is_active:
-                        roles.append(dev_role)
+            if role_ids:
+                roles.extend(
+                    Role.query.options(selectinload(Role.permissions))
+                    .filter(Role.id.in_(role_ids), Role.is_active.is_(True))
+                    .all()
+                )
+            if dev_role_ids:
+                roles.extend(
+                    DeveloperRole.query.options(selectinload(DeveloperRole.permissions))
+                    .filter(DeveloperRole.id.in_(dev_role_ids), DeveloperRole.is_active.is_(True))
+                    .all()
+                )
+
+            if cache is not None and cache_key is not None:
+                cache[cache_key] = roles
 
             return roles
         except Exception as e:
@@ -398,11 +449,7 @@ class User(UserMixin, db.Model):
             print("------------------------------------------------------------------")
 
             # Try to rollback and clean up
-            try:
-                from ..extensions import db
-                db.session.rollback()
-            except:
-                pass
+            _rollback_if_inactive()
 
             return []
 
@@ -425,15 +472,19 @@ class User(UserMixin, db.Model):
                 if role not in roles:
                     roles.append(role)
 
+        tier_permissions = None
+        if self.organization:
+            try:
+                from app.utils.permissions import AuthorizationHierarchy
+                tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(self.organization)
+            except Exception:
+                tier_permissions = None
+
         for role in roles:
             if role.has_permission(permission_name):
-                # Also check if the permission is available for the organization's tier
-                if self.organization and self.organization.tier:
-                    # Check if the tier allows this permission
-                    if self.organization.tier.has_permission(permission_name):
-                        return True
-                else:
-                    # No tier restriction - allow if role has permission
+                if tier_permissions is None:
+                    return True
+                if permission_name in tier_permissions:
                     return True
 
         return False
@@ -450,17 +501,11 @@ class User(UserMixin, db.Model):
         if self.user_type != 'developer':
             return False
 
-        # Get developer role assignments for this user
-        from .user_role_assignment import UserRoleAssignment
+        from .developer_role import DeveloperRole
 
-        # Check if user has any developer roles assigned
-        assignments = UserRoleAssignment.query.filter_by(
-            user_id=self.id,
-            is_active=True
-        ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
-
-        for assignment in assignments:
-            if assignment.developer_role and assignment.developer_role.has_permission(permission_name):
+        roles = self.get_active_roles()
+        for role in roles:
+            if isinstance(role, DeveloperRole) and role.has_permission(permission_name):
                 return True
 
         return False
@@ -594,6 +639,8 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
+# --- Default username hook ---
+# Purpose: Ensure a username exists before inserting a user record.
 @event.listens_for(User, "before_insert")
 def _default_username_before_insert(mapper, connection, target):
     """Auto-generate username if not provided (for test compatibility)"""

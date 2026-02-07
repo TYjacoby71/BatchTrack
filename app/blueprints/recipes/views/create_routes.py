@@ -1,3 +1,13 @@
+"""Recipe create/edit routes.
+
+Synopsis:
+Handles new recipe creation, variation/test creation, edits, and forced-edit overrides.
+
+Glossary:
+- Variation: Branch off a master recipe with its own version line.
+- Test: Editable draft tied to a master/variation before promotion.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -14,13 +24,18 @@ from app.models import InventoryItem, Recipe
 from app.models.batch import Batch
 from app.models.product_category import ProductCategory
 from app.services.recipe_proportionality_service import RecipeProportionalityService
+from app.services.lineage_service import format_label_prefix, generate_variation_prefix
 from app.services.recipe_service import (
+    build_test_template,
     create_recipe,
+    create_test_version as create_test_version_service,
     duplicate_recipe,
     get_recipe_details,
+    get_next_test_sequence,
     update_recipe,
 )
-from app.utils.permissions import get_effective_organization_id, require_permission
+from app.services.recipe_service._core import _derive_variation_name
+from app.utils.permissions import get_effective_organization_id, has_permission, require_permission
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -43,6 +58,8 @@ from ..form_utils import (
 logger = logging.getLogger(__name__)
 
 
+# --- Resolve active org ---
+# Purpose: Determine the active organization for recipe operations.
 def _resolve_active_org_id():
     org_id = get_effective_organization_id()
     if org_id:
@@ -53,6 +70,8 @@ def _resolve_active_org_id():
         return None
 
 
+# --- Ensure variation changes ---
+# Purpose: Reject variations without ingredient-level changes.
 def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
     if RecipeProportionalityService.are_recipes_proportionally_identical(
         variation_ingredients,
@@ -63,8 +82,52 @@ def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
         )
 
 
+# --- Hydrate variation draft ---
+# Purpose: Ensure variation drafts have lineage metadata for display.
+def _hydrate_variation_draft(draft, parent_recipe):
+    draft.is_master = False
+    draft.recipe_group_id = parent_recipe.recipe_group_id
+    draft.recipe_group = parent_recipe.recipe_group
+    draft.parent_master = parent_recipe
+    draft.version_number = 1
+    if not getattr(draft, "variation_name", None):
+        draft.variation_name = _derive_variation_name(draft.name, parent_recipe.name)
+    if not getattr(draft, "variation_prefix", None):
+        draft.variation_prefix = generate_variation_prefix(
+            draft.variation_name or draft.name,
+            parent_recipe.recipe_group_id,
+        )
+
+
+# --- Ensure test changes ---
+# Purpose: Require tests to change ingredients, yield, or instructions.
+def _ensure_test_has_changes(base_recipe, payload):
+    submitted_ingredients = payload.get("ingredients") or []
+    ingredients_same = RecipeProportionalityService.are_recipes_proportionally_identical(
+        submitted_ingredients,
+        base_recipe.recipe_ingredients,
+    )
+    submitted_instructions = (payload.get("instructions") or "").strip()
+    base_instructions = (base_recipe.instructions or "").strip()
+    instructions_same = submitted_instructions == base_instructions
+    submitted_yield = payload.get("yield_amount")
+    submitted_unit = (payload.get("yield_unit") or "").strip()
+    base_yield = float(base_recipe.predicted_yield or 0)
+    base_unit = (base_recipe.predicted_yield_unit or "").strip()
+    yield_same = (float(submitted_yield or 0) == base_yield) and (submitted_unit == base_unit)
+
+    if ingredients_same and instructions_same and yield_same:
+        raise ValidationError(
+            "Tests must change ingredients, yield, or instructions to create a new version."
+        )
+
+
+# --- Enforce anti-plagiarism ---
+# Purpose: Block recipes that duplicate purchased formulas.
 def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
     if skip_check or not ingredients:
+        return
+    if not has_permission(current_user, "recipes.create_variations"):
         return
 
     org_id = _resolve_active_org_id()
@@ -76,6 +139,7 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
         .filter(
             Recipe.organization_id == org_id,
             Recipe.org_origin_purchased.is_(True),
+            Recipe.test_sequence.is_(None),
         )
         .all()
     )
@@ -90,6 +154,11 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
             )
 
 
+# =========================================================
+# RECIPE CREATION
+# =========================================================
+# --- New recipe ---
+# Purpose: Create a new master recipe.
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.create')
@@ -247,6 +316,11 @@ def new_recipe():
     return render_recipe_form(recipe=prefill)
 
 
+# =========================================================
+# VARIATIONS & TESTS
+# =========================================================
+# --- Create variation ---
+# Purpose: Create a variation from a published master.
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -256,6 +330,12 @@ def create_variation(recipe_id):
         if not parent:
             flash('Parent recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
+        if parent.is_archived:
+            flash('Archived recipes cannot accept new variations.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        if not parent.is_master or parent.test_sequence is not None:
+            flash('Variations can only be created from a published master recipe.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
         if request.method == 'POST':
             target_status = get_submission_status(request.form)
@@ -267,6 +347,7 @@ def create_variation(recipe_id):
                 ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
+                _hydrate_variation_draft(variation_draft, parent)
                 return render_recipe_form(
                     recipe=variation_draft,
                     is_variation=True,
@@ -294,6 +375,7 @@ def create_variation(recipe_id):
                 ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
+                _hydrate_variation_draft(variation_draft, parent)
                 return render_recipe_form(
                     recipe=variation_draft,
                     is_variation=True,
@@ -323,6 +405,7 @@ def create_variation(recipe_id):
             ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
             variation_draft = recipe_from_form(request.form, base_recipe=parent)
             variation_draft.parent_recipe_id = parent.id
+            _hydrate_variation_draft(variation_draft, parent)
             return render_recipe_form(
                 recipe=variation_draft,
                 is_variation=True,
@@ -334,6 +417,14 @@ def create_variation(recipe_id):
             )
 
         new_variation = create_variation_template(parent)
+        requested_name = (request.args.get('variation_name') or '').strip()
+        if requested_name:
+            new_variation.name = requested_name
+            new_variation.variation_name = requested_name
+            new_variation.variation_prefix = generate_variation_prefix(
+                requested_name,
+                parent.recipe_group_id,
+            )
         ingredient_prefill = serialize_assoc_rows(parent.recipe_ingredients)
         consumable_prefill = serialize_assoc_rows(parent.recipe_consumables)
 
@@ -351,6 +442,119 @@ def create_variation(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# --- Create test version ---
+# Purpose: Create a test version for master/variation.
+@recipes_bp.route('/<int:recipe_id>/test', methods=['GET', 'POST'])
+@login_required
+@require_permission('recipes.create_variations')
+def create_test_version(recipe_id):
+    try:
+        base = get_recipe_details(recipe_id)
+        if not base:
+            flash('Recipe not found.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+        if base.is_archived:
+            flash('Archived recipes cannot be tested.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        if base.status != 'published':
+            flash('Publish the recipe before creating tests.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        if request.method == 'POST':
+            target_status = get_submission_status(request.form)
+            submission = build_recipe_submission(request.form, request.files, defaults=base)
+            if not submission.ok:
+                flash(submission.error, 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                test_draft = recipe_from_form(request.form, base_recipe=base)
+                next_sequence = get_next_test_sequence(base)
+                return render_recipe_form(
+                    recipe=test_draft,
+                    is_test=True,
+                    test_base_id=base.id,
+                    test_sequence_hint=next_sequence,
+                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
+            payload = dict(submission.kwargs)
+            try:
+                _ensure_test_has_changes(base, payload)
+            except ValidationError as exc:
+                flash(str(exc), 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                test_draft = recipe_from_form(request.form, base_recipe=base)
+                next_sequence = get_next_test_sequence(base)
+                return render_recipe_form(
+                    recipe=test_draft,
+                    is_test=True,
+                    test_base_id=base.id,
+                    test_sequence_hint=next_sequence,
+                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
+            success, result = create_test_version_service(
+                base=base,
+                payload=payload,
+                target_status=target_status,
+            )
+            if success:
+                if target_status == 'draft':
+                    flash('Test saved as a draft.', 'info')
+                else:
+                    flash('Test version created successfully.', 'success')
+                return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+
+            error_message, missing_fields = parse_service_error(result)
+            draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
+            flash(f'Error creating test: {error_message}', 'error')
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            test_draft = recipe_from_form(request.form, base_recipe=base)
+            next_sequence = get_next_test_sequence(base)
+            return render_recipe_form(
+                recipe=test_draft,
+                is_test=True,
+                test_base_id=base.id,
+                test_sequence_hint=next_sequence,
+                label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                form_values=request.form,
+                draft_prompt=draft_prompt,
+            )
+
+        next_sequence = get_next_test_sequence(base)
+        test_template = build_test_template(base, test_sequence=next_sequence)
+
+        ingredient_prefill = serialize_assoc_rows(base.recipe_ingredients)
+        consumable_prefill = serialize_assoc_rows(base.recipe_consumables)
+
+        return render_recipe_form(
+            recipe=test_template,
+            is_test=True,
+            test_base_id=base.id,
+            test_sequence_hint=next_sequence,
+            label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+            ingredient_prefill=ingredient_prefill,
+            consumable_prefill=consumable_prefill,
+        )
+
+    except Exception as exc:
+        flash(f"Error creating test: {exc}", "error")
+        logger.exception("Error creating test: %s", exc)
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+# =========================================================
+# EDITING
+# =========================================================
+# --- Edit recipe ---
+# Purpose: Edit a recipe, allowing forced overrides for published masters.
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -360,8 +564,21 @@ def edit_recipe(recipe_id):
         flash('Recipe not found.', 'error')
         return redirect(url_for('recipes.list_recipes'))
 
+    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
+    force_edit = (
+        str(request.args.get('force') or request.form.get('force_edit') or '').lower() in {'1', 'true', 'yes'}
+    )
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.is_archived:
+        flash('Archived recipes cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.status == 'published' and recipe.test_sequence is None and not force_edit:
+        flash('Published versions are locked. Create a test to make edits.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    if recipe.test_sequence is not None and existing_batches > 0:
+        flash('Tests cannot be edited after running batches.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
     draft_prompt = None
@@ -382,13 +599,16 @@ def edit_recipe(recipe_id):
                     ingredient_prefill=ingredient_prefill,
                     consumable_prefill=consumable_prefill,
                     form_values=form_override,
+                    force_edit=force_edit,
                 )
 
             payload = dict(submission.kwargs)
             payload['status'] = target_status
+            payload['is_test'] = str(request.form.get('is_test') or '').lower() == 'true'
 
             success, result = update_recipe(
                 recipe_id=recipe_id,
+                allow_published_edit=force_edit,
                 **payload,
             )
 
@@ -410,50 +630,41 @@ def edit_recipe(recipe_id):
 
     form_data = get_recipe_form_data()
 
-    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
-
     return render_template(
         'pages/recipes/recipe_form.html',
         recipe=recipe,
         edit_mode=True,
+        is_test=bool(recipe.test_sequence),
         existing_batches=existing_batches,
         draft_prompt=draft_prompt,
         form_values=form_override,
+        force_edit=force_edit,
         **form_data,
     )
 
 
+# =========================================================
+# LEGACY & IMPORT
+# =========================================================
+# --- Clone recipe (deprecated) ---
+# Purpose: Redirect clone requests to new version flow.
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 @require_permission('recipes.create')
 def clone_recipe(recipe_id):
     try:
-        success, payload = duplicate_recipe(recipe_id)
-
-        if success:
-            template_recipe = payload['template']
-            ingredient_prefill = serialize_prefill_rows(payload['ingredients'])
-            consumable_prefill = serialize_prefill_rows(payload['consumables'])
-
-            return render_recipe_form(
-                recipe=template_recipe,
-                is_clone=True,
-                ingredient_prefill=ingredient_prefill,
-                consumable_prefill=consumable_prefill,
-                cloned_from_id=payload.get('cloned_from_id'),
-                form_values=None,
-            )
-        else:
-            flash(f"Error cloning recipe: {payload}", "error")
+        flash("Cloning recipes has been retired. Use Create New Version instead.", "warning")
 
     except Exception as exc:
         db.session.rollback()
-        flash(f"Error cloning recipe: {exc}", "error")
+        flash(f"Error handling clone request: {exc}", "error")
         logger.exception("Error cloning recipe: %s", exc)
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+# --- Import recipe ---
+# Purpose: Import a public recipe into the org library.
 @recipes_bp.route('/<int:recipe_id>/import', methods=['GET'])
 @login_required
 @require_permission('recipes.view')
@@ -474,7 +685,13 @@ def import_recipe(recipe_id: int):
         flash("Select an organization before importing a recipe.", "error")
         return redirect(detail_url)
 
-    if not recipe.is_public or recipe.marketplace_status != 'listed' or recipe.marketplace_blocked:
+    if (
+        not recipe.is_public
+        or recipe.status != 'published'
+        or recipe.test_sequence is not None
+        or recipe.marketplace_status != 'listed'
+        or recipe.marketplace_blocked
+    ):
         flash("This recipe is not available for import right now.", "error")
         return redirect(detail_url)
 

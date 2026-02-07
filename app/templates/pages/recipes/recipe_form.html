@@ -1,16 +1,44 @@
+{# File: pages/recipes/recipe_form.html
+   Synopsis: Create/edit recipe form with versioning context and locked prefix rules.
+   Glossary: Test = editable trial version; Variation = branch off master; Prefix = label code. #}
 {% extends 'layout.html' %}
+{# --- Content block ---
+   Purpose: Collect recipe inputs with version-aware gating and helpers. #}
 {% block content %}
 
 {% set preselect_ingredient_id = session.pop('preselect_ingredient_id', None) %}
 {% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
 {% set field_values = form_values if form_values is defined else None %}
+{% set is_test_mode = is_test or (recipe and recipe.test_sequence) %}
+{% set is_edit_mode = edit_mode if edit_mode is defined else false %}
+{% set force_edit_mode = force_edit if force_edit is defined else false %}
+{% set is_variation_mode = (not is_test_mode) and (is_variation or (recipe and recipe.parent_recipe_id)) %}
+{% set is_master_edit = recipe and recipe.is_master and is_edit_mode %}
+{% set lock_name = is_test_mode or is_variation_mode %}
+{% set lock_prefix = is_test_mode or is_variation_mode or is_master_edit %}
+{% set should_auto_prefix = (not is_edit_mode) and (not is_variation_mode) and (not is_test_mode) %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="d-flex align-items-center gap-2">
         {% if recipe %}
-            {% if recipe.parent_recipe_id %}Edit Variation{% else %}Edit Recipe{% endif %}
+            {% if is_test_mode %}
+                Edit Test
+            {% elif recipe.parent_recipe_id %}
+                Edit Variation
+            {% else %}
+                Edit Recipe
+            {% endif %}
         {% else %}
-            {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+            {% if is_test_mode %}
+                New Test
+            {% elif is_variation %}
+                New Variation
+            {% else %}
+                New Recipe
+            {% endif %}
+        {% endif %}
+        {% if is_test_mode %}
+            <span class="badge bg-info text-dark">Test{% if recipe and recipe.test_sequence %} {{ recipe.test_sequence }}{% endif %}</span>
         {% endif %}
         {% if recipe and recipe.status == 'draft' %}
             <span class="badge bg-warning text-dark">Draft</span>
@@ -23,6 +51,20 @@
     </a>
 </div>
 
+{% if is_test_mode %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-flask"></i>
+    Tests must change ingredients, yield, or instructions. Names and label prefixes are generated from the lineage.
+</div>
+{% endif %}
+
+{% if force_edit_mode %}
+<div class="alert alert-warning mb-4">
+    <i class="fas fa-exclamation-triangle"></i>
+    You are editing a published recipe. Changes will be recorded in recipe notes with a timestamp.
+</div>
+{% endif %}
+
 {% if recipe and recipe.parent %}
 <div class="alert alert-info mb-4">
     <i class="fas fa-info-circle"></i> <strong>Variation of:</strong> {{ recipe.parent.name }}
@@ -31,9 +73,9 @@
 <div class="alert alert-info mb-4">
     <i class="fas fa-plus-circle"></i> <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
-{% elif is_clone and recipe %}
+{% elif is_import and recipe %}
 <div class="alert alert-info mb-4">
-    <i class="fas fa-copy"></i> <strong>Creating a copy of:</strong> {{ recipe.name }}
+    <i class="fas fa-file-import"></i> <strong>Imported recipe:</strong> Review details before saving.
 </div>
 {% endif %}
 
@@ -52,18 +94,21 @@
         <button type="button" class="btn btn-warning" data-role="dismiss-draft-prompt">
             <i class="fas fa-edit"></i> I'll fix it
         </button>
+        {% if not is_test_mode %}
         <button type="button" class="btn btn-outline-primary" id="promptSaveDraftButton">
             <i class="fas fa-file-alt"></i> Save Draft
         </button>
+        {% endif %}
     </div>
 </div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
+<form method="post" enctype="multipart/form-data" action="{% if is_test_mode and not edit_mode %}{{ url_for('recipes.create_test_version', recipe_id=test_base_id) }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
     {% if cloned_from_id %}<input type="hidden" name="cloned_from_id" value="{{ cloned_from_id }}">{% endif %}
+    {% if is_test_mode %}<input type="hidden" name="is_test" value="true">{% endif %}
     <input type="hidden" name="save_mode" id="saveModeInput" value="publish">
+    {% if force_edit_mode %}<input type="hidden" name="force_edit" value="1">{% endif %}
 
     <!-- Basic Information Card -->
     <div class="card mb-4">
@@ -76,15 +121,44 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="name" class="form-label">{% if recipe and recipe.parent_recipe_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}</label>
-                        <input type="text" name="name" class="form-control" value="{{ field_values.get('name') if field_values else (recipe.name if recipe else '') }}" required>
+                        <label for="name" class="form-label">{% if is_variation_mode %}Variation Name{% else %}Recipe Name{% endif %}</label>
+                        {% set name_value = field_values.get('name') if field_values else (recipe.name if recipe else '') %}
+                        {% if is_variation_mode and recipe and recipe.variation_name %}
+                            {% set name_value = recipe.variation_name %}
+                        {% endif %}
+                        <input type="text"
+                               name="name"
+                               class="form-control{% if lock_name %} bg-light{% endif %}"
+                               value="{{ name_value }}"
+                               {% if lock_name %}readonly{% endif %}
+                               required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="label_prefix" class="form-label">Label Prefix <span class="text-danger">*</span></label>
+                        <label for="{% if lock_prefix %}label_prefix_display{% else %}label_prefix{% endif %}" class="form-label">Label Prefix{% if not should_auto_prefix %} <span class="text-danger">*</span>{% endif %}</label>
                         <div class="d-flex align-items-center">
-                            <input type="text" id="label_prefix" name="label_prefix" value="{{ field_values.get('label_prefix') if field_values else (recipe.label_prefix if recipe else '') }}" maxlength="8" required class="form-control me-2">
+                            {% set label_prefix_value = field_values.get('label_prefix') if field_values else (recipe.label_prefix if recipe else '') %}
+                            {% set display_prefix = label_prefix_display if label_prefix_display is defined and label_prefix_display else label_prefix_value %}
+                            {% if lock_prefix %}
+                            <input type="text"
+                                   id="label_prefix_display"
+                                   value="{{ display_prefix }}"
+                                   class="form-control me-2 bg-light"
+                                   readonly
+                                   disabled>
+                            <input type="hidden" name="label_prefix" value="{{ label_prefix_value }}">
+                            {% else %}
+                            <input type="text"
+                                   id="label_prefix"
+                                   name="label_prefix"
+                                   value="{{ label_prefix_value }}"
+                                   maxlength="8"
+                                   class="form-control me-2{% if should_auto_prefix %} bg-light{% endif %}"
+                                   data-auto-prefix="{{ 'true' if should_auto_prefix else 'false' }}"
+                                   data-prefix-endpoint="{{ url_for('api.recipe_prefix') }}"
+                                   {% if should_auto_prefix %}readonly{% else %}required{% endif %}>
+                            {% endif %}
                             <i class="fas fa-info-circle text-muted" 
                                data-bs-toggle="popover" 
                                data-bs-placement="right"
@@ -103,6 +177,11 @@
                                style="cursor: pointer;">
                             </i>
                         </div>
+                        {% if should_auto_prefix %}
+                        <div class="form-text">Auto-generated from the recipe name.</div>
+                        {% elif lock_prefix %}
+                        <div class="form-text">Generated from lineage and locked for edits.</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

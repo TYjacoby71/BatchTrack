@@ -16,6 +16,7 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion.unit_conversion import ConversionEngine
+from app.utils.recipe_display import format_recipe_lineage_name
 
 # FIFOService functionality moved to inventory_adjustment service
 
@@ -264,7 +265,7 @@ class UniversalStockCheckService:
                 'status': overall_status,
                 'all_ok': all_available,
                 'stock_check': stock_results,
-                'recipe_name': recipe.name,
+                'recipe_name': format_recipe_lineage_name(recipe),
                 'error': None
             }
 

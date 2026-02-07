@@ -11,9 +11,29 @@ from app.services.batch_service import BatchOperationsService
 
 
 def _build_recipe_with_missing_inventory():
+    from app.models.permission import Permission
+    from app.models.subscription_tier import SubscriptionTier
+    from app.models.role import Role
+
     org = Organization(name='Gating Org')
     db.session.add(org)
     db.session.flush()
+
+    perm = Permission.query.filter_by(name='batches.create').first()
+    if not perm:
+        perm = Permission(name='batches.create', description='Start production batches')
+        db.session.add(perm)
+        db.session.flush()
+
+    tier = SubscriptionTier(
+        name='Gating Tier',
+        billing_provider='exempt',
+        user_limit=5
+    )
+    db.session.add(tier)
+    db.session.flush()
+    tier.permissions.append(perm)
+    org.subscription_tier_id = tier.id
 
     user = User(
         email='gating@example.com',
@@ -23,6 +43,9 @@ def _build_recipe_with_missing_inventory():
     )
     db.session.add(user)
     db.session.flush()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
     recipe = Recipe(
         name='Gated Recipe',
@@ -73,12 +96,12 @@ def _build_recipe_with_missing_inventory():
     db.session.add(recipe_consumable)
     db.session.commit()
 
-    return user, recipe, ingredient.id, consumable.id
+    return user.id, recipe.id, ingredient.id, consumable.id
 
 
 def test_api_start_batch_requires_override_before_force(app, monkeypatch):
     with app.app_context():
-        user, recipe, ingredient_id, consumable_id = _build_recipe_with_missing_inventory()
+        user_id, recipe_id, ingredient_id, consumable_id = _build_recipe_with_missing_inventory()
 
         captured_plan = {}
 
@@ -93,7 +116,7 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
         )
 
         payload = {
-            'recipe_id': recipe.id,
+            'recipe_id': recipe_id,
             'scale': 1.0,
             'batch_type': 'ingredient',
             'notes': '',
@@ -101,7 +124,7 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
         }
 
         with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
-            login_user(user)
+            login_user(db.session.get(User, user_id))
             response = api_start_batch()
             data = response.get_json()
             assert data['requires_override'] is True
@@ -110,7 +133,7 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
 
         payload['force_start'] = True
         with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
-            login_user(user)
+            login_user(db.session.get(User, user_id))
             response = api_start_batch()
             data = response.get_json()
             assert data['success'] is True

@@ -1,3 +1,14 @@
+"""Recipe models and lineage structures.
+
+Synopsis:
+Defines recipes, groups, versioning fields, and ingredient associations.
+
+Glossary:
+- RecipeGroup: Container for master/variation lineages.
+- Test sequence: Numeric identifier for non-current test versions.
+- Current version: Active master/variation used for production.
+"""
+
 from flask_login import current_user
 import sqlalchemy as sa
 from sqlalchemy import event
@@ -16,9 +27,35 @@ _IS_PG = is_postgres()
 def _pg_computed(expr: str):
     return sa.Computed(expr, persisted=True) if _IS_PG else None
 
+class RecipeGroup(ScopedModelMixin, db.Model):
+    __tablename__ = "recipe_group"
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    prefix = db.Column(db.String(8), nullable=False)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+
+    organization = db.relationship("Organization", foreign_keys=[organization_id])
+
+    __table_args__ = (
+        db.UniqueConstraint("organization_id", "name", name="uq_recipe_group_org_name"),
+        db.UniqueConstraint("organization_id", "prefix", name="uq_recipe_group_org_prefix"),
+        db.Index("ix_recipe_group_org", "organization_id"),
+    )
+
 class Recipe(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe'
     id = db.Column(db.Integer, primary_key=True)
+    recipe_group_id = db.Column(db.Integer, db.ForeignKey("recipe_group.id"), nullable=True)
+    is_master = db.Column(db.Boolean, default=True, nullable=False, server_default=sa.text("true"))
+    variation_name = db.Column(db.String(128), nullable=True)
+    variation_prefix = db.Column(db.String(8), nullable=True)
+    version_number = db.Column(db.Integer, default=1, nullable=False, server_default="1")
+    parent_master_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
+    test_sequence = db.Column(db.Integer, nullable=True)
+    is_current = db.Column(db.Boolean, default=False, nullable=False, server_default=sa.text("false"))
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
@@ -27,6 +64,9 @@ class Recipe(ScopedModelMixin, db.Model):
     cloned_from_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     root_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     is_locked = db.Column(db.Boolean, default=False)
+    is_archived = db.Column(db.Boolean, default=False, nullable=False, server_default=sa.text("false"))
+    archived_at = db.Column(db.DateTime, nullable=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
@@ -38,12 +78,20 @@ class Recipe(ScopedModelMixin, db.Model):
     # Timestamps for retention calculations
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+    recipe_group = db.relationship("RecipeGroup", foreign_keys=[recipe_group_id])
     parent = db.relationship(
         'Recipe',
         remote_side=[id],
         foreign_keys=[parent_recipe_id],
         backref='variations',
         primaryjoin="Recipe.parent_recipe_id==Recipe.id"
+    )
+    parent_master = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[parent_master_id],
+        backref='version_descendants',
+        primaryjoin="Recipe.parent_master_id==Recipe.id"
     )
     cloned_from = db.relationship(
         'Recipe',
@@ -149,6 +197,24 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_parent_recipe_id', 'parent_recipe_id'),
         db.Index('ix_recipe_cloned_from_id', 'cloned_from_id'),
         db.Index('ix_recipe_root_recipe_id', 'root_recipe_id'),
+        db.Index('ix_recipe_group_id', 'recipe_group_id'),
+        db.Index('ix_recipe_parent_master_id', 'parent_master_id'),
+        db.Index('ix_recipe_is_master', 'is_master'),
+        db.Index('ix_recipe_version_number', 'version_number'),
+        db.Index('ix_recipe_test_sequence', 'test_sequence'),
+        db.Index('ix_recipe_is_current', 'is_current'),
+        db.Index('ix_recipe_current_branch', 'recipe_group_id', 'is_master', 'variation_name', 'is_current'),
+        db.Index('ix_recipe_is_archived', 'is_archived'),
+        db.Index(
+            'ix_recipe_list_page',
+            'organization_id',
+            'is_archived',
+            'is_current',
+            'parent_recipe_id',
+            'test_sequence',
+            'name',
+        ),
+        db.Index('ix_recipe_root_created_at', 'root_recipe_id', 'created_at'),
         *([db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
         db.Index('ix_recipe_soap_superfat', 'soap_superfat'),
         db.Index('ix_recipe_soap_water_pct', 'soap_water_pct'),
@@ -291,4 +357,6 @@ class RecipeLineage(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_lineage_recipe_id', 'recipe_id'),
         db.Index('ix_recipe_lineage_source_recipe_id', 'source_recipe_id'),
         db.Index('ix_recipe_lineage_event_type', 'event_type'),
+        db.Index('ix_recipe_lineage_recipe_created_at', 'recipe_id', 'created_at'),
+        db.Index('ix_recipe_lineage_recipe_event_created_at', 'recipe_id', 'event_type', 'created_at'),
     )

@@ -1,5 +1,5 @@
-<div class="tab-pane fade show active" id="soapStage1Pane" role="tabpanel" aria-labelledby="soapStage1Tab">
-  <div class="soap-stage-body p-3" data-stage-index="0">
+<div class="tab-pane fade" id="soapStage3Pane" role="tabpanel" aria-labelledby="soapStage3Tab">
+  <div class="soap-stage-body p-3" data-stage-index="2">
     <div class="row g-3 align-items-start soap-stage-form-row soap-config-row soap-stage-grid">
       <div class="col-12 soap-field-stack">
         <label class="form-label">Lye type</label>
@@ -10,17 +10,6 @@
           <label class="btn btn-outline-secondary" for="lyeTypeKoh">KOH</label>
           <input type="radio" class="btn-check" name="lye_type" id="lyeTypeKoh90" value="KOH90">
           <label class="btn btn-outline-secondary" for="lyeTypeKoh90">90% KOH</label>
-        </div>
-      </div>
-      <div class="col-12 soap-field-stack">
-        <label class="form-label">Units</label>
-        <div class="btn-group w-100" role="group" aria-label="Weight units">
-          <input type="radio" class="btn-check" name="weight_unit" id="unitGrams" value="g" checked>
-          <label class="btn btn-outline-secondary" for="unitGrams">g</label>
-          <input type="radio" class="btn-check" name="weight_unit" id="unitOunces" value="oz">
-          <label class="btn btn-outline-secondary" for="unitOunces">oz</label>
-          <input type="radio" class="btn-check" name="weight_unit" id="unitPounds" value="lb">
-          <label class="btn btn-outline-secondary" for="unitPounds">lb</label>
         </div>
       </div>
     </div>
@@ -68,7 +57,7 @@
         <div class="form-text soap-stage-note">5% is a balanced default.</div>
       </div>
     </div>
-    {% set stage_index = 0 %}
+    {% set stage_index = 2 %}
     {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>
 </div>

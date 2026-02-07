@@ -1,9 +1,12 @@
+{# File: pages/recipes/recipe_list.html
+   Synopsis: List view for recipes and their variations.
+   Glossary: Master = primary recipe; Archived = hidden from list. #}
 {% extends 'layout.html' %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Recipes</h2>
+    <h2>{{ 'Recipe Groups' if can_create_variations else 'Recipes' }}</h2>
     <div class="d-flex gap-2">
         <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Recipe
@@ -26,8 +29,16 @@
     <div class="card">
         <div class="card-body">
             <i class="fas fa-book fa-4x text-muted mb-4"></i>
-            <h4 class="text-muted mb-3">No Recipes Yet</h4>
-            <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
+            <h4 class="text-muted mb-3">
+                {% if can_create_variations %}No Recipe Groups Yet{% else %}No Recipes Yet{% endif %}
+            </h4>
+            <p class="text-muted mb-4">
+                {% if can_create_variations %}
+                    Create your first recipe group to start tracking batches and managing production!
+                {% else %}
+                    Create your first recipe to start tracking batches and managing production!
+                {% endif %}
+            </p>
             <div class="d-flex gap-3 justify-content-center">
                 <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
                     <i class="fas fa-plus"></i> Create Your First Recipe
@@ -81,8 +92,87 @@
 <div class="row" id="recipesContainer">
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
-        <div class="card h-100 shadow-sm">
+    {% set group_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
+    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    {% set published_variations = current_variations %}
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
+        <div class="card h-100 shadow-sm recipe-group-card">
+            {% if can_create_variations %}
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">{{ group_name }}</h5>
+                    <small class="text-muted">Recipe Group</small>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge bg-primary">{{ recipe.recipe_group.prefix if recipe.recipe_group else (recipe.label_prefix or 'BTH') }}</span>
+                    <span class="badge bg-dark">Group</span>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <div>
+                    <div class="text-muted text-uppercase small mb-2">Master</div>
+                    {% set plan_disabled = (recipe.status == 'draft') %}
+                    <div class="lineage-card recipe-link" data-href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" tabindex="0" role="button">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-semibold">{{ group_name }}</div>
+                                <div class="small text-muted">Current Master</div>
+                                <div class="small mt-1">
+                                    {% if recipe.status == 'draft' %}
+                                    <span class="badge bg-warning text-dark">Draft</span>
+                                    {% endif %}
+                                    {% if recipe.is_current %}
+                                    <span class="badge bg-success">Current</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
+                                   class="btn btn-primary btn-sm {% if plan_disabled %}disabled{% endif %}"
+                                   onclick="event.stopPropagation();{% if plan_disabled %} return false;{% endif %}"
+                                   {% if plan_disabled %}tabindex="-1" aria-disabled="true" title="Publish this recipe before planning"{% endif %}>
+                                    Plan
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted text-uppercase small mb-2">Variations ({{ current_variations|length }})</div>
+                    {% if current_variations %}
+                        {% for variation in current_variations %}
+                        {% set variation_plan_disabled = (variation.status == 'draft') %}
+                        <div class="lineage-card recipe-link mt-2" data-href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" tabindex="0" role="button">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <div class="fw-semibold">{{ variation.variation_name or variation.name }}</div>
+                                    <div class="small text-muted">Variation</div>
+                                    <div class="small mt-1">
+                                        {% if variation.status == 'draft' %}
+                                        <span class="badge bg-warning text-dark">Draft</span>
+                                        {% endif %}
+                                        {% if variation.is_current %}
+                                        <span class="badge bg-success">Current</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
+                                       class="btn btn-primary btn-sm {% if variation_plan_disabled %}disabled{% endif %}"
+                                       onclick="event.stopPropagation();{% if variation_plan_disabled %} return false;{% endif %}"
+                                       {% if variation_plan_disabled %}tabindex="-1" aria-disabled="true" title="Publish this variation before planning"{% endif %}>
+                                        Plan
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted small">No variations yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ recipe.name }}</h5>
                   <div class="d-flex gap-2 align-items-center">
@@ -90,6 +180,7 @@
                       {% if recipe.status == 'draft' %}
                       <span class="badge bg-warning text-dark">Draft</span>
                       {% endif %}
+                      <span class="badge bg-dark">Master</span>
                       {% if recipe.org_origin_purchased %}
                       <span class="badge bg-warning text-dark">Purchased Origin</span>
                       {% else %}
@@ -101,7 +192,7 @@
                 <div class="recipe-details mb-3">
                     <p class="card-text text-muted mb-2">
                         <small>
-                            <i class="fas fa-flask"></i> {{ recipe.recipe_ingredients|length }} ingredients
+                            <i class="fas fa-flask"></i> {{ recipe.ingredient_count }} ingredients
                             {% if recipe.predicted_yield %}
                                 | <i class="fas fa-balance-scale"></i> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
                             {% endif %}
@@ -117,13 +208,13 @@
                     <div class="row text-center">
                         <div class="col-4">
                             <div class="stat-box">
-                                <strong>{{ recipe.batches|length }}</strong>
+                                <strong>{{ recipe.batch_count }}</strong>
                                 <br><small class="text-muted">Batches</small>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="stat-box">
-                                <strong>{{ recipe.variations|length }}</strong>
+                                <strong>{{ published_variations|length }}</strong>
                                 <br><small class="text-muted">Variations</small>
                             </div>
                         </div>
@@ -139,11 +230,12 @@
                 <!-- Action Buttons -->
                 <div class="mt-auto">
                       {% set plan_disabled = (recipe.status == 'draft') %}
+                      {% set edit_disabled = (recipe.status == 'published' and recipe.test_sequence is none) %}
                       <div class="btn-group w-100 mb-2" role="group">
                         <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-eye"></i> View
                         </a>
-                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm{% if edit_disabled %} disabled{% endif %}" {% if edit_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Published versions are locked. Create a test to edit."{% endif %}>
                             <i class="fas fa-edit"></i> Edit
                         </a>
                           <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
@@ -153,9 +245,6 @@
                           </a>
                     </div>
                     <div class="btn-group w-100" role="group">
-                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-copy"></i> Clone
-                        </a>
                         {% if can_create_variations %}
                         <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-code-branch"></i> Variation
@@ -166,14 +255,14 @@
             </div>
 
             <!-- Variations Section -->
-            {% if recipe.variations %}
+                    {% if published_variations %}
             <div class="card-footer">
                 <button class="btn btn-link btn-sm p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#variations-{{ recipe.id }}">
-                    <i class="fas fa-chevron-right"></i> {{ recipe.variations|length }} Variation{{ 's' if recipe.variations|length != 1 else '' }}
+                            <i class="fas fa-chevron-right"></i> {{ published_variations|length }} Variation{{ 's' if published_variations|length != 1 else '' }}
                 </button>
                 <div class="collapse variations-list" id="variations-{{ recipe.id }}">
                     <div class="mt-2">
-                        {% for variation in recipe.variations %}
+                        {% for variation in published_variations %}
                         <div class="variation-item d-flex justify-content-between align-items-center py-2 border-bottom">
                             <div>
                                 <strong>{{ variation.name }}</strong>
@@ -182,7 +271,6 @@
                           {% set variation_plan_disabled = (variation.status == 'draft') %}
                           <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
                               <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
                                  class="btn btn-primary btn-xs {% if variation_plan_disabled %}disabled{% endif %}"
                                  {% if variation_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
@@ -194,6 +282,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>
@@ -207,6 +296,12 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        {% if can_create_variations %}
+                        <th>Recipe Group</th>
+                        <th>Master Version</th>
+                        <th>Current Variations</th>
+                        <th>Actions</th>
+                        {% else %}
                         <th>Recipe Name</th>
                         <th>Label Prefix</th>
                         <th>Ingredients</th>
@@ -215,15 +310,58 @@
                         <th>Variations</th>
                         <th>Containers</th>
                         <th>Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for recipe in recipes if not recipe.parent_recipe_id %}
-                    {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
-                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
-                        <td>
-                            <strong>{{ recipe.name }}</strong>
-                            {% if recipe.instructions %}
+    {% for recipe in recipes if not recipe.parent_recipe_id %}
+    {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
+    {% set group_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
+    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    {% set table_variations = recipe.variations | selectattr('test_sequence', 'none') | list %}
+    <tr class="recipe-row" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
+        {% if can_create_variations %}
+        <td>
+            <strong>{{ group_name }}</strong>
+        </td>
+        <td>Master v{{ recipe.version_number }}</td>
+        <td>
+            {% if current_variations %}
+                {% for variation in current_variations %}
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span>{{ variation.variation_name or variation.name }} <small class="text-muted">v{{ variation.version_number }}</small></span>
+                        <span class="btn-group btn-group-sm" role="group">
+                            {% set table_variation_disabled = (variation.status == 'draft') %}
+                            <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                            <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
+                               class="btn btn-primary btn-xs {% if table_variation_disabled %}disabled{% endif %}"
+                               {% if table_variation_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
+                                Plan
+                            </a>
+                        </span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <span class="text-muted">No variations yet.</span>
+            {% endif %}
+        </td>
+        <td>
+            <div class="btn-group" role="group">
+                {% set table_plan_disabled = (recipe.status == 'draft') %}
+                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
+                   class="btn btn-primary btn-sm {% if table_plan_disabled %}disabled{% endif %}"
+                   {% if table_plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning"{% endif %}>
+                    <i class="fas fa-play"></i> Plan
+                </a>
+            </div>
+        </td>
+        {% else %}
+        <td>
+            <strong>{{ recipe.name }}</strong>
+            {% if recipe.instructions %}
                             <br><small class="text-muted">{{ recipe.instructions[:50] }}{% if recipe.instructions|length > 50 %}...{% endif %}</small>
                             {% endif %}
                             <div class="mt-1">
@@ -240,7 +378,7 @@
                             <span class="badge bg-warning text-dark ms-1">Draft</span>
                             {% endif %}
                         </td>
-                        <td>{{ recipe.recipe_ingredients|length }}</td>
+                        <td>{{ recipe.ingredient_count }}</td>
                         <td>
                             {% if recipe.predicted_yield %}
                                 {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
@@ -248,10 +386,10 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>{{ recipe.batches|length }}</td>
+                        <td>{{ recipe.batch_count }}</td>
                         <td>
-                            {{ recipe.variations|length }}
-                            {% if recipe.variations %}
+                            {{ table_variations|length }}
+                            {% if table_variations %}
                             <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ recipe.id }}">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
@@ -283,10 +421,6 @@
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-edit"></i> Edit
                                         </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
-                                            <i class="fas fa-copy"></i> Clone
-                                        </a></li>
                                         {% if can_create_variations %}
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
                                             <i class="fas fa-code-branch"></i> Create Variation
@@ -296,14 +430,15 @@
                                 </div>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
-                    {% if recipe.variations %}
+                    {% if table_variations and not can_create_variations %}
                     <tr class="collapse" id="table-variations-{{ recipe.id }}">
                         <td colspan="8">
                             <div class="ps-4">
                                 <strong>Variations:</strong>
                                 <div class="mt-2">
-                                    {% for variation in recipe.variations %}
+                                    {% for variation in table_variations %}
                                       <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                                         <div>
                                             <span class="fw-bold">{{ variation.name }}</span>
@@ -312,7 +447,6 @@
                                           {% set table_variation_disabled = (variation.status == 'draft') %}
                                           <div class="btn-group" role="group">
                                             <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                            <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
                                               <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}"
                                                  class="btn btn-primary btn-xs {% if table_variation_disabled %}disabled{% endif %}"
                                                  {% if table_variation_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this variation before planning"{% endif %}>
@@ -333,12 +467,52 @@
     </div>
 </div>
 
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Recipes pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('recipes.list_recipes', page=pagination.prev_num) }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link" aria-hidden="true">&laquo;</span>
+        </li>
+        {% endif %}
+
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('recipes.list_recipes', page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('recipes.list_recipes', page=pagination.next_num) }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link" aria-hidden="true">&raquo;</span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
 <!-- No Results Message -->
 <div id="noResults" class="text-center py-5" style="display: none;">
     <div class="card">
         <div class="card-body">
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h5>No recipes found</h5>
+            <h5>{% if can_create_variations %}No recipe groups found{% else %}No recipes found{% endif %}</h5>
             <p class="text-muted">Try adjusting your search criteria</p>
         </div>
     </div>
@@ -351,6 +525,24 @@
 
 .recipe-card:hover {
     transform: translateY(-2px);
+}
+
+.recipe-group-card .lineage-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--color-breadcrumb-bg);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.recipe-group-card .lineage-card:hover,
+.recipe-group-card .lineage-card:focus {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.18);
+}
+
+.recipe-group-card .recipe-link {
+    cursor: pointer;
 }
 
 .stat-box {
@@ -536,6 +728,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const bsCollapse = new bootstrap.Collapse(filterSection, { toggle: false });
             bsCollapse.hide();
         }
+    });
+
+    // Make lineage cards clickable for view navigation
+    document.querySelectorAll('.recipe-link[data-href]').forEach(card => {
+        card.addEventListener('click', () => {
+            const href = card.dataset.href;
+            if (href) {
+                window.location = href;
+            }
+        });
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                card.click();
+            }
+        });
     });
 });
 </script>

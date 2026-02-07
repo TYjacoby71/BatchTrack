@@ -1,15 +1,22 @@
-"""
-Additive operations handler - operations that increase inventory quantity.
-These handlers calculate what needs to happen and return deltas.
-They should NEVER directly modify item.quantity.
+"""Additive inventory adjustment handlers.
+
+Synopsis:
+Calculate additive inventory deltas and create FIFO lots where required.
+
+Glossary:
+- Additive operation: Adjustment that increases inventory.
+- Lot creation: FIFO lot creation for stock additions.
 """
 
 import logging
 from app.models import db, UnifiedInventoryHistory
+from app.services.quantity_base import from_base_quantity, sync_lot_quantities_from_base
 from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
 
+# --- Operation groups ---
+# Purpose: Define additive operation grouping rules.
 # Define operation groups and their processing logic
 ADDITIVE_OPERATION_GROUPS = {
     'lot_creation': {
@@ -26,6 +33,8 @@ ADDITIVE_OPERATION_GROUPS = {
     }
 }
 
+# --- Operation group lookup ---
+# Purpose: Resolve the additive operation group for a change type.
 def _get_operation_group(change_type):
     """Get the operation group for a given change type"""
     for group_name, group_config in ADDITIVE_OPERATION_GROUPS.items():
@@ -33,7 +42,9 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None, **kwargs):
+# --- Additive handler ---
+# Purpose: Process additive operations and return quantity deltas.
+def _universal_additive_handler(item, quantity, quantity_base, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None, **kwargs):
     """
     Universal handler for all additive operations.
     Processes operations based on their group classification.
@@ -55,15 +66,17 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         # Use provided cost or item's default cost
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        if quantity is None:
+        if quantity is None or quantity_base is None:
             return False, f"Invalid quantity: {quantity}", 0
         quantity_delta = float(quantity)
+        quantity_delta_base = int(quantity_base)
 
         if group_name == 'lot_creation':
             # Operations that create new lots (restock, manual_addition, finished_batch)
             success, message, lot_id = _handle_lot_creation_operation(
                 item=item,
                 quantity=quantity,
+                quantity_base=quantity_base,
                 change_type=change_type,
                 notes=notes,
                 created_by=created_by,
@@ -77,8 +90,16 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         elif group_name == 'lot_crediting':
             # Operations that credit back to existing lots (returned, refunded, release_reservation)
             success, message, lot_id = _handle_lot_crediting_operation(
-                item, quantity, change_type, unit, notes, final_cost,
-                created_by, batch_id=batch_id, **kwargs # Pass batch_id here
+                item,
+                quantity,
+                quantity_base,
+                change_type,
+                unit,
+                notes,
+                final_cost,
+                created_by,
+                batch_id=batch_id,
+                **kwargs # Pass batch_id here
             )
 
         else:
@@ -100,7 +121,7 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         success_message = action_messages.get(change_type, f"{change_type.replace('_', ' ').title()} added {quantity} {unit}")
 
         logger.info(f"{change_type.upper()} SUCCESS: Will increase item {item.id} by {quantity_delta}")
-        return True, success_message, quantity_delta
+        return True, success_message, quantity_delta, quantity_delta_base
 
     except Exception as e:
         logger.error(f"Error in {change_type} operation: {str(e)}")
@@ -108,7 +129,9 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
 
 
 
-def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None, cost_override=None):
+# --- Lot creation ---
+# Purpose: Create FIFO lots for additive operations.
+def _handle_lot_creation_operation(item, quantity, quantity_base, change_type, notes, created_by, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None, cost_override=None):
     """
     Handle operations that create new lots (restock, returns, etc.)
     Returns (success, message, quantity_delta)
@@ -123,6 +146,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
         success, message, lot_id = create_new_fifo_lot(
             item_id=item.id,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type=change_type,
             unit=unit,
             notes=notes or f"{change_type.title()} operation",
@@ -137,7 +161,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
             return False, f"Failed to create lot: {message}", 0
 
         # Return the quantity delta for core to apply
-        if quantity is None: # Added check here to handle potential None quantity passed to this function
+        if quantity is None or quantity_base is None: # Added check here to handle potential None quantity passed to this function
             return False, f"Invalid quantity: {quantity}", 0
         quantity_delta = float(quantity)
         logger.info(f"LOT_CREATION SUCCESS: Will add {quantity_delta} to item {item.id}")
@@ -148,7 +172,9 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
         logger.error(f"Error in lot creation operation: {str(e)}")
         return False, f"Lot creation failed: {str(e)}", 0
 
-def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, batch_id=None, customer=None, order_id=None, **kwargs):
+# --- Lot crediting ---
+# Purpose: Credit quantities back to existing FIFO lots.
+def _handle_lot_crediting_operation(item, quantity, quantity_base, change_type, unit, notes, final_cost, created_by, batch_id=None, customer=None, order_id=None, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from app.models.inventory_lot import InventoryLot
     from app.utils.inventory_event_code_generator import generate_inventory_event_code
@@ -165,25 +191,32 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity < InventoryLot.original_quantity  # Lots that have been consumed from
+                InventoryLot.remaining_quantity_base < InventoryLot.original_quantity_base  # Lots that have been consumed from
             )
         ).order_by(InventoryLot.received_date.asc()).all()
 
-        remaining_to_credit = float(quantity)
+        remaining_to_credit_base = int(quantity_base)
         lots_credited = 0
 
         # Credit back to existing lots first (FIFO order)
         for lot in lots_to_credit:
-            if remaining_to_credit <= 0:
+            if remaining_to_credit_base <= 0:
                 break
 
             # Calculate how much space is available in this lot
-            space_available = float(lot.original_quantity) - float(lot.remaining_quantity)
+            space_available_base = int(lot.original_quantity_base) - int(lot.remaining_quantity_base)
 
-            if space_available > 0:
+            if space_available_base > 0:
                 # Credit back up to the available space
-                credit_amount = min(space_available, remaining_to_credit)
-                lot.remaining_quantity = float(lot.remaining_quantity) + credit_amount
+                credit_amount_base = min(space_available_base, remaining_to_credit_base)
+                lot.remaining_quantity_base = int(lot.remaining_quantity_base) + int(credit_amount_base)
+                sync_lot_quantities_from_base(lot, item)
+                credit_amount = from_base_quantity(
+                    base_amount=credit_amount_base,
+                    unit_name=lot.unit,
+                    ingredient_id=item.id,
+                    density=item.density,
+                )
 
                 # Create audit record for this credit
                 event_code = generate_inventory_event_code(change_type, item_id=item.id, code_type="event")
@@ -192,6 +225,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
                     inventory_item_id=item.id,
                     change_type=change_type,
                     quantity_change=credit_amount,
+                    quantity_change_base=credit_amount_base,
                     unit=lot.unit,
                     unit_cost=lot.unit_cost,
                     notes=f"{change_type.title()}: Credited {credit_amount} back to lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
@@ -203,13 +237,19 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
                 )
                 db.session.add(history_record)
 
-                remaining_to_credit -= credit_amount
+                remaining_to_credit_base -= credit_amount_base
                 lots_credited += 1
 
                 logger.info(f"LOT_CREDITING: Credited {credit_amount} back to lot {lot.id} ({lot.fifo_code}), new remaining: {lot.remaining_quantity}")
 
         # If there's still quantity to credit after filling existing lots, create a new lot
-        if remaining_to_credit > 0:
+        if remaining_to_credit_base > 0:
+            remaining_to_credit = from_base_quantity(
+                base_amount=remaining_to_credit_base,
+                unit_name=unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
             logger.info(f"LOT_CREDITING: Creating new lot for overflow {remaining_to_credit} {unit}")
 
             # Ensure quantity is not None before creating the overflow lot
@@ -219,6 +259,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
             success, message, overflow_lot_id = create_new_fifo_lot(
                 item_id=item.id,
                 quantity=remaining_to_credit,
+                quantity_base=remaining_to_credit_base,
                 change_type=change_type,
                 unit=unit,
                 notes=f"{change_type.title()} overflow: {remaining_to_credit}" + (f" | {notes}" if notes else ""),
@@ -231,7 +272,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
                 return False, f"Failed to create overflow lot: {message}", 0
 
         # Generate success message
-        if lots_credited > 0 and remaining_to_credit > 0:
+        if lots_credited > 0 and remaining_to_credit_base > 0:
             success_msg = f"Credited to {lots_credited} existing lots and created overflow lot"
         elif lots_credited > 0:
             success_msg = f"Credited back to {lots_credited} existing lots using FIFO order"

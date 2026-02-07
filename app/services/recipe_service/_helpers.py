@@ -1,4 +1,13 @@
-"""Shared helpers used by the recipe core service."""
+"""Shared helpers used by the recipe core service.
+
+Synopsis:
+Resolves organization context, normalizes recipe status, derives label prefixes,
+and extracts structured category data from the request payload.
+
+Glossary:
+- Label prefix: Short code used in batch labels for a recipe.
+- Organization scope: The tenant context used to enforce uniqueness and access.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +21,8 @@ from ...utils.code_generator import generate_recipe_prefix
 from ._constants import _ALLOWED_RECIPE_STATUSES
 
 
+# --- Resolve current org ---
+# Purpose: Determine the organization id for the active user context.
 def _resolve_current_org_id() -> Optional[int]:
     """Best-effort helper to determine the organization for the active user."""
     try:
@@ -24,6 +35,8 @@ def _resolve_current_org_id() -> Optional[int]:
     return None
 
 
+# --- Normalize status ---
+# Purpose: Normalize a recipe status into a supported value.
 def _normalize_status(value: str | None) -> str:
     if not value:
         return 'published'
@@ -31,20 +44,30 @@ def _normalize_status(value: str | None) -> str:
     return normalized if normalized in _ALLOWED_RECIPE_STATUSES else 'published'
 
 
+# --- Derive label prefix ---
+# Purpose: Generate or reuse a label prefix for a recipe.
 def _derive_label_prefix(
     name: str,
     requested_prefix: Optional[str],
     parent_recipe_id: Optional[int],
     parent_recipe: Optional[Recipe],
+    org_id: Optional[int] = None,
 ) -> str:
     if requested_prefix not in (None, ''):
         return requested_prefix
 
-    final_prefix = generate_recipe_prefix(name)
+    resolved_org_id = org_id
+    if resolved_org_id is None and parent_recipe is not None:
+        resolved_org_id = getattr(parent_recipe, "organization_id", None)
+    if resolved_org_id is None:
+        resolved_org_id = _resolve_current_org_id()
+
+    final_prefix = generate_recipe_prefix(name, resolved_org_id)
     if parent_recipe_id and parent_recipe and parent_recipe.label_prefix:
         base_prefix = parent_recipe.label_prefix
         existing_variations = Recipe.query.filter(
             Recipe.parent_recipe_id == parent_recipe_id,
+            Recipe.test_sequence.is_(None),
             Recipe.label_prefix.like(f"{base_prefix}%")
         ).count()
         suffix = existing_variations + 1
@@ -52,6 +75,8 @@ def _derive_label_prefix(
     return final_prefix
 
 
+# --- Extract category data ---
+# Purpose: Pull structured category fields from the active request.
 def _extract_category_data_from_request() -> Optional[Dict[str, Any]]:
     try:
         from flask import request

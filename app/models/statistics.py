@@ -1,9 +1,21 @@
+"""Statistics models for reporting and leaderboards.
+
+Synopsis:
+Tracks user and organization stats for reporting and badges.
+
+Glossary:
+- UserStats: Per-user counts used for performance tracking.
+- OrganizationStats: Aggregated org counts for dashboards.
+"""
+
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
+# --- UserStats ---
+# Purpose: Track per-user statistics for reporting and gamification.
 class UserStats(ScopedModelMixin, db.Model):
     """Track user statistics for reporting and gamification"""
     __tablename__ = 'user_stats'
@@ -21,6 +33,9 @@ class UserStats(ScopedModelMixin, db.Model):
     # Recipe statistics
     total_recipes = db.Column(db.Integer, default=0)
     recipes_created = db.Column(db.Integer, default=0)
+    master_recipes_created = db.Column(db.Integer, default=0)
+    variation_recipes_created = db.Column(db.Integer, default=0)
+    tests_created = db.Column(db.Integer, default=0)
 
     # Inventory statistics
     inventory_adjustments = db.Column(db.Integer, default=0)
@@ -69,6 +84,17 @@ class UserStats(ScopedModelMixin, db.Model):
         )
         self.total_recipes = user_recipes.count()
         self.recipes_created = user_recipes.count()
+        self.master_recipes_created = user_recipes.filter(
+            Recipe.is_master.is_(True),
+            Recipe.test_sequence.is_(None),
+        ).count()
+        self.variation_recipes_created = user_recipes.filter(
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+        ).count()
+        self.tests_created = user_recipes.filter(
+            Recipe.test_sequence.is_not(None),
+        ).count()
 
         # Inventory statistics - use explicit column references for consistency
         user_inventory = InventoryItem.query.filter(
@@ -118,6 +144,8 @@ class UserStats(ScopedModelMixin, db.Model):
             'user_id': self.user_id
         }
 
+# --- OrganizationStats ---
+# Purpose: Track organization-level aggregates for dashboards and reports.
 class OrganizationStats(db.Model):
     """Track organization-wide statistics"""
     __tablename__ = 'organization_stats'
@@ -137,6 +165,9 @@ class OrganizationStats(db.Model):
 
     # Recipe statistics
     total_recipes = db.Column(db.Integer, default=0)
+    total_master_recipes = db.Column(db.Integer, default=0)
+    total_variation_recipes = db.Column(db.Integer, default=0)
+    total_test_recipes = db.Column(db.Integer, default=0)
 
     # Inventory statistics
     total_inventory_items = db.Column(db.Integer, default=0)
@@ -190,6 +221,25 @@ class OrganizationStats(db.Model):
 
             # Recipe statistics - scoped by organization
             self.total_recipes = Recipe.query.filter(Recipe.organization_id == self.organization_id).count()
+            self.total_master_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(True),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_variation_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.is_master.is_(False),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+            self.total_test_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id,
+                Recipe.test_sequence.is_not(None),
+                Recipe.is_archived.is_(False),
+            ).count()
 
             # Inventory statistics - already scoped by organization
             self.total_inventory_items = InventoryItem.query.filter(InventoryItem.organization_id == self.organization_id).count()
@@ -238,6 +288,8 @@ class OrganizationStats(db.Model):
             'organization_id': self.organization_id
         }
 
+# --- Leaderboard ---
+# Purpose: Provide leaderboard queries for user/org metrics.
 class Leaderboard:
     """Service class for generating leaderboards and competitions"""
 
@@ -309,6 +361,8 @@ class Leaderboard:
         return monthly_stats
 
 
+# --- BatchStats ---
+# Purpose: Store batch statistics snapshots for reporting.
 class BatchStats(ScopedModelMixin, db.Model):
     """Track detailed statistics for each batch"""
     __tablename__ = 'batch_stats'
@@ -409,6 +463,8 @@ class BatchStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- RecipeStats ---
+# Purpose: Store recipe statistics snapshots for reporting.
 class RecipeStats(ScopedModelMixin, db.Model):
     """Track performance statistics for recipes across all batches"""
     __tablename__ = 'recipe_stats'
@@ -488,6 +544,8 @@ class RecipeStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- InventoryEfficiencyStats ---
+# Purpose: Track inventory efficiency and wastage metrics.
 class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
     """Track inventory usage efficiency and spoilage"""
     __tablename__ = 'inventory_efficiency_stats'
@@ -539,6 +597,8 @@ class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
         self.last_updated = TimezoneUtils.utc_now()
 
 
+# --- OrganizationLeaderboardStats ---
+# Purpose: Store leaderboard stats used for organization badges.
 class OrganizationLeaderboardStats(db.Model):
     """Track organization-level statistics for leaderboards"""
     __tablename__ = 'organization_leaderboard_stats'
@@ -562,6 +622,8 @@ class OrganizationLeaderboardStats(db.Model):
     active_users_count = db.Column(db.Integer, default=0)
     most_productive_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     avg_batches_per_user = db.Column(db.Float, default=0.0)
+    most_testing_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    most_tests_created = db.Column(db.Integer, default=0)
 
     # Container Usage
     most_used_container_size = db.Column(db.Float, default=0.0)
@@ -589,6 +651,7 @@ class OrganizationLeaderboardStats(db.Model):
     organization = db.relationship('Organization')
     most_popular_recipe = db.relationship('Recipe', foreign_keys=[most_popular_recipe_id])
     most_productive_user = db.relationship('User', foreign_keys=[most_productive_user_id])
+    most_testing_user = db.relationship('User', foreign_keys=[most_testing_user_id])
     most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
 
     @classmethod
@@ -601,6 +664,8 @@ class OrganizationLeaderboardStats(db.Model):
         return stats
 
 
+# --- InventoryChangeLog ---
+# Purpose: Record inventory changes for analytics and audits.
 class InventoryChangeLog(ScopedModelMixin, db.Model):
     """Log all inventory changes with detailed categorization"""
     __tablename__ = 'inventory_change_log'

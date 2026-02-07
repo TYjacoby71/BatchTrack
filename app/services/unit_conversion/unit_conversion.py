@@ -26,7 +26,7 @@ class ConversionEngine:
         return float(rounded_decimal)
 
     @staticmethod
-    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None, organization_id=None):
+    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None, organization_id=None, rounding_decimals=3):
         """
         Convert units with structured error handling for wall of drawers protocol
 
@@ -56,8 +56,9 @@ class ConversionEngine:
             # Fallback to provided organization_id only
             pass
 
-        # Create cache key (org-scoped)
-        cache_key = f"org:{effective_org_id or 'public'}:{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
+        # Create cache key (org-scoped), include rounding to avoid precision mix-ups
+        rounding_key = rounding_decimals if rounding_decimals is not None else "raw"
+        cache_key = f"org:{effective_org_id or 'public'}:{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}:{rounding_key}"
 
         # Check centralized cache first
         cached_result = conversion_cache.get(cache_key)
@@ -398,9 +399,14 @@ class ConversionEngine:
                 # For now, we'll just print and continue if logging fails.
 
         # Return success result with all metadata
+        if rounding_decimals is None:
+            converted_value = float(converted)
+        else:
+            converted_value = ConversionEngine.round_value(converted, rounding_decimals)
+
         result = {
             'success': True,
-            'converted_value': ConversionEngine.round_value(converted, 3),
+            'converted_value': converted_value,
             'conversion_type': conversion_type,
             'density_used': used_density,
             'from': from_unit,

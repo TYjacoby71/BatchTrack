@@ -1,3 +1,13 @@
+"""Global item synchronization service.
+
+Synopsis:
+Sync linked inventory items with updates to global catalog entries.
+
+Glossary:
+- Global item: Canonical ingredient entry in the global catalog.
+- Ownership: Flag indicating whether an item is globally managed.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +19,8 @@ from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
 logger = logging.getLogger(__name__)
 
 
+# --- Global item sync ---
+# Purpose: Sync linked inventory items to global item updates.
 class GlobalItemSyncService:
     """Keep org inventory items in sync with their linked GlobalItem.
 
@@ -163,6 +175,7 @@ class GlobalItemSyncService:
                             inventory_item_id=inv.id,
                             change_type="sync_global",
                             quantity_change=0.0,
+                            quantity_change_base=0,
                             unit=inv.unit or "count",
                             notes=f"Synced fields from GlobalItem '{global_item.name}'",
                             created_by=None,

@@ -1,8 +1,11 @@
 # Documentation Structure
 
-## Overview
+## Synopsis
+This document explains where documentation lives and how updates should be staged across system guides, changelogs, and checklists.
 
-This document explains the organization of BatchTrack documentation.
+## Glossary
+- **System doc**: Current-state guide for a platform area.
+- **Changelog**: Historical record of changes.
 
 ## Directory Structure
 
@@ -10,6 +13,8 @@ This document explains the organization of BatchTrack documentation.
 docs/
 ├── system/              Master documentation for every platform system and concept
 │   ├── ARCHITECTURE.md
+│   ├── ADDONS_AND_ENTITLEMENTS.md
+│   ├── APP_DICTIONARY.md
 │   ├── SERVICES.md
 │   ├── DATABASE_MODELS.md
 │   ├── PLAN_SNAPSHOT.md
@@ -129,6 +134,12 @@ Marketing documentation that describes the content workspace now lives in `marke
    - Changelog: Record the change
    - System docs: Update to reflect new state
 
+4. **Document Functional Units in code**
+   - Add a section header for each top-level functional unit (no numbering)
+   - Include: unit name, purpose, inputs, outputs
+   - Keep each description to 5 sentences or fewer
+   - Use the same pattern for route handlers, service methods, scripts, and models
+
 ### ❌ DON'T
 
 1. **Don't put change history in system docs**
@@ -142,6 +153,25 @@ Marketing documentation that describes the content workspace now lives in `marke
 3. **Don't create unnecessary iteration logs**
    - Work-in-progress logs are temporary
    - Only keep finished documentation
+
+## Functional Unit Header Standard
+
+**Term to use**: "Top-Level Functional Unit"
+
+**When**: Any file containing multiple routes, services, or functions.
+
+**Header structure**:
+```
+# --- <UNIT NAME> ---
+# PURPOSE: <Concise description (≤ 5 sentences)>
+# INPUTS: <Key inputs, parameters, or request payloads>
+# OUTPUTS: <Return values, side-effects, or response payloads>
+```
+
+**Naming by file type**:
+- Route files: use "Route Handler" or "Endpoint"
+- Service files: use "Service Method" or "Utility Function"
+- Model files: use "Model" or "Schema"
 
 ## When to Update Documentation
 
@@ -164,6 +194,14 @@ Made a code change?
     - DOCUMENTATION_STRUCTURE.md when map or ownership shifts
     - FUTURE_ROADMAP.md and other planning docs when strategy evolves
 ```
+
+## PR Documentation Checklist (keep in sync with PR template)
+- [ ] Updated system docs for feature changes (docs/system/)
+- [ ] Added/updated changelog entry (docs/changelog/)
+- [ ] Updated add-on entitlements doc if tiers/add-ons changed
+- [ ] Added/updated file Synopsis + Glossary blocks
+- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences)
+- [ ] Updated APP_DICTIONARY.md if new terms were introduced
 
 ## Cross-References
 

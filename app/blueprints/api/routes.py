@@ -1,9 +1,20 @@
+"""API routes for client bootstrap and batchbot features.
+
+Synopsis:
+Provides JSON endpoints for dashboard widgets, bootstrap payloads, and recipe prefix generation.
+
+Glossary:
+- Bootstrap: Lightweight payload for client selection lists.
+- Dashboard alerts: Aggregated warning or status indicators.
+- Recipe prefix: Unique label prefix derived from a recipe name.
+"""
+
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from flask import session
 import logging
-from sqlalchemy.orm import selectinload, load_only
+from sqlalchemy.orm import load_only
 from app.models import InventoryItem, Recipe, Product  # Added for get_ingredients endpoint
 from app.models.product import ProductSKU
 from app import db  # Assuming db is imported from app
@@ -23,6 +34,7 @@ from app.services.cache_invalidation import (
     recipe_bootstrap_cache_key,
 )
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.code_generator import generate_recipe_prefix
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -30,10 +42,14 @@ logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+# --- Batchbot flag ---
+# Purpose: Check if BatchBot features are enabled in config.
 def _is_batchbot_enabled() -> bool:
     return bool(current_app.config.get('FEATURE_BATCHBOT', False))
 
 
+# --- Resolve org scope ---
+# Purpose: Determine the request organization scope (supports developer masquerade).
 def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.
@@ -45,6 +61,11 @@ def _resolve_org_id():
             org_id = dev_selected
     return org_id
 
+# =========================================================
+# HEALTH & TIME
+# =========================================================
+# --- Health check ---
+# Purpose: Return API health status for monitoring.
 @api_bp.route('/', methods=['GET', 'HEAD'])
 def health_check():
     """Health check endpoint for monitoring services"""
@@ -52,6 +73,8 @@ def health_check():
         return '', 200
     return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
+# --- Server time ---
+# Purpose: Return server time in user's timezone.
 @api_bp.route('/server-time')
 @login_required
 @require_permission('dashboard.view')
@@ -68,6 +91,27 @@ def server_time():
         'timezone': str(TimezoneUtils.get_user_timezone())
     })
 
+# =========================================================
+# RECIPES
+# =========================================================
+# --- Recipe label prefix ---
+# Purpose: Generate a unique label prefix for a recipe name.
+@api_bp.route('/recipes/prefix', methods=['GET'])
+@login_required
+@require_permission('recipes.create')
+def recipe_prefix():
+    name = (request.args.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Recipe name is required'}), 400
+    org_id = _resolve_org_id()
+    prefix = generate_recipe_prefix(name, org_id)
+    return jsonify({'prefix': prefix})
+
+# =========================================================
+# ALERTS
+# =========================================================
+# --- Dismiss alert ---
+# Purpose: Dismiss a dashboard alert for the session.
 @api_bp.route('/dismiss-alert', methods=['POST'])
 @login_required
 @require_permission('alerts.dismiss')
@@ -91,6 +135,8 @@ def dismiss_alert():
 
     return jsonify({'success': True})
 
+# --- Dashboard alerts ---
+# Purpose: Fetch dashboard alerts for the organization.
 @api_bp.route('/dashboard-alerts')
 @login_required
 @require_permission('alerts.view')
@@ -139,6 +185,11 @@ api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredients')
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(reservation_api_bp)
 
+# =========================================================
+# INVENTORY & PRODUCTS
+# =========================================================
+# --- Inventory item ---
+# Purpose: Return inventory item details for editing.
 @api_bp.route('/inventory/item/<int:item_id>', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -169,6 +220,8 @@ def get_inventory_item(item_id):
     })
 
 
+# --- Product category ---
+# Purpose: Return product category details by id.
 @api_bp.route('/categories/<int:cat_id>', methods=['GET'])
 @login_required
 @require_permission('products.view')
@@ -177,6 +230,11 @@ def get_category(cat_id):
     return jsonify({'id': c.id, 'name': c.name, 'is_typically_portioned': bool(c.is_typically_portioned)})
 
 
+# =========================================================
+# UNITS
+# =========================================================
+# --- Unit search ---
+# Purpose: Search units for selection lists.
 @api_bp.route('/unit-search', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -211,6 +269,8 @@ def list_units():
         } for u in results
     ]})
 
+# --- Create unit ---
+# Purpose: Create a new unit for inventory usage.
 @api_bp.route('/units', methods=['POST'])
 @login_required
 @require_permission('inventory.edit')
@@ -233,6 +293,11 @@ def create_unit():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# =========================================================
+# CONTAINERS
+# =========================================================
+# --- Container suggestions ---
+# Purpose: Return curated container field suggestions.
 @api_bp.route('/containers/suggestions', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -281,7 +346,11 @@ def get_container_suggestions():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Added timezone endpoint
+# =========================================================
+# TIMEZONE
+# =========================================================
+# --- Timezone info ---
+# Purpose: Return server timezone metadata.
 @api_bp.route('/timezone', methods=['GET'])
 @login_required
 @require_permission('settings.view')
@@ -299,7 +368,11 @@ def get_timezone():
         'available_timezones': pytz.all_timezones_set
     })
 
-# Added ingredients endpoint for unit converter
+# =========================================================
+# INGREDIENTS
+# =========================================================
+# --- Ingredient list ---
+# Purpose: Return ingredient list for unit conversion.
 @api_bp.route('/ingredients', methods=['GET'])
 @login_required
 @require_permission('inventory.view')
@@ -340,6 +413,11 @@ def get_ingredients():
         return jsonify({'error': str(e)}), 500
 
 
+# =========================================================
+# BOOTSTRAP
+# =========================================================
+# --- Recipe bootstrap ---
+# Purpose: Return current master recipes + current variations.
 @api_bp.route('/bootstrap/recipes', methods=['GET'])
 @login_required
 @require_permission('recipes.view')
@@ -358,34 +436,57 @@ def bootstrap_recipes():
         if cached is not None:
             return jsonify({'recipes': cached, 'count': len(cached), 'cache': 'hit', 'version': 1})
 
-    query = (
+    masters = (
         Recipe.query.options(
-            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status),
-            selectinload(Recipe.variations).load_only(
-                Recipe.id,
-                Recipe.name,
-                Recipe.label_prefix,
-                Recipe.status,
-            ),
+            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id),
         )
         .filter(
-            Recipe.parent_recipe_id.is_(None),
             Recipe.organization_id == org_id,
+            Recipe.is_master.is_(True),
+            Recipe.test_sequence.is_(None),
+            Recipe.status == "published",
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
         )
         .order_by(Recipe.name.asc())
     )
 
+    variations_query = (
+        Recipe.query.options(
+            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id, Recipe.parent_recipe_id),
+        )
+        .filter(
+            Recipe.organization_id == org_id,
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+            Recipe.status == "published",
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
+        )
+    )
+
+    variations_by_group = {}
+    variations_by_parent = {}
+    for variation in variations_query.all():
+        payload = {
+            'id': variation.id,
+            'name': variation.name,
+            'status': getattr(variation, 'status', None),
+            'label_prefix': getattr(variation, 'label_prefix', None),
+        }
+        if variation.recipe_group_id:
+            variations_by_group.setdefault(variation.recipe_group_id, []).append(payload)
+        elif variation.parent_recipe_id:
+            variations_by_parent.setdefault(variation.parent_recipe_id, []).append(payload)
+
     recipes = []
-    for recipe in query.all():
-        variations = [
-            {
-                'id': variation.id,
-                'name': variation.name,
-                'status': getattr(variation, 'status', None),
-                'label_prefix': getattr(variation, 'label_prefix', None),
-            }
-            for variation in getattr(recipe, 'variations', []) or []
-        ]
+    for recipe in masters.all():
+        variations = []
+        if recipe.recipe_group_id:
+            variations = variations_by_group.get(recipe.recipe_group_id, [])
+        elif recipe.id in variations_by_parent:
+            variations = variations_by_parent.get(recipe.id, [])
+        variations = sorted(variations, key=lambda item: (item.get('name') or '').lower())
         recipes.append(
             {
                 'id': recipe.id,
@@ -400,6 +501,8 @@ def bootstrap_recipes():
     return jsonify({'recipes': recipes, 'count': len(recipes), 'cache': 'miss', 'version': 1})
 
 
+# --- Product bootstrap ---
+# Purpose: Return product list + SKU inventory ids.
 @api_bp.route('/bootstrap/products', methods=['GET'])
 @login_required
 @require_permission('products.view')
@@ -448,6 +551,11 @@ def bootstrap_products():
     cache.set(cache_key, payload, timeout=cache_ttl)
     return jsonify({**payload, 'cache': 'miss', 'version': 1})
 
+# =========================================================
+# UNIT CONVERSION
+# =========================================================
+# --- Unit converter ---
+# Purpose: Convert between inventory units.
 @api_bp.route('/unit-converter', methods=['POST'])
 @login_required
 @require_permission('inventory.view')
@@ -503,6 +611,11 @@ def unit_converter():
         return jsonify({'success': False, 'error': str(e)})
 
 
+# =========================================================
+# BATCHBOT
+# =========================================================
+# --- BatchBot chat ---
+# Purpose: Chat with BatchBot for recipe assistance.
 @api_bp.route('/batchbot/chat', methods=['POST'])
 @login_required
 @require_permission('ai.batchbot')
@@ -559,6 +672,8 @@ def batchbot_chat():
         return jsonify({'success': False, 'error': 'Unexpected BatchBot failure.'}), 500
 
 
+# --- BatchBot usage ---
+# Purpose: Return BatchBot usage and quota snapshot.
 @api_bp.route('/batchbot/usage', methods=['GET'])
 @login_required
 @require_permission('ai.batchbot')

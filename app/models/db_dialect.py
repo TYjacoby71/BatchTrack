@@ -1,3 +1,13 @@
+"""Database dialect detection helpers.
+
+Synopsis:
+Infers the active database dialect based on configured SQLAlchemy URLs.
+
+Glossary:
+- Dialect: Database backend type (e.g., PostgreSQL, SQLite).
+- Override: Environment variable used to force a specific value.
+"""
+
 import os
 from typing import Final
 
@@ -11,6 +21,8 @@ _DIALECT_OVERRIDE_ENV: Final = "BATCHTRACK_FORCE_DB_DIALECT"
 _DB_URL_OVERRIDE_ENV: Final = "BATCHTRACK_FORCE_DB_URL"
 
 
+# --- Resolve DB URL ---
+# Purpose: Select the active database URL based on precedence.
 def _resolve_active_database_url() -> str:
     """Return the best-guess database URL based on environment precedence."""
     override = os.environ.get(_DB_URL_OVERRIDE_ENV)
@@ -20,8 +32,7 @@ def _resolve_active_database_url() -> str:
     precedence = (
         "SQLALCHEMY_TEST_DATABASE_URI",  # pytest / local overrides
         "SQLALCHEMY_DATABASE_URI",       # explicit SQLAlchemy config
-        "DATABASE_INTERNAL_URL",         # render-internal URL if provided
-        "DATABASE_URL",                  # legacy Heroku-style
+        "DATABASE_URL",                  # canonical env var
     )
 
     for key in precedence:
@@ -31,6 +42,8 @@ def _resolve_active_database_url() -> str:
     return ""
 
 
+# --- Check Postgres URL ---
+# Purpose: Determine if a URL points to PostgreSQL.
 def _is_postgres_url(url: str | None) -> bool:
     if not url:
         return False
@@ -38,6 +51,8 @@ def _is_postgres_url(url: str | None) -> bool:
     return lowered.startswith(_POSTGRES_PREFIXES)
 
 
+# --- Is Postgres ---
+# Purpose: Determine whether the active DB dialect is PostgreSQL.
 def is_postgres() -> bool:
     """Determine if the active database dialect is PostgreSQL.
 

@@ -1,4 +1,14 @@
-from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app
+"""Permission and entitlement utilities.
+
+Synopsis:
+Provides decorators, entitlement resolution, and tier/add-on checks.
+
+Glossary:
+- Entitlement: Permission granted by tier or add-on.
+- Scope: Developer vs customer permission namespace.
+"""
+
+from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app, g, has_app_context
 from flask_login import current_user, login_required
 from functools import wraps, lru_cache
 from werkzeug.exceptions import Forbidden
@@ -10,6 +20,25 @@ from markupsafe import Markup, escape
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _get_request_cache() -> dict[str, object] | None:
+    if not has_app_context():
+        return None
+    cache = getattr(g, "_permission_cache", None)
+    if cache is None:
+        cache = {}
+        g._permission_cache = cache
+    return cache
+
+
+def _rollback_if_inactive() -> None:
+    try:
+        from ..extensions import db
+        if not getattr(db.session, "is_active", True):
+            db.session.rollback()
+    except Exception:
+        pass
 
 
 @dataclass
@@ -395,11 +424,7 @@ def get_effective_organization():
     """Get the effective organization for the current user context"""
     from ..extensions import db
 
-    # Always rollback any pending failed transaction first
-    try:
-        db.session.rollback()
-    except:
-        pass
+    _rollback_if_inactive()
 
     try:
         if current_user.user_type == 'developer':
@@ -541,11 +566,56 @@ class AuthorizationHierarchy:
         """
         Step 2: Get all permissions allowed by subscription tier
         """
-        if not organization or not organization.tier:
+        if not organization:
             return []
 
-        # Get permissions directly from the database tier relationship
-        return [p.name for p in organization.tier.permissions if p.is_active]
+        tier_id = getattr(organization, "subscription_tier_id", None)
+        if not tier_id:
+            return []
+
+        cache = _get_request_cache()
+        cache_key = None
+        if cache is not None:
+            cache_key = ("tier_permissions", getattr(organization, "id", None), tier_id)
+            if cache_key in cache:
+                return cache[cache_key]
+
+        try:
+            from ..extensions import db
+            from app.models.permission import Permission
+            from app.models.subscription_tier import subscription_tier_permission
+
+            rows = (
+                db.session.query(Permission.name)
+                .join(
+                    subscription_tier_permission,
+                    Permission.id == subscription_tier_permission.c.permission_id,
+                )
+                .filter(
+                    subscription_tier_permission.c.tier_id == tier_id,
+                    Permission.is_active.is_(True),
+                )
+                .all()
+            )
+            permissions = [name for (name,) in rows]
+        except Exception:
+            permissions = []
+
+        tier = getattr(organization, "tier", None)
+        try:
+            allowed_addons = getattr(tier, 'allowed_addons', []) or []
+            included_addons = getattr(tier, 'included_addons', []) or []
+            addon_perm_names = {a.permission_name for a in allowed_addons if a and a.permission_name}
+            addon_perm_names |= {a.permission_name for a in included_addons if a and a.permission_name}
+            included_perm_names = {a.permission_name for a in included_addons if a and a.permission_name}
+            if addon_perm_names:
+                permissions = [p for p in permissions if p not in addon_perm_names or p in included_perm_names]
+        except Exception:
+            pass
+
+        if cache is not None and cache_key is not None:
+            cache[cache_key] = permissions
+        return permissions
 
     @staticmethod
     def check_user_authorization(user, permission_name):
@@ -557,11 +627,7 @@ class AuthorizationHierarchy:
         """
         from ..extensions import db
 
-        # Always rollback any pending failed transaction first
-        try:
-            db.session.rollback()
-        except:
-            pass
+        _rollback_if_inactive()
 
         try:
             # Developers have scoped access based on developer roles + masquerade context
@@ -647,21 +713,40 @@ class AuthorizationHierarchy:
         """
         Get all effective permissions for a user based on the authorization hierarchy
         """
+        cache = _get_request_cache()
+        cache_key = None
+        if cache is not None:
+            org_id = None
+            if getattr(user, "user_type", None) == 'developer':
+                org_id = session.get('dev_selected_org_id')
+            else:
+                org_id = getattr(user, "organization_id", None)
+            cache_key = ("user_permissions", getattr(user, "id", None), org_id)
+            if cache_key in cache:
+                return cache[cache_key]
+
         # Developers without masquerade context only see developer permissions
         if user.user_type == 'developer':
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
-                return AuthorizationHierarchy.get_developer_role_permissions(user)
+                permissions = AuthorizationHierarchy.get_developer_role_permissions(user)
+                if cache is not None and cache_key is not None:
+                    cache[cache_key] = permissions
+                return permissions
 
         # Get organization
         organization = get_effective_organization()
 
         if not organization:
+            if cache is not None and cache_key is not None:
+                cache[cache_key] = []
             return []
 
         # Check subscription standing
         subscription_ok, _ = AuthorizationHierarchy.check_subscription_standing(organization)
         if not subscription_ok:
+            if cache is not None and cache_key is not None:
+                cache[cache_key] = []
             return []
 
         # Get tier-allowed permissions (may be empty if tier missing)
@@ -691,7 +776,10 @@ class AuthorizationHierarchy:
 
         # Organization owners get all tier-allowed + addon permissions.
         if getattr(user, 'is_organization_owner', False):
-            return list(set(tier_permissions + addon_permissions))
+            permissions = list(set(tier_permissions + addon_permissions))
+            if cache is not None and cache_key is not None:
+                cache[cache_key] = permissions
+            return permissions
 
         # Other users
         user_permissions = set()
@@ -709,7 +797,10 @@ class AuthorizationHierarchy:
         # for perm in addon_permissions:
         #     user_permissions.add(perm)
 
-        return list(user_permissions)
+        permissions = list(user_permissions)
+        if cache is not None and cache_key is not None:
+            cache[cache_key] = permissions
+        return permissions
 
     @staticmethod
     def get_developer_role_permissions(user):

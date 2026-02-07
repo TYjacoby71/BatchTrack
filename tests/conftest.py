@@ -1,5 +1,11 @@
-"""
-Pytest configuration and shared fixtures for BatchTrack tests.
+"""Pytest configuration and shared fixtures.
+
+Synopsis:
+Provides app, client, and database fixtures for BatchTrack tests.
+
+Glossary:
+- Fixture: Pytest helper for shared setup and teardown.
+- App context: Flask context used to access app resources.
 """
 import os
 import tempfile
@@ -30,7 +36,8 @@ def app():
         'STRIPE_SECRET_KEY': 'sk_test_fake',
         'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
         'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
-        'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+        'TESTING_DISABLE_AUTH': False,  # Disable any test-specific auth bypass
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
         # Don't disable login - we need to test permissions properly
     })
 
@@ -90,7 +97,27 @@ def _create_test_data():
     from app.models.subscription_tier import SubscriptionTier
     from app.models.models import Organization, User
     from app.models.product_category import ProductCategory
+    from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
+    from app.seeders.unit_seeder import seed_units
+    from app.models import Unit
     from app.extensions import db
+
+    seed_consolidated_permissions()
+    seed_units()
+
+    required_units = [
+        dict(name='piece', symbol='pc', unit_type='count', base_unit='count', conversion_factor=1.0),
+        dict(name='scoops', symbol='scoops', unit_type='count', base_unit='count', conversion_factor=1.0),
+        dict(name='kg', symbol='kg', unit_type='weight', base_unit='gram', conversion_factor=1000.0),
+        dict(name='gram', symbol='g', unit_type='weight', base_unit='gram', conversion_factor=1.0),
+        dict(name='oz', symbol='oz', unit_type='weight', base_unit='gram', conversion_factor=28.3495),
+        dict(name='ml', symbol='ml', unit_type='volume', base_unit='ml', conversion_factor=1.0),
+        dict(name='count', symbol='ct', unit_type='count', base_unit='count', conversion_factor=1.0),
+    ]
+    for unit in required_units:
+        if not Unit.query.filter_by(name=unit['name']).first():
+            db.session.add(Unit(**unit, is_custom=False, is_mapped=True))
+    db.session.commit()
 
     # Create a test subscription tier
     tier = SubscriptionTier(
@@ -101,6 +128,8 @@ def _create_test_data():
         billing_provider='exempt'
     )
     db.session.add(tier)
+    db.session.commit()
+    tier.permissions = Permission.query.filter_by(is_active=True).all()
     db.session.commit()
 
     # Ensure a default product category exists for tests
@@ -122,10 +151,15 @@ def _create_test_data():
         username='testuser',  # Added username for completeness
         password_hash='test_hash',
         is_verified=True,
-        organization_id=org.id  # This is correct - organization_id is a foreign key
+        organization_id=org.id,  # This is correct - organization_id is a foreign key
+        user_type='customer',
+        is_active=True
     )
     db.session.add(user)
     db.session.commit()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if org_owner_role:
+        user.assign_role(org_owner_role)
 
 
 def _ensure_sqlite_schema_columns():
@@ -217,10 +251,12 @@ def test_user(app):
         # Create a basic tier
         tier = SubscriptionTier(
             name='Basic',
-            user_limit=5
+            user_limit=5,
+            billing_provider='exempt'
         )
         db.session.add(tier)
         db.session.flush()
+        tier.permissions = Permission.query.filter_by(is_active=True).all()
 
         # Assign tier to organization
         org.subscription_tier_id = tier.id
@@ -234,6 +270,9 @@ def test_user(app):
         )
         db.session.add(user)
         db.session.commit()
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            user.assign_role(org_owner_role)
 
         yield user
 
@@ -258,6 +297,18 @@ def developer_user(app):
         db.session.add(user)
         db.session.commit()
 
-        yield user
+        from app.models.developer_role import DeveloperRole
+        from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
+
+        role = DeveloperRole.query.filter_by(name='system_admin').first()
+        if role is None:
+            seed_consolidated_permissions()
+            role = DeveloperRole.query.filter_by(name='system_admin').first()
+        if role:
+            user.assign_role(role)
+
+        from types import SimpleNamespace
+        user_id = user.id
+        yield SimpleNamespace(id=user_id)
 
         # Cleanup is handled by the app fixture dropping all tables

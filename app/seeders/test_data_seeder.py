@@ -1,3 +1,13 @@
+"""Test data seeder for demo scenarios.
+
+Synopsis:
+Seeds a rich dataset for end-to-end inventory and batch workflows.
+
+Glossary:
+- Seeder: Script that inserts baseline or demo data.
+- Living dataset: Realistic data used for manual QA.
+"""
+
 from datetime import timedelta, timezone as dt_timezone
 from typing import Dict, List, Optional
 
@@ -32,6 +42,8 @@ from ..services.inventory_adjustment import process_inventory_adjustment
 from ..services.unit_conversion import ConversionEngine
 
 
+# --- Seed test data ---
+# Purpose: Seed a living dataset for QA workflows.
 def seed_test_data(organization_id: Optional[int] = None):
     """Seed a rich "living" dataset for a milk & honey workflow using core services."""
 
@@ -93,7 +105,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     def reset_inventory_item(item: InventoryItem):
         UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
         InventoryLot.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
-        item.quantity = 0.0
+        from app.services.quantity_base import sync_item_quantity_from_base
+        item.quantity_base = 0
+        sync_item_quantity_from_base(item)
         db.session.flush()
 
     def remove_existing_batches(labels: List[str]):

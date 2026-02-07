@@ -6,6 +6,7 @@ from flask_login import login_user, logout_user
 from app.extensions import db
 from app.models.models import Organization, User
 from app.models.product_category import ProductCategory
+from app.models.recipe import Recipe
 from app.services.recipe_service._core import create_recipe
 
 
@@ -41,7 +42,7 @@ def test_create_recipe_sets_authored_origin(app):
     category_id = _get_category_id()
 
     with app.test_request_context():
-        login_user(user)
+        login_user(db.session.get(User, user.id))
         ok, recipe = create_recipe(
             name="Authored Origin",
             description="",
@@ -54,23 +55,28 @@ def test_create_recipe_sets_authored_origin(app):
             category_id=category_id,
             status="draft",
         )
+        recipe_id = recipe.id
         logout_user()
 
     assert ok, f"Recipe creation failed: {recipe}"
-    assert recipe.org_origin_recipe_id == recipe.id
-    assert recipe.org_origin_type == "authored"
-    assert recipe.org_origin_purchased is False
-    assert recipe.is_sellable is True
+    fresh_recipe = db.session.get(Recipe, recipe_id)
+    assert fresh_recipe.org_origin_recipe_id == fresh_recipe.id
+    assert fresh_recipe.org_origin_type == "authored"
+    assert fresh_recipe.org_origin_purchased is False
+    assert fresh_recipe.is_sellable is True
 
 
 @pytest.mark.usefixtures("app_context")
 def test_clone_from_other_org_marks_purchased_origin(app):
     seller_user, seller_org = _create_user("Seller Org")
+    seller_org_id = seller_org.id
     buyer_user, _ = _create_user("Buyer Org")
+    seller_user_id = db.session.merge(seller_user).id
+    buyer_user_id = db.session.merge(buyer_user).id
     category_id = _get_category_id()
 
     with app.test_request_context():
-        login_user(seller_user)
+        login_user(db.session.get(User, seller_user_id), force=True)
         ok, seller_recipe = create_recipe(
             name="Seller Recipe",
             description="",
@@ -83,11 +89,14 @@ def test_clone_from_other_org_marks_purchased_origin(app):
             category_id=category_id,
             status="draft",
         )
+        seller_recipe_id = seller_recipe.id
         logout_user()
     assert ok, f"Seller recipe creation failed: {seller_recipe}"
+    seller_recipe = db.session.get(Recipe, seller_recipe_id)
+    seller_root_recipe_id = seller_recipe.root_recipe_id or seller_recipe.id
 
     with app.test_request_context():
-        login_user(buyer_user)
+        login_user(db.session.get(User, buyer_user_id), force=True)
         ok, purchased_recipe = create_recipe(
             name="Purchased Copy",
             description="",
@@ -99,17 +108,19 @@ def test_clone_from_other_org_marks_purchased_origin(app):
             allowed_containers=[],
             category_id=category_id,
             status="draft",
-            cloned_from_id=seller_recipe.id,
+            cloned_from_id=seller_recipe_id,
         )
+        purchased_recipe_id = purchased_recipe.id
         logout_user()
 
     assert ok, f"Purchased recipe creation failed: {purchased_recipe}"
+    purchased_recipe = db.session.get(Recipe, purchased_recipe_id)
     assert purchased_recipe.org_origin_purchased is True
     assert purchased_recipe.org_origin_type == "purchased"
     assert purchased_recipe.org_origin_recipe_id == purchased_recipe.id
-    assert purchased_recipe.org_origin_source_org_id == seller_org.id
-    assert purchased_recipe.org_origin_source_recipe_id == seller_recipe.root_recipe_id or seller_recipe.id
-    assert purchased_recipe.root_recipe_id == seller_recipe.root_recipe_id
+    assert purchased_recipe.org_origin_source_org_id == seller_org_id
+    assert purchased_recipe.org_origin_source_recipe_id in {seller_root_recipe_id, seller_recipe_id}
+    assert purchased_recipe.root_recipe_id == seller_root_recipe_id
     assert purchased_recipe.is_sellable is False
 
 
@@ -119,7 +130,7 @@ def test_variation_inherits_org_origin(app):
     category_id = _get_category_id()
 
     with app.test_request_context():
-        login_user(user)
+        login_user(db.session.get(User, user.id))
         ok, parent_recipe = create_recipe(
             name="Parent Recipe",
             description="",
@@ -147,9 +158,13 @@ def test_variation_inherits_org_origin(app):
             status="draft",
             parent_recipe_id=parent_recipe.id,
         )
+        parent_recipe_id = parent_recipe.id
+        variation_id = variation.id
         logout_user()
 
     assert ok, f"Variation creation failed: {variation}"
+    parent_recipe = db.session.get(Recipe, parent_recipe_id)
+    variation = db.session.get(Recipe, variation_id)
     assert variation.org_origin_recipe_id == parent_recipe.org_origin_recipe_id
     assert variation.org_origin_type == parent_recipe.org_origin_type
     assert variation.org_origin_purchased == parent_recipe.org_origin_purchased

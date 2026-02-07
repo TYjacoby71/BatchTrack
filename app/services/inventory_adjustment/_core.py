@@ -1,8 +1,23 @@
+"""Inventory adjustment core delegator.
+
+Synopsis:
+Normalize inventory adjustments, delegate to handlers, and sync FIFO.
+
+Glossary:
+- Adjustment: Inventory change event (add, deduct, recount).
+- Delegator: Central entry point for inventory changes.
+"""
+
 import logging
 from typing import Any, Dict, Optional
 
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.services.unit_conversion import ConversionEngine
+from app.services.quantity_base import (
+    to_base_quantity,
+    from_base_quantity,
+    sync_item_quantity_from_base,
+)
 from ._validation import validate_inventory_fifo_sync
 from app.services.costing_engine import weighted_average_cost_for_item
 
@@ -18,6 +33,8 @@ ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
     ADDITIVE_OPERATIONS.update(group.get('operations', []))
 
+# --- Inventory adjustment ---
+# Purpose: Central entry point for inventory adjustments.
 def process_inventory_adjustment(
     item_id,
     change_type,
@@ -58,8 +75,22 @@ def process_inventory_adjustment(
     if not item:
         return _response(False, "Inventory item not found.")
 
-    # Store original quantity for logging
-    original_quantity = float(item.quantity)
+    if getattr(item, "quantity_base", None) is None:
+        item.quantity_base = to_base_quantity(
+            amount=item.quantity or 0.0,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        sync_item_quantity_from_base(item)
+
+    # Store original quantity for logging (derived from base)
+    original_quantity = from_base_quantity(
+        base_amount=getattr(item, "quantity_base", 0),
+        unit_name=item.unit,
+        ingredient_id=item.id,
+        density=item.density,
+    )
 
     # Check if this is the first entry for this item
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
@@ -135,12 +166,29 @@ def process_inventory_adjustment(
             except (TypeError, ValueError):
                 return _response(False, "Invalid cost provided.")
 
+        # Convert normalized quantities to base integers for authoritative math
+        normalized_quantity_base = to_base_quantity(
+            amount=normalized_quantity,
+            unit_name=item.unit or unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        target_quantity_base = None
+        if change_type == 'recount' and target_quantity is not None:
+            target_quantity_base = to_base_quantity(
+                amount=target_quantity,
+                unit_name=item.unit or unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+
         # CENTRAL DELEGATION - Route to appropriate operation module
         result = _delegate_to_operation_module(
             effective_change_type=effective_change_type,
             original_change_type=change_type,
             item=item,
             quantity=normalized_quantity,
+            quantity_base=normalized_quantity_base,
             notes=notes,
             created_by=created_by,
             cost_override=cost_override,
@@ -150,6 +198,7 @@ def process_inventory_adjustment(
             sale_price=sale_price,
             order_id=order_id,
             target_quantity=target_quantity,
+            target_quantity_base=target_quantity_base,
             unit=item.unit or unit,
             batch_id=batch_id
         )
@@ -158,8 +207,12 @@ def process_inventory_adjustment(
         if len(result) == 2:
             success, message = result
             quantity_delta = None
+            quantity_delta_base = None
         elif len(result) == 3:
             success, message, quantity_delta = result
+            quantity_delta_base = None
+        elif len(result) == 4:
+            success, message, quantity_delta, quantity_delta_base = result
         else:
             logger.error(f"Operation returned unexpected format: {result}")
             return _response(False, "Operation returned invalid response format")
@@ -170,20 +223,34 @@ def process_inventory_adjustment(
             return _response(False, message)
 
         # CENTRAL QUANTITY CONTROL - Only this core function modifies item.quantity
-        if quantity_delta is not None:
-            current_quantity = float(item.quantity)
-            new_quantity = current_quantity + quantity_delta
-            item.quantity = new_quantity
+        if quantity_delta_base is None and quantity_delta is not None:
+            quantity_delta_base = to_base_quantity(
+                amount=quantity_delta,
+                unit_name=item.unit or unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+
+        if quantity_delta_base is not None:
+            current_base = int(getattr(item, "quantity_base", 0) or 0)
+            new_base = current_base + int(quantity_delta_base)
+            item.quantity_base = new_base
+            sync_item_quantity_from_base(item)
 
             # Log the operation correctly for readability
-            if quantity_delta >= 0:
-                logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {current_quantity} + {quantity_delta} = {new_quantity}")
+            if quantity_delta is not None and quantity_delta >= 0:
+                logger.info(
+                    f"QUANTITY UPDATE: Item {item.id} quantity {original_quantity} + {quantity_delta} = {item.quantity}"
+                )
             else:
-                logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {current_quantity} - {abs(quantity_delta)} = {new_quantity}")
-        elif change_type == 'recount' and target_quantity is not None:
+                logger.info(
+                    f"QUANTITY UPDATE: Item {item.id} quantity {original_quantity} - {abs(quantity_delta or 0)} = {item.quantity}"
+                )
+        elif change_type == 'recount' and target_quantity_base is not None:
             # Special case for recount - set absolute quantity
             logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
-            item.quantity = float(target_quantity)
+            item.quantity_base = int(target_quantity_base)
+            sync_item_quantity_from_base(item)
 
         # Validate FIFO sync before commit. During a multi-step batch start (defer_commit=True),
         # skip validation until outer transaction commits to avoid transient mismatch.
@@ -225,9 +292,23 @@ def process_inventory_adjustment(
             # Do not fail the adjustment because of WAC recompute issues
             pass
 
+        if quantity_delta_base is not None:
+            event_quantity_delta = from_base_quantity(
+                base_amount=quantity_delta_base,
+                unit_name=item.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+        else:
+            event_quantity_delta = quantity_delta if quantity_delta is not None else None
+
+        recount_delta = None
+        if change_type == 'recount' and target_quantity is not None:
+            recount_delta = float(target_quantity) - float(original_quantity)
+
         event_properties = {
             'change_type': change_type,
-            'quantity_delta': quantity_delta if quantity_delta is not None else (target_quantity - original_quantity if change_type == 'recount' and target_quantity is not None else None),
+            'quantity_delta': event_quantity_delta if event_quantity_delta is not None else recount_delta,
             'unit': item.unit,
             'notes': notes,
             'cost_override': cost_override,
@@ -275,7 +356,7 @@ def process_inventory_adjustment(
         return _response(False, "A critical internal error occurred.")
 
 
-def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit, batch_id):
+def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, quantity_base, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, target_quantity_base, unit, batch_id):
     """
     DELEGATION LOGIC - Routes to appropriate operation module based on change type
     """
@@ -288,6 +369,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             return _universal_additive_handler(
                 item=item,
                 quantity=quantity,
+                quantity_base=quantity_base,
                 change_type=original_change_type,  # Preserve original intent
                 notes=notes,
                 created_by=created_by,
@@ -305,6 +387,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             return _handle_deductive_operation(
                 item=item,
                 quantity=quantity,
+                quantity_base=quantity_base,
                 change_type=original_change_type,
                 notes=notes,
                 created_by=created_by,
@@ -320,10 +403,12 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
         return handle_recount(
             item=item,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type=original_change_type,
             notes=notes,
             created_by=created_by,
             target_quantity=target_quantity,
+            target_quantity_base=target_quantity_base,
             unit=unit,
             batch_id=batch_id
         )
@@ -332,6 +417,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
         return handle_cost_override(
             item=item,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type=original_change_type,
             notes=notes,
             created_by=created_by,
@@ -344,6 +430,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
         return handle_unit_conversion(
             item=item,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type=original_change_type,
             notes=notes,
             created_by=created_by,
@@ -357,6 +444,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
         return _universal_additive_handler(
             item=item,
             quantity=quantity,
+            quantity_base=quantity_base,
             change_type='restock',  # Treat as restock for processing
             notes=notes or "Initial stock entry",
             created_by=created_by,
