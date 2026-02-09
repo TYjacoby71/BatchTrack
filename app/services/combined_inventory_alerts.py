@@ -1,7 +1,8 @@
 """Combined inventory alert service.
 
 Synopsis:
-Compute expiration and low-stock alerts for ingredients and products.
+Compute expiration, low-stock, and out-of-stock alerts for ingredients and product SKUs.
+Gate SKU alerts on inventory activity so never-stocked items do not trigger.
 
 Glossary:
 - Expiration alert: Warning for expired or expiring lots.
@@ -18,11 +19,14 @@ from flask_login import current_user
 # --- Combined inventory alerts ---
 # Purpose: Compute unified expiration and product alerts.
 class CombinedInventoryAlertService:
-    """Unified service for all inventory alerts - raw materials and products"""
+    """Unified service for all inventory alerts - raw materials and products.
+
+    Purpose: Provide SKU- and inventory-based alert queries plus summary payloads for dashboards and alert views.
+    """
 
     @staticmethod
     def get_expiration_alerts(days_ahead: int = 7) -> Dict:
-        """Get comprehensive expiration alerts for both FIFO and product inventory"""
+        """Purpose: Return expired and expiring inventory lots and product items within the alert window."""
         import logging
         try:
             from ..models import InventoryItem, UnifiedInventoryHistory
@@ -103,7 +107,7 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_low_stock_ingredients():
-        """Get all raw ingredients/containers that are below their low stock threshold"""
+        """Purpose: Return ingredient and container items that are below their configured thresholds."""
         from flask_login import current_user
         # Query InventoryItem for raw materials with low stock thresholds
         # Then check if total remaining quantity across all lots is below threshold
@@ -126,7 +130,7 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_low_stock_skus():
-        """Get all product SKUs that are below their low stock threshold"""
+        """Purpose: Return SKU low-stock alerts using SKU thresholds and activity gating."""
         from flask_login import current_user
         from ..models.inventory import InventoryHistory
         history_exists = db.session.query(InventoryHistory.id).filter(
@@ -156,7 +160,7 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_out_of_stock_skus():
-        """Get all product SKUs that are out of stock"""
+        """Purpose: Return SKU out-of-stock alerts once inventory activity exists."""
         from flask_login import current_user
         from ..models.inventory import InventoryHistory
         history_exists = db.session.query(InventoryHistory.id).filter(
@@ -185,7 +189,7 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_unified_stock_summary() -> Dict:
-        """Get comprehensive summary of all inventory stock issues"""
+        """Purpose: Aggregate ingredient and SKU alerts into dashboard-ready counts and groupings."""
         # Get raw material alerts
         low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
 
@@ -235,7 +239,7 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_product_stock_summary() -> Dict:
-        """Backward compatibility method for product-specific alerts"""
+        """Purpose: Provide backward-compatible product alert payloads from the unified summary."""
         unified_summary = CombinedInventoryAlertService.get_unified_stock_summary()
 
         # Return only product-related data for compatibility
