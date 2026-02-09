@@ -10,7 +10,7 @@ Glossary:
 
 from ..models import db, InventoryItem, ProductSKU
 from ..models.inventory_lot import InventoryLot
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from typing import List, Dict
 from datetime import timedelta
 from flask_login import current_user
@@ -126,19 +126,28 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_low_stock_skus():
-        """Get all product inventory items that are below their low stock threshold"""
+        """Get all product SKUs that are below their low stock threshold"""
         from flask_login import current_user
-        query = InventoryItem.query.filter(
+        from ..models.inventory import InventoryHistory
+        history_exists = db.session.query(InventoryHistory.id).filter(
+            InventoryHistory.inventory_item_id == InventoryItem.id
+        ).exists()
+        query = ProductSKU.query.join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             and_(
                 InventoryItem.type.in_(['product', 'product-reserved']),
-                InventoryItem.low_stock_threshold > 0,
-                InventoryItem.quantity <= InventoryItem.low_stock_threshold
+                ProductSKU.is_active == True,
+                ProductSKU.is_product_active == True,
+                ProductSKU.low_stock_threshold > 0,
+                InventoryItem.quantity <= ProductSKU.low_stock_threshold,
+                or_(InventoryItem.quantity != 0, history_exists)
             )
         )
         # Apply organization scoping
         if current_user and current_user.is_authenticated:
             if current_user.organization_id:
-                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
             # Developer users without organization_id see all data
         else:
             # If not authenticated, return empty result
@@ -147,18 +156,27 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_out_of_stock_skus():
-        """Get all product inventory items that are out of stock"""
+        """Get all product SKUs that are out of stock"""
         from flask_login import current_user
-        query = InventoryItem.query.filter(
+        from ..models.inventory import InventoryHistory
+        history_exists = db.session.query(InventoryHistory.id).filter(
+            InventoryHistory.inventory_item_id == InventoryItem.id
+        ).exists()
+        query = ProductSKU.query.join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             and_(
                 InventoryItem.type.in_(['product', 'product-reserved']),
-                InventoryItem.quantity == 0
+                ProductSKU.is_active == True,
+                ProductSKU.is_product_active == True,
+                InventoryItem.quantity == 0,
+                history_exists
             )
         )
         # Apply organization scoping
         if current_user and current_user.is_authenticated:
             if current_user.organization_id:
-                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
             # Developer users without organization_id see all data
         else:
             # If not authenticated, return empty result
@@ -171,7 +189,7 @@ class CombinedInventoryAlertService:
         # Get raw material alerts
         low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
 
-        # Get product alerts (these are now InventoryItem objects)
+        # Get product alerts (these are SKU-level objects)
         low_stock_product_items = CombinedInventoryAlertService.get_low_stock_skus()
         out_of_stock_product_items = CombinedInventoryAlertService.get_out_of_stock_skus()
 
@@ -180,13 +198,17 @@ class CombinedInventoryAlertService:
         out_of_stock_products = {}
 
         for item in low_stock_product_items:
-            product_name = item.name
+            product_name = item.product_name or (item.product.name if item.product else None)
+            if not product_name:
+                product_name = item.sku_name or item.sku
             if product_name not in low_stock_products:
                 low_stock_products[product_name] = []
             low_stock_products[product_name].append(item)
 
         for item in out_of_stock_product_items:
-            product_name = item.name
+            product_name = item.product_name or (item.product.name if item.product else None)
+            if not product_name:
+                product_name = item.sku_name or item.sku
             if product_name not in out_of_stock_products:
                 out_of_stock_products[product_name] = []
             out_of_stock_products[product_name].append(item)
@@ -196,7 +218,7 @@ class CombinedInventoryAlertService:
             'low_stock_ingredients': low_stock_ingredients,
             'low_stock_ingredients_count': len(low_stock_ingredients),
 
-            # Products (now InventoryItem objects)
+            # Products (SKU-level objects)
             'low_stock_skus': low_stock_product_items,
             'out_of_stock_skus': out_of_stock_product_items,
             'low_stock_products': low_stock_products,
