@@ -119,6 +119,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
+- **SKU Activity Gate** → Suppresses SKU low/out-of-stock alerts until inventory activity exists (see `app/services/combined_inventory_alerts.py`)
 - **CostingEngine** → Weighted unit cost helpers (see `app/services/costing_engine.py`)
 - **GlobalItemStatsService** → Global item adoption and cost rollups (see `app/services/statistics/global_item_stats.py`)
 - **QuantityBase** → Base quantity conversion helpers (see `app/services/quantity_base.py`)
@@ -162,6 +163,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Retention Drawer** → Acknowledge retention deletions (see `app/blueprints/api/drawers/drawer_actions/retention.py`)
 - **SKU Merge Flow** → Merge SKUs into a single inventory item (see `app/blueprints/products/sku.py`)
 - **Inventory Bulk Updates** → Bulk inventory adjustment UI (see `app/blueprints/inventory/routes.py`)
+- **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
+- **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
+- **Variant Sizes View** → Size-level inventory and SKU actions for a variant (see `app/templates/pages/products/view_variation.html`)
 
 ---
 

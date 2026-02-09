@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+{# Synopsis: Variant sizes and SKU inventory detail view. #}
+{# Purpose: Manage size-level inventory, SKU creation, and stock adjustments. #}
+{% set page_title = product.name ~ ' - ' ~ variation.name ~ ' Sizes | BatchTrack' %}
+{% set page_description = 'Manage sizes and SKU inventory for ' ~ product.name ~ ' ' ~ variation.name ~ '.' %}
+{% set canonical_url = url_for('product_variants.view_variant', product_id=product.id, variant_name=variation.name, _external=True) %}
 {% block content %}
 <div>
   <div class="row">
@@ -279,11 +284,6 @@
                   <option value="{{ unit['name'] }}">{{ unit['name'] }}</option>
                 {% endfor %}
               </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="low_stock_threshold">Low Stock Threshold (optional)</label>
-              <input type="number" min="0" step="0.01" class="form-control" id="low_stock_threshold" name="low_stock_threshold" placeholder="{{ product.low_stock_threshold or 0 }}">
-              <small class="text-muted">Defaults to the product threshold if left blank.</small>
             </div>
             <div class="alert alert-info">
               The SKU will be created with zero inventory. Use “Manage Stock” or finish a batch to add quantity.
