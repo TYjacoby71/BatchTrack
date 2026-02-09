@@ -18,8 +18,11 @@ class Logger {
             return true;
         }
 
-        // Check localStorage for persistent debugging
-        if (localStorage.getItem('batchtrack_debug') === 'true') {
+        // Check localStorage for persistent debugging (scoped per user/org)
+        const scopedKey = (window.BT_STORAGE && typeof window.BT_STORAGE.key === 'function')
+            ? window.BT_STORAGE.key('batchtrack_debug')
+            : 'batchtrack_debug';
+        if (localStorage.getItem(scopedKey) === 'true') {
             return true;
         }
 

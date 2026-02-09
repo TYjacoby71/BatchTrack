@@ -31,11 +31,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <script>
-      // Minimal theme bootstrap: scope localStorage per user when available.
+      // Minimal theme bootstrap: scope localStorage per user + org.
       (function() {
         try {
           var userId = {{ current_user.id if current_user.is_authenticated else 'null' }};
-          var storageKey = userId ? ('bt_theme:' + userId) : 'bt_theme';
+          var orgId = {{ get_effective_org_id() if current_user.is_authenticated else 'null' }};
+          var userKey = userId ? String(userId) : 'guest';
+          var orgKey = orgId ? String(orgId) : 'public';
+          var prefix = 'bt:' + userKey + ':' + orgKey + ':';
+          window.BT_STORAGE = {
+            userId: userId,
+            orgId: orgId,
+            prefix: prefix,
+            key: function(baseKey) { return prefix + baseKey; }
+          };
+
+          var storageKey = window.BT_STORAGE.key('theme');
           var hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
           var serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
           var theme = null;
@@ -103,7 +114,9 @@
         }
     </style>
 </head>
-<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
+      data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
+      data-org-id="{{ get_effective_org_id() if current_user.is_authenticated else '' }}">
     <script>
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>

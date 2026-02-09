@@ -6,7 +6,9 @@
       </div>
       <div class="card-body" x-data="(function(){
         const userId = {{ current_user.id if current_user.is_authenticated else 'null' }};
-        const storageKey = userId ? ('bt_theme:' + userId) : 'bt_theme';
+        const storageKey = (window.BT_STORAGE && typeof window.BT_STORAGE.key === 'function')
+          ? window.BT_STORAGE.key('theme')
+          : (userId ? ('bt_theme:' + userId) : 'bt_theme');
         const hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
         const serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
         const storedTheme = localStorage.getItem(storageKey);
