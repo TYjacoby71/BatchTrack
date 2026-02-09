@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+{# Synopsis: Product overview page with variant cards and inventory metrics. #}
+{# Purpose: Present product-level details, variant summaries, and edit actions. #}
+{% set page_title = product.name ~ ' - Product Overview | BatchTrack' %}
+{% set page_description = 'View variants, SKU sizes, and inventory totals for ' ~ product.name ~ '.' %}
+{% set canonical_url = url_for('products.view_product', product_id=product.id, _external=True) %}
 {% block content %}
 <div>
   <div class="row">

@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+{# Synopsis: Product dashboard showing catalog inventory and variants. #}
+{# Purpose: Render portfolio summary, filters, and card/table views for products. #}
+{% set page_title = 'Product Dashboard - BatchTrack' %}
+{% set page_description = 'Review products, variants, and stock status across your catalog.' %}
+{% set canonical_url = url_for('products.list_products', _external=True) %}
 {% block content %}
 <div>
   {% set variant_namespace = namespace(options=[]) %}

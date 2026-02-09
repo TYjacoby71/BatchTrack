@@ -154,6 +154,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Retention Drawer** → Acknowledge retention deletions (see `app/blueprints/api/drawers/drawer_actions/retention.py`)
 - **SKU Merge Flow** → Merge SKUs into a single inventory item (see `app/blueprints/products/sku.py`)
 - **Inventory Bulk Updates** → Bulk inventory adjustment UI (see `app/blueprints/inventory/routes.py`)
+- **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
+- **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
+- **Variant Sizes View** → Size-level inventory and SKU actions for a variant (see `app/templates/pages/products/view_variation.html`)
 
 ---
 

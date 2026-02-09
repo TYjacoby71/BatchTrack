@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+{# Synopsis: Variant sizes and SKU inventory detail view. #}
+{# Purpose: Manage size-level inventory, SKU creation, and stock adjustments. #}
+{% set page_title = product.name ~ ' - ' ~ variation.name ~ ' Sizes | BatchTrack' %}
+{% set page_description = 'Manage sizes and SKU inventory for ' ~ product.name ~ ' ' ~ variation.name ~ '.' %}
+{% set canonical_url = url_for('product_variants.view_variant', product_id=product.id, variant_name=variation.name, _external=True) %}
 {% block content %}
 <div>
   <div class="row">
