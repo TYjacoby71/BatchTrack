@@ -18,6 +18,27 @@ Billing is centralized in `BillingService` and is the authority for tier checkou
 3. Stripe redirects user; webhook or `/billing/complete-signup-from-stripe` calls `BillingService._provision_checkout_session`.
 4. `SignupService.complete_pending_signup_from_checkout` creates the org + owner, emits events, and logs the owner in.
 
+### 2.1 Lifetime launch mode (coupon + seat counters)
+- Signup now supports `billing_mode=lifetime` with three launch tiers:
+  - Hobbyist (`2000` seats, display floor `1997`)
+  - Enthusiast (`1000` seats, display floor `995`)
+  - Fanatic (`500` seats, display floor `492`)
+- Seat counters are promo-code based (`organization.promo_code`), with floor logic:
+  - Show the floor value while sold count is below `total - floor`.
+  - Show true remaining once sold count reaches the threshold.
+- Lifetime checkout can optionally force a yearly/one-time lookup key and auto-apply Stripe discounts.
+
+### 2.2 Lifetime Stripe configuration keys
+Set these env vars (all map-like values accept JSON or `key:value,key:value` CSV):
+- `LIFETIME_YEARLY_LOOKUP_KEYS`  
+  Map `hobbyist|enthusiast|fanatic` (or tier id/name/lookup key) to the Stripe yearly/one-time lookup key.
+- `LIFETIME_COUPON_CODES`  
+  Public coupon codes shown in UI and used for seat counting.
+- `LIFETIME_COUPON_IDS` *(optional)*  
+  Stripe coupon IDs to auto-apply at checkout (`discounts[coupon]`).
+- `LIFETIME_PROMOTION_CODE_IDS` *(optional)*  
+  Stripe promotion-code IDs to auto-apply (`discounts[promotion_code]`).
+
 ## 3. Webhooks & Callbacks
 - **Endpoint**: `POST /billing/webhooks/stripe`
 - `BillingService.handle_webhook_event('stripe', payload)` enforces idempotency via `stripe_event` table.

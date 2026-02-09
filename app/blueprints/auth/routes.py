@@ -20,6 +20,7 @@ from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.billing_service import BillingService
+from ...services.lifetime_pricing_service import LifetimePricingService
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 import re
@@ -601,23 +602,14 @@ def dev_login():
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
 
-@auth_bp.route('/signup-data')
-def signup_data():
-    """API endpoint to get available tiers for signup modal"""
-    # Get tiers filtered by database columns only - no hardcoded logic
-    from ...models.subscription_tier import SubscriptionTier
 
-    available_tiers_db = SubscriptionTier.query.filter_by(
-            is_customer_facing=True).filter(
-            SubscriptionTier.billing_provider != 'exempt').order_by(SubscriptionTier.user_limit).all()
-
-    # Build purely from DB for display
+def _build_available_tiers_payload(db_tiers):
+    """Build concise tier payloads for signup pages and API consumers."""
     available_tiers = {}
-    for tier_obj in available_tiers_db:
-        # Features from permissions
-        features = [p.name for p in getattr(tier_obj, 'permissions', [])]
+    for tier_obj in db_tiers:
+        raw_features = [p.name for p in getattr(tier_obj, 'permissions', [])]
+        feature_highlights, feature_total = LifetimePricingService.summarize_features(raw_features, limit=9)
 
-        # Get live pricing from Stripe if available, otherwise use fallback
         live_pricing = None
         if tier_obj.stripe_lookup_key:
             try:
@@ -625,22 +617,33 @@ def signup_data():
             except Exception:
                 live_pricing = None
 
-        # Use live pricing if available, otherwise show as contact sales
-        if live_pricing:
-            price_display = live_pricing['formatted_price']
-        else:
-            price_display = 'Contact Sales'
-
+        price_display = live_pricing['formatted_price'] if live_pricing else 'Contact Sales'
         available_tiers[str(tier_obj.id)] = {
             'name': tier_obj.name,
             'price_display': price_display,
-            'features': features,
+            'features': feature_highlights,
+            'feature_total': feature_total,
+            'all_features': raw_features,
             'user_limit': tier_obj.user_limit,
-            'whop_product_id': tier_obj.whop_product_key or ''
+            'whop_product_id': tier_obj.whop_product_key or '',
         }
+
+    return available_tiers
+
+@auth_bp.route('/signup-data')
+def signup_data():
+    """API endpoint to get available tiers for signup modal"""
+    available_tiers_db = SubscriptionTier.query.filter_by(
+        is_customer_facing=True
+    ).filter(
+        SubscriptionTier.billing_provider != 'exempt'
+    ).order_by(SubscriptionTier.user_limit).all()
+    available_tiers = _build_available_tiers_payload(available_tiers_db)
+    lifetime_offers = LifetimePricingService.build_lifetime_offers(available_tiers_db)
 
     return jsonify({
         'available_tiers': available_tiers,
+        'lifetime_offers': lifetime_offers,
         'oauth_available': OAuthService.is_oauth_configured()
     })
 
@@ -664,113 +667,191 @@ def debug_oauth_config():
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit("600/minute")
 def signup():
-    """Simplified signup flow - tier selection only, then redirect to payment"""
+    """Signup flow with standard and lifetime plan modes."""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get available tiers from database only
-    from ...models.subscription_tier import SubscriptionTier
     db_tiers = SubscriptionTier.query.filter_by(
         is_customer_facing=True
     ).filter(
         SubscriptionTier.billing_provider != 'exempt'
-    ).all()
+    ).order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc()).all()
+    available_tiers = _build_available_tiers_payload(db_tiers)
+    lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
+    lifetime_by_key = LifetimePricingService.map_by_key(lifetime_offers)
+    lifetime_by_tier_id = LifetimePricingService.map_by_tier_id(lifetime_offers)
 
-    # Build available tiers using DB only
-    available_tiers = {}
-    for tier_obj in db_tiers:
-        features = [p.name for p in getattr(tier_obj, 'permissions', [])]
-
-        # Get live pricing from Stripe if available, otherwise use fallback
-        live_pricing = None
-        if tier_obj.stripe_lookup_key:
-            try:
-                live_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
-            except Exception:
-                live_pricing = None
-
-        # Use live pricing if available, otherwise show as contact sales
-        price_display = live_pricing['formatted_price'] if live_pricing else 'Contact Sales'
-
-        available_tiers[str(tier_obj.id)] = {
-            'name': tier_obj.name,
-            'price_display': price_display,
-            'features': features,
-            'user_limit': tier_obj.user_limit,
-            'whop_product_id': tier_obj.whop_product_key or ''
-        }
-
-    # Get signup tracking parameters
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
     referral_code = request.args.get('ref', request.form.get('ref'))
     promo_code = request.args.get('promo', request.form.get('promo'))
     preselected_tier = request.args.get('tier')
+    selected_lifetime_tier = request.args.get('lifetime_tier', request.form.get('lifetime_tier', ''))
+    requested_billing_mode = request.args.get('billing_mode', request.form.get('billing_mode', ''))
 
-    # Check for OAuth user info from session
     oauth_user_info = session.get('oauth_user_info')
     prefill_email = request.form.get('contact_email') or (oauth_user_info.get('email') if oauth_user_info else '')
     prefill_phone = request.form.get('contact_phone') or ''
+
+    has_lifetime_capacity = LifetimePricingService.any_seats_remaining(lifetime_offers)
+    default_billing_mode = 'lifetime' if has_lifetime_capacity else 'standard'
+    billing_mode = requested_billing_mode if requested_billing_mode in {'standard', 'lifetime'} else default_billing_mode
+
+    if selected_lifetime_tier not in lifetime_by_key:
+        selected_lifetime_tier = ''
+
+    if selected_lifetime_tier:
+        selected_offer = lifetime_by_key[selected_lifetime_tier]
+        if selected_offer.get('tier_id'):
+            preselected_tier = selected_offer['tier_id']
+        if not promo_code and selected_offer.get('coupon_code'):
+            promo_code = selected_offer['coupon_code']
+    elif billing_mode == 'lifetime':
+        first_open_offer = next(
+            (offer for offer in lifetime_offers if offer.get('tier_id') and offer.get('has_remaining')),
+            None,
+        )
+        if first_open_offer:
+            selected_lifetime_tier = first_open_offer['key']
+            if not preselected_tier:
+                preselected_tier = first_open_offer['tier_id']
+            if not promo_code and first_open_offer.get('coupon_code'):
+                promo_code = first_open_offer['coupon_code']
+
+    if not preselected_tier and db_tiers:
+        preselected_tier = str(db_tiers[0].id)
+
+    def _render_signup(
+        *,
+        selected_tier: str | None,
+        selected_mode: str,
+        selected_lifetime_key: str,
+        contact_email: str,
+        contact_phone: str,
+        promo: str | None,
+    ):
+        default_tier_id = selected_tier or (str(db_tiers[0].id) if db_tiers else '')
+        return render_template(
+            'pages/auth/signup.html',
+            signup_source=signup_source,
+            referral_code=referral_code,
+            promo_code=promo,
+            available_tiers=available_tiers,
+            lifetime_offers=lifetime_offers,
+            has_lifetime_capacity=has_lifetime_capacity,
+            billing_mode=selected_mode,
+            selected_lifetime_tier=selected_lifetime_key,
+            oauth_user_info=oauth_user_info,
+            oauth_available=OAuthService.is_oauth_configured(),
+            preselected_tier=selected_tier,
+            default_tier_id=default_tier_id,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
+        )
 
     if request.method == 'POST':
         selected_tier = request.form.get('selected_tier')
         oauth_signup = request.form.get('oauth_signup') == 'true'
         contact_email = (request.form.get('contact_email') or '').strip()
         contact_phone = (request.form.get('contact_phone') or '').strip()
+        selected_mode = request.form.get('billing_mode', 'standard')
+        selected_mode = selected_mode if selected_mode in {'standard', 'lifetime'} else 'standard'
+        selected_lifetime_key = request.form.get('lifetime_tier', selected_lifetime_tier)
+        selected_lifetime_key = selected_lifetime_key if selected_lifetime_key in lifetime_by_key else ''
+        effective_promo_code = promo_code
+        price_lookup_key_override = None
+        stripe_coupon_id = None
+        stripe_promotion_code_id = None
 
         if not selected_tier:
             flash('Please select a subscription plan', 'error')
-            return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         contact_email=contact_email,
-                         contact_phone=contact_phone)
+            return _render_signup(
+                selected_tier=preselected_tier,
+                selected_mode=selected_mode,
+                selected_lifetime_key=selected_lifetime_key,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                promo=effective_promo_code,
+            )
 
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
-            return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         contact_email=contact_email,
-                         contact_phone=contact_phone)
+            return _render_signup(
+                selected_tier=preselected_tier,
+                selected_mode=selected_mode,
+                selected_lifetime_key=selected_lifetime_key,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                promo=effective_promo_code,
+            )
 
-        # Create Stripe checkout session
-        from ...models import SubscriptionTier
-        from ...services.signup_service import SignupService
         try:
             tier_id = int(selected_tier)
             tier_obj = db.session.get(SubscriptionTier, tier_id)
         except (ValueError, TypeError):
             tier_obj = None
+
+        if selected_mode == 'lifetime':
+            lifetime_offer = (
+                lifetime_by_key.get(selected_lifetime_key)
+                or lifetime_by_tier_id.get(str(selected_tier))
+            )
+            if not lifetime_offer:
+                flash('Please choose a valid lifetime tier option.', 'error')
+                return _render_signup(
+                    selected_tier=selected_tier,
+                    selected_mode=selected_mode,
+                    selected_lifetime_key='',
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
+            if not lifetime_offer.get('has_remaining'):
+                flash('That lifetime tier is sold out. Please pick another option.', 'error')
+                return _render_signup(
+                    selected_tier=lifetime_offer.get('tier_id') or selected_tier,
+                    selected_mode=selected_mode,
+                    selected_lifetime_key=lifetime_offer.get('key', ''),
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
+            selected_lifetime_key = lifetime_offer.get('key', '')
+            mapped_tier_id = lifetime_offer.get('tier_id')
+            if mapped_tier_id and mapped_tier_id != selected_tier:
+                selected_tier = mapped_tier_id
+                try:
+                    tier_obj = db.session.get(SubscriptionTier, int(selected_tier))
+                except (ValueError, TypeError):
+                    tier_obj = None
+            effective_promo_code = lifetime_offer.get('coupon_code') or effective_promo_code
+            price_lookup_key_override = lifetime_offer.get('yearly_lookup_key') or None
+            stripe_coupon_id = lifetime_offer.get('stripe_coupon_id') or None
+            stripe_promotion_code_id = lifetime_offer.get('stripe_promotion_code_id') or None
+
         if not tier_obj:
             flash('Invalid subscription plan', 'error')
-            return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info)
+            return _render_signup(
+                selected_tier=selected_tier,
+                selected_mode=selected_mode,
+                selected_lifetime_key=selected_lifetime_key,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                promo=effective_promo_code,
+            )
 
-        # Complete metadata for Stripe checkout - include all signup data
         metadata = {
             'tier_id': str(tier_obj.id),
             'tier_name': tier_obj.name,
             'signup_source': signup_source,
-            'oauth_signup': str(oauth_signup)
+            'oauth_signup': str(oauth_signup),
+            'billing_mode': selected_mode,
         }
-        
-        # Add detected timezone from browser
+
         detected_timezone = request.form.get('detected_timezone')
         if detected_timezone:
             metadata['detected_timezone'] = detected_timezone
             logger.info(f"Auto-detected timezone: {detected_timezone}")
 
-        # Add OAuth information if present
         if oauth_user_info:
             metadata['oauth_email'] = oauth_user_info.get('email', '')
             metadata['oauth_provider'] = oauth_user_info.get('oauth_provider', '')
@@ -778,15 +859,19 @@ def signup():
             metadata['first_name'] = oauth_user_info.get('first_name', '')
             metadata['last_name'] = oauth_user_info.get('last_name', '')
             metadata['username'] = oauth_user_info.get('email', '').split('@')[0]
-            metadata['email_verified'] = 'true'  # OAuth emails are pre-verified
+            metadata['email_verified'] = 'true'
 
-        # Add referral/promo codes
+        if selected_mode == 'lifetime':
+            metadata['lifetime_tier_key'] = selected_lifetime_key
+            if effective_promo_code:
+                metadata['lifetime_coupon_code'] = effective_promo_code
+            if price_lookup_key_override:
+                metadata['lifetime_lookup_key'] = price_lookup_key_override
+
         if referral_code:
             metadata['referral_code'] = referral_code
-        if promo_code:
-            metadata['promo_code'] = promo_code
-
-        detected_timezone = request.form.get('detected_timezone')
+        if effective_promo_code:
+            metadata['promo_code'] = effective_promo_code
 
         try:
             pending_signup = SignupService.create_pending_signup_record(
@@ -795,36 +880,54 @@ def signup():
                 phone=contact_phone or None,
                 signup_source=signup_source,
                 referral_code=referral_code,
-                promo_code=promo_code,
+                promo_code=effective_promo_code,
                 detected_timezone=detected_timezone,
                 oauth_user_info=oauth_user_info,
-                extra_metadata={'preselected_tier': selected_tier, **metadata}
+                extra_metadata={
+                    'preselected_tier': selected_tier,
+                    'billing_mode': selected_mode,
+                    'lifetime_tier': selected_lifetime_key,
+                    **metadata,
+                }
             )
         except Exception as exc:
             logger.error("Failed to create pending signup: %s", exc)
             flash('Unable to start checkout right now. Please try again later.', 'error')
-            return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         contact_email=contact_email,
-                         contact_phone=contact_phone)
+            return _render_signup(
+                selected_tier=selected_tier,
+                selected_mode=selected_mode,
+                selected_lifetime_key=selected_lifetime_key,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                promo=effective_promo_code,
+            )
 
         metadata['pending_signup_id'] = str(pending_signup.id)
 
         success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
-        cancel_url = url_for('auth.signup', _external=True)
-
-        stripe_session = BillingService.create_checkout_session_for_tier(
-            tier_obj,
-            customer_email=contact_email or None,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata=metadata,
-            client_reference_id=str(pending_signup.id),
+        cancel_url = url_for(
+            'auth.signup',
+            _external=True,
+            billing_mode=selected_mode,
+            lifetime_tier=selected_lifetime_key if selected_mode == 'lifetime' else None,
+            promo=effective_promo_code if selected_mode == 'lifetime' else None,
         )
+
+        checkout_kwargs = {
+            'customer_email': contact_email or None,
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'metadata': metadata,
+            'client_reference_id': str(pending_signup.id),
+        }
+        if price_lookup_key_override:
+            checkout_kwargs['price_lookup_key_override'] = price_lookup_key_override
+        if stripe_coupon_id:
+            checkout_kwargs['stripe_coupon_id'] = stripe_coupon_id
+        if stripe_promotion_code_id:
+            checkout_kwargs['stripe_promotion_code_id'] = stripe_promotion_code_id
+
+        stripe_session = BillingService.create_checkout_session_for_tier(tier_obj, **checkout_kwargs)
 
         if stripe_session:
             pending_signup.stripe_checkout_session_id = stripe_session.id
@@ -835,21 +938,23 @@ def signup():
             pending_signup.mark_status('failed', error='session_creation_failed')
             db.session.commit()
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
+            return _render_signup(
+                selected_tier=selected_tier,
+                selected_mode=selected_mode,
+                selected_lifetime_key=selected_lifetime_key,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                promo=effective_promo_code,
+            )
 
-    # Choose a default tier id for UI selection (first available)
-    default_tier_id = str(db_tiers[0].id) if db_tiers else ''
-
-    return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         oauth_available=OAuthService.is_oauth_configured(),
-                         preselected_tier=preselected_tier,
-                         default_tier_id=default_tier_id,
-                         contact_email=prefill_email,
-                         contact_phone=prefill_phone)
+    return _render_signup(
+        selected_tier=preselected_tier,
+        selected_mode=billing_mode,
+        selected_lifetime_key=selected_lifetime_tier,
+        contact_email=prefill_email,
+        contact_phone=prefill_phone,
+        promo=promo_code,
+    )
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])

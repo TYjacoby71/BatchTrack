@@ -650,11 +650,10 @@ class BillingService:
             logger.error(f"Error handling payment failed: {exc}")
             db.session.rollback()
 
-    # Purpose: Fetch Stripe pricing for a tier.
+    # Purpose: Fetch Stripe pricing for an arbitrary lookup key.
     @staticmethod
-    def get_live_pricing_for_tier(tier_obj):
-        """Get live pricing from Stripe for a subscription tier"""
-        lookup_key = getattr(tier_obj, 'stripe_lookup_key', None)
+    def get_live_pricing_for_lookup_key(lookup_key: str | None):
+        """Get live pricing from Stripe for any lookup key or price ID."""
         if not lookup_key:
             return None
 
@@ -665,7 +664,6 @@ class BillingService:
 
         lock = BillingService._get_pricing_lock(lookup_key)
         with lock:
-            # Another thread may have populated while we were waiting
             cached = app_cache.get(cache_key)
             if cached:
                 return cached
@@ -673,10 +671,8 @@ class BillingService:
             if not BillingService.ensure_stripe():
                 return None
 
-            price_obj = None
             try:
                 price_obj, resolution_strategy = BillingService._resolve_price_for_lookup_key(lookup_key)
-
                 if not price_obj:
                     logger.warning(
                         "No active Stripe price found for lookup key %s; ensure the price exists and is active",
@@ -687,7 +683,6 @@ class BillingService:
 
                 amount = price_obj.unit_amount / 100
                 currency = price_obj.currency.upper()
-
                 billing_cycle = 'one-time'
                 if price_obj.recurring:
                     billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
@@ -707,15 +702,21 @@ class BillingService:
                     'currency': currency,
                     'billing_cycle': billing_cycle,
                     'lookup_key': lookup_key,
-                    'last_synced': datetime.now(timezone.utc).isoformat()
+                    'last_synced': datetime.now(timezone.utc).isoformat(),
                 }
                 app_cache.set(cache_key, data, ttl=BillingService._pricing_cache_ttl_seconds)
                 return data
-
             except StripeError as e:
                 logger.error(f"Stripe error fetching price for {lookup_key}: {e}")
                 app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
                 return None
+
+    # Purpose: Fetch Stripe pricing for a tier.
+    @staticmethod
+    def get_live_pricing_for_tier(tier_obj):
+        """Get live pricing from Stripe for a subscription tier."""
+        lookup_key = getattr(tier_obj, 'stripe_lookup_key', None)
+        return BillingService.get_live_pricing_for_lookup_key(lookup_key)
 
     # Purpose: Resolve Stripe price for lookup key.
     @staticmethod
@@ -772,20 +773,30 @@ class BillingService:
         phone_required: bool = True,
         allow_promo: bool = True,
         existing_customer_id: str | None = None,
+        price_lookup_key_override: str | None = None,
+        stripe_coupon_id: str | None = None,
+        stripe_promotion_code_id: str | None = None,
     ):
-        """Create checkout session using tier's lookup key with minimal required inputs."""
+        """Create checkout session using tier pricing or an explicit lookup key."""
         if not BillingService.ensure_stripe():
             return None
 
-        # Get live pricing first
-        pricing = BillingService.get_live_pricing_for_tier(tier_obj)
+        lookup_key = (price_lookup_key_override or getattr(tier_obj, 'stripe_lookup_key', None) or '').strip()
+        pricing = BillingService.get_live_pricing_for_lookup_key(lookup_key)
+        if not pricing and price_lookup_key_override:
+            # Safety fallback: if override is misconfigured, use tier's canonical lookup key.
+            fallback_lookup_key = getattr(tier_obj, 'stripe_lookup_key', None)
+            pricing = BillingService.get_live_pricing_for_lookup_key(fallback_lookup_key)
+            lookup_key = (fallback_lookup_key or '').strip()
+
         if not pricing:
             logger.error(f"No pricing found for tier {tier_obj.name} (ID: {tier_obj.id})")
             return None
 
         try:
+            checkout_mode = 'payment' if pricing.get('billing_cycle') == 'one-time' else 'subscription'
             session_params = {
-                'mode': 'subscription',
+                'mode': checkout_mode,
                 'payment_method_types': ['card'],
                 'line_items': [{
                     'price': pricing['price_id'],
@@ -800,7 +811,8 @@ class BillingService:
                 'metadata': {
                     'tier_id': str(tier_obj.id),
                     'tier_name': tier_obj.name,
-                    'lookup_key': tier_obj.stripe_lookup_key,
+                    'lookup_key': lookup_key,
+                    'billing_cycle': pricing.get('billing_cycle', ''),
                     **(metadata or {})
                 },
                 'custom_fields': [
@@ -824,6 +836,11 @@ class BillingService:
                     },
                 ],
             }
+
+            if stripe_promotion_code_id:
+                session_params['discounts'] = [{'promotion_code': stripe_promotion_code_id}]
+            elif stripe_coupon_id:
+                session_params['discounts'] = [{'coupon': stripe_coupon_id}]
 
             if session_params.get('mode') == 'payment':
                 session_params['customer_creation'] = 'always'

@@ -32,6 +32,32 @@ FIELDS = [
         "secret": True,
     },
     {
+        "key": "LIFETIME_YEARLY_LOOKUP_KEYS",
+        "cast": "str",
+        "default": "",
+        "description": "Lifetime yearly lookup-key map (JSON or key:value CSV).",
+        "note": "Example: hobbyist:batchtrack_solo_yearly,enthusiast:batchtrack_team_yearly,fanatic:batchtrack_enterprise_yearly",
+    },
+    {
+        "key": "LIFETIME_COUPON_CODES",
+        "cast": "str",
+        "default": "",
+        "description": "Lifetime coupon code map for seat counters (JSON or key:value CSV).",
+        "note": "Example: hobbyist:LIFETIME-HOBBYIST,enthusiast:LIFETIME-ENTHUSIAST,fanatic:LIFETIME-FANATIC",
+    },
+    {
+        "key": "LIFETIME_COUPON_IDS",
+        "cast": "str",
+        "default": "",
+        "description": "Optional Stripe coupon-id map to auto-apply discounts (JSON or key:value CSV).",
+    },
+    {
+        "key": "LIFETIME_PROMOTION_CODE_IDS",
+        "cast": "str",
+        "default": "",
+        "description": "Optional Stripe promotion-code-id map to auto-apply discounts (JSON or key:value CSV).",
+    },
+    {
         "key": "BILLING_CACHE_ENABLED",
         "cast": "bool",
         "default": True,

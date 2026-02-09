@@ -137,6 +137,29 @@
             margin: -1px !important;
             padding: 0 !important;
         }
+
+        .lifetime-launch-shell {
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(160deg, rgba(11, 16, 44, 0.88), rgba(39, 20, 64, 0.84));
+            box-shadow: 0 12px 30px rgba(9, 14, 41, 0.35);
+        }
+
+        .lifetime-launch-card {
+            border: 1px solid rgba(111, 124, 255, 0.2);
+            background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
+            box-shadow: 0 10px 20px rgba(25, 38, 88, 0.12);
+        }
+
+        .lifetime-launch-card.is-sold-out {
+            opacity: 0.75;
+        }
+
+        .lifetime-seat-copy {
+            font-size: 0.95rem;
+            color: #16203d;
+        }
     </style>
 </head>
 <body>
@@ -201,6 +224,8 @@
                 <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg px-4">Start Free Trial</a>
                 <a href="{{ marketing_settings.demo_url or '#demo' }}" class="btn btn-outline-primary btn-lg px-4" target="_blank">Watch Demo</a>
             </div>
+
+            {% include 'components/billing/lifetime_hero_tiles.html' %}
         </div>
     </section>
 

@@ -1,0 +1,57 @@
+{% if marketing_lifetime_offers %}
+<section class="lifetime-launch-shell mt-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3 text-start">
+        <div>
+            <h2 class="h3 fw-bold mb-1 text-white">Lifetime Launch Access</h2>
+            <p class="mb-0 text-white-50">Pay once (about 1 year pricing), keep your tier forever.</p>
+        </div>
+        <span class="badge rounded-pill bg-light text-dark px-3 py-2">Limited launch seats</span>
+    </div>
+
+    <div class="row g-3">
+        {% for offer in marketing_lifetime_offers %}
+        {% set can_start_checkout = offer.has_remaining and offer.tier_id %}
+        <div class="col-12 col-lg-4">
+            <article class="card lifetime-launch-card h-100 {% if not can_start_checkout %}is-sold-out{% endif %}">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-light text-dark text-uppercase border">{{ offer.name }}</span>
+                        {% if not can_start_checkout %}
+                        <span class="badge bg-danger">Sold out</span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="h5 fw-semibold mb-1">{{ offer.tagline }}</h3>
+                    <p class="text-muted small mb-3">{{ offer.future_scope }}</p>
+
+                    <div class="lifetime-seat-copy mb-2">
+                        Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
+                    </div>
+                    <div class="text-muted small mb-3">
+                        Coupon code: <code>{{ offer.coupon_code }}</code>
+                    </div>
+
+                    <div class="mt-auto">
+                        <div class="fw-bold text-primary mb-2">
+                            {{ offer.lifetime_price_copy }}
+                        </div>
+                        {% if can_start_checkout %}
+                        <a
+                            href="{{ url_for('auth.signup', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, promo=offer.coupon_code, source='homepage_lifetime_' ~ offer.key) }}"
+                            class="btn btn-primary w-100"
+                        >
+                            Claim {{ offer.name }} Lifetime
+                        </a>
+                        {% else %}
+                        <button type="button" class="btn btn-outline-secondary w-100" disabled>
+                            Waitlist only
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
