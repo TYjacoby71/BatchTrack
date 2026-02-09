@@ -610,17 +610,30 @@ def _build_available_tiers_payload(db_tiers):
         raw_features = [p.name for p in getattr(tier_obj, 'permissions', [])]
         feature_highlights, feature_total = LifetimePricingService.summarize_features(raw_features, limit=9)
 
-        live_pricing = None
+        monthly_pricing = None
         if tier_obj.stripe_lookup_key:
             try:
-                live_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
+                monthly_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
             except Exception:
-                live_pricing = None
+                monthly_pricing = None
 
-        price_display = live_pricing['formatted_price'] if live_pricing else 'Contact Sales'
+        yearly_lookup_key = LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+        yearly_pricing = None
+        if yearly_lookup_key:
+            try:
+                yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
+            except Exception:
+                yearly_pricing = None
+        if yearly_pricing and yearly_pricing.get('billing_cycle') != 'yearly':
+            yearly_pricing = None
+
+        price_display = monthly_pricing['formatted_price'] if monthly_pricing else 'Contact Sales'
         available_tiers[str(tier_obj.id)] = {
             'name': tier_obj.name,
             'price_display': price_display,
+            'monthly_price_display': price_display,
+            'yearly_price_display': yearly_pricing['formatted_price'] if yearly_pricing else None,
+            'yearly_lookup_key': yearly_lookup_key,
             'features': feature_highlights,
             'feature_total': feature_total,
             'all_features': raw_features,
@@ -687,6 +700,7 @@ def signup():
     preselected_tier = request.args.get('tier')
     selected_lifetime_tier = request.args.get('lifetime_tier', request.form.get('lifetime_tier', ''))
     requested_billing_mode = request.args.get('billing_mode', request.form.get('billing_mode', ''))
+    requested_billing_cycle = request.args.get('billing_cycle', request.form.get('billing_cycle', ''))
 
     oauth_user_info = session.get('oauth_user_info')
     prefill_email = request.form.get('contact_email') or (oauth_user_info.get('email') if oauth_user_info else '')
@@ -695,6 +709,15 @@ def signup():
     has_lifetime_capacity = LifetimePricingService.any_seats_remaining(lifetime_offers)
     default_billing_mode = 'lifetime' if has_lifetime_capacity else 'standard'
     billing_mode = requested_billing_mode if requested_billing_mode in {'standard', 'lifetime'} else default_billing_mode
+    default_standard_billing_cycle = 'monthly' if has_lifetime_capacity else 'yearly'
+    standard_billing_cycle = (
+        requested_billing_cycle if requested_billing_cycle in {'monthly', 'yearly'} else default_standard_billing_cycle
+    )
+
+    # Once lifetime seats are exhausted, force standard mode.
+    if not has_lifetime_capacity:
+        billing_mode = 'standard'
+        selected_lifetime_tier = ''
 
     if selected_lifetime_tier not in lifetime_by_key:
         selected_lifetime_tier = ''
@@ -725,6 +748,7 @@ def signup():
         selected_tier: str | None,
         selected_mode: str,
         selected_lifetime_key: str,
+        selected_standard_cycle: str,
         contact_email: str,
         contact_phone: str,
         promo: str | None,
@@ -740,6 +764,7 @@ def signup():
             has_lifetime_capacity=has_lifetime_capacity,
             billing_mode=selected_mode,
             selected_lifetime_tier=selected_lifetime_key,
+            standard_billing_cycle=selected_standard_cycle,
             oauth_user_info=oauth_user_info,
             oauth_available=OAuthService.is_oauth_configured(),
             preselected_tier=selected_tier,
@@ -755,6 +780,10 @@ def signup():
         contact_phone = (request.form.get('contact_phone') or '').strip()
         selected_mode = request.form.get('billing_mode', 'standard')
         selected_mode = selected_mode if selected_mode in {'standard', 'lifetime'} else 'standard'
+        selected_standard_cycle = request.form.get('billing_cycle', standard_billing_cycle)
+        selected_standard_cycle = (
+            selected_standard_cycle if selected_standard_cycle in {'monthly', 'yearly'} else standard_billing_cycle
+        )
         selected_lifetime_key = request.form.get('lifetime_tier', selected_lifetime_tier)
         selected_lifetime_key = selected_lifetime_key if selected_lifetime_key in lifetime_by_key else ''
         effective_promo_code = promo_code
@@ -762,12 +791,18 @@ def signup():
         stripe_coupon_id = None
         stripe_promotion_code_id = None
 
+        if not has_lifetime_capacity and selected_mode == 'lifetime':
+            selected_mode = 'standard'
+            selected_lifetime_key = ''
+            selected_standard_cycle = 'yearly'
+
         if not selected_tier:
             flash('Please select a subscription plan', 'error')
             return _render_signup(
                 selected_tier=preselected_tier,
                 selected_mode=selected_mode,
                 selected_lifetime_key=selected_lifetime_key,
+                selected_standard_cycle=selected_standard_cycle,
                 contact_email=contact_email,
                 contact_phone=contact_phone,
                 promo=effective_promo_code,
@@ -779,6 +814,7 @@ def signup():
                 selected_tier=preselected_tier,
                 selected_mode=selected_mode,
                 selected_lifetime_key=selected_lifetime_key,
+                selected_standard_cycle=selected_standard_cycle,
                 contact_email=contact_email,
                 contact_phone=contact_phone,
                 promo=effective_promo_code,
@@ -801,6 +837,7 @@ def signup():
                     selected_tier=selected_tier,
                     selected_mode=selected_mode,
                     selected_lifetime_key='',
+                    selected_standard_cycle=selected_standard_cycle,
                     contact_email=contact_email,
                     contact_phone=contact_phone,
                     promo=effective_promo_code,
@@ -811,6 +848,7 @@ def signup():
                     selected_tier=lifetime_offer.get('tier_id') or selected_tier,
                     selected_mode=selected_mode,
                     selected_lifetime_key=lifetime_offer.get('key', ''),
+                    selected_standard_cycle='yearly',
                     contact_email=contact_email,
                     contact_phone=contact_phone,
                     promo=effective_promo_code,
@@ -834,10 +872,38 @@ def signup():
                 selected_tier=selected_tier,
                 selected_mode=selected_mode,
                 selected_lifetime_key=selected_lifetime_key,
+                selected_standard_cycle=selected_standard_cycle,
                 contact_email=contact_email,
                 contact_phone=contact_phone,
                 promo=effective_promo_code,
             )
+
+        if selected_mode == 'standard' and selected_standard_cycle == 'yearly':
+            yearly_lookup_key = LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+            if not yearly_lookup_key:
+                flash('Yearly billing is not configured for this plan yet.', 'error')
+                return _render_signup(
+                    selected_tier=selected_tier,
+                    selected_mode=selected_mode,
+                    selected_lifetime_key=selected_lifetime_key,
+                    selected_standard_cycle='monthly',
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
+            yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
+            if not yearly_pricing or yearly_pricing.get('billing_cycle') != 'yearly':
+                flash('Yearly billing is temporarily unavailable for this plan.', 'error')
+                return _render_signup(
+                    selected_tier=selected_tier,
+                    selected_mode=selected_mode,
+                    selected_lifetime_key=selected_lifetime_key,
+                    selected_standard_cycle='monthly',
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
+            price_lookup_key_override = yearly_lookup_key
 
         metadata = {
             'tier_id': str(tier_obj.id),
@@ -845,6 +911,7 @@ def signup():
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup),
             'billing_mode': selected_mode,
+            'billing_cycle': 'lifetime' if selected_mode == 'lifetime' else selected_standard_cycle,
         }
 
         detected_timezone = request.form.get('detected_timezone')
@@ -886,6 +953,7 @@ def signup():
                 extra_metadata={
                     'preselected_tier': selected_tier,
                     'billing_mode': selected_mode,
+                    'billing_cycle': selected_standard_cycle,
                     'lifetime_tier': selected_lifetime_key,
                     **metadata,
                 }
@@ -897,6 +965,7 @@ def signup():
                 selected_tier=selected_tier,
                 selected_mode=selected_mode,
                 selected_lifetime_key=selected_lifetime_key,
+                selected_standard_cycle=selected_standard_cycle,
                 contact_email=contact_email,
                 contact_phone=contact_phone,
                 promo=effective_promo_code,
@@ -909,6 +978,7 @@ def signup():
             'auth.signup',
             _external=True,
             billing_mode=selected_mode,
+            billing_cycle=selected_standard_cycle if selected_mode == 'standard' else None,
             lifetime_tier=selected_lifetime_key if selected_mode == 'lifetime' else None,
             promo=effective_promo_code if selected_mode == 'lifetime' else None,
         )
@@ -942,6 +1012,7 @@ def signup():
                 selected_tier=selected_tier,
                 selected_mode=selected_mode,
                 selected_lifetime_key=selected_lifetime_key,
+                selected_standard_cycle=selected_standard_cycle,
                 contact_email=contact_email,
                 contact_phone=contact_phone,
                 promo=effective_promo_code,
@@ -951,6 +1022,7 @@ def signup():
         selected_tier=preselected_tier,
         selected_mode=billing_mode,
         selected_lifetime_key=selected_lifetime_tier,
+        selected_standard_cycle=standard_billing_cycle,
         contact_email=prefill_email,
         contact_phone=prefill_phone,
         promo=promo_code,

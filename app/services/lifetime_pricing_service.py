@@ -90,6 +90,10 @@ class LifetimePricingService:
                 tier=tier,
                 yearly_lookup_map=yearly_lookup_map,
             )
+            monthly_price_display = None
+            if tier and getattr(tier, "stripe_lookup_key", None):
+                monthly_pricing = cls._get_lookup_key_pricing(getattr(tier, "stripe_lookup_key", None))
+                monthly_price_display = monthly_pricing.get("formatted_price") if monthly_pricing else None
             yearly_price_display = None
             if yearly_lookup_key:
                 yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
@@ -120,6 +124,7 @@ class LifetimePricingService:
                     tier=tier,
                     id_map=promo_code_id_map,
                 ),
+                "monthly_price_display": monthly_price_display,
                 "yearly_lookup_key": yearly_lookup_key,
                 "yearly_price_display": yearly_price_display,
                 "lifetime_price_copy": (
@@ -182,6 +187,20 @@ class LifetimePricingService:
 
         total = len(labels)
         return labels[: max(1, limit)], total
+
+    @classmethod
+    def resolve_standard_yearly_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
+        """Resolve the yearly lookup key for a paid (non-lifetime) tier."""
+        if not tier:
+            return None
+        yearly_map = cls._read_mapping("STANDARD_YEARLY_LOOKUP_KEYS")
+        for candidate in cls._id_candidates(offer_key="", tier=tier):
+            if not candidate:
+                continue
+            value = yearly_map.get(candidate)
+            if value:
+                return value
+        return cls._derive_yearly_lookup_from_monthly(getattr(tier, "stripe_lookup_key", None))
 
     @classmethod
     def _load_paid_tiers(cls) -> list[SubscriptionTier]:
@@ -271,7 +290,11 @@ class LifetimePricingService:
         if not tier:
             return None
 
-        monthly_lookup = (getattr(tier, "stripe_lookup_key", "") or "").strip()
+        return cls._derive_yearly_lookup_from_monthly(getattr(tier, "stripe_lookup_key", None))
+
+    @staticmethod
+    def _derive_yearly_lookup_from_monthly(monthly_lookup_key: str | None) -> str | None:
+        monthly_lookup = (monthly_lookup_key or "").strip()
         if not monthly_lookup:
             return None
         if "_monthly" in monthly_lookup:
@@ -284,7 +307,10 @@ class LifetimePricingService:
 
     @staticmethod
     def _id_candidates(*, offer_key: str, tier: SubscriptionTier | None) -> list[str]:
-        candidates = [offer_key.strip().lower()]
+        candidates = []
+        normalized_offer_key = offer_key.strip().lower()
+        if normalized_offer_key:
+            candidates.append(normalized_offer_key)
         if tier:
             candidates.append(str(tier.id).strip().lower())
             tier_name = (tier.name or "").strip().lower()

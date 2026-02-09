@@ -27,21 +27,49 @@
                             <button type="button" class="btn btn-outline-primary mode-btn" data-mode="standard">
                                 Standard tiers
                             </button>
+                            {% if has_lifetime_capacity %}
                             <button type="button" class="btn btn-outline-primary mode-btn" data-mode="lifetime">
                                 Lifetime launch tiers
                             </button>
+                            {% endif %}
                         </div>
+                        {% if has_lifetime_capacity %}
                         <p class="small text-muted mt-2 mb-0">Lifetime seats are limited and coupon-code based.</p>
+                        {% else %}
+                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                            Lifetime launch seats are sold out. Switching to yearly-first subscription options.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="billing-cycle-toggle mb-4" id="billingCycleToggle">
+                        <div class="btn-group w-100" role="group" aria-label="Standard billing cycle">
+                            <button type="button" class="btn btn-outline-secondary cycle-btn" data-cycle="monthly" aria-label="Select monthly billing">
+                                Monthly
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary cycle-btn" data-cycle="yearly" aria-label="Select yearly billing">
+                                Yearly
+                            </button>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0">Toggle between monthly and yearly for standard subscriptions.</p>
                     </div>
 
                     <section id="standardPlansSection">
                         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="tierSelection">
                             {% for tier_key, tier_data in available_tiers.items() %}
                             <div class="col">
-                                <article class="card tier-card compact h-100 border-2 border-primary" data-tier="{{ tier_key }}">
+                                <article
+                                    class="card tier-card compact h-100 border-2 border-primary"
+                                    data-tier="{{ tier_key }}"
+                                    data-monthly-price="{{ tier_data.monthly_price_display or tier_data.price_display }}"
+                                    data-yearly-price="{{ tier_data.yearly_price_display or '' }}"
+                                >
                                     <div class="card-body text-center p-3">
                                         <h3 class="h5 fw-bold mb-2 tier-name">{{ tier_data.name }}</h3>
-                                        <div class="tier-price text-primary fw-semibold mb-2">{{ tier_data.price_display }}</div>
+                                        <div class="tier-price text-primary fw-semibold mb-2">
+                                            <span class="tier-price-value">{{ tier_data.price_display }}</span>
+                                            <small class="text-muted d-block tier-cycle-label">/month</small>
+                                        </div>
                                         <div class="text-muted small">
                                             {% if tier_data.user_limit == -1 %}
                                                 <strong>Unlimited users</strong>
@@ -102,6 +130,7 @@
 let selectedTier = '{{ preselected_tier or default_tier_id }}';
 let selectedLifetimeTier = '{{ selected_lifetime_tier or "" }}';
 let billingMode = '{{ billing_mode or "standard" }}';
+let standardBillingCycle = '{{ standard_billing_cycle or "monthly" }}';
 const hasLifetimeCapacity = {{ 'true' if has_lifetime_capacity else 'false' }};
 const availableTiers = {{ available_tiers|tojson }};
 const lifetimeOffers = {{ lifetime_offers|tojson }};
@@ -126,10 +155,12 @@ function setBillingMode(mode) {
         const isActive = button.dataset.mode === billingMode;
         button.classList.toggle('btn-primary', isActive);
         button.classList.toggle('btn-outline-primary', !isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
     document.getElementById('standardPlansSection').classList.toggle('d-none', billingMode !== 'standard');
     document.getElementById('lifetimePlansSection').classList.toggle('d-none', billingMode !== 'lifetime');
+    document.getElementById('billingCycleToggle').classList.toggle('d-none', billingMode !== 'standard');
 
     if (billingMode === 'lifetime') {
         const activeOffer = lifetimeByKey[selectedLifetimeTier];
@@ -142,8 +173,39 @@ function setBillingMode(mode) {
         }
     }
 
+    refreshTierCardPrices();
     updateSelectionState();
     updatePlanSummary();
+}
+
+function setBillingCycle(cycle) {
+    standardBillingCycle = cycle === 'yearly' ? 'yearly' : 'monthly';
+    document.querySelectorAll('.cycle-btn').forEach((button) => {
+        const isActive = button.dataset.cycle === standardBillingCycle;
+        button.classList.toggle('btn-secondary', isActive);
+        button.classList.toggle('btn-outline-secondary', !isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    refreshTierCardPrices();
+    updatePlanSummary();
+}
+
+function refreshTierCardPrices() {
+    document.querySelectorAll('.tier-card').forEach((card) => {
+        const monthlyPrice = card.dataset.monthlyPrice || '';
+        const yearlyPrice = card.dataset.yearlyPrice || '';
+        const priceValue = card.querySelector('.tier-price-value');
+        const cycleLabel = card.querySelector('.tier-cycle-label');
+        if (!priceValue || !cycleLabel) return;
+
+        if (standardBillingCycle === 'yearly' && yearlyPrice) {
+            priceValue.textContent = yearlyPrice;
+            cycleLabel.textContent = '/year';
+        } else {
+            priceValue.textContent = monthlyPrice || yearlyPrice || 'Contact Sales';
+            cycleLabel.textContent = standardBillingCycle === 'yearly' ? '/year' : '/month';
+        }
+    });
 }
 
 function selectTier(tierKey) {
@@ -219,6 +281,7 @@ function updatePlanSummary() {
         selectedText.textContent = 'Select a plan to continue to checkout.';
         badge.textContent = 'No plan selected';
         priceText.textContent = '—';
+        continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
@@ -247,15 +310,28 @@ function updatePlanSummary() {
             continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
             lifetimeCounterMessage.textContent = `Only ${offer.display_spots_left} spots left / ${offer.seat_total} for ${offer.name}.`;
             lifetimeCounterMessage.classList.remove('d-none');
+            continueBtn.disabled = !offer.has_remaining;
         }
         return;
     }
 
+    const hasYearlyOption = Boolean(tierData.yearly_price_display);
+    const isYearlySelected = standardBillingCycle === 'yearly';
+    const displayPrice = (isYearlySelected && hasYearlyOption)
+        ? tierData.yearly_price_display
+        : (tierData.monthly_price_display || tierData.price_display);
+
     title.textContent = `${tierData.name} plan summary`;
-    selectedText.innerHTML = `You selected the <strong>${tierData.name}</strong> plan.`;
+    selectedText.innerHTML = `You selected the <strong>${tierData.name}</strong> plan (${standardBillingCycle}).`;
     badge.textContent = tierData.name;
-    priceText.textContent = tierData.price_display;
-    continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
+    priceText.textContent = displayPrice || 'Contact Sales';
+    continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${standardBillingCycle === 'yearly' ? 'Yearly' : 'Monthly'} Checkout`;
+    continueBtn.disabled = Boolean(isYearlySelected && !hasYearlyOption);
+
+    if (isYearlySelected && !hasYearlyOption) {
+        lifetimeCounterMessage.textContent = 'Yearly pricing is not configured for this tier yet. Switch to monthly or pick another tier.';
+        lifetimeCounterMessage.classList.remove('d-none');
+    }
 }
 
 function proceedToPayment() {
@@ -282,6 +358,7 @@ function proceedToPayment() {
         ['csrf_token', '{{ csrf_token() }}'],
         ['selected_tier', selectedTier],
         ['billing_mode', billingMode],
+        ['billing_cycle', billingMode === 'standard' ? standardBillingCycle : 'lifetime'],
     ];
 
     if (signupSource) entries.push(['source', signupSource]);
@@ -327,6 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.mode-btn').forEach((button) => {
         button.addEventListener('click', () => setBillingMode(button.dataset.mode));
     });
+    document.querySelectorAll('.cycle-btn').forEach((button) => {
+        button.addEventListener('click', () => setBillingCycle(button.dataset.cycle));
+    });
 
     if (!selectedTier) {
         const firstKey = Object.keys(availableTiers)[0];
@@ -341,6 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    setBillingCycle(standardBillingCycle);
     setBillingMode(billingMode);
 });
 </script>

@@ -23,6 +23,10 @@ Billing is centralized in `BillingService` and is the authority for tier checkou
   - Hobbyist (`2000` seats, display floor `1997`)
   - Enthusiast (`1000` seats, display floor `995`)
   - Fanatic (`500` seats, display floor `492`)
+- When all lifetime seats are sold out, signup automatically defaults to:
+  - `billing_mode=standard`
+  - `billing_cycle=yearly`
+  while still allowing users to toggle monthly/yearly.
 - Seat counters are promo-code based (`organization.promo_code`), with floor logic:
   - Show the floor value while sold count is below `total - floor`.
   - Show true remaining once sold count reaches the threshold.
@@ -38,6 +42,8 @@ Set these env vars (all map-like values accept JSON or `key:value,key:value` CSV
   Stripe coupon IDs to auto-apply at checkout (`discounts[coupon]`).
 - `LIFETIME_PROMOTION_CODE_IDS` *(optional)*  
   Stripe promotion-code IDs to auto-apply (`discounts[promotion_code]`).
+- `STANDARD_YEARLY_LOOKUP_KEYS` *(optional)*  
+  Map standard tiers to yearly lookup keys when your naming does not follow `_monthly` -> `_yearly`.
 
 ## 3. Webhooks & Callbacks
 - **Endpoint**: `POST /billing/webhooks/stripe`

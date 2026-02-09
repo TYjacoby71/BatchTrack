@@ -58,6 +58,13 @@ FIELDS = [
         "description": "Optional Stripe promotion-code-id map to auto-apply discounts (JSON or key:value CSV).",
     },
     {
+        "key": "STANDARD_YEARLY_LOOKUP_KEYS",
+        "cast": "str",
+        "default": "",
+        "description": "Standard yearly lookup-key map (JSON or key:value CSV).",
+        "note": "Use when monthly->yearly key naming is non-standard.",
+    },
+    {
         "key": "BILLING_CACHE_ENABLED",
         "cast": "bool",
         "default": True,
