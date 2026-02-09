@@ -131,6 +131,25 @@ def register_template_context(app: Flask) -> None:
         }
 
     @app.context_processor
+    def _inject_theme_preference() -> Dict[str, Any]:
+        theme_preference = None
+        theme_preference_scoped = False
+        if current_user.is_authenticated:
+            try:
+                from .models import UserPreferences
+
+                prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+            except Exception:
+                prefs = None
+            if prefs:
+                theme_preference_scoped = True
+                theme_preference = prefs.theme or "system"
+        return {
+            "theme_preference": theme_preference,
+            "theme_preference_scoped": theme_preference_scoped,
+        }
+
+    @app.context_processor
     def _inject_org_helpers() -> Dict[str, Any]:
         from .models import Organization
 
