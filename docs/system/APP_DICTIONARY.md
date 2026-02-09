@@ -169,6 +169,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: CLI scripts, update flows, and maintenance commands.
 
 ### Entries (placeholder)
+- **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits

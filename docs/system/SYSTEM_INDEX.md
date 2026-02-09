@@ -13,7 +13,7 @@ This directory is the curated reference library for every master document that e
 
 ## Brand, Marketing & SEO
 
-- **[SEO_METADATA_STYLE.md](SEO_METADATA_STYLE.md)** – Metadata prompts, maker-first language, and title/description rules
+- **[SEO_GUIDE.md](SEO_GUIDE.md)** – Metadata prompts, maker-first language, and title/description rules
 - **[SEO_ACCELERATION_PLAN.md](SEO_ACCELERATION_PLAN.md)** – SEO initiatives, roadmap, and performance targets
 
 ## Architecture & Core Services
