@@ -11,6 +11,11 @@ This directory is the curated reference library for every master document that e
 
 - **[APP_MASTER_DESCRIPTION.md](APP_MASTER_DESCRIPTION.md)** – Master product description and prompt-ready summary
 
+## Brand, Marketing & SEO
+
+- **[SEO_METADATA_STYLE.md](SEO_METADATA_STYLE.md)** – Metadata prompts, maker-first language, and title/description rules
+- **[SEO_ACCELERATION_PLAN.md](SEO_ACCELERATION_PLAN.md)** – SEO initiatives, roadmap, and performance targets
+
 ## Architecture & Core Services
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** – System architecture, service patterns, data flow
