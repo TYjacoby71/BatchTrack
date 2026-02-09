@@ -754,6 +754,12 @@ def signup():
         promo: str | None,
     ):
         default_tier_id = selected_tier or (str(db_tiers[0].id) if db_tiers else '')
+        page_title = "BatchTrack.com | Pricing for Small-Batch Makers"
+        page_description = (
+            "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly, yearly, and limited lifetime options."
+            if has_lifetime_capacity
+            else "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly and yearly subscriptions in a calm, batch-first flow."
+        )
         return render_template(
             'pages/auth/signup.html',
             signup_source=signup_source,
@@ -771,6 +777,9 @@ def signup():
             default_tier_id=default_tier_id,
             contact_email=contact_email,
             contact_phone=contact_phone,
+            page_title=page_title,
+            page_description=page_description,
+            canonical_url=url_for('auth.signup', _external=True),
         )
 
     if request.method == 'POST':
