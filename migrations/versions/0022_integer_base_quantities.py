@@ -24,7 +24,10 @@ BASE_SCALE = 1_000_000
 COUNT_SCALE = 32
 BIGINT_MAX = 9223372036854775807
 BIGINT_MIN = -9223372036854775808
-SCALE_SQL = f"CASE WHEN ru.unit_type = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END"
+
+
+def _scale_sql(unit_type_expr: str) -> str:
+    return f"CASE WHEN {unit_type_expr} = 'count' THEN {COUNT_SCALE} ELSE {BASE_SCALE} END"
 
 
 def _clamped_bigint_sql(expr: str, *, allow_negative: bool) -> str:
@@ -109,76 +112,114 @@ def downgrade():
 
 def _backfill_inventory_item_base() -> None:
     quantity_base_expr = _base_quantity_sql(
-        f"COALESCE(i.quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        f"COALESCE(i.quantity, 0) * iu.conversion_factor * {_scale_sql('iu.unit_type')}",
         allow_negative=True,
     )
     op.execute(
         f"""
         WITH resolved_units AS (
-            SELECT u.name AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.name) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             UNION ALL
-            SELECT u.symbol AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.symbol) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             WHERE u.symbol IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
+              AND NOT EXISTS (
+                  SELECT 1 FROM unit u2 WHERE LOWER(u2.name) = LOWER(u.symbol)
+              )
+        ),
+        item_units AS (
+            SELECT i.id,
+                   COALESCE(ru.conversion_factor, 1) AS conversion_factor,
+                   ru.unit_type
+            FROM inventory_item i
+            LEFT JOIN resolved_units ru
+                ON ru.unit_key = LOWER(i.unit)
         )
         UPDATE inventory_item i
         SET quantity_base = {quantity_base_expr}
-        FROM resolved_units ru
-        WHERE ru.unit_key = i.unit
+        FROM item_units iu
+        WHERE i.id = iu.id
         """
     )
 
 
 def _backfill_inventory_lot_base() -> None:
     remaining_base_expr = _base_quantity_sql(
-        f"COALESCE(l.remaining_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        f"COALESCE(l.remaining_quantity, 0) * lu.conversion_factor * {_scale_sql('lu.unit_type')}",
         allow_negative=False,
     )
     original_base_expr = _base_quantity_sql(
-        f"COALESCE(l.original_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        f"COALESCE(l.original_quantity, 0) * lu.conversion_factor * {_scale_sql('lu.unit_type')}",
         allow_negative=False,
     )
     op.execute(
         f"""
         WITH resolved_units AS (
-            SELECT u.name AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.name) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             UNION ALL
-            SELECT u.symbol AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.symbol) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             WHERE u.symbol IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
+              AND NOT EXISTS (
+                  SELECT 1 FROM unit u2 WHERE LOWER(u2.name) = LOWER(u.symbol)
+              )
+        ),
+        lot_units AS (
+            SELECT l.id,
+                   COALESCE(ru.conversion_factor, 1) AS conversion_factor,
+                   ru.unit_type
+            FROM inventory_lot l
+            LEFT JOIN resolved_units ru
+                ON ru.unit_key = LOWER(l.unit)
         )
         UPDATE inventory_lot l
         SET remaining_quantity_base = {remaining_base_expr},
             original_quantity_base = {original_base_expr}
-        FROM resolved_units ru
-        WHERE ru.unit_key = l.unit
+        FROM lot_units lu
+        WHERE l.id = lu.id
+        """
+    )
+    op.execute(
+        """
+        UPDATE inventory_lot
+        SET original_quantity_base = GREATEST(original_quantity_base, remaining_quantity_base, 1)
+        WHERE original_quantity_base <= 0
+           OR remaining_quantity_base > original_quantity_base
         """
     )
 
 
 def _backfill_unified_history_base() -> None:
     quantity_change_expr = _base_quantity_sql(
-        f"COALESCE(h.quantity_change, 0) * ru.conversion_factor * {SCALE_SQL}",
+        f"COALESCE(h.quantity_change, 0) * hu.conversion_factor * {_scale_sql('hu.unit_type')}",
         allow_negative=True,
     )
     remaining_expr = _base_quantity_sql(
-        f"COALESCE(h.remaining_quantity, 0) * ru.conversion_factor * {SCALE_SQL}",
+        f"COALESCE(h.remaining_quantity, 0) * hu.conversion_factor * {_scale_sql('hu.unit_type')}",
         allow_negative=False,
     )
     op.execute(
         f"""
         WITH resolved_units AS (
-            SELECT u.name AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.name) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             UNION ALL
-            SELECT u.symbol AS unit_key, u.conversion_factor, u.unit_type
+            SELECT LOWER(u.symbol) AS unit_key, u.conversion_factor, u.unit_type
             FROM unit u
             WHERE u.symbol IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM unit u2 WHERE u2.name = u.symbol)
+              AND NOT EXISTS (
+                  SELECT 1 FROM unit u2 WHERE LOWER(u2.name) = LOWER(u.symbol)
+              )
+        ),
+        history_units AS (
+            SELECT h.id,
+                   COALESCE(ru.conversion_factor, 1) AS conversion_factor,
+                   ru.unit_type
+            FROM unified_inventory_history h
+            LEFT JOIN resolved_units ru
+                ON ru.unit_key = LOWER(h.unit)
         )
         UPDATE unified_inventory_history h
         SET quantity_change_base = {quantity_change_expr},
@@ -186,7 +227,7 @@ def _backfill_unified_history_base() -> None:
                 WHEN h.remaining_quantity IS NULL THEN NULL
                 ELSE {remaining_expr}
             END
-        FROM resolved_units ru
-        WHERE ru.unit_key = h.unit
+        FROM history_units hu
+        WHERE h.id = hu.id
         """
     )
