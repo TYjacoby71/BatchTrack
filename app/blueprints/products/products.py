@@ -576,7 +576,7 @@ def edit_product(product_id):
 
     name = (request.form.get('name') or '').strip()
     category_id = request.form.get('category_id')
-    low_stock_threshold = request.form.get('low_stock_threshold', 0)
+    low_stock_threshold = request.form.get('low_stock_threshold')
 
     if not name or not category_id:
         flash('Name and category are required', 'error')
@@ -594,16 +594,12 @@ def edit_product(product_id):
 
     # Update the product
     product.name = name
-    product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+    if low_stock_threshold is not None:
+        product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
     try:
         product.category_id = int(category_id)
     except Exception:
         pass
-
-    # Update all SKUs for this product
-    skus = ProductSKU.query.filter_by(product_id=product.id).all()
-    for sku in skus:
-        sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
     db.session.commit()
     flash('Product updated successfully', 'success')

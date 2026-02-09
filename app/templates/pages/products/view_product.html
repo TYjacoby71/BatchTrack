@@ -10,7 +10,6 @@
         <div>
           <h2>{{ product.name }} - Product Overview</h2>
           <small class="text-muted">
-            Low Stock Alert: {{ product.low_stock_threshold }} | 
             Created: {{ product.created_at | user_date }}
           </small>
         </div>
@@ -161,26 +160,30 @@
         {% for variant_name in all_variants %}
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
         {% set variant_skus = variants.get(variant_name, {}).get('skus', []) %}
-        {% set ns_variant = namespace(total_qty=0, total_cost=0, total_value=0, total_bulk=0, total_packaged=0) %}
+        {% set ns_variant = namespace(total_qty=0, total_cost=0, total_value=0, total_bulk=0, total_packaged=0, is_low_stock=false) %}
         {% set unique_size_labels = [] %}
 
         {% for sku in variant_skus %}
           {% if sku.inventory_item %}
-            {% set ns_variant.total_qty = ns_variant.total_qty + sku.inventory_item.quantity %}
+            {% set sku_quantity = sku.inventory_item.quantity or 0 %}
+            {% set ns_variant.total_qty = ns_variant.total_qty + sku_quantity %}
             {% if sku.inventory_item.cost_per_unit %}
-              {% set ns_variant.total_cost = ns_variant.total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
+              {% set ns_variant.total_cost = ns_variant.total_cost + (sku.inventory_item.cost_per_unit * sku_quantity) %}
             {% endif %}
             {% if sku.retail_price %}
-              {% set ns_variant.total_value = ns_variant.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+              {% set ns_variant.total_value = ns_variant.total_value + (sku.retail_price * sku_quantity) %}
             {% endif %}
             {% set size_label = sku.size_label if sku.size_label else 'Bulk' %}
             {% if size_label not in unique_size_labels %}
               {% set _ = unique_size_labels.append(size_label) %}
             {% endif %}
             {% if size_label == 'Bulk' or not sku.size_label %}
-              {% set ns_variant.total_bulk = ns_variant.total_bulk + sku.inventory_item.quantity %}
+              {% set ns_variant.total_bulk = ns_variant.total_bulk + sku_quantity %}
             {% else %}
-              {% set ns_variant.total_packaged = ns_variant.total_packaged + sku.inventory_item.quantity %}
+              {% set ns_variant.total_packaged = ns_variant.total_packaged + sku_quantity %}
+            {% endif %}
+            {% if sku.low_stock_threshold and sku.low_stock_threshold > 0 and sku_quantity <= sku.low_stock_threshold %}
+              {% set ns_variant.is_low_stock = true %}
             {% endif %}
           {% endif %}
         {% endfor %}
@@ -191,8 +194,8 @@
           <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">{{ variant_name }}</h5>
-              <span class="badge {% if ns_variant.total_qty <= 0 %}bg-danger{% elif ns_variant.total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
-                {% if ns_variant.total_qty <= 0 %}Out of Stock{% elif ns_variant.total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
+              <span class="badge {% if ns_variant.total_qty <= 0 %}bg-danger{% elif ns_variant.is_low_stock %}bg-warning{% else %}bg-success{% endif %}">
+                {% if ns_variant.total_qty <= 0 %}Out of Stock{% elif ns_variant.is_low_stock %}Low Stock{% else %}In Stock{% endif %}
               </span>
             </div>
             <div class="card-body d-flex flex-column">
@@ -269,11 +272,6 @@
           <div class="mb-3">
             <label class="form-label">Units</label>
             <div class="form-text">Units are defined per SKU. Edit SKUs to change units.</div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Low Stock Threshold</label>
-            <input type="number" name="low_stock_threshold" class="form-control" 
-                   value="{{ product.low_stock_threshold }}" step="0.01" min="0">
           </div>
           <div class="mb-3">
             <label class="form-label">Product Category</label>

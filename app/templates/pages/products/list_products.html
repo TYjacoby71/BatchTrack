@@ -363,6 +363,13 @@
                           <!-- All Variations (including Base) -->
                           {% for variation in product.variations %}
                           {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
+                          {% set size_labels = [] %}
+                          {% for inv in variation_inventory %}
+                            {% set size_label = inv.size_label if inv.size_label else 'Bulk' %}
+                            {% if size_label not in size_labels %}
+                              {% set _ = size_labels.append(size_label) %}
+                            {% endif %}
+                          {% endfor %}
                           <tr>
                             <td>
                               {% if variation.name == 'Base' %}
@@ -382,7 +389,7 @@
                               {% endif %}
                             </td>
                             <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                            <td>{{ size_labels|length }}</td>
                             <td>{{ variation.created_at | user_date if variation.created_at else 'N/A' }}</td>
                             <td>
                               <div class="btn-group" role="group">
