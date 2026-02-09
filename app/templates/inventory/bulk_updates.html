@@ -154,7 +154,10 @@
 {{ super() }}
 <script>
 (function () {
-    const storageKey = 'bt_bulk_inventory_drafts';
+    const storageKeyBase = 'bulk_inventory_drafts';
+    const storageKey = (window.BT_STORAGE && typeof window.BT_STORAGE.key === 'function')
+        ? window.BT_STORAGE.key(storageKeyBase)
+        : 'bt_bulk_inventory_drafts';
     const rawInventoryOptions = {{ (inventory_items or [])|tojson }};
     const rawUnitOptions = {{ (unit_options or [])|tojson }};
     const inventoryOptions = Array.isArray(rawInventoryOptions) ? rawInventoryOptions : [];

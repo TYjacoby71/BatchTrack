@@ -34,7 +34,10 @@
   }
 
   function runGlobalLinkCheck() {
-    const storageKey = 'drawerCadence:global_link:lastCheck';
+    const storageKeyBase = 'drawerCadence:global_link:lastCheck';
+    const storageKey = (window.BT_STORAGE && typeof window.BT_STORAGE.key === 'function')
+      ? window.BT_STORAGE.key(storageKeyBase)
+      : storageKeyBase;
     const now = Date.now();
     const oneWeek = 7 * 24 * 60 * 60 * 1000;
 

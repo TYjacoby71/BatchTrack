@@ -34,7 +34,7 @@
       <div class="flex-grow-1">
         <h2 class="mb-1">{{ display_recipe_name }}</h2>
         <div class="d-flex gap-2 align-items-center mb-2">
-          {% if is_published_locked or (is_test and has_batches) %}
+          {% if (is_published_locked or (is_test and has_batches)) and not can_create_variations %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
           {% endif %}
           {% if is_archived %}
@@ -104,9 +104,7 @@
       </div>
 
       <div class="d-flex gap-2 align-items-start">
-        {% if is_published_locked %}
-          <span class="text-muted small mt-1"><i class="fas fa-lock"></i> Published versions are read-only.</span>
-        {% elif is_test and has_batches %}
+        {% if is_test and has_batches %}
           <span class="text-muted small mt-1"><i class="fas fa-lock"></i> Tests lock after batches run.</span>
         {% endif %}
       </div>
