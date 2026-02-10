@@ -338,19 +338,17 @@ def complete_signup_from_stripe():
         flash('Payment confirmed! Please check your inbox for setup instructions.', 'info')
         return redirect(url_for('auth.login'))
 
-    if owner_user.email and not owner_user.email_verified:
-        flash(
-            'Payment confirmed! Please verify your email, then use the setup link to choose your password.',
-            'info',
-        )
-        return redirect(url_for('auth.login'))
-
     login_user(owner_user)
     SessionService.rotate_user_session(owner_user)
     owner_user.last_login = TimezoneUtils.utc_now()
     db.session.commit()
 
     session['onboarding_welcome'] = True
+    if owner_user.email and not owner_user.email_verified:
+        flash(
+            'Please verify your email while you complete account setup.',
+            'info',
+        )
     tier_name = organization.subscription_tier.name if organization and organization.subscription_tier else 'BatchTrack'
     flash(f'Welcome to BatchTrack! Your {tier_name} account is ready to use.', 'success')
     return redirect(url_for('onboarding.welcome'))

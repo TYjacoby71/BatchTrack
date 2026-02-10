@@ -128,6 +128,6 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
             follow_redirects=False,
         )
         assert response.status_code == 302
-        assert response.headers['Location'].endswith('/auth/login')
+        assert response.headers['Location'].endswith('/onboarding/welcome')
         with client.session_transaction() as sess:
-            assert sess.get('_user_id') is None
+            assert sess.get('_user_id') == str(user.id)

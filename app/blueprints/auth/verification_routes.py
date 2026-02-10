@@ -72,6 +72,10 @@ def resend_verification():
         or ((current_user.email if current_user.is_authenticated else "") or "").strip().lower()
     )
 
+    if not EmailService.should_issue_verification_tokens():
+        flash("Email verification is disabled for this environment.", "info")
+        return redirect(url_for("auth.login"))
+
     if request.method == "POST":
         email = ((request.form.get("email") or prefill_email) or "").strip().lower()
         generic_message = (

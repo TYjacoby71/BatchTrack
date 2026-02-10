@@ -310,9 +310,46 @@ class EmailService:
             if provider == 'mailgun':
                 return bool(current_app.config.get('MAILGUN_API_KEY') and current_app.config.get('MAILGUN_DOMAIN'))
             # SES SMTP or generic SMTP
-            return bool(current_app.config.get('MAIL_SERVER'))
+            mail_server = current_app.config.get('MAIL_SERVER')
+            default_sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('DEFAULT_FROM_EMAIL')
+            if not mail_server or not default_sender:
+                return False
+            if current_app.config.get('EMAIL_SMTP_ALLOW_NO_AUTH'):
+                return True
+            return bool(current_app.config.get('MAIL_USERNAME') and current_app.config.get('MAIL_PASSWORD'))
         except Exception:
             return False
+
+    @staticmethod
+    def get_verification_mode() -> str:
+        """Resolve effective verification mode from config and provider readiness."""
+        raw_mode = (current_app.config.get('AUTH_EMAIL_VERIFICATION_MODE') or 'prompt').strip().lower()
+        mode = raw_mode if raw_mode in {'off', 'prompt', 'required'} else 'prompt'
+
+        require_provider = bool(current_app.config.get('AUTH_EMAIL_REQUIRE_PROVIDER', True))
+        if mode != 'off' and require_provider and not EmailService.is_configured():
+            return 'off'
+        return mode
+
+    @staticmethod
+    def should_issue_verification_tokens() -> bool:
+        """Whether account flows should create and send verification links."""
+        return EmailService.get_verification_mode() in {'prompt', 'required'}
+
+    @staticmethod
+    def should_require_verified_email_on_login() -> bool:
+        """Whether login should block unverified users."""
+        return EmailService.get_verification_mode() == 'required'
+
+    @staticmethod
+    def password_reset_enabled() -> bool:
+        """Whether forgot/reset-by-email should be active for this environment."""
+        if not current_app.config.get('AUTH_PASSWORD_RESET_ENABLED', True):
+            return False
+        require_provider = bool(current_app.config.get('AUTH_EMAIL_REQUIRE_PROVIDER', True))
+        if require_provider and not EmailService.is_configured():
+            return False
+        return True
 
     @staticmethod
     def send_waitlist_confirmation(email, first_name=None, last_name=None, name=None):

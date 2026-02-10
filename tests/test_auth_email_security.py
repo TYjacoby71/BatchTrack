@@ -26,7 +26,10 @@ def _create_user(*, username: str, email: str, password: str, verified: bool) ->
     return user
 
 
-def test_login_blocks_unverified_email(client, app):
+def test_login_prompts_unverified_email_without_blocking(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
     with app.app_context():
         user = _create_user(
             username=f"unverified_{uuid.uuid4().hex[:6]}",
@@ -43,7 +46,7 @@ def test_login_blocks_unverified_email(client, app):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert "/auth/resend-verification" in response.headers["Location"]
+    assert response.headers["Location"].endswith("/dashboard")
 
     with app.app_context():
         refreshed = User.query.filter_by(email=email).first()
@@ -52,10 +55,73 @@ def test_login_blocks_unverified_email(client, app):
         assert refreshed.email_verification_sent_at is not None
 
     with client.session_transaction() as sess:
+        assert sess.get("_user_id") is not None
+
+
+def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = True
+    app.config["EMAIL_SMTP_ALLOW_NO_AUTH"] = False
+    app.config["MAIL_USERNAME"] = None
+    app.config["MAIL_PASSWORD"] = None
+
+    with app.app_context():
+        user = _create_user(
+            username=f"legacy_{uuid.uuid4().hex[:6]}",
+            email=f"legacy_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        username = user.username
+        email = user.email
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/dashboard")
+
+    with app.app_context():
+        refreshed = User.query.filter_by(email=email).first()
+        assert refreshed is not None
+        assert refreshed.email_verification_token in (None, "")
+        assert refreshed.email_verification_sent_at is None
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is not None
+
+
+def test_login_blocks_unverified_when_required_mode(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "required"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"required_{uuid.uuid4().hex[:6]}",
+            email=f"required_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        username = user.username
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/auth/resend-verification" in response.headers["Location"]
+
+    with client.session_transaction() as sess:
         assert sess.get("_user_id") is None
 
 
 def test_forgot_password_and_reset_flow(client, app):
+    app.config["AUTH_PASSWORD_RESET_ENABLED"] = True
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
     with app.app_context():
         user = _create_user(
             username=f"verified_{uuid.uuid4().hex[:6]}",

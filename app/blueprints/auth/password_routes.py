@@ -42,8 +42,9 @@ def forgot_password():
         generic_message = (
             "If an account with that email exists, we sent a password reset link."
         )
+        reset_enabled = EmailService.password_reset_enabled()
 
-        if email and "@" in email:
+        if reset_enabled and email and "@" in email:
             try:
                 user = User.query.filter_by(email=email).first()
                 if user and user.is_active:
