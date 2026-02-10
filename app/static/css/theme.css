@@ -477,6 +477,8 @@ h5 { font-size: var(--heading-5-size); }
 h6 { font-size: var(--heading-6-size); }
 
 .btn {
+  font-size: var(--btn-font-size);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   --bs-btn-font-size: var(--btn-font-size);
   --bs-btn-padding-y: var(--btn-padding-y);
   --bs-btn-padding-x: var(--btn-padding-x);
@@ -484,12 +486,16 @@ h6 { font-size: var(--heading-6-size); }
 }
 
 .btn-sm {
+  font-size: var(--btn-font-size-sm);
+  padding: var(--btn-padding-y-sm) var(--btn-padding-x-sm);
   --bs-btn-font-size: var(--btn-font-size-sm);
   --bs-btn-padding-y: var(--btn-padding-y-sm);
   --bs-btn-padding-x: var(--btn-padding-x-sm);
 }
 
 .btn-lg {
+  font-size: var(--btn-font-size-lg);
+  padding: var(--btn-padding-y-lg) var(--btn-padding-x-lg);
   --bs-btn-font-size: var(--btn-font-size-lg);
   --bs-btn-padding-y: var(--btn-padding-y-lg);
   --bs-btn-padding-x: var(--btn-padding-x-lg);
