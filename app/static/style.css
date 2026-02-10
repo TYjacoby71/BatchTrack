@@ -30,7 +30,8 @@ body {
   margin: 0;
   border-radius: 0;
   position: relative;
-  z-index: 2000;
+  /* Keep navbar below Bootstrap modal backdrop (1050) so modals dim the header. */
+  z-index: 1030;
 }
 
 .navbar .container-fluid {
