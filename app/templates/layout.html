@@ -1,3 +1,11 @@
+{#
+Synopsis:
+Primary shell template for authenticated app pages and public-layout pages.
+
+Glossary:
+- Theme bootstrap: Early script that resolves and applies the page theme before paint.
+- Public header mode: Guest navigation variant enabled by `show_public_header`.
+#}
 <!DOCTYPE html>
 <html>
 <head>
@@ -49,22 +57,15 @@
           var serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
           var theme = null;
 
-          if (hasServerTheme) {
+          if (hasServerTheme && serverTheme) {
             theme = serverTheme;
-            if (theme && theme !== 'system') {
-              localStorage.setItem(storageKey, theme);
-            } else {
-              localStorage.removeItem(storageKey);
-            }
+            localStorage.setItem(storageKey, theme);
           } else {
-            theme = localStorage.getItem(storageKey);
+            theme = localStorage.getItem(storageKey) || 'light';
+            localStorage.setItem(storageKey, theme);
           }
 
-          if (theme && theme !== 'system') {
-            document.documentElement.setAttribute('data-theme', theme);
-          } else {
-            document.documentElement.removeAttribute('data-theme');
-          }
+          document.documentElement.setAttribute('data-theme', theme || 'light');
         } catch (e) {}
       })();
     </script>
