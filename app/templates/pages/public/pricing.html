@@ -1,0 +1,421 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+  .pricing-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .pricing-hero {
+    border-radius: 1.25rem;
+    padding: 2.4rem;
+    background: radial-gradient(circle at 0% 0%, rgba(45, 108, 223, 0.2), transparent 55%),
+      linear-gradient(140deg, #0d2342 0%, #112f58 45%, #2f2a68 100%);
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(11, 20, 48, 0.25);
+  }
+
+  .pricing-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.4rem 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .pricing-hero h1 {
+    color: #fff;
+    font-size: clamp(1.8rem, 3vw, 2.7rem);
+    margin-bottom: 0.8rem;
+  }
+
+  .pricing-hero p {
+    color: rgba(255, 255, 255, 0.88);
+    max-width: 760px;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-heading h2 {
+    margin-bottom: 0;
+    font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  }
+
+  .section-heading p {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  .lifetime-shell {
+    border-radius: 1.2rem;
+    padding: 1.4rem;
+    border: 1px solid rgba(99, 110, 198, 0.2);
+    background: linear-gradient(165deg, rgba(14, 20, 53, 0.95), rgba(34, 19, 58, 0.94));
+    box-shadow: 0 14px 30px rgba(16, 22, 55, 0.24);
+    color: #fff;
+  }
+
+  .lifetime-shell .section-heading h2,
+  .lifetime-shell .section-heading p {
+    color: #fff;
+  }
+
+  .tier-card {
+    border-radius: 1rem;
+    border: 1px solid rgba(210, 218, 236, 0.85);
+    background: #fff;
+    color: #1b2438;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem;
+    box-shadow: 0 10px 24px rgba(19, 30, 61, 0.08);
+  }
+
+  .lifetime-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f6f8ff 100%);
+  }
+
+  .tier-card.is-featured {
+    border-color: rgba(25, 135, 84, 0.6);
+    box-shadow: 0 14px 26px rgba(25, 135, 84, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .tier-card.is-sold-out {
+    opacity: 0.82;
+  }
+
+  .tier-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    padding: 0.24rem 0.6rem;
+    border: 1px solid rgba(92, 106, 188, 0.3);
+    color: #324579;
+    background: rgba(81, 101, 208, 0.08);
+  }
+
+  .tier-card h3 {
+    margin: 0.7rem 0 0.4rem;
+    font-size: 1.25rem;
+  }
+
+  .tier-tagline {
+    margin-bottom: 0.55rem;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .tier-price-row {
+    margin-top: 0.35rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .tier-price-figure {
+    font-weight: 700;
+    font-size: 1.16rem;
+    color: #1e3b7d;
+    margin-bottom: 0.25rem;
+  }
+
+  .tier-price-alt {
+    color: #5f6f94;
+    font-size: 0.92rem;
+  }
+
+  .tier-feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.7rem 0 1rem;
+  }
+
+  .tier-feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin-bottom: 0.45rem;
+    color: #26345d;
+    font-size: 0.92rem;
+  }
+
+  .tier-feature-list i {
+    margin-top: 0.15rem;
+    color: #198754;
+  }
+
+  .lifetime-seat-copy {
+    color: #2f3b63;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .comparison-shell {
+    border: 1px solid rgba(205, 213, 231, 0.9);
+    border-radius: 1.1rem;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(19, 30, 61, 0.08);
+    overflow: hidden;
+  }
+
+  .comparison-table thead th {
+    background: #eef3ff;
+    color: #1f3264;
+    border-bottom: 1px solid rgba(189, 201, 232, 0.85);
+    text-align: center;
+    font-size: 0.84rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .comparison-table thead th:first-child {
+    text-align: left;
+    width: 42%;
+  }
+
+  .comparison-table tbody th {
+    color: #223056;
+    font-weight: 600;
+    background: #fff;
+  }
+
+  .comparison-table td,
+  .comparison-table th {
+    border-color: rgba(223, 228, 242, 0.92);
+    vertical-align: middle;
+  }
+
+  .comparison-icon-yes,
+  .comparison-icon-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+  }
+
+  .comparison-icon-yes {
+    background: rgba(25, 135, 84, 0.14);
+    color: #198754;
+  }
+
+  .comparison-icon-no {
+    background: rgba(108, 117, 125, 0.14);
+    color: #6c757d;
+  }
+
+  .pricing-bottom-cta {
+    border-radius: 1.15rem;
+    padding: 1.8rem;
+    border: 1px solid rgba(195, 205, 231, 0.84);
+    background: linear-gradient(140deg, rgba(48, 84, 194, 0.1), rgba(111, 66, 193, 0.08));
+  }
+
+  #plan-comparison {
+    scroll-margin-top: 120px;
+  }
+
+  @media (max-width: 991px) {
+    .pricing-hero {
+      padding: 1.6rem;
+    }
+
+    .section-heading {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pricing-shell py-4">
+  <section class="pricing-hero mb-4 mb-lg-5">
+    <span class="pricing-kicker"><i class="fas fa-bolt"></i> Batch-first pricing</span>
+    <h1>Choose the right BatchTrack plan for your production stage</h1>
+    <p>
+      Compare Hobbyist, Enthusiast, and Fanatic side-by-side. Every plan starts with a free trial
+      and scales with your process, team, and inventory complexity.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='pricing_hero_trial') }}" class="btn btn-primary btn-lg">
+        Start Free Trial
+      </a>
+      <a href="#plan-comparison" class="btn btn-outline-light btn-lg">Compare all features</a>
+    </div>
+  </section>
+
+  {% if lifetime_has_capacity %}
+  <section class="lifetime-shell mb-4 mb-lg-5">
+    <div class="section-heading">
+      <div>
+        <h2>Limited Lifetime Launch Seats</h2>
+        <p>These one-time offers appear first while seats are still available.</p>
+      </div>
+      <span class="badge bg-light text-dark">Pay once, keep your tier forever</span>
+    </div>
+    <div class="row g-3">
+      {% for tier in pricing_tiers %}
+      {% set offer = tier.lifetime_offer %}
+      <div class="col-12 col-lg-4">
+        <article class="tier-card lifetime-card {% if tier.key == 'enthusiast' %}is-featured{% endif %} {% if not tier.lifetime_has_remaining %}is-sold-out{% endif %}">
+          <span class="tier-chip">{{ tier.name }}</span>
+          <h3>{{ offer.tagline or tier.tagline }}</h3>
+          <p class="tier-tagline">{{ offer.future_scope or tier.future_scope }}</p>
+          <div class="tier-price-row">
+            <div class="tier-price-figure">{{ offer.lifetime_price_copy or "Configure lifetime pricing" }}</div>
+          </div>
+          <div class="lifetime-seat-copy">
+            Only <strong>{{ offer.display_spots_left or 0 }}</strong> seats left / {{ offer.seat_total or 0 }}.
+          </div>
+          <div class="small text-muted mb-3">Coupon: <code>{{ offer.coupon_code }}</code></div>
+          <div class="mt-auto d-grid">
+            {% if tier.signup_lifetime_url %}
+            <a href="{{ tier.signup_lifetime_url }}" class="btn btn-warning">
+              Claim {{ tier.name }} Lifetime
+            </a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Sold out</button>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="mb-4 mb-lg-5" id="plans">
+    <div class="section-heading">
+      <div>
+        <h2>Monthly and yearly plans</h2>
+        <p>Pick a tier now, then upgrade or expand as your operation grows.</p>
+      </div>
+      <span class="text-muted small">Recommended: Enthusiast for most small teams</span>
+    </div>
+    <div class="row g-3">
+      {% for tier in pricing_tiers %}
+      <div class="col-12 col-lg-4">
+        <article class="tier-card {% if tier.key == 'enthusiast' %}is-featured{% endif %}">
+          <span class="tier-chip">
+            {{ tier.name }}
+            {% if tier.key == 'enthusiast' %}
+            <i class="fas fa-star text-warning"></i>
+            {% endif %}
+          </span>
+          <h3>{{ tier.name }}</h3>
+          <p class="tier-tagline">{{ tier.tagline }}</p>
+          <div class="tier-price-row">
+            <div class="tier-price-figure">{{ tier.monthly_price_display or "Contact sales" }} / month</div>
+            <div class="tier-price-alt">
+              {% if tier.yearly_price_display %}
+              {{ tier.yearly_price_display }} / year
+              {% else %}
+              Yearly pricing not configured yet
+              {% endif %}
+            </div>
+          </div>
+          <ul class="tier-feature-list">
+            {% for feature in tier.feature_highlights[:6] %}
+            <li><i class="fas fa-check-circle"></i><span>{{ feature }}</span></li>
+            {% endfor %}
+          </ul>
+          {% if tier.feature_total > (tier.feature_highlights|length) %}
+          <div class="small text-muted mb-3">+ {{ tier.feature_total - (tier.feature_highlights|length) }} more capabilities inside the app</div>
+          {% endif %}
+          <div class="mt-auto d-grid gap-2">
+            {% if tier.signup_monthly_url %}
+            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Start Free Trial</a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Unavailable</button>
+            {% endif %}
+
+            {% if tier.signup_yearly_url %}
+            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Choose Yearly</a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Yearly Unavailable</button>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="plan-comparison" class="mb-4 mb-lg-5">
+    <div class="section-heading">
+      <div>
+        <h2>Feature comparison</h2>
+        <p>Column-style checklist across Hobbyist, Enthusiast, and Fanatic.</p>
+      </div>
+    </div>
+    <div class="comparison-shell table-responsive">
+      <table class="table comparison-table mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Feature</th>
+            {% for tier in pricing_tiers %}
+            <th scope="col">{{ tier.name }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparison_rows %}
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            {% for tier in pricing_tiers %}
+            <td class="text-center">
+              {% if row[tier.key] %}
+              <span class="comparison-icon-yes"><i class="fas fa-check"></i></span>
+              {% else %}
+              <span class="comparison-icon-no"><i class="fas fa-minus"></i></span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pricing-bottom-cta">
+    <h2 class="h4 mb-2">Ready to simplify production and inventory?</h2>
+    <p class="text-muted mb-3">
+      Start your free trial now, pick your tier, and launch your first tracked batch in minutes.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='pricing_bottom_trial') }}" class="btn btn-primary btn-lg">
+        Start Free Trial
+      </a>
+      <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
+        View Help Center
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}
