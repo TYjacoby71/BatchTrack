@@ -16,6 +16,8 @@ Glossary:
       {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
       {% set resolved_og_image = page_og_image or url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
+      {% set use_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else false) %}
+      {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
       <title>{{ resolved_title }}</title>
       <meta name="description" content="{{ resolved_description }}">
       <link rel="canonical" href="{{ resolved_canonical }}">
@@ -54,9 +56,13 @@ Glossary:
           var storageKey = window.BT_STORAGE.key('theme');
           var hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
           var serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
+          var forcePublicLightTheme = {{ 'true' if public_shell_mode else 'false' }};
           var theme = null;
 
-          if (hasServerTheme && serverTheme) {
+          if (forcePublicLightTheme) {
+            theme = 'light';
+            localStorage.setItem(storageKey, theme);
+          } else if (hasServerTheme && serverTheme) {
             theme = serverTheme;
             localStorage.setItem(storageKey, theme);
           } else {
@@ -110,6 +116,10 @@ Glossary:
             max-width: 1200px; /* Adjust as needed */
             margin: 0 auto;
         }
+        .app-container.public-shell {
+            max-width: none;
+            width: 100%;
+        }
     </style>
 </head>
 <body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
@@ -118,12 +128,14 @@ Glossary:
     <script>
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
-    <div class="app-container">
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid position-relative">
+    <div class="app-container{% if public_shell_mode %} public-shell{% endif %}">
+    <nav class="navbar navbar-expand-lg {% if public_shell_mode %}navbar-light bg-white shadow-sm{% else %}navbar-light bg-light{% endif %}">
+        <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
+            {% if not public_shell_mode %}
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
             </a>
+            {% endif %}
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
             {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') and marketplace_display_enabled %}
             {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
@@ -466,7 +478,7 @@ Glossary:
             {% endif %}
         </div>
     </nav>
-    <main class="container-xl mt-4">
+    <main class="{% if public_shell_mode %}container-fluid{% else %}container-xl{% endif %} mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
             <nav aria-label="breadcrumb" class="mb-3">
