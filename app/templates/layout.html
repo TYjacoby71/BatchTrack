@@ -185,8 +185,8 @@
             {% if not has_nav_center %}
             <ul class="navbar-nav mx-auto d-none d-md-flex">
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
-                        ❓ Help
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                        🧮 Converter
                     </a>
                 </li>
                 {% if recipe_library_nav_enabled %}
@@ -382,6 +382,16 @@
             {% if not has_nav_center %}
             <ul class="navbar-nav mx-auto d-none d-md-flex">
                 <li class="nav-item">
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                        🧮 Converter
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/tools">
+                        🔧 Tools
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
                         ❓ Help
                     </a>
@@ -393,6 +403,11 @@
                     </a>
                 </li>
                 {% endif %}
+                <li class="nav-item">
+                    <div class="navbar-text">
+                        <span id="header-clock" class="text-muted">🕐 Loading...</span>
+                    </div>
+                </li>
             </ul>
             {% endif %}
             <div class="dropdown ms-auto">
@@ -599,6 +614,20 @@
         })();
     </script>
     {% endif %}
+
+    <!-- Simple browser clock script -->
+    <script>
+        function updateClock() {
+            const clockElement = document.getElementById('header-clock');
+            if (clockElement) {
+                const now = new Date();
+                clockElement.textContent = `🕐 ${now.toLocaleTimeString()}`;
+            }
+        }
+        // Update clock every second and start immediately
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
 
     </body>
 </html>
