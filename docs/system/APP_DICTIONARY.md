@@ -50,6 +50,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
 - **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
+- **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/templates/pages/public/pricing.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -146,6 +147,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
+- **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Homepage Public Footer Links** → Product/company/support/legal links mapped to concrete routes/anchors instead of placeholder targets (see `app/templates/homepage.html`)
 - **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
 - **Soap Formulator (Public Tool)** → Batch-first soap recipe builder with quality targets (see `app/templates/tools/soaps/index.html`)
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)

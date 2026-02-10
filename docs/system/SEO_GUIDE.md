@@ -97,8 +97,12 @@ page_description = "Free soap formulator: build recipes with lye, oils, superfat
 Pricing (/pricing)
 ```
 page_title = "BatchTrack.com | Pricing for Small-Batch Makers"
-page_description = "Simple pricing for makers: Hobbyist, Enthusiast, Fanatic. Unlimited batches on Fanatic. Lifetime deals available. Batch-first tools, not finance-first."
+page_description = "Compare Hobbyist, Enthusiast, and Fanatic plans with monthly, yearly, and limited lifetime launch seats in a calm, batch-first flow."
 ```
+
+Notes:
+- `/pricing` is a public destination page and should set `page_title`, `page_description`, and `canonical_url` through the route context.
+- `layout.html` handles OG/Twitter tags from those variables; keep the copy maker-first and avoid finance-first language.
 
 ## Final Notes for Engineers
 - Use Jinja variables consistently (`page_title`, `page_description`, etc.) in `layout.html` head.
