@@ -1,9 +1,20 @@
+"""Single-session login enforcement tests.
+
+Synopsis:
+Ensures a later login invalidates an earlier browser session for the same user.
+
+Glossary:
+- Active session token: Server-side token mirrored in Flask session for session validity.
+"""
+
 import uuid
 
 from app.extensions import db
 from app.models.models import User, Organization
 
 
+# --- Create user helper ---
+# Purpose: Create a customer user with dashboard permission for session token assertions.
 def _create_user(app):
     """Helper to create a user with a known password for session tests."""
     suffix = uuid.uuid4().hex[:8]
@@ -40,6 +51,7 @@ def _create_user(app):
             email=f"{username}@example.com",
             organization_id=org.id,
             is_active=True,
+            is_verified=True,
             user_type="customer",
         )
         user.set_password(password)
@@ -52,6 +64,8 @@ def _create_user(app):
     return username, password
 
 
+# --- Session invalidation test ---
+# Purpose: Confirm newer login revokes prior session and keeps latest session valid.
 def test_subsequent_login_invalidates_existing_session(app):
     username, password = _create_user(app)
 

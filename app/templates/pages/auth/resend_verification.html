@@ -1,4 +1,10 @@
+{#
+Synopsis:
+Public form for requesting a new email verification link.
 
+Glossary:
+- Verification resend: Re-issues mailbox ownership token for unverified accounts.
+#}
 {% extends "layout.html" %}
 
 {% block title %}Resend Email Verification{% endblock %}
@@ -15,12 +21,15 @@
                     <p class="text-muted">Enter your email address and we'll send you a new verification link.</p>
                     
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-group mb-3">
                             <label for="email">Email Address</label>
                             <input type="email" 
                                    class="form-control" 
                                    id="email" 
                                    name="email" 
+                                   value="{{ prefill_email or '' }}"
+                                   autocomplete="email"
                                    required>
                         </div>
                         

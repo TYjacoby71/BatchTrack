@@ -69,6 +69,11 @@ This document pairs **plain-language instructions** for every major system actio
     - **Source Docs:** [`docs/system/deploy_migration_guide.md`](deploy_migration_guide.md), [`docs/system/DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md#database-changes), [`docs/system/ARCHITECTURE.md`](ARCHITECTURE.md#monitoring--observability).
     - **Checklist:** Create Alembic migration per schema change, run migrations with org-safe order, monitor logs (`app/middleware.py` adds security headers/logging), keep `docs/changelog` updated post-release.
 
+15. ### [Configure Account Email Security Modes](#instruction-auth-email)
+    - **Source Docs:** `app/config.py`, `app/services/email_service.py`, `app/blueprints/auth/password_routes.py`, `app/blueprints/auth/verification_routes.py`.
+    - **Steps:** Choose `AUTH_EMAIL_VERIFICATION_MODE` (`off`, `prompt`, `required`), set `AUTH_EMAIL_REQUIRE_PROVIDER=true` to enable provider-aware fallback, then turn on `AUTH_PASSWORD_RESET_ENABLED` when mailbox delivery is live.
+    - **Operational Rule:** If provider credentials are missing and provider-required fallback is enabled, account email verification and reset-email flows relax automatically to preserve legacy login/signup behavior.
+
 > **Wireframe Note:** Each subsection is intentionally concise. Future agents can extend them with screenshots, drawer IDs, or SOP checklists without changing anchors.
 
 ---
@@ -80,6 +85,7 @@ Each CAQ links back to the instruction that resolves it.
 ### Access & Environment
 - **How do I bootstrap a fresh workspace or reset my database?** → [Provision & Seed a New Environment](#instruction-provision)
 - **Why can’t my developer account access customer data?** → [Manage Organizations, Roles, and Permissions](#instruction-org-permissions)
+- **Can I run signup/login without an email provider configured yet?** → [Configure Account Email Security Modes](#instruction-auth-email)
 
 ### Inventory & Global Library
 - **Where do the densities and defaults come from for new inventory?** → [Curate the Global Item Library](#instruction-global-library)

@@ -354,8 +354,8 @@
 }
 
 .stat-box {
-    padding: 0.5rem;
-    border-radius: 0.25rem;
+    padding: var(--theme-ext-space-22272eb8f4);
+    border-radius: var(--theme-ext-radius-002e22995e);
     background-color: var(--color-breadcrumb-bg);
 }
 
@@ -363,18 +363,18 @@
 .variants-carousel-wrapper {
     position: relative;
     overflow: hidden;
-    padding: 0 40px;
-    margin: 0 -15px; /* Offset Bootstrap container padding to align with grid */
+    padding: var(--theme-ext-space-0aa0ca2d94);
+    margin: var(--theme-ext-space-ff0362dfff); /* Offset Bootstrap container padding to align with grid */
 }
 
 .variants-carousel {
     display: flex;
-    gap: 1rem;
+    gap: var(--theme-ext-space-65e5c91bd4);
     overflow-x: auto;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding: 10px 15px; /* Add padding back to align content */
+    padding: var(--theme-ext-space-ab22a61d62); /* Add padding back to align content */
 }
 
 .variants-carousel::-webkit-scrollbar {
@@ -393,12 +393,12 @@
 
 .carousel-nav {
     position: absolute;
-    top: 50%;
+    top: var(--theme-ext-space-d7b86fa95a);
     transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
+    background: var(--theme-ext-color-3572281613);
+    color: var(--theme-ext-color-1ab4b8ffdf);
     border: none;
-    border-radius: 50%;
+    border-radius: var(--theme-ext-radius-9d3bc57a82);
     width: 40px;
     height: 40px;
     display: flex;
@@ -410,19 +410,19 @@
 }
 
 .carousel-nav:hover {
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--theme-ext-color-a0f2fa1d85);
 }
 
 .carousel-nav-left {
-    left: 0;
+    left: var(--theme-ext-space-51c807580e);
 }
 
 .carousel-nav-right {
-    right: 0;
+    right: var(--theme-ext-space-ffe0ae9ea3);
 }
 
 .carousel-nav:disabled {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--theme-ext-color-657aaea199);
     cursor: not-allowed;
 }
 
@@ -433,7 +433,7 @@
     }
 
     .variants-carousel-wrapper {
-        padding: 0 30px;
+        padding: var(--theme-ext-space-ed2a3cf4ec);
     }
 
     .carousel-nav {

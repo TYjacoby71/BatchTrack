@@ -14,6 +14,19 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-10: Tools Index Visual Cleanup and Mobile Theme Fallback Fix](2026-02-10-tools-index-visual-cleanup-and-mobile-theme-fallback.md)**
+  - Removed rainbow-like category accents from `/tools` and aligned cards/tiles to core app styling.
+  - Fixed mobile dark-theme forcing by requiring explicit system-theme mode and adding light fallback.
+  - Added dictionary/changelog documentation for updated tool UI and theme semantics.
+- **[2026-02-10: Pricing Page Launch, Public CTA Routing, and Header Offset Fix](2026-02-10-pricing-page-and-public-cta-flow.md)**
+  - Added dedicated `/pricing` sales page with lifetime-first display and 3-tier checkbox comparison.
+  - Rewired public pricing/trial links to deterministic `/pricing` → `/auth/signup` flow.
+  - Removed development/waitlist gating from homepage CTAs and fixed public header offset CSS conflicts.
+- **[2026-02-10: Auth Email Modes and Integrations Checklist Alignment](2026-02-10-auth-email-modes-and-integrations-checklist.md)**
+  - Added env-driven auth-email verification/reset controls with provider-aware legacy fallback.
+  - Updated developer integrations checklist to show configured vs effective auth-email mode.
+  - Documented new routes/terms in APP_DICTIONARY and operations FAQ.
+
 - **[2026-02-09: Lifetime Billing Alignment and Stripe Runbook](2026-02-09-lifetime-billing-single-key-runbook.md)**
   - Aligned checkout to single-key tier model with derived yearly/lifetime lookup keys.
   - Documented Stripe production setup and safe price-update runbook.

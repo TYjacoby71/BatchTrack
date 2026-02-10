@@ -1,3 +1,11 @@
+{#
+Synopsis:
+Appearance settings controls for selecting and persisting user theme preference.
+
+Glossary:
+- System theme: Theme mode that follows the device/browser color-scheme preference.
+- Theme storage key: Scoped localStorage key used for per-user/per-org persistence.
+#}
 <div class="row">
   <div class="col-lg-6">
     <div class="card">
@@ -12,14 +20,13 @@
         const hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
         const serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
         const storedTheme = localStorage.getItem(storageKey);
-        let initialTheme = hasServerTheme ? (serverTheme || 'system') : (storedTheme || 'system');
+        const resolvedServerTheme = (hasServerTheme && serverTheme) ? serverTheme : null;
+        let initialTheme = resolvedServerTheme || storedTheme || 'light';
 
-        if (hasServerTheme) {
-          if (serverTheme && serverTheme !== 'system') {
-            localStorage.setItem(storageKey, serverTheme);
-          } else {
-            localStorage.removeItem(storageKey);
-          }
+        if (resolvedServerTheme) {
+          localStorage.setItem(storageKey, resolvedServerTheme);
+        } else if (!storedTheme) {
+          localStorage.setItem(storageKey, 'light');
         }
 
         return {
@@ -28,14 +35,10 @@
           async applyTheme(newTheme) {
             this.theme = newTheme;
             try {
-              // Apply theme immediately to DOM and localStorage
-              if (newTheme && newTheme !== 'system') {
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem(this.themeStorageKey, newTheme);
-              } else {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.removeItem(this.themeStorageKey);
-              }
+              // Apply theme immediately to DOM and localStorage.
+              const appliedTheme = newTheme || 'light';
+              document.documentElement.setAttribute('data-theme', appliedTheme);
+              localStorage.setItem(this.themeStorageKey, appliedTheme);
 
               // Try to persist to user preferences (may fail for anonymous users or developers)
               try {

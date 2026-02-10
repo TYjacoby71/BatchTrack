@@ -50,6 +50,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
 - **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
+- **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/routes/pricing_routes.py` and `app/templates/pages/public/pricing.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -60,6 +61,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-stripe** → Stripe connectivity check (see `app/blueprints/developer/views/integration_routes.py`)
+- **/auth/forgot-password** → Password reset request endpoint that issues one-time reset tokens when enabled (see `app/blueprints/auth/password_routes.py`)
+- **/auth/reset-password/<token>** → Password reset completion endpoint for token-backed credential changes (see `app/blueprints/auth/password_routes.py`)
+- **/auth/verify-email/<token>** → Email verification endpoint for mailbox ownership confirmation (see `app/blueprints/auth/verification_routes.py`)
+- **/auth/resend-verification** → Verification resend endpoint for unverified accounts (see `app/blueprints/auth/verification_routes.py`)
 - **/api/drawers/global-link/check** → Global link drawer availability (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/modal** → Render global link modal (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/confirm** → Link inventory to global items (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
@@ -106,6 +111,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)
@@ -116,6 +122,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **RecipeFormVariations** → Variation template construction helpers (see `app/blueprints/recipes/form_variations.py`)
 - **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
 - **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
+- **EmailService.get_verification_mode** → Resolves effective verification mode (off/prompt/required) with provider-aware fallback (see `app/services/email_service.py`)
+- **EmailService.password_reset_enabled** → Determines whether forgot/reset token flows are active for the current environment (see `app/services/email_service.py`)
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
@@ -143,9 +151,14 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **BT_STORAGE (Client Scope Prefix)** → Front-end storage key prefix scoped by user + org to avoid tenant bleed (see `app/templates/layout.html`)
+- **System Theme Token (`data-theme='system'`)** → Explicit client-side mode that follows OS color-scheme only when the user intentionally selects System in appearance settings (see `app/templates/layout.html`, `app/templates/settings/components/appearance_tab.html`, and `app/static/css/theme.css`).
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
+- **Maker Tools Neutral Card Styling** → Tools index cards/tiles aligned to core app surface and border tokens, replacing per-category rainbow accents (see `app/templates/tools/index.html`).
+- **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Homepage Public Footer Links** → Product/company/support/legal links mapped to concrete routes/anchors instead of placeholder targets (see `app/templates/homepage.html`)
+- **Default Social Preview Image** → App-wide Open Graph/Twitter fallback image used when a page does not provide a custom `page_og_image` (see `app/static/images/og/batchtrack-default-og.svg` and `app/templates/layout.html`)
 - **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
 - **Soap Formulator (Public Tool)** → Batch-first soap recipe builder with quality targets (see `app/templates/tools/soaps/index.html`)
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
@@ -156,6 +169,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Origin Summary (Origin/Root Recipe)** → Origin + predecessor display (see `app/templates/pages/recipes/view_recipe.html`)
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
+- **Account Email Security Callout** → Integrations-page summary of configured vs effective auth-email mode and provider fallback state (see `app/templates/developer/integrations.html`)
 - **Inventory Filter Persistence (Scoped)** → Per-user/org inventory filters and column preferences (see `app/templates/inventory_list.html`)
 - **Bulk Inventory Drafts (Scoped)** → Per-user/org bulk update drafts stored in the browser (see `app/templates/inventory/bulk_updates.html`)
 - **Drawer Cadence Throttle (Scoped)** → Per-user/org cadence window for drawer checks (see `app/static/js/drawers/drawer_cadence.js`)
@@ -174,12 +188,19 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
+- **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
 - **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
 - **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
 - **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)
+- **AUTH_EMAIL_VERIFICATION_MODE** → Auth-email policy switch (`off`, `prompt`, `required`) for signup/login posture (see `app/config.py`)
+- **AUTH_EMAIL_REQUIRE_PROVIDER** → If true, disables email auth flows when provider credentials are missing (see `app/config.py`)
+- **AUTH_PASSWORD_RESET_ENABLED** → Master toggle for forgot/reset password email flow (see `app/config.py`)
+- **EMAIL_SMTP_ALLOW_NO_AUTH** → Allows SMTP provider checks to pass without username/password when relay policy permits (see `app/config.py`)
+- **EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS** → Verification token expiry window in hours (see `app/blueprints/auth/verification_routes.py`)
+- **PASSWORD_RESET_TOKEN_EXPIRY_HOURS** → Reset token expiry window in hours (see `app/blueprints/auth/password_routes.py`)
 - **seed_test_data** → Seed living demo dataset (see `app/seeders/test_data_seeder.py`)
 
 ---

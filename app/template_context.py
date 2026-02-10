@@ -1,3 +1,13 @@
+"""Template context registry for global Jinja helpers.
+
+Synopsis:
+Registers shared context processors used across all templates.
+
+Glossary:
+- Context processor: Function that injects variables/helpers into every template render.
+- Theme preference scope: Per-user stored appearance preference value.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -144,7 +154,9 @@ def register_template_context(app: Flask) -> None:
                 prefs = None
             if prefs:
                 theme_preference_scoped = True
-                theme_preference = prefs.theme or "system"
+                # Keep None when a preference row exists but theme was never chosen.
+                # Layout bootstrap falls back to explicit light mode in this case.
+                theme_preference = prefs.theme
         return {
             "theme_preference": theme_preference,
             "theme_preference_scoped": theme_preference_scoped,

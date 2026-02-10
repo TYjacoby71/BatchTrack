@@ -1,3 +1,13 @@
+"""Signup orchestration for pending checkout and account provisioning.
+
+Synopsis:
+Creates pending signup records before checkout and provisions org/user records after payment.
+Coordinates verification/reset token issuance and welcome/setup notifications.
+
+Glossary:
+- Pending signup: Pre-checkout record tracking email, tier, and checkout state.
+- Provisioning: Materializing organization + owner user from checkout artifacts.
+"""
 
 import logging
 import secrets
@@ -17,6 +27,8 @@ from .batchbot_credit_service import BatchBotCreditService
 
 logger = logging.getLogger(__name__)
 
+# --- Signup service ---
+# Purpose: Orchestrate pending signup records and post-checkout account provisioning.
 class SignupService:
     """Service for handling complete signup and organization creation"""
 
@@ -61,6 +73,8 @@ class SignupService:
         return pending
 
     @staticmethod
+    # --- Complete pending signup from checkout ---
+    # Purpose: Create org + owner user after payment and initialize setup tokens/emails.
     def complete_pending_signup_from_checkout(
         pending_signup: PendingSignup,
         checkout_session,
@@ -133,6 +147,7 @@ class SignupService:
         username = SignupService._generate_username(email)
 
         try:
+            verification_enabled = EmailService.should_issue_verification_tokens()
             org = Organization(
                 name=org_name,
                 contact_email=email,
@@ -158,7 +173,11 @@ class SignupService:
                 user_type='customer',
                 is_organization_owner=True,
                 is_active=True,
-                email_verified=True,
+                email_verified=not verification_enabled,
+                email_verification_token=(
+                    EmailService.generate_verification_token(email) if verification_enabled else None
+                ),
+                email_verification_sent_at=TimezoneUtils.utc_now() if verification_enabled else None,
                 oauth_provider=pending_signup.oauth_provider,
                 oauth_provider_id=pending_signup.oauth_provider_id,
             )
@@ -186,6 +205,16 @@ class SignupService:
                 BatchBotCreditService.grant_signup_bonus(org)
             except Exception as bonus_error:
                 logger.warning("Failed to grant BatchBot signup bonus: %s", bonus_error)
+
+            if verification_enabled:
+                try:
+                    EmailService.send_verification_email(
+                        owner_user.email,
+                        owner_user.email_verification_token,
+                        owner_user.first_name or owner_user.username,
+                    )
+                except Exception as email_error:
+                    logger.warning("Failed to send verification email: %s", email_error)
 
             try:
                 EmailService.send_welcome_email(owner_user.email, owner_user.first_name or owner_user.username, org.name, subscription_tier.name)

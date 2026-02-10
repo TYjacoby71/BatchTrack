@@ -444,11 +444,11 @@ function renderCostDistribution(data) {
         const percentage = maxCount > 0 ? (bin.count / maxCount) * 100 : 0;
         html += `
             <div class="d-flex align-items-center mb-1">
-                <span class="me-2" style="width: 80px; font-size: 0.8em;">$${bin.bin_start.toFixed(2)}</span>
+                <span class="me-2" style="width: 80px; font-size: var(--theme-ext-size-bc254b7f05);">$${bin.bin_start.toFixed(2)}</span>
                 <div class="progress flex-grow-1 me-2" style="height: 20px;">
                     <div class="progress-bar bg-info" style="width: ${percentage}%"></div>
                 </div>
-                <span style="width: 30px; font-size: 0.8em;">${bin.count}</span>
+                <span style="width: 30px; font-size: var(--theme-ext-size-bc254b7f05);">${bin.count}</span>
             </div>
         `;
     });

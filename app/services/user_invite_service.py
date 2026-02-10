@@ -1,3 +1,14 @@
+"""Organization user invitation orchestration.
+
+Synopsis:
+Creates invited users, assigns roles, and prepares password setup delivery.
+Persists password-setup token metadata so invite links map to real accounts.
+
+Glossary:
+- Invite flow: Create-account path initiated by organization owners/admins.
+- Setup token: One-time token used by invited users to choose a password.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,8 +18,11 @@ from flask_login import current_user
 from app.extensions import db
 from app.models import User, Role, Organization
 from app.services.email_service import EmailService
+from app.utils.timezone_utils import TimezoneUtils
 
 
+# --- Invite result DTO ---
+# Purpose: Return standardized invite outcomes to calling routes/services.
 @dataclass
 class InviteResult:
     success: bool
@@ -16,10 +30,14 @@ class InviteResult:
     user: Optional[User] = None
 
 
+# --- User invite service ---
+# Purpose: Manage org-scoped invite lifecycle including setup token initialization.
 class UserInviteService:
     """Orchestrates organization user invitations (creation, role assignment, email)."""
 
     @staticmethod
+    # --- Invite user ---
+    # Purpose: Create invited user records with role assignment and setup email metadata.
     def invite_user(*, organization: Organization, email: str, role_id: int,
                     first_name: str = "", last_name: str = "", phone: str = "",
                     force_inactive: bool = False) -> InviteResult:
@@ -64,9 +82,12 @@ class UserInviteService:
         # Assign role
         new_user.assign_role(role, assigned_by=current_user)
 
+        setup_token = EmailService.generate_reset_token(new_user.id)
+        new_user.password_reset_token = setup_token
+        new_user.password_reset_sent_at = TimezoneUtils.utc_now()
+
         # Send password-setup email if configured
         if EmailService.is_configured():
-            setup_token = EmailService.generate_reset_token(new_user.id)
             EmailService.send_password_setup_email(email, setup_token, first_name or username)
             msg = 'User invited successfully! Password setup email sent.'
         else:
