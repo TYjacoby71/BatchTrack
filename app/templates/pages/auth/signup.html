@@ -12,7 +12,7 @@
                     <h2 class="mb-1">
                         <i class="fas fa-rocket me-2"></i>Choose Your BatchTrack Plan
                     </h2>
-                    <p class="text-muted mb-0">Choose a tier, then move down its stacked cards: Lifetime, Yearly, Monthly.</p>
+                    <p class="text-muted mb-0">Pick one tier, then choose the card you want: Lifetime, Yearly, or Monthly.</p>
                 </div>
                 <div class="card-body p-4 p-lg-5">
                     {% if oauth_user_info %}
@@ -24,12 +24,11 @@
 
                     <div class="alert alert-info py-2 px-3 mb-4 small">
                         <i class="fas fa-layer-group me-2"></i>
-                        Plans are stacked in sequence for each tier: <strong>Lifetime</strong> (if available), then
-                        <strong>Yearly</strong>, then <strong>Monthly</strong>. Click the down arrow or exposed card edge to move down the stack.
+                        Each tier is shown as a 3-card solitaire stack. Click any exposed card to select that billing option.
                     </div>
 
                     <section id="successivePlansSection">
-                        <div class="row row-cols-1 row-cols-lg-3 g-4" id="tierStackGrid">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="tierStackGrid">
                             {% for offer in lifetime_offers %}
                             {% set tier_key = (offer.tier_id|string) if offer.tier_id else '' %}
                             {% set tier_data = available_tiers.get(tier_key) if tier_key else None %}
@@ -57,12 +56,11 @@
                                     </div>
                                     {% else %}
                                     <div class="small text-muted mb-2">
-                                        <i class="fas fa-hourglass-end me-1"></i>Lifetime sold out for this tier. Showing yearly first.
+                                        <i class="fas fa-hourglass-end me-1"></i>Lifetime sold out for this tier.
                                     </div>
                                     {% endif %}
 
                                     <div class="tier-plan-stack">
-                                        {% if offer.has_remaining %}
                                         <article
                                             class="stack-plan-card"
                                             data-tier-id="{{ tier_key }}"
@@ -72,11 +70,9 @@
                                         >
                                             <div class="stack-plan-peek">
                                                 <span class="stack-plan-label">Lifetime</span>
-                                                <button type="button" class="btn btn-link stack-next-btn" aria-label="Show next plan option">
-                                                    <i class="fas fa-angle-down"></i>
-                                                </button>
                                             </div>
                                             <div class="stack-plan-body">
+                                                {% if offer.has_remaining %}
                                                 <div class="fw-bold text-primary mb-2">{{ offer.lifetime_price_copy }}</div>
                                                 <div class="small mb-2">
                                                     Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
@@ -84,9 +80,13 @@
                                                 <div class="small text-muted">
                                                     Coupon auto-applied: <code>{{ offer.coupon_code }}</code>
                                                 </div>
+                                                {% else %}
+                                                <div class="fw-bold text-muted mb-2">Lifetime sold out</div>
+                                                <div class="small text-muted mb-1">All {{ offer.seat_total }} lifetime seats have been claimed.</div>
+                                                <div class="small text-muted">Choose Yearly or Monthly below for immediate checkout.</div>
+                                                {% endif %}
                                             </div>
                                         </article>
-                                        {% endif %}
 
                                         <article
                                             class="stack-plan-card"
@@ -96,9 +96,6 @@
                                         >
                                             <div class="stack-plan-peek">
                                                 <span class="stack-plan-label">Yearly</span>
-                                                <button type="button" class="btn btn-link stack-next-btn" aria-label="Show next plan option">
-                                                    <i class="fas fa-angle-down"></i>
-                                                </button>
                                             </div>
                                             <div class="stack-plan-body">
                                                 {% if tier_data and yearly_price %}
@@ -119,9 +116,6 @@
                                         >
                                             <div class="stack-plan-peek">
                                                 <span class="stack-plan-label">Monthly</span>
-                                                <button type="button" class="btn btn-link stack-next-btn" aria-label="Show next plan option">
-                                                    <i class="fas fa-angle-down"></i>
-                                                </button>
                                             </div>
                                             <div class="stack-plan-body">
                                                 {% if tier_data and monthly_price %}
@@ -232,12 +226,9 @@ function getDefaultPlanKindForTier(tierId) {
     return 'monthly';
 }
 
-function setActiveCard(shell, card, options = {}) {
+function selectPlanCard(shell, card, options = {}) {
     if (!shell || !card) return;
     const syncSelection = options.syncSelection !== false;
-    shell.querySelectorAll('.stack-plan-card').forEach((entry) => {
-        entry.classList.toggle('is-active', entry === card);
-    });
 
     if (syncSelection) {
         const tierId = card.dataset.tierId || shell.dataset.tierId || '';
@@ -256,15 +247,6 @@ function setActiveCard(shell, card, options = {}) {
     updatePlanSummary();
 }
 
-function activateNextCard(card) {
-    const shell = card.closest('.tier-stack-shell');
-    if (!shell) return;
-    const cards = Array.from(shell.querySelectorAll('.stack-plan-card'));
-    const currentIndex = cards.indexOf(card);
-    if (currentIndex < 0 || currentIndex + 1 >= cards.length) return;
-    setActiveCard(shell, cards[currentIndex + 1], { syncSelection: true });
-}
-
 function updateSelectionState() {
     document.querySelectorAll('.tier-stack-shell').forEach((shell) => {
         const shellTierId = String(shell.dataset.tierId || '');
@@ -273,6 +255,7 @@ function updateSelectionState() {
 
         shell.querySelectorAll('.stack-plan-card').forEach((card) => {
             const isCheckoutCard = isSelectedTier && card.dataset.planKind === selectedPlanKind;
+            card.classList.toggle('is-selected-plan', isCheckoutCard);
             card.classList.toggle('is-checkout-selected', isCheckoutCard);
             card.classList.toggle('is-disabled', card.dataset.enabled !== 'true');
         });
@@ -330,7 +313,7 @@ function updatePlanSummary() {
             continueBtn.disabled = false;
         } else {
             title.textContent = 'Lifetime summary';
-            selectedText.textContent = 'This lifetime option is currently unavailable. Move down this tier stack to yearly or monthly.';
+            selectedText.textContent = 'This lifetime option is currently unavailable. Choose the yearly or monthly card for this tier.';
             badge.textContent = 'Unavailable';
             priceText.textContent = '—';
             continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
@@ -434,23 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tierShells.forEach((shell) => {
         const cards = Array.from(shell.querySelectorAll('.stack-plan-card'));
-        cards.forEach((card, index) => {
-            if (index === 0) {
-                card.classList.add('is-active');
-            }
-
+        cards.forEach((card) => {
             card.addEventListener('click', () => {
-                setActiveCard(shell, card, { syncSelection: true });
+                selectPlanCard(shell, card, { syncSelection: true });
             });
-
-            const nextButton = card.querySelector('.stack-next-btn');
-            if (nextButton) {
-                nextButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    activateNextCard(card);
-                });
-            }
         });
     });
 
@@ -487,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return card.dataset.planKind === selectedPlanKind;
         });
         const fallbackCard = selectedShell.querySelector('.stack-plan-card');
-        setActiveCard(selectedShell, matchingCard || fallbackCard, { syncSelection: false });
+        selectPlanCard(selectedShell, matchingCard || fallbackCard, { syncSelection: false });
     } else {
         const fallbackShell = tierShells.find((shell) => {
             return Boolean(String(shell.dataset.tierId || ''));
@@ -499,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return card.dataset.planKind === selectedPlanKind;
             });
             const fallbackCard = fallbackShell.querySelector('.stack-plan-card');
-            setActiveCard(fallbackShell, matchingCard || fallbackCard, { syncSelection: false });
+            selectPlanCard(fallbackShell, matchingCard || fallbackCard, { syncSelection: false });
         }
     }
 
@@ -529,7 +499,10 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .tier-plan-stack {
-    margin-top: 0.6rem;
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.2rem;
 }
 
 .stack-plan-card {
@@ -544,14 +517,28 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .stack-plan-card + .stack-plan-card {
-    margin-top: -1.4rem;
+    margin-top: -1.1rem;
+    margin-left: 0.8rem;
+}
+
+.stack-plan-card:nth-of-type(1) {
+    z-index: 3;
+}
+
+.stack-plan-card:nth-of-type(2) {
+    z-index: 2;
+}
+
+.stack-plan-card:nth-of-type(3) {
+    z-index: 1;
+    margin-left: 1.45rem;
 }
 
 .stack-plan-card .stack-plan-peek {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    justify-content: flex-start;
+    gap: 0.35rem;
     padding: 0.75rem 0.9rem;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -573,25 +560,15 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .stack-plan-card .stack-plan-body {
-    display: none;
     padding: 0.8rem 0.95rem 0.95rem;
     border-top: 1px solid #e4e9f4;
     min-height: 7.5rem;
 }
 
-.stack-plan-card.is-active {
-    margin-top: 0.5rem;
+.stack-plan-card.is-selected-plan {
     transform: translateY(-2px);
     box-shadow: 0 10px 24px rgba(17, 28, 56, 0.15);
-    z-index: 3;
-}
-
-.stack-plan-card.is-active:first-child {
-    margin-top: 0;
-}
-
-.stack-plan-card.is-active .stack-plan-body {
-    display: block;
+    z-index: 6;
 }
 
 .stack-plan-card.is-checkout-selected {
@@ -601,22 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .stack-plan-card.is-disabled {
     opacity: 0.76;
-}
-
-.stack-next-btn {
-    color: #3f4f71;
-    text-decoration: none;
-    padding: 0;
-    line-height: 1;
-}
-
-.stack-next-btn:hover {
-    color: #1f2f53;
-}
-
-.stack-plan-card:last-child .stack-next-btn {
-    visibility: hidden;
-    pointer-events: none;
 }
 
 .features-checklist {
@@ -636,6 +597,20 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 @media (max-width: 768px) {
+    .tier-stack-shell {
+        padding: 0.85rem;
+    }
+
+    .stack-plan-card + .stack-plan-card,
+    .stack-plan-card:nth-of-type(3) {
+        margin-top: 0.65rem;
+        margin-left: 0;
+    }
+
+    .stack-plan-card .stack-plan-body {
+        min-height: auto;
+    }
+
     .features-checklist {
         columns: 1;
     }
