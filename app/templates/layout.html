@@ -182,6 +182,22 @@
             </div>
             <!-- Show both menus when developer is viewing an organization -->
             {% if session.get('dev_selected_org_id') %}
+            {% if not has_nav_center %}
+            <ul class="navbar-nav mx-auto d-none d-md-flex">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
+                        ❓ Help
+                    </a>
+                </li>
+                {% if recipe_library_nav_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
+                        📚 Recipe Library
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
             <div class="dropdown me-2">
                 <button class="btn btn-light dropdown-toggle" type="button" id="customerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-user"></i> Customer Menu
@@ -363,6 +379,22 @@
             <!-- Customer Navigation -->
             <div class="navbar-nav me-auto">
             </div>
+            {% if not has_nav_center %}
+            <ul class="navbar-nav mx-auto d-none d-md-flex">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
+                        ❓ Help
+                    </a>
+                </li>
+                {% if recipe_library_nav_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
+                        📚 Recipe Library
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
             <div class="dropdown ms-auto">
                 <button class="btn btn-light dropdown-toggle" type="button" id="directoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-bars"></i> Menu
