@@ -25,6 +25,8 @@ class RouteAccessConfig:
         "index",
         "public_page",
         "pricing_routes.pricing",
+        "landing_pages.lp_hormozi",
+        "landing_pages.lp_robbins",
         "auth.login",
         "auth.signup",
         "auth.logout",
@@ -74,6 +76,7 @@ class RouteAccessConfig:
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
         "/homepage",
         "/pricing",
+        "/lp/",
         "/legal/",
         "/static/",
         "/favicon.ico",

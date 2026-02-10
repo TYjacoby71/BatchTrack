@@ -45,4 +45,6 @@ def test_anonymous_workflow_can_browse_public_site(app):
     )
     _assert_public_get(client, "/recipes/library", label="recipe library")
     _assert_public_get(client, "/help/how-it-works", label="how it works")
+    _assert_public_get(client, "/lp/hormozi", label="landing page (results-first)")
+    _assert_public_get(client, "/lp/robbins", label="landing page (transformation-first)")
     _assert_public_get(client, "/auth/signup", label="signup page")
