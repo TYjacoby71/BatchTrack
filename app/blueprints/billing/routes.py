@@ -344,6 +344,11 @@ def complete_signup_from_stripe():
     db.session.commit()
 
     session['onboarding_welcome'] = True
+    if owner_user.email and not owner_user.email_verified:
+        flash(
+            'Please verify your email while you complete account setup.',
+            'info',
+        )
     tier_name = organization.subscription_tier.name if organization and organization.subscription_tier else 'BatchTrack'
     flash(f'Welcome to BatchTrack! Your {tier_name} account is ready to use.', 'success')
     return redirect(url_for('onboarding.welcome'))

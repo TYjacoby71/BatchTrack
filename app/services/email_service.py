@@ -1,3 +1,14 @@
+"""Transactional email delivery and auth-email mode helpers.
+
+Synopsis:
+Builds and sends verification, reset, welcome, and operational emails.
+Also resolves whether auth-email security flows are active in the current environment.
+
+Glossary:
+- Auth-email mode: Effective verification policy after provider-aware fallback.
+- Provider readiness: Whether selected email backend has required credentials.
+"""
+
 import logging
 from flask import current_app, render_template, url_for
 from flask_mail import Message
@@ -9,6 +20,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# --- Email service ---
+# Purpose: Compose and dispatch transactional emails and auth-email control decisions.
 class EmailService:
     """Service for sending emails"""
 
@@ -104,6 +117,13 @@ class EmailService:
     def send_password_reset_email(user_email, reset_token, user_name=None):
         """Send password reset email"""
         try:
+            raw_expiry = current_app.config.get('PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 24)
+            try:
+                expiry_hours = max(1, int(raw_expiry))
+            except (TypeError, ValueError):
+                expiry_hours = 24
+            expiry_label = "hour" if expiry_hours == 1 else "hours"
+
             reset_url = url_for('auth.reset_password', 
                               token=reset_token, 
                               _external=True)
@@ -117,7 +137,7 @@ class EmailService:
             <p><a href="{reset_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
             <p>If the button doesn't work, copy and paste this link into your browser:</p>
             <p>{reset_url}</p>
-            <p>This link will expire in 1 hour.</p>
+            <p>This link will expire in {expiry_hours} {expiry_label}.</p>
             <p>If you didn't request this reset, please ignore this email.</p>
             <br>
             <p>Best regards,<br>The BatchTrack Team</p>
@@ -292,6 +312,8 @@ class EmailService:
         return EmailService._send_email(email, subject, body)
 
     @staticmethod
+    # --- Check provider configuration ---
+    # Purpose: Determine whether the selected email backend can send messages now.
     def is_configured():
         """Check if email is properly configured for the selected provider."""
         try:
@@ -303,9 +325,54 @@ class EmailService:
             if provider == 'mailgun':
                 return bool(current_app.config.get('MAILGUN_API_KEY') and current_app.config.get('MAILGUN_DOMAIN'))
             # SES SMTP or generic SMTP
-            return bool(current_app.config.get('MAIL_SERVER'))
+            mail_server = current_app.config.get('MAIL_SERVER')
+            default_sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('DEFAULT_FROM_EMAIL')
+            if not mail_server or not default_sender:
+                return False
+            if current_app.config.get('EMAIL_SMTP_ALLOW_NO_AUTH'):
+                return True
+            return bool(current_app.config.get('MAIL_USERNAME') and current_app.config.get('MAIL_PASSWORD'))
         except Exception:
             return False
+
+    @staticmethod
+    # --- Resolve verification mode ---
+    # Purpose: Convert configured auth-email mode into effective runtime behavior.
+    def get_verification_mode() -> str:
+        """Resolve effective verification mode from config and provider readiness."""
+        raw_mode = (current_app.config.get('AUTH_EMAIL_VERIFICATION_MODE') or 'prompt').strip().lower()
+        mode = raw_mode if raw_mode in {'off', 'prompt', 'required'} else 'prompt'
+
+        require_provider = bool(current_app.config.get('AUTH_EMAIL_REQUIRE_PROVIDER', True))
+        if mode != 'off' and require_provider and not EmailService.is_configured():
+            return 'off'
+        return mode
+
+    @staticmethod
+    # --- Should issue verification tokens ---
+    # Purpose: Gate token generation and verification email dispatch for account flows.
+    def should_issue_verification_tokens() -> bool:
+        """Whether account flows should create and send verification links."""
+        return EmailService.get_verification_mode() in {'prompt', 'required'}
+
+    @staticmethod
+    # --- Should require verified email ---
+    # Purpose: Decide whether login must block unverified users.
+    def should_require_verified_email_on_login() -> bool:
+        """Whether login should block unverified users."""
+        return EmailService.get_verification_mode() == 'required'
+
+    @staticmethod
+    # --- Password reset enabled ---
+    # Purpose: Gate forgot/reset email routes based on config and provider readiness.
+    def password_reset_enabled() -> bool:
+        """Whether forgot/reset-by-email should be active for this environment."""
+        if not current_app.config.get('AUTH_PASSWORD_RESET_ENABLED', True):
+            return False
+        require_provider = bool(current_app.config.get('AUTH_EMAIL_REQUIRE_PROVIDER', True))
+        if require_provider and not EmailService.is_configured():
+            return False
+        return True
 
     @staticmethod
     def send_waitlist_confirmation(email, first_name=None, last_name=None, name=None):

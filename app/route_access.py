@@ -1,10 +1,21 @@
-"""Declarative route-access configuration consumed by middleware."""
+"""Declarative route-access configuration consumed by middleware.
+
+Synopsis:
+Defines public, developer-only, and monitoring route classifications.
+Used by middleware to enforce auth and access policies consistently.
+
+Glossary:
+- Public endpoint: Route exempt from login checks.
+- Prefix rule: Path-based access classification fallback.
+"""
 
 from __future__ import annotations
 
 from typing import Iterable, Tuple
 
 
+# --- Route access config ---
+# Purpose: Centralize endpoint/path visibility rules used by middleware checks.
 class RouteAccessConfig:
     """Single source of truth for public/developer/monitoring routes."""
 
@@ -20,6 +31,8 @@ class RouteAccessConfig:
         "auth.oauth_google",
         "auth.oauth_callback",
         "auth.oauth_callback_compat",
+        "auth.forgot_password",
+        "auth.reset_password",
         "auth.resend_verification",
         "auth.verify_email",
         "auth.dev_login",
@@ -65,6 +78,8 @@ class RouteAccessConfig:
         "/auth/login",
         "/auth/signup",
         "/auth/logout",
+        "/auth/forgot-password",
+        "/auth/reset-password",
         "/tools",
         "/tools/",
         "/exports/tool",
