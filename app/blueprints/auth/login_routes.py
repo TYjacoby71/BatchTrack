@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import timedelta
 
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_user, logout_user
@@ -16,6 +17,7 @@ from . import auth_bp
 from ...extensions import db, limiter
 from ...models import GlobalItem, Organization, Role, User
 from ...models.subscription_tier import SubscriptionTier
+from ...services.email_service import EmailService
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
@@ -130,6 +132,31 @@ def login():
                 _log_loadtest_login_context("inactive_user", {"username": username})
                 flash("Account is inactive. Please contact administrator.")
                 return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available)
+
+            if user.user_type != "developer" and user.email and not user.email_verified:
+                try:
+                    recently_sent = (
+                        user.email_verification_sent_at
+                        and TimezoneUtils.utc_now() - user.email_verification_sent_at < timedelta(minutes=15)
+                    )
+                    if not recently_sent:
+                        user.email_verification_token = EmailService.generate_verification_token(user.email)
+                        user.email_verification_sent_at = TimezoneUtils.utc_now()
+                        db.session.commit()
+                        EmailService.send_verification_email(
+                            user.email,
+                            user.email_verification_token,
+                            user.first_name or user.username,
+                        )
+                except Exception as exc:
+                    db.session.rollback()
+                    logger.warning("Unable to queue verification email for user %s: %s", user.id, exc)
+
+                flash(
+                    "Please verify your email before logging in. We sent you a verification link.",
+                    "warning",
+                )
+                return redirect(url_for("auth.resend_verification", email=user.email))
 
             login_user(user)
             SessionService.rotate_user_session(user)
@@ -298,8 +325,9 @@ def quick_signup():
                 user_type="customer",
                 is_organization_owner=True,
                 is_active=True,
-                email_verified=True,
-                last_login=TimezoneUtils.utc_now(),
+                email_verified=False,
+                email_verification_token=EmailService.generate_verification_token(email),
+                email_verification_sent_at=TimezoneUtils.utc_now(),
             )
             user.set_password(password)
             db.session.add(user)
@@ -311,11 +339,17 @@ def quick_signup():
 
             db.session.commit()
 
-            login_user(user)
-            SessionService.rotate_user_session(user)
-            session["onboarding_welcome"] = True
+            try:
+                EmailService.send_verification_email(
+                    user.email,
+                    user.email_verification_token,
+                    user.first_name or user.username,
+                )
+            except Exception as exc:
+                logger.warning("Quick-signup verification email failed for %s: %s", user.email, exc)
 
-            return redirect(next_url)
+            flash("Account created. Please verify your email before signing in.", "success")
+            return redirect(url_for("auth.login", next=next_url))
         except Exception as exc:
             db.session.rollback()
             logger.error("Quick signup failed: %s", exc, exc_info=True)

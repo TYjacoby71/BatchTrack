@@ -104,6 +104,13 @@ class EmailService:
     def send_password_reset_email(user_email, reset_token, user_name=None):
         """Send password reset email"""
         try:
+            raw_expiry = current_app.config.get('PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 24)
+            try:
+                expiry_hours = max(1, int(raw_expiry))
+            except (TypeError, ValueError):
+                expiry_hours = 24
+            expiry_label = "hour" if expiry_hours == 1 else "hours"
+
             reset_url = url_for('auth.reset_password', 
                               token=reset_token, 
                               _external=True)
@@ -117,7 +124,7 @@ class EmailService:
             <p><a href="{reset_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
             <p>If the button doesn't work, copy and paste this link into your browser:</p>
             <p>{reset_url}</p>
-            <p>This link will expire in 1 hour.</p>
+            <p>This link will expire in {expiry_hours} {expiry_label}.</p>
             <p>If you didn't request this reset, please ignore this email.</p>
             <br>
             <p>Best regards,<br>The BatchTrack Team</p>

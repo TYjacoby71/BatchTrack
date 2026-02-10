@@ -7,6 +7,7 @@ from flask_login import current_user
 from app.extensions import db
 from app.models import User, Role, Organization
 from app.services.email_service import EmailService
+from app.utils.timezone_utils import TimezoneUtils
 
 
 @dataclass
@@ -64,9 +65,12 @@ class UserInviteService:
         # Assign role
         new_user.assign_role(role, assigned_by=current_user)
 
+        setup_token = EmailService.generate_reset_token(new_user.id)
+        new_user.password_reset_token = setup_token
+        new_user.password_reset_sent_at = TimezoneUtils.utc_now()
+
         # Send password-setup email if configured
         if EmailService.is_configured():
-            setup_token = EmailService.generate_reset_token(new_user.id)
             EmailService.send_password_setup_email(email, setup_token, first_name or username)
             msg = 'User invited successfully! Password setup email sent.'
         else:

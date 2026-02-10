@@ -27,7 +27,7 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     org.subscription_tier_id = tier.id
     org_id = org.id
 
-    user = User(username='ret_user', email='ret@example.com')
+    user = User(username='ret_user', email='ret@example.com', is_verified=True)
     user.organization_id = org.id
     user.set_password('password')
     db_session.add(user)

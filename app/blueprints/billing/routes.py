@@ -338,6 +338,13 @@ def complete_signup_from_stripe():
         flash('Payment confirmed! Please check your inbox for setup instructions.', 'info')
         return redirect(url_for('auth.login'))
 
+    if owner_user.email and not owner_user.email_verified:
+        flash(
+            'Payment confirmed! Please verify your email, then use the setup link to choose your password.',
+            'info',
+        )
+        return redirect(url_for('auth.login'))
+
     login_user(owner_user)
     SessionService.rotate_user_session(owner_user)
     owner_user.last_login = TimezoneUtils.utc_now()

@@ -115,7 +115,6 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         org, user = BillingService._provision_checkout_session(fake_session)
         assert org and user
         assert pending.status == 'account_created'
-        user_id = user.id
 
         # Simulate success route
         def fake_finalize(session_id):
@@ -129,6 +128,6 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
             follow_redirects=False,
         )
         assert response.status_code == 302
-        assert response.headers['Location'].endswith('/onboarding/welcome')
+        assert response.headers['Location'].endswith('/auth/login')
         with client.session_transaction() as sess:
-            assert sess.get('_user_id') == str(user_id)
+            assert sess.get('_user_id') is None

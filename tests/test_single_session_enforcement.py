@@ -40,6 +40,7 @@ def _create_user(app):
             email=f"{username}@example.com",
             organization_id=org.id,
             is_active=True,
+            is_verified=True,
             user_type="customer",
         )
         user.set_password(password)

@@ -158,7 +158,9 @@ class SignupService:
                 user_type='customer',
                 is_organization_owner=True,
                 is_active=True,
-                email_verified=True,
+                email_verified=False,
+                email_verification_token=EmailService.generate_verification_token(email),
+                email_verification_sent_at=TimezoneUtils.utc_now(),
                 oauth_provider=pending_signup.oauth_provider,
                 oauth_provider_id=pending_signup.oauth_provider_id,
             )
@@ -186,6 +188,15 @@ class SignupService:
                 BatchBotCreditService.grant_signup_bonus(org)
             except Exception as bonus_error:
                 logger.warning("Failed to grant BatchBot signup bonus: %s", bonus_error)
+
+            try:
+                EmailService.send_verification_email(
+                    owner_user.email,
+                    owner_user.email_verification_token,
+                    owner_user.first_name or owner_user.username,
+                )
+            except Exception as email_error:
+                logger.warning("Failed to send verification email: %s", email_error)
 
             try:
                 EmailService.send_welcome_email(owner_user.email, owner_user.first_name or owner_user.username, org.name, subscription_tier.name)
