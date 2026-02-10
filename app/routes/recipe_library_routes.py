@@ -190,6 +190,7 @@ def recipe_library():
         org_filter=org_filter,
         origin_filter=origin_filter,
         sort_mode=sort_mode,
+        show_public_header=True,
     )
     cache.set(cache_key, rendered, timeout=current_app.config.get("RECIPE_LIBRARY_CACHE_TTL", 180))
     return rendered
@@ -251,6 +252,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
         purchase_enabled=purchase_enabled,
         reveal_details=reveal_details,
         org_marketplace_enabled=org_marketplace_enabled,
+        show_public_header=True,
     )
 
 
@@ -339,6 +341,7 @@ def organization_marketplace(organization_id: int):
         search_query=search_query,
         sale_filter=sale_filter,
         sort_mode=sort_mode,
+        show_public_header=True,
     )
 
 

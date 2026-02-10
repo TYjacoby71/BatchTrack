@@ -180,53 +180,11 @@
 <body>
     <!-- Header with Navigation -->
     {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
+    {% set public_header_is_homepage = true %}
+    {% set public_header_signup_source = 'homepage_get_started' %}
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
         <div class="container">
-            <a class="navbar-brand text-primary" href="{{ url_for('index') }}">
-                <i class="fas fa-flask me-2"></i>BatchTrack
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/tools/">Tools</a>
-                    </li>
-                    {% if global_library_enabled %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">Inventory Library</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
-                    </li>
-                      <li class="nav-item">
-                          <a class="nav-link" href="#about">About</a>
-                      </li>
-                      <li class="nav-item">
-                          <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
-                      </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#contact">Contact</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login to App
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-2" href="{{ url_for('auth.signup', source='homepage_get_started') }}">Get Started</a>
-                    </li>
-                </ul>
-            </div>
+            {% include 'components/shared/public_marketing_header.html' %}
         </div>
     </nav>
 
