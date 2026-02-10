@@ -296,7 +296,7 @@
           <div class="mt-auto d-grid">
             {% if tier.signup_lifetime_url %}
             <a href="{{ tier.signup_lifetime_url }}" class="btn btn-warning">
-              Claim {{ tier.name }} Lifetime
+              Checkout {{ tier.name }} Lifetime
             </a>
             {% else %}
             <button type="button" class="btn btn-outline-secondary" disabled>Sold out</button>
@@ -313,7 +313,7 @@
     <div class="section-heading">
       <div>
         <h2>Monthly and yearly plans</h2>
-        <p>Pick a tier now, then upgrade or expand as your operation grows.</p>
+        <p>Pick a tier and go straight to secure checkout from this page.</p>
       </div>
       <span class="text-muted small">Recommended: Enthusiast for most small teams</span>
     </div>
@@ -349,13 +349,13 @@
           {% endif %}
           <div class="mt-auto d-grid gap-2">
             {% if tier.signup_monthly_url %}
-            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Start Free Trial</a>
+            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Checkout Monthly</a>
             {% else %}
             <button type="button" class="btn btn-outline-secondary" disabled>Unavailable</button>
             {% endif %}
 
             {% if tier.signup_yearly_url %}
-            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Choose Yearly</a>
+            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Checkout Yearly</a>
             {% else %}
             <button type="button" class="btn btn-outline-secondary" disabled>Yearly Unavailable</button>
             {% endif %}
