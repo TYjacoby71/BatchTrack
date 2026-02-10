@@ -198,6 +198,10 @@ class SignupCheckoutService:
             "page_title": page_title,
             "page_description": page_description,
             "canonical_url": canonical_url,
+            # Signup is part of the public acquisition funnel and should keep
+            # the marketing header/shell instead of the authenticated app shell.
+            "show_public_header": True,
+            "public_header_signup_source": context.signup_source or "signup_page",
         }
 
     @classmethod
