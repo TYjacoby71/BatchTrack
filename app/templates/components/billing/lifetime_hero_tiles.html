@@ -39,7 +39,7 @@
                             </div>
                             {% if can_start_checkout %}
                             <a
-                                href="{{ url_for('auth.signup', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, promo=offer.coupon_code, source='homepage_lifetime_' ~ offer.key) }}"
+                                href="{{ url_for('auth.signup_checkout', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, promo=offer.coupon_code, source='homepage_lifetime_' ~ offer.key) }}"
                                 class="btn btn-primary w-100"
                             >
                                 Claim {{ offer.name }} Lifetime
@@ -72,8 +72,8 @@
         <div class="row g-3">
             {% for offer in marketing_lifetime_offers %}
             {% set has_tier = offer.tier_id %}
-            {% set monthly_url = url_for('auth.signup', billing_mode='standard', billing_cycle='monthly', tier=offer.tier_id, source='homepage_monthly_' ~ offer.key) if has_tier else '#' %}
-            {% set yearly_url = url_for('auth.signup', billing_mode='standard', billing_cycle='yearly', tier=offer.tier_id, source='homepage_yearly_' ~ offer.key) if has_tier else '#' %}
+            {% set monthly_url = url_for('auth.signup_checkout', billing_mode='standard', billing_cycle='monthly', tier=offer.tier_id, source='homepage_monthly_' ~ offer.key) if has_tier else '#' %}
+            {% set yearly_url = url_for('auth.signup_checkout', billing_mode='standard', billing_cycle='yearly', tier=offer.tier_id, source='homepage_yearly_' ~ offer.key) if has_tier else '#' %}
             <div class="col-12 col-lg-4">
                 <article
                     class="card lifetime-launch-card h-100 hero-cycle-card"
