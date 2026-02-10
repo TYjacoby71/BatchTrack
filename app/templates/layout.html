@@ -166,7 +166,7 @@ Glossary:
         <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
             {% if not public_shell_mode %}
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
-                BatchTrack<sup>TM</sup> 1.0
+                BatchTrack<sup class="logo-tm">TM</sup> 1.0
             </a>
             {% endif %}
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}

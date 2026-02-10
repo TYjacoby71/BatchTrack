@@ -249,6 +249,11 @@
 .navbar .navbar-nav .nav-link,
 .navbar .navbar-text { color: var(--color-text) !important; }
 .navbar .nav-link:hover { color: var(--color-primary) !important; }
+.navbar .navbar-brand .logo-tm {
+  font-size: 0.5em;
+  line-height: 0;
+  vertical-align: super;
+}
 
 /* Button variants synced to tokens */
 .btn-primary {
