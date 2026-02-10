@@ -22,7 +22,7 @@ def _is_enabled(key: str, default: bool = True) -> bool:
 
 def _render_tool(template_name: str, flag_key: str, **context):
     enabled = _is_enabled(flag_key, True)
-    return render_template(template_name, tool_enabled=enabled, show_public_header=True, **context)
+    return render_template(template_name, tool_enabled=enabled, **context)
 
 
 def _soap_calc_limit():
@@ -84,7 +84,7 @@ def tools_index():
         'herbal': _is_enabled('TOOLS_HERBAL', True),
         'baker': _is_enabled('TOOLS_BAKING', True),
     }
-    return render_template('tools/index.html', tool_flags=flags, show_public_header=True)
+    return render_template('tools/index.html', tool_flags=flags)
 
 @tools_bp.route('/soap')
 def tools_soap():

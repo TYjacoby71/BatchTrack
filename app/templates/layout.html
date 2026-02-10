@@ -12,7 +12,6 @@ Glossary:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-      {% set use_public_header = (not current_user.is_authenticated and (show_public_header if show_public_header is defined else false)) %}
       {% set resolved_title = page_title or "BatchTrack — Production & Inventory" %}
       {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
@@ -111,31 +110,6 @@ Glossary:
             max-width: 1200px; /* Adjust as needed */
             margin: 0 auto;
         }
-        {% if use_public_header %}
-        :root {
-            --navbar-height: 80px;
-        }
-        body {
-            padding-top: var(--navbar-height);
-            scroll-padding-top: calc(var(--navbar-height) + 16px);
-        }
-        body.scrolled .navbar {
-            box-shadow: 0 6px 18px rgba(14, 30, 37, 0.12);
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(6px);
-        }
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-        .btn-cta {
-            background: linear-gradient(45deg, #ff6b6b, #ffa500);
-            border: none;
-            padding: 12px 30px;
-            font-weight: bold;
-            border-radius: 50px;
-        }
-        {% endif %}
     </style>
 </head>
 <body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
@@ -145,14 +119,10 @@ Glossary:
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
     <div class="app-container">
-    <nav class="navbar navbar-expand-lg navbar-light {{ 'bg-white shadow-sm fixed-top' if use_public_header else 'bg-light' }}">
-        <div class="{{ 'container' if use_public_header else 'container-fluid position-relative' }}">
-            <a class="navbar-brand{% if use_public_header %} text-primary{% endif %}" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
-                {% if use_public_header %}
-                <i class="fas fa-flask me-2"></i>BatchTrack
-                {% else %}
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid position-relative">
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
-                {% endif %}
             </a>
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
             {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') and marketplace_display_enabled %}
@@ -160,7 +130,7 @@ Glossary:
             {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
             {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
             {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
-            {% set has_nav_center = navbar_center_title is defined and navbar_center_title and not use_public_header %}
+            {% set has_nav_center = navbar_center_title is defined and navbar_center_title %}
             {% if has_nav_center %}
             <div class="position-absolute top-50 start-50 translate-middle text-center">
                 <span class="navbar-text fw-semibold">{{ navbar_center_title }}</span>
@@ -493,10 +463,9 @@ Glossary:
                 </ul>
             </div>
             {% endif %}
-            {% endif %}
         </div>
     </nav>
-    <main class="container-xl {{ 'mt-0' if use_public_header else 'mt-4' }}">
+    <main class="container-xl mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
             <nav aria-label="breadcrumb" class="mb-3">
@@ -572,35 +541,6 @@ Glossary:
       <script src="{{ url_for('static', filename='js/drawers/container_unit_mismatch_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
-    {% if use_public_header %}
-    <script>
-        (function () {
-            function updateNavbarSpacing() {
-                const navbar = document.querySelector('.navbar');
-                if (!navbar) return;
-                const height = navbar.offsetHeight;
-                document.documentElement.style.setProperty('--navbar-height', `${height}px`);
-                document.body.style.paddingTop = `${height}px`;
-                document.body.style.setProperty('scroll-padding-top', `${height + 16}px`);
-            }
-
-            function handleNavbarScrollState() {
-                if (window.scrollY > 4) {
-                    document.body.classList.add('scrolled');
-                } else {
-                    document.body.classList.remove('scrolled');
-                }
-            }
-
-            window.addEventListener('load', () => {
-                updateNavbarSpacing();
-                handleNavbarScrollState();
-            });
-            window.addEventListener('resize', updateNavbarSpacing);
-            window.addEventListener('scroll', handleNavbarScrollState);
-        })();
-    </script>
-    {% endif %}
 
     <!-- Simple browser clock script -->
     <script>
