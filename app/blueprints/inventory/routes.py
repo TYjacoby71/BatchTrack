@@ -452,6 +452,7 @@ def list_inventory():
                 show_archived=show_archived,
                 show_zero_qty=show_zero_qty,
                 get_global_unit_list=get_global_unit_list,
+                breadcrumb_items=[{'label': 'Inventory'}],
             )
 
     query = InventoryItem.query
@@ -506,6 +507,7 @@ def list_inventory():
         show_archived=show_archived,
         show_zero_qty=show_zero_qty,
         get_global_unit_list=get_global_unit_list,
+        breadcrumb_items=[{'label': 'Inventory'}],
     )
 
 # --- Inventory column visibility ---

@@ -263,16 +263,19 @@ function initTablePagination(tableType) {
   updateTable();
 }
 
-function toggleIngredientsFilter() {
-  const filterSection = document.getElementById('ingredientsFilterSection');
-  const collapse = new bootstrap.Collapse(filterSection);
+function toggleFilterSection(sectionId) {
+  const filterSection = document.getElementById(sectionId);
+  if (!filterSection) return;
+  const collapse = bootstrap.Collapse.getOrCreateInstance(filterSection, { toggle: false });
   collapse.toggle();
 }
 
+function toggleIngredientsFilter() {
+  toggleFilterSection('ingredientsFilterSection');
+}
+
 function toggleContainersFilter() {
-  const filterSection = document.getElementById('containersFilterSection');
-  const collapse = new bootstrap.Collapse(filterSection);
-  collapse.toggle();
+  toggleFilterSection('containersFilterSection');
 }
 
 function toggleIngredientForm() {
@@ -936,13 +939,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Packaging toggles
-function togglePackagingFilter(){ const el = document.getElementById('packagingFilterSection'); const c = new bootstrap.Collapse(el); c.toggle(); }
+function togglePackagingFilter(){ toggleFilterSection('packagingFilterSection'); }
 function togglePackagingForm(){ const f = document.getElementById('addPackagingForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function togglePackagingUpdateForm(){ const f = document.getElementById('updatePackagingForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function updateAddPackagingCostHelp(){ const t = document.getElementById('addPackagingCostType').value; const h = document.getElementById('addPackagingCostHelp'); const qEl = document.querySelector('#addPackagingForm input[name="quantity"]'); const q = parseFloat(qEl?.value)||1; h.textContent = t==='per_unit' ? 'Enter cost per unit' : `Enter total cost (will be divided by ${q} units)`; }
 
 // Consumables toggles
-function toggleConsumablesFilter(){ const el = document.getElementById('consumablesFilterSection'); const c = new bootstrap.Collapse(el); c.toggle(); }
+function toggleConsumablesFilter(){ toggleFilterSection('consumablesFilterSection'); }
 function toggleConsumableForm(){ const f = document.getElementById('addConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function toggleConsumableUpdateForm(){ const f = document.getElementById('updateConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function updateAddConsumableCostHelp(){ const t = document.getElementById('addConsumableCostType').value; const h = document.getElementById('addConsumableCostHelp'); const qEl = document.querySelector('#addConsumableForm input[name="quantity"]'); const q = parseFloat(qEl?.value)||1; h.textContent = t==='per_unit' ? 'Enter cost per unit' : `Enter total cost (will be divided by ${q} units)`; }

@@ -138,6 +138,7 @@ def list_recipes():
         recipes=recipes,
         inventory_units=inventory_units,
         pagination=pagination,
+        breadcrumb_items=[{'label': 'Recipes'}],
     )
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
