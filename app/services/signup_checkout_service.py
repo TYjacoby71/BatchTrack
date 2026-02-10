@@ -57,6 +57,7 @@ class SignupSubmission:
     contact_phone: str
     selected_mode: str
     selected_standard_cycle: str
+    billing_cycle_explicit: bool
     selected_lifetime_key: str
     effective_promo_code: str | None
     detected_timezone: str | None
@@ -280,20 +281,27 @@ class SignupCheckoutService:
         if submission.selected_mode == "standard" and submission.selected_standard_cycle == "yearly":
             yearly_lookup_key = LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
             if not yearly_lookup_key:
-                return cls._error_result(
-                    "Yearly billing is not configured for this plan yet.",
-                    submission=submission,
-                    selected_standard_cycle="monthly",
-                )
-
-            yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
-            if not yearly_pricing or yearly_pricing.get("billing_cycle") != "yearly":
-                return cls._error_result(
-                    "Yearly billing is temporarily unavailable for this plan.",
-                    submission=submission,
-                    selected_standard_cycle="monthly",
-                )
-            submission.price_lookup_key_override = yearly_lookup_key
+                if not submission.billing_cycle_explicit:
+                    submission.selected_standard_cycle = "monthly"
+                else:
+                    return cls._error_result(
+                        "Yearly billing is not configured for this plan yet.",
+                        submission=submission,
+                        selected_standard_cycle="monthly",
+                    )
+            else:
+                yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
+                if not yearly_pricing or yearly_pricing.get("billing_cycle") != "yearly":
+                    if not submission.billing_cycle_explicit:
+                        submission.selected_standard_cycle = "monthly"
+                    else:
+                        return cls._error_result(
+                            "Yearly billing is temporarily unavailable for this plan.",
+                            submission=submission,
+                            selected_standard_cycle="monthly",
+                        )
+                else:
+                    submission.price_lookup_key_override = yearly_lookup_key
 
         metadata = cls._build_checkout_metadata(context=context, submission=submission, tier_obj=tier_obj)
 
@@ -381,7 +389,9 @@ class SignupCheckoutService:
     def _build_submission(cls, *, context: SignupRequestContext, form_data) -> SignupSubmission:
         selected_mode = form_data.get("billing_mode", "standard")
         selected_mode = selected_mode if selected_mode in {"standard", "lifetime"} else "standard"
-        selected_standard_cycle = form_data.get("billing_cycle", context.standard_billing_cycle)
+        raw_billing_cycle = form_data.get("billing_cycle")
+        billing_cycle_explicit = bool(raw_billing_cycle and raw_billing_cycle.strip())
+        selected_standard_cycle = raw_billing_cycle or context.standard_billing_cycle
         selected_standard_cycle = (
             selected_standard_cycle if selected_standard_cycle in {"monthly", "yearly"} else context.standard_billing_cycle
         )
@@ -395,6 +405,7 @@ class SignupCheckoutService:
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
+            billing_cycle_explicit=billing_cycle_explicit,
             selected_lifetime_key=selected_lifetime_key,
             effective_promo_code=context.promo_code,
             detected_timezone=form_data.get("detected_timezone"),
