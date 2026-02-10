@@ -478,49 +478,9 @@
             {% endif %}
             {% else %}
             {% if use_public_header %}
-            {% set home_url = url_for('index') %}
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicHeaderNav" aria-controls="publicHeaderNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="publicHeaderNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('tools_bp.tools_index') }}">Tools</a>
-                    </li>
-                    {% if global_library_enabled %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">Inventory Library</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#about">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#contact">Contact</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login to App
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-lg-2 mt-2 mt-lg-0" href="{{ url_for('auth.signup', source='public_header') }}">
-                            Get Started
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            {% set public_header_is_homepage = false %}
+            {% set public_header_signup_source = 'public_header' %}
+            {% include 'components/shared/public_marketing_header.html' %}
             {% else %}
             <div class="navbar-nav me-auto"></div>
             <div class="dropdown ms-auto">
