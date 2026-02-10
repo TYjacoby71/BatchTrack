@@ -14,6 +14,11 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-09: Lifetime Billing Alignment and Stripe Runbook](2026-02-09-lifetime-billing-single-key-runbook.md)**
+  - Aligned checkout to single-key tier model with derived yearly/lifetime lookup keys.
+  - Documented Stripe production setup and safe price-update runbook.
+  - Simplified tier admin by removing tier type selector from edit flow.
+
 - **[2026-02-06: Recipe Lineage Notes, Prefix Auto-Generation, and Edit Overrides](2026-02-06-recipe-lineage-notes-and-prefixes.md)**
   - Auto-generated recipe prefixes and org-scoped lineage IDs.
   - Recipe notes panel, published-edit confirmation, and new group naming control.

@@ -35,6 +35,52 @@ Billing is centralized in `BillingService` and is the authority for tier checkou
   - standard yearly: `<tier>_yearly`
   - lifetime one-time: `<tier>_lifetime`
 
+### 2.2 Stripe production structure (single-key tier model)
+This app intentionally stores **one** Stripe lookup key per tier in the database.
+
+#### Required Stripe setup per tier
+For each paid tier (for example Hobbyist, Enthusiast, Fanatic, Enterprise):
+1. Create one Stripe Product (for grouping and dashboard clarity).
+2. Create three Stripe Prices under that product with lookup keys:
+   - `<slug>_monthly` (recurring monthly)
+   - `<slug>_yearly` (recurring yearly)
+   - `<slug>_lifetime` (one-time payment)
+3. In BatchTrack tier admin, set only:
+   - `billing_provider = stripe`
+   - `stripe_lookup_key = <slug>_monthly`
+
+#### How checkout key selection works
+- Standard monthly: uses stored `stripe_lookup_key` directly.
+- Standard yearly: derives `<slug>_yearly` from the stored monthly key.
+- Lifetime: derives `<slug>_lifetime` from the stored monthly key and requires one-time Stripe billing cycle.
+
+If derived yearly/lifetime keys do not exist (or lifecycle type is wrong), signup falls back with an error message instead of creating an invalid checkout session.
+
+### 2.3 Lifetime counter behavior and price changes
+- Counter source of truth: `organization.promo_code` values in app DB (not Stripe price IDs).
+- Default coupon buckets:
+  - `LIFETIME-HOBBYIST`
+  - `LIFETIME-ENTHUSIAST`
+  - `LIFETIME-FANATIC`
+- Replacing a Stripe lifetime price does **not** break existing counts if you keep the same lifetime coupon code bucket for that tier.
+- Existing paid users on older Stripe prices continue to work as long as billing status stays active.
+
+### 2.4 Updating prices safely
+Two valid operating styles:
+1. **Stable lookup keys (recommended)**  
+   Keep keys unchanged (for example `hobbyist_monthly`) and point the key to the newest Stripe price.
+2. **Versioned lookup keys**  
+   If you use `_v2`, `_v3`, etc., update the entire family (`monthly/yearly/lifetime`) together.  
+   Updating only monthly to `..._v2` while yearly/lifetime remain `..._v1` will make derived yearly/lifetime lookups unavailable.
+
+### 2.5 Tiers beyond the original three
+Tier names are not hardcoded to Hobbyist/Enthusiast/Fanatic for standard monthly/yearly billing.
+- Any new tier (for example Enterprise) works with the same naming pattern:
+  - `enterprise_monthly`
+  - `enterprise_yearly`
+  - `enterprise_lifetime` (if offered)
+- Lifetime launch seat-counter UX is currently designed around the three launch buckets above.
+
 ## 3. Webhooks & Callbacks
 - **Endpoint**: `POST /billing/webhooks/stripe`
 - `BillingService.handle_webhook_event('stripe', payload)` enforces idempotency via `stripe_event` table.
