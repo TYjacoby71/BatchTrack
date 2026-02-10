@@ -17,7 +17,7 @@ This directory contains the complete history of all fixes, improvements, and cha
 - **[2026-02-10: Landing Page A/B Variants + Metadata/Dictionary Alignment](2026-02-10-landing-page-ab-variants-and-metadata-dictionary-alignment.md)**
   - Added `/lp/hormozi` and `/lp/robbins` public landing pages for messaging A/B tests.
   - Added explicit maker-first metadata context and OG image mapping for both landing routes.
-  - Updated APP_DICTIONARY and SEO guide examples for new routes/UI surfaces.
+  - Updated APP_DICTIONARY entries for new routes and landing UI surfaces.
 - **[2026-02-10: Tools Index Visual Cleanup and Mobile Theme Fallback Fix](2026-02-10-tools-index-visual-cleanup-and-mobile-theme-fallback.md)**
   - Removed rainbow-like category accents from `/tools` and aligned cards/tiles to core app styling.
   - Fixed mobile dark-theme forcing by requiring explicit system-theme mode and adding light fallback.

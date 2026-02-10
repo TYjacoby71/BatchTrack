@@ -104,18 +104,6 @@ page_title = "BatchTrack.com | Pricing for Small-Batch Makers"
 page_description = "Compare Hobbyist, Enthusiast, and Fanatic plans with monthly, yearly, and limited lifetime launch seats in a calm, batch-first flow."
 ```
 
-Landing Variant A (/lp/hormozi)
-```
-page_title = "BatchTrack.com | Results-First System for Small-Batch Makers"
-page_description = "Track full batch lifecycle with FIFO, traceability, and calm workflows. Built for small-batch makers so accounting does not interrupt the craft."
-```
-
-Landing Variant B (/lp/robbins)
-```
-page_title = "BatchTrack.com | Calm, Inclusive Production Flow for Makers"
-page_description = "Neurodivergent-friendly production tracking for makers: batch lifecycle, FIFO inventory, traceability, and guided onboarding in one calm system."
-```
-
 Notes:
 - `/pricing` is a public destination page and should set `page_title`, `page_description`, and `canonical_url` through the route context.
 - `layout.html` handles OG/Twitter tags from those variables; keep the copy maker-first and avoid finance-first language.

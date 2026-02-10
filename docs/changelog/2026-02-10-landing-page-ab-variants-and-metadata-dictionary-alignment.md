@@ -7,7 +7,6 @@
 - Wired both routes into the public route registry and access middleware allow-list.
 - Added maker-first metadata context for both routes (`page_title`, `page_description`, `canonical_url`, and `page_og_image`).
 - Updated app dictionary entries for the new routes and UI surfaces.
-- Updated SEO guide examples with metadata references for both new landing variants.
 
 ## Problems Solved
 - No dedicated split-test landing destinations existed for distinct messaging styles.
@@ -35,8 +34,6 @@
 - `docs/system/APP_DICTIONARY.md`
   - Added dictionary entries for the new landing routes and landing UI variants.
   - Added operations entry for landing route metadata context.
-- `docs/system/SEO_GUIDE.md`
-  - Added page metadata examples for both new landing variants.
 
 ## Impact
 - Marketing now has two dedicated public variants to run clean A/B campaigns against the same signup flow.
@@ -51,6 +48,5 @@
 - `app/route_access.py`
 - `tests/test_public_tools_access.py`
 - `docs/system/APP_DICTIONARY.md`
-- `docs/system/SEO_GUIDE.md`
 - `docs/changelog/CHANGELOG_INDEX.md`
 - `docs/changelog/2026-02-10-landing-page-ab-variants-and-metadata-dictionary-alignment.md` (this file)
