@@ -60,6 +60,10 @@ Required when set:
 - og:image -> 1200x630 px, maker-focused screenshot (calculator UI, BatchBot demo, FIFO view)
 - og:url -> canonical URL
 
+Current app defaults:
+- `layout.html` falls back to `app/static/images/og/batchtrack-default-og.svg` when no page-specific image is supplied.
+- `/pricing` uses `app/static/images/og/batchtrack-pricing-og.svg`.
+
 ## 5. Keyword Strategy (No Stuffing - Helpful Content First)
 Do:
 - Use 3 to 8 natural keywords per page in headings, first paragraph, alt text.

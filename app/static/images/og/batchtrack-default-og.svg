@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">BatchTrack  Batch-First Production and Inventory</title>
+  <desc id="desc">Default social preview image for BatchTrack public pages.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d2342" />
+      <stop offset="55%" stop-color="#1a3f73" />
+      <stop offset="100%" stop-color="#443b91" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5cc8ff" />
+      <stop offset="100%" stop-color="#9f8cff" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect x="56" y="56" width="1088" height="518" rx="28" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.16)" />
+
+  <text x="104" y="182" fill="#f7fbff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="72" font-weight="700">
+    BatchTrack
+  </text>
+  <text x="104" y="238" fill="#d6e7ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="500">
+    Batch-first production and inventory for makers
+  </text>
+
+  <rect x="104" y="286" width="502" height="52" rx="26" fill="rgba(255,255,255,0.1)" />
+  <text x="130" y="320" fill="#f1f7ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="600">
+    FIFO tracking " Recipe workflows " Calm UX
+  </text>
+
+  <g transform="translate(760 150)">
+    <rect width="340" height="330" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.22)" />
+    <text x="26" y="54" fill="#f7fbff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Today</text>
+    <rect x="26" y="78" width="288" height="1" fill="rgba(255,255,255,0.2)" />
+
+    <circle cx="36" cy="118" r="7" fill="#61d297" />
+    <text x="56" y="124" fill="#e8f6ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Batch in progress</text>
+
+    <circle cx="36" cy="164" r="7" fill="#5cc8ff" />
+    <text x="56" y="170" fill="#e8f6ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">FIFO lots healthy</text>
+
+    <circle cx="36" cy="210" r="7" fill="#f5c46c" />
+    <text x="56" y="216" fill="#e8f6ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Low-stock alerts clear</text>
+
+    <rect x="26" y="252" width="204" height="40" rx="20" fill="url(#accent)" />
+    <text x="52" y="278" fill="#0d1d36" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Start Free Trial</text>
+  </g>
+
+  <text x="104" y="542" fill="#c7daf8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22">
+    batchtrack.com
+  </text>
+</svg>

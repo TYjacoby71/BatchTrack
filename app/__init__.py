@@ -596,6 +596,11 @@ def _add_core_routes(app):
                 "and limited lifetime launch seats."
             ),
             canonical_url=url_for("pricing", _external=True),
+            page_og_image=url_for(
+                "static",
+                filename="images/og/batchtrack-pricing-og.svg",
+                _external=True,
+            ),
             **pricing_context,
         )
 

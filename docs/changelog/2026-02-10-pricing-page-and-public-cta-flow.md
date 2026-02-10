@@ -30,11 +30,16 @@
   - Replaced placeholder footer links with concrete internal destinations.
 - `app/templates/layout.html`
   - Public header pricing nav now points to `/pricing`.
+  - Added default OG/Twitter image fallback for pages that do not pass `page_og_image`.
 - `app/route_access.py`
   - Added `pricing` endpoint and `/pricing` prefix to public route allow-list.
 - `app/static/style.css`
   - Removed navbar `position: relative` override that conflicted with `fixed-top`.
   - Removed global `body` top padding that caused public header offset drift.
+- `app/static/images/og/batchtrack-default-og.svg`
+  - Added app-wide social preview fallback image.
+- `app/static/images/og/batchtrack-pricing-og.svg`
+  - Added pricing-specific social preview image.
 
 ## Impact
 - Public acquisition flow is cleaner: homepage → pricing → signup.
