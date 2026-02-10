@@ -729,7 +729,16 @@ def signup():
         if not promo_code and selected_offer.get('coupon_code'):
             promo_code = selected_offer['coupon_code']
     elif billing_mode == 'lifetime':
-        first_open_offer = next(
+        preferred_open_offer = next(
+            (
+                offer for offer in lifetime_offers
+                if str(offer.get('key', '')).lower() == 'enthusiast'
+                and offer.get('tier_id')
+                and offer.get('has_remaining')
+            ),
+            None,
+        )
+        first_open_offer = preferred_open_offer or next(
             (offer for offer in lifetime_offers if offer.get('tier_id') and offer.get('has_remaining')),
             None,
         )
@@ -741,7 +750,11 @@ def signup():
                 promo_code = first_open_offer['coupon_code']
 
     if not preselected_tier and db_tiers:
-        preselected_tier = str(db_tiers[0].id)
+        preferred_default_tier = next(
+            (tier for tier in db_tiers if (getattr(tier, 'name', '') or '').strip().lower() == 'enthusiast'),
+            None,
+        )
+        preselected_tier = str((preferred_default_tier or db_tiers[0]).id)
 
     def _render_signup(
         *,
