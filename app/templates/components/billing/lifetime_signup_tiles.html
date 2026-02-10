@@ -1,0 +1,45 @@
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="lifetimeTierSelection">
+    {% for offer in lifetime_offers %}
+    {% set is_selected = selected_lifetime_tier == offer.key %}
+    {% set can_select = offer.has_remaining and offer.tier_id %}
+    <div class="col">
+        <article
+            class="card lifetime-tier-card h-100 border-2 {% if is_selected %}selected border-success{% else %}border-primary{% endif %} {% if not can_select %}is-sold-out{% endif %}"
+            data-lifetime-tier="{{ offer.key }}"
+            data-tier-id="{{ offer.tier_id }}"
+            data-coupon-code="{{ offer.coupon_code }}"
+            data-price-override="{{ offer.lifetime_lookup_key or '' }}"
+            data-spots-left="{{ offer.display_spots_left }}"
+            data-total-seats="{{ offer.seat_total }}"
+            data-has-remaining="{{ 'true' if offer.has_remaining else 'false' }}"
+            style="cursor: {% if can_select %}pointer{% else %}not-allowed{% endif %};"
+        >
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-light text-dark text-uppercase border">{{ offer.name }}</span>
+                    {% if not can_select %}
+                    <span class="badge bg-danger">Sold out</span>
+                    {% endif %}
+                </div>
+                <h3 class="h6 fw-bold mb-1">{{ offer.tagline }}</h3>
+                <p class="small text-muted mb-2">{{ offer.future_scope }}</p>
+
+                <div class="lifetime-seat-copy mb-2">
+                    Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
+                </div>
+
+                <div class="small text-muted mb-3">Coupon code: <code>{{ offer.coupon_code }}</code></div>
+
+                <div class="mt-auto">
+                    <div class="fw-bold text-primary mb-2">{{ offer.lifetime_price_copy }}</div>
+                    {% if can_select %}
+                    <div class="small text-success">Includes this tier forever</div>
+                    {% else %}
+                    <div class="small text-muted">No seats remaining for this tier.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+    </div>
+    {% endfor %}
+</div>
