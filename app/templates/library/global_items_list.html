@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="global-library-page">
-  <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+  <div class="library-hero d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-2">
     <div>
       <h2 class="mb-1">Global Item Library</h2>
       <p class="text-muted mb-0">Shared ingredient, container, packaging, and consumable definitions that mirror the inventory list experience.</p>
@@ -29,7 +29,7 @@
   </div>
 
   {% if preview_remaining is not none %}
-  <div class="alert alert-light border d-flex flex-column flex-md-row align-items-md-center gap-3 small">
+  <div class="library-preview-banner alert alert-light border d-flex flex-column flex-md-row align-items-md-center gap-3 small">
     <div class="flex-grow-1">
       <strong>Preview mode:</strong>
       You can open {{ preview_remaining }} more item{{ '' if preview_remaining == 1 else 's' }}{% if search_remaining is not none %} and run {{ search_remaining }} more search{{ '' if search_remaining == 1 else 'es' }}{% endif %} before a free account is required.
@@ -41,7 +41,7 @@
   </div>
   {% endif %}
 
-  <ul class="nav nav-tabs mb-3" id="globalLibraryScopeTabs">
+  <ul class="library-scope-tabs nav nav-tabs mb-3" id="globalLibraryScopeTabs">
     {% for scope, label in scope_labels.items() %}
       <li class="nav-item">
         <a class="nav-link {% if active_scope == scope %}active{% endif %}" href="{{ build_scope_url(scope) }}">
@@ -54,7 +54,7 @@
     {% endfor %}
   </ul>
 
-  <form method="GET" class="card border-0 shadow-sm mb-4">
+  <form method="GET" class="library-filter-card card border-0 shadow-sm mb-4">
     <div class="card-body">
       <input type="hidden" name="scope" value="{{ active_scope }}">
       <input type="hidden" name="page" value="1">
@@ -105,7 +105,7 @@
     </div>
   </form>
 
-  <div class="card border-0 shadow-sm">
+  <div class="library-table-card card border-0 shadow-sm">
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0" id="globalItemsTable">
         {% if active_scope == 'ingredient' %}
@@ -373,6 +373,71 @@
   </div>
 </div>
 {% endif %}
+<style>
+  .global-library-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .global-library-page .library-hero {
+    border-radius: 1rem;
+    border: 1px solid rgba(176, 190, 224, 0.9);
+    background: linear-gradient(145deg, rgba(13, 110, 253, 0.08), rgba(111, 66, 193, 0.06));
+    box-shadow: 0 10px 20px rgba(24, 39, 75, 0.08);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .global-library-page .library-hero h2 {
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .global-library-page .library-preview-banner {
+    border-radius: 0.75rem;
+  }
+
+  .global-library-page .library-scope-tabs {
+    border-bottom: 0;
+    gap: 0.35rem;
+  }
+
+  .global-library-page .library-scope-tabs .nav-link {
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    background: var(--color-surface);
+    padding: 0.4rem 0.9rem;
+    font-weight: 600;
+  }
+
+  .global-library-page .library-scope-tabs .nav-link.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .global-library-page .library-filter-card,
+  .global-library-page .library-table-card {
+    border: 1px solid var(--color-border) !important;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-2);
+  }
+
+  .global-library-page .library-filter-card .card-body {
+    padding: 1.1rem;
+  }
+
+  .global-library-page .table thead th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .global-library-page .table td {
+    vertical-align: top;
+  }
+</style>
 {% endblock %}
 
 {% block scripts %}
