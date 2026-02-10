@@ -502,13 +502,13 @@ document.addEventListener('DOMContentLoaded', () => {
     margin-top: 0.75rem;
     display: flex;
     flex-direction: column;
-    padding-bottom: 0.2rem;
+    padding-bottom: 0.25rem;
 }
 
 .stack-plan-card {
     position: relative;
     border: 2px solid #b8c7e4;
-    border-radius: 0.95rem;
+    border-radius: 1rem;
     background: #ffffff;
     box-shadow: 0 4px 14px rgba(17, 28, 56, 0.08);
     overflow: hidden;
@@ -517,8 +517,8 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .stack-plan-card + .stack-plan-card {
-    margin-top: -1.1rem;
-    margin-left: 0.8rem;
+    margin-top: -1rem;
+    margin-left: 0.75rem;
 }
 
 .stack-plan-card:nth-of-type(1) {
@@ -531,15 +531,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .stack-plan-card:nth-of-type(3) {
     z-index: 1;
-    margin-left: 1.45rem;
+    margin-left: 1.5rem;
 }
 
 .stack-plan-card .stack-plan-peek {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.35rem;
-    padding: 0.75rem 0.9rem;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
     font-weight: 700;
     letter-spacing: 0.01em;
     text-transform: uppercase;
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .stack-plan-card .stack-plan-body {
-    padding: 0.8rem 0.95rem 0.95rem;
+    padding: 0.75rem 1rem 1rem;
     border-top: 1px solid #e4e9f4;
     min-height: 7.5rem;
 }
@@ -592,18 +592,18 @@ document.addEventListener('DOMContentLoaded', () => {
     break-inside: avoid;
     display: flex;
     align-items: flex-start;
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.75rem;
     font-size: 0.96rem;
 }
 
 @media (max-width: 768px) {
     .tier-stack-shell {
-        padding: 0.85rem;
+        padding: 0.75rem;
     }
 
     .stack-plan-card + .stack-plan-card,
     .stack-plan-card:nth-of-type(3) {
-        margin-top: 0.65rem;
+        margin-top: 0.75rem;
         margin-left: 0;
     }
 
