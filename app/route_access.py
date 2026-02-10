@@ -24,6 +24,7 @@ class RouteAccessConfig:
         "homepage",
         "index",
         "public_page",
+        "pricing_routes.pricing",
         "auth.login",
         "auth.signup",
         "auth.logout",
@@ -72,6 +73,7 @@ class RouteAccessConfig:
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
         "/homepage",
+        "/pricing",
         "/legal/",
         "/static/",
         "/favicon.ico",

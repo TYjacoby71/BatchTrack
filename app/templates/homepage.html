@@ -6,6 +6,7 @@
     {% set home_title = "BatchTrack.com | Batch-First Production & Inventory for Makers" %}
     {% set home_description = "BatchTrack helps small-batch makers track recipes, FIFO lots, batch lifecycle, and output products. Free maker tools with calm, neurodivergent-friendly design." %}
     {% set home_canonical = url_for('index', _external=True) %}
+    {% set home_og_image = url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
     <title>{{ home_title }}</title>
     <meta name="description" content="{{ home_description }}">
     <link rel="canonical" href="{{ home_canonical }}">
@@ -13,9 +14,11 @@
     <meta property="og:title" content="{{ home_title }}">
     <meta property="og:description" content="{{ home_description }}">
     <meta property="og:url" content="{{ home_canonical }}">
+    <meta property="og:image" content="{{ home_og_image }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ home_title }}">
     <meta name="twitter:description" content="{{ home_description }}">
+    <meta name="twitter:image" content="{{ home_og_image }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -179,7 +182,7 @@
     {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
         <div class="container">
-            <a class="navbar-brand text-primary" href="#">
+            <a class="navbar-brand text-primary" href="{{ url_for('index') }}">
                 <i class="fas fa-flask me-2"></i>BatchTrack
             </a>
 
@@ -201,7 +204,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#pricing">Pricing</a>
+                        <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
                     </li>
                       <li class="nav-item">
                           <a class="nav-link" href="#about">About</a>
@@ -220,7 +223,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-2" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#developmentModal">Get Started</a>
+                        <a class="btn btn-cta text-white ms-2" href="{{ url_for('auth.signup', source='homepage_get_started') }}">Get Started</a>
                     </li>
                 </ul>
             </div>
@@ -252,28 +255,6 @@
             <span class="me-5"><i class="fas fa-check text-success"></i> Recipe Scaling</span>
         </div>
     </div>
-
-    <!-- Development Notice Section -->
-    <section class="py-4 bg-warning bg-opacity-10 border-warning border-top border-bottom">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-code text-warning me-3 fa-2x"></i>
-                        <div>
-                            <h5 class="mb-1 fw-bold">🚧 Development Phase</h5>
-                            <p class="mb-0 text-muted">BatchTrack is currently in active development. Want early access? Join our waitlist for exclusive beta pricing and lifetime deals!</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#waitlistModal">
-                        <i class="fas fa-envelope me-2"></i>Join Waitlist
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Features Section -->
     <section id="features" class="py-5">
@@ -323,6 +304,58 @@
         </div>
     </section>
 
+    <section id="about" class="py-5 bg-light border-top border-bottom">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <h2 class="fw-bold mb-3">Built for makers, not enterprise complexity</h2>
+                    <p class="lead text-muted mb-3">
+                        BatchTrack focuses on real production workflows: batching, FIFO inventory, and day-to-day execution.
+                    </p>
+                    <p class="text-muted mb-0">
+                        From solo operations to growing teams, the platform is designed to stay calm, clear, and fast while your process scales.
+                    </p>
+                </div>
+                <div class="col-lg-6">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold mb-2">Batch-first</h5>
+                                    <p class="text-muted mb-0 small">Track every run from prep to finished output with cleaner records.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold mb-2">Inventory clarity</h5>
+                                    <p class="text-muted mb-0 small">FIFO-aware ingredient flow keeps costs and stock decisions grounded.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold mb-2">Calm UX</h5>
+                                    <p class="text-muted mb-0 small">Minimal friction interface designed for focus during production hours.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold mb-2">Team-ready</h5>
+                                    <p class="text-muted mb-0 small">Scale from one maker to multiple operators without workflow rewrites.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- First CTA Section -->
     <section class="cta-section">
         <div class="container">
@@ -332,7 +365,7 @@
                     <p class="mb-0">Join thousands of makers who trust BatchTrack for their inventory management.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="javascript:void(0)" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#developmentModal">Start Your Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_cta_primary') }}" class="btn btn-light btn-lg">Start Your Free Trial</a>
                 </div>
             </div>
         </div>
@@ -533,7 +566,7 @@
             <h2 class="fw-bold mb-4">Transform Your Production Process Today</h2>
             <p class="lead mb-4">Join the growing community of makers who have streamlined their operations with BatchTrack</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="javascript:void(0)" class="btn btn-light btn-lg px-4" data-bs-toggle="modal" data-bs-target="#developmentModal">Get Started Free</a>
+                <a href="{{ url_for('auth.signup', source='homepage_cta_secondary') }}" class="btn btn-light btn-lg px-4">Get Started Free</a>
                 <a href="#contact" class="btn btn-outline-light btn-lg px-4">Contact Sales</a>
             </div>
         </div>
@@ -609,7 +642,26 @@
                         <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 30-day free trial</li>
                         <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Cancel anytime</li>
                     </ul>
-                    <a href="javascript:void(0)" class="btn btn-cta btn-lg text-white" data-bs-toggle="modal" data-bs-target="#developmentModal">Start Your Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_final_trial') }}" class="btn btn-cta btn-lg text-white">Start Your Free Trial</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-5 bg-light border-top">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <h2 class="fw-bold mb-2">Questions before you start?</h2>
+                    <p class="text-muted mb-0">
+                        Reach out and we will help you choose the right plan and rollout path for your team.
+                    </p>
+                </div>
+                <div class="col-lg-5">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-primary">Help Center</a>
+                        <a href="mailto:support@batchtrack.com" class="btn btn-primary">Contact Support</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -625,31 +677,31 @@
                     </h5>
                     <p>The complete solution for production and inventory management.</p>
                     <div class="d-flex gap-3">
-                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-twitter"></i></a>
-                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-facebook"></i></a>
-                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-linkedin"></i></a>
+                        <a href="mailto:support@batchtrack.com" class="text-light" aria-label="Email support"><i class="fas fa-envelope"></i></a>
+                        <a href="{{ url_for('help_routes.help_overview') }}" class="text-light" aria-label="Help center"><i class="fas fa-life-ring"></i></a>
+                        <a href="{{ url_for('pricing_routes.pricing') }}" class="text-light" aria-label="View pricing"><i class="fas fa-tags"></i></a>
                     </div>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Product</h6>
                     <ul class="list-unstyled">
                         <li><a href="#features" class="text-light text-decoration-none">Features</a></li>
-                        <li><a href="#pricing" class="text-light text-decoration-none">Pricing</a></li>
-                        <li><a href="#demo" class="text-light text-decoration-none">Demo</a></li>
+                        <li><a href="{{ url_for('pricing_routes.pricing') }}" class="text-light text-decoration-none">Pricing</a></li>
+                        <li><a href="/tools/" class="text-light text-decoration-none">Maker Tools</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Company</h6>
                     <ul class="list-unstyled">
                         <li><a href="#about" class="text-light text-decoration-none">About</a></li>
-                        <li><a href="#blog" class="text-light text-decoration-none">Blog</a></li>
-                        <li><a href="#careers" class="text-light text-decoration-none">Careers</a></li>
+                        <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
+                        <li><a href="{{ url_for('help_routes.help_faq') }}" class="text-light text-decoration-none">FAQ</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Support</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#help" class="text-light text-decoration-none">Help Center</a></li>
+                        <li><a href="{{ url_for('help_routes.help_overview') }}" class="text-light text-decoration-none">Help Center</a></li>
                         <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
                         <li><a href="{{ url_for('auth.login') }}" class="text-light text-decoration-none">Login</a></li>
                     </ul>
@@ -669,112 +721,6 @@
             </div>
         </div>
     </footer>
-
-    <!-- Development Modal -->
-    <div class="modal fade" id="developmentModal" tabindex="-1" aria-labelledby="developmentModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold" id="developmentModalLabel">
-                        <i class="fas fa-code text-warning me-2"></i>Development Phase
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <div class="mb-4">
-                        <i class="fas fa-tools text-primary fa-3x mb-3"></i>
-                        <h5 class="fw-bold">Site Under Development</h5>
-                        <p class="text-muted">BatchTrack is currently in active development. You're welcome to try signing up in the interim!</p>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-rocket me-2"></i>Try Signing Up Anyway
-                        </a>
-                        <p class="small text-muted mt-2">If billing works, fantastic! If not, no worries.</p>
-                        <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#waitlistModal">
-                            <i class="fas fa-envelope me-2"></i>Join Waitlist Instead
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 text-center">
-                    <small class="text-muted">
-                        Waitlist members get first access to beta pricing and lifetime deals!
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Waitlist Modal -->
-    <div class="modal fade" id="waitlistModal" tabindex="-1" aria-labelledby="waitlistModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold" id="waitlistModalLabel">
-                        <i class="fas fa-star text-warning me-2"></i>Join the Waitlist
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-gift text-success fa-3x mb-3"></i>
-                        <h6 class="fw-bold">Get Exclusive Early Access</h6>
-                        <p class="text-muted small">Be the first to know when BatchTrack launches and get access to special beta pricing and lifetime deals!</p>
-                    </div>
-
-                    <form id="waitlistForm" onsubmit="submitWaitlist(event)">
-                        <input type="text" class="bot-trap-field" id="waitlistWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-                        <div class="mb-3">
-                            <label for="waitlistEmail" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="waitlistEmail" name="email" required placeholder="your@email.com">
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="waitlistFirstName" class="form-label">First Name (Optional)</label>
-                                <input type="text" class="form-control" id="waitlistFirstName" name="first_name" placeholder="First name">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="waitlistLastName" class="form-label">Last Name (Optional)</label>
-                                <input type="text" class="form-control" id="waitlistLastName" name="last_name" placeholder="Last name">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="businessType" class="form-label">Business Type (Optional)</label>
-                            <select class="form-control" id="businessType" name="business_type">
-                                <option value="">Select your business type...</option>
-                                <option value="soap_making">Soap Making</option>
-                                <option value="candle_making">Candle Making</option>
-                                <option value="cosmetics">Cosmetics</option>
-                                <option value="food_beverage">Food & Beverage</option>
-                                <option value="craft_brewing">Craft Brewing</option>
-                                <option value="other_artisan">Other Artisan</option>
-                                <option value="manufacturing">Small Manufacturing</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-warning btn-lg" id="waitlistSubmitBtn">
-                                <i class="fas fa-paper-plane me-2"></i>Join Waitlist
-                            </button>
-                        </div>
-                    </form>
-
-                    <div id="waitlistSuccess" class="text-center" style="display: none;">
-                        <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
-                        <h5 class="fw-bold text-success">You're on the list!</h5>
-                        <p class="text-muted">We'll notify you as soon as BatchTrack is ready for beta testing.</p>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 text-center">
-                    <small class="text-muted">
-                        <i class="fas fa-shield-alt text-success me-1"></i>
-                        We respect your privacy. No spam, ever.
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='homepage') }}" rel="nofollow" aria-hidden="true" tabindex="-1">More</a>
 
@@ -819,85 +765,6 @@
                         block: 'start'
                     });
                 }
-            });
-        });
-
-        // Waitlist form submission
-        async function submitWaitlist(event) {
-            event.preventDefault();
-
-            const submitBtn = document.getElementById('waitlistSubmitBtn');
-            const form = document.getElementById('waitlistForm');
-            const successDiv = document.getElementById('waitlistSuccess');
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Joining...';
-
-            try {
-                const formData = new FormData(form);
-
-                // Debug logging
-                console.log('Form data:', {
-                    email: formData.get('email'),
-                    first_name: formData.get('first_name'),
-                    last_name: formData.get('last_name'),
-                    business_type: formData.get('business_type')
-                });
-
-                const response = await fetch('/api/waitlist', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email: formData.get('email'),
-                        first_name: formData.get('first_name'),
-                        last_name: formData.get('last_name'),
-                        business_type: formData.get('business_type'),
-                        website: formData.get('website'),
-                        waitlist_key: 'public_homepage',
-                        source: 'public_homepage',
-                        context: 'homepage_modal'
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    form.style.display = 'none';
-                    successDiv.style.display = 'block';
-                } else {
-                    throw new Error(result.error || 'Failed to join waitlist');
-                }
-            } catch (error) {
-                alert('Sorry, there was an error joining the waitlist. Please try again.');
-                console.error('Waitlist error:', error);
-
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Join Waitlist';
-            }
-        }
-
-        // Handle modal chaining (from development modal to waitlist modal)
-        document.addEventListener('DOMContentLoaded', function() {
-            const developmentModal = document.getElementById('developmentModal');
-            const waitlistModal = document.getElementById('waitlistModal');
-
-            developmentModal.addEventListener('hidden.bs.modal', function () {
-                // Check if we should open the waitlist modal
-                const waitlistTrigger = document.querySelector('[data-bs-target="#waitlistModal"]');
-                if (waitlistTrigger && waitlistTrigger.getAttribute('data-triggered') === 'true') {
-                    const modal = new bootstrap.Modal(waitlistModal);
-                    modal.show();
-                    waitlistTrigger.removeAttribute('data-triggered');
-                }
-            });
-
-            // Mark trigger when waitlist button is clicked from development modal
-            document.querySelector('#developmentModal [data-bs-target="#waitlistModal"]').addEventListener('click', function() {
-                this.setAttribute('data-triggered', 'true');
             });
         });
     </script>

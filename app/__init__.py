@@ -12,7 +12,7 @@ import logging
 import os
 from typing import Any
 
-from flask import Flask, current_app, redirect, render_template, request, url_for
+from flask import Flask, current_app, redirect, render_template, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.pool import StaticPool

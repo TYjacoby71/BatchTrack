@@ -29,7 +29,6 @@ body {
 .navbar {
   margin: 0;
   border-radius: 0;
-  position: relative;
   /* Keep navbar below Bootstrap modal backdrop (1050) so modals dim the header. */
   z-index: 1030;
 }
@@ -203,11 +202,6 @@ body {
 .navbar {
   box-shadow: var(--shadow-1);
   background-color: var(--color-navbar) !important;
-}
-
-/* Fixed navbar spacing - add padding to body when navbar is fixed */
-body {
-  padding-top: 76px; /* Account for fixed navbar height */
 }
 
 /* Hero section spacing adjustment */

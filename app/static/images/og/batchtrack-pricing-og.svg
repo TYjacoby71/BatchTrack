@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">BatchTrack Pricing  Hobbyist, Enthusiast, Fanatic</title>
+  <desc id="desc">Social preview image for BatchTrack pricing page.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f2240" />
+      <stop offset="50%" stop-color="#214377" />
+      <stop offset="100%" stop-color="#5a3e96" />
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#eef3ff" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect x="52" y="52" width="1096" height="526" rx="28" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" />
+
+  <text x="96" y="132" fill="#f7fbff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">
+    BatchTrack Pricing
+  </text>
+  <text x="96" y="178" fill="#d5e6ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="500">
+    Hobbyist " Enthusiast " Fanatic
+  </text>
+
+  <g transform="translate(88 230)">
+    <rect width="320" height="290" rx="20" fill="url(#card)" />
+    <text x="24" y="48" fill="#1c315f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Hobbyist</text>
+    <text x="24" y="82" fill="#3f588e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20">$ / month</text>
+    <text x="24" y="120" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Core features</text>
+    <text x="24" y="152" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Batch + inventory basics</text>
+    <text x="24" y="184" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Starter workflows</text>
+  </g>
+
+  <g transform="translate(440 210)">
+    <rect width="320" height="320" rx="20" fill="url(#card)" stroke="#3abf8f" stroke-width="4" />
+    <rect x="200" y="20" width="100" height="34" rx="17" fill="#3abf8f" />
+    <text x="218" y="42" fill="#113126" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Popular</text>
+    <text x="24" y="58" fill="#1c315f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Enthusiast</text>
+    <text x="24" y="92" fill="#3f588e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20">$ / month</text>
+    <text x="24" y="130" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Team-ready workflows</text>
+    <text x="24" y="162" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> More automation</text>
+    <text x="24" y="194" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Lifetime launch seats</text>
+  </g>
+
+  <g transform="translate(792 230)">
+    <rect width="320" height="290" rx="20" fill="url(#card)" />
+    <text x="24" y="48" fill="#1c315f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Fanatic</text>
+    <text x="24" y="82" fill="#3f588e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20">$ / month</text>
+    <text x="24" y="120" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Advanced controls</text>
+    <text x="24" y="152" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Highest feature access</text>
+    <text x="24" y="184" fill="#2b3d68" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18"> Built to scale</text>
+  </g>
+
+  <text x="96" y="556" fill="#c8daf8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22">
+    Compare plans and start your free trial at batchtrack.com/pricing
+  </text>
+</svg>

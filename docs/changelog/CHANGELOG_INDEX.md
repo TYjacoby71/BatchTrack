@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-10: Pricing Page Launch, Public CTA Routing, and Header Offset Fix](2026-02-10-pricing-page-and-public-cta-flow.md)**
+  - Added dedicated `/pricing` sales page with lifetime-first display and 3-tier checkbox comparison.
+  - Rewired public pricing/trial links to deterministic `/pricing` → `/auth/signup` flow.
+  - Removed development/waitlist gating from homepage CTAs and fixed public header offset CSS conflicts.
 - **[2026-02-10: Auth Email Modes and Integrations Checklist Alignment](2026-02-10-auth-email-modes-and-integrations-checklist.md)**
   - Added env-driven auth-email verification/reset controls with provider-aware legacy fallback.
   - Updated developer integrations checklist to show configured vs effective auth-email mode.

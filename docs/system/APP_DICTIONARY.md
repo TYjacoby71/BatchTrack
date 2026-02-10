@@ -50,6 +50,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
 - **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
+- **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/routes/pricing_routes.py` and `app/templates/pages/public/pricing.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -110,6 +111,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)
@@ -152,6 +154,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
+- **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Homepage Public Footer Links** → Product/company/support/legal links mapped to concrete routes/anchors instead of placeholder targets (see `app/templates/homepage.html`)
+- **Default Social Preview Image** → App-wide Open Graph/Twitter fallback image used when a page does not provide a custom `page_og_image` (see `app/static/images/og/batchtrack-default-og.svg` and `app/templates/layout.html`)
 - **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
 - **Soap Formulator (Public Tool)** → Batch-first soap recipe builder with quality targets (see `app/templates/tools/soaps/index.html`)
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
@@ -181,6 +186,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
+- **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
