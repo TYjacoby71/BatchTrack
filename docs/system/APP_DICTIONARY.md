@@ -48,6 +48,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: Public and internal route definitions with intent and permissions.
 
 ### Entries (placeholder)
+- **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
+- **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -117,6 +119,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
+- **SKU Activity Gate** → Suppresses SKU low/out-of-stock alerts until inventory activity exists (see `app/services/combined_inventory_alerts.py`)
 - **CostingEngine** → Weighted unit cost helpers (see `app/services/costing_engine.py`)
 - **GlobalItemStatsService** → Global item adoption and cost rollups (see `app/services/statistics/global_item_stats.py`)
 - **QuantityBase** → Base quantity conversion helpers (see `app/services/quantity_base.py`)
@@ -139,8 +142,12 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: UI/UX surfaces and critical modals/forms.
 
 ### Entries (placeholder)
+- **BT_STORAGE (Client Scope Prefix)** → Front-end storage key prefix scoped by user + org to avoid tenant bleed (see `app/templates/layout.html`)
 - **Tier Edit Form** → Permissions + add-on selection
 - **Add-on Create/Edit** → Permission/function key wiring
+- **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
+- **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
+- **Soap Formulator (Public Tool)** → Batch-first soap recipe builder with quality targets (see `app/templates/tools/soaps/index.html`)
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
 - **Recipe Notes Panel** → Add and review timestamped recipe notes (see `app/templates/pages/recipes/view_recipe.html`)
 - **Auto Label Prefix Field** → Locked prefix auto-generation on recipe forms (see `app/templates/pages/recipes/recipe_form.html`)
@@ -149,10 +156,16 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Origin Summary (Origin/Root Recipe)** → Origin + predecessor display (see `app/templates/pages/recipes/view_recipe.html`)
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
+- **Inventory Filter Persistence (Scoped)** → Per-user/org inventory filters and column preferences (see `app/templates/inventory_list.html`)
+- **Bulk Inventory Drafts (Scoped)** → Per-user/org bulk update drafts stored in the browser (see `app/templates/inventory/bulk_updates.html`)
+- **Drawer Cadence Throttle (Scoped)** → Per-user/org cadence window for drawer checks (see `app/static/js/drawers/drawer_cadence.js`)
 - **Global Link Drawer** → Link local items to global catalog (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **Retention Drawer** → Acknowledge retention deletions (see `app/blueprints/api/drawers/drawer_actions/retention.py`)
 - **SKU Merge Flow** → Merge SKUs into a single inventory item (see `app/blueprints/products/sku.py`)
 - **Inventory Bulk Updates** → Bulk inventory adjustment UI (see `app/blueprints/inventory/routes.py`)
+- **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
+- **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
+- **Variant Sizes View** → Size-level inventory and SKU actions for a variant (see `app/templates/pages/products/view_variation.html`)
 
 ---
 
@@ -160,6 +173,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: CLI scripts, update flows, and maintenance commands.
 
 ### Entries (placeholder)
+- **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits

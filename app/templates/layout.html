@@ -31,12 +31,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <script>
-      // Minimal theme bootstrap: set data-theme before paint if user preference saved
+      // Minimal theme bootstrap: scope localStorage per user + org.
       (function() {
         try {
-          var t = localStorage.getItem('bt_theme');
-          if (t && t !== 'system') {
-            document.documentElement.setAttribute('data-theme', t);
+          var userId = {{ current_user.id if current_user.is_authenticated else 'null' }};
+          var orgId = {{ get_effective_org_id() if current_user.is_authenticated else 'null' }};
+          var userKey = userId ? String(userId) : 'guest';
+          var orgKey = orgId ? String(orgId) : 'public';
+          var prefix = 'bt:' + userKey + ':' + orgKey + ':';
+          window.BT_STORAGE = {
+            userId: userId,
+            orgId: orgId,
+            prefix: prefix,
+            key: function(baseKey) { return prefix + baseKey; }
+          };
+
+          var storageKey = window.BT_STORAGE.key('theme');
+          var hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
+          var serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
+          var theme = null;
+
+          if (hasServerTheme) {
+            theme = serverTheme;
+            if (theme && theme !== 'system') {
+              localStorage.setItem(storageKey, theme);
+            } else {
+              localStorage.removeItem(storageKey);
+            }
+          } else {
+            theme = localStorage.getItem(storageKey);
+          }
+
+          if (theme && theme !== 'system') {
+            document.documentElement.setAttribute('data-theme', theme);
           } else {
             document.documentElement.removeAttribute('data-theme');
           }
@@ -86,17 +113,10 @@
             margin: 0 auto;
         }
     </style>
-<script>
-    // Initialize theme immediately to prevent flash
-    (function() {
-      const savedTheme = localStorage.getItem('bt_theme');
-      if (savedTheme && savedTheme !== 'system') {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-      }
-    })();
-  </script>
 </head>
-<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
+      data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
+      data-org-id="{{ get_effective_org_id() if current_user.is_authenticated else '' }}">
     <script>
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
