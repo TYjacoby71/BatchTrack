@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">BatchTrack favicon</title>
+  <desc id="desc">BatchTrack BT monogram icon with green-to-navy accent.</desc>
+  <defs>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7ecb2f" />
+      <stop offset="55%" stop-color="#2e8f3a" />
+      <stop offset="100%" stop-color="#24335d" />
+    </linearGradient>
+    <linearGradient id="letters" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#58b430" />
+      <stop offset="100%" stop-color="#4f565d" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="none" />
+  <circle cx="256" cy="256" r="190" fill="none" stroke="url(#ring)" stroke-width="28" stroke-linecap="round" />
+  <rect x="71" y="64" width="78" height="40" fill="#ffffff" />
+  <rect x="362" y="408" width="78" height="40" fill="#ffffff" />
+
+  <text x="256" y="312" text-anchor="middle" fill="url(#letters)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="198" font-weight="800" letter-spacing="-8">BT</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">BatchTrack app tile</title>
+  <desc id="desc">BatchTrack rounded app tile icon.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f3f5f2" />
+      <stop offset="100%" stop-color="#d9e3d7" />
+    </linearGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#89d03a" />
+      <stop offset="55%" stop-color="#2f9440" />
+      <stop offset="100%" stop-color="#263660" />
+    </linearGradient>
+    <linearGradient id="letters" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#64bb3a" />
+      <stop offset="100%" stop-color="#5f656d" />
+    </linearGradient>
+  </defs>
+
+  <rect x="120" y="120" width="784" height="784" rx="120" fill="url(#tile)" stroke="#c1c3c7" stroke-width="4" />
+  <circle cx="512" cy="512" r="236" fill="none" stroke="url(#ring)" stroke-width="34" stroke-linecap="round" />
+  <rect x="263" y="243" width="94" height="46" fill="#f3f5f2" />
+  <rect x="658" y="738" width="94" height="46" fill="#d9e3d7" />
+  <text x="512" y="598" text-anchor="middle" fill="url(#letters)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="248" font-weight="800" letter-spacing="-10">BT</text>
+</svg>

@@ -37,6 +37,8 @@ Glossary:
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/branding/batchtrack-favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/branding/batchtrack-app-tile.svg') }}">
     <script>
       // Minimal theme bootstrap: scope localStorage per user + org.
       (function() {
@@ -132,6 +134,22 @@ Glossary:
             font-weight: 700;
             font-size: 1.5rem;
         }
+        .navbar-brand.bt-brand-link {
+            display: inline-flex;
+            align-items: center;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .bt-brand-wordmark {
+            display: block;
+            height: 36px;
+            width: auto;
+        }
+        @media (max-width: 992px) {
+            .bt-brand-wordmark {
+                height: 32px;
+            }
+        }
         .public-marketing-nav .navbar-nav .nav-link {
             color: #6c757d !important;
             font-size: 0.9rem;
@@ -165,8 +183,8 @@ Glossary:
     <nav class="navbar navbar-expand-lg {% if public_shell_mode %}public-marketing-nav navbar-light bg-white shadow-sm{% else %}navbar-light bg-light{% endif %}">
         <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
             {% if not public_shell_mode %}
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
-                BatchTrack 1.0
+            <a class="navbar-brand bt-brand-link" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}" aria-label="BatchTrack home">
+                <img src="{{ url_for('static', filename='images/branding/batchtrack-wordmark.svg') }}" alt="BatchTrack" class="bt-brand-wordmark">
             </a>
             {% endif %}
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}

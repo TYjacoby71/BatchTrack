@@ -19,8 +19,8 @@ Glossary:
 {% set about_href = '#about' if public_header_is_homepage else public_header_home_url ~ '#about' %}
 {% set contact_href = '#contact' if public_header_is_homepage else public_header_home_url ~ '#contact' %}
 
-<a class="navbar-brand text-primary" href="{{ public_header_home_url }}">
-    <i class="fas fa-flask me-2"></i>BatchTrack
+<a class="navbar-brand bt-brand-link" href="{{ public_header_home_url }}" aria-label="BatchTrack home">
+    <img src="{{ url_for('static', filename='images/branding/batchtrack-wordmark.svg') }}" alt="BatchTrack" class="bt-brand-wordmark" style="height: 36px; width: auto;">
 </a>
 
 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicMarketingNav" aria-controls="publicMarketingNav" aria-expanded="false" aria-label="Toggle navigation">

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="320" viewBox="0 0 1300 320" role="img" aria-labelledby="title desc">
+  <title id="title">BatchTrack wordmark</title>
+  <desc id="desc">BatchTrack wordmark with BT monogram and brand text.</desc>
+  <defs>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7ecb2f" />
+      <stop offset="55%" stop-color="#2e8f3a" />
+      <stop offset="100%" stop-color="#24335d" />
+    </linearGradient>
+    <linearGradient id="letters" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#58b430" />
+      <stop offset="100%" stop-color="#4f565d" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="168" cy="160" r="116" fill="none" stroke="url(#ring)" stroke-width="18" stroke-linecap="round" />
+  <rect x="46" y="41" width="50" height="28" fill="#ffffff" />
+  <rect x="240" y="248" width="50" height="28" fill="#ffffff" />
+  <text x="168" y="198" text-anchor="middle" fill="url(#letters)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="122" font-weight="800" letter-spacing="-5">BT</text>
+
+  <text x="326" y="202" fill="#3f914a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="118" font-weight="700">Batch</text>
+  <text x="662" y="202" fill="#61666e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="118" font-weight="700">Track</text>
+</svg>

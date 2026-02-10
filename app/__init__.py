@@ -418,6 +418,11 @@ def _add_core_routes(app):
         """Alternative public page"""
         return _render_public_homepage_response()
 
+    @app.route("/favicon.ico")
+    def favicon():
+        """Serve a favicon from static assets to avoid noisy 404s."""
+        return redirect(url_for("static", filename="images/branding/batchtrack-favicon.svg"), code=302)
+
 # --- Setup logging ---
 # Purpose: Configure log levels and app log formatters.
 def _setup_logging(app):
