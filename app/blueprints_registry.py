@@ -42,6 +42,7 @@ API_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
 ROUTE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.routes.app_routes", "app_routes_bp", None, "App Routes"),
     BlueprintSpec("app.routes.pricing_routes", "pricing_bp", None, "Pricing Routes"),
+    BlueprintSpec("app.routes.landing_routes", "landing_pages_bp", None, "Landing Pages"),
     BlueprintSpec("app.routes.legal_routes", "legal_bp", "/legal", "Legal Routes"),
     BlueprintSpec("app.routes.bulk_stock_routes", "bulk_stock_bp", "/bulk-stock", "Bulk Stock"),
     BlueprintSpec("app.routes.fault_log_routes", "faults_bp", "/faults", "Fault Log"),

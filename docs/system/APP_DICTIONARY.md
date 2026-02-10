@@ -51,6 +51,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
 - **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
 - **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/routes/pricing_routes.py` and `app/templates/pages/public/pricing.html`)
+- **/lp/hormozi** → Public A/B landing variant with results-first offer framing for makers (see `app/routes/landing_routes.py` and `app/templates/pages/public/landing_hormozi.html`)
+- **/lp/robbins** → Public A/B landing variant with transformation-first calm workflow framing for makers (see `app/routes/landing_routes.py` and `app/templates/pages/public/landing_robbins.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -157,6 +159,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
 - **Maker Tools Neutral Card Styling** → Tools index cards/tiles aligned to core app surface and border tokens, replacing per-category rainbow accents (see `app/templates/tools/index.html`).
 - **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Staging Home Variants Switcher** → Public header dropdown shown only in staging to switch between classic homepage and landing A/B variants (`/lp/hormozi`, `/lp/robbins`) (see `app/templates/components/shared/public_marketing_header.html`)
+- **Landing Page Variant A (Results-First)** → Public offer-led maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_hormozi.html`)
+- **Landing Page Variant B (Transformation-First)** → Public calm-workflow maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_robbins.html`)
 - **Homepage Public Footer Links** → Product/company/support/legal links mapped to concrete routes/anchors instead of placeholder targets (see `app/templates/homepage.html`)
 - **Default Social Preview Image** → App-wide Open Graph/Twitter fallback image used when a page does not provide a custom `page_og_image` (see `app/static/images/og/batchtrack-default-og.svg` and `app/templates/layout.html`)
 - **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
@@ -189,6 +194,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
 - **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
+- **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits

@@ -1,0 +1,274 @@
+{#
+Synopsis:
+Public A/B landing page variant that emphasizes offer clarity and outcomes for small-batch makers.
+Uses maker-first language with explicit conversion CTAs into signup.
+
+Glossary:
+- Results-first variant: Messaging style that leads with pain, outcome, and offer.
+- Offer stack: Grouped value items included with the core product experience.
+#}
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+  .hormone-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .hormone-hero {
+    border-radius: 1.25rem;
+    padding: 2.6rem;
+    color: #fff;
+    background: radial-gradient(circle at 0% 0%, rgba(60, 120, 255, 0.36), transparent 52%),
+      linear-gradient(145deg, #0f1b3e 0%, #132f60 48%, #3e2367 100%);
+    box-shadow: 0 20px 40px rgba(14, 25, 60, 0.28);
+  }
+
+  .hormone-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 999px;
+    padding: 0.4rem 0.72rem;
+    background: rgba(255, 255, 255, 0.12);
+    margin-bottom: 1rem;
+  }
+
+  .hormone-hero h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 0.85rem;
+    color: #fff;
+  }
+
+  .hormone-hero p {
+    max-width: 760px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .hormone-chip-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+
+  .hormone-chip {
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.65rem 0.8rem;
+    font-size: 0.92rem;
+  }
+
+  .hormone-section-title {
+    font-size: clamp(1.45rem, 2.2vw, 2rem);
+    margin-bottom: 0.55rem;
+  }
+
+  .hormone-muted {
+    color: var(--color-muted);
+  }
+
+  .hormone-card {
+    border-radius: 1rem;
+    border: 1px solid rgba(196, 205, 228, 0.9);
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(16, 26, 58, 0.08);
+    padding: 1.1rem;
+    height: 100%;
+  }
+
+  .hormone-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .hormone-icon {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(13, 110, 253, 0.15);
+    color: #0d6efd;
+    margin-bottom: 0.6rem;
+  }
+
+  .hormone-split {
+    border: 1px solid rgba(194, 205, 231, 0.92);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .hormone-split-head {
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.1), rgba(111, 66, 193, 0.08));
+    padding: 0.9rem 1rem;
+    font-weight: 700;
+    color: #173369;
+    border-bottom: 1px solid rgba(199, 208, 233, 0.88);
+  }
+
+  .hormone-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.95rem 1rem 0.45rem;
+  }
+
+  .hormone-list li {
+    margin-bottom: 0.65rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .hormone-list i {
+    margin-top: 0.2rem;
+    color: #198754;
+  }
+
+  .hormone-offer {
+    border: 1px solid rgba(144, 156, 203, 0.3);
+    border-radius: 1rem;
+    padding: 1.2rem;
+    background: linear-gradient(160deg, rgba(13, 26, 67, 0.96), rgba(40, 22, 68, 0.94));
+    color: #fff;
+  }
+
+  .hormone-offer li {
+    margin-bottom: 0.65rem;
+  }
+
+  .hormone-offer .small {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+
+  .hormone-cta {
+    border-radius: 1rem;
+    border: 1px solid rgba(196, 205, 231, 0.9);
+    background: linear-gradient(145deg, rgba(13, 110, 253, 0.1), rgba(111, 66, 193, 0.08));
+    padding: 1.5rem;
+  }
+
+  @media (max-width: 991px) {
+    .hormone-hero {
+      padding: 1.6rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hormone-shell py-4">
+  <section class="hormone-hero mb-4 mb-lg-5">
+    <span class="hormone-kicker"><i class="fas fa-bolt"></i> Variant A: results-first landing page</span>
+    <h1>Stop losing money to batch chaos.</h1>
+    <p class="lead mb-3">
+      BatchTrack is the first system build for small-batch makers to track their passion from first pour to final sale.
+      This is not just another accounting app: we handle the accounting so your team can focus on the art.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='lp_hormozi_hero_trial') }}" class="btn btn-warning btn-lg">
+        Start Free Trial
+      </a>
+      <a href="{{ url_for('pricing_routes.pricing') }}" class="btn btn-outline-light btn-lg">
+        See Pricing
+      </a>
+    </div>
+    <div class="hormone-chip-row">
+      <div class="hormone-chip"><i class="fas fa-route me-2"></i>Full batch lifecycle tracking</div>
+      <div class="hormone-chip"><i class="fas fa-clipboard-check me-2"></i>Full traceability + expiration + FIFO</div>
+      <div class="hormone-chip"><i class="fas fa-brain me-2"></i>Calming, neurodivergent-friendly UX</div>
+    </div>
+  </section>
+
+  <section id="features" class="mb-4 mb-lg-5">
+    <h2 class="hormone-section-title">What you get immediately</h2>
+    <p class="hormone-muted mb-3">
+      One workspace for the maker journey: plan, batch, trace, replenish, and repeat.
+    </p>
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <article class="hormone-card">
+          <span class="hormone-icon"><i class="fas fa-boxes"></i></span>
+          <h3>End-to-end production control</h3>
+          <p class="mb-0">Track the full lifecycle of every batch with clear records, lot history, and execution status.</p>
+        </article>
+      </div>
+      <div class="col-12 col-lg-4">
+        <article class="hormone-card">
+          <span class="hormone-icon"><i class="fas fa-hourglass-half"></i></span>
+          <h3>Traceability that protects margin</h3>
+          <p class="mb-0">Keep expiration and FIFO inventory management visible so you use the right materials at the right time.</p>
+        </article>
+      </div>
+      <div class="col-12 col-lg-4">
+        <article class="hormone-card">
+          <span class="hormone-icon"><i class="fas fa-robot"></i></span>
+          <h3>BatchBot onboarding + guided setup</h3>
+          <p class="mb-0">Onboard faster with BatchBot and a smooth, intuitive system designed to reduce overwhelm.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="mb-4 mb-lg-5">
+    <h2 class="hormone-section-title">Why makers switch to BatchTrack</h2>
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <article class="hormone-split h-100">
+          <div class="hormone-split-head">Before: scattered tools and stress</div>
+          <ul class="hormone-list">
+            <li><i class="fas fa-times-circle"></i><span>Lifecycle steps split across spreadsheets, notes, and memory.</span></li>
+            <li><i class="fas fa-times-circle"></i><span>Inventory errors from weak traceability and no FIFO guardrails.</span></li>
+            <li><i class="fas fa-times-circle"></i><span>Creative flow interrupted by admin and accounting busywork.</span></li>
+          </ul>
+        </article>
+      </div>
+      <div class="col-12 col-lg-6">
+        <article class="hormone-split h-100">
+          <div class="hormone-split-head">After: focused production and calm execution</div>
+          <ul class="hormone-list">
+            <li><i class="fas fa-check-circle"></i><span>One guided system for batch lifecycle, from prep to packaged product.</span></li>
+            <li><i class="fas fa-check-circle"></i><span>Full traceability, expiration visibility, and FIFO inventory confidence.</span></li>
+            <li><i class="fas fa-check-circle"></i><span>Inclusive, neurodivergent-friendly workflows that help your team stay in flow.</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hormone-offer mb-4 mb-lg-5">
+    <h2 class="h4 mb-2 text-white">Launch offer stack for growing maker brands</h2>
+    <ul class="mb-3">
+      <li>Global library access for cleaner inputs and standards.</li>
+      <li>Recipe marketplace access to discover, share, and scale your formulas.</li>
+      <li>Private Facebook group for peer support, implementation, and best practices.</li>
+      <li>Shopify and Etsy integrations marked as coming soon.</li>
+    </ul>
+    <p class="small mb-0">Everything is designed to remove friction so you can create, ship, and improve with confidence.</p>
+  </section>
+
+  <section id="contact" class="hormone-cta">
+    <h2 class="h4 mb-2">Ready to turn batch tracking into your growth engine?</h2>
+    <p class="text-muted mb-3">
+      Start your free trial, choose your tier, and move from patchwork tools to a calm, all-inclusive production system.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='lp_hormozi_bottom_trial') }}" class="btn btn-primary btn-lg">
+        Start Free Trial
+      </a>
+      <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
+        Explore Help Center
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}
