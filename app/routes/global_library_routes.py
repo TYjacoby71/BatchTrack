@@ -221,6 +221,7 @@ def global_library():
         page_title="Global Item Library — BatchTrack",
         page_description=" ".join(description_bits),
         canonical_url=canonical_url,
+        show_public_header=True,
     )
 
     if not bypass_cache:
@@ -330,6 +331,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         page_og_image=metadata.get('hero_image'),
         slugify=slugify_value,
         preview_remaining=preview_remaining,
+        show_public_header=True,
     )
 
 
