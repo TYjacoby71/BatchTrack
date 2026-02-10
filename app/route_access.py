@@ -13,7 +13,7 @@ class RouteAccessConfig:
         "homepage",
         "index",
         "public_page",
-        "pricing",
+        "pricing_routes.pricing",
         "auth.login",
         "auth.signup",
         "auth.logout",

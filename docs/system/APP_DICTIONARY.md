@@ -50,7 +50,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ### Entries (placeholder)
 - **/tools** → Maker Tools index for public calculators (see `app/templates/tools/index.html`)
 - **/tools/soap** → Soap Formulator public tool (see `app/templates/tools/soaps/index.html`)
-- **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/templates/pages/public/pricing.html`)
+- **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/routes/pricing_routes.py` and `app/templates/pages/public/pricing.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
@@ -107,7 +107,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
-- **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/__init__.py`).
+- **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)

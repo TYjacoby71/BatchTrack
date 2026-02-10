@@ -14,9 +14,10 @@
 - Public pages with redirects could render with the header shifted down due to conflicting global CSS.
 
 ## Key Changes
-- `app/__init__.py`
-  - Added `/pricing` route and context builder for tier cards, lifetime-offer-first display, and comparison rows.
-  - Added maker-first metadata context (`page_title`, `page_description`, `canonical_url`) for the pricing page.
+- `app/routes/pricing_routes.py`
+  - Added dedicated public `/pricing` route handler with maker-first metadata context (`page_title`, `page_description`, `canonical_url`, `page_og_image`).
+- `app/services/public_pricing_page_service.py`
+  - Added pricing context builder for tier cards, lifetime-offer-first display, and comparison rows.
 - `app/templates/pages/public/pricing.html`
   - New dedicated pricing/sales page with:
     - Lifetime launch cards shown first when seats remain.
@@ -32,7 +33,7 @@
   - Public header pricing nav now points to `/pricing`.
   - Added default OG/Twitter image fallback for pages that do not pass `page_og_image`.
 - `app/route_access.py`
-  - Added `pricing` endpoint and `/pricing` prefix to public route allow-list.
+  - Added `/pricing` endpoint + path to public route allow-list.
 - `app/static/style.css`
   - Removed navbar `position: relative` override that conflicted with `fixed-top`.
   - Removed global `body` top padding that caused public header offset drift.
@@ -49,6 +50,9 @@
 
 ## Files Modified
 - `app/__init__.py`
+- `app/blueprints_registry.py`
+- `app/routes/pricing_routes.py`
+- `app/services/public_pricing_page_service.py`
 - `app/route_access.py`
 - `app/static/style.css`
 - `app/templates/homepage.html`
