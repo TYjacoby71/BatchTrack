@@ -190,6 +190,7 @@ def list_batches():
             InventoryItem=InventoryItem,
             TimezoneUtils=TimezoneUtils,
             visible_columns=visible_columns,
+            breadcrumb_items=[{'label': 'Batches'}],
             **batch_data)
 
     except Exception as e:
@@ -203,7 +204,8 @@ def list_batches():
             completed_pagination=None,
             InventoryItem=InventoryItem,
             TimezoneUtils=TimezoneUtils,
-            visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
+            visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'],
+            breadcrumb_items=[{'label': 'Batches'}])
 
 
 # --- Batch record ---
