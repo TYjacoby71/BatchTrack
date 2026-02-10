@@ -204,11 +204,6 @@ body {
   background-color: var(--color-navbar) !important;
 }
 
-/* Fixed navbar spacing - add padding to body when navbar is fixed */
-body {
-  padding-top: 76px; /* Account for fixed navbar height */
-}
-
 /* Hero section spacing adjustment */
 .hero-section {
   padding-top: 3rem !important;
