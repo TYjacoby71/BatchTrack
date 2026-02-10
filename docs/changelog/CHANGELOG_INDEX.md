@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-10: SEO Guide Agent Update Standard Clarification](2026-02-10-seo-guide-agent-update-standard.md)**
+  - Added dictionary-style top-of-file instructions for metadata implementation.
+  - Clarified when to apply the guide vs when to edit the guide itself.
+  - Added a pre-push metadata quality checklist for touched routes/templates.
 - **[2026-02-10: Landing Page A/B Variants + Metadata/Dictionary Alignment](2026-02-10-landing-page-ab-variants-and-metadata-dictionary-alignment.md)**
   - Added `/lp/hormozi` and `/lp/robbins` public landing pages for messaging A/B tests.
   - Added explicit maker-first metadata context and OG image mapping for both landing routes.
