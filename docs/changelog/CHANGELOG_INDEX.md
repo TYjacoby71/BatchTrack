@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-10: Staging Homepage Variant Toggle in Public Nav](2026-02-10-staging-homepage-variant-nav-toggle.md)**
+  - Added a staging-only "Home Variants" dropdown in public navigation.
+  - Added quick links to classic homepage, `/lp/hormozi`, and `/lp/robbins`.
+  - Added tests ensuring visibility only in staging.
 - **[2026-02-10: SEO Guide Agent Update Standard Clarification](2026-02-10-seo-guide-agent-update-standard.md)**
   - Added dictionary-style top-of-file instructions for metadata implementation.
   - Clarified when to apply the guide vs when to edit the guide itself.

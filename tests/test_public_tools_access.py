@@ -48,3 +48,33 @@ def test_anonymous_workflow_can_browse_public_site(app):
     _assert_public_get(client, "/lp/hormozi", label="landing page (results-first)")
     _assert_public_get(client, "/lp/robbins", label="landing page (transformation-first)")
     _assert_public_get(client, "/auth/signup", label="signup page")
+
+
+@pytest.mark.usefixtures("app")
+def test_staging_homepage_variant_switcher_visibility(app):
+    """Homepage variant switcher should only appear in staging."""
+    client = app.test_client()
+
+    app.config["ENV"] = "testing"
+    app.config["FLASK_ENV"] = "testing"
+    testing_response = _assert_public_get(
+        client,
+        "/",
+        label="homepage in non-staging",
+        query_string={"refresh": "1"},
+    )
+    testing_html = testing_response.get_data(as_text=True)
+    assert "Home Variants" not in testing_html
+
+    app.config["ENV"] = "staging"
+    app.config["FLASK_ENV"] = "staging"
+    staging_response = _assert_public_get(
+        client,
+        "/",
+        label="homepage in staging",
+        query_string={"refresh": "1"},
+    )
+    staging_html = staging_response.get_data(as_text=True)
+    assert "Home Variants" in staging_html
+    assert "/lp/hormozi" in staging_html
+    assert "/lp/robbins" in staging_html

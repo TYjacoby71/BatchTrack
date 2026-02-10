@@ -5,6 +5,7 @@ Shared marketing header for homepage and public content routes.
 Glossary:
 - Home anchors: Section links that scroll within the homepage.
 - Public route: Non-authenticated route that should use marketing navigation.
+- Staging variant switcher: Nav dropdown used to toggle landing variants in staging only.
 #}
 {% set public_header_home_url = url_for('index') %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
@@ -12,6 +13,8 @@ Glossary:
 {% if global_library_enabled is not defined %}
 {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
 {% endif %}
+{% set active_env = (config.get('ENV') or config.get('FLASK_ENV') or '')|lower %}
+{% set show_staging_variant_switcher = active_env == 'staging' %}
 {% set features_href = '#features' if public_header_is_homepage else public_header_home_url ~ '#features' %}
 {% set about_href = '#about' if public_header_is_homepage else public_header_home_url ~ '#about' %}
 {% set contact_href = '#contact' if public_header_is_homepage else public_header_home_url ~ '#contact' %}
@@ -40,6 +43,26 @@ Glossary:
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
         </li>
+        {% if show_staging_variant_switcher %}
+        <li class="nav-item dropdown">
+            <a
+                class="nav-link dropdown-toggle text-primary fw-semibold"
+                href="#"
+                id="stagingVariantDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                Home Variants
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="stagingVariantDropdown">
+                <li><h6 class="dropdown-header">Staging only</h6></li>
+                <li><a class="dropdown-item" href="{{ url_for('index') }}">Classic Homepage</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('landing_pages.lp_hormozi') }}">Results-First Variant</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('landing_pages.lp_robbins') }}">Transformation Variant</a></li>
+            </ul>
+        </li>
+        {% endif %}
         <li class="nav-item">
             <a class="nav-link" href="{{ about_href }}">About</a>
         </li>
