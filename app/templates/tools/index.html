@@ -257,7 +257,7 @@ Glossary:
 }
 
 .tools-eyebrow {
-  font-size: 0.75rem;
+  font-size: var(--theme-ext-size-64663a75d2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-primary);
@@ -267,12 +267,12 @@ Glossary:
 .tools-hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 999px;
+  gap: var(--theme-ext-space-e0100a51c2);
+  padding: var(--theme-ext-space-d1851abc4a);
+  border-radius: var(--theme-ext-radius-13166981e2);
   background: var(--color-subtle-bg);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: var(--theme-ext-size-21583621a9);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-1);
 }
@@ -288,8 +288,8 @@ Glossary:
 .tool-category-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
+  top: var(--theme-ext-space-da36f4b27f);
+  left: var(--theme-ext-space-51c807580e);
   height: 4px;
   width: 100%;
   background: var(--color-border);
@@ -297,19 +297,19 @@ Glossary:
 
 .tool-tiles {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--theme-ext-space-ac314870d0);
 }
 
 .tool-tile {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  gap: var(--theme-ext-space-ac314870d0);
+  padding: var(--theme-ext-space-16c0d9f312);
+  border-radius: var(--theme-ext-radius-ef4e416e4e);
   border: 1px solid var(--color-border, #e6e9ef);
   background: var(--color-surface);
-  color: inherit;
+  color: var(--theme-ext-color-cb5d7279ca);
   text-decoration: none;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
   border-left: 4px solid var(--color-primary);
@@ -326,12 +326,12 @@ Glossary:
 
 .tool-tile-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--theme-ext-size-ad1cdf8362);
 }
 
 .tool-tile-meta {
-  margin-top: 0.25rem;
-  line-height: 1.4;
+  margin-top: var(--theme-ext-space-6166d0e813);
+  line-height: var(--theme-ext-size-cc5c27a52a);
 }
 
 .tool-tile-icon {
@@ -347,7 +347,7 @@ Glossary:
 .tool-tile--disabled:hover,
 .tool-tile--disabled:focus {
   transform: none;
-  box-shadow: none;
+  box-shadow: var(--theme-ext-shadow-e49af3bb5b);
   border-color: var(--color-border, #e6e9ef);
   background: var(--color-breadcrumb-bg, #f8f9fb);
 }
