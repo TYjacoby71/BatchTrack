@@ -439,7 +439,7 @@ def help_overview():
             ],
         },
     ]
-    return render_template("help/how_it_works.html", sections=sections)
+    return render_template("help/how_it_works.html", sections=sections, show_public_header=True)
 
 
 @help_bp.route("/help/system-faq")
@@ -491,4 +491,4 @@ def help_faq():
             "link": ("Labels & Exports", "help_routes.help_overview", "labels-exports"),
         },
     ]
-    return render_template("help/system_faq.html", faqs=faqs)
+    return render_template("help/system_faq.html", faqs=faqs, show_public_header=True)
