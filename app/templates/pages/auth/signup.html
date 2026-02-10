@@ -311,6 +311,15 @@ function updatePlanSummary() {
             lifetimeCounterMessage.textContent = `Only ${offer.display_spots_left} spots left / ${offer.seat_total} for ${offer.name}.`;
             lifetimeCounterMessage.classList.remove('d-none');
             continueBtn.disabled = !offer.has_remaining;
+        } else {
+            title.textContent = 'Lifetime summary';
+            selectedText.textContent = 'This lifetime option is currently unavailable. Choose another plan or switch billing mode.';
+            badge.textContent = 'Unavailable';
+            priceText.textContent = '—';
+            continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
+            continueBtn.disabled = true;
+            lifetimeCounterMessage.textContent = 'Lifetime pricing is not configured for this selection yet.';
+            lifetimeCounterMessage.classList.remove('d-none');
         }
         return;
     }

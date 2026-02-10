@@ -11,6 +11,7 @@ Glossary:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from sqlalchemy import func
@@ -22,6 +23,8 @@ from ..models.subscription_tier import SubscriptionTier
 
 class LifetimePricingService:
     """Single source for lifetime offer card data and counters."""
+
+    _VERSION_SUFFIX_RE = re.compile(r"([_-])v\d+$", re.IGNORECASE)
 
     DEFAULT_TIER_BLUEPRINTS = (
         {
@@ -72,8 +75,8 @@ class LifetimePricingService:
             display_spots_left = display_floor if sold_count < threshold else true_spots_left
 
             monthly_lookup_key = (getattr(tier, "stripe_lookup_key", None) or "").strip() if tier else ""
-            yearly_lookup_key = cls._derive_lookup_variant(monthly_lookup_key, "yearly")
-            lifetime_lookup_key = cls._derive_lookup_variant(monthly_lookup_key, "lifetime")
+            yearly_lookup_key = cls.resolve_standard_yearly_lookup_key(tier)
+            lifetime_lookup_key = cls.resolve_standard_lifetime_lookup_key(tier)
 
             monthly_pricing = cls._get_lookup_key_pricing(monthly_lookup_key)
             yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
@@ -87,6 +90,10 @@ class LifetimePricingService:
             lifetime_price_copy = "Configure lifetime Stripe price"
             if lifetime_price_is_valid and lifetime_pricing:
                 lifetime_price_copy = f"{lifetime_pricing.get('formatted_price')} one-time"
+            elif yearly_pricing:
+                lifetime_price_copy = f"{yearly_pricing.get('formatted_price')} yearly available"
+            elif monthly_pricing:
+                lifetime_price_copy = f"{monthly_pricing.get('formatted_price')} monthly available"
 
             offer = {
                 "key": blueprint["key"],
@@ -171,14 +178,22 @@ class LifetimePricingService:
         """Resolve yearly lookup key from a tier's single configured lookup key."""
         if not tier:
             return None
-        return cls._derive_lookup_variant(getattr(tier, "stripe_lookup_key", None), "yearly")
+        return cls._resolve_lookup_variant(
+            base_lookup_key=getattr(tier, "stripe_lookup_key", None),
+            target_variant="yearly",
+            expected_cycle="yearly",
+        )
 
     @classmethod
     def resolve_standard_lifetime_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
         """Resolve lifetime lookup key from a tier's single configured lookup key."""
         if not tier:
             return None
-        return cls._derive_lookup_variant(getattr(tier, "stripe_lookup_key", None), "lifetime")
+        return cls._resolve_lookup_variant(
+            base_lookup_key=getattr(tier, "stripe_lookup_key", None),
+            target_variant="lifetime",
+            expected_cycle="one-time",
+        )
 
     @classmethod
     def _load_paid_tiers(cls) -> list[SubscriptionTier]:
@@ -228,6 +243,78 @@ class LifetimePricingService:
             if from_token in lookup:
                 return lookup.replace(from_token, to_token)
         return None
+
+    @classmethod
+    def _resolve_lookup_variant(
+        cls,
+        *,
+        base_lookup_key: str | None,
+        target_variant: str,
+        expected_cycle: str | None = None,
+    ) -> str | None:
+        """Resolve the first existing Stripe lookup variant.
+
+        This is intentionally defensive: if strict versioned keys are missing, it
+        retries likely non-versioned and delimiter variants to keep pricing UI
+        functional instead of breaking card rendering.
+        """
+        candidates = cls._lookup_variant_candidates(base_lookup_key, target_variant)
+        for candidate in candidates:
+            pricing = cls._get_lookup_key_pricing(candidate)
+            if not pricing:
+                continue
+            if expected_cycle and pricing.get("billing_cycle") != expected_cycle:
+                continue
+            return candidate
+        return None
+
+    @classmethod
+    def _lookup_variant_candidates(cls, base_lookup_key: str | None, target_variant: str) -> list[str]:
+        lookup = (base_lookup_key or "").strip()
+        if not lookup:
+            return []
+
+        variants = []
+
+        primary = cls._derive_lookup_variant(lookup, target_variant)
+        if primary:
+            variants.append(primary)
+
+        stripped = cls._strip_version_suffix(lookup)
+        if stripped and stripped != lookup:
+            secondary = cls._derive_lookup_variant(stripped, target_variant)
+            if secondary:
+                variants.append(secondary)
+
+        expanded = []
+        for value in variants:
+            expanded.extend(cls._delimiter_variants(value))
+
+        deduped = []
+        seen = set()
+        for candidate in expanded:
+            cleaned = (candidate or "").strip()
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            deduped.append(cleaned)
+        return deduped
+
+    @classmethod
+    def _strip_version_suffix(cls, lookup_key: str | None) -> str:
+        return cls._VERSION_SUFFIX_RE.sub("", (lookup_key or "").strip())
+
+    @staticmethod
+    def _delimiter_variants(value: str) -> list[str]:
+        value = (value or "").strip()
+        if not value:
+            return []
+        output = [value]
+        if "_" in value:
+            output.append(value.replace("_", "-"))
+        if "-" in value:
+            output.append(value.replace("-", "_"))
+        return output
 
     @staticmethod
     def _sold_count_by_coupon(coupon_codes_lower: Sequence[str]) -> dict[str, int]:
