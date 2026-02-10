@@ -1,4 +1,12 @@
-"""Email verification auth routes."""
+"""Email verification auth routes.
+
+Synopsis:
+Handles email token verification and resend flows.
+Resend behavior is controlled by env-driven verification mode and provider readiness.
+
+Glossary:
+- Verification token: One-time token proving mailbox ownership.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def _verification_expiry_hours() -> int:
+    """Resolve verification token expiry window from config."""
     raw = current_app.config.get("EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS", 24)
     try:
         hours = int(raw)
@@ -27,6 +36,7 @@ def _verification_expiry_hours() -> int:
 
 
 def _issue_verification_token(user: User) -> str:
+    """Generate, persist, and return a fresh verification token."""
     token = EmailService.generate_verification_token(user.email or "")
     user.email_verification_token = token
     user.email_verification_sent_at = TimezoneUtils.utc_now()
@@ -36,6 +46,8 @@ def _issue_verification_token(user: User) -> str:
 
 @auth_bp.route("/verify-email/<token>")
 @limiter.limit("600/minute")
+# --- Verify email route ---
+# Purpose: Mark mailbox ownership as verified when token is valid and unexpired.
 def verify_email(token):
     """Verify email address."""
     try:
@@ -65,6 +77,8 @@ def verify_email(token):
 
 @auth_bp.route("/resend-verification", methods=["GET", "POST"])
 @limiter.limit("120/minute")
+# --- Resend verification route ---
+# Purpose: Re-issue verification links in prompt/required environments.
 def resend_verification():
     """Resend email verification."""
     prefill_email = (

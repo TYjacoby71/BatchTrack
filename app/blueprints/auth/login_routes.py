@@ -1,4 +1,13 @@
-"""Login and lightweight account access routes."""
+"""Login and lightweight account access routes.
+
+Synopsis:
+Handles username/password login, quick signup, and logout flows.
+Applies optional email-verification prompting or enforcement based on env mode.
+
+Glossary:
+- Prompt mode: Unverified users can log in but are nudged to verify email.
+- Required mode: Unverified users are blocked from login until verified.
+"""
 
 from __future__ import annotations
 
@@ -26,6 +35,8 @@ from ...utils.timezone_utils import TimezoneUtils
 logger = logging.getLogger(__name__)
 
 
+# --- Loadtest login diagnostics ---
+# Purpose: Emit safe context for debugging load-test auth failures.
 def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
     """Emit structured diagnostics for load-test login failures."""
     if not current_app.config.get("LOADTEST_LOG_LOGIN_FAILURE_CONTEXT"):
@@ -51,12 +62,16 @@ def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
         current_app.logger.warning("Failed to log load test login context: %s", exc)
 
 
+# --- Login form ---
+# Purpose: Validate credential form input for the login route.
 class LoginForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
 
+# --- Send verification if needed ---
+# Purpose: Issue and email a fresh verification token with a resend cooldown.
 def _send_verification_if_needed(user: User) -> bool:
     """Issue and send verification token when prompt/required mode is active."""
     if not user.email or user.email_verified:
@@ -90,6 +105,8 @@ def _send_verification_if_needed(user: User) -> bool:
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("6000/minute")
+# --- Login route ---
+# Purpose: Authenticate users and apply env-driven unverified email behavior.
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
@@ -267,6 +284,8 @@ def login():
     )
 
 
+# --- Sanitize next path ---
+# Purpose: Prevent open redirects by allowing only safe relative paths.
 def _safe_next_path(value: str | None):
     """Only allow relative, non-protocol next URLs."""
     if not value or not isinstance(value, str):
@@ -279,6 +298,8 @@ def _safe_next_path(value: str | None):
     return None
 
 
+# --- Generate username from email ---
+# Purpose: Build a unique username candidate for quick-signup accounts.
 def _generate_username_from_email(email: str) -> str:
     base = (email or "user").split("@")[0]
     base = re.sub(r"[^a-zA-Z0-9]+", "", base) or "user"
@@ -292,6 +313,8 @@ def _generate_username_from_email(email: str) -> str:
 
 @auth_bp.route("/quick-signup", methods=["GET", "POST"])
 @limiter.limit("600/minute")
+# --- Quick signup route ---
+# Purpose: Create a lightweight account from public pages and enter onboarding.
 def quick_signup():
     """Lightweight, free-account signup used by public global item pages."""
     if current_user.is_authenticated:
@@ -472,6 +495,8 @@ def quick_signup():
 
 
 @auth_bp.route("/logout")
+# --- Logout route ---
+# Purpose: Clear scoped session state and invalidate the current session token.
 def logout():
     session.pop("dev_selected_org_id", None)
     session.pop("dismissed_alerts", None)
@@ -495,6 +520,8 @@ def logout():
 
 
 @auth_bp.route("/dev-login")
+# --- Developer quick login ---
+# Purpose: Internal convenience login route for developer account access.
 def dev_login():
     """Quick developer login for system access."""
     dev_user = User.query.filter_by(username="dev").first()

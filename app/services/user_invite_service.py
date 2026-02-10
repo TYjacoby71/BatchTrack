@@ -1,3 +1,14 @@
+"""Organization user invitation orchestration.
+
+Synopsis:
+Creates invited users, assigns roles, and prepares password setup delivery.
+Persists password-setup token metadata so invite links map to real accounts.
+
+Glossary:
+- Invite flow: Create-account path initiated by organization owners/admins.
+- Setup token: One-time token used by invited users to choose a password.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,6 +21,8 @@ from app.services.email_service import EmailService
 from app.utils.timezone_utils import TimezoneUtils
 
 
+# --- Invite result DTO ---
+# Purpose: Return standardized invite outcomes to calling routes/services.
 @dataclass
 class InviteResult:
     success: bool
@@ -17,10 +30,14 @@ class InviteResult:
     user: Optional[User] = None
 
 
+# --- User invite service ---
+# Purpose: Manage org-scoped invite lifecycle including setup token initialization.
 class UserInviteService:
     """Orchestrates organization user invitations (creation, role assignment, email)."""
 
     @staticmethod
+    # --- Invite user ---
+    # Purpose: Create invited user records with role assignment and setup email metadata.
     def invite_user(*, organization: Organization, email: str, role_id: int,
                     first_name: str = "", last_name: str = "", phone: str = "",
                     force_inactive: bool = False) -> InviteResult:

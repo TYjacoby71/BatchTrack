@@ -1,4 +1,12 @@
-"""Password reset routes backed by one-time email tokens."""
+"""Password reset routes backed by one-time email tokens.
+
+Synopsis:
+Implements forgot-password and token-backed reset flows.
+Routes are provider-aware and gracefully no-op when reset email is disabled.
+
+Glossary:
+- Reset token: One-time password-change token sent to account email.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def _password_reset_expiry_hours() -> int:
+    """Resolve reset token expiry window from config."""
     raw = current_app.config.get("PASSWORD_RESET_TOKEN_EXPIRY_HOURS", 24)
     try:
         hours = int(raw)
@@ -26,6 +35,7 @@ def _password_reset_expiry_hours() -> int:
 
 
 def _is_reset_token_expired(user: User) -> bool:
+    """Return True when token timestamp is absent or expired."""
     sent_at = getattr(user, "password_reset_sent_at", None)
     if not sent_at:
         return True
@@ -35,6 +45,8 @@ def _is_reset_token_expired(user: User) -> bool:
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 @limiter.limit("120/minute")
+# --- Forgot password route ---
+# Purpose: Issue password reset tokens while keeping responses account-enumeration safe.
 def forgot_password():
     """Request a password reset link. Response is intentionally generic."""
     if request.method == "POST":
@@ -70,6 +82,8 @@ def forgot_password():
 
 @auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
 @limiter.limit("120/minute")
+# --- Reset password route ---
+# Purpose: Validate one-time tokens and finalize password changes securely.
 def reset_password(token):
     """Reset password using a one-time token delivered via email."""
     user = User.query.filter_by(password_reset_token=token).first()

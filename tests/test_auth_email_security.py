@@ -1,3 +1,13 @@
+"""Auth email-security behavior tests.
+
+Synopsis:
+Covers prompt/required/off verification modes and password-reset token flows.
+
+Glossary:
+- Prompt mode: Unverified users can proceed while being nudged to verify.
+- Required mode: Unverified users are blocked from login.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -7,6 +17,8 @@ from app.models import Organization, User
 from app.utils.timezone_utils import TimezoneUtils
 
 
+# --- Create user helper ---
+# Purpose: Build test users with explicit verification state and known password.
 def _create_user(*, username: str, email: str, password: str, verified: bool) -> User:
     org = Organization(name=f"Auth Org {uuid.uuid4().hex[:8]}")
     db.session.add(org)
@@ -26,6 +38,8 @@ def _create_user(*, username: str, email: str, password: str, verified: bool) ->
     return user
 
 
+# --- Prompt mode login ---
+# Purpose: Verify unverified accounts can log in and receive verification prompts in prompt mode.
 def test_login_prompts_unverified_email_without_blocking(client, app):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
@@ -58,6 +72,8 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
         assert sess.get("_user_id") is not None
 
 
+# --- Provider fallback login ---
+# Purpose: Verify auth-email features auto-relax when provider-required mode lacks credentials.
 def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = True
@@ -93,6 +109,8 @@ def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):
         assert sess.get("_user_id") is not None
 
 
+# --- Required mode login ---
+# Purpose: Verify strict mode blocks unverified accounts and redirects to resend verification.
 def test_login_blocks_unverified_when_required_mode(client, app):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "required"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
@@ -118,6 +136,8 @@ def test_login_blocks_unverified_when_required_mode(client, app):
         assert sess.get("_user_id") is None
 
 
+# --- Forgot/reset flow ---
+# Purpose: Verify reset token issuance, password update, and successful relogin path.
 def test_forgot_password_and_reset_flow(client, app):
     app.config["AUTH_PASSWORD_RESET_ENABLED"] = True
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
@@ -172,6 +192,8 @@ def test_forgot_password_and_reset_flow(client, app):
     assert "/auth/resend-verification" not in login_response.headers["Location"]
 
 
+# --- Reset implies verification ---
+# Purpose: Ensure token-backed reset marks mailbox as verified for previously unverified users.
 def test_reset_link_verifies_email_for_unverified_account(client, app):
     with app.app_context():
         user = _create_user(

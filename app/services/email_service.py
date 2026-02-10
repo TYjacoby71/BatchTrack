@@ -1,3 +1,14 @@
+"""Transactional email delivery and auth-email mode helpers.
+
+Synopsis:
+Builds and sends verification, reset, welcome, and operational emails.
+Also resolves whether auth-email security flows are active in the current environment.
+
+Glossary:
+- Auth-email mode: Effective verification policy after provider-aware fallback.
+- Provider readiness: Whether selected email backend has required credentials.
+"""
+
 import logging
 from flask import current_app, render_template, url_for
 from flask_mail import Message
@@ -9,6 +20,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# --- Email service ---
+# Purpose: Compose and dispatch transactional emails and auth-email control decisions.
 class EmailService:
     """Service for sending emails"""
 
@@ -299,6 +312,8 @@ class EmailService:
         return EmailService._send_email(email, subject, body)
 
     @staticmethod
+    # --- Check provider configuration ---
+    # Purpose: Determine whether the selected email backend can send messages now.
     def is_configured():
         """Check if email is properly configured for the selected provider."""
         try:
@@ -321,6 +336,8 @@ class EmailService:
             return False
 
     @staticmethod
+    # --- Resolve verification mode ---
+    # Purpose: Convert configured auth-email mode into effective runtime behavior.
     def get_verification_mode() -> str:
         """Resolve effective verification mode from config and provider readiness."""
         raw_mode = (current_app.config.get('AUTH_EMAIL_VERIFICATION_MODE') or 'prompt').strip().lower()
@@ -332,16 +349,22 @@ class EmailService:
         return mode
 
     @staticmethod
+    # --- Should issue verification tokens ---
+    # Purpose: Gate token generation and verification email dispatch for account flows.
     def should_issue_verification_tokens() -> bool:
         """Whether account flows should create and send verification links."""
         return EmailService.get_verification_mode() in {'prompt', 'required'}
 
     @staticmethod
+    # --- Should require verified email ---
+    # Purpose: Decide whether login must block unverified users.
     def should_require_verified_email_on_login() -> bool:
         """Whether login should block unverified users."""
         return EmailService.get_verification_mode() == 'required'
 
     @staticmethod
+    # --- Password reset enabled ---
+    # Purpose: Gate forgot/reset email routes based on config and provider readiness.
     def password_reset_enabled() -> bool:
         """Whether forgot/reset-by-email should be active for this environment."""
         if not current_app.config.get('AUTH_PASSWORD_RESET_ENABLED', True):

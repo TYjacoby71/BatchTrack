@@ -1,3 +1,13 @@
+"""Signup orchestration for pending checkout and account provisioning.
+
+Synopsis:
+Creates pending signup records before checkout and provisions org/user records after payment.
+Coordinates verification/reset token issuance and welcome/setup notifications.
+
+Glossary:
+- Pending signup: Pre-checkout record tracking email, tier, and checkout state.
+- Provisioning: Materializing organization + owner user from checkout artifacts.
+"""
 
 import logging
 import secrets
@@ -17,6 +27,8 @@ from .batchbot_credit_service import BatchBotCreditService
 
 logger = logging.getLogger(__name__)
 
+# --- Signup service ---
+# Purpose: Orchestrate pending signup records and post-checkout account provisioning.
 class SignupService:
     """Service for handling complete signup and organization creation"""
 
@@ -61,6 +73,8 @@ class SignupService:
         return pending
 
     @staticmethod
+    # --- Complete pending signup from checkout ---
+    # Purpose: Create org + owner user after payment and initialize setup tokens/emails.
     def complete_pending_signup_from_checkout(
         pending_signup: PendingSignup,
         checkout_session,
