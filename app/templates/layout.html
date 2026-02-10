@@ -189,13 +189,6 @@
                         🧮 Converter
                     </a>
                 </li>
-                {% if recipe_library_nav_enabled %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
-                        📚 Recipe Library
-                    </a>
-                </li>
-                {% endif %}
             </ul>
             {% endif %}
             <div class="dropdown me-2">
@@ -396,13 +389,6 @@
                         ❓ Help
                     </a>
                 </li>
-                {% if recipe_library_nav_enabled %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
-                        📚 Recipe Library
-                    </a>
-                </li>
-                {% endif %}
                 <li class="nav-item">
                     <div class="navbar-text">
                         <span id="header-clock" class="text-muted">🕐 Loading...</span>
