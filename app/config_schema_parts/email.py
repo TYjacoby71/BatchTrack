@@ -1,7 +1,7 @@
 """Config schema: Email settings.
 
 Synopsis:
-Defines email provider and SMTP configuration keys.
+Defines email provider, SMTP, and account email-security configuration keys.
 
 Glossary:
 - Provider: Email delivery backend (SMTP, SendGrid, Postmark).
@@ -93,6 +93,50 @@ FIELDS = [
         "default": None,
         "description": "Mailgun domain.",
     },
+    {
+        "key": "EMAIL_SMTP_ALLOW_NO_AUTH",
+        "cast": "bool",
+        "default": False,
+        "description": "Allow SMTP mode without MAIL_USERNAME/MAIL_PASSWORD.",
+        "recommended": "false",
+        "note": "Keep false unless your SMTP relay allows trusted unauthenticated senders.",
+    },
+    {
+        "key": "AUTH_EMAIL_VERIFICATION_MODE",
+        "cast": "str",
+        "default": "prompt",
+        "description": "Email verification mode: off, prompt, or required.",
+        "recommended": "prompt",
+        "note": "prompt = allow login but show verification prompts; required = block login until verified.",
+    },
+    {
+        "key": "AUTH_EMAIL_REQUIRE_PROVIDER",
+        "cast": "bool",
+        "default": True,
+        "description": "Disable email auth flows when provider credentials are unavailable.",
+        "recommended": "true",
+    },
+    {
+        "key": "AUTH_PASSWORD_RESET_ENABLED",
+        "cast": "bool",
+        "default": True,
+        "description": "Enable forgot/reset password email token flow.",
+        "recommended": "true",
+    },
+    {
+        "key": "EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS",
+        "cast": "int",
+        "default": 24,
+        "description": "Verification token lifetime in hours.",
+        "recommended": "24",
+    },
+    {
+        "key": "PASSWORD_RESET_TOKEN_EXPIRY_HOURS",
+        "cast": "int",
+        "default": 24,
+        "description": "Password reset token lifetime in hours.",
+        "recommended": "24",
+    },
 ]
 
 # --- Email section ---
@@ -100,5 +144,5 @@ FIELDS = [
 SECTION = {
     "key": "email",
     "title": "Email & Notifications",
-    "note": "Configure exactly one provider for transactional email.",
+    "note": "Configure exactly one provider for transactional email and account security flows.",
 }

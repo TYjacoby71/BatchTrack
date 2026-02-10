@@ -1,9 +1,19 @@
-"""Login and lightweight account access routes."""
+"""Login and lightweight account access routes.
+
+Synopsis:
+Handles username/password login, quick signup, and logout flows.
+Applies optional email-verification prompting or enforcement based on env mode.
+
+Glossary:
+- Prompt mode: Unverified users can log in but are nudged to verify email.
+- Required mode: Unverified users are blocked from login until verified.
+"""
 
 from __future__ import annotations
 
 import logging
 import re
+from datetime import timedelta
 
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_user, logout_user
@@ -16,6 +26,7 @@ from . import auth_bp
 from ...extensions import db, limiter
 from ...models import GlobalItem, Organization, Role, User
 from ...models.subscription_tier import SubscriptionTier
+from ...services.email_service import EmailService
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
@@ -24,6 +35,8 @@ from ...utils.timezone_utils import TimezoneUtils
 logger = logging.getLogger(__name__)
 
 
+# --- Loadtest login diagnostics ---
+# Purpose: Emit safe context for debugging load-test auth failures.
 def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
     """Emit structured diagnostics for load-test login failures."""
     if not current_app.config.get("LOADTEST_LOG_LOGIN_FAILURE_CONTEXT"):
@@ -49,20 +62,59 @@ def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
         current_app.logger.warning("Failed to log load test login context: %s", exc)
 
 
+# --- Login form ---
+# Purpose: Validate credential form input for the login route.
 class LoginForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
 
+# --- Send verification if needed ---
+# Purpose: Issue and email a fresh verification token with a resend cooldown.
+def _send_verification_if_needed(user: User) -> bool:
+    """Issue and send verification token when prompt/required mode is active."""
+    if not user.email or user.email_verified:
+        return False
+    if not EmailService.should_issue_verification_tokens():
+        return False
+
+    try:
+        recently_sent = (
+            user.email_verification_sent_at
+            and TimezoneUtils.utc_now() - user.email_verification_sent_at < timedelta(minutes=15)
+        )
+        if recently_sent and user.email_verification_token:
+            return False
+
+        user.email_verification_token = EmailService.generate_verification_token(user.email)
+        user.email_verification_sent_at = TimezoneUtils.utc_now()
+        db.session.commit()
+
+        EmailService.send_verification_email(
+            user.email,
+            user.email_verification_token,
+            user.first_name or user.username,
+        )
+        return True
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning("Unable to queue verification email for user %s: %s", user.id, exc)
+        return False
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("6000/minute")
+# --- Login route ---
+# Purpose: Authenticate users and apply env-driven unverified email behavior.
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
 
     form = LoginForm()
     oauth_available = OAuthService.is_oauth_configured()
+    show_forgot_password = EmailService.password_reset_enabled()
+    show_resend_verification = EmailService.should_issue_verification_tokens()
 
     # Persist "next" param for OAuth/alternate login flows
     try:
@@ -79,7 +131,13 @@ def login():
         logger.exception("Login form validation failed: %s", exc)
         _log_loadtest_login_context("form_validation_error", {"error": str(exc)})
         flash("Unable to process login right now. Please try again.")
-        return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available), 503
+        return render_template(
+            "pages/auth/login.html",
+            form=form,
+            oauth_available=oauth_available,
+            show_forgot_password=show_forgot_password,
+            show_resend_verification=show_resend_verification,
+        ), 503
 
     if form_is_valid:
         username = request.form.get("username")
@@ -87,7 +145,13 @@ def login():
 
         if not username or not password:
             flash("Please provide both username and password")
-            return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available)
+            return render_template(
+                "pages/auth/login.html",
+                form=form,
+                oauth_available=oauth_available,
+                show_forgot_password=show_forgot_password,
+                show_resend_verification=show_resend_verification,
+            )
 
         try:
             user = User.query.filter_by(username=username).first()
@@ -96,7 +160,13 @@ def login():
             logger.exception("Login query failed for %s: %s", username, exc)
             _log_loadtest_login_context("db_query_error", {"username": username})
             flash("Login temporarily unavailable. Please try again.")
-            return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available), 503
+            return render_template(
+                "pages/auth/login.html",
+                form=form,
+                oauth_available=oauth_available,
+                show_forgot_password=show_forgot_password,
+                show_resend_verification=show_resend_verification,
+            ), 503
 
         if username and username.startswith("loadtest_user"):
             logger.info(
@@ -121,7 +191,13 @@ def login():
             logger.exception("Login password check failed for %s: %s", username, exc)
             _log_loadtest_login_context("password_check_error", {"username": username})
             flash("Login temporarily unavailable. Please try again.")
-            return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available), 503
+            return render_template(
+                "pages/auth/login.html",
+                form=form,
+                oauth_available=oauth_available,
+                show_forgot_password=show_forgot_password,
+                show_resend_verification=show_resend_verification,
+            ), 503
 
         if user and password_ok:
             if not user.is_active:
@@ -129,7 +205,33 @@ def login():
                     logger.warning("Load test user %s is inactive", username)
                 _log_loadtest_login_context("inactive_user", {"username": username})
                 flash("Account is inactive. Please contact administrator.")
-                return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available)
+                return render_template(
+                    "pages/auth/login.html",
+                    form=form,
+                    oauth_available=oauth_available,
+                    show_forgot_password=show_forgot_password,
+                    show_resend_verification=show_resend_verification,
+                )
+
+            if user.user_type != "developer" and user.email and not user.email_verified:
+                sent = _send_verification_if_needed(user)
+                if EmailService.should_require_verified_email_on_login():
+                    flash(
+                        "Please verify your email before logging in. We sent you a verification link.",
+                        "warning",
+                    )
+                    return redirect(url_for("auth.resend_verification", email=user.email))
+                if EmailService.should_issue_verification_tokens():
+                    if sent:
+                        flash(
+                            "Please verify your email while you finish account setup. A verification link was sent.",
+                            "info",
+                        )
+                    else:
+                        flash(
+                            "Please verify your email while you finish account setup.",
+                            "info",
+                        )
 
             login_user(user)
             SessionService.rotate_user_session(user)
@@ -142,7 +244,13 @@ def login():
                 logger.exception("Login commit failed for %s: %s", username, exc)
                 _log_loadtest_login_context("db_commit_error", {"username": username})
                 flash("Login temporarily unavailable. Please try again.")
-                return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available), 503
+                return render_template(
+                    "pages/auth/login.html",
+                    form=form,
+                    oauth_available=oauth_available,
+                    show_forgot_password=show_forgot_password,
+                    show_resend_verification=show_resend_verification,
+                ), 503
 
             if user.user_type == "developer":
                 return redirect(url_for("developer.dashboard"))
@@ -159,11 +267,25 @@ def login():
         if username and username.startswith("loadtest_user"):
             logger.warning("Load test login failed: invalid credentials for %s", username)
         flash("Invalid username or password")
-        return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available)
+        return render_template(
+            "pages/auth/login.html",
+            form=form,
+            oauth_available=oauth_available,
+            show_forgot_password=show_forgot_password,
+            show_resend_verification=show_resend_verification,
+        )
 
-    return render_template("pages/auth/login.html", form=form, oauth_available=oauth_available)
+    return render_template(
+        "pages/auth/login.html",
+        form=form,
+        oauth_available=oauth_available,
+        show_forgot_password=show_forgot_password,
+        show_resend_verification=show_resend_verification,
+    )
 
 
+# --- Sanitize next path ---
+# Purpose: Prevent open redirects by allowing only safe relative paths.
 def _safe_next_path(value: str | None):
     """Only allow relative, non-protocol next URLs."""
     if not value or not isinstance(value, str):
@@ -176,6 +298,8 @@ def _safe_next_path(value: str | None):
     return None
 
 
+# --- Generate username from email ---
+# Purpose: Build a unique username candidate for quick-signup accounts.
 def _generate_username_from_email(email: str) -> str:
     base = (email or "user").split("@")[0]
     base = re.sub(r"[^a-zA-Z0-9]+", "", base) or "user"
@@ -189,6 +313,8 @@ def _generate_username_from_email(email: str) -> str:
 
 @auth_bp.route("/quick-signup", methods=["GET", "POST"])
 @limiter.limit("600/minute")
+# --- Quick signup route ---
+# Purpose: Create a lightweight account from public pages and enter onboarding.
 def quick_signup():
     """Lightweight, free-account signup used by public global item pages."""
     if current_user.is_authenticated:
@@ -273,6 +399,7 @@ def quick_signup():
 
         try:
             tier = SubscriptionTier.find_by_identifier("free") or SubscriptionTier.find_by_identifier("exempt")
+            verification_enabled = EmailService.should_issue_verification_tokens()
 
             org_name = f"{first_name or 'New'}'s Workspace"
             org = Organization(
@@ -298,8 +425,11 @@ def quick_signup():
                 user_type="customer",
                 is_organization_owner=True,
                 is_active=True,
-                email_verified=True,
-                last_login=TimezoneUtils.utc_now(),
+                email_verified=not verification_enabled,
+                email_verification_token=(
+                    EmailService.generate_verification_token(email) if verification_enabled else None
+                ),
+                email_verification_sent_at=TimezoneUtils.utc_now() if verification_enabled else None,
             )
             user.set_password(password)
             db.session.add(user)
@@ -311,9 +441,24 @@ def quick_signup():
 
             db.session.commit()
 
+            if verification_enabled:
+                try:
+                    EmailService.send_verification_email(
+                        user.email,
+                        user.email_verification_token,
+                        user.first_name or user.username,
+                    )
+                except Exception as exc:
+                    logger.warning("Quick-signup verification email failed for %s: %s", user.email, exc)
+
             login_user(user)
             SessionService.rotate_user_session(user)
             session["onboarding_welcome"] = True
+            if verification_enabled:
+                flash(
+                    "Account created. Please verify your email while you complete setup.",
+                    "info",
+                )
 
             return redirect(next_url)
         except Exception as exc:
@@ -350,6 +495,8 @@ def quick_signup():
 
 
 @auth_bp.route("/logout")
+# --- Logout route ---
+# Purpose: Clear scoped session state and invalidate the current session token.
 def logout():
     session.pop("dev_selected_org_id", None)
     session.pop("dismissed_alerts", None)
@@ -373,6 +520,8 @@ def logout():
 
 
 @auth_bp.route("/dev-login")
+# --- Developer quick login ---
+# Purpose: Internal convenience login route for developer account access.
 def dev_login():
     """Quick developer login for system access."""
     dev_user = User.query.filter_by(username="dev").first()

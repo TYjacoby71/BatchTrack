@@ -1,6 +1,17 @@
+"""Retention drawer acknowledgement-to-delete flow test.
+
+Synopsis:
+Validates retention drawer check/modal/acknowledge behavior and downstream deletion sweep.
+
+Glossary:
+- Retention queue: Delayed-delete records created after user acknowledgement.
+"""
+
 from datetime import datetime, timedelta, timezone
 
 
+# --- Retention flow test ---
+# Purpose: Cover drawer acknowledgement and eventual deletion of due retention records.
 def test_retention_flow_ack_to_delete(client, db_session, app):
     app.config['SKIP_PERMISSIONS'] = True
     # Arrange: create org, tier with 365d retention, user, and an old recipe not used by batches
@@ -27,7 +38,7 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     org.subscription_tier_id = tier.id
     org_id = org.id
 
-    user = User(username='ret_user', email='ret@example.com')
+    user = User(username='ret_user', email='ret@example.com', is_verified=True)
     user.organization_id = org.id
     user.set_password('password')
     db_session.add(user)

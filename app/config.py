@@ -198,6 +198,12 @@ if not _BASE_URL:
     _BASE_URL = _resolve_base_url(env, ENV_INFO.name)
 _CANONICAL_HOST = SETTINGS.get("APP_HOST") or _extract_host(_BASE_URL)
 _PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
+_AUTH_EMAIL_VERIFICATION_MODE = (env.str("AUTH_EMAIL_VERIFICATION_MODE", "prompt") or "prompt").strip().lower()
+if _AUTH_EMAIL_VERIFICATION_MODE not in {"off", "prompt", "required"}:
+    env.warn(
+        "AUTH_EMAIL_VERIFICATION_MODE expected one of {'off','prompt','required'}; falling back to 'prompt'."
+    )
+    _AUTH_EMAIL_VERIFICATION_MODE = "prompt"
 
 
 # --- BaseConfig ---
@@ -263,6 +269,15 @@ class BaseConfig:
     POSTMARK_SERVER_TOKEN = SETTINGS.get("POSTMARK_SERVER_TOKEN")
     MAILGUN_API_KEY = SETTINGS.get("MAILGUN_API_KEY")
     MAILGUN_DOMAIN = SETTINGS.get("MAILGUN_DOMAIN")
+    EMAIL_SMTP_ALLOW_NO_AUTH = env.bool("EMAIL_SMTP_ALLOW_NO_AUTH", False)
+
+    # Account email security behavior
+    # off      => do not issue/require verification
+    # prompt   => issue verification and prompt users in login/setup flows
+    # required => block regular login until email is verified
+    AUTH_EMAIL_VERIFICATION_MODE = _AUTH_EMAIL_VERIFICATION_MODE
+    AUTH_EMAIL_REQUIRE_PROVIDER = env.bool("AUTH_EMAIL_REQUIRE_PROVIDER", True)
+    AUTH_PASSWORD_RESET_ENABLED = env.bool("AUTH_PASSWORD_RESET_ENABLED", True)
 
     STRIPE_PUBLISHABLE_KEY = SETTINGS.get("STRIPE_PUBLISHABLE_KEY")
     STRIPE_SECRET_KEY = SETTINGS.get("STRIPE_SECRET_KEY")

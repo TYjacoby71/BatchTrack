@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import re
 
-from flask import jsonify, render_template, request
+from flask import jsonify, render_template, request, url_for
 from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
@@ -44,6 +44,18 @@ def integrations_checklist():
 
     email_provider = (current_app.config.get("EMAIL_PROVIDER") or "smtp").lower()
     email_configured = EmailService.is_configured()
+    configured_verification_mode = (
+        (current_app.config.get("AUTH_EMAIL_VERIFICATION_MODE") or "prompt").strip().lower()
+    )
+    effective_verification_mode = EmailService.get_verification_mode()
+    auth_email_status = {
+        "configured_mode": configured_verification_mode,
+        "effective_mode": effective_verification_mode,
+        "provider_required": bool(current_app.config.get("AUTH_EMAIL_REQUIRE_PROVIDER", True)),
+        "provider_configured": email_configured,
+        "password_reset_enabled": EmailService.password_reset_enabled(),
+        "provider_fallback_active": configured_verification_mode != effective_verification_mode,
+    }
     email_keys = {
         "SMTP": bool(current_app.config.get("MAIL_SERVER")),
         "SendGrid": bool(current_app.config.get("SENDGRID_API_KEY")),
@@ -123,33 +135,63 @@ def integrations_checklist():
     rate_limiters = [
         {
             "endpoint": "GET/POST /auth/login",
-            "limit": "100/minute",
-            "source": "app/blueprints/auth/routes.py::login",
-            "notes": "Primary credential-based login form (scaled for 1K users).",
+            "limit": "6000/minute",
+            "source": "app/blueprints/auth/login_routes.py::login",
+            "notes": "Primary credential-based login form.",
         },
         {
             "endpoint": "GET /auth/oauth/google",
-            "limit": "50/minute",
-            "source": "app/blueprints/auth/routes.py::oauth_google",
+            "limit": "1200/minute",
+            "source": "app/blueprints/auth/oauth_routes.py::oauth_google",
             "notes": "Google OAuth initiation endpoint.",
         },
         {
             "endpoint": "GET /auth/oauth/callback",
-            "limit": "75/minute",
-            "source": "app/blueprints/auth/routes.py::oauth_callback",
+            "limit": "1200/minute",
+            "source": "app/blueprints/auth/oauth_routes.py::oauth_callback",
             "notes": "OAuth callback handler (Google).",
         },
         {
             "endpoint": "GET /auth/callback",
-            "limit": "75/minute",
-            "source": "app/blueprints/auth/routes.py::oauth_callback_compat",
+            "limit": "1200/minute",
+            "source": "app/blueprints/auth/oauth_routes.py::oauth_callback_compat",
             "notes": "Legacy alias for the OAuth callback.",
         },
         {
             "endpoint": "GET/POST /auth/signup",
-            "limit": "60/minute",
-            "source": "app/blueprints/auth/routes.py::signup",
+            "limit": "600/minute",
+            "source": "app/blueprints/auth/signup_routes.py::signup",
             "notes": "Self-serve signup + tier selection.",
+        },
+        {
+            "endpoint": "GET/POST /auth/quick-signup",
+            "limit": "600/minute",
+            "source": "app/blueprints/auth/login_routes.py::quick_signup",
+            "notes": "Lightweight account creation flow from public catalog pages.",
+        },
+        {
+            "endpoint": "GET /auth/verify-email/<token>",
+            "limit": "600/minute",
+            "source": "app/blueprints/auth/verification_routes.py::verify_email",
+            "notes": "Email verification token landing endpoint.",
+        },
+        {
+            "endpoint": "GET/POST /auth/resend-verification",
+            "limit": "120/minute",
+            "source": "app/blueprints/auth/verification_routes.py::resend_verification",
+            "notes": "Verification resend endpoint (prompt/required modes only).",
+        },
+        {
+            "endpoint": "GET/POST /auth/forgot-password",
+            "limit": "120/minute",
+            "source": "app/blueprints/auth/password_routes.py::forgot_password",
+            "notes": "Password reset request endpoint (when enabled).",
+        },
+        {
+            "endpoint": "GET/POST /auth/reset-password/<token>",
+            "limit": "120/minute",
+            "source": "app/blueprints/auth/password_routes.py::reset_password",
+            "notes": "Password reset token submission endpoint.",
         },
         {
             "endpoint": "GET /",
@@ -258,8 +300,12 @@ def integrations_checklist():
 
     return render_template(
         "developer/integrations.html",
+        page_title="BatchTrack | Integrations & Launch Checklist",
+        page_description="Developer checklist for environment variables, auth-email security modes, and launch readiness diagnostics.",
+        canonical_url=url_for("developer.integrations_checklist", _external=True),
         email_provider=email_provider,
         email_configured=email_configured,
+        auth_email_status=auth_email_status,
         email_keys=email_keys,
         stripe_status=stripe_status,
         tiers_count=tiers_count,
