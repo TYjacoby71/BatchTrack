@@ -119,6 +119,39 @@ Glossary:
         .app-container.public-shell {
             max-width: none;
             width: 100%;
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            min-height: auto;
+        }
+        .public-marketing-nav {
+            border-bottom: 1px solid #e9ecef;
+        }
+        .public-marketing-nav .navbar-brand {
+            color: #0d6efd !important;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .public-marketing-nav .navbar-nav .nav-link {
+            color: #6c757d !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .public-marketing-nav .navbar-nav .nav-link:hover {
+            color: #0d6efd !important;
+        }
+        .public-marketing-nav .btn-cta {
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            border: none;
+            border-radius: 999px;
+            padding: 0.45rem 1.1rem;
+            font-weight: 700;
+            color: #ffffff !important;
+            box-shadow: 0 6px 16px rgba(255, 165, 0, 0.28);
+        }
+        .public-marketing-nav .btn-cta:hover {
+            filter: brightness(0.95);
+            color: #ffffff !important;
         }
     </style>
 </head>
@@ -129,7 +162,7 @@ Glossary:
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
     <div class="app-container{% if public_shell_mode %} public-shell{% endif %}">
-    <nav class="navbar navbar-expand-lg {% if public_shell_mode %}navbar-light bg-white shadow-sm{% else %}navbar-light bg-light{% endif %}">
+    <nav class="navbar navbar-expand-lg {% if public_shell_mode %}public-marketing-nav navbar-light bg-white shadow-sm{% else %}navbar-light bg-light{% endif %}">
         <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
             {% if not public_shell_mode %}
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
@@ -478,7 +511,7 @@ Glossary:
             {% endif %}
         </div>
     </nav>
-    <main class="{% if public_shell_mode %}container-fluid{% else %}container-xl{% endif %} mt-4">
+    <main class="container-xl mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
             <nav aria-label="breadcrumb" class="mb-3">
