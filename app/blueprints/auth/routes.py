@@ -871,7 +871,31 @@ def signup():
                 except (ValueError, TypeError):
                     tier_obj = None
             effective_promo_code = lifetime_offer.get('coupon_code') or effective_promo_code
-            price_lookup_key_override = lifetime_offer.get('yearly_lookup_key') or None
+            price_lookup_key_override = lifetime_offer.get('lifetime_lookup_key') or None
+            if not price_lookup_key_override:
+                flash('Lifetime pricing is not configured for this tier yet.', 'error')
+                return _render_signup(
+                    selected_tier=selected_tier,
+                    selected_mode='standard',
+                    selected_lifetime_key='',
+                    selected_standard_cycle='yearly',
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
+
+            lifetime_pricing = BillingService.get_live_pricing_for_lookup_key(price_lookup_key_override)
+            if not lifetime_pricing or lifetime_pricing.get('billing_cycle') != 'one-time':
+                flash('Lifetime pricing must be configured as a one-time Stripe price.', 'error')
+                return _render_signup(
+                    selected_tier=selected_tier,
+                    selected_mode='standard',
+                    selected_lifetime_key='',
+                    selected_standard_cycle='yearly',
+                    contact_email=contact_email,
+                    contact_phone=contact_phone,
+                    promo=effective_promo_code,
+                )
             stripe_coupon_id = lifetime_offer.get('stripe_coupon_id') or None
             stripe_promotion_code_id = lifetime_offer.get('stripe_promotion_code_id') or None
 

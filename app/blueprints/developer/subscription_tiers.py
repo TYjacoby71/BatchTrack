@@ -130,7 +130,6 @@ def create_tier():
         # Data Collection
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '')
-        tier_type = request.form.get('tier_type', 'monthly')
         def _parse_int_allow_neg1(text, default):
             try:
                 v = int(str(text).strip())
@@ -204,7 +203,6 @@ def create_tier():
         tier = SubscriptionTier(
             name=name,
             description=description,
-            tier_type=tier_type,
             user_limit=user_limit,
             max_users=max_users,
             max_recipes=max_recipes,

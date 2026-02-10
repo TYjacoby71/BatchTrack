@@ -39,15 +39,6 @@
                                     <div class="form-text">Set to -1 for unlimited users</div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label for="tier_type" class="form-label">Tier Type</label>
-                                    <select class="form-select" id="tier_type" name="tier_type">
-                                        <option value="monthly" {{ 'selected' if tier.tier_type == 'monthly' else '' }}>Monthly</option>
-                                        <option value="yearly" {{ 'selected' if tier.tier_type == 'yearly' else '' }}>Yearly</option>
-                                        <option value="promotion" {{ 'selected' if tier.tier_type == 'promotion' else '' }}>Promotion</option>
-                                    </select>
-                                    <div class="form-text">Used for organizing and sorting tiers</div>
-                                </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -117,6 +108,7 @@
                                     <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
                                     <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
                                            value="{{ tier.stripe_lookup_key or '' }}" placeholder="batchtrack_team_monthly">
+                                    <div class="form-text">Use the monthly key here. The app derives yearly/lifetime keys using the same prefix.</div>
                                 </div>
 
                                 <div id="whop_fields" class="mb-3" style="display: none;">

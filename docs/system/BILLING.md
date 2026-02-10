@@ -30,20 +30,10 @@ Billing is centralized in `BillingService` and is the authority for tier checkou
 - Seat counters are promo-code based (`organization.promo_code`), with floor logic:
   - Show the floor value while sold count is below `total - floor`.
   - Show true remaining once sold count reaches the threshold.
-- Lifetime checkout can optionally force a yearly/one-time lookup key and auto-apply Stripe discounts.
-
-### 2.2 Lifetime Stripe configuration keys
-Set these env vars (all map-like values accept JSON or `key:value,key:value` CSV):
-- `LIFETIME_YEARLY_LOOKUP_KEYS`  
-  Map `hobbyist|enthusiast|fanatic` (or tier id/name/lookup key) to the Stripe yearly/one-time lookup key.
-- `LIFETIME_COUPON_CODES`  
-  Public coupon codes shown in UI and used for seat counting.
-- `LIFETIME_COUPON_IDS` *(optional)*  
-  Stripe coupon IDs to auto-apply at checkout (`discounts[coupon]`).
-- `LIFETIME_PROMOTION_CODE_IDS` *(optional)*  
-  Stripe promotion-code IDs to auto-apply (`discounts[promotion_code]`).
-- `STANDARD_YEARLY_LOOKUP_KEYS` *(optional)*  
-  Map standard tiers to yearly lookup keys when your naming does not follow `_monthly` -> `_yearly`.
+- Lifetime checkout uses the tier's single configured Stripe lookup key and derives related keys by naming convention:
+  - standard monthly: `<tier>_monthly` (stored in `subscription_tier.stripe_lookup_key`)
+  - standard yearly: `<tier>_yearly`
+  - lifetime one-time: `<tier>_lifetime`
 
 ## 3. Webhooks & Callbacks
 - **Endpoint**: `POST /billing/webhooks/stripe`

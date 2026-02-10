@@ -8,7 +8,7 @@
             data-lifetime-tier="{{ offer.key }}"
             data-tier-id="{{ offer.tier_id }}"
             data-coupon-code="{{ offer.coupon_code }}"
-            data-price-override="{{ offer.yearly_lookup_key or '' }}"
+            data-price-override="{{ offer.lifetime_lookup_key or '' }}"
             data-spots-left="{{ offer.display_spots_left }}"
             data-total-seats="{{ offer.seat_total }}"
             data-has-remaining="{{ 'true' if offer.has_remaining else 'false' }}"

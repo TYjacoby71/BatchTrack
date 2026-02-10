@@ -1,28 +1,23 @@
 """Lifetime tier presentation and seat-counter helpers.
 
 Synopsis:
-Builds marketing/signup lifetime tier payloads, maps tiers to Stripe yearly
-prices, and calculates seat counters from promo-code usage.
+Builds marketing/signup lifetime tier payloads from existing paid tiers while
+keeping the app's single-lookup-key-per-tier model.
 
 Glossary:
-- Lifetime tier: A limited-seat launch offer mapped to an existing paid tier.
+- Lifetime tier: Limited-seat launch offer mapped to an existing paid tier.
 - Display floor: Minimum seats-left value shown before real sales catch up.
 """
 
 from __future__ import annotations
 
-import json
-import logging
 from collections.abc import Sequence
 
-from flask import current_app
 from sqlalchemy import func
 
 from ..extensions import db
 from ..models.models import Organization
 from ..models.subscription_tier import SubscriptionTier
-
-logger = logging.getLogger(__name__)
 
 
 class LifetimePricingService:
@@ -62,44 +57,36 @@ class LifetimePricingService:
     def build_lifetime_offers(cls, paid_tiers: Sequence[SubscriptionTier] | None = None) -> list[dict]:
         """Return normalized lifetime offers mapped to existing paid tiers."""
         tiers = cls._sort_paid_tiers(paid_tiers or cls._load_paid_tiers())
-        yearly_lookup_map = cls._read_mapping("LIFETIME_YEARLY_LOOKUP_KEYS")
-        coupon_code_map = cls._read_mapping("LIFETIME_COUPON_CODES")
-        coupon_id_map = cls._read_mapping("LIFETIME_COUPON_IDS")
-        promo_code_id_map = cls._read_mapping("LIFETIME_PROMOTION_CODE_IDS")
-
-        resolved_coupon_codes: list[str] = []
-        for blueprint in cls.DEFAULT_TIER_BLUEPRINTS:
-            code = cls._resolve_coupon_code(blueprint, coupon_code_map)
-            if code:
-                resolved_coupon_codes.append(code.lower())
-        sold_counts = cls._sold_count_by_coupon(resolved_coupon_codes)
+        coupon_codes = [str(blueprint["default_coupon_code"]).lower() for blueprint in cls.DEFAULT_TIER_BLUEPRINTS]
+        sold_counts = cls._sold_count_by_coupon(coupon_codes)
 
         offers: list[dict] = []
         for index, blueprint in enumerate(cls.DEFAULT_TIER_BLUEPRINTS):
             tier = tiers[index] if index < len(tiers) else None
-            coupon_code = cls._resolve_coupon_code(blueprint, coupon_code_map)
-            sold_count = int(sold_counts.get(coupon_code.lower(), 0)) if coupon_code else 0
+            coupon_code = str(blueprint["default_coupon_code"]).strip()
+            sold_count = int(sold_counts.get(coupon_code.lower(), 0))
             seat_total = int(blueprint["seat_total"])
             display_floor = int(blueprint["display_floor"])
             threshold = max(0, seat_total - display_floor)
             true_spots_left = max(0, seat_total - sold_count)
             display_spots_left = display_floor if sold_count < threshold else true_spots_left
 
-            yearly_lookup_key = cls._resolve_yearly_lookup_key(
-                offer_key=blueprint["key"],
-                tier=tier,
-                yearly_lookup_map=yearly_lookup_map,
+            monthly_lookup_key = (getattr(tier, "stripe_lookup_key", None) or "").strip() if tier else ""
+            yearly_lookup_key = cls._derive_lookup_variant(monthly_lookup_key, "yearly")
+            lifetime_lookup_key = cls._derive_lookup_variant(monthly_lookup_key, "lifetime")
+
+            monthly_pricing = cls._get_lookup_key_pricing(monthly_lookup_key)
+            yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
+            lifetime_pricing = cls._get_lookup_key_pricing(lifetime_lookup_key)
+
+            lifetime_price_is_valid = bool(
+                lifetime_pricing and lifetime_pricing.get("billing_cycle") == "one-time"
             )
-            monthly_price_display = None
-            if tier and getattr(tier, "stripe_lookup_key", None):
-                monthly_pricing = cls._get_lookup_key_pricing(getattr(tier, "stripe_lookup_key", None))
-                monthly_price_display = monthly_pricing.get("formatted_price") if monthly_pricing else None
-            yearly_price_display = None
-            if yearly_lookup_key:
-                yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
-                yearly_price_display = (
-                    yearly_pricing.get("formatted_price") if yearly_pricing else None
-                )
+            has_remaining = bool(tier and lifetime_price_is_valid and true_spots_left > 0)
+
+            lifetime_price_copy = "Configure lifetime Stripe price"
+            if lifetime_price_is_valid and lifetime_pricing:
+                lifetime_price_copy = f"{lifetime_pricing.get('formatted_price')} one-time"
 
             offer = {
                 "key": blueprint["key"],
@@ -112,28 +99,19 @@ class LifetimePricingService:
                 "threshold": threshold,
                 "true_spots_left": true_spots_left,
                 "display_spots_left": display_spots_left,
-                "has_remaining": true_spots_left > 0,
+                "has_remaining": has_remaining,
                 "coupon_code": coupon_code,
-                "stripe_coupon_id": cls._resolve_id_for_offer(
-                    offer_key=blueprint["key"],
-                    tier=tier,
-                    id_map=coupon_id_map,
-                ),
-                "stripe_promotion_code_id": cls._resolve_id_for_offer(
-                    offer_key=blueprint["key"],
-                    tier=tier,
-                    id_map=promo_code_id_map,
-                ),
-                "monthly_price_display": monthly_price_display,
-                "yearly_lookup_key": yearly_lookup_key,
-                "yearly_price_display": yearly_price_display,
-                "lifetime_price_copy": (
-                    f"{yearly_price_display} one-time"
-                    if yearly_price_display
-                    else "One-time price of 1 year"
-                ),
+                "stripe_coupon_id": None,
+                "stripe_promotion_code_id": None,
                 "tier_id": str(tier.id) if tier else "",
                 "base_tier_name": tier.name if tier else "Unavailable",
+                "monthly_lookup_key": monthly_lookup_key or None,
+                "monthly_price_display": monthly_pricing.get("formatted_price") if monthly_pricing else None,
+                "yearly_lookup_key": yearly_lookup_key,
+                "yearly_price_display": yearly_pricing.get("formatted_price") if yearly_pricing else None,
+                "lifetime_lookup_key": lifetime_lookup_key,
+                "lifetime_price_display": lifetime_pricing.get("formatted_price") if lifetime_pricing else None,
+                "lifetime_price_copy": lifetime_price_copy,
             }
             offers.append(offer)
 
@@ -190,17 +168,17 @@ class LifetimePricingService:
 
     @classmethod
     def resolve_standard_yearly_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
-        """Resolve the yearly lookup key for a paid (non-lifetime) tier."""
+        """Resolve yearly lookup key from a tier's single configured lookup key."""
         if not tier:
             return None
-        yearly_map = cls._read_mapping("STANDARD_YEARLY_LOOKUP_KEYS")
-        for candidate in cls._id_candidates(offer_key="", tier=tier):
-            if not candidate:
-                continue
-            value = yearly_map.get(candidate)
-            if value:
-                return value
-        return cls._derive_yearly_lookup_from_monthly(getattr(tier, "stripe_lookup_key", None))
+        return cls._derive_lookup_variant(getattr(tier, "stripe_lookup_key", None), "yearly")
+
+    @classmethod
+    def resolve_standard_lifetime_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
+        """Resolve lifetime lookup key from a tier's single configured lookup key."""
+        if not tier:
+            return None
+        return cls._derive_lookup_variant(getattr(tier, "stripe_lookup_key", None), "lifetime")
 
     @classmethod
     def _load_paid_tiers(cls) -> list[SubscriptionTier]:
@@ -220,106 +198,36 @@ class LifetimePricingService:
         return sorted(list(tiers or []), key=_tier_sort_key)
 
     @staticmethod
-    def _read_mapping(config_key: str) -> dict[str, str]:
-        """Read a mapping from Flask config (dict, JSON, or CSV pairs)."""
-        raw = current_app.config.get(config_key)
-        if isinstance(raw, dict):
-            return {
-                str(key).strip().lower(): str(value).strip()
-                for key, value in raw.items()
-                if str(value).strip()
-            }
-        if not isinstance(raw, str) or not raw.strip():
-            return {}
+    def _derive_lookup_variant(base_lookup_key: str | None, target_variant: str) -> str | None:
+        """Derive related lookup keys via naming convention.
 
-        stripped = raw.strip()
-        parsed = None
-        if stripped.startswith("{"):
-            try:
-                parsed = json.loads(stripped)
-            except json.JSONDecodeError:
-                logger.warning("Invalid JSON for %s, falling back to CSV parser.", config_key)
-        if isinstance(parsed, dict):
-            return {
-                str(key).strip().lower(): str(value).strip()
-                for key, value in parsed.items()
-                if str(value).strip()
-            }
+        Supported conventions:
+        - *_monthly -> *_yearly or *_lifetime
+        - *-monthly -> *-yearly or *-lifetime
+        - ...monthly (suffix) -> ...yearly or ...lifetime
+        """
+        lookup = (base_lookup_key or "").strip()
+        variant = (target_variant or "").strip().lower()
+        if not lookup or variant not in {"monthly", "yearly", "lifetime"}:
+            return None
 
-        mapping: dict[str, str] = {}
-        for chunk in stripped.split(","):
-            part = chunk.strip()
-            if not part or ":" not in part:
-                continue
-            key, value = part.split(":", 1)
-            key = key.strip().lower()
-            value = value.strip()
-            if key and value:
-                mapping[key] = value
-        return mapping
-
-    @classmethod
-    def _resolve_coupon_code(cls, blueprint: dict, coupon_code_map: dict[str, str]) -> str:
-        offer_key = str(blueprint["key"]).strip().lower()
-        configured = coupon_code_map.get(offer_key)
-        return (configured or blueprint["default_coupon_code"]).strip()
-
-    @classmethod
-    def _resolve_id_for_offer(cls, *, offer_key: str, tier: SubscriptionTier | None, id_map: dict[str, str]) -> str | None:
-        for candidate in cls._id_candidates(offer_key=offer_key, tier=tier):
-            value = id_map.get(candidate)
-            if value:
-                return value
-        return None
-
-    @classmethod
-    def _resolve_yearly_lookup_key(
-        cls,
-        *,
-        offer_key: str,
-        tier: SubscriptionTier | None,
-        yearly_lookup_map: dict[str, str],
-    ) -> str | None:
-        configured = cls._resolve_id_for_offer(
-            offer_key=offer_key,
-            tier=tier,
-            id_map=yearly_lookup_map,
+        replacements = (
+            ("_monthly", f"_{variant}"),
+            ("-monthly", f"-{variant}"),
+            ("monthly", variant),
+            ("_yearly", f"_{variant}"),
+            ("-yearly", f"-{variant}"),
+            ("yearly", variant),
+            ("_lifetime", f"_{variant}"),
+            ("-lifetime", f"-{variant}"),
+            ("lifetime", variant),
         )
-        if configured:
-            return configured
-        if not tier:
-            return None
-
-        return cls._derive_yearly_lookup_from_monthly(getattr(tier, "stripe_lookup_key", None))
-
-    @staticmethod
-    def _derive_yearly_lookup_from_monthly(monthly_lookup_key: str | None) -> str | None:
-        monthly_lookup = (monthly_lookup_key or "").strip()
-        if not monthly_lookup:
-            return None
-        if "_monthly" in monthly_lookup:
-            return monthly_lookup.replace("_monthly", "_yearly")
-        if "-monthly" in monthly_lookup:
-            return monthly_lookup.replace("-monthly", "-yearly")
-        if monthly_lookup.endswith("monthly"):
-            return f"{monthly_lookup[:-7]}yearly"
+        for from_token, to_token in replacements:
+            if lookup.endswith(from_token):
+                return f"{lookup[:-len(from_token)]}{to_token}"
+            if from_token in lookup:
+                return lookup.replace(from_token, to_token)
         return None
-
-    @staticmethod
-    def _id_candidates(*, offer_key: str, tier: SubscriptionTier | None) -> list[str]:
-        candidates = []
-        normalized_offer_key = offer_key.strip().lower()
-        if normalized_offer_key:
-            candidates.append(normalized_offer_key)
-        if tier:
-            candidates.append(str(tier.id).strip().lower())
-            tier_name = (tier.name or "").strip().lower()
-            if tier_name:
-                candidates.append(tier_name)
-            tier_lookup = (tier.stripe_lookup_key or "").strip().lower()
-            if tier_lookup:
-                candidates.append(tier_lookup)
-        return candidates
 
     @staticmethod
     def _sold_count_by_coupon(coupon_codes_lower: Sequence[str]) -> dict[str, int]:
@@ -340,7 +248,7 @@ class LifetimePricingService:
         return {str(row.promo_code): int(row.total or 0) for row in rows if row.promo_code}
 
     @staticmethod
-    def _get_lookup_key_pricing(lookup_key: str) -> dict | None:
+    def _get_lookup_key_pricing(lookup_key: str | None) -> dict | None:
         if not lookup_key:
             return None
         try:
