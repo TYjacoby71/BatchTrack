@@ -19,6 +19,35 @@ Glossary:
   <h2 class="mb-2">Integrations & Launch Checklist</h2>
   <p class="text-muted">Use this single matrix to verify every environment variable and secret. Once a row shows “Detected,” move on to the quick actions below.</p>
 
+  <div class="alert alert-info mt-3 mb-0">
+    <div class="d-flex flex-column gap-1">
+      <div>
+        <strong>Account Email Security:</strong>
+        configured mode <code>{{ auth_email_status.configured_mode }}</code>,
+        effective mode <code>{{ auth_email_status.effective_mode }}</code>.
+      </div>
+      <div class="small">
+        Email provider configured:
+        {% if auth_email_status.provider_configured %}
+        <span class="text-success fw-semibold">yes</span>
+        {% else %}
+        <span class="text-danger fw-semibold">no</span>
+        {% endif %}
+        · Password reset flow:
+        {% if auth_email_status.password_reset_enabled %}
+        <span class="text-success fw-semibold">enabled</span>
+        {% else %}
+        <span class="text-warning fw-semibold">disabled (fallback)</span>
+        {% endif %}
+      </div>
+      {% if auth_email_status.provider_fallback_active %}
+      <div class="small text-warning">
+        Provider fallback is active: auth-email flows were automatically relaxed because provider credentials are missing while <code>AUTH_EMAIL_REQUIRE_PROVIDER=true</code>.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="card shadow-sm mt-3">
     <div class="card-header bg-white border-0">
       <h4 class="mb-1">Environment & Secrets Matrix</h4>
@@ -119,6 +148,7 @@ Glossary:
           <ul class="small text-muted mb-0">
             <li>Logging level: <code>{{ logging_status.LOG_LEVEL }}</code>; PII redaction {% if logging_status.LOG_REDACT_PII %}<span class="text-success">enabled</span>{% else %}<span class="text-danger">disabled</span>{% endif %}. Keep DEBUG off in production.</li>
             <li>Stripe tiers: {% if stripe_status.tiers_configured %}<span class="text-success">configured</span>{% else %}<span class="text-danger">missing price mappings</span>{% endif %}. Update <code>app/seeders/subscription_tiers.json</code> before launch.</li>
+            <li>Auth-email mode: <code>{{ auth_email_status.effective_mode }}</code> (configured: <code>{{ auth_email_status.configured_mode }}</code>).{% if auth_email_status.provider_fallback_active %} Provider fallback is active because credentials are missing.{% endif %}</li>
             <li>POS / Shopify: {{ shopify_status.notes }}</li>
             <li>Sessions use pooled Redis connections. Adjust <code>REDIS_POOL_MAX_CONNECTIONS</code> when you change <code>GUNICORN_WORKERS</code>.</li>
           </ul>
