@@ -121,15 +121,10 @@
         window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
     <div class="app-container">
-    {% set use_public_header = (not current_user.is_authenticated and (show_public_header if show_public_header is defined else false)) %}
-    <nav class="navbar navbar-expand-lg navbar-light {{ 'bg-white shadow-sm' if use_public_header else 'bg-light' }}">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid position-relative">
-            <a class="navbar-brand{% if use_public_header %} text-primary{% endif %}" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
-                {% if use_public_header %}
-                <i class="fas fa-flask me-2"></i>BatchTrack
-                {% else %}
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
-                {% endif %}
             </a>
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
             {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') and marketplace_display_enabled %}
@@ -137,7 +132,7 @@
             {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
             {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
             {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
-            {% set has_nav_center = navbar_center_title is defined and navbar_center_title and not use_public_header %}
+            {% set has_nav_center = navbar_center_title is defined and navbar_center_title %}
             {% if has_nav_center %}
             <div class="position-absolute top-50 start-50 translate-middle text-center">
                 <span class="navbar-text fw-semibold">{{ navbar_center_title }}</span>
@@ -455,51 +450,6 @@
             </div>
             {% endif %}
             {% else %}
-            {% if use_public_header %}
-            {% set home_url = url_for('index') %}
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicHeaderNav" aria-controls="publicHeaderNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="publicHeaderNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('tools_bp.tools_index') }}">Tools</a>
-                    </li>
-                    {% if global_library_enabled %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">Inventory Library</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#pricing">Pricing</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#about">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ home_url }}#contact">Contact</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login to App
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-primary text-white ms-lg-2 mt-2 mt-lg-0" href="{{ url_for('auth.signup', source='public_header') }}">
-                            Get Started
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% else %}
             <div class="navbar-nav me-auto"></div>
             <div class="dropdown ms-auto">
                 <button class="btn btn-light dropdown-toggle" type="button" id="publicMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -514,7 +464,6 @@
                     <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
                 </ul>
             </div>
-            {% endif %}
             {% endif %}
         </div>
     </nav>
