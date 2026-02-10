@@ -12,7 +12,7 @@
                     <h2 class="mb-1">
                         <i class="fas fa-rocket me-2"></i>Choose Your BatchTrack Plan
                     </h2>
-                    <p class="text-muted mb-0">Pick one tier, then choose the card you want: Lifetime, Yearly, or Monthly.</p>
+                    <p class="text-muted mb-0">Pick one of the 3 tiers, then use the billing toggle below (Monthly, Yearly, Lifetime).</p>
                 </div>
                 <div class="card-body p-4 p-lg-5">
                     {% if oauth_user_info %}
@@ -23,109 +23,55 @@
                     {% endif %}
 
                     <section id="successivePlansSection">
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="tierStackGrid">
-                            {% for offer in lifetime_offers %}
-                            {% set tier_key = (offer.tier_id|string) if offer.tier_id else '' %}
-                            {% set tier_data = available_tiers.get(tier_key) if tier_key else None %}
-                            {% set monthly_price = tier_data.monthly_price_display if tier_data else None %}
-                            {% set yearly_price = tier_data.yearly_price_display if tier_data else None %}
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="tierCardGrid">
+                            {% for tier_id, tier_data in available_tiers.items() %}
+                            {% set lifetime_offer = (lifetime_offers | selectattr('tier_id', 'equalto', tier_id) | list | first) %}
                             <div class="col">
                                 <article
-                                    class="tier-stack-shell h-100 {% if offer.name|lower == 'enthusiast' %}is-recommended{% endif %}"
-                                    data-tier-id="{{ tier_key }}"
-                                    data-offer-key="{{ offer.key }}"
+                                    class="tier-choice-card h-100 {% if tier_data.name|lower == 'enthusiast' %}is-recommended{% endif %}"
+                                    data-tier-id="{{ tier_id }}"
+                                    role="button"
+                                    tabindex="0"
+                                    aria-pressed="false"
                                 >
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
-                                            <h3 class="h5 fw-bold mb-1">{{ offer.name }}</h3>
-                                            <p class="small text-muted mb-0">{{ tier_data.name if tier_data else 'Tier configuration pending' }}</p>
+                                            <h3 class="h5 fw-bold mb-1">{{ tier_data.name }}</h3>
+                                            <p class="small text-muted mb-0">
+                                                {{ lifetime_offer.tagline if lifetime_offer else 'Choose this tier for your next step.' }}
+                                            </p>
                                         </div>
-                                        {% if offer.name|lower == 'enthusiast' %}
+                                        {% if tier_data.name|lower == 'enthusiast' %}
                                         <span class="badge bg-success">Recommended</span>
                                         {% endif %}
                                     </div>
 
-                                    {% if offer.has_remaining %}
-                                    <div class="small text-success mb-2">
-                                        <i class="fas fa-bolt me-1"></i>Lifetime seats are currently available.
+                                    <div class="tier-choice-mode-badge mb-2" data-role="modeBadge" data-mode="lifetime">Lifetime</div>
+                                    <div class="tier-choice-price mb-2" data-role="priceText">
+                                        {% if lifetime_offer and lifetime_offer.has_remaining %}
+                                            {{ lifetime_offer.lifetime_price_copy }}
+                                        {% elif tier_data.yearly_price_display %}
+                                            {{ tier_data.yearly_price_display }}
+                                        {% elif tier_data.monthly_price_display %}
+                                            {{ tier_data.monthly_price_display }}
+                                        {% else %}
+                                            Contact Sales
+                                        {% endif %}
                                     </div>
-                                    {% else %}
-                                    <div class="small text-muted mb-2">
-                                        <i class="fas fa-hourglass-end me-1"></i>Lifetime sold out for this tier.
-                                    </div>
-                                    {% endif %}
-
-                                    <div class="tier-plan-stack">
-                                        <article
-                                            class="stack-plan-card"
-                                            data-tier-id="{{ tier_key }}"
-                                            data-plan-kind="lifetime"
-                                            data-lifetime-key="{{ offer.key }}"
-                                            data-enabled="{{ 'true' if offer.tier_id and offer.has_remaining else 'false' }}"
-                                        >
-                                            <div class="stack-plan-peek">
-                                                <span class="stack-plan-label">Lifetime</span>
-                                            </div>
-                                            <div class="stack-plan-body">
-                                                {% if offer.has_remaining %}
-                                                <div class="fw-bold text-primary mb-2">{{ offer.lifetime_price_copy }}</div>
-                                                <div class="small mb-2">
-                                                    Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
-                                                </div>
-                                                <div class="small text-muted">
-                                                    Coupon auto-applied: <code>{{ offer.coupon_code }}</code>
-                                                </div>
-                                                {% else %}
-                                                <div class="fw-bold text-muted mb-2">Lifetime sold out</div>
-                                                <div class="small text-muted mb-1">All {{ offer.seat_total }} lifetime seats have been claimed.</div>
-                                                <div class="small text-muted">Choose Yearly or Monthly below for immediate checkout.</div>
-                                                {% endif %}
-                                            </div>
-                                        </article>
-
-                                        <article
-                                            class="stack-plan-card"
-                                            data-tier-id="{{ tier_key }}"
-                                            data-plan-kind="yearly"
-                                            data-enabled="{{ 'true' if tier_data and yearly_price else 'false' }}"
-                                        >
-                                            <div class="stack-plan-peek">
-                                                <span class="stack-plan-label">Yearly</span>
-                                            </div>
-                                            <div class="stack-plan-body">
-                                                {% if tier_data and yearly_price %}
-                                                <div class="fw-bold text-primary mb-2">{{ yearly_price }}</div>
-                                                <div class="small text-muted">Billed yearly subscription.</div>
-                                                {% else %}
-                                                <div class="fw-bold text-muted mb-2">Yearly unavailable</div>
-                                                <div class="small text-muted">Configure yearly Stripe pricing for this tier.</div>
-                                                {% endif %}
-                                            </div>
-                                        </article>
-
-                                        <article
-                                            class="stack-plan-card"
-                                            data-tier-id="{{ tier_key }}"
-                                            data-plan-kind="monthly"
-                                            data-enabled="{{ 'true' if tier_data and monthly_price else 'false' }}"
-                                        >
-                                            <div class="stack-plan-peek">
-                                                <span class="stack-plan-label">Monthly</span>
-                                            </div>
-                                            <div class="stack-plan-body">
-                                                {% if tier_data and monthly_price %}
-                                                <div class="fw-bold text-primary mb-2">{{ monthly_price }}</div>
-                                                <div class="small text-muted">Billed monthly subscription.</div>
-                                                {% else %}
-                                                <div class="fw-bold text-muted mb-2">Monthly unavailable</div>
-                                                <div class="small text-muted">This tier is not configured for checkout yet.</div>
-                                                {% endif %}
-                                            </div>
-                                        </article>
-                                    </div>
+                                    <p class="small mb-2" data-role="statusText">Select this tier to continue.</p>
+                                    <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
                                 </article>
                             </div>
                             {% endfor %}
+                        </div>
+
+                        <div class="billing-toggle-wrap mt-4">
+                            <p class="small text-muted mb-2">Billing cadence</p>
+                            <div class="btn-group" role="group" aria-label="Billing cadence toggle" id="billingPlanToggle">
+                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="monthly">Monthly</button>
+                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="yearly">Yearly</button>
+                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="lifetime">Lifetime</button>
+                            </div>
                         </div>
                     </section>
 
@@ -173,7 +119,12 @@ const lifetimeOffers = {{ lifetime_offers|tojson }};
 const signupSource = {{ signup_source|tojson }};
 const referralCode = {{ referral_code|tojson }};
 const initialPromoCode = {{ promo_code|tojson }};
-const lifetimeByKey = Object.fromEntries(lifetimeOffers.map((offer) => [offer.key, offer]));
+const VALID_PLAN_KINDS = ['lifetime', 'yearly', 'monthly'];
+const lifetimeByKey = Object.fromEntries(
+    lifetimeOffers
+        .filter((offer) => offer && offer.key)
+        .map((offer) => [String(offer.key), offer])
+);
 const lifetimeByTier = Object.fromEntries(
     lifetimeOffers
         .filter((offer) => offer.tier_id)
@@ -188,16 +139,12 @@ function getLifetimeOfferForTier(tierId) {
     return lifetimeByTier[String(tierId)] || null;
 }
 
-function getPreferredTierId() {
-    const enthusiastOffer = lifetimeOffers.find((offer) => {
-        return String(offer.name || '').toLowerCase() === 'enthusiast'
-            && offer.tier_id
-            && getTierData(offer.tier_id);
-    });
-    if (enthusiastOffer) {
-        return String(enthusiastOffer.tier_id);
-    }
+function isConfiguredPrice(priceCopy) {
+    const normalized = String(priceCopy || '').trim().toLowerCase();
+    return Boolean(normalized) && normalized !== 'contact sales';
+}
 
+function getPreferredTierId() {
     const enthusiastTier = Object.entries(availableTiers).find((entry) => {
         const tierData = entry[1] || {};
         return String(tierData.name || '').toLowerCase() === 'enthusiast';
@@ -209,51 +156,178 @@ function getPreferredTierId() {
     return Object.keys(availableTiers)[0] || '';
 }
 
-function getDefaultPlanKindForTier(tierId) {
-    const tierData = getTierData(tierId);
-    const lifetimeOffer = getLifetimeOfferForTier(tierId);
-    if (lifetimeOffer && lifetimeOffer.has_remaining && lifetimeOffer.tier_id) {
-        return 'lifetime';
-    }
-    if (tierData && tierData.yearly_price_display) {
-        return 'yearly';
-    }
-    return 'monthly';
+function formatPlanLabel(planKind) {
+    if (planKind === 'lifetime') return 'Lifetime';
+    if (planKind === 'yearly') return 'Yearly';
+    if (planKind === 'monthly') return 'Monthly';
+    return 'Unavailable';
 }
 
-function selectPlanCard(shell, card, options = {}) {
-    if (!shell || !card) return;
-    const syncSelection = options.syncSelection !== false;
+function resolveTierSelection(tierId) {
+    const normalizedTierId = String(tierId || '');
+    const tierData = getTierData(normalizedTierId);
+    const lifetimeOffer = getLifetimeOfferForTier(normalizedTierId);
 
-    if (syncSelection) {
-        const tierId = card.dataset.tierId || shell.dataset.tierId || '';
-        if (tierId) {
-            selectedTier = String(tierId);
-        }
-        selectedPlanKind = card.dataset.planKind || 'monthly';
-        if (selectedPlanKind === 'lifetime') {
-            selectedLifetimeTier = card.dataset.lifetimeKey || '';
+    if (!tierData) {
+        return {
+            tierData: null,
+            lifetimeOffer,
+            requestedPlanKind: selectedPlanKind,
+            effectivePlanKind: 'unavailable',
+            modeBadgeText: 'Unavailable',
+            priceText: '—',
+            statusText: 'Tier configuration is unavailable.',
+            fallbackText: '',
+            fallbackFromLifetime: false,
+            isUnavailable: true,
+        };
+    }
+
+    const monthlyPrice = tierData.monthly_price_display || tierData.price_display || '';
+    const yearlyPrice = tierData.yearly_price_display || '';
+    const hasMonthly = isConfiguredPrice(monthlyPrice);
+    const hasYearly = isConfiguredPrice(yearlyPrice);
+    const hasLifetime = Boolean(
+        lifetimeOffer
+        && lifetimeOffer.tier_id
+        && lifetimeOffer.has_remaining
+        && lifetimeOffer.lifetime_lookup_key
+    );
+
+    let effectivePlanKind = selectedPlanKind;
+    let modeBadgeText = formatPlanLabel(selectedPlanKind);
+    let priceText = monthlyPrice || yearlyPrice || 'Contact Sales';
+    let statusText = 'Select this tier to continue.';
+    let fallbackText = '';
+    let fallbackFromLifetime = false;
+    let isUnavailable = false;
+
+    if (selectedPlanKind === 'lifetime') {
+        if (hasLifetime) {
+            effectivePlanKind = 'lifetime';
+            modeBadgeText = 'Lifetime';
+            priceText = lifetimeOffer.lifetime_price_copy || 'One-time payment';
+            statusText = `Only ${lifetimeOffer.display_spots_left} spots left / ${lifetimeOffer.seat_total}.`;
+            if (lifetimeOffer.coupon_code) {
+                fallbackText = `Coupon auto-applied: ${lifetimeOffer.coupon_code}`;
+            }
         } else {
-            selectedLifetimeTier = '';
+            fallbackFromLifetime = true;
+            statusText = 'No lifetime offers remain for this tier.';
+            if (hasYearly) {
+                effectivePlanKind = 'yearly';
+                modeBadgeText = 'Yearly fallback';
+                priceText = yearlyPrice;
+                fallbackText = 'Showing yearly billing as the next step down.';
+            } else if (hasMonthly) {
+                effectivePlanKind = 'monthly';
+                modeBadgeText = 'Monthly fallback';
+                priceText = monthlyPrice;
+                fallbackText = 'Showing monthly billing as the next step down.';
+            } else {
+                effectivePlanKind = 'unavailable';
+                modeBadgeText = 'Unavailable';
+                priceText = 'Contact Sales';
+                fallbackText = 'This tier is not configured for checkout yet.';
+                isUnavailable = true;
+            }
+        }
+    } else if (selectedPlanKind === 'yearly') {
+        if (hasYearly) {
+            effectivePlanKind = 'yearly';
+            modeBadgeText = 'Yearly';
+            priceText = yearlyPrice;
+            statusText = 'Billed yearly subscription.';
+        } else if (hasMonthly) {
+            effectivePlanKind = 'monthly';
+            modeBadgeText = 'Monthly fallback';
+            priceText = monthlyPrice;
+            statusText = 'Yearly pricing is not configured for this tier.';
+            fallbackText = 'Showing monthly billing instead.';
+        } else {
+            effectivePlanKind = 'unavailable';
+            modeBadgeText = 'Unavailable';
+            priceText = 'Contact Sales';
+            statusText = 'Yearly pricing is unavailable for this tier.';
+            fallbackText = 'This tier is not configured for checkout yet.';
+            isUnavailable = true;
+        }
+    } else {
+        if (hasMonthly) {
+            effectivePlanKind = 'monthly';
+            modeBadgeText = 'Monthly';
+            priceText = monthlyPrice;
+            statusText = 'Billed monthly subscription.';
+        } else if (hasYearly) {
+            effectivePlanKind = 'yearly';
+            modeBadgeText = 'Yearly fallback';
+            priceText = yearlyPrice;
+            statusText = 'Monthly pricing is not configured for this tier.';
+            fallbackText = 'Showing yearly billing instead.';
+        } else {
+            effectivePlanKind = 'unavailable';
+            modeBadgeText = 'Unavailable';
+            priceText = 'Contact Sales';
+            statusText = 'Monthly pricing is unavailable for this tier.';
+            fallbackText = 'This tier is not configured for checkout yet.';
+            isUnavailable = true;
         }
     }
 
-    updateSelectionState();
-    updatePlanSummary();
+    return {
+        tierData,
+        lifetimeOffer,
+        requestedPlanKind: selectedPlanKind,
+        effectivePlanKind,
+        modeBadgeText,
+        priceText,
+        statusText,
+        fallbackText,
+        fallbackFromLifetime,
+        isUnavailable,
+    };
 }
 
-function updateSelectionState() {
-    document.querySelectorAll('.tier-stack-shell').forEach((shell) => {
-        const shellTierId = String(shell.dataset.tierId || '');
-        const isSelectedTier = shellTierId && shellTierId === String(selectedTier);
-        shell.classList.toggle('selected-tier', isSelectedTier);
+function updateToggleState() {
+    document.querySelectorAll('.plan-kind-toggle').forEach((button) => {
+        const isActive = button.dataset.planKind === selectedPlanKind;
+        button.classList.toggle('active', isActive);
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline-primary', !isActive);
+    });
+}
 
-        shell.querySelectorAll('.stack-plan-card').forEach((card) => {
-            const isCheckoutCard = isSelectedTier && card.dataset.planKind === selectedPlanKind;
-            card.classList.toggle('is-selected-plan', isCheckoutCard);
-            card.classList.toggle('is-checkout-selected', isCheckoutCard);
-            card.classList.toggle('is-disabled', card.dataset.enabled !== 'true');
-        });
+function updateTierCardPresentations() {
+    document.querySelectorAll('.tier-choice-card').forEach((card) => {
+        const tierId = String(card.dataset.tierId || '');
+        const state = resolveTierSelection(tierId);
+        const isSelectedTier = tierId && tierId === String(selectedTier);
+
+        card.classList.toggle('selected-tier', isSelectedTier);
+        card.classList.toggle('is-lifetime-exhausted', selectedPlanKind === 'lifetime' && state.fallbackFromLifetime);
+        card.classList.toggle('is-disabled', state.isUnavailable);
+        card.setAttribute('aria-pressed', isSelectedTier ? 'true' : 'false');
+        card.setAttribute('aria-disabled', state.isUnavailable ? 'true' : 'false');
+
+        const modeBadge = card.querySelector('[data-role="modeBadge"]');
+        const priceText = card.querySelector('[data-role="priceText"]');
+        const statusText = card.querySelector('[data-role="statusText"]');
+        const fallbackText = card.querySelector('[data-role="fallbackText"]');
+
+        if (modeBadge) {
+            modeBadge.textContent = state.modeBadgeText;
+            modeBadge.dataset.mode = state.effectivePlanKind || 'unavailable';
+        }
+        if (priceText) {
+            priceText.textContent = state.priceText;
+        }
+        if (statusText) {
+            statusText.textContent = state.statusText;
+        }
+        if (fallbackText) {
+            fallbackText.textContent = state.fallbackText || '';
+            fallbackText.classList.toggle('d-none', !state.fallbackText);
+        }
     });
 }
 
@@ -268,6 +342,8 @@ function updatePlanSummary() {
 
     featuresList.innerHTML = '';
     lifetimeCounterMessage.classList.add('d-none');
+    lifetimeCounterMessage.classList.remove('alert-info');
+    lifetimeCounterMessage.classList.add('alert-warning');
 
     const tierData = availableTiers[String(selectedTier)];
     if (!tierData) {
@@ -283,7 +359,12 @@ function updatePlanSummary() {
     const features = tierData.features || [];
     features.forEach((feature) => {
         const item = document.createElement('li');
-        item.innerHTML = `<i class="fas fa-check text-success me-2"></i><span>${feature}</span>`;
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-check text-success me-2';
+        const copy = document.createElement('span');
+        copy.textContent = feature;
+        item.appendChild(icon);
+        item.appendChild(copy);
         featuresList.appendChild(item);
     });
 
@@ -294,47 +375,62 @@ function updatePlanSummary() {
         featuresList.appendChild(moreItem);
     }
 
-    if (selectedPlanKind === 'lifetime') {
-        const offer = lifetimeByKey[selectedLifetimeTier] || getLifetimeOfferForTier(selectedTier);
-        if (offer && offer.has_remaining && offer.tier_id) {
-            selectedLifetimeTier = offer.key;
-            title.textContent = `${offer.name} lifetime summary`;
-            selectedText.innerHTML = `You selected <strong>${offer.name} Lifetime</strong> (${offer.base_tier_name}) with coupon code <code>${offer.coupon_code}</code>.`;
-            badge.textContent = `${offer.name} Lifetime`;
-            priceText.textContent = offer.lifetime_price_copy || 'One-time price of 1 year';
-            continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
-            lifetimeCounterMessage.textContent = `Only ${offer.display_spots_left} spots left / ${offer.seat_total} for ${offer.name}.`;
-            lifetimeCounterMessage.classList.remove('d-none');
-            continueBtn.disabled = false;
-        } else {
-            title.textContent = 'Lifetime summary';
-            selectedText.textContent = 'This lifetime option is currently unavailable. Choose the yearly or monthly card for this tier.';
-            badge.textContent = 'Unavailable';
-            priceText.textContent = '—';
-            continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
-            continueBtn.disabled = true;
-            lifetimeCounterMessage.textContent = 'Lifetime pricing is not configured for this selection yet.';
-            lifetimeCounterMessage.classList.remove('d-none');
-        }
+    const selectionState = resolveTierSelection(selectedTier);
+    const effectivePlanLabel = formatPlanLabel(selectionState.effectivePlanKind);
+
+    if (selectionState.isUnavailable) {
+        title.textContent = `${tierData.name} summary`;
+        selectedText.textContent = 'This tier is currently unavailable for checkout.';
+        badge.textContent = `${tierData.name} Unavailable`;
+        priceText.textContent = '—';
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
+        continueBtn.disabled = true;
+        lifetimeCounterMessage.textContent = selectionState.fallbackText || 'Pricing is not configured for this tier yet.';
+        lifetimeCounterMessage.classList.remove('d-none');
         return;
     }
 
-    const isYearlySelected = selectedPlanKind === 'yearly';
-    const hasYearlyOption = Boolean(tierData.yearly_price_display);
-    const displayPrice = isYearlySelected
-        ? (tierData.yearly_price_display || 'Yearly unavailable')
-        : (tierData.monthly_price_display || tierData.price_display || 'Contact Sales');
-
     title.textContent = `${tierData.name} plan summary`;
-    selectedText.innerHTML = `You selected the <strong>${tierData.name}</strong> plan (${isYearlySelected ? 'yearly' : 'monthly'}).`;
-    badge.textContent = `${tierData.name} ${isYearlySelected ? 'Yearly' : 'Monthly'}`;
-    priceText.textContent = displayPrice;
-    continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${isYearlySelected ? 'Yearly' : 'Monthly'} Checkout`;
-    continueBtn.disabled = Boolean(isYearlySelected && !hasYearlyOption);
+    badge.textContent = `${tierData.name} ${effectivePlanLabel}`;
+    priceText.textContent = selectionState.priceText;
 
-    if (isYearlySelected && !hasYearlyOption) {
-        lifetimeCounterMessage.textContent = 'Yearly pricing is not configured for this tier yet. Click the Monthly card in this tier stack.';
+    if (selectionState.effectivePlanKind === 'lifetime') {
+        const offer = selectionState.lifetimeOffer;
+        if (!offer || !offer.has_remaining || !offer.tier_id) {
+            selectedLifetimeTier = '';
+            continueBtn.disabled = true;
+            continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
+            selectedText.textContent = 'Lifetime checkout is unavailable for this tier right now.';
+            lifetimeCounterMessage.textContent = 'No lifetime offers remain for this tier.';
+            lifetimeCounterMessage.classList.remove('d-none');
+            return;
+        }
+
+        selectedLifetimeTier = offer.key;
+        selectedText.textContent = `You selected ${tierData.name} lifetime access.`;
+        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
+        continueBtn.disabled = false;
+        lifetimeCounterMessage.textContent = `Only ${offer.display_spots_left} spots left / ${offer.seat_total} for ${offer.name}.`;
         lifetimeCounterMessage.classList.remove('d-none');
+        return;
+    }
+
+    selectedLifetimeTier = '';
+    continueBtn.disabled = false;
+    continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${effectivePlanLabel} Checkout`;
+
+    if (selectedPlanKind === 'lifetime' && selectionState.fallbackFromLifetime) {
+        selectedText.textContent = `No lifetime offers remain for this tier. Checkout will continue with ${effectivePlanLabel.toLowerCase()} billing.`;
+        lifetimeCounterMessage.textContent = `No lifetime offers remain for this tier. Showing ${effectivePlanLabel.toLowerCase()} as the next step down.`;
+        lifetimeCounterMessage.classList.remove('d-none');
+    } else {
+        selectedText.textContent = `You selected the ${tierData.name} plan (${effectivePlanLabel.toLowerCase()}).`;
+        if (selectionState.effectivePlanKind !== selectionState.requestedPlanKind && selectionState.fallbackText) {
+            lifetimeCounterMessage.textContent = selectionState.fallbackText;
+            lifetimeCounterMessage.classList.remove('d-none');
+            lifetimeCounterMessage.classList.remove('alert-warning');
+            lifetimeCounterMessage.classList.add('alert-info');
+        }
     }
 }
 
@@ -344,24 +440,28 @@ function proceedToPayment() {
         return;
     }
 
-    if (selectedPlanKind === 'lifetime') {
-        const offer = lifetimeByKey[selectedLifetimeTier] || getLifetimeOfferForTier(selectedTier);
-        if (!offer || !offer.has_remaining) {
+    const selectionState = resolveTierSelection(selectedTier);
+    if (selectionState.isUnavailable || !VALID_PLAN_KINDS.includes(selectionState.effectivePlanKind)) {
+        alert('This tier is not available for checkout yet.');
+        return;
+    }
+
+    let billingMode = 'standard';
+    let billingCycle = selectionState.effectivePlanKind === 'yearly' ? 'yearly' : 'monthly';
+
+    if (selectionState.effectivePlanKind === 'lifetime') {
+        const offer = selectionState.lifetimeOffer;
+        if (!offer || !offer.has_remaining || !offer.tier_id) {
             alert('That lifetime tier is sold out. Please choose another option.');
             return;
         }
         selectedLifetimeTier = offer.key;
         selectedTier = String(offer.tier_id);
-    } else if (selectedPlanKind === 'yearly') {
-        const tierData = getTierData(selectedTier);
-        if (!tierData || !tierData.yearly_price_display) {
-            alert('Yearly pricing is not configured for this tier yet. Please choose monthly.');
-            return;
-        }
+        billingMode = 'lifetime';
+        billingCycle = 'lifetime';
+    } else {
+        selectedLifetimeTier = '';
     }
-
-    const billingMode = selectedPlanKind === 'lifetime' ? 'lifetime' : 'standard';
-    const billingCycle = selectedPlanKind === 'lifetime' ? 'lifetime' : (selectedPlanKind === 'yearly' ? 'yearly' : 'monthly');
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -408,171 +508,147 @@ function proceedToPayment() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const tierShells = Array.from(document.querySelectorAll('.tier-stack-shell'));
+    const tierCards = Array.from(document.querySelectorAll('.tier-choice-card'));
+    const toggleButtons = Array.from(document.querySelectorAll('.plan-kind-toggle'));
 
-    tierShells.forEach((shell) => {
-        const cards = Array.from(shell.querySelectorAll('.stack-plan-card'));
-        cards.forEach((card) => {
-            card.addEventListener('click', () => {
-                selectPlanCard(shell, card, { syncSelection: true });
-            });
+    tierCards.forEach((card) => {
+        card.addEventListener('click', () => {
+            selectedTier = String(card.dataset.tierId || '');
+            updateToggleState();
+            updateTierCardPresentations();
+            updatePlanSummary();
+        });
+
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                selectedTier = String(card.dataset.tierId || '');
+                updateToggleState();
+                updateTierCardPresentations();
+                updatePlanSummary();
+            }
         });
     });
+
+    toggleButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const nextKind = String(button.dataset.planKind || '').toLowerCase();
+            if (!VALID_PLAN_KINDS.includes(nextKind)) {
+                return;
+            }
+            selectedPlanKind = nextKind;
+            updateToggleState();
+            updateTierCardPresentations();
+            updatePlanSummary();
+        });
+    });
+
+    if (!VALID_PLAN_KINDS.includes(selectedPlanKind)) {
+        selectedPlanKind = 'lifetime';
+    }
+
+    if (selectedLifetimeTier && lifetimeByKey[selectedLifetimeTier] && lifetimeByKey[selectedLifetimeTier].tier_id) {
+        selectedTier = String(lifetimeByKey[selectedLifetimeTier].tier_id);
+    }
 
     if (!selectedTier || !getTierData(selectedTier)) {
         selectedTier = getPreferredTierId();
     }
 
-    if (!['lifetime', 'yearly', 'monthly'].includes(selectedPlanKind)) {
-        selectedPlanKind = getDefaultPlanKindForTier(selectedTier);
+    if (!selectedTier && tierCards.length > 0) {
+        selectedTier = String(tierCards[0].dataset.tierId || '');
     }
 
-    if (selectedPlanKind === 'lifetime') {
-        const offer = selectedLifetimeTier ? lifetimeByKey[selectedLifetimeTier] : getLifetimeOfferForTier(selectedTier);
-        if (offer && offer.has_remaining && offer.tier_id) {
-            selectedLifetimeTier = offer.key;
-            selectedTier = String(offer.tier_id);
-        } else {
-            selectedLifetimeTier = '';
-            selectedPlanKind = getDefaultPlanKindForTier(selectedTier);
-        }
+    if (!selectedTier || !getTierData(selectedTier)) {
+        selectedTier = '';
     }
 
-    const initialTierData = getTierData(selectedTier);
-    if (selectedPlanKind === 'yearly' && !(initialTierData && initialTierData.yearly_price_display)) {
-        selectedPlanKind = 'monthly';
-    }
-
-    const selectedShell = tierShells.find((shell) => {
-        return String(shell.dataset.tierId || '') === String(selectedTier);
-    });
-
-    if (selectedShell) {
-        const matchingCard = Array.from(selectedShell.querySelectorAll('.stack-plan-card')).find((card) => {
-            return card.dataset.planKind === selectedPlanKind;
-        });
-        const fallbackCard = selectedShell.querySelector('.stack-plan-card');
-        selectPlanCard(selectedShell, matchingCard || fallbackCard, { syncSelection: false });
-    } else {
-        const fallbackShell = tierShells.find((shell) => {
-            return Boolean(String(shell.dataset.tierId || ''));
-        });
-        if (fallbackShell) {
-            selectedTier = String(fallbackShell.dataset.tierId);
-            selectedPlanKind = getDefaultPlanKindForTier(selectedTier);
-            const matchingCard = Array.from(fallbackShell.querySelectorAll('.stack-plan-card')).find((card) => {
-                return card.dataset.planKind === selectedPlanKind;
-            });
-            const fallbackCard = fallbackShell.querySelector('.stack-plan-card');
-            selectPlanCard(fallbackShell, matchingCard || fallbackCard, { syncSelection: false });
-        }
-    }
-
-    updateSelectionState();
+    updateToggleState();
+    updateTierCardPresentations();
     updatePlanSummary();
 });
 </script>
 
 <style>
-.tier-stack-shell {
+.tier-choice-card {
     border: 2px solid #d8e0ef;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
     background: var(--theme-ext-color-e26efca41a);
     padding: var(--theme-ext-space-8d9db2a862);
     box-shadow: var(--theme-ext-shadow-f0041b4741);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
 }
 
-.tier-stack-shell.is-recommended {
+.tier-choice-card.is-recommended {
     background: var(--theme-ext-color-866694556b);
 }
 
-.tier-stack-shell.selected-tier {
+.tier-choice-card.selected-tier {
     border-color: var(--theme-ext-color-7630a14d9f);
     box-shadow: var(--theme-ext-shadow-a9f9d9573c);
     transform: translateY(-2px);
 }
 
-.tier-plan-stack {
-    margin-top: 0.75rem;
+.tier-choice-card.is-lifetime-exhausted {
+    border-style: dashed;
+    background: #f8f9fd;
+}
+
+.tier-choice-card.is-disabled {
+    opacity: 0.72;
+}
+
+.tier-choice-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--theme-ext-radius-13166981e2);
+    font-size: var(--theme-ext-size-6ab716b90b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+}
+
+.tier-choice-mode-badge[data-mode="lifetime"] {
+    background: #fff4de;
+    border: 1px solid #f2d18b;
+    color: #7a4f00;
+}
+
+.tier-choice-mode-badge[data-mode="yearly"] {
+    background: #e4f7ea;
+    border: 1px solid #9fd8ad;
+    color: #21643a;
+}
+
+.tier-choice-mode-badge[data-mode="monthly"] {
+    background: #e8f0ff;
+    border: 1px solid #9eb8ee;
+    color: #244a97;
+}
+
+.tier-choice-mode-badge[data-mode="unavailable"] {
+    background: #f0f2f6;
+    border: 1px solid #d4dae6;
+    color: #68738a;
+}
+
+.tier-choice-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--theme-ext-color-7630a14d9f);
+    line-height: 1.25;
+}
+
+.billing-toggle-wrap {
     display: flex;
     flex-direction: column;
-    padding-bottom: 0.35rem;
-}
-
-.stack-plan-card {
-    position: relative;
-    border: 2px solid #b8c7e4;
-    border-radius: var(--theme-ext-radius-1f2f59cc9c);
-    background: var(--theme-ext-color-c760a834cc);
-    box-shadow: var(--theme-ext-shadow-1b71b17ff4);
-    overflow: hidden;
-    cursor: pointer;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-}
-
-.stack-plan-card + .stack-plan-card {
-    margin-top: 0.65rem;
-    margin-left: 0.45rem;
-}
-
-.stack-plan-card:nth-of-type(1) {
-    z-index: 3;
-}
-
-.stack-plan-card:nth-of-type(2) {
-    z-index: 2;
-}
-
-.stack-plan-card:nth-of-type(3) {
-    z-index: 1;
-    margin-left: 0.9rem;
-}
-
-.stack-plan-card .stack-plan-peek {
-    display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: var(--theme-ext-space-e0100a51c2);
-    padding: var(--theme-ext-space-16c0d9f312);
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
-    font-size: var(--theme-ext-size-d5aadd0be8);
-    background: var(--theme-ext-color-1f226a77aa);
 }
 
-.stack-plan-card[data-plan-kind="lifetime"] .stack-plan-peek {
-    background: var(--theme-ext-color-1034f38d64);
-}
-
-.stack-plan-card[data-plan-kind="yearly"] .stack-plan-peek {
-    background: var(--theme-ext-color-b0490aee06);
-}
-
-.stack-plan-card[data-plan-kind="monthly"] .stack-plan-peek {
-    background: var(--theme-ext-color-197c76433a);
-}
-
-.stack-plan-card .stack-plan-body {
-    padding: var(--theme-ext-space-09250e72d8);
-    border-top: 1px solid #e4e9f4;
-    min-height: 7.5rem;
-}
-
-.stack-plan-card.is-selected-plan {
-    transform: translateY(-2px);
-    box-shadow: var(--theme-ext-shadow-b289e9213c);
-    z-index: 6;
-}
-
-.stack-plan-card.is-checkout-selected {
-    border-color: var(--theme-ext-color-7630a14d9f);
-    box-shadow: var(--theme-ext-shadow-a9f9d9573c);
-}
-
-.stack-plan-card.is-disabled {
-    opacity: 0.76;
+#billingPlanToggle .plan-kind-toggle {
+    min-width: 7.5rem;
 }
 
 .features-checklist {
@@ -592,18 +668,20 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 @media (max-width: 768px) {
-    .tier-stack-shell {
+    .tier-choice-card {
         padding: var(--theme-ext-space-32524b311c);
     }
 
-    .stack-plan-card + .stack-plan-card,
-    .stack-plan-card:nth-of-type(3) {
-        margin-top: 0.55rem;
-        margin-left: 0.3rem;
+    #billingPlanToggle {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
     }
 
-    .stack-plan-card .stack-plan-body {
-        min-height: auto;
+    #billingPlanToggle .plan-kind-toggle {
+        min-width: 0;
+        border-radius: var(--theme-ext-radius-1f2f59cc9c) !important;
     }
 
     .features-checklist {
