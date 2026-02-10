@@ -107,6 +107,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout + add-on activation
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
+- **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/__init__.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)
@@ -177,6 +178,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
+- **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
