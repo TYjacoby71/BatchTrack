@@ -110,3 +110,17 @@ def test_non_suspicious_unknown_path_does_not_auto_block(app):
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
+
+
+def test_robots_txt_unknown_path_does_not_auto_block(app):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    response = client.get("/robots.txt", follow_redirects=False)
+    assert response.status_code == 404
+
+    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
+    assert "127.0.0.1" not in (state.get("blocked_ips") or [])
+
+    still_public = client.get("/tools/", follow_redirects=False)
+    assert still_public.status_code == 200
