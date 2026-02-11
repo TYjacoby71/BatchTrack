@@ -377,6 +377,13 @@ soapToolPage {
 #soapToolPage .soap-input-suffix .form-control {
   padding-right: calc(var(--soap-addon-width) + var(--space-1));
 }
+#soapToolPage .soap-input-suffix .form-control.is-invalid,
+#soapToolPage .soap-input-suffix .form-control.is-valid,
+#soapToolPage .was-validated .soap-input-suffix .form-control:invalid,
+#soapToolPage .was-validated .soap-input-suffix .form-control:valid {
+  padding-right: calc(var(--soap-addon-width) + 1.6rem + var(--space-1));
+  background-position: right calc(var(--soap-addon-width) - 0.15rem) center;
+}
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
