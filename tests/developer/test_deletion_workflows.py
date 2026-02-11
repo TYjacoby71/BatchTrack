@@ -58,6 +58,7 @@ def test_delete_organization_archives_marketplace_recipes_and_detaches_links(app
         )
         db.session.add(seller_recipe)
         db.session.flush()
+        seller_recipe_id = seller_recipe.id
 
         imported_recipe = Recipe(
             name=_uniq("imported_recipe"),
@@ -68,9 +69,9 @@ def test_delete_organization_archives_marketplace_recipes_and_detaches_links(app
             created_by=buyer_user.id,
             org_origin_purchased=True,
             org_origin_source_org_id=seller_org.id,
-            org_origin_source_recipe_id=seller_recipe.id,
-            cloned_from_id=seller_recipe.id,
-            root_recipe_id=seller_recipe.id,
+            org_origin_source_recipe_id=seller_recipe_id,
+            cloned_from_id=seller_recipe_id,
+            root_recipe_id=seller_recipe_id,
         )
         db.session.add(imported_recipe)
         db.session.flush()
@@ -78,7 +79,7 @@ def test_delete_organization_archives_marketplace_recipes_and_detaches_links(app
         lineage_event = RecipeLineage(
             organization_id=buyer_org.id,
             recipe_id=imported_recipe.id,
-            source_recipe_id=seller_recipe.id,
+            source_recipe_id=seller_recipe_id,
             event_type="IMPORT",
             user_id=buyer_user.id,
         )
@@ -107,7 +108,7 @@ def test_delete_organization_archives_marketplace_recipes_and_detaches_links(app
         payload = json.loads(archive_files[0].read_text(encoding="utf-8"))
         assert payload["organization"]["id"] == seller_org.id
         assert payload["recipe_count"] == 1
-        assert payload["recipes"][0]["id"] == seller_recipe.id
+        assert payload["recipes"][0]["id"] == seller_recipe_id
 
 
 def test_hard_delete_user_preserves_org_records_and_nulls_user_links(app):
