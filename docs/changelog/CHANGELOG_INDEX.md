@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Stripe Cancellation During Customer Deletion](2026-02-11-stripe-cancellation-on-customer-deletion.md)**
+  - Added pre-delete Stripe cancellation guard for organization hard-delete and final-customer hard-delete.
+  - Deletions now abort when Stripe cancellation fails to prevent orphan billing.
+  - Added tests covering both success and failure cancellation paths.
 - **[2026-02-11: Billing Access Policy Extraction + Inactive Organization Lockout](2026-02-11-billing-access-policy-and-inactive-org-lockout.md)**
   - Fixed `/billing/upgrade` redirect-loop behavior for recoverable billing states.
   - Extracted billing access decisions into `BillingAccessPolicyService` and simplified middleware responsibilities.

@@ -209,12 +209,36 @@ class UserService:
 
         username = user.username
         try:
+            from app.services.billing_service import BillingService
             from app.services.developer.deletion_utils import clear_user_foreign_keys
+
+            stripe_cancelled = False
+            org = user.organization
+            if org and org.stripe_customer_id:
+                remaining_customer_users = (
+                    User.query.filter(
+                        User.organization_id == org.id,
+                        User.user_type == "customer",
+                        User.id != user.id,
+                        User.is_deleted.is_(False),
+                    ).count()
+                )
+                # If this is the final customer account in the organization, cancel billing first.
+                if remaining_customer_users == 0:
+                    stripe_cancelled = BillingService.cancel_subscription(org.stripe_customer_id)
+                    if not stripe_cancelled:
+                        return (
+                            False,
+                            "Failed to cancel Stripe subscription before deleting final customer account.",
+                        )
 
             clear_user_foreign_keys([user.id])
             db.session.delete(user)
             db.session.commit()
-            return True, f'User "{username}" permanently deleted'
+            message = f'User "{username}" permanently deleted'
+            if stripe_cancelled:
+                message += " Stripe subscription canceled."
+            return True, message
         except Exception as exc:  # pragma: no cover - defensive
             db.session.rollback()
             return False, str(exc)

@@ -118,7 +118,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: Service ownership and key workflows.
 
 ### Entries (placeholder)
-- **BillingService** → Tier checkout + add-on activation
+- **BillingService** → Tier checkout, add-on activation, and Stripe subscription cancellation primitives used by billing flows and destructive account cleanup (see `app/services/billing_service.py`)
 - **BillingAccessPolicyService** → Canonical billing-access policy evaluator that returns `allow`, `require_upgrade`, or `hard_lock` decisions for auth flows (see `app/services/billing_access_policy_service.py`)
 - **BillingAccessDecision** → Structured decision payload containing action + reason + message for billing gates (see `app/services/billing_access_policy_service.py`)
 - **RetentionService** → Function-key retention entitlements
