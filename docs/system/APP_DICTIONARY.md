@@ -63,6 +63,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
+- **/billing/upgrade** → Recoverable billing remediation page for `payment_failed`/`past_due` organizations (see `app/blueprints/billing/routes.py` and `app/services/billing_access_policy_service.py`)
+- **/auth/login (inactive org lockout)** → Login denies customer access when organization status is hard-locked (`suspended`/`canceled`/inactive) and instructs users to contact support (see `app/blueprints/auth/login_routes.py`)
 - **/api/recipes/prefix** → Generate a unique label prefix for recipe names (see `app/blueprints/api/routes.py`)
 - **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
@@ -117,6 +119,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **BillingService** → Tier checkout + add-on activation
+- **BillingAccessPolicyService** → Canonical billing-access policy evaluator that returns `allow`, `require_upgrade`, or `hard_lock` decisions for auth flows (see `app/services/billing_access_policy_service.py`)
+- **BillingAccessDecision** → Structured decision payload containing action + reason + message for billing gates (see `app/services/billing_access_policy_service.py`)
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
@@ -153,7 +157,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **IngredientHandler** → Stock check handler for ingredients (see `app/services/stock_check/handlers/ingredient_handler.py`)
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
 - **Extensions Registry** → Shared app extensions (see `app/extensions.py`)
-- **Security Middleware** → Permission and bot checks (see `app/middleware.py`)
+- **Security Middleware** → Request-layer enforcer for permission/bot checks and billing decision application (redirect/logout/JSON behavior) using service-provided policy decisions (see `app/middleware.py`)
 
 ---
 

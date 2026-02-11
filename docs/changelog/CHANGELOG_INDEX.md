@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Billing Access Policy Extraction + Inactive Organization Lockout](2026-02-11-billing-access-policy-and-inactive-org-lockout.md)**
+  - Fixed `/billing/upgrade` redirect-loop behavior for recoverable billing states.
+  - Extracted billing access decisions into `BillingAccessPolicyService` and simplified middleware responsibilities.
+  - Enforced consistent hard-lock login/session behavior for inactive organizations.
 - **[2026-02-11: PR Documentation Guard + Dictionary Schema Enforcement](2026-02-11-pr-documentation-guard-and-dictionary-schema-enforcement.md)**
   - Added automated guard for synopsis/glossary headers, functional-unit blocks, and dictionary/changelog alignment.
   - Enforced one-entry dictionary term uniqueness and link/path validation.

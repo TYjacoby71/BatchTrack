@@ -67,14 +67,25 @@ class TestBillingAndTierEnforcement:
             # This MUST FAIL. The tier is the ceiling. This is the critical test.
             assert user.has_permission(AppPermission.PRODUCT_CREATE) is False
 
-    @pytest.mark.parametrize("billing_status, expected_status_code", [
-        ('active', 200),
-        ('payment_failed', 302),
-        ('past_due', 302),
-        ('suspended', 302),
-        ('canceled', 302),
-    ])
-    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+    @pytest.mark.parametrize(
+        "billing_status, expected_status_code, expected_redirect_fragment",
+        [
+            ('active', 200, None),
+            ('payment_failed', 302, '/billing/upgrade'),
+            ('past_due', 302, '/billing/upgrade'),
+            ('suspended', 302, '/auth/login'),
+            ('canceled', 302, '/auth/login'),
+        ],
+    )
+    def test_billing_status_enforcement(
+        self,
+        app,
+        client,
+        test_user,
+        billing_status,
+        expected_status_code,
+        expected_redirect_fragment,
+    ):
         """
         Tests that the billing middleware blocks access for non-active billing statuses.
         """
@@ -129,9 +140,68 @@ class TestBillingAndTierEnforcement:
             # ASSERT
             assert response.status_code == expected_status_code
 
-            # If redirected, ensure it's to the correct billing page
             if expected_status_code == 302:
-                assert '/billing/upgrade' in response.location or '/billing' in response.location
+                assert expected_redirect_fragment in response.location
+                if expected_redirect_fragment == '/auth/login':
+                    with client.session_transaction() as sess:
+                        assert '_user_id' not in sess
+
+    def test_recoverable_billing_status_allows_upgrade_page_without_loop(self, app, client, test_user):
+        """
+        Regression test for redirect loops: /billing/upgrade must be reachable
+        for recoverable billing states (e.g. past_due) without self-redirecting.
+        """
+        with app.app_context():
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+
+            fresh_org.billing_status = 'past_due'
+            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
+                paid_tier = SubscriptionTier.query.filter_by(billing_provider='stripe').first()
+                if not paid_tier:
+                    paid_tier = SubscriptionTier(
+                        name='Paid Tier',
+                        billing_provider='stripe',
+                        user_limit=10,
+                    )
+                    db.session.add(paid_tier)
+                    db.session.flush()
+                fresh_org.subscription_tier_id = paid_tier.id
+            db.session.commit()
+
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(fresh_user.id)
+                sess['_fresh'] = True
+
+            response = client.get('/billing/upgrade', follow_redirects=False)
+            assert response.status_code == 200
+
+    def test_login_rejects_inactive_organization(self, app, client, test_user):
+        """
+        Users tied to inactive/canceled organizations should be denied login with
+        a clear support message and no authenticated session.
+        """
+        with app.app_context():
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+
+            fresh_user.set_password('password-123')
+            fresh_org.billing_status = 'canceled'
+            db.session.commit()
+
+            response = client.post(
+                '/auth/login',
+                data={
+                    'username': fresh_user.username,
+                    'password': 'password-123',
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b'organization is currently inactive' in response.data.lower()
+            with client.session_transaction() as sess:
+                assert '_user_id' not in sess
 
     def test_developer_can_masquerade_regardless_of_billing(self, app, client):
         """

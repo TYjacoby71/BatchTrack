@@ -32,7 +32,9 @@ from .extensions import db
 from .route_access import RouteAccessConfig
 from .utils.permissions import PermissionScope, resolve_permission_scope
 from .services.middleware_probe_service import MiddlewareProbeService
+from .services.billing_access_policy_service import BillingAccessAction, BillingAccessPolicyService
 from .services.public_bot_trap_service import PublicBotTrapService
+from .services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +92,29 @@ def _wants_json_response() -> bool:
     return request.path.startswith("/api/") or (
         "application/json" in accepts and not accepts.accept_html
     )
+
+
+# --- Force logout for billing lock ---
+# Purpose: Invalidate current session when org access is hard-locked.
+def _force_logout_for_billing_lock() -> None:
+    try:
+        if current_user.is_authenticated:
+            current_user.active_session_token = None
+            db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            SessionService.clear_session_state()
+        except Exception:
+            pass
+        try:
+            logout_user()
+        except Exception:
+            pass
 
 
 # --- Developer action logging ---
@@ -380,7 +405,6 @@ def _handle_developer_context(
 def _enforce_billing() -> Response | None:
     try:
         from .models import Organization
-        from .services.billing_service import BillingService
 
         organization = getattr(current_user, "organization", None)
         if organization is None:
@@ -391,34 +415,58 @@ def _enforce_billing() -> Response | None:
         if not organization:
             return None
 
-        tier_obj = getattr(organization, "subscription_tier_obj", None)
-        billing_status = (organization.billing_status or "active").lower()
+        path = request.path
+        endpoint = request.endpoint
+        is_exempt_request = BillingAccessPolicyService.is_enforcement_exempt_route(path, endpoint)
+        decision = BillingAccessPolicyService.evaluate_organization(organization)
 
-        if tier_obj and not tier_obj.is_billing_exempt:
-            if billing_status in {"payment_failed", "past_due"}:
-                return redirect(url_for("billing.upgrade"))
-            if billing_status in {"suspended", "canceled", "cancelled"}:
-                try:
-                    flash("Your organization does not have an active subscription. Please update billing.", "error")
-                except Exception:
-                    pass
-                return redirect(url_for("billing.upgrade"))
+        if decision.action == BillingAccessAction.ALLOW:
+            return None
 
-        access_valid, access_reason = BillingService.validate_tier_access(organization)
-        if not access_valid:
-            logger.warning(
-                "Billing access denied for org %s: %s",
-                getattr(organization, "id", None),
-                access_reason,
-            )
-            if access_reason in {"payment_required", "subscription_canceled"}:
-                return redirect(url_for("billing.upgrade"))
-            if access_reason == "organization_suspended":
-                try:
-                    flash("Your organization has been suspended. Please contact support.", "error")
-                except Exception:
-                    pass
-                return redirect(url_for("billing.upgrade"))
+        logger.warning(
+            "Billing access decision for org %s: action=%s reason=%s",
+            getattr(organization, "id", None),
+            decision.action,
+            decision.reason,
+        )
+
+        if decision.action == BillingAccessAction.HARD_LOCK:
+            _force_logout_for_billing_lock()
+            if _wants_json_response():
+                return (
+                    jsonify(
+                        {
+                            "error": "organization_inactive",
+                            "message": decision.message,
+                        }
+                    ),
+                    403,
+                )
+            try:
+                flash(decision.message, "error")
+            except Exception:
+                pass
+            return redirect(url_for("auth.login"))
+
+        if decision.action == BillingAccessAction.REQUIRE_UPGRADE:
+            if is_exempt_request:
+                return None
+            if _wants_json_response():
+                return (
+                    jsonify(
+                        {
+                            "error": "billing_required",
+                            "message": decision.message,
+                            "upgrade_url": url_for("billing.upgrade"),
+                        }
+                    ),
+                    403,
+                )
+            try:
+                flash(decision.message, "warning")
+            except Exception:
+                pass
+            return redirect(url_for("billing.upgrade"))
 
         return None
     except Exception as exc:
