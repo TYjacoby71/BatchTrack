@@ -29,6 +29,7 @@ from ...models.subscription_tier import SubscriptionTier
 from ...services.email_service import EmailService
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
+from ...services.billing_access_policy_service import BillingAccessAction, BillingAccessPolicyService
 from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
 
@@ -212,6 +213,32 @@ def login():
                     show_forgot_password=show_forgot_password,
                     show_resend_verification=show_resend_verification,
                 )
+
+            if user.user_type != "developer":
+                organization = getattr(user, "organization", None)
+                billing_decision = BillingAccessPolicyService.evaluate_organization(organization)
+                if billing_decision.action == BillingAccessAction.HARD_LOCK:
+                    _log_loadtest_login_context(
+                        "inactive_organization",
+                        {
+                            "username": username,
+                            "organization_present": organization is not None,
+                            "organization_billing_status": (
+                                (getattr(organization, "billing_status", "inactive") or "inactive").lower()
+                                if organization is not None
+                                else "inactive"
+                            ),
+                            "billing_reason": billing_decision.reason,
+                        },
+                    )
+                    flash(billing_decision.message)
+                    return render_template(
+                        "pages/auth/login.html",
+                        form=form,
+                        oauth_available=oauth_available,
+                        show_forgot_password=show_forgot_password,
+                        show_resend_verification=show_resend_verification,
+                    )
 
             if user.user_type != "developer" and user.email and not user.email_verified:
                 sent = _send_verification_if_needed(user)
