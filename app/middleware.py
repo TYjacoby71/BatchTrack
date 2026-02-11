@@ -27,6 +27,8 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, logout_user
+from werkzeug.exceptions import MethodNotAllowed, NotFound
+from werkzeug.routing import RequestRedirect
 
 from .extensions import db
 from .route_access import RouteAccessConfig
@@ -89,6 +91,25 @@ def _wants_json_response() -> bool:
     return request.path.startswith("/api/") or (
         "application/json" in accepts and not accepts.accept_html
     )
+
+
+# --- Unknown endpoint status ---
+# Purpose: Derive lightweight response status for unmatched routes.
+def _unknown_endpoint_status() -> int | None:
+    routing_error = getattr(request, "routing_exception", None)
+    if routing_error is None:
+        return 404
+    if isinstance(routing_error, RequestRedirect):
+        # Let Flask apply canonical slash/host redirects for valid routes.
+        return None
+    if isinstance(routing_error, MethodNotAllowed):
+        return 405
+    if isinstance(routing_error, NotFound):
+        return 404
+    code = getattr(routing_error, "code", None)
+    if isinstance(code, int) and 400 <= code < 600:
+        return code
+    return 404
 
 
 # --- Developer action logging ---
@@ -237,11 +258,19 @@ def register_middleware(app: Flask) -> None:
             level_name = str(current_app.config.get("ANON_REQUEST_LOG_LEVEL", "DEBUG")).upper()
             log_level = getattr(logging, level_name, logging.DEBUG)
             if request.endpoint is None:
+                status_code = _unknown_endpoint_status()
+                if status_code is None:
+                    return None
                 logger.warning(
                     "Unauthenticated request to unknown endpoint: %s; user_agent=%s",
                     endpoint_info,
                     request.headers.get("User-Agent", "unknown")[:100],
                 )
+                if _wants_json_response():
+                    message = "Method not allowed" if status_code == 405 else "Not found"
+                    return jsonify({"error": message}), status_code
+                body = "Method Not Allowed" if status_code == 405 else "Not Found"
+                return (body, status_code)
             elif logger.isEnabledFor(log_level):
                 logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
 
