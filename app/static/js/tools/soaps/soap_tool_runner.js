@@ -93,7 +93,6 @@
       if (!waterPct || waterPct <= 0) {
         waterPct = 33;
       }
-      waterPct = clamp(waterPct, 20, 50);
       const input = document.getElementById('waterPct');
       if (input) input.value = round(waterPct, 1);
     }
