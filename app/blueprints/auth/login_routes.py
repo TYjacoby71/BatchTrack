@@ -358,6 +358,8 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                show_public_header=True,
+                public_header_signup_source="quick_signup",
             )
 
         if PublicBotTrapService.is_blocked(
@@ -383,6 +385,8 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                show_public_header=True,
+                public_header_signup_source="quick_signup",
             )
 
         existing_by_email = User.query.filter_by(email=email).first()
@@ -472,6 +476,8 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                show_public_header=True,
+                public_header_signup_source="quick_signup",
             )
 
     next_url = _safe_next_path(request.args.get("next")) or url_for("inventory.list_inventory")
@@ -491,6 +497,8 @@ def quick_signup():
         global_item_name=global_item_name,
         prefill_name="",
         prefill_email="",
+        show_public_header=True,
+        public_header_signup_source="quick_signup",
     )
 
 

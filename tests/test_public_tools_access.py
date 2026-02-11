@@ -51,6 +51,27 @@ def test_anonymous_workflow_can_browse_public_site(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_signup_page_uses_public_marketing_shell(app):
+    """Signup should render the public marketing shell, not app/auth nav."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/signup", label="signup page")
+    html = response.get_data(as_text=True)
+    assert "public-shell" in html
+    assert "public-marketing-nav" in html
+    assert "Login to App" in html
+
+
+@pytest.mark.usefixtures("app")
+def test_quick_signup_page_uses_public_marketing_shell(app):
+    """Quick signup should keep public styling when opened from public pages."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/quick-signup", label="quick signup page")
+    html = response.get_data(as_text=True)
+    assert "public-shell" in html
+    assert "public-marketing-nav" in html
+
+
+@pytest.mark.usefixtures("app")
 def test_staging_homepage_variant_switcher_visibility(app):
     """Homepage variant switcher should only appear in staging."""
     client = app.test_client()
