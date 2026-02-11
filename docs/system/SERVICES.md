@@ -178,11 +178,23 @@ alerts = DashboardAlertService.get_dashboard_alerts(max_alerts=3)
 - Consolidates all former `StripeService` logic into a single authority
 - Exposes tier helpers (`get_tier_for_organization`, `validate_tier_access`, etc.) for middleware
 
-### 9. Timer Service (`app/services/timer_service.py`)
+### 9. Billing Access Policy Service (`app/services/billing_access_policy_service.py`)
+
+**Authority:** Billing-access policy decisions for customer auth flows
+
+**Key Functions:**
+- `evaluate_organization(organization)` – returns `allow`, `require_upgrade`, or `hard_lock` decision objects
+- `is_enforcement_exempt_route(path, endpoint)` – prevents self-redirect loops on billing routes
+
+**Notes:**
+- Keeps business policy out of request middleware
+- Used by both middleware and login flows so hard-lock behavior is consistent
+
+### 10. Timer Service (`app/services/timer_service.py`)
 
 **Authority:** Production timer management
 
-### 10. Product Service (`app/services/product_service.py`)
+### 11. Product Service (`app/services/product_service.py`)
 
 **Authority:** Product lifecycle and variant management
 

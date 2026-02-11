@@ -17,6 +17,10 @@ from enum import Enum
 from .billing_service import BillingService
 
 
+# --- Billing access action enum ---
+# Purpose: Standardize high-level access actions for billing gates.
+# Inputs: N/A.
+# Outputs: Enum values consumed by middleware/login flows.
 class BillingAccessAction(str, Enum):
     """Top-level action the caller should take for a request."""
 
@@ -25,6 +29,10 @@ class BillingAccessAction(str, Enum):
     HARD_LOCK = "hard_lock"
 
 
+# --- Billing access decision ---
+# Purpose: Carry policy result data from service to callers.
+# Inputs: action, reason, message.
+# Outputs: Immutable decision object.
 @dataclass(frozen=True)
 class BillingAccessDecision:
     """Result of evaluating organization billing access."""
@@ -34,12 +42,20 @@ class BillingAccessDecision:
     message: str
 
 
+# --- Billing access policy service ---
+# Purpose: Centralize organization billing-access policy evaluation.
+# Inputs: organization-like object and route context.
+# Outputs: BillingAccessDecision and route exemption booleans.
 class BillingAccessPolicyService:
     """Policy engine for org billing access and route exemptions."""
 
     _RECOVERY_STATUSES = {"payment_failed", "past_due"}
     _HARD_LOCK_STATUSES = {"suspended", "canceled", "cancelled"}
 
+    # --- Evaluate organization billing access ---
+    # Purpose: Map organization state to a single access decision.
+    # Inputs: organization model/object with billing and tier state.
+    # Outputs: BillingAccessDecision(action/reason/message).
     @classmethod
     def evaluate_organization(cls, organization) -> BillingAccessDecision:
         """Evaluate a customer's organization and return a policy decision."""
@@ -98,6 +114,10 @@ class BillingAccessPolicyService:
             message="",
         )
 
+    # --- Billing-route exemption check ---
+    # Purpose: Identify routes that should bypass upgrade self-redirect logic.
+    # Inputs: request path and endpoint.
+    # Outputs: True when route is billing-enforcement exempt.
     @staticmethod
     def is_enforcement_exempt_route(path: str, endpoint: str | None) -> bool:
         """Return True when billing middleware should not re-redirect this route."""

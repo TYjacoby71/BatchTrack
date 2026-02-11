@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Billing Access Policy Extraction + Inactive Organization Lockout](2026-02-11-billing-access-policy-and-inactive-org-lockout.md)**
+  - Fixed `/billing/upgrade` redirect-loop behavior for recoverable billing states.
+  - Extracted billing access decisions into `BillingAccessPolicyService` and simplified middleware responsibilities.
+  - Enforced consistent hard-lock login/session behavior for inactive organizations.
 - **[2026-02-10: Staging Homepage Variant Toggle in Public Nav](2026-02-10-staging-homepage-variant-nav-toggle.md)**
   - Added a staging-only "Home Variants" dropdown in public navigation.
   - Added quick links to classic homepage, `/lp/hormozi`, and `/lp/robbins`.
