@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Flask, current_app, session
+from flask import Flask, current_app, request, session
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
@@ -35,6 +35,23 @@ from .utils.timezone_utils import TimezoneUtils
 
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
+_MARKETING_CONTEXT_ENDPOINTS = {"index", "homepage", "public_page"}
+
+
+def _default_marketing_context() -> Dict[str, Any]:
+    return {
+        "marketing_reviews": [],
+        "marketing_spotlights": [],
+        "marketing_stats": {
+            "total_active_users": 0,
+            "lifetime_left": 0,
+            "lifetime_true_left": 0,
+            "lifetime_total": 0,
+        },
+        "marketing_lifetime_offers": [],
+        "marketing_messages": {"day_1": "", "day_3": "", "day_5": ""},
+        "marketing_settings": {"promo_codes": [], "demo_url": "", "demo_videos": []},
+    }
 
 
 def _serialize_ingredient_category(category) -> Dict[str, Any]:
@@ -194,6 +211,11 @@ def register_template_context(app: Flask) -> None:
 
     @app.context_processor
     def _inject_marketing_content() -> Dict[str, Any]:
+        # Most templates do not consume marketing payloads; avoid unnecessary
+        # DB and Stripe lookups on unrelated pages (e.g., auth/login redirects).
+        if request.endpoint not in _MARKETING_CONTEXT_ENDPOINTS:
+            return _default_marketing_context()
+
         try:
             from .models import Organization, User
             from .models.subscription_tier import SubscriptionTier
