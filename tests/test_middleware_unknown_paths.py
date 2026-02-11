@@ -1,4 +1,5 @@
 from app.utils.cache_manager import app_cache
+from app.utils.json_store import read_json_file
 
 
 def test_unknown_unauthenticated_path_returns_404(app):
@@ -67,3 +68,43 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
 
     assert response.status_code == 200
     assert calls
+
+
+def test_suspicious_unknown_probe_auto_blocks_request_ip(app, tmp_path):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    trap_path = tmp_path / "bot_traps.json"
+    original_path = PublicBotTrapService.BOT_TRAP_FILE
+    PublicBotTrapService.BOT_TRAP_FILE = str(trap_path)
+    try:
+        response = client.get("/wp-admin/setup-config.php", follow_redirects=False)
+        assert response.status_code == 404
+
+        state = read_json_file(str(trap_path), default={}) or {}
+        assert "127.0.0.1" in (state.get("blocked_ips") or [])
+
+        blocked_response = client.get("/tools/", follow_redirects=False)
+        assert blocked_response.status_code == 403
+    finally:
+        PublicBotTrapService.BOT_TRAP_FILE = original_path
+
+
+def test_non_suspicious_unknown_path_does_not_auto_block(app, tmp_path):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    trap_path = tmp_path / "bot_traps.json"
+    original_path = PublicBotTrapService.BOT_TRAP_FILE
+    PublicBotTrapService.BOT_TRAP_FILE = str(trap_path)
+    try:
+        response = client.get("/totally-made-up-page", follow_redirects=False)
+        assert response.status_code == 404
+
+        state = read_json_file(str(trap_path), default={}) or {}
+        assert "127.0.0.1" not in (state.get("blocked_ips") or [])
+
+        still_public = client.get("/tools/", follow_redirects=False)
+        assert still_public.status_code == 200
+    finally:
+        PublicBotTrapService.BOT_TRAP_FILE = original_path

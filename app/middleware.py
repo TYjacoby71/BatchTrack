@@ -55,6 +55,60 @@ DEFAULT_SECURITY_HEADERS = {
     ),
 }
 
+_SUSPICIOUS_UNKNOWN_PATH_PREFIXES = (
+    "/wp-",
+    "/wordpress",
+    "/xmlrpc.php",
+    "/phpmyadmin",
+    "/pma",
+    "/adminer",
+    "/cgi-bin",
+    "/.git",
+    "/.svn",
+    "/.hg",
+    "/.env",
+    "/vendor/phpunit",
+)
+
+_SUSPICIOUS_UNKNOWN_PATH_TOKENS = (
+    "wp-content",
+    "wp-includes",
+    "wp-admin",
+    ".env",
+    "docker-compose",
+    "nginx.conf",
+    "httpd.conf",
+    "selfsigned",
+    "cert.pem",
+    "ssl.key",
+    "secret",
+    "setup-config.php",
+    "app_dev.php",
+    "config_dev.php",
+    "phpmyadmin",
+    "adminer.php",
+)
+
+_SUSPICIOUS_UNKNOWN_PATH_SUFFIXES = (
+    ".php",
+    ".asp",
+    ".aspx",
+    ".jsp",
+    ".cgi",
+    ".pl",
+    ".env",
+    ".ini",
+    ".conf",
+    ".yml",
+    ".yaml",
+    ".sql",
+    ".bak",
+    ".pem",
+    ".key",
+    ".crt",
+    ".sh",
+)
+
 
 # --- Config flag ---
 # Purpose: Resolve boolean config values from app config.
@@ -110,6 +164,48 @@ def _unknown_endpoint_status() -> int | None:
     if isinstance(code, int) and 400 <= code < 600:
         return code
     return 404
+
+
+# --- Suspicious unknown path detection ---
+# Purpose: Identify high-signal scanner probe paths.
+def _is_suspicious_unknown_path(path: str) -> bool:
+    normalized_path = (path or "").strip().lower()
+    if not normalized_path or normalized_path == "/":
+        return False
+    if any(normalized_path.startswith(prefix) for prefix in _SUSPICIOUS_UNKNOWN_PATH_PREFIXES):
+        return True
+    if any(token in normalized_path for token in _SUSPICIOUS_UNKNOWN_PATH_TOKENS):
+        return True
+    last_segment = normalized_path.rsplit("/", 1)[-1]
+    if any(last_segment.endswith(suffix) for suffix in _SUSPICIOUS_UNKNOWN_PATH_SUFFIXES):
+        return True
+    return False
+
+
+# --- Auto-block suspicious unknown request ---
+# Purpose: Add scanner probe IPs to bot-trap blocklist.
+def _auto_block_suspicious_unknown_request(path: str, status_code: int) -> None:
+    if not _is_suspicious_unknown_path(path):
+        return
+    try:
+        request_ip = PublicBotTrapService.resolve_request_ip(request)
+        if not request_ip or PublicBotTrapService.is_blocked(ip=request_ip):
+            return
+        PublicBotTrapService.record_hit(
+            request=request,
+            source="middleware_unknown_endpoint",
+            reason="suspicious_unknown_path",
+            extra={"status_code": status_code, "path": path},
+            block=True,
+        )
+        logger.warning(
+            "Auto-blocked suspicious unknown-path probe: path=%s ip=%s status=%s",
+            path,
+            request_ip,
+            status_code,
+        )
+    except Exception as exc:
+        logger.warning("Unable to auto-block suspicious unknown path %s: %s", path, exc)
 
 
 # --- Developer action logging ---
@@ -261,6 +357,7 @@ def register_middleware(app: Flask) -> None:
                 status_code = _unknown_endpoint_status()
                 if status_code is None:
                     return None
+                _auto_block_suspicious_unknown_request(path, status_code)
                 logger.warning(
                     "Unauthenticated request to unknown endpoint: %s; user_agent=%s",
                     endpoint_info,
