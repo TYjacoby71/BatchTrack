@@ -150,3 +150,20 @@ class UserService:
             return False, "Cannot soft delete developer users"
         user.soft_delete(current_user)
         return True, "User soft deleted successfully"
+
+    @staticmethod
+    def hard_delete_user(user: User) -> Tuple[bool, str]:
+        if user.user_type == "developer":
+            return False, "Cannot hard delete developer users"
+
+        username = user.username
+        try:
+            from app.services.developer.deletion_utils import clear_user_foreign_keys
+
+            clear_user_foreign_keys([user.id])
+            db.session.delete(user)
+            db.session.commit()
+            return True, f'User "{username}" permanently deleted'
+        except Exception as exc:  # pragma: no cover - defensive
+            db.session.rollback()
+            return False, str(exc)

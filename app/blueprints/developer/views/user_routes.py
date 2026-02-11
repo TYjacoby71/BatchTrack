@@ -133,3 +133,14 @@ def soft_delete_user():
     success, message = UserService.soft_delete_user(user)
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status
+
+
+@developer_bp.route("/api/user/hard-delete", methods=["POST"])
+@require_developer_permission("dev.manage_users")
+def hard_delete_user():
+    """Hard delete a user while preserving tenant data integrity."""
+    data = request.get_json() or {}
+    user = User.query.get_or_404(data.get("user_id"))
+    success, message = UserService.hard_delete_user(user)
+    status = 200 if success else 400
+    return jsonify({"success": success, "message": message}), status
