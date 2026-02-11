@@ -33,6 +33,7 @@ from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
+_BILLING_HARD_LOCK_STATUSES = {"suspended", "canceled", "cancelled"}
 
 
 # --- Loadtest login diagnostics ---
@@ -212,6 +213,32 @@ def login():
                     show_forgot_password=show_forgot_password,
                     show_resend_verification=show_resend_verification,
                 )
+
+            if user.user_type != "developer":
+                organization = getattr(user, "organization", None)
+                organization_active = bool(getattr(organization, "is_active", False))
+                organization_billing_status = (
+                    (getattr(organization, "billing_status", "inactive") or "inactive").lower()
+                    if organization is not None
+                    else "inactive"
+                )
+                if (not organization_active) or (organization_billing_status in _BILLING_HARD_LOCK_STATUSES):
+                    _log_loadtest_login_context(
+                        "inactive_organization",
+                        {
+                            "username": username,
+                            "organization_present": organization is not None,
+                            "organization_billing_status": organization_billing_status,
+                        },
+                    )
+                    flash("Your organization is currently inactive. Please contact support immediately.")
+                    return render_template(
+                        "pages/auth/login.html",
+                        form=form,
+                        oauth_available=oauth_available,
+                        show_forgot_password=show_forgot_password,
+                        show_resend_verification=show_resend_verification,
+                    )
 
             if user.user_type != "developer" and user.email and not user.email_verified:
                 sent = _send_verification_if_needed(user)

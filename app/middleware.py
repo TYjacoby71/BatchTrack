@@ -33,8 +33,12 @@ from .route_access import RouteAccessConfig
 from .utils.permissions import PermissionScope, resolve_permission_scope
 from .services.middleware_probe_service import MiddlewareProbeService
 from .services.public_bot_trap_service import PublicBotTrapService
+from .services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
+
+_BILLING_RECOVERY_STATUSES = {"payment_failed", "past_due"}
+_BILLING_HARD_LOCK_STATUSES = {"suspended", "canceled", "cancelled"}
 
 DEFAULT_SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
@@ -90,6 +94,39 @@ def _wants_json_response() -> bool:
     return request.path.startswith("/api/") or (
         "application/json" in accepts and not accepts.accept_html
     )
+
+
+# --- Billing enforcement exemption ---
+# Purpose: Avoid billing self-redirect loops on billing routes.
+def _is_billing_enforcement_exempt(path: str, endpoint: str | None) -> bool:
+    if path == "/billing" or path.startswith("/billing/"):
+        return True
+    if endpoint and endpoint.startswith("billing."):
+        return True
+    return False
+
+
+# --- Force logout for billing lock ---
+# Purpose: Invalidate current session when org access is hard-locked.
+def _force_logout_for_billing_lock() -> None:
+    try:
+        if current_user.is_authenticated:
+            current_user.active_session_token = None
+            db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            SessionService.clear_session_state()
+        except Exception:
+            pass
+        try:
+            logout_user()
+        except Exception:
+            pass
 
 
 # --- Developer action logging ---
@@ -393,16 +430,54 @@ def _enforce_billing() -> Response | None:
 
         tier_obj = getattr(organization, "subscription_tier_obj", None)
         billing_status = (organization.billing_status or "active").lower()
+        path = request.path
+        endpoint = request.endpoint
+        is_exempt_request = _is_billing_enforcement_exempt(path, endpoint)
 
-        if tier_obj and not tier_obj.is_billing_exempt:
-            if billing_status in {"payment_failed", "past_due"}:
-                return redirect(url_for("billing.upgrade"))
-            if billing_status in {"suspended", "canceled", "cancelled"}:
-                try:
-                    flash("Your organization does not have an active subscription. Please update billing.", "error")
-                except Exception:
-                    pass
-                return redirect(url_for("billing.upgrade"))
+        # Hard lock: organization disabled or explicitly canceled/suspended.
+        hard_locked = (
+            not getattr(organization, "is_active", True)
+            or billing_status in _BILLING_HARD_LOCK_STATUSES
+        )
+        if hard_locked:
+            _force_logout_for_billing_lock()
+            if _wants_json_response():
+                return (
+                    jsonify(
+                        {
+                            "error": "organization_inactive",
+                            "message": "Your organization is currently inactive. Please contact support.",
+                        }
+                    ),
+                    403,
+                )
+            try:
+                flash("Your organization is currently inactive. Please contact support immediately.", "error")
+            except Exception:
+                pass
+            return redirect(url_for("auth.login"))
+
+        # Recoverable billing states should funnel to upgrade, but must never
+        # self-redirect when the user is already on billing routes.
+        if tier_obj and not tier_obj.is_billing_exempt and billing_status in _BILLING_RECOVERY_STATUSES:
+            if is_exempt_request:
+                return None
+            if _wants_json_response():
+                return (
+                    jsonify(
+                        {
+                            "error": "billing_required",
+                            "message": "Billing payment is required to continue.",
+                            "upgrade_url": url_for("billing.upgrade"),
+                        }
+                    ),
+                    403,
+                )
+            try:
+                flash("Your billing requires attention. Please update your subscription.", "warning")
+            except Exception:
+                pass
+            return redirect(url_for("billing.upgrade"))
 
         access_valid, access_reason = BillingService.validate_tier_access(organization)
         if not access_valid:
@@ -411,14 +486,38 @@ def _enforce_billing() -> Response | None:
                 getattr(organization, "id", None),
                 access_reason,
             )
-            if access_reason in {"payment_required", "subscription_canceled"}:
+            if access_reason == "payment_required":
+                if is_exempt_request:
+                    return None
+                if _wants_json_response():
+                    return (
+                        jsonify(
+                            {
+                                "error": "billing_required",
+                                "message": "Billing payment is required to continue.",
+                                "upgrade_url": url_for("billing.upgrade"),
+                            }
+                        ),
+                        403,
+                    )
                 return redirect(url_for("billing.upgrade"))
-            if access_reason == "organization_suspended":
+            if access_reason in {"subscription_canceled", "organization_suspended"}:
+                _force_logout_for_billing_lock()
+                if _wants_json_response():
+                    return (
+                        jsonify(
+                            {
+                                "error": "organization_inactive",
+                                "message": "Your organization is currently inactive. Please contact support.",
+                            }
+                        ),
+                        403,
+                    )
                 try:
-                    flash("Your organization has been suspended. Please contact support.", "error")
+                    flash("Your organization is currently inactive. Please contact support immediately.", "error")
                 except Exception:
                     pass
-                return redirect(url_for("billing.upgrade"))
+                return redirect(url_for("auth.login"))
 
         return None
     except Exception as exc:
