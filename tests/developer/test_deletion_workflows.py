@@ -7,6 +7,7 @@ from uuid import uuid4
 from app.extensions import db
 from app.models import InventoryItem, Organization, ProductCategory, Recipe, User
 from app.models.recipe import RecipeLineage
+from app.services.billing_service import BillingService
 from app.services.developer.organization_service import OrganizationService
 from app.services.developer.user_service import UserService
 
@@ -186,3 +187,121 @@ def test_hard_delete_user_rejects_developer_accounts(app):
         success, message = UserService.hard_delete_user(developer)
         assert success is False
         assert "developer" in message.lower()
+
+
+def test_delete_organization_cancels_stripe_subscription(app, monkeypatch):
+    cancelled_customer_ids: list[str] = []
+
+    def _fake_cancel_subscription(stripe_customer_id: str) -> bool:
+        cancelled_customer_ids.append(stripe_customer_id)
+        return True
+
+    monkeypatch.setattr(
+        BillingService,
+        "cancel_subscription",
+        staticmethod(_fake_cancel_subscription),
+    )
+
+    with app.app_context():
+        org = Organization(name=_uniq("org_with_stripe"), stripe_customer_id="cus_test_delete_org")
+        db.session.add(org)
+        db.session.commit()
+
+        success, message = OrganizationService.delete_organization(org)
+        assert success, message
+        assert "Stripe subscription canceled" in message
+        assert cancelled_customer_ids == ["cus_test_delete_org"]
+        assert db.session.get(Organization, org.id) is None
+
+
+def test_delete_organization_aborts_when_stripe_cancel_fails(app, monkeypatch):
+    def _fake_cancel_subscription(_stripe_customer_id: str) -> bool:
+        return False
+
+    monkeypatch.setattr(
+        BillingService,
+        "cancel_subscription",
+        staticmethod(_fake_cancel_subscription),
+    )
+
+    with app.app_context():
+        org = Organization(name=_uniq("org_stripe_fail"), stripe_customer_id="cus_fail_delete_org")
+        db.session.add(org)
+        db.session.commit()
+
+        success, message = OrganizationService.delete_organization(org)
+        assert success is False
+        assert "Failed to cancel Stripe subscription" in message
+        assert db.session.get(Organization, org.id) is not None
+
+
+def test_hard_delete_user_cancels_subscription_for_final_customer(app, monkeypatch):
+    cancelled_customer_ids: list[str] = []
+
+    def _fake_cancel_subscription(stripe_customer_id: str) -> bool:
+        cancelled_customer_ids.append(stripe_customer_id)
+        return True
+
+    monkeypatch.setattr(
+        BillingService,
+        "cancel_subscription",
+        staticmethod(_fake_cancel_subscription),
+    )
+
+    with app.app_context():
+        org = Organization(
+            name=_uniq("org_user_cancel"),
+            stripe_customer_id="cus_final_customer",
+        )
+        db.session.add(org)
+        db.session.flush()
+
+        user = User(
+            username=_uniq("last_customer"),
+            email=f"{_uniq('last')}@example.com",
+            organization_id=org.id,
+            user_type="customer",
+            is_active=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        success, message = UserService.hard_delete_user(user)
+        assert success, message
+        assert "Stripe subscription canceled" in message
+        assert cancelled_customer_ids == ["cus_final_customer"]
+        assert db.session.get(User, user.id) is None
+
+
+def test_hard_delete_user_aborts_when_final_customer_cancel_fails(app, monkeypatch):
+    def _fake_cancel_subscription(_stripe_customer_id: str) -> bool:
+        return False
+
+    monkeypatch.setattr(
+        BillingService,
+        "cancel_subscription",
+        staticmethod(_fake_cancel_subscription),
+    )
+
+    with app.app_context():
+        org = Organization(
+            name=_uniq("org_user_cancel_fail"),
+            stripe_customer_id="cus_cancel_fail",
+        )
+        db.session.add(org)
+        db.session.flush()
+
+        user = User(
+            username=_uniq("last_customer_fail"),
+            email=f"{_uniq('last_fail')}@example.com",
+            organization_id=org.id,
+            user_type="customer",
+            is_active=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        success, message = UserService.hard_delete_user(user)
+        assert success is False
+        assert "Failed to cancel Stripe subscription" in message
+        assert db.session.get(User, user.id) is not None

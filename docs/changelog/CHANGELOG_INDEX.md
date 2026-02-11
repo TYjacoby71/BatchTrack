@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Stripe Cancellation During Customer Deletion](2026-02-11-stripe-cancellation-on-customer-deletion.md)**
+  - Added pre-delete Stripe cancellation guard for organization hard-delete and final-customer hard-delete.
+  - Deletions now abort when Stripe cancellation fails to prevent orphan billing.
+  - Added tests covering both success and failure cancellation paths.
 - **[2026-02-11: PR Documentation Guard + Dictionary Schema Enforcement](2026-02-11-pr-documentation-guard-and-dictionary-schema-enforcement.md)**
   - Added automated guard for synopsis/glossary headers, functional-unit blocks, and dictionary/changelog alignment.
   - Enforced one-entry dictionary term uniqueness and link/path validation.

@@ -116,7 +116,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: Service ownership and key workflows.
 
 ### Entries (placeholder)
-- **BillingService** → Tier checkout + add-on activation
+- **BillingService** → Tier checkout, add-on activation, and Stripe subscription cancellation primitives used by billing flows and destructive account cleanup (see `app/services/billing_service.py`)
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).

@@ -183,6 +183,7 @@ class OrganizationService:
         org_id = org.id
         org_name = org.name
         try:
+            from app.services.billing_service import BillingService
             from sqlalchemy import or_
 
             from app.models import (
@@ -223,6 +224,16 @@ class OrganizationService:
                 delete_org_scoped_rows,
                 detach_external_recipe_links,
             )
+
+            stripe_cancelled = False
+            if org.stripe_customer_id:
+                stripe_cancelled = BillingService.cancel_subscription(org.stripe_customer_id)
+                if not stripe_cancelled:
+                    return (
+                        False,
+                        "Failed to cancel Stripe subscription before organization deletion. "
+                        "Deletion aborted to prevent orphan billing.",
+                    )
 
             org_user_ids = [int(row[0]) for row in db.session.query(User.id).filter(User.organization_id == org_id).all()]
             org_recipe_ids = [int(row[0]) for row in db.session.query(Recipe.id).filter(Recipe.organization_id == org_id).all()]
@@ -409,6 +420,8 @@ class OrganizationService:
             db.session.commit()
 
             message = f'Organization "{org_name}" deleted.'
+            if stripe_cancelled:
+                message += " Stripe subscription canceled."
             if archive_path:
                 message += (
                     f" Archived {marketplace_recipe_count} marketplace recipe snapshot(s) to {archive_path}."
