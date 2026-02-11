@@ -31,6 +31,7 @@ from flask_login import current_user, logout_user
 from .extensions import db
 from .route_access import RouteAccessConfig
 from .utils.permissions import PermissionScope, resolve_permission_scope
+from .services.middleware_probe_service import MiddlewareProbeService
 from .services.public_bot_trap_service import PublicBotTrapService
 
 logger = logging.getLogger(__name__)
@@ -237,11 +238,24 @@ def register_middleware(app: Flask) -> None:
             level_name = str(current_app.config.get("ANON_REQUEST_LOG_LEVEL", "DEBUG")).upper()
             log_level = getattr(logging, level_name, logging.DEBUG)
             if request.endpoint is None:
+                status_code = MiddlewareProbeService.derive_unknown_endpoint_status(request)
+                if status_code is None:
+                    return None
+                MiddlewareProbeService.maybe_block_suspicious_unknown_probe(
+                    request=request,
+                    path=path,
+                    status_code=status_code,
+                )
                 logger.warning(
                     "Unauthenticated request to unknown endpoint: %s; user_agent=%s",
                     endpoint_info,
                     request.headers.get("User-Agent", "unknown")[:100],
                 )
+                if _wants_json_response():
+                    message = "Method not allowed" if status_code == 405 else "Not found"
+                    return jsonify({"error": message}), status_code
+                body = "Method Not Allowed" if status_code == 405 else "Not Found"
+                return (body, status_code)
             elif logger.isEnabledFor(log_level):
                 logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
 
