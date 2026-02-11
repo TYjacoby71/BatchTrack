@@ -119,7 +119,20 @@ See [ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md) for the full workfl
 
 ---
 
-## 7. Data Scoping Rules
+## 7. Developer Deletion Modes (Support/Test Accounts)
+
+Developer tooling now uses two explicit deletion behaviors for customer accounts:
+
+- **Soft delete** (`/developer/api/user/soft-delete`): disables access and deactivates role assignments while preserving all historical records.
+- **Hard delete** (`/developer/api/user/hard-delete`): permanently removes one non-developer user after clearing foreign-key references to avoid cross-table breakage.
+
+For organization hard-delete (`/developer/organizations/<org_id>/delete`), the platform first archives marketplace/listed/sold recipe snapshots to JSON and detaches cross-organization lineage/source links before deleting org-scoped data.
+
+✅ **Intended use**: controlled cleanup of test/support accounts by developers only.
+
+---
+
+## 8. Data Scoping Rules
 
 ### Scoped Models
 All models except Developers are scoped by `organization_id`.
@@ -147,7 +160,7 @@ else:
 
 ---
 
-## 8. Permission Checking
+## 9. Permission Checking
 
 ### Route Example
 ```python
@@ -165,7 +178,7 @@ def adjust_inventory_route():
 
 ---
 
-## 9. Best Practices
+## 10. Best Practices
 
 ✔ Developers NEVER receive roles or organization IDs.  
 ✔ Always filter by `organization_id` for customer data.  

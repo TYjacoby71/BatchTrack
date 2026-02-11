@@ -19,11 +19,14 @@
 
 ## Documentation
 - [ ] Updated system docs for feature changes (`docs/system/`)
-- [ ] Added/updated changelog entry (`docs/changelog/`)
+- [ ] Added/updated dated changelog entry (`docs/changelog/YYYY-MM-DD-*.md`)
+- [ ] Updated changelog index (`docs/changelog/CHANGELOG_INDEX.md`)
 - [ ] Updated add-on entitlements doc if tiers/add-ons changed
-- [ ] Added/updated file Synopsis + Glossary blocks
-- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences)
-- [ ] Updated APP_DICTIONARY.md if new terms were introduced
+- [ ] Added/updated file Synopsis + Glossary blocks for every touched file
+- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences) for every touched top-level unit
+- [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
+- [ ] Verified one-entry rule (single canonical term entry, no duplicates)
+- [ ] Ran `python3 scripts/validate_pr_documentation.py` and confirmed pass
 
 ## Checklist
 - [ ] Code follows project patterns

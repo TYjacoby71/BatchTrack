@@ -1,5 +1,5 @@
 
-.PHONY: help install test lint format type-check migrate upgrade downgrade clean
+.PHONY: help install test lint format type-check docs-guard migrate upgrade downgrade clean
 
 help:  ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -27,9 +27,13 @@ format:  ## Format code
 type-check:  ## Run type checking
 	mypy app/
 
+docs-guard:  ## Enforce PR documentation schema
+	python3 scripts/validate_pr_documentation.py
+
 quality:  ## Run all quality checks
 	$(MAKE) lint
 	$(MAKE) type-check
+	$(MAKE) docs-guard
 	$(MAKE) test
 
 migrate:  ## Generate new migration
