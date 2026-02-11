@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Deletion Hard-Delete Safety + Legacy Marketplace Archive](2026-02-11-deletion-hard-delete-safety-and-legacy-archive.md)**
+  - Hardened organization hard-delete to run scoped FK-safe cleanup and avoid stale cross-org references.
+  - Added marketplace/listed/sold recipe JSON snapshot export before organization deletion.
+  - Added developer user hard-delete endpoint and modal confirmation flow for test-account cleanup.
 - **[2026-02-10: Staging Homepage Variant Toggle in Public Nav](2026-02-10-staging-homepage-variant-nav-toggle.md)**
   - Added a staging-only "Home Variants" dropdown in public navigation.
   - Added quick links to classic homepage, `/lp/hormozi`, and `/lp/robbins`.

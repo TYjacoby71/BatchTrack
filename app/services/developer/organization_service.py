@@ -1,3 +1,14 @@
+"""Developer organization service layer.
+
+Synopsis:
+Centralizes developer-facing organization lifecycle workflows, including org
+creation, tier updates, and safe hard-delete execution with tenant scoping.
+
+Glossary:
+- Tier config: Presentation-ready availability map for subscription tiers.
+- Safe hard delete: Permanent removal with link detachment and legacy snapshotting.
+"""
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
@@ -11,14 +22,26 @@ from app.models import Organization, User
 class OrganizationService:
     """Business logic that powers the developer organization workflows."""
 
+    # --- List organizations ---
+    # Purpose: Return all organizations ordered for developer support views.
+    # Inputs: None.
+    # Outputs: List of Organization rows sorted by name.
     @staticmethod
     def list_all_organizations() -> List[Organization]:
         return Organization.query.order_by(Organization.name.asc()).all()
 
+    # --- Get selected organization ---
+    # Purpose: Resolve a specific organization by ID for contextual support views.
+    # Inputs: Optional organization ID.
+    # Outputs: Organization instance or None.
     @staticmethod
     def get_selected_organization(org_id: Optional[int]) -> Optional[Organization]:
         return db.session.get(Organization, org_id) if org_id else None
 
+    # --- Build available tiers ---
+    # Purpose: Build minimal tier display data for create-organization forms.
+    # Inputs: None.
+    # Outputs: Dict keyed by tier ID containing tier names.
     @staticmethod
     def build_available_tiers() -> Dict[str, Dict[str, str]]:
         from app.models.subscription_tier import SubscriptionTier as _ST
@@ -28,6 +51,10 @@ class OrganizationService:
             tiers[str(tier.id)] = {"name": tier.name}
         return tiers
 
+    # --- Build tier config ---
+    # Purpose: Build tier metadata including integration availability for edit screens.
+    # Inputs: None.
+    # Outputs: Dict keyed by tier ID with display name and is_available flag.
     @staticmethod
     def build_tier_config() -> Dict[str, Dict[str, str]]:
         from app.models.subscription_tier import SubscriptionTier as _ST
@@ -40,6 +67,10 @@ class OrganizationService:
             }
         return tiers
 
+    # --- Create organization with owner ---
+    # Purpose: Atomically create a customer organization and initial owner account.
+    # Inputs: Form payload with org + owner fields and tier choice.
+    # Outputs: Tuple(success flag, organization or None, status message).
     @staticmethod
     def create_organization_with_owner(form_data: Dict[str, str]) -> Tuple[bool, Optional[Organization], str]:
         name = form_data.get("name")
@@ -99,6 +130,10 @@ class OrganizationService:
             db.session.rollback()
             return False, None, str(exc)
 
+    # --- Update organization ---
+    # Purpose: Apply editable organization fields and optional subscription tier update.
+    # Inputs: Organization row and form payload.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def update_organization(org: Organization, form_data: Dict[str, str]) -> Tuple[bool, str]:
         org.name = form_data.get("name", org.name)
@@ -119,6 +154,10 @@ class OrganizationService:
             db.session.rollback()
             return False, str(exc)
 
+    # --- Upgrade organization tier ---
+    # Purpose: Force an organization to a specific tier identifier from developer tools.
+    # Inputs: Organization row and tier identifier string.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def upgrade_organization(org: Organization, tier_identifier: str) -> Tuple[bool, str]:
         from app.models.subscription_tier import SubscriptionTier
@@ -131,6 +170,10 @@ class OrganizationService:
         db.session.commit()
         return True, f"Organization upgraded to {tier_identifier}"
 
+    # --- Delete organization safely ---
+    # Purpose: Hard-delete an organization without cross-tenant data loss or FK breakage.
+    # Inputs: Target Organization row.
+    # Outputs: Tuple(success flag, status message with archive/detach summary).
     @staticmethod
     def delete_organization(org: Organization) -> Tuple[bool, str]:
         org_id = org.id
@@ -373,6 +416,10 @@ class OrganizationService:
             db.session.rollback()
             return False, str(exc)
 
+    # --- Validate destructive-action confirmation ---
+    # Purpose: Verify developer password and exact confirmation phrase before hard delete.
+    # Inputs: Password input, typed confirmation text, expected confirmation phrase.
+    # Outputs: Tuple(valid flag, error message when invalid).
     @staticmethod
     def validate_deletion(password: str, confirm_text: str, expected_confirm: str) -> Tuple[bool, str]:
         if not current_user.check_password(password or ""):

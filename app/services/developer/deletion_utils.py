@@ -1,3 +1,15 @@
+"""Developer deletion safety helpers.
+
+Synopsis:
+Provides shared routines for hard-delete workflows so user/org removal stays
+scoped, preserves marketplace legacy snapshots, and avoids cross-tenant
+reference breakage.
+
+Glossary:
+- Legacy snapshot: JSON export of a recipe's public/marketplace payload before deletion.
+- External recipe link: FK on a recipe in another org referencing deleted org data.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +29,10 @@ from app.utils.json_store import write_json_file
 logger = logging.getLogger(__name__)
 
 
+# --- Normalize integer IDs ---
+# Purpose: Parse and dedupe positive integer IDs from mixed inputs.
+# Inputs: Any iterable/sequence of potential integer values.
+# Outputs: Sorted list of unique positive integers.
 def _normalize_ids(values: Sequence[int] | Iterable[int] | None) -> list[int]:
     normalized: list[int] = []
     for value in values or []:
@@ -29,6 +45,10 @@ def _normalize_ids(values: Sequence[int] | Iterable[int] | None) -> list[int]:
     return sorted(set(normalized))
 
 
+# --- Resolve archive directory ---
+# Purpose: Pick the output directory for deletion archive files.
+# Inputs: App config (optional DELETION_ARCHIVE_DIR).
+# Outputs: Filesystem Path where archive JSON files should be written.
 def _archive_directory() -> Path:
     if has_app_context():
         configured = current_app.config.get("DELETION_ARCHIVE_DIR")
@@ -37,10 +57,18 @@ def _archive_directory() -> Path:
     return Path("data/deletion_archives")
 
 
+# --- Serialize datetime to ISO ---
+# Purpose: Convert optional datetime-like values into ISO strings.
+# Inputs: Datetime or None.
+# Outputs: ISO-8601 string or None.
 def _to_iso(value) -> str | None:
     return value.isoformat() if value else None
 
 
+# --- Cast to float helper ---
+# Purpose: Safely normalize numeric-ish values to float.
+# Inputs: Any scalar candidate value.
+# Outputs: Float value or None when conversion is not possible.
 def _to_float(value) -> float | None:
     if value is None:
         return None
@@ -50,6 +78,10 @@ def _to_float(value) -> float | None:
         return None
 
 
+# --- Resolve SQLAlchemy table object ---
+# Purpose: Load a table from metadata or reflect it from the engine on demand.
+# Inputs: Database table name.
+# Outputs: SQLAlchemy Table object ready for delete/update statements.
 def _resolve_table(table_name: str):
     table = db.metadata.tables.get(table_name)
     if table is not None:
@@ -57,6 +89,10 @@ def _resolve_table(table_name: str):
     return Table(table_name, db.metadata, autoload_with=db.engine)
 
 
+# --- Serialize recipe legacy snapshot ---
+# Purpose: Build a stable JSON payload for marketplace/public recipe preservation.
+# Inputs: Recipe ORM object with related ingredients/consumables.
+# Outputs: Dict containing export-safe recipe metadata and formula rows.
 def _serialize_recipe_snapshot(recipe: Recipe) -> dict:
     ingredient_rows = []
     for row in recipe.recipe_ingredients or []:
@@ -110,6 +146,10 @@ def _serialize_recipe_snapshot(recipe: Recipe) -> dict:
     }
 
 
+# --- Archive marketplace-facing recipes ---
+# Purpose: Persist snapshot JSON for public/sold/listed recipes before hard delete.
+# Inputs: Organization object and org-owned recipes.
+# Outputs: Archive path string when files were written, otherwise None.
 def archive_marketplace_recipes(organization, recipes: Sequence[Recipe]) -> str | None:
     candidates = [
         recipe
@@ -143,6 +183,10 @@ def archive_marketplace_recipes(organization, recipes: Sequence[Recipe]) -> str 
     return str(archive_path)
 
 
+# --- Detach external recipe links ---
+# Purpose: Null out cross-org recipe/source links that reference deleted recipes.
+# Inputs: Deleted org ID, deleted recipe IDs, optional archive path for logs.
+# Outputs: Count of recipe/lineage rows updated.
 def detach_external_recipe_links(
     deleted_org_id: int,
     deleted_recipe_ids: Sequence[int],
@@ -218,6 +262,10 @@ def detach_external_recipe_links(
     return touched
 
 
+# --- Topological child-first ordering ---
+# Purpose: Produce a safe child-before-parent order for FK-connected tables.
+# Inputs: Candidate table names and dependency map.
+# Outputs: Ordered table names minimizing FK delete violations.
 def _topological_child_first(nodes: Sequence[str], dependencies: dict[str, set[str]]) -> list[str]:
     node_set = set(nodes)
     indegree = {node: 0 for node in node_set}
@@ -249,6 +297,10 @@ def _topological_child_first(nodes: Sequence[str], dependencies: dict[str, set[s
     return ordered
 
 
+# --- Delete organization-scoped rows ---
+# Purpose: Delete rows from tables with organization_id in FK-safe order.
+# Inputs: Organization ID and optional table exclusions.
+# Outputs: List of table names that received scoped delete statements.
 def delete_org_scoped_rows(org_id: int, *, exclude_tables: set[str] | None = None) -> list[str]:
     exclude = set(exclude_tables or set())
     inspector = sa_inspect(db.engine)
@@ -282,6 +334,10 @@ def delete_org_scoped_rows(org_id: int, *, exclude_tables: set[str] | None = Non
     return deleted_tables
 
 
+# --- Clear user foreign-key references ---
+# Purpose: Remove/nullable all FK references to deleted users across tables.
+# Inputs: One or more user IDs.
+# Outputs: None (applies SQL updates/deletes in current transaction).
 def clear_user_foreign_keys(user_ids: Sequence[int]) -> None:
     ids = _normalize_ids(user_ids)
     if not ids:
