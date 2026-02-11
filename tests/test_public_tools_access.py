@@ -37,6 +37,7 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
     assert 'id="publicMarketingNav"' in html
     assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
     assert "position-absolute top-50 start-50 translate-middle text-center" not in html
+    assert 'id="stageWaterOutput"' in html
 
 
 @pytest.mark.usefixtures("app")

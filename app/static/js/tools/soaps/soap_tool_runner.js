@@ -39,6 +39,46 @@
     document.querySelectorAll('.water-input').forEach(el => {
       el.classList.toggle('d-none', el.dataset.method !== method);
     });
+    updateStageWaterSummary(null, method);
+  }
+
+  function getWaterMethodHelp(method){
+    if (method === 'concentration') {
+      return 'Concentration mode uses lye amount, so superfat and purity change water.';
+    }
+    if (method === 'ratio') {
+      return 'Ratio mode uses lye amount, so superfat and purity change water.';
+    }
+    return 'Percent mode uses oils total, so superfat changes lye but not water.';
+  }
+
+  function updateStageWaterSummary(summary = null, explicitMethod = null){
+    const waterOutput = document.getElementById('stageWaterOutput');
+    const hintOutput = document.getElementById('stageWaterComputedHint');
+    const method = explicitMethod || summary?.waterMethod || document.getElementById('waterMethod')?.value || 'percent';
+
+    if (waterOutput) {
+      const hasWater = summary && isFinite(summary.waterG) && summary.waterG > 0;
+      waterOutput.textContent = hasWater ? formatWeight(summary.waterG) : '--';
+    }
+    if (!hintOutput) return;
+
+    if (!summary || !isFinite(summary.totalOils) || summary.totalOils <= 0) {
+      hintOutput.textContent = `Set oils in Stage 2 to calculate water. ${getWaterMethodHelp(method)}`;
+      return;
+    }
+
+    if (method === 'concentration') {
+      const concentration = summary.lyeConcentrationInput || summary.lyeConcentration || 0;
+      hintOutput.textContent = `Using ${round(concentration, 1)}% lye concentration from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+      return;
+    }
+    if (method === 'ratio') {
+      const ratio = summary.waterRatioInput || summary.waterRatio || 0;
+      hintOutput.textContent = `Using ${round(ratio, 2)} : 1 water-to-lye ratio from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+      return;
+    }
+    hintOutput.textContent = `Using ${round(summary.waterPct || 0, 1)}% of total oils (${formatWeight(summary.totalOils)}).`;
   }
 
   function validateCalculation(){
@@ -188,6 +228,7 @@
     }
     const validation = validateCalculation();
     if (!validation.ok) {
+      updateStageWaterSummary(null);
       if (settings.showAlerts) {
         SoapTool.ui.showSoapAlert('warning', `<strong>Missing info:</strong><ul class="mb-0">${validation.errors.map(err => `<li>${err}</li>`).join('')}</ul>`, { dismissible: true, persist: true });
       }
@@ -219,6 +260,17 @@
     const lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
     const lyeAdjusted = purity > 0 ? lyePure / (purity / 100) : lyePure;
     const waterData = computeWater(lyeAdjusted, totalOils, waterMethod, waterPct, lyeConcentration, waterRatio);
+    updateStageWaterSummary({
+      waterG: waterData.waterG,
+      lyeAdjusted,
+      totalOils,
+      waterMethod,
+      waterPct,
+      lyeConcentrationInput: lyeConcentration,
+      waterRatioInput: waterRatio,
+      lyeConcentration: waterData.lyeConcentration,
+      waterRatio: waterData.waterRatio,
+    });
     const additives = SoapTool.additives.updateAdditivesOutput(totalOils);
     const batchYield = totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG;
 

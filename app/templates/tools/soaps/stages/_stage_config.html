@@ -57,6 +57,17 @@
         <div class="form-text soap-stage-note">5% is a balanced default.</div>
       </div>
     </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-12">
+        <div class="soap-output-tile">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="small text-muted">Calculated water</div>
+            <div class="fw-semibold soap-animate-number" id="stageWaterOutput">--</div>
+          </div>
+          <div class="small text-muted" id="stageWaterComputedHint">Set oils and lye settings to calculate water.</div>
+        </div>
+      </div>
+    </div>
     {% set stage_index = 2 %}
     {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>
