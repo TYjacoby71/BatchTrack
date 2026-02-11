@@ -80,7 +80,7 @@ Marketing documentation that describes the content workspace now lives in `marke
 
 **Types**:
 - Individual change logs (YYYY-MM-DD-description.md)
-- Changelog index (README.md)
+- Changelog index (CHANGELOG_INDEX.md)
 
 **Update when**: Making any code changes, bug fixes, or improvements
 
@@ -163,9 +163,9 @@ Marketing documentation that describes the content workspace now lives in `marke
 **Header structure**:
 ```
 # --- <UNIT NAME> ---
-# PURPOSE: <Concise description (≤ 5 sentences)>
-# INPUTS: <Key inputs, parameters, or request payloads>
-# OUTPUTS: <Return values, side-effects, or response payloads>
+# Purpose: <Concise description (≤ 5 sentences)>
+# Inputs: <Key inputs, parameters, or request payloads>
+# Outputs: <Return values, side-effects, or response payloads>
 ```
 
 **Naming by file type**:
@@ -197,11 +197,46 @@ Made a code change?
 
 ## PR Documentation Checklist (keep in sync with PR template)
 - [ ] Updated system docs for feature changes (docs/system/)
-- [ ] Added/updated changelog entry (docs/changelog/)
+- [ ] Added/updated dated changelog entry (docs/changelog/YYYY-MM-DD-*.md)
+- [ ] Updated changelog index (docs/changelog/CHANGELOG_INDEX.md)
 - [ ] Updated add-on entitlements doc if tiers/add-ons changed
-- [ ] Added/updated file Synopsis + Glossary blocks
-- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences)
-- [ ] Updated APP_DICTIONARY.md if new terms were introduced
+- [ ] Added/updated file Synopsis + Glossary blocks for every touched file
+- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences) for every touched top-level unit
+- [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
+- [ ] Verified one-entry rule (single canonical term entry, no duplicates)
+- [ ] Ran `python3 scripts/validate_pr_documentation.py` and confirmed pass
+
+## Enforcement (Automated Guard)
+
+The following rules are enforced by `scripts/validate_pr_documentation.py` in local pre-commit and CI:
+
+1. **App-change requirement**
+   - If any `app/` file changes, the PR must also update:
+     - `docs/system/APP_DICTIONARY.md`
+     - `docs/changelog/CHANGELOG_INDEX.md`
+     - at least one dated changelog file in `docs/changelog/`
+
+2. **Python schema requirement (`app/` and `scripts/`)**
+   - Module docstring must include both **Synopsis** and **Glossary**.
+   - Every touched top-level class/function must include a nearby functional header:
+     - `# --- <UNIT NAME> ---`
+     - `# Purpose: ...`
+     - `# Inputs: ...`
+     - `# Outputs: ...`
+
+3. **Dictionary schema requirement**
+   - Entry format: `- **Term** → Description`.
+   - One-entry rule: one canonical dictionary entry per unique term.
+   - Every changed `app/` file path must be referenced in `APP_DICTIONARY.md`.
+   - File links/locations in dictionary entries must resolve to valid targets.
+
+4. **Doc schema requirement**
+   - Changed `docs/system/*.md` files must include `## Synopsis` and `## Glossary`.
+   - Changed dated changelog entries must include:
+     - `## Summary`
+     - `## Problems Solved`
+     - `## Key Changes`
+     - `## Files Modified`
 
 ## Cross-References
 

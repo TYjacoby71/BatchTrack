@@ -1,0 +1,33 @@
+name: Documentation Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - cursor/**
+
+jobs:
+  documentation-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch PR base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch origin "${{ github.base_ref }}"
+
+      - name: Run documentation guard (pull request)
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/validate_pr_documentation.py --base-ref "origin/${{ github.base_ref }}"
+
+      - name: Run documentation guard (push)
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/validate_pr_documentation.py --base-ref "HEAD~1"

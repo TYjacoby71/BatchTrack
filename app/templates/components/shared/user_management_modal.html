@@ -111,6 +111,9 @@
                                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="softDeleteModalUser()">
                                     <i class="fas fa-user-slash me-2"></i>Soft Delete User
                                 </button>
+                                <button type="button" class="btn btn-danger btn-sm ms-2" onclick="hardDeleteModalUser()">
+                                    <i class="fas fa-user-times me-2"></i>Hard Delete User (Test Only)
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -369,6 +372,48 @@ async function softDeleteModalUser() {
         }
     } catch (error) {
         console.error('Error soft deleting user:', error);
+        alert('Network error occurred');
+    }
+}
+
+async function hardDeleteModalUser() {
+    if (!currentModalUser) return;
+
+    const confirmationPhrase = `HARD DELETE ${currentModalUser.username}`;
+    const typed = prompt(
+        `This permanently deletes ${currentModalUser.username}.\nType "${confirmationPhrase}" to continue:`
+    );
+    if (typed !== confirmationPhrase) {
+        alert(`Confirmation failed. You must type: ${confirmationPhrase}`);
+        return;
+    }
+
+    if (!confirm('FINAL CONFIRMATION: Permanently delete this user account now? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/developer/api/user/hard-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: currentModalUser.id
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert('User permanently deleted.');
+            bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
+            location.reload();
+        } else {
+            alert('Error hard deleting user: ' + (data.message || data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error hard deleting user:', error);
         alert('Network error occurred');
     }
 }
