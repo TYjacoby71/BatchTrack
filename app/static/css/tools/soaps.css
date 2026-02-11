@@ -125,11 +125,15 @@ soapToolPage {
 }
 #soapToolPage .quality-target-marker {
   position: absolute;
-  top: -4px;
-  bottom: -4px;
-  border-left: 2px dashed var(--color-primary);
-  width: 0;
-  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #111111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+  z-index: 6;
+  opacity: 1;
 }
 #soapToolPage .quality-target-label {
   display: none;
@@ -574,11 +578,15 @@ soapToolPage {
 }
 #soapToolPage .quality-target-marker {
   position: absolute;
-  top: -4px;
-  bottom: -4px;
-  border-left: 2px dashed var(--color-primary);
-  width: 0;
-  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #111111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+  z-index: 6;
+  opacity: 1;
 }
 #soapToolPage .quality-target-label {
   display: none;
