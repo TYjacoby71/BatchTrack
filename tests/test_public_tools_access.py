@@ -28,6 +28,18 @@ def test_public_tools_pages_are_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
+    """Anonymous soap page should use marketing nav without center-title overlay."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert 'id="publicMarketingNav"' in html
+    assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
+    assert "position-absolute top-50 start-50 translate-middle text-center" not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_anonymous_workflow_can_browse_public_site(app):
     """
     Simulate a public visitor navigating marketing pages so we detect regressions

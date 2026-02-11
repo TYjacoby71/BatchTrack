@@ -175,7 +175,7 @@ Glossary:
             {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
             {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
             {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
-            {% set has_nav_center = navbar_center_title is defined and navbar_center_title %}
+            {% set has_nav_center = (navbar_center_title is defined and navbar_center_title) and not public_shell_mode %}
             {% if has_nav_center %}
             <div class="position-absolute top-50 start-50 translate-middle text-center">
                 <span class="navbar-text fw-semibold">{{ navbar_center_title }}</span>
