@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 
 # --- BillingService ---
 # Purpose: Coordinate billing workflows, pricing, and Stripe integration.
+# Inputs: Method-level billing objects, organization context, and provider identifiers.
+# Outputs: Stripe/checkout payloads, persisted billing updates, and boolean status flags.
 class BillingService:
     """Consolidated billing + Stripe orchestration service."""
 
