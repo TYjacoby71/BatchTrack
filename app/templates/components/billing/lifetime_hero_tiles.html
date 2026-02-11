@@ -1,153 +1,57 @@
 {% if marketing_lifetime_offers %}
-{% set lifetime_has_capacity = (marketing_lifetime_offers | selectattr('has_remaining') | list | length) > 0 %}
+{% set lifetime_offers_remaining = marketing_lifetime_offers | selectattr('has_remaining') | list %}
+{% if lifetime_offers_remaining %}
 <section class="lifetime-launch-shell mt-5">
-    {% if lifetime_has_capacity %}
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3 text-start">
-            <div>
-                <h2 class="h3 fw-bold mb-1 text-white">Lifetime Launch Access</h2>
-                <p class="mb-0 text-white-50">Pay once (about 1 year pricing), keep your tier forever.</p>
-            </div>
-            <span class="badge rounded-pill bg-light text-dark px-3 py-2">Limited launch seats</span>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3 text-start">
+        <div>
+            <h2 class="h3 fw-bold mb-1 text-white">Lifetime Launch Access</h2>
+            <p class="mb-0 text-white-50">Pay once (about 1 year pricing), keep your tier forever.</p>
         </div>
+        <span class="badge rounded-pill bg-light text-dark px-3 py-2">Limited launch seats</span>
+    </div>
 
-        <div class="row g-3">
-            {% for offer in marketing_lifetime_offers %}
-            {% set can_start_checkout = offer.has_remaining and offer.tier_id %}
-            <div class="col-12 col-lg-4">
-                <article class="card lifetime-launch-card h-100 {% if not can_start_checkout %}is-sold-out{% endif %}">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="badge bg-light text-dark text-uppercase border">{{ offer.name }}</span>
-                            {% if not can_start_checkout %}
-                            <span class="badge bg-danger">Sold out</span>
-                            {% endif %}
-                        </div>
-
-                        <h3 class="h5 fw-semibold mb-1">{{ offer.tagline }}</h3>
-                        <p class="text-muted small mb-3">{{ offer.future_scope }}</p>
-
-                        <div class="lifetime-seat-copy mb-2">
-                            Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
-                        </div>
-                        <div class="text-muted small mb-3">
-                            Coupon code: <code>{{ offer.coupon_code }}</code>
-                        </div>
-
-                        <div class="mt-auto">
-                            <div class="fw-bold text-primary mb-2">
-                                {{ offer.lifetime_price_copy }}
-                            </div>
-                            {% if can_start_checkout %}
-                            <a
-                                href="{{ url_for('auth.signup_checkout', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, promo=offer.coupon_code, source='homepage_lifetime_' ~ offer.key) }}"
-                                class="btn btn-primary w-100"
-                            >
-                                Claim {{ offer.name }} Lifetime
-                            </a>
-                            {% else %}
-                            <button type="button" class="btn btn-outline-secondary w-100" disabled>
-                                Waitlist only
-                            </button>
-                            {% endif %}
-                        </div>
+    <div class="row g-3">
+        {% for offer in lifetime_offers_remaining %}
+        {% set can_start_checkout = offer.tier_id %}
+        <div class="col-12 col-lg-4">
+            <article class="card lifetime-launch-card h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-light text-dark text-uppercase border">{{ offer.name }}</span>
                     </div>
-                </article>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3 text-start">
-            <div>
-                <h2 class="h3 fw-bold mb-1 text-white">Lifetime Launch Sold Out</h2>
-                <p class="mb-0 text-white-50">Switching to subscription checkout. Pick monthly or yearly below.</p>
-            </div>
-            <span class="badge rounded-pill bg-warning text-dark px-3 py-2">Lifetime closed</span>
-        </div>
 
-        <div class="btn-group w-100 mb-3" role="group" aria-label="Homepage billing cycle toggle" id="heroBillingCycleToggle">
-            <button type="button" class="btn btn-light hero-cycle-btn" data-cycle="monthly">Monthly</button>
-            <button type="button" class="btn btn-light hero-cycle-btn" data-cycle="yearly">Yearly</button>
-        </div>
+                    <h3 class="h5 fw-semibold mb-1">{{ offer.tagline }}</h3>
+                    <p class="text-muted small mb-3">{{ offer.future_scope }}</p>
 
-        <div class="row g-3">
-            {% for offer in marketing_lifetime_offers %}
-            {% set has_tier = offer.tier_id %}
-            {% set monthly_url = url_for('auth.signup_checkout', billing_mode='standard', billing_cycle='monthly', tier=offer.tier_id, source='homepage_monthly_' ~ offer.key) if has_tier else '#' %}
-            {% set yearly_url = url_for('auth.signup_checkout', billing_mode='standard', billing_cycle='yearly', tier=offer.tier_id, source='homepage_yearly_' ~ offer.key) if has_tier else '#' %}
-            <div class="col-12 col-lg-4">
-                <article
-                    class="card lifetime-launch-card h-100 hero-cycle-card"
-                    data-monthly-price="{{ offer.monthly_price_display or 'Contact Sales' }}"
-                    data-yearly-price="{{ offer.yearly_price_display or offer.monthly_price_display or 'Contact Sales' }}"
-                    data-monthly-url="{{ monthly_url }}"
-                    data-yearly-url="{{ yearly_url }}"
-                >
-                    <div class="card-body d-flex flex-column">
-                        <span class="badge bg-light text-dark text-uppercase border mb-2">{{ offer.name }}</span>
-                        <h3 class="h5 fw-semibold mb-1">{{ offer.base_tier_name }}</h3>
-                        <p class="text-muted small mb-3">{{ offer.future_scope }}</p>
-
-                        <div class="fw-bold text-primary mb-2 hero-cycle-price">
-                            {{ offer.yearly_price_display or offer.monthly_price_display or 'Contact Sales' }}
-                        </div>
-                        <div class="small text-muted mb-3 hero-cycle-label">/year</div>
-
-                        <div class="mt-auto">
-                            {% if has_tier %}
-                            <a href="{{ yearly_url }}" class="btn btn-primary w-100 hero-cycle-cta">Start Yearly</a>
-                            {% else %}
-                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Unavailable</button>
-                            {% endif %}
-                        </div>
+                    <div class="lifetime-seat-copy mb-2">
+                        Only <strong>{{ offer.display_spots_left }}</strong> spots left / {{ offer.seat_total }}
                     </div>
-                </article>
-            </div>
-            {% endfor %}
+                    <div class="text-muted small mb-3">
+                        Coupon code: <code>{{ offer.coupon_code }}</code>
+                    </div>
+
+                    <div class="mt-auto">
+                        <div class="fw-bold text-primary mb-2">
+                            {{ offer.lifetime_price_copy }}
+                        </div>
+                        {% if can_start_checkout %}
+                        <a
+                            href="{{ url_for('auth.signup_checkout', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, promo=offer.coupon_code, source='homepage_lifetime_' ~ offer.key) }}"
+                            class="btn btn-primary w-100"
+                        >
+                            Claim {{ offer.name }} Lifetime
+                        </a>
+                        {% else %}
+                        <button type="button" class="btn btn-outline-secondary w-100" disabled>
+                            Unavailable
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
         </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const buttons = document.querySelectorAll('#heroBillingCycleToggle .hero-cycle-btn');
-                const cards = document.querySelectorAll('.hero-cycle-card');
-                let selectedCycle = 'yearly';
-
-                function applyCycle() {
-                    buttons.forEach((button) => {
-                        const active = button.dataset.cycle === selectedCycle;
-                        button.classList.toggle('btn-primary', active);
-                        button.classList.toggle('btn-light', !active);
-                        button.setAttribute('aria-pressed', active ? 'true' : 'false');
-                    });
-
-                    cards.forEach((card) => {
-                        const price = selectedCycle === 'yearly'
-                            ? card.dataset.yearlyPrice
-                            : card.dataset.monthlyPrice;
-                        const targetUrl = selectedCycle === 'yearly'
-                            ? card.dataset.yearlyUrl
-                            : card.dataset.monthlyUrl;
-                        const priceNode = card.querySelector('.hero-cycle-price');
-                        const labelNode = card.querySelector('.hero-cycle-label');
-                        const ctaNode = card.querySelector('.hero-cycle-cta');
-                        if (priceNode) priceNode.textContent = price || 'Contact Sales';
-                        if (labelNode) labelNode.textContent = selectedCycle === 'yearly' ? '/year' : '/month';
-                        if (ctaNode) {
-                            ctaNode.href = targetUrl || '#';
-                            ctaNode.textContent = selectedCycle === 'yearly' ? 'Start Yearly' : 'Start Monthly';
-                        }
-                    });
-                }
-
-                buttons.forEach((button) => {
-                    button.addEventListener('click', function () {
-                        selectedCycle = button.dataset.cycle === 'monthly' ? 'monthly' : 'yearly';
-                        applyCycle();
-                    });
-                });
-
-                applyCycle();
-            });
-        </script>
-    {% endif %}
+        {% endfor %}
+    </div>
 </section>
+{% endif %}
 {% endif %}

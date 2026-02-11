@@ -153,9 +153,4 @@ def signup():
         oauth_available=OAuthService.is_oauth_configured(),
         canonical_url=url_for("auth.signup", _external=True),
     )
-    return render_template(
-        "pages/auth/signup.html",
-        show_public_header=True,
-        public_header_signup_source=signup_context.signup_source or "signup_page",
-        **template_context,
-    )
+    return render_template("pages/auth/signup.html", **template_context)
