@@ -105,8 +105,21 @@ Tier names are not hardcoded to Hobbyist/Enthusiast/Fanatic for standard monthly
 
 ## 7. Change Process
 1. Update `BillingService` (never reintroduce parallel services).
-2. Document behavior changes here and in `docs/system/SERVICES.md`.
-3. Expand `test_signup_flow_end_to_end` instead of creating new ad-hoc tests.
-4. If new providers are added, they must be routed through `BillingService`.
+2. For billing-access gating changes, update `BillingAccessPolicyService` (`app/services/billing_access_policy_service.py`) and keep middleware thin.
+3. Document behavior changes here and in `docs/system/SERVICES.md`.
+4. Expand `test_signup_flow_end_to_end` instead of creating new ad-hoc tests.
+5. If new providers are added, they must be routed through `BillingService`.
+
+## 8. Billing Access Policy Boundary
+- **Policy authority:** `BillingAccessPolicyService.evaluate_organization(organization)`
+  - Returns a structured decision:
+    - `allow` (no billing redirect/block)
+    - `require_upgrade` (recoverable billing state such as `payment_failed`/`past_due`)
+    - `hard_lock` (organization inactive/suspended/canceled; support-required lockout)
+- **Request enforcement:** `app/middleware.py::_enforce_billing`
+  - Applies transport behavior only (redirect, JSON error, logout/session invalidation).
+  - Must not duplicate business-policy branching that belongs to the policy service.
+- **Auth login enforcement:** `app/blueprints/auth/login_routes.py`
+  - Uses the same policy service to deny login on `hard_lock` decisions so stale sessions cannot re-enter protected pages.
 
 This document supersedes any legacy references to `StripeService`. All future fixes must consult and update this file to keep the billing architecture coherent.***

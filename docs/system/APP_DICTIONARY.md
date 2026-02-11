@@ -5,9 +5,13 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ## Update Standard (Agent Instructions)
 - For every file touched, add or update the **Synopsis** (max 5 sentences).
-- For every top-level functional unit touched in a file, add a **Purpose** block (max 5 sentences).
+- For every top-level functional unit touched in a file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
 - If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
 - Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
+- Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
+- Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
+- When files move or routes change, update dictionary path/location links in the same PR.
+- Run `python3 scripts/validate_pr_documentation.py` before push.
 
 ---
 
@@ -59,6 +63,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
+- **/billing/upgrade** → Recoverable billing remediation page for `payment_failed`/`past_due` organizations (see `app/blueprints/billing/routes.py` and `app/services/billing_access_policy_service.py`)
+- **/auth/login (inactive org lockout)** → Login denies customer access when organization status is hard-locked (`suspended`/`canceled`/inactive) and instructs users to contact support (see `app/blueprints/auth/login_routes.py`)
 - **/api/recipes/prefix** → Generate a unique label prefix for recipe names (see `app/blueprints/api/routes.py`)
 - **/developer/integrations** → Developer integrations checklist and diagnostics (see `app/blueprints/developer/views/integration_routes.py`)
 - **/integrations/test-email** → Send test email from checklist (see `app/blueprints/developer/views/integration_routes.py`)
@@ -67,6 +73,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/auth/reset-password/<token>** → Password reset completion endpoint for token-backed credential changes (see `app/blueprints/auth/password_routes.py`)
 - **/auth/verify-email/<token>** → Email verification endpoint for mailbox ownership confirmation (see `app/blueprints/auth/verification_routes.py`)
 - **/auth/resend-verification** → Verification resend endpoint for unverified accounts (see `app/blueprints/auth/verification_routes.py`)
+- **/developer/api/user/hard-delete** → Developer-only endpoint to permanently remove a non-developer user after foreign-key cleanup (see `app/blueprints/developer/views/user_routes.py`)
+- **/developer/organizations/<org_id>/delete** → Developer-only endpoint for scoped organization hard-delete with legacy marketplace archival safeguards (see `app/blueprints/developer/views/organization_routes.py`)
 - **/api/drawers/global-link/check** → Global link drawer availability (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/modal** → Render global link modal (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
 - **/api/drawers/global-link/confirm** → Link inventory to global items (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
@@ -110,7 +118,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 **Purpose**: Service ownership and key workflows.
 
 ### Entries (placeholder)
-- **BillingService** → Tier checkout + add-on activation
+- **BillingService** → Tier checkout, add-on activation, and Stripe subscription cancellation primitives used by billing flows and destructive account cleanup (see `app/services/billing_service.py`)
+- **BillingAccessPolicyService** → Canonical billing-access policy evaluator that returns `allow`, `require_upgrade`, or `hard_lock` decisions for auth flows (see `app/services/billing_access_policy_service.py`)
+- **BillingAccessDecision** → Structured decision payload containing action + reason + message for billing gates (see `app/services/billing_access_policy_service.py`)
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
@@ -124,6 +134,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **RecipeFormVariations** → Variation template construction helpers (see `app/blueprints/recipes/form_variations.py`)
 - **DomainEventDispatcher** → Sends outbox events to external webhooks (see `app/services/domain_event_dispatcher.py`)
 - **Integration Registry** → Integration metadata and readiness checks (see `app/services/integrations/registry.py`)
+- **Developer Deletion Utils** → Shared archive/detach/fk-cleanup helpers for hard-delete workflows (see `app/services/developer/deletion_utils.py`)
+- **OrganizationService.delete_organization** → Scoped organization hard-delete pipeline with marketplace JSON archival and cross-org link detachment (see `app/services/developer/organization_service.py`)
+- **UserService.hard_delete_user** → Permanent non-developer user deletion with FK-safe cleanup (see `app/services/developer/user_service.py`)
 - **EmailService.get_verification_mode** → Resolves effective verification mode (off/prompt/required) with provider-aware fallback (see `app/services/email_service.py`)
 - **EmailService.password_reset_enabled** → Determines whether forgot/reset token flows are active for the current environment (see `app/services/email_service.py`)
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
@@ -144,7 +157,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **IngredientHandler** → Stock check handler for ingredients (see `app/services/stock_check/handlers/ingredient_handler.py`)
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
 - **Extensions Registry** → Shared app extensions (see `app/extensions.py`)
-- **Security Middleware** → Permission and bot checks (see `app/middleware.py`)
+- **Security Middleware** → Request-layer enforcer for permission/bot checks and billing decision application (redirect/logout/JSON behavior) using service-provided policy decisions (see `app/middleware.py`)
 
 ---
 
@@ -159,6 +172,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
 - **Maker Tools Neutral Card Styling** → Tools index cards/tiles aligned to core app surface and border tokens, replacing per-category rainbow accents (see `app/templates/tools/index.html`).
 - **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Signup Tier Heading Guidance** → Legacy instructional copy beneath the signup pricing-tier heading was removed to keep tier selection concise and reduce duplicated guidance text (see `app/templates/pages/auth/signup.html`)
 - **Staging Home Variants Switcher** → Public header dropdown shown only in staging to switch between classic homepage and landing A/B variants (`/lp/hormozi`, `/lp/robbins`) (see `app/templates/components/shared/public_marketing_header.html`)
 - **Landing Page Variant A (Results-First)** → Public offer-led maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_hormozi.html`)
 - **Landing Page Variant B (Transformation-First)** → Public calm-workflow maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_robbins.html`)
@@ -182,6 +196,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Retention Drawer** → Acknowledge retention deletions (see `app/blueprints/api/drawers/drawer_actions/retention.py`)
 - **SKU Merge Flow** → Merge SKUs into a single inventory item (see `app/blueprints/products/sku.py`)
 - **Inventory Bulk Updates** → Bulk inventory adjustment UI (see `app/blueprints/inventory/routes.py`)
+- **Developer User Hard Delete CTA** → Explicitly-labeled "Hard Delete User (Test Only)" modal action requiring typed confirmation before permanent deletion (see `app/templates/components/shared/user_management_modal.html`)
+- **Organization Hard Delete Legacy Snapshot Notice** → Developer organization deletion modal warning that marketplace/listed recipes are archived to JSON snapshots before removal (see `app/templates/developer/organization_detail.html`)
 - **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
 - **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
 - **Variant Sizes View** → Size-level inventory and SKU actions for a variant (see `app/templates/pages/products/view_variation.html`)
@@ -193,6 +209,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
+- **PR Documentation Guard** → Automated PR validator for synopsis/glossary, functional-unit headers, dictionary coverage, and changelog alignment (see `scripts/validate_pr_documentation.py` and `.github/workflows/documentation-guard.yml`)
 - **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
 - **flask update-permissions** → Sync permission catalog
@@ -207,6 +224,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **EMAIL_SMTP_ALLOW_NO_AUTH** → Allows SMTP provider checks to pass without username/password when relay policy permits (see `app/config.py`)
 - **EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS** → Verification token expiry window in hours (see `app/blueprints/auth/verification_routes.py`)
 - **PASSWORD_RESET_TOKEN_EXPIRY_HOURS** → Reset token expiry window in hours (see `app/blueprints/auth/password_routes.py`)
+- **DELETION_ARCHIVE_DIR** → Optional app config path used to store organization hard-delete marketplace snapshot JSON files (see `app/services/developer/deletion_utils.py`)
 - **seed_test_data** → Seed living demo dataset (see `app/seeders/test_data_seeder.py`)
 
 ---
@@ -216,3 +234,4 @@ This is the living glossary for BatchTrack. It is organized by application layer
 2. Link to the authoritative system doc for details.
 3. Keep definitions concise (1–3 sentences).
 4. Use consistent naming across layers (same term, same spelling).
+5. Keep one canonical entry per term; update the existing entry instead of duplicating.

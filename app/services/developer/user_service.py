@@ -1,3 +1,14 @@
+"""Developer user service helpers.
+
+Synopsis:
+Provides developer-only user management operations including profile updates,
+role assignment orchestration, soft delete, and scoped hard-delete cleanup.
+
+Glossary:
+- Soft delete: Access revocation while retaining account record/history.
+- Hard delete: Permanent account removal after FK cleanup.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,17 +20,33 @@ from app.extensions import db
 from app.models import User
 
 
+# --- User service class ---
+# Purpose: Encapsulate developer-managed user lifecycle and account operations.
+# Inputs: Method-level user rows and request payloads for profile/deletion workflows.
+# Outputs: Query results plus tuple status messages and persisted user state changes.
 class UserService:
     """Helper functions for developer-managed user operations."""
 
+    # --- List customer users ---
+    # Purpose: Fetch all non-developer users for developer management dashboards.
+    # Inputs: None.
+    # Outputs: Query result list of customer/team accounts.
     @staticmethod
     def list_customer_users():
         return User.query.filter(User.user_type != "developer").all()
 
+    # --- List developer users ---
+    # Purpose: Fetch internal developer accounts for role/admin views.
+    # Inputs: None.
+    # Outputs: Query result list of developer users.
     @staticmethod
     def list_developer_users():
         return User.query.filter(User.user_type == "developer").all()
 
+    # --- Toggle user active flag ---
+    # Purpose: Flip active/inactive state for a user account.
+    # Inputs: User row.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def toggle_user_active(user: User) -> Tuple[bool, str]:
         user.is_active = not user.is_active
@@ -27,6 +54,10 @@ class UserService:
         status = "activated" if user.is_active else "deactivated"
         return True, f"User {user.username} {status}"
 
+    # --- Serialize user payload ---
+    # Purpose: Build API-friendly user detail payload for modal editing UI.
+    # Inputs: User row.
+    # Outputs: Dict with user metadata fields.
     @staticmethod
     def serialize_user(user: User) -> Dict[str, str]:
         return {
@@ -44,6 +75,10 @@ class UserService:
             "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
         }
 
+    # --- Update customer user ---
+    # Purpose: Apply editable profile/ownership fields for non-developer users.
+    # Inputs: User row and JSON payload.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def update_user(user: User, data: Dict) -> Tuple[bool, str]:
         if user.user_type == "developer":
@@ -91,6 +126,10 @@ class UserService:
             db.session.rollback()
             return False, str(exc)
 
+    # --- Update developer user ---
+    # Purpose: Apply developer profile fields and active developer role assignments.
+    # Inputs: Developer user row and JSON payload.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def update_developer_user(user: User, data: Dict) -> Tuple[bool, str]:
         if user.user_type != "developer":
@@ -136,6 +175,10 @@ class UserService:
             db.session.rollback()
             return False, str(exc)
 
+    # --- Reset user password ---
+    # Purpose: Set a new password for a selected user account.
+    # Inputs: User row and plaintext new password.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def reset_password(user: User, new_password: str) -> Tuple[bool, str]:
         if not new_password:
@@ -144,9 +187,58 @@ class UserService:
         db.session.commit()
         return True, "Password reset successfully"
 
+    # --- Soft delete user ---
+    # Purpose: Revoke account access while preserving historical data.
+    # Inputs: User row.
+    # Outputs: Tuple(success flag, status message).
     @staticmethod
     def soft_delete_user(user: User) -> Tuple[bool, str]:
         if user.user_type == "developer":
             return False, "Cannot soft delete developer users"
         user.soft_delete(current_user)
         return True, "User soft deleted successfully"
+
+    # --- Hard delete user ---
+    # Purpose: Permanently remove a non-developer account after FK cleanup.
+    # Inputs: User row.
+    # Outputs: Tuple(success flag, status message).
+    @staticmethod
+    def hard_delete_user(user: User) -> Tuple[bool, str]:
+        if user.user_type == "developer":
+            return False, "Cannot hard delete developer users"
+
+        username = user.username
+        try:
+            from app.services.billing_service import BillingService
+            from app.services.developer.deletion_utils import clear_user_foreign_keys
+
+            stripe_cancelled = False
+            org = user.organization
+            if org and org.stripe_customer_id:
+                remaining_customer_users = (
+                    User.query.filter(
+                        User.organization_id == org.id,
+                        User.user_type == "customer",
+                        User.id != user.id,
+                        User.is_deleted.is_(False),
+                    ).count()
+                )
+                # If this is the final customer account in the organization, cancel billing first.
+                if remaining_customer_users == 0:
+                    stripe_cancelled = BillingService.cancel_subscription(org.stripe_customer_id)
+                    if not stripe_cancelled:
+                        return (
+                            False,
+                            "Failed to cancel Stripe subscription before deleting final customer account.",
+                        )
+
+            clear_user_foreign_keys([user.id])
+            db.session.delete(user)
+            db.session.commit()
+            message = f'User "{username}" permanently deleted'
+            if stripe_cancelled:
+                message += " Stripe subscription canceled."
+            return True, message
+        except Exception as exc:  # pragma: no cover - defensive
+            db.session.rollback()
+            return False, str(exc)

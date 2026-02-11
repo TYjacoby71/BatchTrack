@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 
 # --- BillingService ---
 # Purpose: Coordinate billing workflows, pricing, and Stripe integration.
+# Inputs: Method-level billing objects, organization context, and provider identifiers.
+# Outputs: Stripe/checkout payloads, persisted billing updates, and boolean status flags.
 class BillingService:
     """Consolidated billing + Stripe orchestration service."""
 
@@ -1003,21 +1005,34 @@ class BillingService:
     # Purpose: Cancel a Stripe subscription by customer ID.
     @staticmethod
     def cancel_subscription(stripe_customer_id: str) -> bool:
-        """Cancel all active subscriptions for a given Stripe customer."""
+        """Cancel all non-canceled subscriptions for a given Stripe customer."""
         if not stripe_customer_id:
             return False
         if not BillingService.ensure_stripe():
             return False
         import stripe
         try:
-            subs = stripe.Subscription.list(customer=stripe_customer_id, status='active', limit=20)
-            cancelled = False
+            # Use status='all' so past_due/unpaid trial subscriptions are also canceled.
+            subs = stripe.Subscription.list(customer=stripe_customer_id, status='all', limit=100)
+            cancelled_count = 0
             for sub in subs.auto_paging_iter():
-                stripe.Subscription.delete(sub.id)
-                cancelled = True
-            if not cancelled:
-                logger.info("No active subscriptions to cancel for customer %s", stripe_customer_id)
-            return cancelled
+                sub_id = getattr(sub, "id", None) or sub.get("id")
+                sub_status = getattr(sub, "status", None) or sub.get("status")
+                if not sub_id or sub_status == "canceled":
+                    continue
+                stripe.Subscription.delete(sub_id)
+                cancelled_count += 1
+
+            if cancelled_count == 0:
+                logger.info("No cancellable Stripe subscriptions found for customer %s", stripe_customer_id)
+            else:
+                logger.info(
+                    "Canceled %s Stripe subscription(s) for customer %s",
+                    cancelled_count,
+                    stripe_customer_id,
+                )
+            # Treat "already canceled / none found" as success (idempotent).
+            return True
         except Exception as exc:
             logger.error(f"Failed to cancel subscription for customer {stripe_customer_id}: {exc}")
             return False
