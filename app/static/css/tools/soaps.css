@@ -879,7 +879,10 @@ soapToolPage {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 #soapToolPage .oil-profile-float {
   position: absolute;
