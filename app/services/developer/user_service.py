@@ -20,6 +20,10 @@ from app.extensions import db
 from app.models import User
 
 
+# --- User service class ---
+# Purpose: Encapsulate developer-managed user lifecycle and account operations.
+# Inputs: Method-level user rows and request payloads for profile/deletion workflows.
+# Outputs: Query results plus tuple status messages and persisted user state changes.
 class UserService:
     """Helper functions for developer-managed user operations."""
 

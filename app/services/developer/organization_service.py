@@ -19,6 +19,10 @@ from app.extensions import db
 from app.models import Organization, User
 
 
+# --- Organization service class ---
+# Purpose: Encapsulate developer-owned organization lifecycle operations.
+# Inputs: Method-level parameters for organization retrieval, creation, and deletion.
+# Outputs: Structured service return values plus committed database state changes.
 class OrganizationService:
     """Business logic that powers the developer organization workflows."""
 

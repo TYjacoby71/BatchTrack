@@ -34,3 +34,11 @@ repos:
       - id: mypy
         additional_dependencies: [types-all]
         exclude: ^(migrations/|tests/)
+
+  - repo: local
+    hooks:
+      - id: docs-guard
+        name: docs-guard
+        entry: python3 scripts/validate_pr_documentation.py --staged
+        language: system
+        pass_filenames: false

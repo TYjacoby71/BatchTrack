@@ -5,9 +5,13 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ## Update Standard (Agent Instructions)
 - For every file touched, add or update the **Synopsis** (max 5 sentences).
-- For every top-level functional unit touched in a file, add a **Purpose** block (max 5 sentences).
+- For every top-level functional unit touched in a file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
 - If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
 - Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
+- Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
+- Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
+- When files move or routes change, update dictionary path/location links in the same PR.
+- Run `python3 scripts/validate_pr_documentation.py` before push.
 
 ---
 
@@ -164,6 +168,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Maker Tools Index** → Public tool hub listing live + coming maker tools (see `app/templates/tools/index.html`)
 - **Maker Tools Neutral Card Styling** → Tools index cards/tiles aligned to core app surface and border tokens, replacing per-category rainbow accents (see `app/templates/tools/index.html`).
 - **Public Pricing Comparison Page** → Dedicated maker-first pricing destination with lifetime launch cards, monthly/yearly plan cards, and column-style feature checks (see `app/templates/pages/public/pricing.html`)
+- **Signup Tier Heading Guidance** → Legacy instructional copy beneath the signup pricing-tier heading was removed to keep tier selection concise and reduce duplicated guidance text (see `app/templates/pages/auth/signup.html`)
 - **Staging Home Variants Switcher** → Public header dropdown shown only in staging to switch between classic homepage and landing A/B variants (`/lp/hormozi`, `/lp/robbins`) (see `app/templates/components/shared/public_marketing_header.html`)
 - **Landing Page Variant A (Results-First)** → Public offer-led maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_hormozi.html`)
 - **Landing Page Variant B (Transformation-First)** → Public calm-workflow maker landing page used for A/B testing and routed to signup CTAs (see `app/templates/pages/public/landing_robbins.html`)
@@ -200,6 +205,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ### Entries (placeholder)
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
+- **PR Documentation Guard** → Automated PR validator for synopsis/glossary, functional-unit headers, dictionary coverage, and changelog alignment (see `scripts/validate_pr_documentation.py` and `.github/workflows/documentation-guard.yml`)
 - **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
 - **flask update-permissions** → Sync permission catalog
@@ -224,3 +230,4 @@ This is the living glossary for BatchTrack. It is organized by application layer
 2. Link to the authoritative system doc for details.
 3. Keep definitions concise (1–3 sentences).
 4. Use consistent naming across layers (same term, same spelling).
+5. Keep one canonical entry per term; update the existing entry instead of duplicating.
