@@ -1,3 +1,12 @@
+"""End-to-end signup checkout flow tests.
+
+Synopsis:
+Validates pending signup creation, checkout provisioning, and completion redirect behavior.
+
+Glossary:
+- Pending signup: Pre-provision row created before redirecting to checkout.
+"""
+
 import os
 from types import SimpleNamespace
 
@@ -10,6 +19,8 @@ from app.models.models import Organization, User
 from app.services.billing_service import BillingService
 
 
+# --- Pytest CLI option ---
+# Purpose: Allow optional execution against live Stripe credentials.
 def pytest_addoption(parser):
     parser.addoption(
         "--stripe-live",
@@ -20,11 +31,14 @@ def pytest_addoption(parser):
 
 
 class _DummySession:
+    """Minimal checkout session stub for non-live test mode."""
     def __init__(self, session_id: str, url: str = 'https://stripe.test/checkout'):
         self.id = session_id
         self.url = url
 
 
+# --- Build fake checkout session ---
+# Purpose: Provide webhook-like payload consumed by provisioning logic.
 def _make_fake_checkout_session(pending_id: int, customer):
     return SimpleNamespace(
         id=f'cs_test_{pending_id}',
@@ -44,18 +58,24 @@ def _make_fake_checkout_session(pending_id: int, customer):
     )
 
 
+# --- Resolve live mode ---
+# Purpose: Enable optional live Stripe checks via marker or CLI switch.
 def _use_live_stripe(request):
     marker = request.node.get_closest_marker("stripe_live")
     cli_flag = request.config.getoption("--stripe-live", default=False)
     return bool(marker) or bool(cli_flag)
 
 
+# --- Require live env keys ---
+# Purpose: Fail fast when live mode is requested without Stripe credentials.
 def _require_env_keys():
     missing = [key for key in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET") if not os.environ.get(key)]
     if missing:
         raise RuntimeError(f"--stripe-live requested, but missing env vars: {', '.join(missing)}")
 
 
+# --- Signup flow test ---
+# Purpose: Validate mocked end-to-end signup + Stripe completion orchestration.
 def test_signup_flow_end_to_end(app, client, monkeypatch, request):
     live_mode = _use_live_stripe(request)
     if live_mode:
@@ -115,7 +135,6 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         org, user = BillingService._provision_checkout_session(fake_session)
         assert org and user
         assert pending.status == 'account_created'
-        user_id = user.id
 
         # Simulate success route
         def fake_finalize(session_id):
@@ -131,4 +150,4 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         assert response.status_code == 302
         assert response.headers['Location'].endswith('/onboarding/welcome')
         with client.session_transaction() as sess:
-            assert sess.get('_user_id') == str(user_id)
+            assert sess.get('_user_id') == str(user.id)

@@ -1,0 +1,420 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+  .pricing-shell {
+    max-width: 1180px;
+    margin: var(--theme-ext-space-b1c1502de5);
+  }
+
+  .pricing-hero {
+    border-radius: var(--theme-ext-radius-cf5969e6df);
+    padding: var(--theme-ext-space-32f84f9697);
+    background: var(--theme-ext-color-bcc0e072a1);
+    color: var(--theme-ext-color-325b628415);
+    box-shadow: var(--theme-ext-shadow-1ad0d22700);
+  }
+
+  .pricing-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--theme-ext-space-e0100a51c2);
+    border-radius: var(--theme-ext-radius-13166981e2);
+    background: var(--theme-ext-color-d70163c255);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    font-size: var(--theme-ext-size-fd06642d38);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: var(--theme-ext-space-d1851abc4a);
+    margin-bottom: var(--theme-ext-space-685ff92249);
+  }
+
+  .pricing-hero h1 {
+    color: var(--theme-ext-color-325b628415);
+    font-size: var(--theme-ext-size-4aa765915d);
+    margin-bottom: var(--theme-ext-space-7a506f4f36);
+  }
+
+  .pricing-hero p {
+    color: var(--theme-ext-color-6e64b963a9);
+    max-width: 760px;
+    margin-bottom: var(--theme-ext-space-4109b0c1d1);
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--theme-ext-space-65e5c91bd4);
+    margin-bottom: var(--theme-ext-space-685ff92249);
+  }
+
+  .section-heading h2 {
+    margin-bottom: var(--theme-ext-space-99e77c1465);
+    font-size: var(--theme-ext-size-9f3394c4c8);
+  }
+
+  .section-heading p {
+    margin: var(--theme-ext-space-4cb477d5ee);
+    color: var(--color-muted);
+  }
+
+  .lifetime-shell {
+    border-radius: var(--theme-ext-radius-cf5969e6df);
+    padding: var(--theme-ext-space-27ec725b7d);
+    border: 1px solid rgba(99, 110, 198, 0.2);
+    background: var(--theme-ext-color-335defddb5);
+    box-shadow: var(--theme-ext-shadow-f7d933f886);
+    color: var(--theme-ext-color-325b628415);
+  }
+
+  .lifetime-shell .section-heading h2,
+  .lifetime-shell .section-heading p {
+    color: var(--theme-ext-color-325b628415);
+  }
+
+  .tier-card {
+    border-radius: var(--theme-ext-radius-1f2f59cc9c);
+    border: 1px solid rgba(210, 218, 236, 0.85);
+    background: var(--theme-ext-color-333b2a35fa);
+    color: var(--theme-ext-color-02edec0f59);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--theme-ext-space-8d9db2a862);
+    box-shadow: var(--theme-ext-shadow-8fd694988c);
+  }
+
+  .lifetime-card {
+    background: var(--theme-ext-color-42cef2f23b);
+  }
+
+  .tier-card.is-featured {
+    border-color: var(--theme-ext-color-28861f339c);
+    box-shadow: var(--theme-ext-shadow-a60f8763a7);
+    transform: translateY(-2px);
+  }
+
+  .tier-card.is-sold-out {
+    opacity: 0.82;
+  }
+
+  .tier-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--theme-ext-space-004ce77bde);
+    border-radius: var(--theme-ext-radius-13166981e2);
+    font-size: var(--theme-ext-size-6ab716b90b);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    padding: var(--theme-ext-space-554b2d50a5);
+    border: 1px solid rgba(92, 106, 188, 0.3);
+    color: var(--theme-ext-color-f5ed5fda4e);
+    background: var(--theme-ext-color-c9a540741b);
+  }
+
+  .tier-card h3 {
+    margin: var(--theme-ext-space-2742fc1a1a);
+    font-size: var(--theme-ext-size-27761ea286);
+  }
+
+  .tier-tagline {
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+    color: var(--color-muted);
+    font-size: var(--theme-ext-size-ad1cdf8362);
+  }
+
+  .tier-price-row {
+    margin-top: var(--theme-ext-space-124a5c3518);
+    margin-bottom: var(--theme-ext-space-7a506f4f36);
+  }
+
+  .tier-price-figure {
+    font-weight: 700;
+    font-size: var(--theme-ext-size-cddf053315);
+    color: var(--theme-ext-color-c6b021bac4);
+    margin-bottom: var(--theme-ext-space-59ce73ca4e);
+  }
+
+  .tier-price-alt {
+    color: var(--theme-ext-color-0f1adc0377);
+    font-size: var(--theme-ext-size-e87070bfde);
+  }
+
+  .tier-feature-list {
+    list-style: none;
+    padding: var(--theme-ext-space-369a047e0c);
+    margin: var(--theme-ext-space-ae352f16c8);
+  }
+
+  .tier-feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--theme-ext-space-e0100a51c2);
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+    color: var(--theme-ext-color-b6d5805367);
+    font-size: var(--theme-ext-size-e87070bfde);
+  }
+
+  .tier-feature-list i {
+    margin-top: var(--theme-ext-space-6166d0e813);
+    color: var(--theme-ext-color-960ccd0cac);
+  }
+
+  .lifetime-seat-copy {
+    color: var(--theme-ext-color-bd84f9fcd1);
+    font-size: var(--theme-ext-size-0eeb212e7b);
+    margin-bottom: var(--theme-ext-space-7a506f4f36);
+  }
+
+  .comparison-shell {
+    border: 1px solid rgba(205, 213, 231, 0.9);
+    border-radius: var(--theme-ext-radius-1f2f59cc9c);
+    background: var(--theme-ext-color-333b2a35fa);
+    box-shadow: var(--theme-ext-shadow-8fd694988c);
+    overflow: hidden;
+  }
+
+  .comparison-table thead th {
+    background: var(--theme-ext-color-8f053ca9f2);
+    color: var(--theme-ext-color-25aa5ed6a9);
+    border-bottom: 1px solid rgba(189, 201, 232, 0.85);
+    text-align: center;
+    font-size: var(--theme-ext-size-910b7a07ff);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding-top: var(--theme-ext-space-1668119ece);
+    padding-bottom: var(--theme-ext-space-270af9b90c);
+  }
+
+  .comparison-table thead th:first-child {
+    text-align: left;
+    width: 42%;
+  }
+
+  .comparison-table tbody th {
+    color: var(--theme-ext-color-b7f3ddcc7e);
+    font-weight: 600;
+    background: var(--theme-ext-color-333b2a35fa);
+  }
+
+  .comparison-table td,
+  .comparison-table th {
+    border-color: var(--theme-ext-color-671e1e4fe1);
+    vertical-align: middle;
+  }
+
+  .comparison-icon-yes,
+  .comparison-icon-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--theme-ext-radius-13166981e2);
+    font-size: var(--theme-ext-size-6a52a3aeb7);
+  }
+
+  .comparison-icon-yes {
+    background: var(--theme-ext-color-5a8ad7b809);
+    color: var(--theme-ext-color-960ccd0cac);
+  }
+
+  .comparison-icon-no {
+    background: var(--theme-ext-color-20ab271541);
+    color: var(--theme-ext-color-ac99c35532);
+  }
+
+  .pricing-bottom-cta {
+    border-radius: var(--theme-ext-radius-cf5969e6df);
+    padding: var(--theme-ext-space-46e9e52087);
+    border: 1px solid rgba(195, 205, 231, 0.84);
+    background: var(--theme-ext-color-e585c11a94);
+  }
+
+  #plan-comparison {
+    scroll-margin-top: var(--theme-ext-space-c2d0b78e59);
+  }
+
+  @media (max-width: 991px) {
+    .pricing-hero {
+      padding: var(--theme-ext-space-27ec725b7d);
+    }
+
+    .section-heading {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pricing-shell py-4">
+  <section class="pricing-hero mb-4 mb-lg-5">
+    <span class="pricing-kicker"><i class="fas fa-bolt"></i> Batch-first pricing</span>
+    <h1>Choose the right BatchTrack plan for your production stage</h1>
+    <p>
+      Compare Hobbyist, Enthusiast, and Fanatic side-by-side. Every plan starts with a free trial
+      and scales with your process, team, and inventory complexity.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='pricing_hero_trial') }}" class="btn btn-primary btn-lg">
+        Start Free Trial
+      </a>
+      <a href="#plan-comparison" class="btn btn-outline-light btn-lg">Compare all features</a>
+    </div>
+  </section>
+
+  {% if lifetime_has_capacity %}
+  <section class="lifetime-shell mb-4 mb-lg-5">
+    <div class="section-heading">
+      <div>
+        <h2>Limited Lifetime Launch Seats</h2>
+        <p>These one-time offers appear first while seats are still available.</p>
+      </div>
+      <span class="badge bg-light text-dark">Pay once, keep your tier forever</span>
+    </div>
+    <div class="row g-3">
+      {% for tier in pricing_tiers %}
+      {% set offer = tier.lifetime_offer %}
+      <div class="col-12 col-lg-4">
+        <article class="tier-card lifetime-card {% if tier.key == 'enthusiast' %}is-featured{% endif %} {% if not tier.lifetime_has_remaining %}is-sold-out{% endif %}">
+          <span class="tier-chip">{{ tier.name }}</span>
+          <h3>{{ offer.tagline or tier.tagline }}</h3>
+          <p class="tier-tagline">{{ offer.future_scope or tier.future_scope }}</p>
+          <div class="tier-price-row">
+            <div class="tier-price-figure">{{ offer.lifetime_price_copy or "Configure lifetime pricing" }}</div>
+          </div>
+          <div class="lifetime-seat-copy">
+            Only <strong>{{ offer.display_spots_left or 0 }}</strong> seats left / {{ offer.seat_total or 0 }}.
+          </div>
+          <div class="small text-muted mb-3">Coupon: <code>{{ offer.coupon_code }}</code></div>
+          <div class="mt-auto d-grid">
+            {% if tier.signup_lifetime_url %}
+            <a href="{{ tier.signup_lifetime_url }}" class="btn btn-warning">
+              Checkout {{ tier.name }} Lifetime
+            </a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Sold out</button>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="mb-4 mb-lg-5" id="plans">
+    <div class="section-heading">
+      <div>
+        <h2>Monthly and yearly plans</h2>
+        <p>Pick a tier and go straight to secure checkout from this page.</p>
+      </div>
+      <span class="text-muted small">Recommended: Enthusiast for most small teams</span>
+    </div>
+    <div class="row g-3">
+      {% for tier in pricing_tiers %}
+      <div class="col-12 col-lg-4">
+        <article class="tier-card {% if tier.key == 'enthusiast' %}is-featured{% endif %}">
+          <span class="tier-chip">
+            {{ tier.name }}
+            {% if tier.key == 'enthusiast' %}
+            <i class="fas fa-star text-warning"></i>
+            {% endif %}
+          </span>
+          <h3>{{ tier.name }}</h3>
+          <p class="tier-tagline">{{ tier.tagline }}</p>
+          <div class="tier-price-row">
+            <div class="tier-price-figure">{{ tier.monthly_price_display or "Contact sales" }} / month</div>
+            <div class="tier-price-alt">
+              {% if tier.yearly_price_display %}
+              {{ tier.yearly_price_display }} / year
+              {% else %}
+              Yearly pricing not configured yet
+              {% endif %}
+            </div>
+          </div>
+          <ul class="tier-feature-list">
+            {% for feature in tier.feature_highlights[:6] %}
+            <li><i class="fas fa-check-circle"></i><span>{{ feature }}</span></li>
+            {% endfor %}
+          </ul>
+          {% if tier.feature_total > (tier.feature_highlights|length) %}
+          <div class="small text-muted mb-3">+ {{ tier.feature_total - (tier.feature_highlights|length) }} more capabilities inside the app</div>
+          {% endif %}
+          <div class="mt-auto d-grid gap-2">
+            {% if tier.signup_monthly_url %}
+            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Checkout Monthly</a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Unavailable</button>
+            {% endif %}
+
+            {% if tier.signup_yearly_url %}
+            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Checkout Yearly</a>
+            {% else %}
+            <button type="button" class="btn btn-outline-secondary" disabled>Yearly Unavailable</button>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="plan-comparison" class="mb-4 mb-lg-5">
+    <div class="section-heading">
+      <div>
+        <h2>Feature comparison</h2>
+        <p>Column-style checklist across Hobbyist, Enthusiast, and Fanatic.</p>
+      </div>
+    </div>
+    <div class="comparison-shell table-responsive">
+      <table class="table comparison-table mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Feature</th>
+            {% for tier in pricing_tiers %}
+            <th scope="col">{{ tier.name }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparison_rows %}
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            {% for tier in pricing_tiers %}
+            <td class="text-center">
+              {% if row[tier.key] %}
+              <span class="comparison-icon-yes"><i class="fas fa-check"></i></span>
+              {% else %}
+              <span class="comparison-icon-no"><i class="fas fa-minus"></i></span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pricing-bottom-cta">
+    <h2 class="h4 mb-2">Ready to simplify production and inventory?</h2>
+    <p class="text-muted mb-3">
+      Start your free trial now, pick your tier, and launch your first tracked batch in minutes.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('auth.signup', source='pricing_bottom_trial') }}" class="btn btn-primary btn-lg">
+        Start Free Trial
+      </a>
+      <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
+        View Help Center
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

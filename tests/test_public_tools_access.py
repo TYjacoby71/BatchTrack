@@ -45,4 +45,57 @@ def test_anonymous_workflow_can_browse_public_site(app):
     )
     _assert_public_get(client, "/recipes/library", label="recipe library")
     _assert_public_get(client, "/help/how-it-works", label="how it works")
+    _assert_public_get(client, "/lp/hormozi", label="landing page (results-first)")
+    _assert_public_get(client, "/lp/robbins", label="landing page (transformation-first)")
     _assert_public_get(client, "/auth/signup", label="signup page")
+
+
+@pytest.mark.usefixtures("app")
+def test_signup_page_uses_public_marketing_shell(app):
+    """Signup should render the public marketing shell, not app/auth nav."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/signup", label="signup page")
+    html = response.get_data(as_text=True)
+    assert "public-shell" in html
+    assert "public-marketing-nav" in html
+    assert "Login to App" in html
+
+
+@pytest.mark.usefixtures("app")
+def test_quick_signup_page_uses_public_marketing_shell(app):
+    """Quick signup should keep public styling when opened from public pages."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/quick-signup", label="quick signup page")
+    html = response.get_data(as_text=True)
+    assert "public-shell" in html
+    assert "public-marketing-nav" in html
+
+
+@pytest.mark.usefixtures("app")
+def test_staging_homepage_variant_switcher_visibility(app):
+    """Homepage variant switcher should only appear in staging."""
+    client = app.test_client()
+
+    app.config["ENV"] = "testing"
+    app.config["FLASK_ENV"] = "testing"
+    testing_response = _assert_public_get(
+        client,
+        "/",
+        label="homepage in non-staging",
+        query_string={"refresh": "1"},
+    )
+    testing_html = testing_response.get_data(as_text=True)
+    assert "Home Variants" not in testing_html
+
+    app.config["ENV"] = "staging"
+    app.config["FLASK_ENV"] = "staging"
+    staging_response = _assert_public_get(
+        client,
+        "/",
+        label="homepage in staging",
+        query_string={"refresh": "1"},
+    )
+    staging_html = staging_response.get_data(as_text=True)
+    assert "Home Variants" in staging_html
+    assert "/lp/hormozi" in staging_html
+    assert "/lp/robbins" in staging_html

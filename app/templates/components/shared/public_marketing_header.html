@@ -1,0 +1,86 @@
+{#
+Synopsis:
+Shared marketing header for homepage and public content routes.
+
+Glossary:
+- Home anchors: Section links that scroll within the homepage.
+- Public route: Non-authenticated route that should use marketing navigation.
+- Staging variant switcher: Nav dropdown used to toggle landing variants in staging only.
+#}
+{% set public_header_home_url = url_for('index') %}
+{% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
+{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'homepage_get_started' %}
+{% if global_library_enabled is not defined %}
+{% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
+{% endif %}
+{% set active_env = (config.get('ENV') or config.get('FLASK_ENV') or '')|lower %}
+{% set show_staging_variant_switcher = active_env == 'staging' %}
+{% set features_href = '#features' if public_header_is_homepage else public_header_home_url ~ '#features' %}
+{% set about_href = '#about' if public_header_is_homepage else public_header_home_url ~ '#about' %}
+{% set contact_href = '#contact' if public_header_is_homepage else public_header_home_url ~ '#contact' %}
+
+<a class="navbar-brand text-primary" href="{{ public_header_home_url }}">
+    <i class="fas fa-flask me-2"></i>BatchTrack<sup class="logo-tm">TM</sup> 1.0
+</a>
+
+<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicMarketingNav" aria-controls="publicMarketingNav" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+</button>
+
+<div class="collapse navbar-collapse" id="publicMarketingNav">
+    <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ features_href }}">Features</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tools_bp.tools_index') }}">Tools</a>
+        </li>
+        {% if global_library_enabled %}
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">Inventory Library</a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
+        </li>
+        {% if show_staging_variant_switcher %}
+        <li class="nav-item dropdown">
+            <a
+                class="nav-link dropdown-toggle text-primary fw-semibold"
+                href="#"
+                id="stagingVariantDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                Home Variants
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="stagingVariantDropdown">
+                <li><h6 class="dropdown-header">Staging only</h6></li>
+                <li><a class="dropdown-item" href="{{ url_for('index') }}">Classic Homepage</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('landing_pages.lp_hormozi') }}">Results-First Variant</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('landing_pages.lp_robbins') }}">Transformation Variant</a></li>
+            </ul>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a class="nav-link" href="{{ about_href }}">About</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ contact_href }}">Contact</a>
+        </li>
+    </ul>
+    <ul class="navbar-nav">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('auth.login') }}">
+                <i class="fas fa-sign-in-alt me-1"></i>Login to App
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="btn btn-cta text-white ms-2" href="{{ url_for('auth.signup', source=public_header_signup_source) }}">Get Started</a>
+        </li>
+    </ul>
+</div>

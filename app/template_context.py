@@ -1,3 +1,13 @@
+"""Template context registry for global Jinja helpers.
+
+Synopsis:
+Registers shared context processors used across all templates.
+
+Glossary:
+- Context processor: Function that injects variables/helpers into every template render.
+- Theme preference scope: Per-user stored appearance preference value.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +23,7 @@ from app.utils.unit_utils import get_global_unit_list
 
 from .utils.json_store import read_json_file
 from .utils.settings import get_settings, is_feature_enabled
+from .services.lifetime_pricing_service import LifetimePricingService
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -143,7 +154,9 @@ def register_template_context(app: Flask) -> None:
                 prefs = None
             if prefs:
                 theme_preference_scoped = True
-                theme_preference = prefs.theme or "system"
+                # Keep None when a preference row exists but theme was never chosen.
+                # Layout bootstrap falls back to explicit light mode in this case.
+                theme_preference = prefs.theme
         return {
             "theme_preference": theme_preference,
             "theme_preference_scoped": theme_preference_scoped,
@@ -192,8 +205,10 @@ def register_template_context(app: Flask) -> None:
         spotlights = [spotlight for spotlight in all_spotlights if spotlight.get("approved")]
 
         total_active_users = 0
-        lifetime_total = 500
-        lifetime_used = 0
+        lifetime_offers: list[dict] = []
+        lifetime_total = 0
+        lifetime_true_left = 0
+        lifetime_display_left = 0
         if all((Organization, User, SubscriptionTier)):
             try:
                 active_user_cache_key = "marketing:active_users"
@@ -205,21 +220,28 @@ def register_template_context(app: Flask) -> None:
                     app_cache.set(active_user_cache_key, total_active_users, ttl=600)
                 else:
                     total_active_users = cached_total_users
-                lifetime_tiers = SubscriptionTier.query.filter(
-                    SubscriptionTier.name.ilike("%lifetime%")
-                ).all()
-                tier_ids = [tier.id for tier in lifetime_tiers]
-                if tier_ids:
-                    lifetime_used += Organization.query.filter(
-                        Organization.subscription_tier_id.in_(tier_ids)
-                    ).count()
-                lifetime_used += Organization.query.filter(
-                    Organization.whop_product_tier == "lifetime"
-                ).count()
+                lifetime_tiers_cache_key = "marketing:lifetime_offers:v1"
+                cached_lifetime_offers = app_cache.get(lifetime_tiers_cache_key)
+                if cached_lifetime_offers is None:
+                    paid_tiers = (
+                        SubscriptionTier.query.filter_by(
+                            is_customer_facing=True,
+                            billing_provider="stripe",
+                        )
+                        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+                        .all()
+                    )
+                    lifetime_offers = LifetimePricingService.build_lifetime_offers(paid_tiers)
+                    app_cache.set(lifetime_tiers_cache_key, lifetime_offers, ttl=300)
+                else:
+                    lifetime_offers = cached_lifetime_offers
             except Exception:
                 pass
 
-        lifetime_left = max(0, lifetime_total - int(lifetime_used or 0))
+        if lifetime_offers:
+            lifetime_total = sum(int(offer.get("seat_total", 0) or 0) for offer in lifetime_offers)
+            lifetime_true_left = sum(int(offer.get("true_spots_left", 0) or 0) for offer in lifetime_offers)
+            lifetime_display_left = sum(int(offer.get("display_spots_left", 0) or 0) for offer in lifetime_offers)
 
         cfg = get_settings()
         marketing_messages = {"day_1": "", "day_3": "", "day_5": ""}
@@ -235,9 +257,11 @@ def register_template_context(app: Flask) -> None:
             "marketing_spotlights": spotlights,
             "marketing_stats": {
                 "total_active_users": total_active_users,
-                "lifetime_left": lifetime_left,
+                "lifetime_left": lifetime_display_left,
+                "lifetime_true_left": lifetime_true_left,
                 "lifetime_total": lifetime_total,
             },
+            "marketing_lifetime_offers": lifetime_offers,
             "marketing_messages": marketing_messages,
             "marketing_settings": marketing_settings,
         }

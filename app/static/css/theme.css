@@ -1,8 +1,9 @@
-/* Theme tokens and Bootstrap mapping (industry-standard palettes) */
+/* Synopsis: Global design tokens and Bootstrap variable mapping for BatchTrack themes. */
+/* Glossary: data-theme='system' follows OS preference; explicit values force a specific palette. */
 
 /* Base (light) theme */
 :root {
-  /* Spacing scale */
+  /* Spacing scale (4px grid) */
   --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -62,6 +63,34 @@
   --color-subtle-bg: #f8f9fa;
   --color-subtle-bg-2: #f3f4f6;
 
+  /* Responsive type and control scale */
+  --font-size-xs: clamp(0.75rem, 0.72rem + 0.12vw, 0.82rem);
+  --font-size-sm: clamp(0.82rem, 0.79rem + 0.18vw, 0.9rem);
+  --font-size-base: clamp(0.93rem, 0.9rem + 0.22vw, 1rem);
+  --font-size-lg: clamp(1rem, 0.97rem + 0.28vw, 1.12rem);
+  --font-size-xl: clamp(1.12rem, 1.04rem + 0.52vw, 1.36rem);
+
+  --heading-1-size: clamp(1.55rem, 1.22rem + 1.45vw, 2.25rem);
+  --heading-2-size: clamp(1.35rem, 1.1rem + 1.1vw, 1.9rem);
+  --heading-3-size: clamp(1.2rem, 1.02rem + 0.75vw, 1.55rem);
+  --heading-4-size: clamp(1.08rem, 0.96rem + 0.5vw, 1.34rem);
+  --heading-5-size: clamp(1rem, 0.92rem + 0.28vw, 1.16rem);
+  --heading-6-size: clamp(0.92rem, 0.88rem + 0.2vw, 1.02rem);
+
+  --control-font-size: var(--font-size-base);
+  --control-padding-y: var(--space-2);  /* 8px */
+  --control-padding-x: var(--space-3);  /* 12px */
+
+  --btn-font-size: var(--font-size-base);
+  --btn-padding-y: var(--space-2);      /* 8px */
+  --btn-padding-x: var(--space-4);      /* 16px */
+  --btn-font-size-sm: var(--font-size-sm);
+  --btn-padding-y-sm: var(--space-1);   /* 4px */
+  --btn-padding-x-sm: var(--space-2);   /* 8px */
+  --btn-font-size-lg: clamp(0.96rem, 0.9rem + 0.35vw, 1.1rem);
+  --btn-padding-y-lg: var(--space-3);   /* 12px */
+  --btn-padding-x-lg: var(--space-5);   /* 20px */
+
   /* Bootstrap mappings */
   --bs-body-bg: var(--color-bg);
   --bs-body-color: var(--color-text);
@@ -77,9 +106,9 @@
   --bs-dark: var(--color-dark);
 }
 
-/* Dark theme via system when no explicit theme is set */
+/* Dark theme via explicit system mode */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
+  :root[data-theme='system'] {
     --color-border: #334155;          /* slate-600 */
     --color-bg: #0b1220;              /* deep navy */
     --color-surface: #111827;         /* slate-800 */
@@ -220,6 +249,11 @@
 .navbar .navbar-nav .nav-link,
 .navbar .navbar-text { color: var(--color-text) !important; }
 .navbar .nav-link:hover { color: var(--color-primary) !important; }
+.navbar .navbar-brand .logo-tm {
+  font-size: 0.5em;
+  line-height: 0;
+  vertical-align: super;
+}
 
 /* Button variants synced to tokens */
 .btn-primary {
@@ -356,13 +390,15 @@ input[type="tel"].form-control,
   color: var(--color-text) !important;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
   border-radius: var(--radius-2) !important;
-  padding: var(--space-3) !important;
+  padding: var(--control-padding-y) var(--control-padding-x) !important;
+  font-size: var(--control-font-size) !important;
+  line-height: 1.35 !important;
 }
 
 .form-check-input {
-  width: 1.1rem;
-  height: 1.1rem;
-  margin-top: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.25rem;
   border: 1px solid var(--color-border);
   background-color: var(--color-surface);
   color: var(--color-primary);
@@ -410,7 +446,7 @@ input[type="tel"].form-control:focus {
   border-color: var(--color-primary) !important;
   border-width: 2px !important;
   outline: 0 !important;
-  box-shadow: 0 0 0 3px var(--focus-ring-color), 0 1px 2px rgba(0,0,0,0.04) !important;
+  box-shadow: 0 0 0 4px var(--focus-ring-color), 0 1px 2px rgba(0,0,0,0.04) !important;
 }
 
 /* Input groups - ensure borders are visible */
@@ -426,3 +462,215 @@ input[type="tel"].form-control:focus {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-1);
 }
+
+/* Standard responsive text + button system */
+body {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+
+small,
+.small {
+  font-size: var(--font-size-sm);
+}
+
+h1 { font-size: var(--heading-1-size); }
+h2 { font-size: var(--heading-2-size); }
+h3 { font-size: var(--heading-3-size); }
+h4 { font-size: var(--heading-4-size); }
+h5 { font-size: var(--heading-5-size); }
+h6 { font-size: var(--heading-6-size); }
+
+.btn {
+  font-size: var(--btn-font-size);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  --bs-btn-font-size: var(--btn-font-size);
+  --bs-btn-padding-y: var(--btn-padding-y);
+  --bs-btn-padding-x: var(--btn-padding-x);
+  line-height: 1.25;
+}
+
+.btn-sm {
+  font-size: var(--btn-font-size-sm);
+  padding: var(--btn-padding-y-sm) var(--btn-padding-x-sm);
+  --bs-btn-font-size: var(--btn-font-size-sm);
+  --bs-btn-padding-y: var(--btn-padding-y-sm);
+  --bs-btn-padding-x: var(--btn-padding-x-sm);
+}
+
+.btn-lg {
+  font-size: var(--btn-font-size-lg);
+  padding: var(--btn-padding-y-lg) var(--btn-padding-x-lg);
+  --bs-btn-font-size: var(--btn-font-size-lg);
+  --bs-btn-padding-y: var(--btn-padding-y-lg);
+  --bs-btn-padding-x: var(--btn-padding-x-lg);
+}
+
+.dropdown-item,
+.form-text {
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 576px) {
+  :root {
+    --control-padding-x: var(--space-2);  /* 8px */
+    --btn-padding-x: var(--space-3);      /* 12px */
+    --btn-padding-x-lg: var(--space-4);   /* 16px */
+    --btn-padding-y-lg: var(--space-2);   /* 8px */
+  }
+
+  .btn {
+    white-space: normal;
+  }
+}
+
+/* Centralized template extension tokens */
+:root {
+  --theme-ext-color-02edec0f59: #1b2438;
+  --theme-ext-color-0f1adc0377: #5f6f94;
+  --theme-ext-color-1034f38d64: linear-gradient(90deg, rgba(111, 66, 193, 0.14), rgba(111, 66, 193, 0.05));
+  --theme-ext-color-1379cbaaa8: rgba(255,255,255,0.7);
+  --theme-ext-color-197c76433a: linear-gradient(90deg, rgba(108, 117, 125, 0.12), rgba(108, 117, 125, 0.04));
+  --theme-ext-color-1ab4b8ffdf: white;
+  --theme-ext-color-1f226a77aa: #edf2ff;
+  --theme-ext-color-20ab271541: rgba(108, 117, 125, 0.14);
+  --theme-ext-color-25aa5ed6a9: #1f3264;
+  --theme-ext-color-28861f339c: rgba(25, 135, 84, 0.6);
+  --theme-ext-color-325b628415: #fff;
+  --theme-ext-color-333b2a35fa: #fff;
+  --theme-ext-color-335defddb5: linear-gradient(165deg, rgba(14, 20, 53, 0.95), rgba(34, 19, 58, 0.94));
+  --theme-ext-color-3572281613: rgba(0, 0, 0, 0.7);
+  --theme-ext-color-42cef2f23b: linear-gradient(180deg, #ffffff 0%, #f6f8ff 100%);
+  --theme-ext-color-5151e4788e: white;
+  --theme-ext-color-5851662767: rgba(25, 135, 84, 0.12);
+  --theme-ext-color-5a8ad7b809: rgba(25, 135, 84, 0.14);
+  --theme-ext-color-645b0e3807: rgba(0,0,0,0.02);
+  --theme-ext-color-6524724366: #fff;
+  --theme-ext-color-657aaea199: rgba(0, 0, 0, 0.3);
+  --theme-ext-color-671e1e4fe1: rgba(223, 228, 242, 0.92);
+  --theme-ext-color-6e64b963a9: rgba(255, 255, 255, 0.88);
+  --theme-ext-color-7630a14d9f: #198754;
+  --theme-ext-color-866694556b: linear-gradient(180deg, rgba(25, 135, 84, 0.08), rgba(247, 249, 255, 0.9));
+  --theme-ext-color-8f053ca9f2: #eef3ff;
+  --theme-ext-color-960ccd0cac: #198754;
+  --theme-ext-color-a0f2fa1d85: rgba(0, 0, 0, 0.9);
+  --theme-ext-color-ac99c35532: #6c757d;
+  --theme-ext-color-b0490aee06: linear-gradient(90deg, rgba(13, 110, 253, 0.12), rgba(13, 110, 253, 0.04));
+  --theme-ext-color-b6d5805367: #26345d;
+  --theme-ext-color-b7f3ddcc7e: #223056;
+  --theme-ext-color-bcc0e072a1: radial-gradient(circle at 0% 0%, rgba(45, 108, 223, 0.2), transparent 55%),
+      linear-gradient(140deg, #0d2342 0%, #112f58 45%, #2f2a68 100%);
+  --theme-ext-color-bd84f9fcd1: #2f3b63;
+  --theme-ext-color-c6b021bac4: #1e3b7d;
+  --theme-ext-color-c760a834cc: #ffffff;
+  --theme-ext-color-c9a540741b: rgba(81, 101, 208, 0.08);
+  --theme-ext-color-c9de8e32a0: rgba(0, 0, 0, 0.18);
+  --theme-ext-color-cb5d7279ca: inherit;
+  --theme-ext-color-d70163c255: rgba(255, 255, 255, 0.18);
+  --theme-ext-color-e26efca41a: #f7f9ff;
+  --theme-ext-color-e585c11a94: linear-gradient(140deg, rgba(48, 84, 194, 0.1), rgba(111, 66, 193, 0.08));
+  --theme-ext-color-ea8ce6a9ef: linear-gradient(135deg, #4158d0 0%, #c850c0 50%, #ffcc70 100%);
+  --theme-ext-color-f5ed5fda4e: #324579;
+  --theme-ext-radius-002e22995e: 0.25rem;
+  --theme-ext-radius-13166981e2: 999px;
+  --theme-ext-radius-1f2f59cc9c: 1rem;
+  --theme-ext-radius-541989fe64: 4px;
+  --theme-ext-radius-9d3bc57a82: 50%;
+  --theme-ext-radius-a8451acdda: 0.5rem;
+  --theme-ext-radius-cf5969e6df: 1.25rem;
+  --theme-ext-radius-ef4e416e4e: 0.75rem;
+  --theme-ext-shadow-1ad0d22700: 0 18px 40px rgba(11, 20, 48, 0.25);
+  --theme-ext-shadow-1b71b17ff4: 0 4px 14px rgba(17, 28, 56, 0.08);
+  --theme-ext-shadow-8fd694988c: 0 10px 24px rgba(19, 30, 61, 0.08);
+  --theme-ext-shadow-a60f8763a7: 0 14px 26px rgba(25, 135, 84, 0.15);
+  --theme-ext-shadow-a9f9d9573c: 0 10px 24px rgba(25, 135, 84, 0.2);
+  --theme-ext-shadow-b289e9213c: 0 10px 24px rgba(17, 28, 56, 0.15);
+  --theme-ext-shadow-e49af3bb5b: none;
+  --theme-ext-shadow-f0041b4741: 0 6px 18px rgba(17, 28, 56, 0.08);
+  --theme-ext-shadow-f7d933f886: 0 14px 30px rgba(16, 22, 55, 0.24);
+  --theme-ext-size-03c2698f9e: 0.96rem;
+  --theme-ext-size-0eeb212e7b: 0.9rem;
+  --theme-ext-size-21583621a9: 0.85rem;
+  --theme-ext-size-27761ea286: 1.25rem;
+  --theme-ext-size-31c120b42b: 14px;
+  --theme-ext-size-4aa765915d: clamp(1.8rem, 3vw, 2.7rem);
+  --theme-ext-size-4c332f7a9b: 12px;
+  --theme-ext-size-64663a75d2: 0.75rem;
+  --theme-ext-size-6a52a3aeb7: 0.78rem;
+  --theme-ext-size-6ab716b90b: 0.72rem;
+  --theme-ext-size-701497cbcf: 0.875rem;
+  --theme-ext-size-910b7a07ff: 0.84rem;
+  --theme-ext-size-9f3394c4c8: clamp(1.35rem, 2.2vw, 1.9rem);
+  --theme-ext-size-ad1cdf8362: 0.95rem;
+  --theme-ext-size-bc254b7f05: 0.8em;
+  --theme-ext-size-cc5c27a52a: 1.4;
+  --theme-ext-size-cddf053315: 1.16rem;
+  --theme-ext-size-d5aadd0be8: 0.82rem;
+  --theme-ext-size-e87070bfde: 0.92rem;
+  --theme-ext-size-f0aea56e76: 0.7rem;
+  --theme-ext-size-f7b7e16be4: 1.6;
+  --theme-ext-size-fd06642d38: 0.8rem;
+  --theme-ext-space-004ce77bde: 0.25rem;
+  --theme-ext-space-09250e72d8: 0.75rem 1rem 1rem;
+  --theme-ext-space-0aa0ca2d94: 0 40px;
+  --theme-ext-space-124a5c3518: 0.5rem;
+  --theme-ext-space-1668119ece: 0.75rem;
+  --theme-ext-space-16a25b2d53: 20px 0;
+  --theme-ext-space-16c0d9f312: 0.75rem 1rem;
+  --theme-ext-space-21b301a6b6: 0.5rem;
+  --theme-ext-space-22272eb8f4: 0.5rem;
+  --theme-ext-space-270af9b90c: 0.75rem;
+  --theme-ext-space-2742fc1a1a: 0.75rem 0 0.5rem;
+  --theme-ext-space-27ec725b7d: 1.5rem;
+  --theme-ext-space-2c758fffcd: 0 16px;
+  --theme-ext-space-30430aa97a: -1rem;
+  --theme-ext-space-32524b311c: 0.75rem;
+  --theme-ext-space-32f84f9697: 2.5rem;
+  --theme-ext-space-369a047e0c: 0;
+  --theme-ext-space-4109b0c1d1: 1.5rem;
+  --theme-ext-space-46e9e52087: 2rem;
+  --theme-ext-space-4cb477d5ee: 0;
+  --theme-ext-space-5118c1e21b: 0.25rem;
+  --theme-ext-space-51c807580e: 0;
+  --theme-ext-space-554b2d50a5: 0.25rem 0.5rem;
+  --theme-ext-space-55b86708d5: 0.5rem 0;
+  --theme-ext-space-55d49dea74: 100%;
+  --theme-ext-space-59ce73ca4e: 0.25rem;
+  --theme-ext-space-6166d0e813: 0.25rem;
+  --theme-ext-space-635e26b8e3: 12px;
+  --theme-ext-space-65e5c91bd4: 1rem;
+  --theme-ext-space-6701b7c520: 1rem;
+  --theme-ext-space-673fadf492: 3rem;
+  --theme-ext-space-685ff92249: 1rem;
+  --theme-ext-space-686c8eafc2: 0;
+  --theme-ext-space-78ba67b8ef: 1rem;
+  --theme-ext-space-7a506f4f36: 0.75rem;
+  --theme-ext-space-7f1ef9ac2f: 1.5rem;
+  --theme-ext-space-8d9db2a862: 1rem;
+  --theme-ext-space-9247946665: 16px;
+  --theme-ext-space-99e77c1465: 0;
+  --theme-ext-space-9b54148fee: 0.25rem;
+  --theme-ext-space-a55cf987a1: 1.5rem;
+  --theme-ext-space-a5d044256d: 0;
+  --theme-ext-space-ab22a61d62: 12px 16px;
+  --theme-ext-space-ac314870d0: 0.75rem;
+  --theme-ext-space-ae352f16c8: 0.75rem 0 1rem;
+  --theme-ext-space-b00420f6ab: 12px;
+  --theme-ext-space-b1c1502de5: 0 auto;
+  --theme-ext-space-c2d0b78e59: 120px;
+  --theme-ext-space-c4ef021fed: 4px;
+  --theme-ext-space-d1851abc4a: 0.5rem 0.75rem;
+  --theme-ext-space-d7b86fa95a: 50%;
+  --theme-ext-space-da36f4b27f: 0;
+  --theme-ext-space-dac1593bce: 16px;
+  --theme-ext-space-db375252e4: 1.5rem;
+  --theme-ext-space-e0100a51c2: 0.5rem;
+  --theme-ext-space-e231d2b7d5: 2.5rem 1.5rem;
+  --theme-ext-space-e2f43d9e27: 0.75rem;
+  --theme-ext-space-e3b603c4bf: 0.75rem;
+  --theme-ext-space-ed2a3cf4ec: 0 32px;
+  --theme-ext-space-f021102165: 2rem;
+  --theme-ext-space-ff0362dfff: 0 -16px;
+  --theme-ext-space-ffe0ae9ea3: 0;
+}
+/* End centralized template extension tokens */

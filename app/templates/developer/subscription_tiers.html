@@ -254,9 +254,9 @@
                         <div class="col-md-6">
                             <h6>To Add a New Tier:</h6>
                             <ol class="small">
-                                <li>Create product in Stripe Dashboard</li>
-                                <li>Copy the Price IDs (monthly/yearly)</li>
-                                <li>Create tier here with those Price IDs</li>
+                                <li>Create one Stripe product for the tier (e.g., Hobbyist)</li>
+                                <li>Create three prices with lookup keys: <code>&lt;tier&gt;_monthly</code>, <code>&lt;tier&gt;_yearly</code>, <code>&lt;tier&gt;_lifetime</code></li>
+                                <li>Store only the monthly lookup key in this tier</li>
                                 <li>Select appropriate permissions</li>
                                 <li>Test with a trial organization</li>
                             </ol>

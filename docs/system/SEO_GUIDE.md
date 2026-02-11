@@ -1,8 +1,34 @@
 # SEO and Metadata Style Guide for BatchTrack.com
 
-Version: 1.1  
+Version: 1.2  
 Last updated: February 2026  
 Core principle: Every page must feel calm, maker-first, and batch-first. Metadata should help real makers find us when searching for tools that understand their craft, not corporate workflows.
+
+## Synopsis
+This is the source-of-truth playbook for metadata updates in BatchTrack.  
+Use it when adding or editing any route or template that renders a page, especially public marketing and SEO-facing pages.
+
+## Update Standard (Agent Instructions)
+- Treat this guide as instructions for implementation work; do not edit it during normal feature pushes unless standards are intentionally changing.
+- For every edited page route/template, ensure metadata is explicitly set in maker-first language:
+  - `page_title`
+  - `page_description`
+  - `canonical_url`
+  - `page_og_image` (required when page-specific social image exists, otherwise use layout default)
+- If a page uses `layout.html`, pass metadata through route context so layout can render title/description/canonical/OG/Twitter tags consistently.
+- If a page does not use `layout.html`, include equivalent head tags directly in the template (`<title>`, meta description, canonical, OG/Twitter).
+- Keep copy within guide constraints:
+  - Title target: 50–60 chars (max 70), format `BatchTrack.com | ...`
+  - Description target: 120–160 chars (max 170)
+- Keep tone maker-first and calm; avoid banned finance/enterprise jargon listed in this guide.
+- When new public pages/routes are introduced, update:
+  - `docs/system/APP_DICTIONARY.md` (route and UI entries)
+  - changelog entry in `docs/changelog/`
+- Before push, verify metadata quality quickly:
+  - canonical points to the intended route
+  - OG/Twitter fields resolve from page variables or fallback image
+  - no placeholder text in title/description
+  - metadata reflects actual page content and CTA intent
 
 ## 1. Brand Voice Rules (Use These Words/Phrases)
 Must-have tone:
@@ -60,6 +86,10 @@ Required when set:
 - og:image -> 1200x630 px, maker-focused screenshot (calculator UI, BatchBot demo, FIFO view)
 - og:url -> canonical URL
 
+Current app defaults:
+- `layout.html` falls back to `app/static/images/og/batchtrack-default-og.svg` when no page-specific image is supplied.
+- `/pricing` uses `app/static/images/og/batchtrack-pricing-og.svg`.
+
 ## 5. Keyword Strategy (No Stuffing - Helpful Content First)
 Do:
 - Use 3 to 8 natural keywords per page in headings, first paragraph, alt text.
@@ -97,8 +127,12 @@ page_description = "Free soap formulator: build recipes with lye, oils, superfat
 Pricing (/pricing)
 ```
 page_title = "BatchTrack.com | Pricing for Small-Batch Makers"
-page_description = "Simple pricing for makers: Hobbyist, Enthusiast, Fanatic. Unlimited batches on Fanatic. Lifetime deals available. Batch-first tools, not finance-first."
+page_description = "Compare Hobbyist, Enthusiast, and Fanatic plans with monthly, yearly, and limited lifetime launch seats in a calm, batch-first flow."
 ```
+
+Notes:
+- `/pricing` is a public destination page and should set `page_title`, `page_description`, and `canonical_url` through the route context.
+- `layout.html` handles OG/Twitter tags from those variables; keep the copy maker-first and avoid finance-first language.
 
 ## Final Notes for Engineers
 - Use Jinja variables consistently (`page_title`, `page_description`, etc.) in `layout.html` head.

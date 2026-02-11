@@ -32,3 +32,4 @@
 - [ ] Timezone handling correct (STORAGE ≠ DISPLAY)
 - [ ] Permission checks in place
 - [ ] Update scripts considered (`update-permissions`, `update-addons`)
+- [ ] For any edited page templates/routes, metadata is updated in maker-first format (title, description, canonical, OG/Twitter tags when applicable)

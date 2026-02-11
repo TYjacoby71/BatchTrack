@@ -7,7 +7,7 @@
             <div class="card-body">
                 {% if config['DEBUG'] %}
                 <!-- Debug info - only show in development -->
-                <div class="alert alert-info mb-3" style="font-family: monospace; font-size: 12px;">
+                <div class="alert alert-info mb-3" style="font-family: monospace; font-size: var(--theme-ext-size-4c332f7a9b);">
                     <strong>Debug Info:</strong><br>
                     current_user.first_name: "{{ current_user.first_name or 'None' }}"<br>
                     current_user.last_name: "{{ current_user.last_name or 'None' }}"<br>
