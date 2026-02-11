@@ -480,6 +480,7 @@
   const oilTotalTarget = document.getElementById('oilTotalTarget');
   if (oilTotalTarget) {
     oilTotalTarget.addEventListener('input', function(){
+      SoapTool.mold.syncMoldPctFromTarget();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -586,7 +587,7 @@
   const moldWaterWeight = document.getElementById('moldWaterWeight');
   if (moldWaterWeight) {
     moldWaterWeight.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -596,7 +597,7 @@
   const moldOilPct = document.getElementById('moldOilPct');
   if (moldOilPct) {
     moldOilPct.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -607,6 +608,7 @@
   if (moldShape) {
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -616,7 +618,7 @@
   const moldCylinderCorrection = document.getElementById('moldCylinderCorrection');
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -626,7 +628,7 @@
   const moldCylinderFactor = document.getElementById('moldCylinderFactor');
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
