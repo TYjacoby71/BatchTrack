@@ -121,6 +121,8 @@ def integrations_checklist():
     oauth_status = {
         "GOOGLE_OAUTH_CLIENT_ID_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")),
         "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")),
+        "FACEBOOK_OAUTH_APP_ID_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_ID")),
+        "FACEBOOK_OAUTH_APP_SECRET_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")),
     }
     whop_status = {
         "WHOP_API_KEY_present": bool(current_app.config.get("WHOP_API_KEY")),
@@ -150,6 +152,18 @@ def integrations_checklist():
             "limit": "1200/minute",
             "source": "app/blueprints/auth/oauth_routes.py::oauth_callback",
             "notes": "OAuth callback handler (Google).",
+        },
+        {
+            "endpoint": "GET /auth/oauth/facebook",
+            "limit": "1200/minute",
+            "source": "app/blueprints/auth/oauth_routes.py::oauth_facebook",
+            "notes": "Facebook OAuth initiation endpoint.",
+        },
+        {
+            "endpoint": "GET /auth/oauth/facebook/callback",
+            "limit": "1200/minute",
+            "source": "app/blueprints/auth/oauth_routes.py::oauth_facebook_callback",
+            "notes": "OAuth callback handler (Facebook).",
         },
         {
             "endpoint": "GET /auth/callback",

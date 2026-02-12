@@ -170,6 +170,7 @@ class SignupCheckoutService:
         view_state: SignupViewState,
         *,
         oauth_available: bool,
+        oauth_providers: dict[str, bool] | None,
         canonical_url: str,
     ) -> dict[str, Any]:
         default_tier_id = view_state.selected_tier or (str(context.db_tiers[0].id) if context.db_tiers else "")
@@ -191,6 +192,7 @@ class SignupCheckoutService:
             "standard_billing_cycle": view_state.selected_standard_cycle,
             "oauth_user_info": context.oauth_user_info,
             "oauth_available": oauth_available,
+            "oauth_providers": oauth_providers or {"google": False, "facebook": False},
             "preselected_tier": view_state.selected_tier,
             "default_tier_id": default_tier_id,
             "contact_email": view_state.contact_email,

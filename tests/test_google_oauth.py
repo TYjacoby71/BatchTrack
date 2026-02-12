@@ -33,6 +33,12 @@ class TestGoogleOAuthCharacterization:
             # Characterize current behavior
             assert response.status_code in [200, 302, 400, 401, 403]
 
+    def test_auth_facebook_endpoint_exists(self, app, client):
+        """Test that Facebook OAuth initiation endpoint exists."""
+        with app.app_context():
+            response = client.get('/auth/oauth/facebook')
+            assert response.status_code in [302, 401, 403]
+
     @patch('app.services.oauth_service.OAuthService.get_user_info')
     def test_oauth_state_validation_path(self, mock_get_user, app, client):
         """Test that OAuth state validation exists in current flow."""
@@ -59,7 +65,11 @@ class TestGoogleOAuthCharacterization:
             expected_methods = [
                 'get_authorization_url',
                 'get_user_info',
-                'generate_state'
+                'generate_state',
+                'get_facebook_authorization_url',
+                'get_facebook_user_info',
+                'exchange_facebook_code_for_token',
+                'get_enabled_providers',
             ]
 
             missing = [method for method in expected_methods if not hasattr(service, method)]

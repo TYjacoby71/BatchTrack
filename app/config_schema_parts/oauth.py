@@ -25,6 +25,20 @@ FIELDS = [
         "secret": True,
     },
     {
+        "key": "FACEBOOK_OAUTH_APP_ID",
+        "cast": "str",
+        "default": None,
+        "description": "Facebook OAuth app ID.",
+        "secret": True,
+    },
+    {
+        "key": "FACEBOOK_OAUTH_APP_SECRET",
+        "cast": "str",
+        "default": None,
+        "description": "Facebook OAuth app secret.",
+        "secret": True,
+    },
+    {
         "key": "WHOP_API_KEY",
         "cast": "str",
         "default": None,
