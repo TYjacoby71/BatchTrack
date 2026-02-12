@@ -1,8 +1,7 @@
 """Soap lye/water authority for full soap tool computation.
 
 Synopsis:
-Provides canonical lye/water calculations for soap tool orchestration and
-legacy wrapper services.
+Provides canonical lye/water calculations for soap tool orchestration.
 
 Glossary:
 - Canonical lye/water: Single authoritative lye and water computation path.

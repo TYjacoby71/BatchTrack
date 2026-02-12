@@ -6,8 +6,8 @@ execution and draft handoff into authenticated recipe creation.
 
 Glossary:
 - Tool draft: Session-backed payload captured from public tools for later save.
-- Soap calculate API: Structured endpoint that delegates lye/water math to the
-  soap calculator service package.
+- Soap calculate API: Structured endpoint that delegates full stage computation
+  to the soap tool service package.
 """
 
 from flask import Blueprint, render_template, request, jsonify, url_for

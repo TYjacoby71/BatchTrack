@@ -11,14 +11,14 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 ## Key Changes
 - Added a new service package: `app/services/tools/soap_tool/`
   - `_core.py`: canonical orchestration entrypoint (`SoapToolComputationService.calculate`)
-  - `_lye_water.py`: bridge to canonical lye/water service authority
+  - `_lye_water.py`: canonical lye/water service authority
   - `_additives.py`: additive/fragrance normalization and output computation
   - `_fatty_acids.py`: iodine/fatty-acid/quality core math
   - `_quality_report.py`: warnings + visual guidance + quality bundle
   - `_sheet.py`: backend formula CSV rows/text + printable sheet HTML
   - `types.py`: normalized request contracts
 - Updated `/tools/api/soap/calculate` to return the full orchestration bundle from `SoapToolComputationService`.
-- Consolidated lye/water authority into `soap_tool/_lye_water.py` and converted `soap_calculator/service.py` into a compatibility wrapper to remove dual-authority confusion.
+- Consolidated lye/water authority into `soap_tool/_lye_water.py` and removed the deprecated `soap_calculator` service package so there is one compute authority only.
 - Updated soap runtime JS to consume backend-computed bundles:
   - runner now sends richer stage payloads (oils/fatty/fragrance/additives/meta)
   - result cards, quality data, and additive outputs now hydrate from service response
@@ -36,6 +36,9 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/services/tools/soap_tool/_quality_report.py` (new)
 - `app/services/tools/soap_tool/_sheet.py` (new)
 - `app/services/tools/soap_tool/types.py` (new)
+- `app/services/tools/soap_calculator/__init__.py` (removed)
+- `app/services/tools/soap_calculator/service.py` (removed)
+- `app/services/tools/soap_calculator/types.py` (removed)
 - `app/static/js/tools/soaps/soap_tool_runner.js`
 - `app/static/js/tools/soaps/soap_tool_additives.js`
 - `app/static/js/tools/soaps/soap_tool_quality.js`
@@ -43,6 +46,7 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/static/js/tools/soaps/soap_tool_recipe_payload.js` (new)
 - `app/templates/tools/soaps/index.html`
 - `tests/test_soap_tool_compute_service.py` (new)
+- `tests/test_soap_tool_lye_water.py` (new)
 - `docs/system/APP_DICTIONARY.md`
 - `docs/changelog/CHANGELOG_INDEX.md`
 
