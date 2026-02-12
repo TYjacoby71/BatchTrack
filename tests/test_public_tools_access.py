@@ -82,6 +82,23 @@ def test_anonymous_workflow_can_browse_public_site(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_branding_assets_are_accessible(app):
+    """Logo and favicon assets should remain publicly available for marketing pages."""
+    client = app.test_client()
+    brand_asset_paths = [
+        "/branding/full-logo.svg",
+        "/branding/full-logo-header.svg",
+        "/branding/app-tile.svg",
+    ]
+
+    for path in brand_asset_paths:
+        response = _assert_public_get(client, path, label=f"branding asset {path}")
+        assert response.mimetype == "image/svg+xml"
+        body = response.get_data(as_text=True)
+        assert "<svg" in body
+
+
+@pytest.mark.usefixtures("app")
 def test_staging_homepage_variant_switcher_visibility(app):
     """Homepage variant switcher should only appear in staging."""
     client = app.test_client()

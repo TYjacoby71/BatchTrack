@@ -25,6 +25,9 @@ class RouteAccessConfig:
         "static",
         "homepage",
         "index",
+        "branding_full_logo",
+        "branding_full_logo_header",
+        "branding_app_tile",
         "public_page",
         "pricing_routes.pricing",
         "landing_pages.lp_hormozi",
@@ -78,6 +81,7 @@ class RouteAccessConfig:
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
         "/homepage",
+        "/branding/",
         "/pricing",
         "/lp/",
         "/legal/",
