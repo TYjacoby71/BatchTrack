@@ -19,6 +19,9 @@
     <meta name="twitter:title" content="{{ home_title }}">
     <meta name="twitter:description" content="{{ home_description }}">
     <meta name="twitter:image" content="{{ home_og_image }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('branding_app_tile') }}">
+    <link rel="shortcut icon" href="{{ url_for('branding_app_tile') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('branding_app_tile') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -58,6 +61,14 @@
             color: var(--brand-deep) !important;
             font-weight: 700;
             font-size: 1.5rem;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .navbar .brand-full-logo {
+            height: 40px;
+            width: auto;
+            display: block;
         }
 
         .navbar .nav-link {

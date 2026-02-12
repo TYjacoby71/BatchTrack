@@ -10,9 +10,10 @@ Glossary:
 
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
-from flask import Flask, current_app, redirect, render_template, url_for
+from flask import Flask, abort, current_app, redirect, render_template, send_file, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
@@ -364,6 +365,24 @@ def _install_global_resilience_handlers(app):
 # Purpose: Register basic app-wide routes like health checks.
 def _add_core_routes(app):
     """Add core application routes"""
+
+    def _serve_brand_asset(filename: str):
+        """Serve attached brand SVG assets used by public templates."""
+        asset_path = Path(current_app.root_path).parent / "attached_assets" / filename
+        if not asset_path.is_file():
+            abort(404)
+        return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
+
+    @app.route("/branding/full-logo.svg")
+    def branding_full_logo():
+        """Full horizontal logo used in marketing headers."""
+        return _serve_brand_asset("Full Logo.svg")
+
+    @app.route("/branding/app-tile.svg")
+    def branding_app_tile():
+        """Square logo tile used for browser icon links."""
+        return _serve_brand_asset("App card logo.svg")
+
     def _render_public_homepage_response():
         """
         Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
