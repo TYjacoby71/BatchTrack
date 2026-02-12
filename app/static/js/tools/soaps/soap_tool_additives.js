@@ -77,15 +77,13 @@
   }
 
   function updateAdditivesOutput(totalOils){
-    const settings = collectAdditiveSettings();
-    const oils = clamp(toNumber(totalOils), 0);
-    const lactateG = oils * (clamp(settings.lactatePct, 0, 100) / 100);
-    const sugarG = oils * (clamp(settings.sugarPct, 0, 100) / 100);
-    const saltG = oils * (clamp(settings.saltPct, 0, 100) / 100);
-    const citricG = oils * (clamp(settings.citricPct, 0, 100) / 100);
-    const lyeType = SoapTool.runner.getLyeSelection().lyeType || 'NaOH';
-    const citricLyeG = citricG * (lyeType === 'KOH' ? 0.719 : 0.624);
-    const outputs = { lactateG, sugarG, saltG, citricG, citricLyeG };
+    const expectedOils = clamp(toNumber(totalOils), 0);
+    const calc = SoapTool.state?.lastCalc;
+    const calcOils = clamp(toNumber(calc?.totalOils), 0);
+    const oilsMatch = Math.abs(calcOils - expectedOils) < 0.01;
+    const outputs = (calc?.additives && oilsMatch)
+      ? calc.additives
+      : { lactateG: 0, sugarG: 0, saltG: 0, citricG: 0, citricLyeG: 0 };
     applyComputedOutputs(outputs);
     return outputs;
   }
@@ -203,35 +201,9 @@
   function updateVisualGuidance(data){
     const list = document.getElementById('soapVisualGuidanceList');
     if (!list) return;
-    if (Array.isArray(data?.tips) && data.tips.length) {
-      list.innerHTML = data.tips.map(tip => `<li>${tip}</li>`).join('');
-      return;
-    }
-    const tips = [];
-    const waterConc = data?.waterData?.lyeConcentration || 0;
-    const additives = data?.additives || {};
-    const fattyPercent = data?.fattyPercent || {};
-    const lauricMyristic = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0);
-
-    if (waterConc > 0 && waterConc < 28) {
-      tips.push('High water can cause soda ash, warping, or glycerin rivers; keep temps even or use less water.');
-    }
-    if (waterConc > 40) {
-      tips.push('Low water (strong lye) can overheat or crack; soap cooler and watch for volcanoing.');
-    }
-    if (additives.sugarPct > 1) {
-      tips.push('Sugars add heat; soap cooler to avoid cracking or glycerin rivers.');
-    }
-    if (additives.saltPct > 1) {
-      tips.push('Salt can make bars brittle; cut sooner than usual.');
-    }
-    if (lauricMyristic > 35) {
-      tips.push('High lauric oils can crumble if cut cold; cut warm for clean edges.');
-    }
-    if (!tips.length) {
-      tips.push('No visual flags detected for this formula.');
-    }
-
+    const tips = Array.isArray(data?.tips) && data.tips.length
+      ? data.tips
+      : ['No visual flags detected for this formula.'];
     list.innerHTML = tips.map(tip => `<li>${tip}</li>`).join('');
   }
 

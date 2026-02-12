@@ -458,7 +458,7 @@
     };
     updateStageWaterSummary(liveSummary);
     updateLiveCalculationPreview(liveSummary);
-    const additives = serviceResult.additives || SoapTool.additives.updateAdditivesOutput(totalOils);
+    const additives = serviceResult.additives || { lactateG: 0, sugarG: 0, saltG: 0, citricG: 0, citricLyeG: 0, fragranceG: 0, fragrancePct: 0 };
     if (SoapTool.additives.applyComputedOutputs) {
       SoapTool.additives.applyComputedOutputs(additives);
     }
