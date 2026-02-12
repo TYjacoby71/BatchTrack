@@ -58,7 +58,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/pricing** → Public sales page for Hobbyist/Enthusiast/Fanatic with lifetime-first launch offers and tier comparison (see `app/routes/pricing_routes.py` and `app/templates/pages/public/pricing.html`)
 - **/lp/hormozi** → Public A/B landing variant with results-first offer framing for makers (see `app/routes/landing_routes.py` and `app/templates/pages/public/landing_hormozi.html`)
 - **/lp/robbins** → Public A/B landing variant with transformation-first calm workflow framing for makers (see `app/routes/landing_routes.py` and `app/templates/pages/public/landing_robbins.html`)
-- **/branding/full-logo.svg and /branding/app-tile.svg** → Public brand asset routes that serve the attached full logo and square app tile for header branding and favicon links (see `app/__init__.py`, `app/templates/layout.html`, and `app/templates/homepage.html`)
+- **/branding/full-logo.svg, /branding/full-logo-header.svg, and /branding/app-tile.svg** → Public brand asset routes that serve attached logo SVGs, including a cropped header-ready full logo variant and the square app tile for favicon links (see `app/__init__.py`, `app/templates/components/shared/public_marketing_header.html`, `app/templates/layout.html`, and `app/templates/homepage.html`)
 - **/recipes/<recipe_id>/view** → Recipe detail view with lineage navigation (see `app/blueprints/recipes/views/manage_routes.py`)
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)

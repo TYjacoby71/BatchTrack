@@ -395,10 +395,37 @@ def _add_core_routes(app):
             abort(404)
         return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
 
+    def _serve_cropped_full_logo():
+        """Serve a cropped full logo variant sized for navbar display."""
+        asset_path = Path(current_app.root_path).parent / "attached_assets" / "Full Logo.svg"
+        if not asset_path.is_file():
+            abort(404)
+
+        try:
+            svg_text = asset_path.read_text(encoding="utf-8")
+        except OSError:
+            abort(404)
+
+        # Crop excessive whitespace in the exported asset so the header logo is legible.
+        svg_text = svg_text.replace(
+            'viewBox="0.00 0.00 1024.00 683.00"',
+            'viewBox="145 224 735 216"',
+            1,
+        )
+        response = current_app.response_class(svg_text, mimetype="image/svg+xml")
+        response.cache_control.public = True
+        response.cache_control.max_age = 86400
+        return response
+
     @app.route("/branding/full-logo.svg")
     def branding_full_logo():
         """Full horizontal logo used in marketing headers."""
         return _serve_brand_asset("Full Logo.svg")
+
+    @app.route("/branding/full-logo-header.svg")
+    def branding_full_logo_header():
+        """Cropped full logo for compact header branding."""
+        return _serve_cropped_full_logo()
 
     @app.route("/branding/app-tile.svg")
     def branding_app_tile():
@@ -410,7 +437,7 @@ def _add_core_routes(app):
         Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
         avoid re-rendering the full template on every hit.
         """
-        cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v1")
+        cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v2")
         try:
             from app.utils.settings import is_feature_enabled
 
