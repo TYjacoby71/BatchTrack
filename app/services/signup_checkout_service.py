@@ -404,7 +404,7 @@ class SignupCheckoutService:
         submission = SignupSubmission(
             selected_tier=form_data.get("selected_tier"),
             oauth_signup=form_data.get("oauth_signup") == "true",
-            contact_email=(form_data.get("contact_email") or "").strip(),
+            contact_email=(form_data.get("contact_email") or context.prefill_email or "").strip(),
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
