@@ -19,33 +19,94 @@
     <meta name="twitter:title" content="{{ home_title }}">
     <meta name="twitter:description" content="{{ home_description }}">
     <meta name="twitter:image" content="{{ home_og_image }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('branding_app_tile') }}">
+    <link rel="shortcut icon" href="{{ url_for('branding_app_tile') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('branding_app_tile') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --navbar-height: 80px;
+            --brand-lime: #73bb43;
+            --brand-green: #59ac3c;
+            --brand-moss: #439f3f;
+            --brand-forest: #3a7c48;
+            --brand-deep: #237038;
+            --brand-slate: #485a4e;
+            --brand-slate-soft: #5e615e;
+            --brand-bg: #f4f9ef;
+            --brand-bg-soft: #ecf5e5;
+            --brand-surface: #ffffff;
+            --brand-border: rgba(62, 92, 70, 0.2);
+            --color-breadcrumb-bg: #e8f2e1;
+            --color-border: var(--brand-border);
+            --color-table-header-bg: #edf5e8;
+            --color-muted: #5a6e5f;
         }
 
         body {
             padding-top: var(--navbar-height);
             scroll-padding-top: calc(var(--navbar-height) + 16px);
             margin: 0;
+            color: #2f4a3a;
+            background: linear-gradient(180deg, #f8fcf5 0%, #f2f8ed 45%, #e9f3e2 100%);
         }
 
         .navbar {
-            transition: box-shadow 0.3s ease, background-color 0.3s ease;
+            transition: box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        .navbar .navbar-brand {
+            color: var(--brand-deep) !important;
+            font-weight: 700;
+            font-size: 1.5rem;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .navbar .brand-full-logo {
+            height: 40px;
+            width: auto;
+            display: block;
+        }
+
+        .navbar .nav-link {
+            color: #4e6657 !important;
+        }
+
+        .navbar .nav-link:hover {
+            color: var(--brand-forest) !important;
         }
 
         body.scrolled .navbar {
-            box-shadow: 0 6px 18px rgba(14, 30, 37, 0.12);
-            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 8px 20px rgba(35, 112, 56, 0.14);
+            background-color: rgba(247, 252, 244, 0.95) !important;
+            border-bottom-color: var(--brand-border);
             backdrop-filter: blur(6px);
         }
+
         .hero-banner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(140deg, var(--brand-deep) 0%, var(--brand-forest) 58%, var(--brand-green) 100%);
+            color: #ffffff;
             padding: 100px 0;
             text-align: center;
+        }
+
+        .hero-section {
+            background:
+                radial-gradient(circle at 18% -10%, rgba(115, 187, 67, 0.24), transparent 42%),
+                linear-gradient(145deg, #f9fcf6 0%, #edf6e7 58%, #e2efd9 100%) !important;
+            border-bottom: 1px solid var(--brand-border) !important;
+        }
+
+        .hero-section h1 {
+            color: #1e4f35 !important;
+        }
+
+        .hero-section .lead,
+        .hero-section .text-muted {
+            color: #44634f !important;
         }
 
         .scrolling-banner {
@@ -53,8 +114,27 @@
             overflow: hidden;
             white-space: nowrap;
             padding: 15px 0;
-            border-top: 2px solid var(--color-border);
-            border-bottom: 2px solid var(--color-border);
+            border-top: 1px solid var(--color-border);
+            border-bottom: 1px solid var(--color-border);
+            color: #3e5d49;
+        }
+
+        .scrolling-banner a {
+            color: var(--brand-forest);
+            text-decoration: none;
+        }
+
+        .scrolling-banner a:hover {
+            color: var(--brand-deep);
+            text-decoration: underline;
+        }
+
+        .scrolling-banner .text-success {
+            color: var(--brand-deep) !important;
+        }
+
+        .scrolling-banner .text-primary {
+            color: var(--brand-green) !important;
         }
 
         .scrolling-content {
@@ -68,40 +148,65 @@
         }
 
         .feature-card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+            border: 1px solid rgba(58, 124, 72, 0.14);
+            box-shadow: 0 8px 18px rgba(35, 112, 56, 0.1);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
             margin-bottom: 30px;
+            background: var(--brand-surface);
+        }
+
+        .feature-card .card-title {
+            color: #244e37;
+        }
+
+        .feature-card .card-text {
+            color: #506858;
         }
 
         .feature-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-6px);
+            border-color: rgba(67, 159, 63, 0.35);
+            box-shadow: 0 14px 24px rgba(35, 112, 56, 0.16);
         }
 
         .cta-section {
-            background: linear-gradient(45deg, #ff6b6b, #ffa500);
-            color: white;
+            background: linear-gradient(125deg, var(--brand-deep) 0%, var(--brand-forest) 54%, var(--brand-green) 100%);
+            color: #ffffff;
             padding: 60px 0;
             margin: 50px 0;
             text-align: center;
+            box-shadow: 0 14px 28px rgba(35, 112, 56, 0.22);
+        }
+
+        .cta-section .btn-light {
+            color: #245538;
+            border-color: #ffffff;
+        }
+
+        .cta-section .btn-light:hover {
+            color: #1d472f;
+            background: #f2f9ec;
+            border-color: #f2f9ec;
+        }
+
+        .cta-section .btn-outline-light:hover {
+            color: #245538;
+            background: #f2f9ec;
+            border-color: #f2f9ec;
         }
 
         .social-proof {
-            background: var(--color-breadcrumb-bg);
+            background: var(--brand-bg-soft);
             padding: 60px 0;
         }
 
         .testimonial-card {
-            background: white;
+            background: #ffffff;
             border-radius: 10px;
+            border: 1px solid rgba(62, 92, 70, 0.13);
             padding: 30px;
             margin: 20px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
+            box-shadow: 0 8px 18px rgba(45, 82, 58, 0.08);
         }
 
         .placeholder-img {
@@ -114,17 +219,54 @@
             min-height: 200px;
         }
 
+        .placeholder-img i {
+            color: var(--brand-moss);
+        }
+
         .btn-cta {
-            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            background: linear-gradient(125deg, var(--brand-green) 0%, var(--brand-lime) 100%);
             border: none;
             padding: 12px 30px;
-            font-weight: bold;
+            font-weight: 700;
             border-radius: 50px;
+            box-shadow: 0 10px 20px rgba(58, 124, 72, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 24px rgba(58, 124, 72, 0.3);
+            filter: brightness(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--brand-forest);
+            border-color: var(--brand-forest);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--brand-deep);
+            border-color: var(--brand-deep);
+        }
+
+        .btn-outline-primary {
+            color: var(--brand-forest);
+            border-color: var(--brand-forest);
+        }
+
+        .btn-outline-primary:hover {
+            color: #ffffff;
+            background-color: var(--brand-forest);
+            border-color: var(--brand-forest);
+        }
+
+        .text-primary {
+            color: var(--brand-forest) !important;
         }
 
         .stats-section {
-            background: #2c3e50;
-            color: white;
+            background: linear-gradient(140deg, #214f36 0%, #29603a 52%, #3a7c48 100%);
+            color: #ecf6ea;
             padding: 60px 0;
         }
 
@@ -136,8 +278,31 @@
         .stat-number {
             font-size: 3rem;
             font-weight: bold;
-            color: #3498db;
+            color: #9bdb65;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
         }
+
+        #about .card {
+            border: 1px solid rgba(62, 92, 70, 0.13);
+            box-shadow: 0 8px 18px rgba(35, 112, 56, 0.08) !important;
+        }
+
+        #about .card h5 {
+            color: #245238;
+        }
+
+        #about .card p {
+            color: #506858 !important;
+        }
+
+        footer.bg-dark {
+            background: linear-gradient(145deg, #1f4432 0%, #2a5b41 100%) !important;
+        }
+
+        footer .text-light:hover {
+            color: #a8e06f !important;
+        }
+
         .bot-trap-link,
         .bot-trap-field {
             position: absolute !important;
@@ -154,17 +319,17 @@
         }
 
         .lifetime-launch-shell {
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(115, 187, 67, 0.35);
             border-radius: 1rem;
             padding: 1.5rem;
-            background: linear-gradient(160deg, rgba(11, 16, 44, 0.88), rgba(39, 20, 64, 0.84));
-            box-shadow: 0 12px 30px rgba(9, 14, 41, 0.35);
+            background: linear-gradient(160deg, rgba(35, 112, 56, 0.96), rgba(62, 124, 72, 0.93), rgba(89, 172, 60, 0.9));
+            box-shadow: 0 14px 30px rgba(35, 112, 56, 0.28);
         }
 
         .lifetime-launch-card {
-            border: 1px solid rgba(111, 124, 255, 0.2);
-            background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
-            box-shadow: 0 10px 20px rgba(25, 38, 88, 0.12);
+            border: 1px solid rgba(89, 172, 60, 0.26);
+            background: linear-gradient(180deg, #ffffff 0%, #f4faef 100%);
+            box-shadow: 0 10px 20px rgba(35, 112, 56, 0.11);
         }
 
         .lifetime-launch-card.is-sold-out {
@@ -173,7 +338,7 @@
 
         .lifetime-seat-copy {
             font-size: 0.95rem;
-            color: #16203d;
+            color: #2c5b3d;
         }
     </style>
 </head>
