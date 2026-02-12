@@ -691,9 +691,7 @@ class BillingService:
 
                 amount = price_obj.unit_amount / 100
                 currency = price_obj.currency.upper()
-                billing_cycle = 'one-time'
-                if price_obj.recurring:
-                    billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
+                billing_cycle = BillingService._stripe_price_billing_cycle(price_obj)
 
                 if resolution_strategy != 'lookup_key':
                     logger.info(
@@ -768,6 +766,26 @@ class BillingService:
             # Propagate to caller for centralized logging/handling
             raise
 
+    # Purpose: Normalize Stripe recurring metadata into app billing cycle labels.
+    @staticmethod
+    def _stripe_price_billing_cycle(price_obj) -> str:
+        recurring = getattr(price_obj, "recurring", None)
+        if not recurring:
+            return "one-time"
+
+        interval = str(getattr(recurring, "interval", "") or "").lower()
+        interval_count = getattr(recurring, "interval_count", 1)
+        try:
+            interval_count = int(interval_count or 1)
+        except (TypeError, ValueError):
+            interval_count = 1
+
+        if interval == "year":
+            return "yearly"
+        if interval == "month" and interval_count == 12:
+            return "yearly"
+        return "monthly"
+
     # Purpose: Discover a related price key on the same Stripe product.
     @classmethod
     def find_related_price_lookup_key(cls, base_lookup_key: str | None, *, billing_cycle: str) -> str | None:
@@ -817,10 +835,7 @@ class BillingService:
             price_list = stripe.Price.list(product=product_id, active=True, limit=100)
             candidates: list[tuple[int, str]] = []
             for candidate in getattr(price_list, "data", []) or []:
-                recurring = getattr(candidate, "recurring", None)
-                candidate_cycle = "one-time"
-                if recurring:
-                    candidate_cycle = "yearly" if getattr(recurring, "interval", None) == "year" else "monthly"
+                candidate_cycle = cls._stripe_price_billing_cycle(candidate)
                 if candidate_cycle != normalized_cycle:
                     continue
 

@@ -45,6 +45,22 @@ def test_get_live_pricing_falls_back_to_price_id(app):
         mock_retrieve.assert_called_once_with('price_fallback')
 
 
+def test_get_live_pricing_treats_12_month_interval_as_yearly(app):
+    price_obj = SimpleNamespace(
+        id='price_annualized',
+        unit_amount=12000,
+        currency='usd',
+        active=True,
+        recurring=SimpleNamespace(interval='month', interval_count=12),
+    )
+
+    with app.app_context(), \
+            patch('app.services.billing_service.BillingService.ensure_stripe', return_value=True), \
+            patch('app.services.billing_service.stripe.Price.list', return_value=SimpleNamespace(data=[price_obj])):
+        pricing = BillingService.get_live_pricing_for_lookup_key('batchtrack_team_yearly')
+        assert pricing['billing_cycle'] == 'yearly'
+
+
 def test_checkout_session_drops_customer_update_without_customer(app):
     tier = SimpleNamespace(id=1, name='Team', stripe_lookup_key='price_team')
 
@@ -97,6 +113,29 @@ def test_find_related_price_lookup_key_prefers_lookup_key(app):
 
         key = BillingService.find_related_price_lookup_key('price_monthly_legacy', billing_cycle='yearly')
         assert key == 'batchtrack_solo_yearly'
+
+
+def test_find_related_price_lookup_key_accepts_12_month_interval_as_yearly(app):
+    base_price = SimpleNamespace(
+        id='price_monthly_legacy_two',
+        product='prod_batchtrack_fanatic',
+        recurring=SimpleNamespace(interval='month', interval_count=1),
+        active=True,
+    )
+    annual_by_month_count = SimpleNamespace(
+        id='price_annual_by_month_count',
+        lookup_key='batchtrack_fanatic_yearly',
+        recurring=SimpleNamespace(interval='month', interval_count=12),
+        active=True,
+    )
+
+    with app.app_context(), \
+            patch('app.services.billing_service.BillingService.ensure_stripe', return_value=True), \
+            patch('app.services.billing_service.BillingService._resolve_price_for_lookup_key', return_value=(base_price, 'price_id_fallback')), \
+            patch('app.services.billing_service.stripe.Price.list', return_value=SimpleNamespace(data=[annual_by_month_count])):
+
+        key = BillingService.find_related_price_lookup_key('price_monthly_legacy_two', billing_cycle='yearly')
+        assert key == 'batchtrack_fanatic_yearly'
 
 
 def test_resolve_lookup_variant_falls_back_to_related_product_price(app):
