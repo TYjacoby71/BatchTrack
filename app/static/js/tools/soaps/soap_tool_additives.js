@@ -4,7 +4,6 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { toNumber, round, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { formatWeight, toGrams, fromGrams } = SoapTool.units;
-  const { computeAdditives } = SoapTool.calc;
   const { FRAGRANCE_CATEGORY_SET } = SoapTool.constants;
   const state = SoapTool.state;
 
@@ -46,19 +45,20 @@
     });
   }
 
-  function updateAdditivesOutput(totalOils){
-    const lyeType = SoapTool.runner.getLyeSelection().lyeType || 'NaOH';
-    const fragranceTotals = SoapTool.fragrances?.updateFragranceTotals
-      ? SoapTool.fragrances.updateFragranceTotals(totalOils)
-      : { totalPct: toNumber(document.getElementById('additiveFragrancePct')?.value), totalGrams: 0 };
-    const percents = {
-      fragrancePct: clamp(fragranceTotals.totalPct, 0, 100),
-      lactatePct: toNumber(document.getElementById('additiveLactatePct').value),
-      sugarPct: toNumber(document.getElementById('additiveSugarPct').value),
-      saltPct: toNumber(document.getElementById('additiveSaltPct').value),
-      citricPct: toNumber(document.getElementById('additiveCitricPct').value),
+  function collectAdditiveSettings(){
+    return {
+      lactatePct: toNumber(document.getElementById('additiveLactatePct')?.value),
+      sugarPct: toNumber(document.getElementById('additiveSugarPct')?.value),
+      saltPct: toNumber(document.getElementById('additiveSaltPct')?.value),
+      citricPct: toNumber(document.getElementById('additiveCitricPct')?.value),
+      lactateName: document.getElementById('additiveLactateName')?.value?.trim() || 'Sodium Lactate',
+      sugarName: document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar',
+      saltName: document.getElementById('additiveSaltName')?.value?.trim() || 'Salt',
+      citricName: document.getElementById('additiveCitricName')?.value?.trim() || 'Citric Acid',
     };
-    const outputs = computeAdditives(totalOils || 0, lyeType, percents);
+  }
+
+  function applyComputedOutputs(outputs){
     const setOutput = (id, value) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -69,11 +69,24 @@
       }
     };
     const toDisplay = (grams) => (grams > 0 ? round(fromGrams(grams), 2) : '');
-    setOutput('additiveLactateWeight', toDisplay(outputs.lactateG));
-    setOutput('additiveSugarWeight', toDisplay(outputs.sugarG));
-    setOutput('additiveSaltWeight', toDisplay(outputs.saltG));
-    setOutput('additiveCitricWeight', toDisplay(outputs.citricG));
-    setOutput('additiveCitricLyeOut', formatWeight(outputs.citricLyeG));
+    setOutput('additiveLactateWeight', toDisplay(toNumber(outputs?.lactateG)));
+    setOutput('additiveSugarWeight', toDisplay(toNumber(outputs?.sugarG)));
+    setOutput('additiveSaltWeight', toDisplay(toNumber(outputs?.saltG)));
+    setOutput('additiveCitricWeight', toDisplay(toNumber(outputs?.citricG)));
+    setOutput('additiveCitricLyeOut', formatWeight(toNumber(outputs?.citricLyeG)));
+  }
+
+  function updateAdditivesOutput(totalOils){
+    const settings = collectAdditiveSettings();
+    const oils = clamp(toNumber(totalOils), 0);
+    const lactateG = oils * (clamp(settings.lactatePct, 0, 100) / 100);
+    const sugarG = oils * (clamp(settings.sugarPct, 0, 100) / 100);
+    const saltG = oils * (clamp(settings.saltPct, 0, 100) / 100);
+    const citricG = oils * (clamp(settings.citricPct, 0, 100) / 100);
+    const lyeType = SoapTool.runner.getLyeSelection().lyeType || 'NaOH';
+    const citricLyeG = citricG * (lyeType === 'KOH' ? 0.719 : 0.624);
+    const outputs = { lactateG, sugarG, saltG, citricG, citricLyeG };
+    applyComputedOutputs(outputs);
     return outputs;
   }
 
@@ -190,6 +203,10 @@
   function updateVisualGuidance(data){
     const list = document.getElementById('soapVisualGuidanceList');
     if (!list) return;
+    if (Array.isArray(data?.tips) && data.tips.length) {
+      list.innerHTML = data.tips.map(tip => `<li>${tip}</li>`).join('');
+      return;
+    }
     const tips = [];
     const waterConc = data?.waterData?.lyeConcentration || 0;
     const additives = data?.additives || {};
@@ -228,6 +245,8 @@
 
   SoapTool.additives = {
     attachAdditiveTypeahead,
+    collectAdditiveSettings,
+    applyComputedOutputs,
     updateAdditivesOutput,
     updateVisualGuidance,
   };

@@ -278,6 +278,7 @@
       additives,
       oils,
       totalOils,
+      warnings: serviceWarnings,
     } = data;
 
     const hasCoverage = coveragePct > 0;
@@ -366,31 +367,32 @@
     updateFattyBar(fattyPercent);
     updateQualityTargets();
 
-    const warnings = [];
-    const pufa = (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
-    const lauricMyristic = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0);
-    const concentration = waterData?.lyeConcentration || 0;
-
-    if (iodine > 70) warnings.push('High iodine value can mean softer bars or faster rancidity.');
-    if (ins > 0 && ins < 136) warnings.push('INS is low (below 136); bars may be soft or have shorter shelf life.');
-    if (ins > 170) warnings.push('INS is high; bars may be brittle or overly cleansing.');
-    if (hasCoverage && pufa > 15) warnings.push('High linoleic/linolenic (PUFA) increases DOS risk; consider antioxidant or more stable oils.');
-    if (hasCoverage && isFinite(qualities.hardness) && qualities.hardness < QUALITY_RANGES.hardness[0]) warnings.push('Hardness looks low; bars may be soft or slow to unmold.');
-    if (hasCoverage && isFinite(qualities.cleansing) && qualities.cleansing > QUALITY_RANGES.cleansing[1]) warnings.push('Cleansing is high; consider more conditioning oils.');
-    if (hasCoverage && isFinite(qualities.bubbly) && qualities.bubbly < QUALITY_RANGES.bubbly[0]) warnings.push('Bubbly lather is low; add 5-10% castor or coconut for more foam.');
-    if (hasCoverage && lauricMyristic > 35) warnings.push('High lauric/myristic (coconut/palm kernel/babassu) can be drying or crumbly; cut warm and keep superfat at least 5%.');
-    if (superfat !== undefined && superfat >= 15) warnings.push('Superfat is high (15%+); bars can be softer/greasy and may have shorter shelf life.');
-    if (concentration > 0 && concentration < 27) warnings.push('Very high water: slower trace and more shrinkage/ash. Consider a higher lye concentration for a firmer bar sooner.');
-    if (concentration > 40) warnings.push('Low water: faster trace and more heat. Work quickly and avoid overheating.');
-    if (additives?.fragrancePct > 3) warnings.push('Fragrance load above 3% can accelerate trace; follow supplier usage rates.');
-    if (additives?.citricPct > 0) warnings.push('Citric acid consumes lye; extra lye has been added. Recheck if you also use vinegar or other acids.');
-    if (Array.isArray(oils) && totalOils > 0) {
-      const positiveOils = oils.filter(oil => oil.grams > 0);
-      if (positiveOils.length === 1) {
-        warnings.push('Single-oil recipe; consider blending for balanced hardness, cleansing, and longevity.');
-      } else if (positiveOils.length > 1) {
-        const maxShare = Math.max(...positiveOils.map(oil => (oil.grams / totalOils) * 100));
-        if (maxShare >= 90) warnings.push('One oil is over 90% of the formula; consider blending for balance.');
+    const warnings = Array.isArray(serviceWarnings) ? serviceWarnings.slice() : [];
+    if (!warnings.length) {
+      const pufa = (fattyPercent.linoleic || 0) + (fattyPercent.linolenic || 0);
+      const lauricMyristic = (fattyPercent.lauric || 0) + (fattyPercent.myristic || 0);
+      const concentration = waterData?.lyeConcentration || 0;
+      if (iodine > 70) warnings.push('High iodine value can mean softer bars or faster rancidity.');
+      if (ins > 0 && ins < 136) warnings.push('INS is low (below 136); bars may be soft or have shorter shelf life.');
+      if (ins > 170) warnings.push('INS is high; bars may be brittle or overly cleansing.');
+      if (hasCoverage && pufa > 15) warnings.push('High linoleic/linolenic (PUFA) increases DOS risk; consider antioxidant or more stable oils.');
+      if (hasCoverage && isFinite(qualities.hardness) && qualities.hardness < QUALITY_RANGES.hardness[0]) warnings.push('Hardness looks low; bars may be soft or slow to unmold.');
+      if (hasCoverage && isFinite(qualities.cleansing) && qualities.cleansing > QUALITY_RANGES.cleansing[1]) warnings.push('Cleansing is high; consider more conditioning oils.');
+      if (hasCoverage && isFinite(qualities.bubbly) && qualities.bubbly < QUALITY_RANGES.bubbly[0]) warnings.push('Bubbly lather is low; add 5-10% castor or coconut for more foam.');
+      if (hasCoverage && lauricMyristic > 35) warnings.push('High lauric/myristic (coconut/palm kernel/babassu) can be drying or crumbly; cut warm and keep superfat at least 5%.');
+      if (superfat !== undefined && superfat >= 15) warnings.push('Superfat is high (15%+); bars can be softer/greasy and may have shorter shelf life.');
+      if (concentration > 0 && concentration < 27) warnings.push('Very high water: slower trace and more shrinkage/ash. Consider a higher lye concentration for a firmer bar sooner.');
+      if (concentration > 40) warnings.push('Low water: faster trace and more heat. Work quickly and avoid overheating.');
+      if (additives?.fragrancePct > 3) warnings.push('Fragrance load above 3% can accelerate trace; follow supplier usage rates.');
+      if (additives?.citricPct > 0) warnings.push('Citric acid consumes lye; extra lye has been added. Recheck if you also use vinegar or other acids.');
+      if (Array.isArray(oils) && totalOils > 0) {
+        const positiveOils = oils.filter(oil => oil.grams > 0);
+        if (positiveOils.length === 1) {
+          warnings.push('Single-oil recipe; consider blending for balanced hardness, cleansing, and longevity.');
+        } else if (positiveOils.length > 1) {
+          const maxShare = Math.max(...positiveOils.map(oil => (oil.grams / totalOils) * 100));
+          if (maxShare >= 90) warnings.push('One oil is over 90% of the formula; consider blending for balance.');
+        }
       }
     }
     const warningBox = document.getElementById('soapQualityWarnings');

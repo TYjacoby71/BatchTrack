@@ -13,7 +13,7 @@ Glossary:
 from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.services.tools.soap_calculator import SoapToolCalculatorService
+from app.services.tools.soap_tool import SoapToolComputationService
 from app.models import GlobalItem
 from app.models import FeatureFlag
 from app.extensions import limiter
@@ -182,10 +182,10 @@ def tools_baker():
 @tools_bp.route('/api/soap/calculate', methods=['POST'])
 @limiter.limit("60000/hour;5000/minute")
 def tools_soap_calculate():
-    """Calculate soap lye/water values through structured service package."""
+    """Calculate soap stage outputs through structured service package."""
     payload = request.get_json(silent=True) or {}
-    result = SoapToolCalculatorService.calculate(payload)
-    return jsonify({"success": True, "result": result.to_dict()})
+    result = SoapToolComputationService.calculate(payload)
+    return jsonify({"success": True, "result": result})
 
 
 # --- Public draft capture route ---

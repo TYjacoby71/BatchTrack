@@ -4,7 +4,6 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp, getStorage } = SoapTool.helpers;
   const { formatWeight, formatPercent } = SoapTool.units;
-  const { computeIodine, computeFattyAcids, computeQualities } = SoapTool.calc;
   const state = SoapTool.state;
 
   function getLyeSelection(){
@@ -282,12 +281,46 @@
     return sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
   }
 
-  function buildServicePayload({ oils, selection, superfat, purity, waterMethod, waterPct, lyeConcentration, waterRatio }){
+  function buildServicePayload({ oils, selection, superfat, purity, waterMethod, waterPct, lyeConcentration, waterRatio, totalOils }){
+    const additiveSettings = SoapTool.additives.collectAdditiveSettings
+      ? SoapTool.additives.collectAdditiveSettings()
+      : {
+        lactatePct: toNumber(document.getElementById('additiveLactatePct')?.value),
+        sugarPct: toNumber(document.getElementById('additiveSugarPct')?.value),
+        saltPct: toNumber(document.getElementById('additiveSaltPct')?.value),
+        citricPct: toNumber(document.getElementById('additiveCitricPct')?.value),
+        lactateName: document.getElementById('additiveLactateName')?.value?.trim() || 'Sodium Lactate',
+        sugarName: document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar',
+        saltName: document.getElementById('additiveSaltName')?.value?.trim() || 'Salt',
+        citricName: document.getElementById('additiveCitricName')?.value?.trim() || 'Citric Acid',
+      };
+    const fragranceRows = collectFragranceRows(totalOils || 0);
     return {
       oils: (oils || []).map(oil => ({
+        name: oil.name || null,
         grams: oil.grams || 0,
         sap_koh: oil.sapKoh || 0,
+        iodine: oil.iodine || 0,
+        fatty_profile: oil.fattyProfile || null,
+        global_item_id: oil.global_item_id || null,
+        default_unit: oil.default_unit || null,
+        ingredient_category_name: oil.ingredient_category_name || null,
       })),
+      fragrances: fragranceRows.map(row => ({
+        name: row.name || 'Fragrance/Essential Oils',
+        grams: row.grams || 0,
+        pct: row.pct || 0,
+      })),
+      additives: {
+        lactate_pct: additiveSettings.lactatePct || 0,
+        sugar_pct: additiveSettings.sugarPct || 0,
+        salt_pct: additiveSettings.saltPct || 0,
+        citric_pct: additiveSettings.citricPct || 0,
+        lactate_name: additiveSettings.lactateName || 'Sodium Lactate',
+        sugar_name: additiveSettings.sugarName || 'Sugar',
+        salt_name: additiveSettings.saltName || 'Salt',
+        citric_name: additiveSettings.citricName || 'Citric Acid',
+      },
       lye: {
         selected: selection?.selected || 'NaOH',
         superfat,
@@ -299,13 +332,16 @@
         lye_concentration: lyeConcentration,
         water_ratio: waterRatio,
       },
+      meta: {
+        unit_display: state.currentUnit || 'g',
+      }
     };
   }
 
   async function calculateWithSoapService(payload){
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 1200);
+    const timeoutId = window.setTimeout(() => controller.abort(), 2500);
     try {
       const response = await fetch('/tools/api/soap/calculate', {
         method: 'POST',
@@ -377,6 +413,7 @@
       waterPct,
       lyeConcentration,
       waterRatio,
+      totalOils: validation.totals.totalWeight,
     });
     const serviceResult = await calculateWithSoapService(servicePayload);
     if (requestSeq !== state.calcRequestSeq) {
@@ -408,6 +445,18 @@
       lyeConcentration: toNumber(serviceResult.lye_concentration_pct),
       waterRatio: toNumber(serviceResult.water_lye_ratio),
     };
+    const resultsCard = serviceResult.results_card || {};
+    const qualityReport = serviceResult.quality_report || {};
+    const oilsForState = (serviceResult.oils || oils).map(oil => ({
+      name: oil.name || null,
+      grams: toNumber(oil.grams),
+      sapKoh: toNumber(oil.sap_koh ?? oil.sapKoh),
+      iodine: toNumber(oil.iodine),
+      fattyProfile: oil.fatty_profile || oil.fattyProfile || null,
+      global_item_id: oil.global_item_id || null,
+      default_unit: oil.default_unit || null,
+      ingredient_category_name: oil.ingredient_category_name || null,
+    }));
     const liveSummary = {
       waterG: waterData.waterG,
       lyeAdjusted,
@@ -421,16 +470,23 @@
     };
     updateStageWaterSummary(liveSummary);
     updateLiveCalculationPreview(liveSummary);
-    const additives = SoapTool.additives.updateAdditivesOutput(totalOils);
-    const batchYield = totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG;
+    const additives = serviceResult.additives || SoapTool.additives.updateAdditivesOutput(totalOils);
+    if (SoapTool.additives.applyComputedOutputs) {
+      SoapTool.additives.applyComputedOutputs(additives);
+    }
+    const batchYield = toNumber(resultsCard.batch_yield_g) || (
+      totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG
+    );
 
     document.getElementById('resultsCard').style.display = 'block';
-    document.getElementById('lyeAdjustedOutput').textContent = formatWeight(lyeAdjusted);
-    document.getElementById('waterOutput').textContent = formatWeight(waterData.waterG);
+    document.getElementById('lyeAdjustedOutput').textContent = formatWeight(toNumber(resultsCard.lye_adjusted_g) || lyeAdjusted);
+    document.getElementById('waterOutput').textContent = formatWeight(toNumber(resultsCard.water_g) || waterData.waterG);
     document.getElementById('batchYieldOutput').textContent = formatWeight(batchYield);
-    document.getElementById('lyeConcentrationOutput').textContent = formatPercent(waterData.lyeConcentration);
-    document.getElementById('waterRatioOutput').textContent = isFinite(waterData.waterRatio) && waterData.waterRatio > 0
-      ? round(waterData.waterRatio, 2).toString()
+    document.getElementById('lyeConcentrationOutput').textContent = formatPercent(
+      toNumber(resultsCard.lye_concentration_pct) || waterData.lyeConcentration
+    );
+    document.getElementById('waterRatioOutput').textContent = isFinite(toNumber(resultsCard.water_lye_ratio) || waterData.waterRatio) && (toNumber(resultsCard.water_lye_ratio) || waterData.waterRatio) > 0
+      ? round(toNumber(resultsCard.water_lye_ratio) || waterData.waterRatio, 2).toString()
       : '--';
     document.getElementById('totalOilsOutput').textContent = formatWeight(totalOils);
     document.getElementById('superfatOutput').textContent = formatPercent(superfat);
@@ -440,28 +496,22 @@
     SoapTool.ui.updateResultsWarnings(waterData);
     SoapTool.ui.updateResultsMeta();
 
-    const iodineData = computeIodine(oils);
-    const fatty = computeFattyAcids(oils);
-    const qualities = computeQualities(fatty.percent);
-    const ins = (lyeTotals.sapAvg && iodineData.iodine) ? (lyeTotals.sapAvg - iodineData.iodine) : 0;
-    const coveragePct = totalOils > 0 ? (fatty.coveredWeight / totalOils) * 100 : 0;
     SoapTool.quality.updateQualitiesDisplay({
-      qualities,
-      fattyPercent: fatty.percent,
-      coveragePct,
-      iodine: iodineData.iodine,
-      ins,
+      qualities: qualityReport.qualities || {},
+      fattyPercent: qualityReport.fatty_acids_pct || {},
+      coveragePct: toNumber(qualityReport.coverage_pct),
+      iodine: toNumber(qualityReport.iodine),
+      ins: toNumber(qualityReport.ins),
       sapAvg: lyeTotals.sapAvg,
       superfat,
       waterData,
       additives,
-      oils,
+      oils: oilsForState,
       totalOils,
+      warnings: qualityReport.warnings || [],
     });
     SoapTool.additives.updateVisualGuidance({
-      fattyPercent: fatty.percent,
-      waterData,
-      additives,
+      tips: qualityReport.visual_guidance || [],
     });
     SoapTool.stages.updateStageStatuses();
 
@@ -483,7 +533,7 @@
 
     state.lastCalc = {
       totalOils,
-      oils,
+      oils: oilsForState,
       lyeType,
       superfat,
       purity,
@@ -498,6 +548,8 @@
       usedSapFallback: lyeTotals.usedFallback,
       additives,
       batchYield,
+      qualityReport,
+      export: serviceResult.export || null,
     };
     if (settings.consumeQuota) {
       consumeCalcQuota();
@@ -512,11 +564,14 @@
   }
 
   function buildSoapNotesBlob(calc){
-    const iodineData = computeIodine(calc.oils || []);
-    const fatty = computeFattyAcids(calc.oils || []);
-    const qualities = computeQualities(fatty.percent || {});
-    const sapAvg = (isFinite(calc.sapAvg) && calc.sapAvg > 0) ? calc.sapAvg : deriveSapAverage(calc.oils || []);
-    const ins = (sapAvg && iodineData.iodine) ? (sapAvg - iodineData.iodine) : 0;
+    const qualityReport = calc.qualityReport || {};
+    const fattyPercent = qualityReport.fatty_acids_pct || {};
+    const qualities = qualityReport.qualities || {};
+    const sapAvg = (isFinite(calc.sapAvg) && calc.sapAvg > 0)
+      ? calc.sapAvg
+      : (toNumber(qualityReport.sap_avg_koh) || deriveSapAverage(calc.oils || []));
+    const iodine = toNumber(qualityReport.iodine);
+    const ins = toNumber(qualityReport.ins) || ((sapAvg && iodine) ? (sapAvg - iodine) : 0);
     const mold = SoapTool.mold.getMoldSettings();
     return {
       source: 'soap_tool',
@@ -571,11 +626,11 @@
         conditioning: round(qualities.conditioning || 0, 1),
         bubbly: round(qualities.bubbly || 0, 1),
         creamy: round(qualities.creamy || 0, 1),
-        iodine: round(iodineData.iodine || 0, 1),
+        iodine: round(iodine || 0, 1),
         ins: round(ins || 0, 1),
         sap_avg: round(sapAvg || 0, 1),
       },
-      fatty_acids: fatty.percent || {},
+      fatty_acids: fattyPercent,
       updated_at: new Date().toISOString(),
     };
   }
@@ -615,6 +670,7 @@
         defaultUnit: defaultUnit || undefined,
         categoryName: categoryName || undefined,
         grams,
+        pct,
       });
     });
     return rows;
