@@ -35,6 +35,9 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - searchable, sortable, lazy-rendered modal table with checkbox selection and optional `% total` / `weight` inputs
   - persisted bulk selection state in soap tool session storage until import
   - import action writes selected oils into Stage 2 rows without requiring weight/percent values
+- Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
+  - water % / concentration / ratio fields no longer force local preset values while typing
+  - added per-method helper text showing normal ranges instead of preset enforcement
 - Fixed `app/services/tools/soap_tool/_sheet.py` CSV escaping to avoid an f-string expression parsing edge in Python 3.11 CI validation.
 - Added service-level tests for the new computation bundle and method-independent lye checks.
 
@@ -63,10 +66,12 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/static/js/tools/soaps/soap_tool_bulk_oils_modal.js` (new)
 - `app/static/js/tools/soaps/soap_tool_storage.js`
 - `app/static/js/tools/soaps/soap_tool_units.js`
+- `app/static/js/tools/soaps/soap_tool_runner_inputs.js`
 - `app/static/css/tools/soaps.css`
 - `app/templates/tools/soaps/index.html`
 - `app/templates/tools/soaps/_modals.html`
 - `app/templates/tools/soaps/stages/_stage_2.html`
+- `app/templates/tools/soaps/stages/_stage_config.html`
 - `tests/test_soap_tool_compute_service.py` (new)
 - `tests/test_soap_tool_lye_water.py` (new)
 - `docs/system/APP_DICTIONARY.md`
@@ -78,3 +83,4 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - Exported formula outputs now originate from the same canonical compute payload used for on-screen results.
 - Runner orchestration is now thinner and easier to reason about because transport/input/render/quota concerns are isolated in dedicated modules.
 - Oil selection workflows now support high-volume catalog browsing and staged bulk import without forcing immediate weight/percent assignment.
+- Water-method entry now behaves like free input during typing while still showing recommended ranges for safe formulation decisions.

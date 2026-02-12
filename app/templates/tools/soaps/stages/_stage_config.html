@@ -26,18 +26,21 @@
         <div class="soap-field-stack water-input" data-method="percent">
           <label class="form-label">Water of oils</label>
           <div class="soap-input-suffix" data-suffix="%">
-            <input type="number" class="form-control" id="waterPct" min="0" step="0.1" value="33">
+            <input type="number" class="form-control" id="waterPct" step="0.1" placeholder="e.g. 33">
           </div>
+          <div class="form-text soap-stage-note">Normal range is about 25-40% of oils.</div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="concentration">
           <label class="form-label">Lye concentration</label>
           <div class="soap-input-suffix" data-suffix="%">
-            <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
+            <input type="number" class="form-control" id="lyeConcentration" step="0.1" placeholder="e.g. 33">
           </div>
+          <div class="form-text soap-stage-note">Normal range is about 20-50%.</div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="ratio">
           <label class="form-label">Water : Lye ratio</label>
-          <input type="number" class="form-control" id="waterRatio" min="1" max="4" step="0.05" value="2">
+          <input type="number" class="form-control" id="waterRatio" step="0.05" placeholder="e.g. 2.0">
+          <div class="form-text soap-stage-note">Normal range is about 1.0-4.0 : 1.</div>
         </div>
       </div>
     </div>
