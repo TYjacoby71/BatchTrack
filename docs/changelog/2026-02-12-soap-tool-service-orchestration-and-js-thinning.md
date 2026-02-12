@@ -18,6 +18,7 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - `_sheet.py`: backend formula CSV rows/text + printable sheet HTML
   - `types.py`: normalized request contracts
 - Updated `/tools/api/soap/calculate` to return the full orchestration bundle from `SoapToolComputationService`.
+- Consolidated lye/water authority into `soap_tool/_lye_water.py` and converted `soap_calculator/service.py` into a compatibility wrapper to remove dual-authority confusion.
 - Updated soap runtime JS to consume backend-computed bundles:
   - runner now sends richer stage payloads (oils/fatty/fragrance/additives/meta)
   - result cards, quality data, and additive outputs now hydrate from service response
