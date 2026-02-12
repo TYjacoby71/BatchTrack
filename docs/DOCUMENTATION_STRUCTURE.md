@@ -196,6 +196,11 @@ Made a code change?
 ```
 
 ## PR Documentation Checklist (keep in sync with PR template)
+- [ ] **Step 1: Scope is clear** — Description/Type/Changes are complete, with user impact and rollback note.
+- [ ] **Step 2: Branch discipline is respected** — work is on the feature branch only, with focused commits and no unrelated file edits.
+- [ ] **Step 3: Validation is complete** — relevant local tests/checks were run for touched areas and passed.
+- [ ] **Step 4: Documentation guard is green** — `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` passed.
+- [ ] **Step 5: Review readiness is complete** — self-review done, debug code removed, and CI checks are green.
 - [ ] Updated system docs for feature changes (docs/system/)
 - [ ] Added/updated dated changelog entry (docs/changelog/YYYY-MM-DD-*.md)
 - [ ] Updated changelog index (docs/changelog/CHANGELOG_INDEX.md)
@@ -205,6 +210,7 @@ Made a code change?
 - [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
 - [ ] Verified one-entry rule (single canonical term entry, no duplicates)
 - [ ] Ran `python3 scripts/validate_pr_documentation.py` and confirmed pass
+- [ ] Added PR evidence: base branch, commands run, and reviewer notes (risk/edge cases/follow-ups)
 
 ## Enforcement (Automated Guard)
 
