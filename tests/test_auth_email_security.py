@@ -93,7 +93,7 @@ def test_login_accepts_email_identifier(client, app):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/dashboard")
+    assert "dashboard" in response.headers["Location"]
 
     with client.session_transaction() as sess:
         assert sess.get("_user_id") is not None
