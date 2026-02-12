@@ -19,6 +19,10 @@ from typing import Any, Mapping
 from .types import SoapCalculationRequest, SoapCalculationResult, _clamp
 
 
+# --- Soap tool calculator service ---
+# Purpose: Provide deterministic lye/water calculations for soap tool requests.
+# Inputs: Structured soap calculation payload/request objects.
+# Outputs: Typed SoapCalculationResult used by API and UI orchestration.
 class SoapToolCalculatorService:
     """Deterministic calculator for soap tool lye/water results."""
 

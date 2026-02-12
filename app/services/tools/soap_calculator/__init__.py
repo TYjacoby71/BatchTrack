@@ -1,6 +1,11 @@
 """Soap tool calculator package.
 
-Structured calculation package scoped to the soap formulator tool.
+Synopsis:
+Exports typed request/response contracts and the canonical soap calculator
+service used by the public soap formulator route/API.
+
+Glossary:
+- Canonical calculator: Authoritative lye/water computation path for the tool.
 """
 
 from .service import SoapToolCalculatorService

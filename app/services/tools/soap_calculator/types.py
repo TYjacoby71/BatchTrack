@@ -15,6 +15,10 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 
+# --- Float parser helper ---
+# Purpose: Parse numeric-like payload values into float with fallback default.
+# Inputs: Arbitrary payload value and default float fallback.
+# Outputs: Parsed float value suitable for calculator sanitization.
 def _to_float(value: Any, default: float = 0.0) -> float:
     try:
         if value is None:
@@ -29,6 +33,10 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return float(default)
 
 
+# --- Numeric clamp helper ---
+# Purpose: Constrain a float to minimum/maximum bounds.
+# Inputs: Candidate float value with lower/optional upper bounds.
+# Outputs: Bounded float value for safe calculator use.
 def _clamp(value: float, minimum: float, maximum: float | None = None) -> float:
     if value < minimum:
         return minimum
@@ -37,12 +45,20 @@ def _clamp(value: float, minimum: float, maximum: float | None = None) -> float:
     return value
 
 
+# --- String normalization helper ---
+# Purpose: Convert arbitrary values to normalized non-empty text.
+# Inputs: Arbitrary value and default fallback string.
+# Outputs: Trimmed non-empty string value.
 def _text(value: Any, default: str = "") -> str:
     if value is None:
         return default
     return str(value).strip() or default
 
 
+# --- Soap oil input contract ---
+# Purpose: Represent sanitized oil grams + SAP KOH pair from request payload.
+# Inputs: Oil payload mapping with grams and sap_koh fields.
+# Outputs: Immutable SoapOilInput instance.
 @dataclass(frozen=True)
 class SoapOilInput:
     grams: float
@@ -58,6 +74,10 @@ class SoapOilInput:
         return cls(grams=grams, sap_koh=sap_koh)
 
 
+# --- Soap calculation request contract ---
+# Purpose: Hold normalized request inputs for service-layer soap calculations.
+# Inputs: Raw payload sections for oils, lye, and water method settings.
+# Outputs: Immutable SoapCalculationRequest instance.
 @dataclass(frozen=True)
 class SoapCalculationRequest:
     oils: tuple[SoapOilInput, ...]
@@ -101,6 +121,10 @@ class SoapCalculationRequest:
         )
 
 
+# --- Soap calculation result contract ---
+# Purpose: Expose structured soap calculation outputs to API/UI callers.
+# Inputs: Final normalized lye/water result values from service pipeline.
+# Outputs: Immutable SoapCalculationResult with serializer helper.
 @dataclass(frozen=True)
 class SoapCalculationResult:
     total_oils_g: float

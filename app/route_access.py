@@ -16,6 +16,8 @@ from typing import Iterable, Tuple
 
 # --- Route access config ---
 # Purpose: Centralize endpoint/path visibility rules used by middleware checks.
+# Inputs: Request endpoint/path values and configured allow-list tuples.
+# Outputs: Boolean policy decisions and summary counts for middleware callers.
 class RouteAccessConfig:
     """Single source of truth for public/developer/monitoring routes."""
 
