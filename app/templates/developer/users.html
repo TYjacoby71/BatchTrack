@@ -434,7 +434,7 @@ async function saveProfile() {
     };
 
     try {
-        const response = await fetch('/settings/profile/save', {
+        const response = await fetch('/developer/api/profile/update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

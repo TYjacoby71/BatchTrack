@@ -47,7 +47,7 @@ def test_users_page_supports_independent_customer_and_developer_pagination(
     _login_as_developer(client, developer_user)
 
     with app.app_context():
-        for idx in range(12):
+        for idx in range(25):
             db.session.add(
                 User(
                     username=f"pagetest_customer_{idx:02d}",
@@ -56,7 +56,7 @@ def test_users_page_supports_independent_customer_and_developer_pagination(
                     is_active=True,
                 )
             )
-        for idx in range(7):
+        for idx in range(23):
             db.session.add(
                 User(
                     username=f"pagetest_dev_{idx:02d}",
@@ -67,21 +67,21 @@ def test_users_page_supports_independent_customer_and_developer_pagination(
             )
         db.session.commit()
 
-    resp = client.get("/developer/users?per_page=3&customer_page=2&developer_page=2")
+    resp = client.get("/developer/users?per_page=10&customer_page=2&developer_page=2")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
 
-    # Customer page 2 should include 08..06, not page 1 or page 3 users.
-    assert "pagetest_customer_08" in body
-    assert "pagetest_customer_06" in body
-    assert "pagetest_customer_11" not in body
-    assert "pagetest_customer_05" not in body
+    # Customer page 2 should include 14..05, not page 1 or page 3 users.
+    assert "pagetest_customer_14" in body
+    assert "pagetest_customer_05" in body
+    assert "pagetest_customer_24" not in body
+    assert "pagetest_customer_04" not in body
 
-    # Developer page 2 should include 03..01, not page 1 or page 3 users.
+    # Developer page 2 should include 12..03, not page 1 or page 3 users.
+    assert "pagetest_dev_12" in body
     assert "pagetest_dev_03" in body
-    assert "pagetest_dev_01" in body
-    assert "pagetest_dev_06" not in body
-    assert "pagetest_dev_00" not in body
+    assert "pagetest_dev_22" not in body
+    assert "pagetest_dev_02" not in body
 
 
 def test_save_profile_allows_developer_username_change(client, developer_user, app):
@@ -89,7 +89,7 @@ def test_save_profile_allows_developer_username_change(client, developer_user, a
     new_username = f"renamed_dev_{uuid.uuid4().hex[:8]}"
 
     resp = client.post(
-        "/settings/profile/save",
+        "/developer/api/profile/update",
         json={
             "username": new_username,
             "first_name": "Dev",
@@ -124,7 +124,7 @@ def test_save_profile_rejects_duplicate_username(client, developer_user, app):
         db.session.commit()
 
     resp = client.post(
-        "/settings/profile/save",
+        "/developer/api/profile/update",
         json={
             "username": taken_username,
             "first_name": "Dev",

@@ -12,6 +12,7 @@ Glossary:
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user
 from app.models import User
 from app.services.developer.user_service import UserService
 
@@ -50,6 +51,25 @@ def users():
         developer_page=developer_page,
         per_page=per_page,
     )
+
+
+# --- Update current developer profile ---
+# Purpose: Apply self-profile edits from developer user-management page.
+# Inputs: JSON body with profile fields.
+# Outputs: JSON success/error payload with HTTP status.
+@developer_bp.route("/api/profile/update", methods=["POST"])
+@require_developer_permission("dev.manage_users")
+def update_developer_profile():
+    """Update currently authenticated developer profile."""
+    data = request.get_json() or {}
+    success, message = UserService.update_own_profile(current_user, data)
+    status = 200 if success else 400
+    payload = {"success": success}
+    if success:
+        payload["message"] = message
+    else:
+        payload["error"] = message
+    return jsonify(payload), status
 
 
 # --- Toggle user active status ---
