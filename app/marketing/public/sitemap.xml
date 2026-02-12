@@ -1,36 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://example.com/</loc>
+    <loc>https://www.batchtrack.com/</loc>
   </url>
   <url>
-    <loc>https://example.com/features</loc>
+    <loc>https://www.batchtrack.com/pricing</loc>
   </url>
   <url>
-    <loc>https://example.com/about</loc>
+    <loc>https://www.batchtrack.com/auth/signup</loc>
   </url>
   <url>
-    <loc>https://example.com/docs/getting-started</loc>
+    <loc>https://www.batchtrack.com/tools/</loc>
   </url>
   <url>
-    <loc>https://example.com/help/inventory-categories</loc>
+    <loc>https://www.batchtrack.com/global-items</loc>
   </url>
   <url>
-    <loc>https://example.com/help/recipe-portioning</loc>
+    <loc>https://www.batchtrack.com/recipes/library</loc>
   </url>
   <url>
-    <loc>https://example.com/help/containment-vs-fill-efficiency</loc>
+    <loc>https://www.batchtrack.com/help/how-it-works</loc>
   </url>
   <url>
-    <loc>https://example.com/help/global-item-library</loc>
+    <loc>https://www.batchtrack.com/help/system-faq</loc>
   </url>
   <url>
-    <loc>https://example.com/privacy</loc>
+    <loc>https://www.batchtrack.com/legal/privacy</loc>
   </url>
   <url>
-    <loc>https://example.com/terms</loc>
+    <loc>https://www.batchtrack.com/legal/terms</loc>
   </url>
   <url>
-    <loc>https://example.com/changelog</loc>
+    <loc>https://www.batchtrack.com/legal/cookies</loc>
+  </url>
+  <url>
+    <loc>https://www.batchtrack.com/lp/hormozi</loc>
+  </url>
+  <url>
+    <loc>https://www.batchtrack.com/lp/robbins</loc>
   </url>
 </urlset>

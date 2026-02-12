@@ -173,7 +173,7 @@ class SignupCheckoutService:
         canonical_url: str,
     ) -> dict[str, Any]:
         default_tier_id = view_state.selected_tier or (str(context.db_tiers[0].id) if context.db_tiers else "")
-        page_title = "BatchTrack.com | Pricing for Small-Batch Makers"
+        page_title = "BatchTrack Signup | Choose Your Plan"
         page_description = (
             "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly, yearly, and limited lifetime options."
             if context.has_lifetime_capacity
