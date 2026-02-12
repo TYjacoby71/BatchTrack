@@ -22,6 +22,7 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - runner now sends richer stage payloads (oils/fatty/fragrance/additives/meta)
   - result cards, quality data, and additive outputs now hydrate from service response
   - export actions prefer service-provided CSV and print-sheet outputs
+- Split recipe payload assembly helpers out of `soap_tool_runner.js` into `soap_tool_recipe_payload.js` so runner orchestration is not coupled to draft/export DTO construction.
 - Added service-level tests for the new computation bundle and method-independent lye checks.
 
 ## Files Modified
@@ -38,6 +39,8 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/static/js/tools/soaps/soap_tool_additives.js`
 - `app/static/js/tools/soaps/soap_tool_quality.js`
 - `app/static/js/tools/soaps/soap_tool_events.js`
+- `app/static/js/tools/soaps/soap_tool_recipe_payload.js` (new)
+- `app/templates/tools/soaps/index.html`
 - `tests/test_soap_tool_compute_service.py` (new)
 - `docs/system/APP_DICTIONARY.md`
 - `docs/changelog/CHANGELOG_INDEX.md`
