@@ -395,6 +395,15 @@ def _add_core_routes(app):
             abort(404)
         return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
 
+    def _serve_marketing_public_asset(filename: str, *, mimetype: str):
+        """Serve crawler-facing public assets from app/marketing/public."""
+        asset_path = Path(current_app.root_path) / "marketing" / "public" / filename
+        if not asset_path.is_file():
+            abort(404)
+        response = send_file(asset_path, mimetype=mimetype, max_age=3600)
+        response.cache_control.public = True
+        return response
+
     def _serve_cropped_full_logo():
         """Serve a cropped full logo variant sized for navbar display."""
         asset_path = Path(current_app.root_path).parent / "attached_assets" / "Full Logo.svg"
@@ -431,6 +440,26 @@ def _add_core_routes(app):
     def branding_app_tile():
         """Square logo tile used for browser icon links."""
         return _serve_brand_asset("App card logo.svg")
+
+    @app.route("/sitemap.xml")
+    def sitemap_xml():
+        """XML sitemap for search engine discovery."""
+        return _serve_marketing_public_asset("sitemap.xml", mimetype="application/xml")
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        """Robots directives for crawlers."""
+        return _serve_marketing_public_asset("robots.txt", mimetype="text/plain; charset=utf-8")
+
+    @app.route("/llms.txt")
+    def llms_txt():
+        """LLMs.txt guidance for AI crawlers and agents."""
+        return _serve_marketing_public_asset("llms.txt", mimetype="text/plain; charset=utf-8")
+
+    @app.route("/dev-login")
+    def dev_login_legacy():
+        """Legacy developer-login path kept for backward compatibility."""
+        return redirect(url_for("auth.dev_login"), code=301)
 
     def _render_public_homepage_response():
         """

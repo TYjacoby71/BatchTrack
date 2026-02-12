@@ -515,7 +515,9 @@ Glossary:
                     <li><a class="dropdown-item" href="{{ url_for('auth.login') }}">Sign in</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+                    {% if global_library_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Library</a></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
                 </ul>
             </div>

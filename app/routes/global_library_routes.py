@@ -47,6 +47,13 @@ def _global_library_enabled() -> bool:
     return is_feature_enabled("FEATURE_GLOBAL_ITEM_LIBRARY")
 
 
+def _global_library_disabled_response():
+    """Gracefully route visitors when the public library feature is disabled."""
+    if current_user.is_authenticated:
+        return redirect(url_for("app_routes.dashboard"))
+    return redirect(url_for("auth.signup", source="global_library"), code=302)
+
+
 def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
     """Advance a session counter and return (allowed, remaining)."""
     record = session.get(key) or {}
@@ -94,7 +101,7 @@ def global_library():
       - search: free text search across name and aka names
     """
     if not _global_library_enabled():
-        abort(404)
+        return _global_library_disabled_response()
     scope_param = (request.args.get('scope') or request.args.get('type') or '').strip()
     search_query = (request.args.get('search') or '').strip()
     raw_category = (request.args.get('category') or '').strip()
@@ -235,7 +242,7 @@ def global_library():
 def global_item_detail(item_id: int, slug: Optional[str] = None):
     """Public detail page for a specific Global Item."""
     if not _global_library_enabled():
-        abort(404)
+        return _global_library_disabled_response()
     gi = GlobalItem.query.filter(
         GlobalItem.is_archived != True,
         GlobalItem.id == item_id,
