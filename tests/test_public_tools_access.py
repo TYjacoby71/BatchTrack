@@ -99,6 +99,39 @@ def test_public_branding_assets_are_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_crawler_assets_are_accessible(app):
+    """Crawler assets should be available on root paths."""
+    client = app.test_client()
+
+    sitemap_response = _assert_public_get(client, "/sitemap.xml", label="sitemap.xml")
+    sitemap_body = sitemap_response.get_data(as_text=True)
+    assert sitemap_response.mimetype in {"application/xml", "text/xml"}
+    assert "<urlset" in sitemap_body
+    assert "https://www.batchtrack.com/" in sitemap_body
+
+    robots_response = _assert_public_get(client, "/robots.txt", label="robots.txt")
+    robots_body = robots_response.get_data(as_text=True)
+    assert robots_response.mimetype == "text/plain"
+    assert "User-agent:" in robots_body
+    assert "Sitemap: https://www.batchtrack.com/sitemap.xml" in robots_body
+
+    llms_response = _assert_public_get(client, "/llms.txt", label="llms.txt")
+    llms_body = llms_response.get_data(as_text=True)
+    assert llms_response.mimetype == "text/plain"
+    assert "BatchTrack" in llms_body
+    assert "Primary site: https://www.batchtrack.com/" in llms_body
+
+
+@pytest.mark.usefixtures("app")
+def test_legacy_dev_login_path_redirects_to_auth_namespace(app):
+    """Legacy /dev-login URL should redirect to the canonical auth route."""
+    client = app.test_client()
+    response = client.get("/dev-login", follow_redirects=False)
+    assert response.status_code in {301, 302}
+    assert response.headers.get("Location", "").endswith("/auth/dev-login")
+
+
+@pytest.mark.usefixtures("app")
 def test_staging_homepage_variant_switcher_visibility(app):
     """Homepage variant switcher should only appear in staging."""
     client = app.test_client()

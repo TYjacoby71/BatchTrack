@@ -61,3 +61,68 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="bulkOilModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="w-100">
+          <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+            <h5 class="modal-title mb-0">Bulk oils picker</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="row g-2 align-items-center">
+            <div class="col-md-5">
+              <input type="search" class="form-control form-control-sm" id="bulkOilSearchInput" placeholder="Search oils, aliases, or categories">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="bulkOilDisplayAllToggle">
+                <label class="form-check-label" for="bulkOilDisplayAllToggle">Display all oils</label>
+              </div>
+              <div class="small text-muted">Off = SoapCalc basics</div>
+            </div>
+            <div class="col-md-3 text-md-end">
+              <div class="small text-muted" id="bulkOilSelectedSummary">Selected: 0</div>
+              <div class="small text-muted" id="bulkOilCatalogStatus">Loading catalog...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body p-0">
+        <div class="table-responsive bulk-oil-table-wrap" id="bulkOilCatalogScroll">
+          <table class="table table-sm mb-0 bulk-oil-table">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" class="bulk-oil-col-check">Pick</th>
+                <th scope="col">
+                  <button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Oil" data-sort-key="name">Oil</button>
+                </th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Lauric" data-sort-key="lauric">Lauric</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Myristic" data-sort-key="myristic">Myristic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Palmitic" data-sort-key="palmitic">Palmitic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Stearic" data-sort-key="stearic">Stearic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Ricinoleic" data-sort-key="ricinoleic">Ricinoleic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Oleic" data-sort-key="oleic">Oleic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Linoleic" data-sort-key="linoleic">Linoleic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Linolenic" data-sort-key="linolenic">Linolenic</button></th>
+                <th scope="col"><button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="% Total" data-sort-key="selected_pct">% Total</button></th>
+                <th scope="col">
+                  <button type="button" class="btn btn-link btn-sm bulk-oil-sort" data-label="Weight" data-sort-key="selected_weight_g">Weight (<span id="bulkOilWeightUnitLabel">g</span>)</button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="bulkOilCatalogBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkOilClearSelectionBtn">Clear selection</button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary btn-sm" id="bulkOilImportBtn">Import selected oils</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

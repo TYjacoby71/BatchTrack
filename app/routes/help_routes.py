@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, url_for
 
 help_bp = Blueprint("help_routes", __name__)
 
@@ -443,6 +443,9 @@ def help_overview():
         "help/how_it_works.html",
         sections=sections,
         show_public_header=True,
+        page_title="BatchTrack Help Center | How It Works",
+        page_description="Learn how BatchTrack handles inventory, recipes, planning, batches, costing, products, and exports.",
+        canonical_url=url_for("help_routes.help_overview", _external=True),
     )
 
 
@@ -499,4 +502,7 @@ def help_faq():
         "help/system_faq.html",
         faqs=faqs,
         show_public_header=True,
+        page_title="BatchTrack System FAQ | Production & Inventory",
+        page_description="Answers to common BatchTrack questions about setup, inventory adjustments, production planning, SKUs, and exports.",
+        canonical_url=url_for("help_routes.help_faq", _external=True),
     )

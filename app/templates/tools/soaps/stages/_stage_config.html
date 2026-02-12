@@ -26,18 +26,21 @@
         <div class="soap-field-stack water-input" data-method="percent">
           <label class="form-label">Water of oils</label>
           <div class="soap-input-suffix" data-suffix="%">
-            <input type="number" class="form-control" id="waterPct" min="0" step="0.1" value="33">
+            <input type="number" class="form-control" id="waterPct" step="0.1" placeholder="e.g. 33">
           </div>
+          <div class="form-text soap-stage-note">Normal range is about 25-40% of oils.</div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="concentration">
           <label class="form-label">Lye concentration</label>
           <div class="soap-input-suffix" data-suffix="%">
-            <input type="number" class="form-control" id="lyeConcentration" min="20" max="50" step="0.1" value="33">
+            <input type="number" class="form-control" id="lyeConcentration" step="0.1" placeholder="e.g. 33">
           </div>
+          <div class="form-text soap-stage-note">Normal range is about 20-50%.</div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="ratio">
           <label class="form-label">Water : Lye ratio</label>
-          <input type="number" class="form-control" id="waterRatio" min="1" max="4" step="0.05" value="2">
+          <input type="number" class="form-control" id="waterRatio" step="0.05" placeholder="e.g. 2.0">
+          <div class="form-text soap-stage-note">Normal range is about 1.0-4.0 : 1.</div>
         </div>
       </div>
     </div>
@@ -65,6 +68,18 @@
             <div class="fw-semibold soap-animate-number" id="stageWaterOutput">--</div>
           </div>
           <div class="small text-muted" id="stageWaterComputedHint">Set oils and lye settings to calculate water.</div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-12">
+        <div class="alert alert-light mb-0">
+          <div class="fw-semibold">Live calculation preview</div>
+          <div class="small text-muted" id="lyeWaterPreviewAnchor">Based on -- oils. All values update live as you change inputs.</div>
+          <div class="small mt-1">Lye needed: <span id="lyePreview">--</span></div>
+          <div class="small">Water amount: <span id="waterPreview">--</span></div>
+          <div class="small">Lye concentration: <span id="concPreview">--</span></div>
+          <div class="small">Water : Lye ratio: <span id="ratioPreview">--</span></div>
         </div>
       </div>
     </div>

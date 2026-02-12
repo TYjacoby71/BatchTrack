@@ -65,6 +65,9 @@
   }
 
   function buildFormulaCsv(calc){
+    if (Array.isArray(calc?.export?.csv_rows) && calc.export.csv_rows.length) {
+      return calc.export.csv_rows;
+    }
     const totalOils = calc.totalOils || 0;
     const rows = [['section', 'name', 'quantity', 'unit', 'percent']];
     rows.push(['Summary', 'Lye Type', calc.lyeType || '', '', '']);
@@ -127,6 +130,9 @@
   }
 
   function buildPrintSheet(calc){
+    if (typeof calc?.export?.sheet_html === 'string' && calc.export.sheet_html.trim()) {
+      return calc.export.sheet_html;
+    }
     const totalOils = calc.totalOils || 0;
     const oils = (calc.oils || []).map(oil => ({
       name: oil.name || 'Oil',
@@ -730,7 +736,9 @@
       const calc = await getCalcForExport();
       if (!calc) return;
       const rows = buildFormulaCsv(calc);
-      const csvText = buildCsvString(rows);
+      const csvText = (typeof calc?.export?.csv_text === 'string' && calc.export.csv_text)
+        ? calc.export.csv_text
+        : buildCsvString(rows);
       triggerCsvDownload(csvText, 'soap_formula.csv');
     });
   }

@@ -14,6 +14,14 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-12: Soap Tool Service Orchestration and JS Thinning](2026-02-12-soap-tool-service-orchestration-and-js-thinning.md)**
+  - Added a dedicated `app/services/tools/soap_tool/` package to compile lye/water, additives, quality report data, and export payloads in one backend authority.
+  - Updated `/tools/api/soap/calculate` and front-end runner wiring to consume service-computed bundles instead of duplicating calculations in JS.
+  - Moved formula CSV/print-sheet source payload generation into backend compute outputs for consistency.
+- **[2026-02-12: PR Checklist Cascade and Documentation Guard Range Fix](2026-02-12-pr-checklist-cascade-and-docs-guard-range-fix.md)**
+  - Reordered PR checklist instructions into a cascading, single-pass sequence for clearer agent delegation.
+  - Added one-line AI shortcut phrasing for "follow PR checklist instructions" handoffs.
+  - Fixed documentation-guard push diff range to evaluate full push sets instead of only `HEAD~1`.
 - **[2026-02-11: Soap Formulator Service Package + UI Stability](2026-02-11-soap-formulator-service-package-and-ui-stability.md)**
   - Added a dedicated tool-scoped soap calculator service package with typed contracts and canonical lye/water computations.
   - Wired the public soap formulator to a structured `/tools/api/soap/calculate` endpoint and removed duplicated frontend lye/water math.
