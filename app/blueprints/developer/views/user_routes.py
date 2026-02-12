@@ -12,6 +12,7 @@ Glossary:
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user
 from app.models import User
 from app.services.developer.user_service import UserService
 
@@ -27,13 +28,48 @@ from ..routes import developer_bp
 @require_developer_permission("dev.manage_users")
 def users():
     """User management dashboard."""
-    customer_users = UserService.list_customer_users()
-    developer_users = UserService.list_developer_users()
+    customer_page = request.args.get("customer_page", 1, type=int) or 1
+    developer_page = request.args.get("developer_page", 1, type=int) or 1
+    per_page = request.args.get("per_page", 25, type=int) or 25
+
+    customer_page = max(customer_page, 1)
+    developer_page = max(developer_page, 1)
+    per_page = max(10, min(per_page, 100))
+
+    customer_users_pagination = UserService.list_customer_users_paginated(
+        page=customer_page, per_page=per_page
+    )
+    developer_users_pagination = UserService.list_developer_users_paginated(
+        page=developer_page, per_page=per_page
+    )
+
     return render_template(
         "developer/users.html",
-        customer_users=customer_users,
-        developer_users=developer_users,
+        customer_users_pagination=customer_users_pagination,
+        developer_users_pagination=developer_users_pagination,
+        customer_page=customer_page,
+        developer_page=developer_page,
+        per_page=per_page,
     )
+
+
+# --- Update current developer profile ---
+# Purpose: Apply self-profile edits from developer user-management page.
+# Inputs: JSON body with profile fields.
+# Outputs: JSON success/error payload with HTTP status.
+@developer_bp.route("/api/profile/update", methods=["POST"])
+@require_developer_permission("dev.manage_users")
+def update_developer_profile():
+    """Update currently authenticated developer profile."""
+    data = request.get_json() or {}
+    success, message = UserService.update_own_profile(current_user, data)
+    status = 200 if success else 400
+    payload = {"success": success}
+    if success:
+        payload["message"] = message
+    else:
+        payload["error"] = message
+    return jsonify(payload), status
 
 
 # --- Toggle user active status ---

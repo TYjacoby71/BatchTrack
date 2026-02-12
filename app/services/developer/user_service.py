@@ -12,6 +12,7 @@ Glossary:
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 from typing import Dict, Tuple
 
 from flask_login import current_user
@@ -35,6 +36,18 @@ class UserService:
     def list_customer_users():
         return User.query.filter(User.user_type != "developer").all()
 
+    # --- List customer users with pagination ---
+    # Purpose: Fetch non-developer users with deterministic ordering for paged views.
+    # Inputs: page number and per-page size.
+    # Outputs: Flask-SQLAlchemy Pagination object.
+    @staticmethod
+    def list_customer_users_paginated(page: int, per_page: int):
+        return (
+            User.query.filter(User.user_type != "developer")
+            .order_by(User.created_at.desc(), User.id.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+
     # --- List developer users ---
     # Purpose: Fetch internal developer accounts for role/admin views.
     # Inputs: None.
@@ -42,6 +55,60 @@ class UserService:
     @staticmethod
     def list_developer_users():
         return User.query.filter(User.user_type == "developer").all()
+
+    # --- List developer users with pagination ---
+    # Purpose: Fetch developer users with deterministic ordering for paged views.
+    # Inputs: page number and per-page size.
+    # Outputs: Flask-SQLAlchemy Pagination object.
+    @staticmethod
+    def list_developer_users_paginated(page: int, per_page: int):
+        return (
+            User.query.filter(User.user_type == "developer")
+            .order_by(User.created_at.desc(), User.id.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+
+    # --- Update own profile ---
+    # Purpose: Apply self-service profile edits for developer manage-users page.
+    # Inputs: Current user row and JSON payload.
+    # Outputs: Tuple(success flag, status message).
+    @staticmethod
+    def update_own_profile(user: User, data: Dict) -> Tuple[bool, str]:
+        username = (data.get("username", user.username) or "").strip()
+        if not username:
+            return False, "Username is required"
+
+        if len(username) > 64:
+            return False, "Username must be 64 characters or fewer"
+
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", username):
+            return (
+                False,
+                "Username may only include letters, numbers, underscore, hyphen, and dot",
+            )
+
+        existing_user = User.query.filter(
+            User.username == username,
+            User.id != user.id,
+        ).first()
+        if existing_user:
+            return False, "Username is already in use"
+
+        user.username = username
+        user.first_name = (data.get("first_name", user.first_name) or "").strip() or None
+        user.last_name = (data.get("last_name", user.last_name) or "").strip() or None
+        user.email = (data.get("email", user.email) or "").strip() or None
+        user.phone = (data.get("phone", user.phone) or "").strip() or None
+
+        if "timezone" in data:
+            user.timezone = data.get("timezone")
+
+        try:
+            db.session.commit()
+            return True, "Profile updated successfully"
+        except Exception as exc:  # pragma: no cover - defensive
+            db.session.rollback()
+            return False, str(exc)
 
     # --- Toggle user active flag ---
     # Purpose: Flip active/inactive state for a user account.

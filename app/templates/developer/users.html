@@ -14,6 +14,19 @@
                     <p class="text-muted mb-0">Manage all users across the system</p>
                 </div>
                 <div class="card-body">
+                    <div class="d-flex justify-content-end mb-3">
+                        <form method="GET" class="d-flex align-items-center gap-2">
+                            <input type="hidden" name="customer_page" value="{{ customer_page }}">
+                            <input type="hidden" name="developer_page" value="{{ developer_page }}">
+                            <label for="perPage" class="form-label mb-0 text-muted">Rows per table:</label>
+                            <select id="perPage" name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for size in [10, 25, 50, 100] %}
+                                <option value="{{ size }}" {% if per_page == size %}selected{% endif %}>{{ size }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+
                     <!-- User Profile Section -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -28,7 +41,8 @@
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Username</label>
-                                                <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                                                <input type="text" class="form-control" id="username"
+                                                       value="{{ current_user.username }}">
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">First Name</label>
@@ -85,7 +99,7 @@
                                     <p class="text-muted mb-0">Organization users and team members</p>
                                 </div>
                                 <div class="card-body">
-                                    {% if customer_users %}
+                                    {% if customer_users_pagination and customer_users_pagination.items %}
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead>
@@ -100,7 +114,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {% for user in customer_users %}
+                                                {% for user in customer_users_pagination.items %}
                                                 <tr>
                                                     <td>
                                                         <div>
@@ -155,6 +169,52 @@
                                             </tbody>
                                         </table>
                                     </div>
+                                    {% if customer_users_pagination.pages > 1 %}
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div class="text-muted small">
+                                            Showing {{ customer_users_pagination.per_page * (customer_users_pagination.page - 1) + 1 }}
+                                            to {{ customer_users_pagination.per_page * (customer_users_pagination.page - 1) + customer_users_pagination.items|length }}
+                                            of {{ customer_users_pagination.total }} customer users
+                                        </div>
+                                        <nav aria-label="Customer users pages">
+                                            <ul class="pagination pagination-sm mb-0">
+                                                {% if customer_users_pagination.has_prev %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('developer.users', customer_page=customer_users_pagination.prev_num, developer_page=developer_page, per_page=per_page) }}">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+
+                                                {% for page_num in customer_users_pagination.iter_pages() %}
+                                                    {% if page_num %}
+                                                        {% if page_num != customer_users_pagination.page %}
+                                                        <li class="page-item">
+                                                            <a class="page-link" href="{{ url_for('developer.users', customer_page=page_num, developer_page=developer_page, per_page=per_page) }}">{{ page_num }}</a>
+                                                        </li>
+                                                        {% else %}
+                                                        <li class="page-item active">
+                                                            <span class="page-link">{{ page_num }}</span>
+                                                        </li>
+                                                        {% endif %}
+                                                    {% else %}
+                                                    <li class="page-item disabled">
+                                                        <span class="page-link">...</span>
+                                                    </li>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% if customer_users_pagination.has_next %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('developer.users', customer_page=customer_users_pagination.next_num, developer_page=developer_page, per_page=per_page) }}">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                    {% endif %}
                                     {% else %}
                                     <p class="text-muted">No customer users found.</p>
                                     {% endif %}
@@ -174,7 +234,7 @@
                                     <p class="text-muted mb-0">System developers and administrators</p>
                                 </div>
                                 <div class="card-body">
-                                    {% if developer_users %}
+                                    {% if developer_users_pagination and developer_users_pagination.items %}
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead>
@@ -188,7 +248,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {% for user in developer_users %}
+                                                {% for user in developer_users_pagination.items %}
                                                 <tr>
                                                     <td>
                                                         <div>
@@ -239,6 +299,52 @@
                                             </tbody>
                                         </table>
                                     </div>
+                                    {% if developer_users_pagination.pages > 1 %}
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div class="text-muted small">
+                                            Showing {{ developer_users_pagination.per_page * (developer_users_pagination.page - 1) + 1 }}
+                                            to {{ developer_users_pagination.per_page * (developer_users_pagination.page - 1) + developer_users_pagination.items|length }}
+                                            of {{ developer_users_pagination.total }} developer users
+                                        </div>
+                                        <nav aria-label="Developer users pages">
+                                            <ul class="pagination pagination-sm mb-0">
+                                                {% if developer_users_pagination.has_prev %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('developer.users', customer_page=customer_page, developer_page=developer_users_pagination.prev_num, per_page=per_page) }}">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+
+                                                {% for page_num in developer_users_pagination.iter_pages() %}
+                                                    {% if page_num %}
+                                                        {% if page_num != developer_users_pagination.page %}
+                                                        <li class="page-item">
+                                                            <a class="page-link" href="{{ url_for('developer.users', customer_page=customer_page, developer_page=page_num, per_page=per_page) }}">{{ page_num }}</a>
+                                                        </li>
+                                                        {% else %}
+                                                        <li class="page-item active">
+                                                            <span class="page-link">{{ page_num }}</span>
+                                                        </li>
+                                                        {% endif %}
+                                                    {% else %}
+                                                    <li class="page-item disabled">
+                                                        <span class="page-link">...</span>
+                                                    </li>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% if developer_users_pagination.has_next %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('developer.users', customer_page=customer_page, developer_page=developer_users_pagination.next_num, per_page=per_page) }}">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                    {% endif %}
                                     {% else %}
                                     <p class="text-muted">No system developers found.</p>
                                     {% endif %}
@@ -320,6 +426,7 @@ let currentUser = null;
 
 async function saveProfile() {
     const profileData = {
+        username: document.getElementById('username').value,
         first_name: document.getElementById('firstName').value,
         last_name: document.getElementById('lastName').value,
         email: document.getElementById('email').value,
@@ -327,7 +434,7 @@ async function saveProfile() {
     };
 
     try {
-        const response = await fetch('/settings/profile/save', {
+        const response = await fetch('/developer/api/profile/update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
