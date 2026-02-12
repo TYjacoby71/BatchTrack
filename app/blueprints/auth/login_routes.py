@@ -117,6 +117,28 @@ def login():
     oauth_available = OAuthService.is_oauth_configured()
     show_forgot_password = EmailService.password_reset_enabled()
     show_resend_verification = EmailService.should_issue_verification_tokens()
+    env_name = (current_app.config.get("ENV") or current_app.config.get("FLASK_ENV") or "").lower()
+    show_dev_login = env_name in {"development", "staging", "testing"} or bool(current_app.config.get("DEBUG"))
+    login_page_context = {
+        "page_title": "BatchTrack Login | Production & Inventory",
+        "page_description": "Sign in to BatchTrack to manage production planning, inventory, recipes, and batches.",
+        "canonical_url": url_for("auth.login", _external=True),
+        "show_public_header": True,
+        "show_dev_login": show_dev_login,
+    }
+
+    def _render_login_page(status_code: int | None = None):
+        rendered = render_template(
+            "pages/auth/login.html",
+            form=form,
+            oauth_available=oauth_available,
+            show_forgot_password=show_forgot_password,
+            show_resend_verification=show_resend_verification,
+            **login_page_context,
+        )
+        if status_code is not None:
+            return rendered, status_code
+        return rendered
 
     # Persist "next" param for OAuth/alternate login flows
     try:
@@ -133,13 +155,7 @@ def login():
         logger.exception("Login form validation failed: %s", exc)
         _log_loadtest_login_context("form_validation_error", {"error": str(exc)})
         flash("Unable to process login right now. Please try again.")
-        return render_template(
-            "pages/auth/login.html",
-            form=form,
-            oauth_available=oauth_available,
-            show_forgot_password=show_forgot_password,
-            show_resend_verification=show_resend_verification,
-        ), 503
+        return _render_login_page(503)
 
     if form_is_valid:
         login_identifier = (request.form.get("username") or "").strip()
@@ -172,13 +188,7 @@ def login():
             logger.exception("Login query failed for %s: %s", login_identifier, exc)
             _log_loadtest_login_context("db_query_error", {"identifier": login_identifier})
             flash("Login temporarily unavailable. Please try again.")
-            return render_template(
-                "pages/auth/login.html",
-                form=form,
-                oauth_available=oauth_available,
-                show_forgot_password=show_forgot_password,
-                show_resend_verification=show_resend_verification,
-            ), 503
+            return _render_login_page(503)
 
         if login_identifier and login_identifier.startswith("loadtest_user"):
             logger.info(
@@ -203,13 +213,7 @@ def login():
             logger.exception("Login password check failed for %s: %s", login_identifier, exc)
             _log_loadtest_login_context("password_check_error", {"identifier": login_identifier})
             flash("Login temporarily unavailable. Please try again.")
-            return render_template(
-                "pages/auth/login.html",
-                form=form,
-                oauth_available=oauth_available,
-                show_forgot_password=show_forgot_password,
-                show_resend_verification=show_resend_verification,
-            ), 503
+            return _render_login_page(503)
 
         if user and password_ok:
             if not user.is_active:
@@ -217,13 +221,7 @@ def login():
                     logger.warning("Load test user %s is inactive", login_identifier)
                 _log_loadtest_login_context("inactive_user", {"identifier": login_identifier})
                 flash("Account is inactive. Please contact administrator.")
-                return render_template(
-                    "pages/auth/login.html",
-                    form=form,
-                    oauth_available=oauth_available,
-                    show_forgot_password=show_forgot_password,
-                    show_resend_verification=show_resend_verification,
-                )
+                return _render_login_page()
 
             if user.user_type != "developer":
                 organization = getattr(user, "organization", None)
@@ -243,13 +241,7 @@ def login():
                         },
                     )
                     flash(billing_decision.message)
-                    return render_template(
-                        "pages/auth/login.html",
-                        form=form,
-                        oauth_available=oauth_available,
-                        show_forgot_password=show_forgot_password,
-                        show_resend_verification=show_resend_verification,
-                    )
+                    return _render_login_page()
 
             if user.user_type != "developer" and user.email and not user.email_verified:
                 sent = _send_verification_if_needed(user)
@@ -282,13 +274,7 @@ def login():
                 logger.exception("Login commit failed for %s: %s", login_identifier, exc)
                 _log_loadtest_login_context("db_commit_error", {"identifier": login_identifier})
                 flash("Login temporarily unavailable. Please try again.")
-                return render_template(
-                    "pages/auth/login.html",
-                    form=form,
-                    oauth_available=oauth_available,
-                    show_forgot_password=show_forgot_password,
-                    show_resend_verification=show_resend_verification,
-                ), 503
+                return _render_login_page(503)
 
             if user.user_type == "developer":
                 return redirect(url_for("developer.dashboard"))
@@ -313,13 +299,7 @@ def login():
             show_resend_verification=show_resend_verification,
         )
 
-    return render_template(
-        "pages/auth/login.html",
-        form=form,
-        oauth_available=oauth_available,
-        show_forgot_password=show_forgot_password,
-        show_resend_verification=show_resend_verification,
-    )
+    return _render_login_page()
 
 
 # --- Sanitize next path ---
@@ -359,6 +339,31 @@ def quick_signup():
         next_url = _safe_next_path(request.args.get("next")) or url_for("inventory.list_inventory")
         return redirect(next_url)
 
+    quick_signup_page_context = {
+        "page_title": "Create a Free BatchTrack Account",
+        "page_description": "Create your free BatchTrack account to save inventory items, recipes, and production workflows.",
+        "canonical_url": url_for("auth.quick_signup", _external=True),
+        "show_public_header": True,
+    }
+
+    def _render_quick_signup_form(
+        *,
+        next_url: str,
+        global_item_id: str,
+        global_item_name: str,
+        prefill_name: str,
+        prefill_email: str,
+    ):
+        return render_template(
+            "pages/auth/quick_signup.html",
+            next_url=next_url,
+            global_item_id=global_item_id,
+            global_item_name=global_item_name,
+            prefill_name=prefill_name,
+            prefill_email=prefill_email,
+            **quick_signup_page_context,
+        )
+
     if request.method == "POST":
         next_url = _safe_next_path(request.form.get("next")) or url_for("inventory.list_inventory")
         global_item_id = (request.form.get("global_item_id") or "").strip()
@@ -389,8 +394,7 @@ def quick_signup():
 
         if not email or "@" not in email:
             flash("Please enter a valid email address.", "error")
-            return render_template(
-                "pages/auth/quick_signup.html",
+            return _render_quick_signup_form(
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
@@ -414,8 +418,7 @@ def quick_signup():
 
         if not password or len(password) < 8:
             flash("Password must be at least 8 characters.", "error")
-            return render_template(
-                "pages/auth/quick_signup.html",
+            return _render_quick_signup_form(
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
@@ -503,8 +506,7 @@ def quick_signup():
             db.session.rollback()
             logger.error("Quick signup failed: %s", exc, exc_info=True)
             flash("Unable to create your account right now. Please try again.", "error")
-            return render_template(
-                "pages/auth/quick_signup.html",
+            return _render_quick_signup_form(
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
@@ -522,8 +524,7 @@ def quick_signup():
     except Exception:
         global_item_name = ""
 
-    return render_template(
-        "pages/auth/quick_signup.html",
+    return _render_quick_signup_form(
         next_url=next_url,
         global_item_id=global_item_id,
         global_item_name=global_item_name,

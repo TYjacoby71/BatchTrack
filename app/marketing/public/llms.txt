@@ -1,0 +1,14 @@
+# BatchTrack
+
+BatchTrack is production and inventory software for small-batch makers.
+
+Primary site: https://www.batchtrack.com/
+Sitemap: https://www.batchtrack.com/sitemap.xml
+
+Public docs and pages:
+- https://www.batchtrack.com/pricing
+- https://www.batchtrack.com/help/how-it-works
+- https://www.batchtrack.com/help/system-faq
+- https://www.batchtrack.com/legal/privacy
+- https://www.batchtrack.com/legal/terms
+- https://www.batchtrack.com/legal/cookies

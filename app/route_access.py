@@ -79,6 +79,10 @@ class RouteAccessConfig:
         "waitlist.join_waitlist",
         "api.health_check",
         "app_routes.vendor_signup",
+        "sitemap_xml",
+        "robots_txt",
+        "llms_txt",
+        "dev_login_legacy",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (

@@ -186,33 +186,11 @@
     }
 
     const waterMethod = document.getElementById('waterMethod')?.value || 'percent';
-    let waterPct = toNumber(document.getElementById('waterPct')?.value);
-    let lyeConcentration = toNumber(document.getElementById('lyeConcentration')?.value);
-    let waterRatio = toNumber(document.getElementById('waterRatio')?.value);
-
-    if (waterMethod === 'percent') {
-      if (!waterPct || waterPct <= 0) {
-        waterPct = 33;
-      }
-      const input = document.getElementById('waterPct');
-      if (input) input.value = round(waterPct, 1);
-    }
-    if (waterMethod === 'concentration') {
-      if (!lyeConcentration || lyeConcentration <= 0) {
-        lyeConcentration = 33;
-      }
-      lyeConcentration = clamp(lyeConcentration, 20, 50);
-      const input = document.getElementById('lyeConcentration');
-      if (input) input.value = round(lyeConcentration, 1);
-    }
-    if (waterMethod === 'ratio') {
-      if (!waterRatio || waterRatio <= 0) {
-        waterRatio = 2;
-      }
-      waterRatio = clamp(waterRatio, 1, 4);
-      const input = document.getElementById('waterRatio');
-      if (input) input.value = round(waterRatio, 2);
-    }
+    // Do not force defaults or clamp user typing for water inputs.
+    // Backend calculation logic owns method defaults/ranges.
+    const waterPct = toNumber(document.getElementById('waterPct')?.value);
+    const lyeConcentration = toNumber(document.getElementById('lyeConcentration')?.value);
+    const waterRatio = toNumber(document.getElementById('waterRatio')?.value);
 
     return { purity, waterMethod, waterPct, lyeConcentration, waterRatio };
   }
