@@ -6,17 +6,17 @@ execution and draft handoff into authenticated recipe creation.
 
 Glossary:
 - Tool draft: Session-backed payload captured from public tools for later save.
-- Soap calculate API: Structured endpoint that delegates lye/water math to the
-  soap calculator service package.
+- Soap calculate API: Structured endpoint that delegates full stage computation
+  to the soap tool service package.
 """
 
 from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.services.tools.soap_calculator import SoapToolCalculatorService
-from app.models import GlobalItem
+from app.services.tools.soap_tool import SoapToolComputationService, get_bulk_catalog_page
 from app.models import FeatureFlag
 from app.extensions import limiter
+from app.utils.cache_utils import should_bypass_cache
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
@@ -182,10 +182,29 @@ def tools_baker():
 @tools_bp.route('/api/soap/calculate', methods=['POST'])
 @limiter.limit("60000/hour;5000/minute")
 def tools_soap_calculate():
-    """Calculate soap lye/water values through structured service package."""
+    """Calculate soap stage outputs through structured service package."""
     payload = request.get_json(silent=True) or {}
-    result = SoapToolCalculatorService.calculate(payload)
-    return jsonify({"success": True, "result": result.to_dict()})
+    result = SoapToolComputationService.calculate(payload)
+    return jsonify({"success": True, "result": result})
+
+
+# --- Soap bulk-oils catalog API route ---
+# Purpose: Return paged oils/butters/waxes catalog rows for bulk-oil picker modal.
+# Inputs: Query params mode/q/sort/offset/limit for server-side paging/search.
+# Outputs: JSON payload with normalized paged records and cursor metadata.
+@tools_bp.route('/api/soap/oils-catalog', methods=['GET'])
+@limiter.limit("1200/hour;120/minute")
+def tools_soap_oils_catalog():
+    result_payload = get_bulk_catalog_page(
+        mode=request.args.get("mode"),
+        query=request.args.get("q"),
+        sort_key=request.args.get("sort_key"),
+        sort_dir=request.args.get("sort_dir"),
+        offset=request.args.get("offset"),
+        limit=request.args.get("limit"),
+        bypass_cache=should_bypass_cache(),
+    )
+    return jsonify({"success": True, "result": result_payload})
 
 
 # --- Public draft capture route ---

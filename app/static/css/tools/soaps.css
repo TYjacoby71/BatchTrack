@@ -944,3 +944,38 @@ soapToolPage {
     display: block;
   }
 }
+#soapToolPage .bulk-oil-table-wrap {
+  max-height: 32.5rem;
+  overflow-y: auto;
+}
+#soapToolPage .bulk-oil-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-subtle-bg-2);
+  white-space: nowrap;
+}
+#soapToolPage .bulk-oil-table .bulk-oil-col-check {
+  min-width: 3.5rem;
+}
+#soapToolPage .bulk-oil-table .bulk-oil-name {
+  min-width: 13rem;
+}
+#soapToolPage .bulk-oil-table .bulk-oil-acid {
+  min-width: 5.5rem;
+  text-align: right;
+}
+#soapToolPage .bulk-oil-table .bulk-oil-sort {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: none;
+  color: var(--color-text);
+}
+#soapToolPage .bulk-oil-table .bulk-oil-sort:hover {
+  color: var(--color-primary);
+}
+#soapToolPage .bulk-oil-table .bulk-oil-input {
+  min-width: 5.5rem;
+  max-width: 6.5rem;
+}

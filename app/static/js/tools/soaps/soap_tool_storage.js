@@ -116,9 +116,9 @@
         lye_type: document.querySelector('input[name="lye_type"]:checked')?.value || 'NaOH',
         lye_purity: document.getElementById('lyePurity')?.value || '100',
         water_method: document.getElementById('waterMethod')?.value || 'percent',
-        water_pct: document.getElementById('waterPct')?.value || '33',
-        lye_concentration: document.getElementById('lyeConcentration')?.value || '33',
-        water_ratio: document.getElementById('waterRatio')?.value || '2',
+        water_pct: document.getElementById('waterPct')?.value || '',
+        lye_concentration: document.getElementById('lyeConcentration')?.value || '',
+        water_ratio: document.getElementById('waterRatio')?.value || '',
       },
       additives: {
         fragrances: serializeFragrances(),
@@ -159,6 +159,9 @@
         consumables: serializeLines('tool-consumables', 'consumable'),
         containers: serializeLines('tool-containers', 'container'),
       },
+      bulk_oils: (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.serializeSelection === 'function')
+        ? SoapTool.bulkOilsModal.serializeSelection()
+        : { mode: 'basics', selections: [] },
       updated_at: Date.now(),
     };
     try {
@@ -223,11 +226,11 @@
       const waterMethod = document.getElementById('waterMethod');
       if (waterMethod) waterMethod.value = data.lye_form.water_method || 'percent';
       const waterPct = document.getElementById('waterPct');
-      if (waterPct) waterPct.value = data.lye_form.water_pct || '33';
+      if (waterPct) waterPct.value = data.lye_form.water_pct || '';
       const lyeConcentration = document.getElementById('lyeConcentration');
-      if (lyeConcentration) lyeConcentration.value = data.lye_form.lye_concentration || '33';
+      if (lyeConcentration) lyeConcentration.value = data.lye_form.lye_concentration || '';
       const waterRatio = document.getElementById('waterRatio');
-      if (waterRatio) waterRatio.value = data.lye_form.water_ratio || '2';
+      if (waterRatio) waterRatio.value = data.lye_form.water_ratio || '';
       SoapTool.runner.applyLyeSelection();
     }
 
@@ -353,6 +356,9 @@
       restoreLines('tool-ingredients', data.lines.ingredients, 'ingredient');
       restoreLines('tool-consumables', data.lines.consumables, 'consumable');
       restoreLines('tool-containers', data.lines.containers, 'container');
+    }
+    if (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.restoreState === 'function') {
+      SoapTool.bulkOilsModal.restoreState(data.bulk_oils || null);
     }
 
     SoapTool.runner.setWaterMethod();

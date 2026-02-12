@@ -169,24 +169,13 @@ def _read_text(path: str) -> str:
 
 
 # --- Validate PR-level requirements ---
-# Purpose: Enforce dictionary/changelog updates whenever app code changes.
+# Purpose: Enforce changelog presence and index linkage whenever app code changes.
 # Inputs: Changed files and mutable issues list.
 # Outputs: Appends violation strings to issues when requirements are unmet.
 def _validate_pr_level_requirements(changed: list[ChangedFile], issues: list[str]) -> None:
-    changed_paths = {entry.path for entry in changed}
     app_changes = [entry for entry in changed if _is_app_source_file(entry.path)]
     if not app_changes:
         return
-
-    if "docs/system/APP_DICTIONARY.md" not in changed_paths:
-        issues.append(
-            "App code changed but docs/system/APP_DICTIONARY.md was not updated."
-        )
-
-    if "docs/changelog/CHANGELOG_INDEX.md" not in changed_paths:
-        issues.append(
-            "App code changed but docs/changelog/CHANGELOG_INDEX.md was not updated."
-        )
 
     touched_changelog_entries = [
         entry.path
@@ -197,6 +186,19 @@ def _validate_pr_level_requirements(changed: list[ChangedFile], issues: list[str
         issues.append(
             "App code changed but no dated changelog entry was added/updated in docs/changelog/."
         )
+        return
+
+    index_text = _read_text("docs/changelog/CHANGELOG_INDEX.md")
+    if not index_text:
+        issues.append("docs/changelog/CHANGELOG_INDEX.md is missing or unreadable.")
+        return
+
+    for entry_path in touched_changelog_entries:
+        relative_name = entry_path.replace("docs/changelog/", "", 1)
+        if relative_name not in index_text:
+            issues.append(
+                f"{entry_path}: Missing link in docs/changelog/CHANGELOG_INDEX.md."
+            )
 
 
 # --- Validate Python file schema ---

@@ -66,6 +66,9 @@
     SoapTool.oils.updateOilTotals();
     SoapTool.mold.updateMoldSuggested();
     SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
+    if (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.onUnitChanged === 'function') {
+      SoapTool.bulkOilsModal.onUnitChanged();
+    }
     if (!options.skipAutoCalc) {
       SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: false });
     }
