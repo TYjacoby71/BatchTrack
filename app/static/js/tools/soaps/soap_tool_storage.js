@@ -159,6 +159,9 @@
         consumables: serializeLines('tool-consumables', 'consumable'),
         containers: serializeLines('tool-containers', 'container'),
       },
+      bulk_oils: (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.serializeSelection === 'function')
+        ? SoapTool.bulkOilsModal.serializeSelection()
+        : { mode: 'basics', selections: [] },
       updated_at: Date.now(),
     };
     try {
@@ -353,6 +356,9 @@
       restoreLines('tool-ingredients', data.lines.ingredients, 'ingredient');
       restoreLines('tool-consumables', data.lines.consumables, 'consumable');
       restoreLines('tool-containers', data.lines.containers, 'container');
+    }
+    if (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.restoreState === 'function') {
+      SoapTool.bulkOilsModal.restoreState(data.bulk_oils || null);
     }
 
     SoapTool.runner.setWaterMethod();

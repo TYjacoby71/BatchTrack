@@ -30,6 +30,11 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - `soap_tool_runner_service.js`: payload assembly + API transport
   - `soap_tool_runner_render.js`: service-result hydration into UI/state
   - `soap_tool_runner.js` now orchestrates those modules instead of carrying all concerns inline
+- Added bulk-oils modal workflow for Stage 2:
+  - new `/tools/api/soap/oils-catalog` endpoint returning basics/all oil catalogs with fatty-acid columns
+  - searchable, sortable, lazy-rendered modal table with checkbox selection and optional `% total` / `weight` inputs
+  - persisted bulk selection state in soap tool session storage until import
+  - import action writes selected oils into Stage 2 rows without requiring weight/percent values
 - Fixed `app/services/tools/soap_tool/_sheet.py` CSV escaping to avoid an f-string expression parsing edge in Python 3.11 CI validation.
 - Added service-level tests for the new computation bundle and method-independent lye checks.
 
@@ -55,7 +60,13 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/static/js/tools/soaps/soap_tool_runner_quota.js` (new)
 - `app/static/js/tools/soaps/soap_tool_runner_service.js` (new)
 - `app/static/js/tools/soaps/soap_tool_runner_render.js` (new)
+- `app/static/js/tools/soaps/soap_tool_bulk_oils_modal.js` (new)
+- `app/static/js/tools/soaps/soap_tool_storage.js`
+- `app/static/js/tools/soaps/soap_tool_units.js`
+- `app/static/css/tools/soaps.css`
 - `app/templates/tools/soaps/index.html`
+- `app/templates/tools/soaps/_modals.html`
+- `app/templates/tools/soaps/stages/_stage_2.html`
 - `tests/test_soap_tool_compute_service.py` (new)
 - `tests/test_soap_tool_lye_water.py` (new)
 - `docs/system/APP_DICTIONARY.md`
@@ -66,3 +77,4 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - Front-end modules are more display-focused and easier to debug.
 - Exported formula outputs now originate from the same canonical compute payload used for on-screen results.
 - Runner orchestration is now thinner and easier to reason about because transport/input/render/quota concerns are isolated in dedicated modules.
+- Oil selection workflows now support high-volume catalog browsing and staged bulk import without forcing immediate weight/percent assignment.
