@@ -52,12 +52,14 @@ def signup_data():
     db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
     available_tiers = SignupPlanCatalogService.build_available_tiers_payload(db_tiers)
     lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
+    oauth_providers = OAuthService.get_enabled_providers()
 
     return jsonify(
         {
             "available_tiers": available_tiers,
             "lifetime_offers": lifetime_offers,
-            "oauth_available": OAuthService.is_oauth_configured(),
+            "oauth_available": bool(any(oauth_providers.values())),
+            "oauth_providers": oauth_providers,
         }
     )
 
@@ -147,10 +149,12 @@ def signup():
     else:
         view_state = SignupCheckoutService.build_initial_view_state(signup_context)
 
+    oauth_providers = OAuthService.get_enabled_providers()
     template_context = SignupCheckoutService.build_template_context(
         signup_context,
         view_state,
-        oauth_available=OAuthService.is_oauth_configured(),
+        oauth_available=bool(any(oauth_providers.values())),
+        oauth_providers=oauth_providers,
         canonical_url=url_for("auth.signup", _external=True),
     )
     return render_template("pages/auth/signup.html", **template_context)

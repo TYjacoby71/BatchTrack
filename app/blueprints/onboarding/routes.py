@@ -51,14 +51,14 @@ def welcome():
 
         else:
             org_name = (request.form.get('org_name') or organization.name or '').strip()
-            org_contact_email = (request.form.get('org_contact_email') or organization.contact_email or '').strip()
+            org_contact_email = (request.form.get('org_contact_email') or organization.contact_email or user.email or '').strip()
             user_first = (request.form.get('first_name') or user.first_name or '').strip()
             user_last = (request.form.get('last_name') or user.last_name or '').strip()
             user_phone = (request.form.get('user_phone') or user.phone or '').strip()
             desired_username = (request.form.get('username') or user.username or '').strip()
 
             organization.name = org_name or organization.name
-            organization.contact_email = org_contact_email or organization.contact_email
+            organization.contact_email = org_contact_email or organization.contact_email or user.email
             user.first_name = user_first
             user.last_name = user_last
             user.phone = user_phone or None
@@ -75,10 +75,18 @@ def welcome():
                 else:
                     user.username = desired_username
 
+            completion_errors = []
+            if request.form.get('complete_checklist') == 'true':
+                if not (organization.contact_email or '').strip():
+                    completion_errors.append('Please add your billing/contact email before continuing.')
+                if not ((user.first_name or '').strip() and (user.last_name or '').strip()):
+                    completion_errors.append('Please add your first and last name before continuing.')
+
             user.last_login = user.last_login or TimezoneUtils.utc_now()
 
-            if username_errors:
-                for err in username_errors:
+            validation_errors = username_errors + completion_errors
+            if validation_errors:
+                for err in validation_errors:
                     flash(err, 'error')
             else:
                 db.session.commit()

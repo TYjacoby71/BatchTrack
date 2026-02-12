@@ -17,6 +17,8 @@ from app.models.pending_signup import PendingSignup
 from app.models.subscription_tier import SubscriptionTier
 from app.models.models import Organization, User
 from app.services.billing_service import BillingService
+from app.services.signup_checkout_service import SignupCheckoutService, SignupRequestContext
+from app.services.signup_service import SignupService
 
 
 # --- Pytest CLI option ---
@@ -100,6 +102,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
                 assert customer_email == 'solo@applicant.com'
                 assert success_url.endswith('{CHECKOUT_SESSION_ID}')
                 assert metadata['tier_id'] == str(solo.id)
+                assert phone_required is False
                 return _DummySession(f'cs_test_{tier_obj.id}')
             monkeypatch.setattr(BillingService, 'create_checkout_session_for_tier', fake_checkout)
 
@@ -151,3 +154,78 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         assert response.headers['Location'].endswith('/onboarding/welcome')
         with client.session_transaction() as sess:
             assert sess.get('_user_id') == str(user.id)
+
+
+def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
+    context = SignupRequestContext(
+        db_tiers=[],
+        available_tiers={},
+        lifetime_offers=[],
+        lifetime_by_key={},
+        lifetime_by_tier_id={},
+        has_lifetime_capacity=True,
+        signup_source='unit-test',
+        referral_code=None,
+        promo_code=None,
+        preselected_tier='1',
+        selected_lifetime_tier='',
+        billing_mode='standard',
+        standard_billing_cycle='monthly',
+        oauth_user_info={'email': 'social@example.com'},
+        prefill_email='social@example.com',
+        prefill_phone='',
+    )
+
+    submission = SignupCheckoutService._build_submission(
+        context=context,
+        form_data={
+            'selected_tier': '1',
+            'billing_mode': 'standard',
+            'billing_cycle': 'monthly',
+            'contact_email': '',
+            'contact_phone': '',
+        },
+    )
+    assert submission.contact_email == 'social@example.com'
+
+
+def test_signup_provisioning_prefills_name_and_email_from_oauth_metadata(app):
+    with app.app_context():
+        tier = SubscriptionTier(
+            name='OAuth Tier',
+            user_limit=1,
+            billing_provider='stripe',
+            is_customer_facing=True,
+            stripe_lookup_key='price_oauth_tier',
+        )
+        db.session.add(tier)
+        db.session.commit()
+
+        pending = SignupService.create_pending_signup_record(
+            tier=tier,
+            email='',
+            phone=None,
+            signup_source='oauth-test',
+            referral_code=None,
+            promo_code=None,
+            detected_timezone='UTC',
+            oauth_user_info={'oauth_provider': 'facebook', 'oauth_provider_id': 'fb_test_id'},
+            extra_metadata={'first_name': 'Ada', 'last_name': 'Lovelace', 'oauth_email': 'ada@example.com'},
+        )
+
+        checkout_session = SimpleNamespace(
+            id='cs_test_oauth',
+            metadata={'first_name': 'Ada', 'last_name': 'Lovelace', 'oauth_email': 'ada@example.com'},
+            customer_details={},
+            custom_fields=[],
+            client_reference_id=str(pending.id),
+        )
+        customer = SimpleNamespace(id='cus_test_oauth', email=None, phone=None, name=None, metadata={})
+
+        org, user = SignupService.complete_pending_signup_from_checkout(pending, checkout_session, customer)
+
+        assert org is not None and user is not None
+        assert user.email == 'ada@example.com'
+        assert user.first_name == 'Ada'
+        assert user.last_name == 'Lovelace'
+        assert org.contact_email == 'ada@example.com'

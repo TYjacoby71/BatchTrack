@@ -27,9 +27,9 @@ Glossary:
 
                         <div class="mb-3">
                             <label for="login_username" class="form-label">
-                                <i class="fas fa-user me-1"></i>Username
+                                <i class="fas fa-user me-1"></i>Email or Username
                             </label>
-                            <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your username" required>
+                            <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your email or username" required>
                         </div>
 
                         <div class="mb-4">
@@ -42,20 +42,29 @@ Glossary:
                         <button type="submit" class="btn btn-primary w-100 btn-lg mb-3">Login</button>
                     </form>
 
-                    {% if oauth_available %}
+                    {% set google_oauth_enabled = config.get('GOOGLE_OAUTH_CLIENT_ID') and config.get('GOOGLE_OAUTH_CLIENT_SECRET') %}
+                    {% set facebook_oauth_enabled = config.get('FACEBOOK_OAUTH_APP_ID') and config.get('FACEBOOK_OAUTH_APP_SECRET') %}
+                    {% if google_oauth_enabled or facebook_oauth_enabled %}
                     <div class="text-center mb-3">
                         <div class="divider">
                             <span class="divider-text">or</span>
                         </div>
+                        {% if google_oauth_enabled %}
                         <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
                             <i class="fab fa-google me-2"></i>Continue with Google
                         </a>
+                        {% endif %}
+                        {% if facebook_oauth_enabled %}
+                        <a href="{{ url_for('auth.oauth_facebook') }}" class="btn btn-outline-primary w-100 mt-2">
+                            <i class="fab fa-facebook-f me-2"></i>Continue with Facebook
+                        </a>
+                        {% endif %}
                     </div>
                     {% elif config.DEBUG %}
                     <div class="text-center mb-3">
                         <div class="alert alert-warning small">
                             <strong>OAuth Debug:</strong> Not configured.<br>
-                            <small>Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to Replit Secrets.</small><br>
+                            <small>Add Google or Facebook OAuth secrets to your environment.</small><br>
                             <a href="{{ url_for('auth.debug_oauth_config') }}" class="small text-muted">Check OAuth config</a>
                         </div>
                     </div>

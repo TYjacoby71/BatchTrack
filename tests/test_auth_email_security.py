@@ -72,6 +72,33 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
         assert sess.get("_user_id") is not None
 
 
+# --- Email identifier login ---
+# Purpose: Verify login accepts email as credential identifier in addition to username.
+def test_login_accepts_email_identifier(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"email_login_{uuid.uuid4().hex[:6]}",
+            email=f"email_login_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=True,
+        )
+        email = user.email
+
+    response = client.post(
+        "/auth/login",
+        data={"username": email, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "dashboard" in response.headers["Location"]
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is not None
+
+
 # --- Provider fallback login ---
 # Purpose: Verify auth-email features auto-relax when provider-required mode lacks credentials.
 def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):

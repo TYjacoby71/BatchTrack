@@ -18,6 +18,7 @@ from datetime import timedelta
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_user, logout_user
 from flask_wtf import FlaskForm
+from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired
@@ -66,7 +67,7 @@ def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
 # --- Login form ---
 # Purpose: Validate credential form input for the login route.
 class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[DataRequired()])
+    username = StringField("Email or Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
@@ -157,26 +158,42 @@ def login():
         return _render_login_page(503)
 
     if form_is_valid:
-        username = request.form.get("username")
+        login_identifier = (request.form.get("username") or "").strip()
         password = request.form.get("password")
 
-        if not username or not password:
-            flash("Please provide both username and password")
-            return _render_login_page()
+        if not login_identifier or not password:
+            flash("Please provide both email/username and password")
+            return render_template(
+                "pages/auth/login.html",
+                form=form,
+                oauth_available=oauth_available,
+                show_forgot_password=show_forgot_password,
+                show_resend_verification=show_resend_verification,
+            )
 
         try:
-            user = User.query.filter_by(username=username).first()
+            normalized_identifier = login_identifier.lower()
+            user = (
+                User.query.filter(
+                    or_(
+                        func.lower(User.username) == normalized_identifier,
+                        func.lower(User.email) == normalized_identifier,
+                    )
+                )
+                .order_by(User.id.asc())
+                .first()
+            )
         except SQLAlchemyError as exc:
             db.session.rollback()
-            logger.exception("Login query failed for %s: %s", username, exc)
-            _log_loadtest_login_context("db_query_error", {"username": username})
+            logger.exception("Login query failed for %s: %s", login_identifier, exc)
+            _log_loadtest_login_context("db_query_error", {"identifier": login_identifier})
             flash("Login temporarily unavailable. Please try again.")
             return _render_login_page(503)
 
-        if username and username.startswith("loadtest_user"):
+        if login_identifier and login_identifier.startswith("loadtest_user"):
             logger.info(
                 "Load test login attempt: %s, user_found=%s",
-                username,
+                login_identifier,
                 bool(user),
             )
             if user:
@@ -193,16 +210,16 @@ def login():
         try:
             password_ok = user.check_password(password) if user else False
         except Exception as exc:
-            logger.exception("Login password check failed for %s: %s", username, exc)
-            _log_loadtest_login_context("password_check_error", {"username": username})
+            logger.exception("Login password check failed for %s: %s", login_identifier, exc)
+            _log_loadtest_login_context("password_check_error", {"identifier": login_identifier})
             flash("Login temporarily unavailable. Please try again.")
             return _render_login_page(503)
 
         if user and password_ok:
             if not user.is_active:
-                if username and username.startswith("loadtest_user"):
-                    logger.warning("Load test user %s is inactive", username)
-                _log_loadtest_login_context("inactive_user", {"username": username})
+                if login_identifier and login_identifier.startswith("loadtest_user"):
+                    logger.warning("Load test user %s is inactive", login_identifier)
+                _log_loadtest_login_context("inactive_user", {"identifier": login_identifier})
                 flash("Account is inactive. Please contact administrator.")
                 return _render_login_page()
 
@@ -213,7 +230,7 @@ def login():
                     _log_loadtest_login_context(
                         "inactive_organization",
                         {
-                            "username": username,
+                            "identifier": login_identifier,
                             "organization_present": organization is not None,
                             "organization_billing_status": (
                                 (getattr(organization, "billing_status", "inactive") or "inactive").lower()
@@ -254,8 +271,8 @@ def login():
                 db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
-                logger.exception("Login commit failed for %s: %s", username, exc)
-                _log_loadtest_login_context("db_commit_error", {"username": username})
+                logger.exception("Login commit failed for %s: %s", login_identifier, exc)
+                _log_loadtest_login_context("db_commit_error", {"identifier": login_identifier})
                 flash("Login temporarily unavailable. Please try again.")
                 return _render_login_page(503)
 
@@ -270,11 +287,17 @@ def login():
                 return redirect(next_url)
             return redirect(url_for("app_routes.dashboard"))
 
-        _log_loadtest_login_context("invalid_credentials", {"username": username, "user_found": bool(user)})
-        if username and username.startswith("loadtest_user"):
-            logger.warning("Load test login failed: invalid credentials for %s", username)
-        flash("Invalid username or password")
-        return _render_login_page()
+        _log_loadtest_login_context("invalid_credentials", {"identifier": login_identifier, "user_found": bool(user)})
+        if login_identifier and login_identifier.startswith("loadtest_user"):
+            logger.warning("Load test login failed: invalid credentials for %s", login_identifier)
+        flash("Invalid email/username or password")
+        return render_template(
+            "pages/auth/login.html",
+            form=form,
+            oauth_available=oauth_available,
+            show_forgot_password=show_forgot_password,
+            show_resend_verification=show_resend_verification,
+        )
 
     return _render_login_page()
 

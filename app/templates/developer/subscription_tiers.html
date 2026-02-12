@@ -162,9 +162,10 @@
                                     </div>
                                 </div>
                                 <div class="col-6">
+                                    {% set requires_stripe = tier_data.get('requires_stripe_billing', tier_data.get('billing_provider') == 'stripe') %}
                                     <div class="mb-1">
-                                        <span class="badge bg-{{ 'success' if tier_data.get('requires_stripe_billing', True) else 'secondary' }}">
-                                            {% if tier_data.get('requires_stripe_billing', True) %}
+                                        <span class="badge bg-{{ 'success' if requires_stripe else 'secondary' }}">
+                                            {% if requires_stripe %}
                                                 Stripe Required
                                             {% else %}
                                                 No Stripe
