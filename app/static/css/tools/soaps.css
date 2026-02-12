@@ -882,7 +882,10 @@ soapToolPage {
 }
 #soapToolPage .soap-stage-pane.is-height-synced .tab-pane {
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 #soapToolPage .soap-stage-pane.is-height-synced .soap-stage-card {
   height: 100%;
@@ -894,10 +897,7 @@ soapToolPage {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 #soapToolPage .oil-profile-float {
   position: absolute;

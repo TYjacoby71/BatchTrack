@@ -49,6 +49,7 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - moved bulk catalog build/page/cache logic out of `app/routes/tools_routes.py` into `app/services/tools/soap_tool/_catalog.py`
   - split `soap_tool_bulk_oils_modal.js` monolith into focused files (`_shared.js`, `_render.js`, `_api.js`, and a thin `_modal.js` controller)
   - updated soap template script ordering so modal behavior composes through explicit module dependencies
+- Fixed stage-card overflow behavior in synced layouts so each stage tab pane scrolls internally when content exceeds the stage-height boundary, instead of clipping long content.
 - Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
   - water % / concentration / ratio fields no longer force local preset values while typing
   - added per-method helper text showing normal ranges instead of preset enforcement
