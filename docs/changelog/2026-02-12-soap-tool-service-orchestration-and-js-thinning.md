@@ -24,6 +24,12 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - result cards, quality data, and additive outputs now hydrate from service response
   - export actions prefer service-provided CSV and print-sheet outputs
 - Split recipe payload assembly helpers out of `soap_tool_runner.js` into `soap_tool_recipe_payload.js` so runner orchestration is not coupled to draft/export DTO construction.
+- Further thinned `soap_tool_runner.js` by extracting runner support concerns into dedicated modules:
+  - `soap_tool_runner_inputs.js`: lye/water input sanitization, validation, and live preview helpers
+  - `soap_tool_runner_quota.js`: calc quota/session tracking
+  - `soap_tool_runner_service.js`: payload assembly + API transport
+  - `soap_tool_runner_render.js`: service-result hydration into UI/state
+  - `soap_tool_runner.js` now orchestrates those modules instead of carrying all concerns inline
 - Added service-level tests for the new computation bundle and method-independent lye checks.
 
 ## Files Modified
@@ -44,6 +50,10 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - `app/static/js/tools/soaps/soap_tool_quality.js`
 - `app/static/js/tools/soaps/soap_tool_events.js`
 - `app/static/js/tools/soaps/soap_tool_recipe_payload.js` (new)
+- `app/static/js/tools/soaps/soap_tool_runner_inputs.js` (new)
+- `app/static/js/tools/soaps/soap_tool_runner_quota.js` (new)
+- `app/static/js/tools/soaps/soap_tool_runner_service.js` (new)
+- `app/static/js/tools/soaps/soap_tool_runner_render.js` (new)
 - `app/templates/tools/soaps/index.html`
 - `tests/test_soap_tool_compute_service.py` (new)
 - `tests/test_soap_tool_lye_water.py` (new)
@@ -54,3 +64,4 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
 - Soap tool compute behavior now has a backend authority layer similar to service-oriented patterns used elsewhere.
 - Front-end modules are more display-focused and easier to debug.
 - Exported formula outputs now originate from the same canonical compute payload used for on-screen results.
+- Runner orchestration is now thinner and easier to reason about because transport/input/render/quota concerns are isolated in dedicated modules.
