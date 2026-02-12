@@ -131,7 +131,8 @@ def build_formula_csv_text(rows: list[list[str | float]]) -> str:
     def _escape(value: str | float) -> str:
         text = "" if value is None else str(value)
         if any(ch in text for ch in ['"', ",", "\n"]):
-            return f"\"{text.replace('\"', '\"\"')}\""
+            escaped = text.replace('"', '""')
+            return f'"{escaped}"'
         return text
 
     return "\n".join(",".join(_escape(col) for col in row) for row in rows)
