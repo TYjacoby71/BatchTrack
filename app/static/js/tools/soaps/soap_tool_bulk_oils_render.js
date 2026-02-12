@@ -76,6 +76,26 @@
     });
   }
 
+  function applyViewSelectedOrderingIfNeeded(){
+    const modalState = ensureModalState();
+    if (!modalState.viewSelected) return;
+    const selected = [];
+    const others = [];
+    modalState.visibleRecords.forEach(record => {
+      if (selectionForRecordKey(record.key)) {
+        selected.push(record);
+      } else {
+        others.push(record);
+      }
+    });
+    modalState.visibleRecords = selected.concat(others);
+  }
+
+  function applyClientOrdering(){
+    applyLocalSelectionSortIfNeeded();
+    applyViewSelectedOrderingIfNeeded();
+  }
+
   function normalizeServerSortKey(sortKey){
     const key = String(sortKey || '').trim().toLowerCase();
     if (key === 'name') return key;
@@ -192,6 +212,8 @@
     updateStatusText,
     refreshCatalogStatus,
     applyLocalSelectionSortIfNeeded,
+    applyViewSelectedOrderingIfNeeded,
+    applyClientOrdering,
     normalizeServerSortKey,
     sortButtonsLabel,
     renderVisibleRecords,
