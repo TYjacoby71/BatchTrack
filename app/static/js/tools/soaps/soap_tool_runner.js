@@ -40,6 +40,7 @@
       el.classList.toggle('d-none', el.dataset.method !== method);
     });
     updateStageWaterSummary(null, method);
+    updateLiveCalculationPreview(null, method);
   }
 
   function getWaterMethodHelp(method){
@@ -79,6 +80,56 @@
       return;
     }
     hintOutput.textContent = `Using ${round(summary.waterPct || 0, 1)}% of total oils (${formatWeight(summary.totalOils)}).`;
+  }
+
+  function updateLiveCalculationPreview(summary = null, explicitMethod = null){
+    const anchorEl = document.getElementById('lyeWaterPreviewAnchor');
+    const lyeEl = document.getElementById('lyePreview');
+    const waterEl = document.getElementById('waterPreview');
+    const concEl = document.getElementById('concPreview');
+    const ratioEl = document.getElementById('ratioPreview');
+    if (!anchorEl && !lyeEl && !waterEl && !concEl && !ratioEl) return;
+
+    const setText = (el, value) => {
+      if (el) el.textContent = value;
+    };
+    const method = explicitMethod || summary?.waterMethod || document.getElementById('waterMethod')?.value || 'percent';
+    const totalOils = toNumber(summary?.totalOils);
+    const lye = toNumber(summary?.lyeAdjusted);
+    const water = toNumber(summary?.waterG);
+    if (totalOils <= 0 || lye <= 0) {
+      setText(anchorEl, 'Based on -- oils. All values update live as you change inputs.');
+      setText(lyeEl, '--');
+      setText(waterEl, '--');
+      setText(concEl, '--');
+      setText(ratioEl, '--');
+      return;
+    }
+
+    const concentration = toNumber(summary?.lyeConcentration) > 0
+      ? toNumber(summary?.lyeConcentration)
+      : ((lye + water) > 0 ? (lye / (lye + water)) * 100 : 0);
+    const ratio = toNumber(summary?.waterRatio) > 0
+      ? toNumber(summary?.waterRatio)
+      : (lye > 0 ? water / lye : 0);
+    setText(anchorEl, `Based on ${formatWeight(totalOils)} oils. All values update live as you change inputs.`);
+    setText(lyeEl, formatWeight(lye));
+    setText(waterEl, formatWeight(water));
+    setText(concEl, concentration > 0 ? formatPercent(concentration) : '--');
+    setText(ratioEl, ratio > 0 ? `${round(ratio, 2)} : 1` : '--');
+
+    if (method === 'concentration') {
+      const concentrationInput = toNumber(summary?.lyeConcentrationInput);
+      if (concentrationInput > 0) {
+        setText(concEl, formatPercent(concentrationInput));
+      }
+    }
+    if (method === 'ratio') {
+      const ratioInput = toNumber(summary?.waterRatioInput);
+      if (ratioInput > 0) {
+        setText(ratioEl, `${round(ratioInput, 2)} : 1`);
+      }
+    }
   }
 
   function validateCalculation(){
@@ -289,6 +340,7 @@
     const validation = validateCalculation();
     if (!validation.ok) {
       updateStageWaterSummary(null);
+      updateLiveCalculationPreview(null);
       if (settings.showAlerts) {
         SoapTool.ui.showSoapAlert('warning', `<strong>Missing info:</strong><ul class="mb-0">${validation.errors.map(err => `<li>${err}</li>`).join('')}</ul>`, { dismissible: true, persist: true });
       }
@@ -356,7 +408,7 @@
       lyeConcentration: toNumber(serviceResult.lye_concentration_pct),
       waterRatio: toNumber(serviceResult.water_lye_ratio),
     };
-    updateStageWaterSummary({
+    const liveSummary = {
       waterG: waterData.waterG,
       lyeAdjusted,
       totalOils,
@@ -366,7 +418,9 @@
       waterRatioInput: waterRatio,
       lyeConcentration: waterData.lyeConcentration,
       waterRatio: waterData.waterRatio,
-    });
+    };
+    updateStageWaterSummary(liveSummary);
+    updateLiveCalculationPreview(liveSummary);
     const additives = SoapTool.additives.updateAdditivesOutput(totalOils);
     const batchYield = totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG;
 
@@ -713,6 +767,7 @@
     getLyeSelection,
     applyLyeSelection,
     setWaterMethod,
+    updateLiveCalculationPreview,
     calculateAll,
     buildSoapRecipePayload,
     buildLineRow,

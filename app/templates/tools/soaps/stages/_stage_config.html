@@ -68,6 +68,18 @@
         </div>
       </div>
     </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-12">
+        <div class="alert alert-light mb-0">
+          <div class="fw-semibold">Live calculation preview</div>
+          <div class="small text-muted" id="lyeWaterPreviewAnchor">Based on -- oils. All values update live as you change inputs.</div>
+          <div class="small mt-1">Lye needed: <span id="lyePreview">--</span></div>
+          <div class="small">Water amount: <span id="waterPreview">--</span></div>
+          <div class="small">Lye concentration: <span id="concPreview">--</span></div>
+          <div class="small">Water : Lye ratio: <span id="ratioPreview">--</span></div>
+        </div>
+      </div>
+    </div>
     {% set stage_index = 2 %}
     {% include 'tools/soaps/stages/_stage_actions.html' %}
   </div>

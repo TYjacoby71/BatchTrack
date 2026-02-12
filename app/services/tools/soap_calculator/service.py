@@ -32,6 +32,21 @@ class SoapToolCalculatorService:
     DEFAULT_NAOH_FALLBACK_PER_G = 0.138
     DEFAULT_KOH_FALLBACK_PER_G = 0.194
     NAOH_FACTOR_FROM_KOH_SAP = 0.713
+    SAP_KOH_DECIMAL_THRESHOLD = 1.0
+    SAP_KOH_DECIMAL_TO_MG_FACTOR = 1000.0
+
+    @classmethod
+    def _normalize_sap_koh(cls, sap_koh: float) -> float:
+        """Normalize KOH SAP values from either decimal or mg input formats.
+
+        Some public datasets provide SAP KOH as decimal g/g values (for example,
+        0.188) while internal records use mg KOH per gram oil (for example, 188).
+        The calculator runs on mg KOH/g, so decimal values are upscaled here.
+        """
+        normalized = max(0.0, float(sap_koh))
+        if 0.0 < normalized <= cls.SAP_KOH_DECIMAL_THRESHOLD:
+            return normalized * cls.SAP_KOH_DECIMAL_TO_MG_FACTOR
+        return normalized
 
     @classmethod
     def calculate(cls, payload: Mapping[str, Any] | None) -> SoapCalculationResult:
@@ -72,7 +87,7 @@ class SoapToolCalculatorService:
         sap_weight_g = 0.0
         for oil in request.oils:
             grams = max(0.0, oil.grams)
-            sap_koh = max(0.0, oil.sap_koh)
+            sap_koh = cls._normalize_sap_koh(oil.sap_koh)
             if grams <= 0 or sap_koh <= 0:
                 continue
             per_g = (
