@@ -50,7 +50,7 @@ def test_checkout_session_drops_customer_update_without_customer(app):
 
     with app.app_context(), \
             patch('app.services.billing_service.BillingService.ensure_stripe', return_value=True), \
-            patch('app.services.billing_service.BillingService.get_live_pricing_for_tier', return_value=_pricing_stub('price_team')), \
+            patch('app.services.billing_service.BillingService.get_live_pricing_for_lookup_key', return_value=_pricing_stub('price_team')), \
             patch('app.services.billing_service.stripe.checkout.Session.create') as mock_session_create:
 
         mock_session_create.return_value = SimpleNamespace(id='cs_test')
