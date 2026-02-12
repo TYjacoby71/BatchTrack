@@ -100,6 +100,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
                 assert customer_email == 'solo@applicant.com'
                 assert success_url.endswith('{CHECKOUT_SESSION_ID}')
                 assert metadata['tier_id'] == str(solo.id)
+                assert phone_required is False
                 return _DummySession(f'cs_test_{tier_obj.id}')
             monkeypatch.setattr(BillingService, 'create_checkout_session_for_tier', fake_checkout)
 

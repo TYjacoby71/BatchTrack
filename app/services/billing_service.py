@@ -934,26 +934,6 @@ class BillingService:
                     'billing_cycle': pricing.get('billing_cycle', ''),
                     **(metadata or {})
                 },
-                'custom_fields': [
-                    {
-                        'key': 'workspace_name',
-                        'label': {'type': 'custom', 'custom': 'Workspace / brand name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 2, 'maximum_length': 60},
-                    },
-                    {
-                        'key': 'first_name',
-                        'label': {'type': 'custom', 'custom': 'First name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 1, 'maximum_length': 40},
-                    },
-                    {
-                        'key': 'last_name',
-                        'label': {'type': 'custom', 'custom': 'Last name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 1, 'maximum_length': 60},
-                    },
-                ],
             }
 
             if stripe_promotion_code_id:

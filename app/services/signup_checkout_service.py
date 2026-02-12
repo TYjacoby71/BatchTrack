@@ -347,6 +347,7 @@ class SignupCheckoutService:
             "cancel_url": cancel_url,
             "metadata": metadata,
             "client_reference_id": str(pending_signup.id),
+            "phone_required": False,
         }
         if submission.price_lookup_key_override:
             checkout_kwargs["price_lookup_key_override"] = submission.price_lookup_key_override

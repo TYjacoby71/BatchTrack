@@ -77,6 +77,7 @@ def test_checkout_session_drops_customer_update_without_customer(app):
             success_url='https://example.com/success',
             cancel_url='https://example.com/cancel',
             metadata={'source': 'test'},
+            phone_required=False,
         )
 
         assert mock_session_create.called
@@ -84,6 +85,8 @@ def test_checkout_session_drops_customer_update_without_customer(app):
         assert 'customer_update' not in kwargs
         assert 'customer' not in kwargs
         assert 'customer_email' not in kwargs
+        assert kwargs['phone_number_collection'] == {'enabled': False}
+        assert 'custom_fields' not in kwargs
 
 
 def test_find_related_price_lookup_key_prefers_lookup_key(app):
