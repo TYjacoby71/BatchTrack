@@ -196,25 +196,26 @@ Made a code change?
 ```
 
 ## PR Documentation Checklist (keep in sync with PR template)
-- [ ] Updated system docs for feature changes (docs/system/)
-- [ ] Added/updated dated changelog entry (docs/changelog/YYYY-MM-DD-*.md)
-- [ ] Updated changelog index (docs/changelog/CHANGELOG_INDEX.md)
-- [ ] Updated add-on entitlements doc if tiers/add-ons changed
-- [ ] Added/updated file Synopsis + Glossary blocks for every touched file
-- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences) for every touched top-level unit
-- [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
-- [ ] Verified one-entry rule (single canonical term entry, no duplicates)
-- [ ] Ran `python3 scripts/validate_pr_documentation.py` and confirmed pass
+- [ ] 1) **System Integrity** — project patterns respected; no service-layer bypassing.
+- [ ] 2) **Scoping and Security** — org scoping, permission checks, and timezone handling are correct.
+- [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
+- [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
+- [ ] 5) **Validation** — local tests run, tests updated, and docs guard passes (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
+- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers, terms/locations, and one-entry rule.
+- [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
+
+### AI Shortcut Phrase
+Use this exact delegation phrase:
+`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, read and implement docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)", and do not stop until docs guard passes.`
 
 ## Enforcement (Automated Guard)
 
 The following rules are enforced by `scripts/validate_pr_documentation.py` in local pre-commit and CI:
 
 1. **App-change requirement**
-   - If any `app/` file changes, the PR must also update:
-     - `docs/system/APP_DICTIONARY.md`
-     - `docs/changelog/CHANGELOG_INDEX.md`
-     - at least one dated changelog file in `docs/changelog/`
+   - If any `app/` file changes, the PR must include at least one dated changelog file update in `docs/changelog/`.
+   - Changed app file paths must still be covered in `APP_DICTIONARY.md`.
+   - Any changed dated changelog entries must be linked in `docs/changelog/CHANGELOG_INDEX.md`.
 
 2. **Python schema requirement (`app/` and `scripts/`)**
    - Module docstring must include both **Synopsis** and **Glossary**.

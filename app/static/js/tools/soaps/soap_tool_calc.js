@@ -2,7 +2,7 @@
   'use strict';
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
-  const { clamp, toNumber } = SoapTool.helpers;
+  const { toNumber } = SoapTool.helpers;
 
   function computeIodine(oils){
     let totalWeight = 0;
@@ -84,42 +84,11 @@
     };
   }
 
-  function computeAdditives(totalOils, lyeType, percents){
-    const inputs = percents || {};
-    const baseOils = clamp(totalOils, 0);
-    const fragrancePct = clamp(toNumber(inputs.fragrancePct), 0, 100);
-    const lactatePct = clamp(toNumber(inputs.lactatePct), 0, 100);
-    const sugarPct = clamp(toNumber(inputs.sugarPct), 0, 100);
-    const saltPct = clamp(toNumber(inputs.saltPct), 0, 100);
-    const citricPct = clamp(toNumber(inputs.citricPct), 0, 100);
-    const fragranceG = baseOils * (fragrancePct / 100);
-    const lactateG = baseOils * (lactatePct / 100);
-    const sugarG = baseOils * (sugarPct / 100);
-    const saltG = baseOils * (saltPct / 100);
-    const citricG = baseOils * (citricPct / 100);
-    const citricLyeFactor = lyeType === 'KOH' ? 0.719 : 0.624;
-    const citricLyeG = citricG * citricLyeFactor;
-    return {
-      fragrancePct,
-      lactatePct,
-      sugarPct,
-      saltPct,
-      citricPct,
-      fragranceG,
-      lactateG,
-      sugarG,
-      saltG,
-      citricG,
-      citricLyeG,
-    };
-  }
-
   SoapTool.calc = {
     computeIodine,
     computeFattyAcids,
     computeQualities,
     computeOilQualityScores,
-    computeAdditives,
   };
 
   window.SoapCalcService = SoapTool.calc;

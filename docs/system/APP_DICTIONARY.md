@@ -4,6 +4,7 @@
 This is the living glossary for BatchTrack. It is organized by application layers so new concepts can be placed where they belong and cross-linked to the source of truth.
 
 ## Update Standard (Agent Instructions)
+- Treat this block as the canonical instruction source for PR documentation checklist items related to Synopsis/Glossary, functional headers, and dictionary updates.
 - For every file touched, add or update the **Synopsis** (max 5 sentences).
 - For every top-level functional unit touched in a file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
 - If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
@@ -145,7 +146,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
 - **SKU Activity Gate** → Suppresses SKU low/out-of-stock alerts until inventory activity exists (see `app/services/combined_inventory_alerts.py`)
-- **SoapToolCalculatorService Package** → Tool-scoped calculator package exporting canonical soap lye/water computations and typed request/result contracts (see `app/services/tools/__init__.py`, `app/services/tools/soap_calculator/__init__.py`, `app/services/tools/soap_calculator/service.py`, and `app/services/tools/soap_calculator/types.py`)
+- **SoapTool Lye/Water Authority** → Canonical lye/water calculation primitives and SAP normalization used across soap computations (see `app/services/tools/soap_tool/_lye_water.py`)
+- **SoapToolComputationService Package** → Soap tool orchestration package that compiles lye/water, additives, quality report data, and formula sheet exports into one canonical compute response (see `app/services/tools/soap_tool/__init__.py`, `app/services/tools/soap_tool/_core.py`, `app/services/tools/soap_tool/_lye_water.py`, `app/services/tools/soap_tool/_additives.py`, `app/services/tools/soap_tool/_fatty_acids.py`, `app/services/tools/soap_tool/_quality_report.py`, `app/services/tools/soap_tool/_sheet.py`, and `app/services/tools/soap_tool/types.py`)
 - **CostingEngine** → Weighted unit cost helpers (see `app/services/costing_engine.py`)
 - **GlobalItemStatsService** → Global item adoption and cost rollups (see `app/services/statistics/global_item_stats.py`)
 - **QuantityBase** → Base quantity conversion helpers (see `app/services/quantity_base.py`)
@@ -201,7 +203,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Inventory Bulk Updates** → Bulk inventory adjustment UI (see `app/blueprints/inventory/routes.py`)
 - **Developer User Hard Delete CTA** → Explicitly-labeled "Hard Delete User (Test Only)" modal action requiring typed confirmation before permanent deletion (see `app/templates/components/shared/user_management_modal.html`)
 - **Organization Hard Delete Legacy Snapshot Notice** → Developer organization deletion modal warning that marketplace/listed recipes are archived to JSON snapshots before removal (see `app/templates/developer/organization_detail.html`)
-- **Soap Formulator Runtime Modules** → Stage synchronization, autosave, and service-backed calculation orchestration for the soap tool (see `app/static/js/tools/soaps/soap_tool_core.js`, `app/static/js/tools/soaps/soap_tool_events.js`, `app/static/js/tools/soaps/soap_tool_mold.js`, `app/static/js/tools/soaps/soap_tool_oils.js`, `app/static/js/tools/soaps/soap_tool_runner.js`, `app/static/js/tools/soaps/soap_tool_storage.js`, and `app/static/js/tools/soaps/soap_tool_calc.js`)
+- **Soap Formulator Runtime Modules** → Stage synchronization, autosave, and service-backed calculation orchestration for the soap tool, including additive/quality rendering, recipe-payload assembly, and thin-runner support modules (see `app/static/js/tools/soaps/soap_tool_core.js`, `app/static/js/tools/soaps/soap_tool_events.js`, `app/static/js/tools/soaps/soap_tool_mold.js`, `app/static/js/tools/soaps/soap_tool_oils.js`, `app/static/js/tools/soaps/soap_tool_runner.js`, `app/static/js/tools/soaps/soap_tool_runner_inputs.js`, `app/static/js/tools/soaps/soap_tool_runner_quota.js`, `app/static/js/tools/soaps/soap_tool_runner_service.js`, `app/static/js/tools/soaps/soap_tool_runner_render.js`, `app/static/js/tools/soaps/soap_tool_storage.js`, `app/static/js/tools/soaps/soap_tool_calc.js`, `app/static/js/tools/soaps/soap_tool_additives.js`, `app/static/js/tools/soaps/soap_tool_quality.js`, and `app/static/js/tools/soaps/soap_tool_recipe_payload.js`)
 - **Soap Formulator Stage Styling** → Soap stage card/preset visuals and lye-water setup presentation styles, including stage config template layout (see `app/static/css/tools/soaps.css` and `app/templates/tools/soaps/stages/_stage_config.html`)
 - **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
 - **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
