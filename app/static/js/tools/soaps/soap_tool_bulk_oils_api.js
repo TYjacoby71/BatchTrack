@@ -16,7 +16,7 @@
   const {
     refreshCatalogStatus,
     normalizeServerSortKey,
-    applyLocalSelectionSortIfNeeded,
+    applyClientOrdering,
     renderVisibleRecords,
     updateStatusText,
   } = render;
@@ -82,7 +82,7 @@
       modalState.offset = nextOffset;
       modalState.totalCount = totalCount;
       modalState.hasMore = hasMore;
-      applyLocalSelectionSortIfNeeded();
+      applyClientOrdering();
       renderVisibleRecords();
     } catch (_) {
       if (requestToken === modalState.requestToken) {

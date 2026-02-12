@@ -49,6 +49,14 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - moved bulk catalog build/page/cache logic out of `app/routes/tools_routes.py` into `app/services/tools/soap_tool/_catalog.py`
   - split `soap_tool_bulk_oils_modal.js` monolith into focused files (`_shared.js`, `_render.js`, `_api.js`, and a thin `_modal.js` controller)
   - updated soap template script ordering so modal behavior composes through explicit module dependencies
+- Fixed stage-card overflow behavior in synced layouts so each stage tab pane scrolls internally when content exceeds the stage-height boundary, instead of clipping long content.
+- Updated bulk-oils modal UX to tightly sync with Stage 2 oils:
+  - bulk modal now hydrates selection from current Stage 2 oil rows on open
+  - changing selections/weights/% in the modal updates Stage 2 rows live
+  - “Clear selection” now clears the Stage 2 oil card rows to keep modal and stage state aligned
+  - added “View selected” control that promotes selected oils to the top of the current display
+  - replaced import flow with a single “Save and close” action and removed the extra footer close button
+  - simplified mode toggle copy to “Basic oils” and “All oils” labels flanking the switch
 - Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
   - water % / concentration / ratio fields no longer force local preset values while typing
   - added per-method helper text showing normal ranges instead of preset enforcement
