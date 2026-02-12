@@ -80,6 +80,7 @@ class RouteAccessConfig:
         "sitemap_xml",
         "robots_txt",
         "llms_txt",
+        "dev_login_legacy",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (

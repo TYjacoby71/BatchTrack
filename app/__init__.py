@@ -456,6 +456,11 @@ def _add_core_routes(app):
         """LLMs.txt guidance for AI crawlers and agents."""
         return _serve_marketing_public_asset("llms.txt", mimetype="text/plain; charset=utf-8")
 
+    @app.route("/dev-login")
+    def dev_login_legacy():
+        """Legacy developer-login path kept for backward compatibility."""
+        return redirect(url_for("auth.dev_login"), code=301)
+
     def _render_public_homepage_response():
         """
         Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
