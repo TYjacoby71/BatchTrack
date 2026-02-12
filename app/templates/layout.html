@@ -38,8 +38,8 @@ Glossary:
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_asset('style.css') }}">
+    <link rel="stylesheet" href="{{ static_asset('css/theme.css') }}">
     <script>
       // Minimal theme bootstrap: scope localStorage per user + org.
       (function() {
@@ -589,18 +589,18 @@ Glossary:
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
       <!-- Custom scripts - Load SessionGuard before other modules -->
-      <script type="module" src="{{ url_for('static', filename='js/core/SessionGuard.js') }}"></script>
+      <script type="module" src="{{ static_asset('js/core/SessionGuard.js') }}"></script>
       <!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
-      <script type="module" src="{{ url_for('static', filename='js/core/DrawerProtocol.js') }}"></script>
-      <script type="module" src="{{ url_for('static', filename='js/core/DrawerInterceptor.js') }}"></script>
-      <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
-      <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
-      <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
-      <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
-      <script type="module" src="{{ url_for('static', filename='js/drawers/drawer_cadence.js') }}"></script>
-      <script src="{{ url_for('static', filename='js/drawers/container_unit_mismatch_drawer.js') }}"></script>
+      <script type="module" src="{{ static_asset('js/core/DrawerProtocol.js') }}"></script>
+      <script type="module" src="{{ static_asset('js/core/DrawerInterceptor.js') }}"></script>
+      <script type="module" src="{{ static_asset('js/main.js') }}"></script>
+      <script src="{{ static_asset('js/utils/utils.js') }}"></script>
+      <script src="{{ static_asset('js/inventory/inventory_adjust.js') }}"></script>
+      <script src="{{ static_asset('js/conversion/unit_converter.js') }}"></script>
+      <script type="module" src="{{ static_asset('js/drawers/drawer_cadence.js') }}"></script>
+      <script src="{{ static_asset('js/drawers/container_unit_mismatch_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
+    <script src="{{ static_asset('js/expiration_alerts.js') }}"></script>
 
     <!-- Simple browser clock script -->
     <script>

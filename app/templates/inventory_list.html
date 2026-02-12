@@ -1028,9 +1028,9 @@ window.onclick = function(event) {
   }
 }
 </script>
-<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
+<script src="{{ static_asset('js/components/suggestions.js') }}"></script>
 <script type="module">
-  import { configureGlobalItemStats } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
+  import { configureGlobalItemStats } from "{{ static_asset('js/global_item_stats.js') }}";
   configureGlobalItemStats();
 </script>
 {% endblock %}

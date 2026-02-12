@@ -494,7 +494,7 @@
 </script>
 {% endif %}
 <script type="module">
-  import { configureGlobalItemStats, bindGlobalItemStatTriggers } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
+  import { configureGlobalItemStats, bindGlobalItemStatTriggers } from "{{ static_asset('js/global_item_stats.js') }}";
 
   configureGlobalItemStats({
     developerLinkBase: {{ developer_link_base|tojson }}

@@ -128,5 +128,5 @@ window.recipeData = {
     category_data: {{ (recipe.category_data or {}) | tojson }}
 };
 </script>
-<script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>
+<script type="module" src="{{ static_asset('js/production_planning/plan_production.js') }}"></script>
 {% endblock %}

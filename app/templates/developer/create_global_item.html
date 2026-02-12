@@ -38,6 +38,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
+  <script src="{{ static_asset('js/components/suggestions.js') }}"></script>
   {% include 'developer/_global_item_form_scripts.html' %}
 {% endblock %}
