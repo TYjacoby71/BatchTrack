@@ -14,7 +14,7 @@
 
 ## One-Line Instruction for AI Agents
 Use this exact instruction when delegating PR prep:
-`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md and do not stop until docs guard passes.`
+`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, read and implement docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)", and do not stop until docs guard passes.`
 
 ## PR Checklist Instructions (Cascade order — top to bottom)
 
@@ -44,10 +44,10 @@ Use this exact instruction when delegating PR prep:
 - [ ] Updated system docs for feature changes (`docs/system/`)
 - [ ] Added/updated dated changelog entry when app behavior changed (`docs/changelog/YYYY-MM-DD-*.md`)
 - [ ] Confirmed changelog index contains links to changed dated entries (`docs/changelog/CHANGELOG_INDEX.md`)
-- [ ] Added/updated file Synopsis + Glossary blocks for every touched file
-- [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences) for every touched top-level unit
-- [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
-- [ ] Verified one-entry rule (single canonical term entry, no duplicates)
+- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for Synopsis + Glossary coverage on every touched file
+- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for top-level Functional Unit headers (Purpose/Inputs/Outputs)
+- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for added/moved/updated app terms and locations
+- [ ] Verified APP_DICTIONARY one-entry rule (single canonical term entry, no duplicates)
 
 ### 7) PR Narrative and Review Readiness
 - [ ] Description/Type/Changes are complete with rollout/rollback note

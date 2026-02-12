@@ -201,12 +201,12 @@ Made a code change?
 - [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
 - [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
 - [ ] 5) **Validation** — local tests run, tests updated, and docs guard passes (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
-- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + Synopsis/Glossary + functional headers + APP_DICTIONARY + one-entry rule.
+- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers, terms/locations, and one-entry rule.
 - [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
 
 ### AI Shortcut Phrase
 Use this exact delegation phrase:
-`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md and do not stop until docs guard passes.`
+`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, read and implement docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)", and do not stop until docs guard passes.`
 
 ## Enforcement (Automated Guard)
 
