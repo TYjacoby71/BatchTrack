@@ -10,19 +10,23 @@ Glossary:
   to the soap tool service package.
 """
 
+import copy
 import csv
 import os
 import re
 from functools import lru_cache
 from typing import Any
 
-from flask import Blueprint, render_template, request, jsonify, url_for
+from flask import Blueprint, render_template, request, jsonify, url_for, current_app
 from flask_login import current_user
+from sqlalchemy.orm import selectinload
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.tools.soap_tool import SoapToolComputationService
-from app.models import GlobalItem
+from app.models import GlobalItem, IngredientDefinition
 from app.models import FeatureFlag
-from app.extensions import limiter
+from app.extensions import limiter, cache
+from app.services.cache_invalidation import global_library_cache_key
+from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
@@ -42,6 +46,8 @@ SOAP_BULK_FATTY_KEYS = (
 SOAP_BULK_SORT_KEYS = {"name", *SOAP_BULK_FATTY_KEYS}
 SOAP_BULK_PAGE_DEFAULT = 25
 SOAP_BULK_PAGE_MAX = 25
+SOAP_BULK_CATALOG_CACHE_TTL_SECONDS = 900
+SOAP_BULK_PAGE_CACHE_TTL_SECONDS = 180
 SOAP_BULK_ALLOWED_CATEGORIES = {
     "oils (carrier & fixed)",
     "butters & solid fats",
@@ -260,8 +266,12 @@ def _load_global_oil_catalog_records() -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     items = (
         GlobalItem.query
+        .options(
+            selectinload(GlobalItem.ingredient).selectinload(IngredientDefinition.category),
+            selectinload(GlobalItem.ingredient_category),
+        )
         .filter(GlobalItem.item_type == "ingredient")
-        .filter(GlobalItem.is_archived != True)
+        .filter(GlobalItem.is_archived.is_(False))
         .order_by(GlobalItem.name.asc())
         .all()
     )
@@ -300,7 +310,7 @@ def _load_global_oil_catalog_records() -> list[dict[str, Any]]:
 # Purpose: Build basics/all catalog views with deterministic dedupe and ordering.
 # Inputs: Display mode token from request.
 # Outputs: List of catalog records for bulk-oil UI consumption.
-def _build_soap_bulk_catalog(mode: str) -> list[dict[str, Any]]:
+def _build_soap_bulk_catalog_uncached(mode: str) -> list[dict[str, Any]]:
     basics = [dict(row) for row in _load_soapcalc_catalog_records()]
     if mode != "all":
         return sorted(basics, key=lambda row: (row.get("name") or "").lower())
@@ -337,6 +347,59 @@ def _build_soap_bulk_catalog(mode: str) -> list[dict[str, Any]]:
         existing["aliases"] = sorted(existing_aliases)
 
     return sorted(merged.values(), key=lambda row: (row.get("name") or "").lower())
+
+
+# --- Soap bulk cache timeout resolver ---
+# Purpose: Resolve safe cache TTL values for soap bulk catalog payloads.
+# Inputs: Flask config key and fallback TTL.
+# Outputs: Positive integer timeout in seconds.
+def _soap_bulk_cache_timeout(config_key: str, fallback: int) -> int:
+    configured = current_app.config.get(config_key, fallback)
+    try:
+        timeout = int(configured)
+    except (TypeError, ValueError):
+        timeout = fallback
+    return max(30, timeout)
+
+
+# --- Soap bulk cache-key builder ---
+# Purpose: Build versioned cache keys invalidated by global-library namespace bumps.
+# Inputs: Key namespace and stable payload dimensions.
+# Outputs: Versioned cache key string suitable for Flask-Caching.
+def _soap_bulk_cache_key(namespace: str, payload: dict[str, Any]) -> str:
+    return global_library_cache_key(stable_cache_key(namespace, payload))
+
+
+# --- Soap bulk catalog cache wrapper ---
+# Purpose: Reuse merged catalog payloads for hot modal traffic.
+# Inputs: Mode token and optional bypass flag for forced refresh.
+# Outputs: Catalog rows ready for paging/filtering.
+def _build_soap_bulk_catalog(mode: str, *, bypass_cache: bool = False) -> list[dict[str, Any]]:
+    normalized_mode = "all" if mode == "all" else "basics"
+    if bypass_cache or not cache:
+        return _build_soap_bulk_catalog_uncached(normalized_mode)
+
+    cache_key = _soap_bulk_cache_key(
+        "tools-soap-bulk-catalog",
+        {"mode": normalized_mode},
+    )
+    try:
+        cached_records = cache.get(cache_key)
+    except Exception:
+        cached_records = None
+    if isinstance(cached_records, list):
+        return copy.deepcopy(cached_records)
+
+    records = _build_soap_bulk_catalog_uncached(normalized_mode)
+    try:
+        cache.set(
+            cache_key,
+            records,
+            timeout=_soap_bulk_cache_timeout("TOOLS_SOAP_BULK_CATALOG_CACHE_TTL", SOAP_BULK_CATALOG_CACHE_TTL_SECONDS),
+        )
+    except Exception:
+        pass
+    return records
 
 
 # --- Soap bulk sort-key normalizer ---
@@ -527,8 +590,28 @@ def tools_soap_oils_catalog():
         limit = max(1, min(SOAP_BULK_PAGE_MAX, int(request.args.get("limit") or SOAP_BULK_PAGE_DEFAULT)))
     except (TypeError, ValueError):
         limit = SOAP_BULK_PAGE_DEFAULT
+    bypass_cache = should_bypass_cache()
+    page_cache_key = _soap_bulk_cache_key(
+        "tools-soap-bulk-page",
+        {
+            "mode": mode,
+            "q": query,
+            "sort_key": sort_key,
+            "sort_dir": sort_dir,
+            "offset": offset,
+            "limit": limit,
+        },
+    )
+    if not bypass_cache and cache:
+        try:
+            cached_result = cache.get(page_cache_key)
+        except Exception:
+            cached_result = None
+        if isinstance(cached_result, dict):
+            return jsonify({"success": True, "result": cached_result})
+
     page_rows, total_count = _page_soap_bulk_catalog(
-        records=_build_soap_bulk_catalog(mode),
+        records=_build_soap_bulk_catalog(mode, bypass_cache=bypass_cache),
         query=query,
         sort_key=sort_key,
         sort_dir=sort_dir,
@@ -537,23 +620,28 @@ def tools_soap_oils_catalog():
     )
     next_offset = offset + len(page_rows)
     has_more = next_offset < total_count
-    return jsonify(
-        {
-            "success": True,
-            "result": {
-                "mode": mode,
-                "query": query,
-                "sort_key": sort_key,
-                "sort_dir": sort_dir,
-                "offset": offset,
-                "limit": limit,
-                "count": total_count,
-                "next_offset": next_offset,
-                "has_more": has_more,
-                "records": [_serialize_soap_bulk_record(row) for row in page_rows],
-            },
-        }
-    )
+    result_payload = {
+        "mode": mode,
+        "query": query,
+        "sort_key": sort_key,
+        "sort_dir": sort_dir,
+        "offset": offset,
+        "limit": limit,
+        "count": total_count,
+        "next_offset": next_offset,
+        "has_more": has_more,
+        "records": [_serialize_soap_bulk_record(row) for row in page_rows],
+    }
+    if not bypass_cache and cache:
+        try:
+            cache.set(
+                page_cache_key,
+                result_payload,
+                timeout=_soap_bulk_cache_timeout("TOOLS_SOAP_BULK_PAGE_CACHE_TTL", SOAP_BULK_PAGE_CACHE_TTL_SECONDS),
+            )
+        except Exception:
+            pass
+    return jsonify({"success": True, "result": result_payload})
 
 
 # --- Public draft capture route ---

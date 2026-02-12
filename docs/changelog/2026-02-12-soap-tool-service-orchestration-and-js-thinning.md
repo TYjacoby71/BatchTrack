@@ -40,6 +40,11 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - search (`q`) and sortable catalog fields (`sort_key`/`sort_dir`) are now server-side, so the browser only receives the current window
   - endpoint response no longer includes alias blobs, reducing unnecessary catalog surface in client payloads
   - tightened endpoint rate limit from blanket tool limits to a scroll-safe catalog-specific throttle (`1200/hour;120/minute`)
+- Added hot-route caching and DB-index hardening for free-tool bulk-oils traffic:
+  - oils-catalog now caches both merged source catalogs and paged responses using versioned global-library cache keys
+  - cache invalidation is automatic when global items change because keys are namespaced through `global_library_cache_key(...)`
+  - global catalog query switched to eager loading + `is_archived IS FALSE` filtering for index-friendly SQL
+  - new migration `0024_global_item_soap_catalog_indexes` ensures composite and PostgreSQL partial indexes for active ingredient name scans
 - Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
   - water % / concentration / ratio fields no longer force local preset values while typing
   - added per-method helper text showing normal ranges instead of preset enforcement
