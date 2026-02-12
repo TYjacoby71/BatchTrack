@@ -12,37 +12,46 @@
 ## Changes Made
 <!-- List the key changes -->
 
-## Testing
+## One-Line Instruction for AI Agents
+Use this exact instruction when delegating PR prep:
+`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md and do not stop until docs guard passes.`
+
+## PR Checklist Instructions (Cascade order — top to bottom)
+
+### 1) System Integrity
+- [ ] Code follows project patterns
+- [ ] No service layer bypassing
+
+### 2) Scoping and Security
+- [ ] Organization scoping maintained
+- [ ] Permission checks in place
+- [ ] Timezone handling is correct (STORAGE ≠ DISPLAY)
+
+### 3) Service and Domain Correctness
+- [ ] Update scripts considered (`update-permissions`, `update-addons`)
+- [ ] Multi-tenant scenarios tested (if applicable)
+
+### 4) User Impact
+- [ ] For edited page templates/routes, metadata is updated in maker-first format (title, description, canonical, OG/Twitter tags when applicable)
+- [ ] User-visible behavior and risk notes are captured in Description
+
+### 5) Validation
 - [ ] Tested locally
 - [ ] Added/updated tests
-- [ ] Tested multi-tenant scenarios (if applicable)
+- [ ] Ran `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` and confirmed pass
 
-## Documentation
+### 6) Documentation and Knowledge Integrity
 - [ ] Updated system docs for feature changes (`docs/system/`)
-- [ ] Added/updated dated changelog entry (`docs/changelog/YYYY-MM-DD-*.md`)
-- [ ] Updated changelog index (`docs/changelog/CHANGELOG_INDEX.md`)
-- [ ] Updated add-on entitlements doc if tiers/add-ons changed
+- [ ] Added/updated dated changelog entry when app behavior changed (`docs/changelog/YYYY-MM-DD-*.md`)
+- [ ] Confirmed changelog index contains links to changed dated entries (`docs/changelog/CHANGELOG_INDEX.md`)
 - [ ] Added/updated file Synopsis + Glossary blocks for every touched file
 - [ ] Added Functional Unit headers (name/purpose/inputs/outputs, ≤5 sentences) for every touched top-level unit
 - [ ] Updated APP_DICTIONARY.md for every added/moved/updated app term or location
 - [ ] Verified one-entry rule (single canonical term entry, no duplicates)
-- [ ] Ran `python3 scripts/validate_pr_documentation.py` and confirmed pass
 
-## PR Workflow Gate (Required, in order — if any item is unchecked, PR is not merge-ready)
-- [ ] **Step 1: Scope is clear** — Description/Type/Changes are complete, with user impact and rollback note.
-- [ ] **Step 2: Branch discipline is respected** — work is on the feature branch only, with focused commits and no unrelated file edits.
-- [ ] **Step 3: Validation is complete** — relevant local tests/checks were run for touched areas and passed.
-- [ ] **Step 4: Documentation guard is green** — `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` passed.
-- [ ] **Step 5: Review readiness is complete** — self-review done, debug code removed, and CI checks are green.
-
-## Checklist
-- [ ] Code follows project patterns
-- [ ] No service layer bypassing
-- [ ] Organization scoping maintained
-- [ ] Timezone handling correct (STORAGE ≠ DISPLAY)
-- [ ] Permission checks in place
-- [ ] Update scripts considered (`update-permissions`, `update-addons`)
-- [ ] For any edited page templates/routes, metadata is updated in maker-first format (title, description, canonical, OG/Twitter tags when applicable)
+### 7) PR Narrative and Review Readiness
+- [ ] Description/Type/Changes are complete with rollout/rollback note
+- [ ] Self-review completed; debug code and dead comments removed
 
 ## Evidence (Required)
 - Base branch compared:
