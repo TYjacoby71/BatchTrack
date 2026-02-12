@@ -30,6 +30,7 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - `soap_tool_runner_service.js`: payload assembly + API transport
   - `soap_tool_runner_render.js`: service-result hydration into UI/state
   - `soap_tool_runner.js` now orchestrates those modules instead of carrying all concerns inline
+- Fixed `app/services/tools/soap_tool/_sheet.py` CSV escaping to avoid an f-string expression parsing edge in Python 3.11 CI validation.
 - Added service-level tests for the new computation bundle and method-independent lye checks.
 
 ## Files Modified
