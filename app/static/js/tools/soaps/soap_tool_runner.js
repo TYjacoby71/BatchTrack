@@ -4,7 +4,7 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp, getStorage } = SoapTool.helpers;
   const { formatWeight, formatPercent } = SoapTool.units;
-  const { computeLyeTotals, computeWater, computeIodine, computeFattyAcids, computeQualities } = SoapTool.calc;
+  const { computeIodine, computeFattyAcids, computeQualities } = SoapTool.calc;
   const state = SoapTool.state;
 
   function getLyeSelection(){
@@ -217,6 +217,20 @@
     }
   }
 
+  function deriveSapAverage(oils){
+    let sapWeighted = 0;
+    let sapWeightG = 0;
+    (oils || []).forEach(oil => {
+      const sapKoh = toNumber(oil?.sapKoh);
+      const grams = toNumber(oil?.grams);
+      if (sapKoh > 0 && grams > 0) {
+        sapWeighted += sapKoh * grams;
+        sapWeightG += grams;
+      }
+    });
+    return sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
+  }
+
   function buildServicePayload({ oils, selection, superfat, purity, waterMethod, waterPct, lyeConcentration, waterRatio }){
     return {
       oils: (oils || []).map(oil => ({
@@ -292,7 +306,6 @@
     superfat = clamp(superfat, 0, 20);
     if (superfatInput) superfatInput.value = round(superfat, 1);
     const selection = getLyeSelection();
-    const lyeType = selection.lyeType || 'NaOH';
     const sanitized = sanitizeLyeInputs();
     let purity = sanitized.purity;
     let waterMethod = sanitized.waterMethod;
@@ -300,12 +313,7 @@
     let lyeConcentration = sanitized.lyeConcentration;
     let waterRatio = sanitized.waterRatio;
 
-    let oils = validation.oils;
-    let totalOils = validation.totals.totalWeight;
-    const lyeTotals = computeLyeTotals(oils, lyeType);
-    let lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
-    let lyeAdjusted = purity > 0 ? lyePure / (purity / 100) : lyePure;
-    let waterData = computeWater(lyeAdjusted, totalOils, waterMethod, waterPct, lyeConcentration, waterRatio);
+    const oils = validation.oils;
     const requestSeq = (state.calcRequestSeq || 0) + 1;
     state.calcRequestSeq = requestSeq;
     const servicePayload = buildServicePayload({
@@ -322,24 +330,32 @@
     if (requestSeq !== state.calcRequestSeq) {
       return state.lastCalc;
     }
-    if (serviceResult) {
-      purity = toNumber(serviceResult.lye_purity_pct) || purity;
-      waterMethod = serviceResult.water_method || waterMethod;
-      waterPct = toNumber(serviceResult.water_pct) || waterPct;
-      lyeConcentration = toNumber(serviceResult.lye_concentration_input_pct) || lyeConcentration;
-      waterRatio = toNumber(serviceResult.water_ratio_input) || waterRatio;
-      lyeTotals.lyeTotal = toNumber(serviceResult.lye_total_g) || lyeTotals.lyeTotal;
-      lyeTotals.sapAvg = toNumber(serviceResult.sap_avg_koh) || lyeTotals.sapAvg;
-      lyeTotals.usedFallback = !!serviceResult.used_sap_fallback;
-      lyePure = toNumber(serviceResult.lye_pure_g) || lyePure;
-      lyeAdjusted = toNumber(serviceResult.lye_adjusted_g) || lyeAdjusted;
-      totalOils = toNumber(serviceResult.total_oils_g) || totalOils;
-      waterData = {
-        waterG: toNumber(serviceResult.water_g),
-        lyeConcentration: toNumber(serviceResult.lye_concentration_pct),
-        waterRatio: toNumber(serviceResult.water_lye_ratio),
-      };
+    if (!serviceResult) {
+      if (settings.showAlerts) {
+        SoapTool.ui.showSoapAlert('danger', 'Soap calculator service is unavailable. Please try again.', { dismissible: true, timeoutMs: 6000 });
+      }
+      return null;
     }
+
+    const lyeType = serviceResult.lye_type || selection.lyeType || 'NaOH';
+    const totalOils = toNumber(serviceResult.total_oils_g) || validation.totals.totalWeight;
+    const lyeTotals = {
+      lyeTotal: toNumber(serviceResult.lye_total_g),
+      sapAvg: toNumber(serviceResult.sap_avg_koh),
+      usedFallback: !!serviceResult.used_sap_fallback,
+    };
+    const lyePure = toNumber(serviceResult.lye_pure_g);
+    const lyeAdjusted = toNumber(serviceResult.lye_adjusted_g);
+    purity = toNumber(serviceResult.lye_purity_pct) || purity;
+    waterMethod = serviceResult.water_method || waterMethod;
+    waterPct = toNumber(serviceResult.water_pct) || waterPct;
+    lyeConcentration = toNumber(serviceResult.lye_concentration_input_pct) || lyeConcentration;
+    waterRatio = toNumber(serviceResult.water_ratio_input) || waterRatio;
+    const waterData = {
+      waterG: toNumber(serviceResult.water_g),
+      lyeConcentration: toNumber(serviceResult.lye_concentration_pct),
+      waterRatio: toNumber(serviceResult.water_lye_ratio),
+    };
     updateStageWaterSummary({
       waterG: waterData.waterG,
       lyeAdjusted,
@@ -424,6 +440,8 @@
       waterPct,
       lyeConcentration: waterData.lyeConcentration,
       waterRatio: waterData.waterRatio,
+      sapAvg: lyeTotals.sapAvg,
+      usedSapFallback: lyeTotals.usedFallback,
       additives,
       batchYield,
     };
@@ -443,8 +461,8 @@
     const iodineData = computeIodine(calc.oils || []);
     const fatty = computeFattyAcids(calc.oils || []);
     const qualities = computeQualities(fatty.percent || {});
-    const lyeTotals = computeLyeTotals(calc.oils || [], calc.lyeType);
-    const ins = (lyeTotals.sapAvg && iodineData.iodine) ? (lyeTotals.sapAvg - iodineData.iodine) : 0;
+    const sapAvg = (isFinite(calc.sapAvg) && calc.sapAvg > 0) ? calc.sapAvg : deriveSapAverage(calc.oils || []);
+    const ins = (sapAvg && iodineData.iodine) ? (sapAvg - iodineData.iodine) : 0;
     const mold = SoapTool.mold.getMoldSettings();
     return {
       source: 'soap_tool',
@@ -501,7 +519,7 @@
         creamy: round(qualities.creamy || 0, 1),
         iodine: round(iodineData.iodine || 0, 1),
         ins: round(ins || 0, 1),
-        sap_avg: round(lyeTotals.sapAvg || 0, 1),
+        sap_avg: round(sapAvg || 0, 1),
       },
       fatty_acids: fatty.percent || {},
       updated_at: new Date().toISOString(),

@@ -4,54 +4,6 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { clamp, toNumber } = SoapTool.helpers;
 
-  function computeLyeTotals(oils, lyeType){
-    let lyeTotal = 0;
-    let sapWeighted = 0;
-    let sapWeightG = 0;
-    let totalWeight = 0;
-    oils.forEach(oil => {
-      totalWeight += oil.grams;
-      if (oil.sapKoh > 0) {
-        const perG = lyeType === 'KOH'
-          ? (oil.sapKoh / 1000)
-          : (oil.sapKoh * 0.713 / 1000);
-        lyeTotal += oil.grams * perG;
-        sapWeighted += oil.sapKoh * oil.grams;
-        sapWeightG += oil.grams;
-      }
-    });
-    const sapAvg = sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
-    const usedFallback = lyeTotal <= 0 && totalWeight > 0;
-    if (usedFallback) {
-      const fallbackPerG = lyeType === 'KOH' ? 0.194 : 0.138;
-      lyeTotal = totalWeight * fallbackPerG;
-    }
-    return { lyeTotal, sapAvg, usedFallback };
-  }
-
-  function computeWater(lyeAdjusted, totalOils, method, waterPct, lyeConcentration, waterRatio){
-    let waterG = 0;
-    if (method === 'concentration') {
-      if (lyeAdjusted <= 0) {
-        return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
-      }
-      const conc = lyeConcentration > 0 ? lyeConcentration : 33;
-      waterG = lyeAdjusted * ((100 - conc) / conc);
-    } else if (method === 'ratio') {
-      if (lyeAdjusted <= 0) {
-        return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
-      }
-      const ratio = waterRatio > 0 ? waterRatio : 2;
-      waterG = lyeAdjusted * ratio;
-    } else {
-      const pct = waterPct > 0 ? waterPct : 33;
-      waterG = totalOils * (pct / 100);
-    }
-    const lyeConc = waterG + lyeAdjusted > 0 ? (lyeAdjusted / (lyeAdjusted + waterG)) * 100 : 0;
-    const ratio = lyeAdjusted > 0 ? (waterG / lyeAdjusted) : 0;
-    return { waterG, lyeConcentration: lyeConc, waterRatio: ratio };
-  }
-
   function computeIodine(oils){
     let totalWeight = 0;
     let weighted = 0;
@@ -163,8 +115,6 @@
   }
 
   SoapTool.calc = {
-    computeLyeTotals,
-    computeWater,
     computeIodine,
     computeFattyAcids,
     computeQualities,
