@@ -8,37 +8,52 @@
   const FATTY_KEYS = Array.isArray(SoapTool.constants?.FATTY_DISPLAY_KEYS)
     ? SoapTool.constants.FATTY_DISPLAY_KEYS.slice()
     : ['lauric', 'myristic', 'palmitic', 'stearic', 'ricinoleic', 'oleic', 'linoleic', 'linolenic'];
-  const LAZY_CHUNK_SIZE = 35;
+  const LOCAL_SORT_KEYS = new Set(['selected_pct', 'selected_weight_g']);
+  const PAGE_SIZE = 25;
+  const SCROLL_FETCH_THRESHOLD = 140;
+  const SEARCH_DEBOUNCE_MS = 260;
   const DEFAULT_MODAL_STATE = {
     mode: 'basics',
     query: '',
     sortKey: 'name',
     sortDir: 'asc',
     selection: {},
-    catalog: {
-      basics: null,
-      all: null,
-    },
     recordByKey: {},
-    filteredRecords: [],
-    renderedCount: 0,
+    visibleRecords: [],
+    offset: 0,
+    totalCount: 0,
+    hasMore: true,
+    loading: false,
+    requestToken: 0,
   };
   let modalInstance = null;
+  let searchDebounceTimer = null;
+
+  function queueStateSave(){
+    SoapTool.storage?.queueStateSave?.();
+  }
+
+  function showAlert(level, message){
+    SoapTool.ui?.showSoapAlert?.(level, message, { dismissible: true, timeoutMs: 6000 });
+  }
 
   function ensureModalState(){
-    if (!state.bulkOilModal) {
+    if (!state.bulkOilModal || typeof state.bulkOilModal !== 'object') {
       state.bulkOilModal = JSON.parse(JSON.stringify(DEFAULT_MODAL_STATE));
     }
     const modalState = state.bulkOilModal;
-    modalState.selection = modalState.selection || {};
-    modalState.catalog = modalState.catalog || { basics: null, all: null };
-    modalState.recordByKey = modalState.recordByKey || {};
-    modalState.filteredRecords = modalState.filteredRecords || [];
-    modalState.renderedCount = toNumber(modalState.renderedCount) || 0;
     modalState.mode = modalState.mode === 'all' ? 'all' : 'basics';
-    modalState.sortKey = modalState.sortKey || 'name';
-    modalState.sortDir = modalState.sortDir === 'desc' ? 'desc' : 'asc';
     modalState.query = typeof modalState.query === 'string' ? modalState.query : '';
+    modalState.sortKey = typeof modalState.sortKey === 'string' ? modalState.sortKey : 'name';
+    modalState.sortDir = modalState.sortDir === 'desc' ? 'desc' : 'asc';
+    modalState.selection = modalState.selection && typeof modalState.selection === 'object' ? modalState.selection : {};
+    modalState.recordByKey = modalState.recordByKey && typeof modalState.recordByKey === 'object' ? modalState.recordByKey : {};
+    modalState.visibleRecords = Array.isArray(modalState.visibleRecords) ? modalState.visibleRecords : [];
+    modalState.offset = Math.max(0, parseInt(modalState.offset, 10) || 0);
+    modalState.totalCount = Math.max(0, parseInt(modalState.totalCount, 10) || 0);
+    modalState.hasMore = modalState.hasMore !== false;
+    modalState.loading = !!modalState.loading;
+    modalState.requestToken = Math.max(0, parseInt(modalState.requestToken, 10) || 0);
     return modalState;
   }
 
@@ -73,15 +88,15 @@
 
   function normalizeCatalogRecord(raw){
     const fattyProfile = normalizeFattyProfile(raw?.fatty_profile);
-    const aliases = Array.isArray(raw?.aliases) ? raw.aliases.filter(Boolean).map(value => String(value)) : [];
     const name = String(raw?.name || '').trim();
     const source = String(raw?.source || 'soapcalc').trim().toLowerCase() || 'soapcalc';
-    const globalItemId = Number.isInteger(raw?.global_item_id) ? raw.global_item_id : (toNumber(raw?.global_item_id) > 0 ? parseInt(raw.global_item_id, 10) : null);
+    const globalItemId = Number.isInteger(raw?.global_item_id)
+      ? raw.global_item_id
+      : (toNumber(raw?.global_item_id) > 0 ? parseInt(raw.global_item_id, 10) : null);
     const key = String(raw?.key || (globalItemId ? `global:${globalItemId}` : `${source}:${name.toLowerCase()}`));
     return {
       key,
       name,
-      aliases,
       sap_koh: toNumber(raw?.sap_koh),
       iodine: toNumber(raw?.iodine),
       fatty_profile: fattyProfile,
@@ -98,19 +113,6 @@
     if (refs.statusEl) refs.statusEl.textContent = text;
   }
 
-  function sortButtonsLabel(){
-    document.querySelectorAll('.bulk-oil-sort').forEach(button => {
-      const modalState = ensureModalState();
-      const label = button.dataset.label || button.textContent || '';
-      const key = button.dataset.sortKey || '';
-      if (modalState.sortKey === key) {
-        button.textContent = `${label} ${modalState.sortDir === 'asc' ? '▲' : '▼'}`;
-      } else {
-        button.textContent = label;
-      }
-    });
-  }
-
   function updateSelectionCounters(){
     const refs = getRefs();
     const modalState = ensureModalState();
@@ -118,6 +120,25 @@
     const summary = `Selected: ${count}`;
     if (refs.summaryEl) refs.summaryEl.textContent = summary;
     if (refs.stageCountEl) refs.stageCountEl.textContent = String(count);
+  }
+
+  function refreshCatalogStatus(){
+    const modalState = ensureModalState();
+    const modeLabel = modalState.mode === 'all' ? 'all oils' : 'SoapCalc basics';
+    if (modalState.loading && !modalState.visibleRecords.length) {
+      updateStatusText('Loading oils...');
+      return;
+    }
+    if (!modalState.visibleRecords.length) {
+      const noMatchLabel = modalState.query ? 'No oils match that search.' : 'No oils available.';
+      updateStatusText(noMatchLabel);
+      return;
+    }
+    const loaded = modalState.visibleRecords.length;
+    const total = modalState.totalCount;
+    const moreHint = modalState.hasMore ? ' • scroll for more' : '';
+    const queryHint = modalState.query ? ` • search: "${modalState.query}"` : '';
+    updateStatusText(`Loaded ${loaded}/${total} in ${modeLabel}${queryHint}${moreHint}`);
   }
 
   function compareValues(aValue, bValue, dir){
@@ -140,34 +161,47 @@
     return modalState.selection?.[recordKey] || null;
   }
 
-  function getSortValue(record, sortKey){
-    if (sortKey === 'name') return record.name || '';
+  function localSortValue(record, sortKey){
     if (sortKey === 'selected_pct') return selectionForRecordKey(record.key)?.selected_pct || 0;
     if (sortKey === 'selected_weight_g') return selectionForRecordKey(record.key)?.selected_weight_g || 0;
-    if (FATTY_KEYS.includes(sortKey)) return toNumber(record.fatty_profile?.[sortKey]);
     return '';
   }
 
-  function getFilteredSortedRecords(){
+  function applyLocalSelectionSortIfNeeded(){
     const modalState = ensureModalState();
-    const baseRecords = modalState.catalog?.[modalState.mode] || [];
-    const query = (modalState.query || '').trim().toLowerCase();
-    const filtered = query
-      ? baseRecords.filter(record => {
-          const nameBlob = `${record.name} ${(record.aliases || []).join(' ')} ${record.ingredient_category_name || ''}`.toLowerCase();
-          return nameBlob.includes(query);
-        })
-      : baseRecords.slice();
-    filtered.sort((left, right) => {
+    if (!LOCAL_SORT_KEYS.has(modalState.sortKey)) return;
+    modalState.visibleRecords.sort((left, right) => {
       const primary = compareValues(
-        getSortValue(left, modalState.sortKey),
-        getSortValue(right, modalState.sortKey),
+        localSortValue(left, modalState.sortKey),
+        localSortValue(right, modalState.sortKey),
         modalState.sortDir
       );
       if (primary !== 0) return primary;
       return compareValues(left.name || '', right.name || '', 'asc');
     });
-    return filtered;
+  }
+
+  function normalizeServerSortKey(sortKey){
+    const key = String(sortKey || '').trim().toLowerCase();
+    if (key === 'name') return key;
+    if (FATTY_KEYS.includes(key)) return key;
+    return 'name';
+  }
+
+  function sortButtonsLabel(){
+    const modalState = ensureModalState();
+    document.querySelectorAll('.bulk-oil-sort').forEach(button => {
+      if (!button.dataset.label) {
+        button.dataset.label = String(button.textContent || '').replace(/[▲▼]\s*$/, '').trim();
+      }
+      const label = button.dataset.label || '';
+      const key = button.dataset.sortKey || '';
+      if (modalState.sortKey === key) {
+        button.textContent = `${label} ${modalState.sortDir === 'asc' ? '▲' : '▼'}`;
+      } else {
+        button.textContent = label;
+      }
+    });
   }
 
   function setSelection(record, values = {}){
@@ -240,8 +274,15 @@
 
     const nameCell = document.createElement('td');
     nameCell.className = 'bulk-oil-name';
+    const title = document.createElement('div');
+    title.className = 'fw-semibold small';
+    title.textContent = record.name;
+    const detail = document.createElement('div');
+    detail.className = 'text-muted small';
     const category = record.ingredient_category_name ? ` · ${record.ingredient_category_name}` : '';
-    nameCell.innerHTML = `<div class="fw-semibold small">${record.name}</div><div class="text-muted small">${record.source}${category}</div>`;
+    detail.textContent = `${record.source}${category}`;
+    nameCell.appendChild(title);
+    nameCell.appendChild(detail);
     row.appendChild(nameCell);
 
     FATTY_KEYS.forEach(key => {
@@ -271,93 +312,110 @@
     return row;
   }
 
-  function refreshCatalogStatus(){
-    const modalState = ensureModalState();
-    const modeLabel = modalState.mode === 'all' ? 'all oils' : 'SoapCalc basics';
-    updateStatusText(`Showing ${modalState.renderedCount}/${modalState.filteredRecords.length} in ${modeLabel}`);
-  }
-
-  function appendLazyRows(){
-    const modalState = ensureModalState();
+  function renderVisibleRecords(){
     const refs = getRefs();
+    const modalState = ensureModalState();
     if (!refs.bodyEl) return;
-    if (modalState.renderedCount >= modalState.filteredRecords.length) {
-      refreshCatalogStatus();
-      return;
-    }
+    refs.bodyEl.innerHTML = '';
     const fragment = document.createDocumentFragment();
-    const nextSlice = modalState.filteredRecords.slice(
-      modalState.renderedCount,
-      modalState.renderedCount + LAZY_CHUNK_SIZE
-    );
-    nextSlice.forEach(record => {
+    modalState.visibleRecords.forEach(record => {
       fragment.appendChild(createRow(record));
     });
     refs.bodyEl.appendChild(fragment);
-    modalState.renderedCount += nextSlice.length;
+    sortButtonsLabel();
+    updateSelectionCounters();
     refreshCatalogStatus();
   }
 
-  function renderCatalog(reset = true){
+  function resetVisibleCatalogForFetch(){
     const modalState = ensureModalState();
     const refs = getRefs();
-    if (!refs.bodyEl) return;
-    modalState.filteredRecords = getFilteredSortedRecords();
+    modalState.visibleRecords = [];
+    modalState.offset = 0;
+    modalState.totalCount = 0;
+    modalState.hasMore = true;
+    if (refs.bodyEl) refs.bodyEl.innerHTML = '';
+    if (refs.scrollEl) refs.scrollEl.scrollTop = 0;
+  }
+
+  async function fetchCatalogPage({ reset = false } = {}){
+    const modalState = ensureModalState();
+    const refs = getRefs();
+    if (!refs.modalEl) return;
+    if (modalState.loading && !reset) return;
+    if (!modalState.hasMore && !reset) return;
+
     if (reset) {
-      modalState.renderedCount = 0;
-      refs.bodyEl.innerHTML = '';
-      appendLazyRows();
-    } else {
-      const rows = Array.from(refs.bodyEl.querySelectorAll('tr[data-record-key]'));
-      rows.forEach(row => {
-        const record = getRecordByKey(row.dataset.recordKey || '');
-        if (record) {
-          updateRowFromSelection(row, record);
-        }
+      resetVisibleCatalogForFetch();
+    }
+
+    const requestToken = modalState.requestToken + 1;
+    modalState.requestToken = requestToken;
+    modalState.loading = true;
+    refreshCatalogStatus();
+
+    const params = new URLSearchParams();
+    params.set('mode', modalState.mode);
+    params.set('offset', String(modalState.offset));
+    params.set('limit', String(PAGE_SIZE));
+    params.set('q', modalState.query || '');
+    params.set('sort_key', normalizeServerSortKey(modalState.sortKey));
+    params.set('sort_dir', modalState.sortDir === 'desc' ? 'desc' : 'asc');
+
+    try {
+      const response = await fetch(`/tools/api/soap/oils-catalog?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Unable to load oils catalog');
+      }
+      const payload = await response.json();
+      if (!payload || payload.success !== true || !payload.result || !Array.isArray(payload.result.records)) {
+        throw new Error('Invalid oils catalog response');
+      }
+      if (requestToken !== modalState.requestToken) {
+        return;
+      }
+      const records = payload.result.records.map(normalizeCatalogRecord);
+      const nextOffset = Math.max(0, parseInt(payload.result.next_offset, 10) || (modalState.offset + records.length));
+      const totalCount = Math.max(records.length, parseInt(payload.result.count, 10) || 0);
+      const hasMore = !!payload.result.has_more;
+
+      records.forEach(record => {
+        modalState.recordByKey[record.key] = record;
       });
-      refreshCatalogStatus();
+      modalState.visibleRecords = reset
+        ? records.slice()
+        : modalState.visibleRecords.concat(records);
+      modalState.offset = nextOffset;
+      modalState.totalCount = totalCount;
+      modalState.hasMore = hasMore;
+      applyLocalSelectionSortIfNeeded();
+      renderVisibleRecords();
+    } catch (_) {
+      if (requestToken === modalState.requestToken) {
+        updateStatusText('Unable to load oils catalog.');
+      }
+      throw _;
+    } finally {
+      if (requestToken === modalState.requestToken) {
+        modalState.loading = false;
+        refreshCatalogStatus();
+      }
     }
-    sortButtonsLabel();
-    updateSelectionCounters();
-  }
-
-  async function fetchCatalog(mode){
-    const modalState = ensureModalState();
-    updateStatusText('Loading catalog...');
-    const response = await fetch(`/tools/api/soap/oils-catalog?mode=${encodeURIComponent(mode)}`);
-    if (!response.ok) {
-      throw new Error('Unable to load oils catalog');
-    }
-    const payload = await response.json();
-    if (!payload || payload.success !== true || !payload.result || !Array.isArray(payload.result.records)) {
-      throw new Error('Invalid oils catalog response');
-    }
-    const normalized = payload.result.records.map(normalizeCatalogRecord);
-    modalState.catalog[mode] = normalized;
-    normalized.forEach(record => {
-      modalState.recordByKey[record.key] = record;
-    });
-  }
-
-  async function ensureCatalogLoaded(mode){
-    const modalState = ensureModalState();
-    if (Array.isArray(modalState.catalog?.[mode])) {
-      return;
-    }
-    await fetchCatalog(mode);
   }
 
   function importSelectedToStage(){
     const modalState = ensureModalState();
     const selectionEntries = Object.values(modalState.selection || {});
     if (!selectionEntries.length) {
-      SoapTool.ui.showSoapAlert('warning', 'Pick at least one oil before importing.', { dismissible: true, timeoutMs: 6000 });
+      showAlert('warning', 'Pick at least one oil before importing.');
       return;
     }
     const oilRows = document.getElementById('oilRows');
     if (!oilRows) return;
 
-    const ordered = selectionEntries.slice().sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+    const ordered = selectionEntries
+      .slice()
+      .sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
     ordered.forEach(item => {
       const row = SoapTool.oils.buildOilRow();
       if (!row) return;
@@ -379,10 +437,7 @@
       if (unitInput) unitInput.value = item.default_unit || '';
       if (categoryInput) categoryInput.value = item.ingredient_category_name || '';
       if (percentInput) percentInput.value = item.selected_pct > 0 ? round(item.selected_pct, 2) : '';
-      if (gramsInput) {
-        gramsInput.value = item.selected_weight_g > 0 ? round(fromGrams(item.selected_weight_g), 2) : '';
-      }
-
+      if (gramsInput) gramsInput.value = item.selected_weight_g > 0 ? round(fromGrams(item.selected_weight_g), 2) : '';
       oilRows.appendChild(row);
     });
 
@@ -390,10 +445,9 @@
     SoapTool.stages.updateStageStatuses();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
-    SoapTool.ui.showSoapAlert(
+    showAlert(
       'info',
-      `Imported ${selectionEntries.length} oil${selectionEntries.length === 1 ? '' : 's'} from bulk picker.`,
-      { dismissible: true, timeoutMs: 6000 }
+      `Imported ${selectionEntries.length} oil${selectionEntries.length === 1 ? '' : 's'} from bulk picker.`
     );
   }
 
@@ -401,36 +455,20 @@
     const refs = getRefs();
     const modalState = ensureModalState();
     if (!refs.modalEl) return;
-
     if (!modalInstance && window.bootstrap?.Modal) {
       modalInstance = window.bootstrap.Modal.getOrCreateInstance(refs.modalEl);
     }
     if (refs.searchInput) refs.searchInput.value = modalState.query || '';
     if (refs.modeToggle) refs.modeToggle.checked = modalState.mode === 'all';
     if (refs.unitLabelEl) refs.unitLabelEl.textContent = state.currentUnit || 'g';
-
+    if (modalInstance) modalInstance.show();
+    sortButtonsLabel();
+    updateSelectionCounters();
     try {
-      await ensureCatalogLoaded(modalState.mode);
-      renderCatalog(true);
-      if (modalInstance) {
-        modalInstance.show();
-      }
+      await fetchCatalogPage({ reset: true });
     } catch (_) {
-      updateStatusText('Unable to load oils catalog.');
-      SoapTool.ui.showSoapAlert('danger', 'Unable to load bulk oils catalog right now.', { dismissible: true, timeoutMs: 6000 });
+      showAlert('danger', 'Unable to load bulk oils catalog right now.');
     }
-  }
-
-  async function handleModeToggle(checked){
-    const modalState = ensureModalState();
-    modalState.mode = checked ? 'all' : 'basics';
-    try {
-      await ensureCatalogLoaded(modalState.mode);
-      renderCatalog(true);
-    } catch (_) {
-      updateStatusText('Unable to load oils catalog.');
-    }
-    SoapTool.storage.queueStateSave();
   }
 
   function handleBodyInput(event){
@@ -460,11 +498,27 @@
       removeSelection(recordKey);
     }
 
-    updateSelectionCounters();
-    SoapTool.storage.queueStateSave();
+    if (LOCAL_SORT_KEYS.has(ensureModalState().sortKey)) {
+      applyLocalSelectionSortIfNeeded();
+      renderVisibleRecords();
+    } else {
+      updateSelectionCounters();
+    }
+    queueStateSave();
   }
 
-  function handleSortClick(event){
+  async function handleModeToggle(checked){
+    const modalState = ensureModalState();
+    modalState.mode = checked ? 'all' : 'basics';
+    queueStateSave();
+    try {
+      await fetchCatalogPage({ reset: true });
+    } catch (_) {
+      showAlert('danger', 'Unable to load bulk oils catalog right now.');
+    }
+  }
+
+  async function handleSortClick(event){
     const button = event.target instanceof HTMLElement ? event.target.closest('.bulk-oil-sort') : null;
     if (!button) return;
     const sortKey = button.getAttribute('data-sort-key') || 'name';
@@ -475,25 +529,54 @@
       modalState.sortKey = sortKey;
       modalState.sortDir = sortKey === 'name' ? 'asc' : 'desc';
     }
-    renderCatalog(true);
-    SoapTool.storage.queueStateSave();
+    queueStateSave();
+    if (LOCAL_SORT_KEYS.has(modalState.sortKey)) {
+      applyLocalSelectionSortIfNeeded();
+      renderVisibleRecords();
+      return;
+    }
+    try {
+      await fetchCatalogPage({ reset: true });
+    } catch (_) {
+      showAlert('danger', 'Unable to load oils in that sort order.');
+    }
   }
 
   function clearSelection(){
     const modalState = ensureModalState();
     modalState.selection = {};
-    renderCatalog(false);
-    SoapTool.storage.queueStateSave();
+    if (LOCAL_SORT_KEYS.has(modalState.sortKey)) {
+      applyLocalSelectionSortIfNeeded();
+      renderVisibleRecords();
+    } else {
+      renderVisibleRecords();
+    }
+    queueStateSave();
   }
 
-  function handleScroll(){
+  async function handleScroll(){
     const refs = getRefs();
+    const modalState = ensureModalState();
     if (!refs.scrollEl) return;
-    const threshold = 120;
-    const atBottom = refs.scrollEl.scrollTop + refs.scrollEl.clientHeight >= refs.scrollEl.scrollHeight - threshold;
-    if (atBottom) {
-      appendLazyRows();
+    if (modalState.loading || !modalState.hasMore) return;
+    const isNearBottom = refs.scrollEl.scrollTop + refs.scrollEl.clientHeight >= refs.scrollEl.scrollHeight - SCROLL_FETCH_THRESHOLD;
+    if (!isNearBottom) return;
+    try {
+      await fetchCatalogPage({ reset: false });
+    } catch (_) {
+      showAlert('danger', 'Unable to load more oils right now.');
     }
+  }
+
+  function scheduleSearchReload(){
+    if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = window.setTimeout(async () => {
+      try {
+        await fetchCatalogPage({ reset: true });
+      } catch (_) {
+        showAlert('danger', 'Unable to search oils right now.');
+      }
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   function serializeSelection(){
@@ -521,17 +604,13 @@
   }
 
   function restoreState(savedState){
-    if (!savedState || typeof savedState !== 'object') {
-      updateSelectionCounters();
-      return;
-    }
     const modalState = ensureModalState();
-    modalState.mode = savedState.mode === 'all' ? 'all' : 'basics';
-    modalState.query = typeof savedState.query === 'string' ? savedState.query : '';
-    modalState.sortKey = typeof savedState.sort_key === 'string' ? savedState.sort_key : 'name';
-    modalState.sortDir = savedState.sort_dir === 'desc' ? 'desc' : 'asc';
+    modalState.mode = savedState?.mode === 'all' ? 'all' : 'basics';
+    modalState.query = typeof savedState?.query === 'string' ? savedState.query : '';
+    modalState.sortKey = typeof savedState?.sort_key === 'string' ? savedState.sort_key : 'name';
+    modalState.sortDir = savedState?.sort_dir === 'desc' ? 'desc' : 'asc';
     const selection = {};
-    const rows = Array.isArray(savedState.selections) ? savedState.selections : [];
+    const rows = Array.isArray(savedState?.selections) ? savedState.selections : [];
     rows.forEach(raw => {
       const key = String(raw?.key || '').trim();
       const name = String(raw?.name || '').trim();
@@ -552,14 +631,20 @@
       };
     });
     modalState.selection = selection;
+    modalState.visibleRecords = [];
+    modalState.offset = 0;
+    modalState.totalCount = 0;
+    modalState.hasMore = true;
+    modalState.loading = false;
     updateSelectionCounters();
+    sortButtonsLabel();
   }
 
   function onUnitChanged(){
     const refs = getRefs();
     if (refs.unitLabelEl) refs.unitLabelEl.textContent = state.currentUnit || 'g';
-    if (refs.modalEl && refs.modalEl.classList.contains('show')) {
-      renderCatalog(false);
+    if (refs.modalEl?.classList.contains('show')) {
+      renderVisibleRecords();
     }
   }
 
@@ -575,8 +660,8 @@
       refs.searchInput.addEventListener('input', () => {
         const modalState = ensureModalState();
         modalState.query = refs.searchInput.value || '';
-        renderCatalog(true);
-        SoapTool.storage.queueStateSave();
+        queueStateSave();
+        scheduleSearchReload();
       });
     }
     if (refs.modeToggle) {
@@ -606,14 +691,13 @@
     }
     refs.modalEl.addEventListener('shown.bs.modal', () => {
       const localRefs = getRefs();
-      if (localRefs.searchInput) {
-        localRefs.searchInput.focus();
-      }
+      if (localRefs.searchInput) localRefs.searchInput.focus();
     });
   }
 
   bindEvents();
   updateSelectionCounters();
+  sortButtonsLabel();
 
   SoapTool.bulkOilsModal = {
     openModal,

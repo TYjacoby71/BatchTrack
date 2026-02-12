@@ -35,6 +35,11 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - searchable, sortable, lazy-rendered modal table with checkbox selection and optional `% total` / `weight` inputs
   - persisted bulk selection state in soap tool session storage until import
   - import action writes selected oils into Stage 2 rows without requiring weight/percent values
+- Hardened bulk-oils catalog delivery and anti-scrape posture:
+  - `/tools/api/soap/oils-catalog` now serves incremental server-side pages (`offset`/`limit`) capped at 25 rows per request
+  - search (`q`) and sortable catalog fields (`sort_key`/`sort_dir`) are now server-side, so the browser only receives the current window
+  - endpoint response no longer includes alias blobs, reducing unnecessary catalog surface in client payloads
+  - tightened endpoint rate limit from blanket tool limits to a scroll-safe catalog-specific throttle (`1200/hour;120/minute`)
 - Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
   - water % / concentration / ratio fields no longer force local preset values while typing
   - added per-method helper text showing normal ranges instead of preset enforcement

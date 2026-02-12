@@ -39,6 +39,9 @@ SOAP_BULK_FATTY_KEYS = (
     "linoleic",
     "linolenic",
 )
+SOAP_BULK_SORT_KEYS = {"name", *SOAP_BULK_FATTY_KEYS}
+SOAP_BULK_PAGE_DEFAULT = 25
+SOAP_BULK_PAGE_MAX = 25
 SOAP_BULK_ALLOWED_CATEGORIES = {
     "oils (carrier & fixed)",
     "butters & solid fats",
@@ -336,6 +339,87 @@ def _build_soap_bulk_catalog(mode: str) -> list[dict[str, Any]]:
     return sorted(merged.values(), key=lambda row: (row.get("name") or "").lower())
 
 
+# --- Soap bulk sort-key normalizer ---
+# Purpose: Normalize and validate requested sort key for bulk-catalog paging.
+# Inputs: Requested sort key string.
+# Outputs: Safe sort key accepted by backend sorter.
+def _normalize_soap_bulk_sort_key(raw_sort_key: str | None) -> str:
+    sort_key = (raw_sort_key or "name").strip().lower()
+    if sort_key not in SOAP_BULK_SORT_KEYS:
+        return "name"
+    return sort_key
+
+
+# --- Soap bulk record serializer ---
+# Purpose: Strip non-display fields before sending catalog records to browser.
+# Inputs: Normalized in-memory catalog record.
+# Outputs: JSON-safe compact record for modal rendering.
+def _serialize_soap_bulk_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "key": record.get("key"),
+        "name": record.get("name"),
+        "sap_koh": record.get("sap_koh"),
+        "iodine": record.get("iodine"),
+        "fatty_profile": record.get("fatty_profile") or {},
+        "default_unit": record.get("default_unit") or "gram",
+        "ingredient_category_name": record.get("ingredient_category_name") or "Oils (Carrier & Fixed)",
+        "global_item_id": record.get("global_item_id"),
+        "source": record.get("source") or "soapcalc",
+        "is_basic": bool(record.get("is_basic")),
+    }
+
+
+# --- Soap bulk catalog pager ---
+# Purpose: Apply search/sort/pagination to bulk-catalog rows for incremental fetch.
+# Inputs: Full mode catalog list and request query options.
+# Outputs: Tuple of paged records and total filtered count.
+def _page_soap_bulk_catalog(
+    *,
+    records: list[dict[str, Any]],
+    query: str,
+    sort_key: str,
+    sort_dir: str,
+    offset: int,
+    limit: int,
+) -> tuple[list[dict[str, Any]], int]:
+    normalized_query = (query or "").strip().lower()
+    query_terms = [term for term in normalized_query.split() if term]
+    if query_terms:
+        def _matches_query(record: dict[str, Any]) -> bool:
+            blob = " ".join(
+                [
+                    str(record.get("name") or ""),
+                    " ".join(record.get("aliases") or []),
+                    str(record.get("ingredient_category_name") or ""),
+                ]
+            ).lower()
+            return all(term in blob for term in query_terms)
+
+        filtered = [row for row in records if _matches_query(row)]
+    else:
+        filtered = list(records)
+
+    normalized_sort_key = _normalize_soap_bulk_sort_key(sort_key)
+    normalized_sort_dir = "desc" if (sort_dir or "").strip().lower() == "desc" else "asc"
+    reverse = normalized_sort_dir == "desc"
+    if normalized_sort_key == "name":
+        filtered.sort(key=lambda row: (str(row.get("name") or "").lower()), reverse=reverse)
+    else:
+        filtered.sort(
+            key=lambda row: (
+                float((row.get("fatty_profile") or {}).get(normalized_sort_key) or 0.0),
+                str(row.get("name") or "").lower(),
+            ),
+            reverse=reverse,
+        )
+
+    total_count = len(filtered)
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = max(1, min(SOAP_BULK_PAGE_MAX, int(limit or SOAP_BULK_PAGE_DEFAULT)))
+    page_rows = filtered[safe_offset:safe_offset + safe_limit]
+    return page_rows, total_count
+
+
 # --- Tools landing route ---
 # Purpose: Render public tools index with per-tool feature visibility flags.
 # Inputs: HTTP request context and feature flag table.
@@ -421,23 +505,52 @@ def tools_soap_calculate():
 
 
 # --- Soap bulk-oils catalog API route ---
-# Purpose: Return oils/butters/waxes catalog for bulk-oil picker modal.
-# Inputs: Query param mode=basics|all.
-# Outputs: JSON payload with normalized catalog records.
+# Purpose: Return paged oils/butters/waxes catalog rows for bulk-oil picker modal.
+# Inputs: Query params mode/q/sort/offset/limit for server-side paging/search.
+# Outputs: JSON payload with normalized paged records and cursor metadata.
 @tools_bp.route('/api/soap/oils-catalog', methods=['GET'])
-@limiter.limit("60000/hour;5000/minute")
+@limiter.limit("1200/hour;120/minute")
 def tools_soap_oils_catalog():
     mode = (request.args.get("mode") or "basics").strip().lower()
     if mode not in {"basics", "all"}:
         mode = "basics"
-    records = _build_soap_bulk_catalog(mode)
+    query = (request.args.get("q") or "").strip()
+    sort_key = _normalize_soap_bulk_sort_key(request.args.get("sort_key"))
+    sort_dir = (request.args.get("sort_dir") or "asc").strip().lower()
+    if sort_dir not in {"asc", "desc"}:
+        sort_dir = "asc"
+    try:
+        offset = max(0, int(request.args.get("offset") or 0))
+    except (TypeError, ValueError):
+        offset = 0
+    try:
+        limit = max(1, min(SOAP_BULK_PAGE_MAX, int(request.args.get("limit") or SOAP_BULK_PAGE_DEFAULT)))
+    except (TypeError, ValueError):
+        limit = SOAP_BULK_PAGE_DEFAULT
+    page_rows, total_count = _page_soap_bulk_catalog(
+        records=_build_soap_bulk_catalog(mode),
+        query=query,
+        sort_key=sort_key,
+        sort_dir=sort_dir,
+        offset=offset,
+        limit=limit,
+    )
+    next_offset = offset + len(page_rows)
+    has_more = next_offset < total_count
     return jsonify(
         {
             "success": True,
             "result": {
                 "mode": mode,
-                "count": len(records),
-                "records": records,
+                "query": query,
+                "sort_key": sort_key,
+                "sort_dir": sort_dir,
+                "offset": offset,
+                "limit": limit,
+                "count": total_count,
+                "next_offset": next_offset,
+                "has_more": has_more,
+                "records": [_serialize_soap_bulk_record(row) for row in page_rows],
             },
         }
     )
