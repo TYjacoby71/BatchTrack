@@ -1,4 +1,4 @@
-from app.routes.tools_routes import _normalize_soap_bulk_sort_key, _page_soap_bulk_catalog
+from app.services.tools.soap_tool._catalog import normalize_bulk_sort_key, page_bulk_catalog
 
 
 def _sample_records():
@@ -25,14 +25,14 @@ def _sample_records():
 
 
 def test_normalize_soap_bulk_sort_key_defaults_for_invalid_values():
-    assert _normalize_soap_bulk_sort_key("name") == "name"
-    assert _normalize_soap_bulk_sort_key("lauric") == "lauric"
-    assert _normalize_soap_bulk_sort_key("unknown-field") == "name"
-    assert _normalize_soap_bulk_sort_key(None) == "name"
+    assert normalize_bulk_sort_key("name") == "name"
+    assert normalize_bulk_sort_key("lauric") == "lauric"
+    assert normalize_bulk_sort_key("unknown-field") == "name"
+    assert normalize_bulk_sort_key(None) == "name"
 
 
 def test_page_soap_bulk_catalog_applies_query_terms_and_total_count():
-    page_rows, total_count = _page_soap_bulk_catalog(
+    page_rows, total_count = page_bulk_catalog(
         records=_sample_records(),
         query="olive carrier",
         sort_key="name",
@@ -47,7 +47,7 @@ def test_page_soap_bulk_catalog_applies_query_terms_and_total_count():
 
 
 def test_page_soap_bulk_catalog_sorts_and_clamps_page_limit():
-    page_rows, total_count = _page_soap_bulk_catalog(
+    page_rows, total_count = page_bulk_catalog(
         records=_sample_records(),
         query="",
         sort_key="lauric",

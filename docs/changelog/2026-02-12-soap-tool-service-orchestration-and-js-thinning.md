@@ -45,6 +45,10 @@ Moved core soap-tool computation responsibilities into a dedicated backend servi
   - cache invalidation is automatic when global items change because keys are namespaced through `global_library_cache_key(...)`
   - global catalog query switched to eager loading + `is_archived IS FALSE` filtering for index-friendly SQL
   - new migration `0024_global_item_soap_catalog_indexes` ensures composite and PostgreSQL partial indexes for active ingredient name scans
+- Refactored bulk-oils architecture to match thin-module conventions:
+  - moved bulk catalog build/page/cache logic out of `app/routes/tools_routes.py` into `app/services/tools/soap_tool/_catalog.py`
+  - split `soap_tool_bulk_oils_modal.js` monolith into focused files (`_shared.js`, `_render.js`, `_api.js`, and a thin `_modal.js` controller)
+  - updated soap template script ordering so modal behavior composes through explicit module dependencies
 - Removed blocking/default-reset behavior from Stage 3 water-method inputs so typing is never overwritten mid-entry.
   - water % / concentration / ratio fields no longer force local preset values while typing
   - added per-method helper text showing normal ranges instead of preset enforcement

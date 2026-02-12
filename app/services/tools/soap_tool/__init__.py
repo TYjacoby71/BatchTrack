@@ -9,6 +9,7 @@ Glossary:
 """
 
 from ._core import SoapToolComputationService
+from ._catalog import get_bulk_catalog_page
 from ._lye_water import compute_lye_water_values
 from .types import SoapToolComputeRequest
 
@@ -16,5 +17,6 @@ __all__ = [
     "SoapToolComputationService",
     "SoapToolComputeRequest",
     "compute_lye_water_values",
+    "get_bulk_catalog_page",
 ]
 
