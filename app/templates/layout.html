@@ -135,12 +135,12 @@ Glossary:
             padding-bottom: 0;
         }
         .public-marketing-nav .brand-full-logo {
-            height: 40px;
+            height: 42px;
             width: auto;
             display: block;
         }
         .app-brand-logo {
-            height: 36px;
+            height: 42px;
             width: auto;
             display: block;
         }
@@ -178,7 +178,7 @@ Glossary:
         <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
             {% if not public_shell_mode %}
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}" aria-label="BatchTrack home">
-                <img src="{{ url_for('branding_full_logo') }}" alt="BatchTrack" class="app-brand-logo">
+                <img src="{{ url_for('branding_full_logo_header') }}" alt="BatchTrack" class="app-brand-logo">
             </a>
             {% endif %}
             {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
