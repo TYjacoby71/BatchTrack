@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-11: Soap Formulator Service Package + UI Stability](2026-02-11-soap-formulator-service-package-and-ui-stability.md)**
+  - Added a dedicated tool-scoped soap calculator service package with typed contracts and canonical lye/water computations.
+  - Wired the public soap formulator to a structured `/tools/api/soap/calculate` endpoint and removed duplicated frontend lye/water math.
+  - Completed targeted soap UI fixes for stage synchronization, card scrolling, marker visibility, and field suffix/icon overlap.
 - **[2026-02-12: Homepage Brand Logo and Favicon Integration](2026-02-12-homepage-brand-logo-and-favicon-integration.md)**
   - Added stable branding asset routes for full logo and square app tile SVGs.
   - Replaced text-only shared header brand labels with the full logo image.

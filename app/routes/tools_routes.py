@@ -1,6 +1,19 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+"""Public tools routes.
+
+Synopsis:
+Defines public-facing maker tool pages and APIs, including soap calculator
+execution and draft handoff into authenticated recipe creation.
+
+Glossary:
+- Tool draft: Session-backed payload captured from public tools for later save.
+- Soap calculate API: Structured endpoint that delegates lye/water math to the
+  soap calculator service package.
+"""
+
+from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.tools.soap_calculator import SoapToolCalculatorService
 from app.models import GlobalItem
 from app.models import FeatureFlag
 from app.extensions import limiter
@@ -10,6 +23,10 @@ from app.extensions import limiter
 
 tools_bp = Blueprint('tools_bp', __name__)
 
+# --- Feature-flag reader ---
+# Purpose: Resolve tool enablement from persisted feature flags with fallback.
+# Inputs: Feature key and optional default boolean.
+# Outputs: Boolean flag value used by route rendering.
 def _is_enabled(key: str, default: bool = True) -> bool:
     try:
         flag = FeatureFlag.query.filter_by(key=key).first()
@@ -20,6 +37,10 @@ def _is_enabled(key: str, default: bool = True) -> bool:
         return default
 
 
+# --- Tool page renderer ---
+# Purpose: Render a tool template with common public-header context.
+# Inputs: Template path, feature-flag key, and extra context kwargs.
+# Outputs: Flask rendered HTML response.
 def _render_tool(template_name: str, flag_key: str, **context):
     enabled = _is_enabled(flag_key, True)
     return render_template(
@@ -30,6 +51,10 @@ def _render_tool(template_name: str, flag_key: str, **context):
     )
 
 
+# --- Soap quota resolver ---
+# Purpose: Determine per-day calc quota based on auth/tier context.
+# Inputs: Current user/session organization state.
+# Outputs: Tuple of (limit or None, tier label).
 def _soap_calc_limit():
     if not getattr(current_user, "is_authenticated", False):
         return 5, "guest"
@@ -41,6 +66,10 @@ def _soap_calc_limit():
     return None, tier_name or "paid"
 
 
+# --- Soap quota consumer ---
+# Purpose: Track and enforce rolling 24-hour draft quota for soap category.
+# Inputs: Category name from payload and session storage state.
+# Outputs: Quota result dict when quota applies, otherwise None.
 def _consume_tool_quota(category_name: str | None):
     """Track draft submissions for free/guest tiers (daily rolling window)."""
     normalized = (category_name or "").strip().lower()
@@ -75,6 +104,10 @@ def _consume_tool_quota(category_name: str | None):
     return {"ok": True, "limit": limit, "tier": tier, "remaining": max(0, limit - count)}
 
 
+# --- Tools landing route ---
+# Purpose: Render public tools index with per-tool feature visibility flags.
+# Inputs: HTTP request context and feature flag table.
+# Outputs: Public tools index HTML response.
 @tools_bp.route('/')
 @limiter.limit("60000/hour;5000/minute")
 def tools_index():
@@ -95,28 +128,70 @@ def tools_index():
         show_public_header=True,
     )
 
+
+# --- Soap tool route ---
+# Purpose: Render the soap formulator page with quota tier context.
+# Inputs: HTTP request/user context.
+# Outputs: Soap tool HTML response.
 @tools_bp.route('/soap')
 def tools_soap():
     calc_limit, calc_tier = _soap_calc_limit()
     return _render_tool('tools/soaps/index.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
 
+
+# --- Candles tool route ---
+# Purpose: Render public candles tool page.
+# Inputs: HTTP request context.
+# Outputs: Candles tool HTML response.
 @tools_bp.route('/candles')
 def tools_candles():
     return _render_tool('tools/candles.html', 'TOOLS_CANDLES')
 
+
+# --- Lotions tool route ---
+# Purpose: Render public lotions tool page.
+# Inputs: HTTP request context.
+# Outputs: Lotions tool HTML response.
 @tools_bp.route('/lotions')
 def tools_lotions():
     return _render_tool('tools/lotions.html', 'TOOLS_LOTIONS')
 
+
+# --- Herbal tool route ---
+# Purpose: Render public herbal tool page.
+# Inputs: HTTP request context.
+# Outputs: Herbal tool HTML response.
 @tools_bp.route('/herbal')
 def tools_herbal():
     return _render_tool('tools/herbal.html', 'TOOLS_HERBAL')
 
+
+# --- Baker tool route ---
+# Purpose: Render public baker tool page.
+# Inputs: HTTP request context.
+# Outputs: Baker tool HTML response.
 @tools_bp.route('/baker')
 def tools_baker():
     return _render_tool('tools/baker.html', 'TOOLS_BAKING')
 
 
+# --- Soap calculate API route ---
+# Purpose: Execute soap lye/water calculation through service package.
+# Inputs: JSON payload with oils/lye/water inputs.
+# Outputs: JSON success response with structured calculation result.
+@tools_bp.route('/api/soap/calculate', methods=['POST'])
+@limiter.limit("60000/hour;5000/minute")
+def tools_soap_calculate():
+    """Calculate soap lye/water values through structured service package."""
+    payload = request.get_json(silent=True) or {}
+    result = SoapToolCalculatorService.calculate(payload)
+    return jsonify({"success": True, "result": result.to_dict()})
+
+
+# --- Public draft capture route ---
+# Purpose: Persist public tool draft payload into session for auth handoff.
+# Inputs: JSON draft payload with optional recipe lines.
+# Outputs: JSON response with redirect target or quota error.
 @tools_bp.route('/draft', methods=['POST'])
 def tools_draft():
     """Accept a draft from the public tools page and redirect to sign-in/save flow.

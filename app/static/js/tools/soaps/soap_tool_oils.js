@@ -89,9 +89,12 @@
   }
 
   function getOilTargetGrams(){
+    const targetInput = document.getElementById('oilTotalTarget');
+    const manualTarget = toGrams(targetInput?.value);
+    if (manualTarget > 0) return manualTarget;
     const mold = SoapTool.mold.getMoldSettings();
     if (mold.targetOils > 0) return mold.targetOils;
-    return toGrams(document.getElementById('oilTotalTarget').value);
+    return 0;
   }
 
   function deriveTargetFromRows(rows){

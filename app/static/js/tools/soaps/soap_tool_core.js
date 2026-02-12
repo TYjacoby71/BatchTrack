@@ -13,6 +13,7 @@
 
   SoapTool.state = {
     lastCalc: null,
+    calcRequestSeq: 0,
     lastOilEdit: null,
     lastFragranceEdit: null,
     selectedOilProfile: null,

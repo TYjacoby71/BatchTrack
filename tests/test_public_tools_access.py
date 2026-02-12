@@ -28,6 +28,37 @@ def test_public_tools_pages_are_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
+    """Anonymous soap page should use marketing nav without center-title overlay."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert 'id="publicMarketingNav"' in html
+    assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
+    assert "position-absolute top-50 start-50 translate-middle text-center" not in html
+    assert 'id="stageWaterOutput"' in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_calculation_api_is_accessible(app):
+    """Anonymous users should be able to run soap calculations via tool API."""
+    client = app.test_client()
+    payload = {
+        "oils": [{"grams": 650, "sap_koh": 190}],
+        "lye": {"selected": "NaOH", "superfat": 5, "purity": 100},
+        "water": {"method": "percent", "water_pct": 33},
+    }
+    response = client.post("/tools/api/soap/calculate", json=payload)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert result.get("water_g", 0) > 0
+    assert result.get("lye_adjusted_g", 0) > 0
+
+
+@pytest.mark.usefixtures("app")
 def test_anonymous_workflow_can_browse_public_site(app):
     """
     Simulate a public visitor navigating marketing pages so we detect regressions
