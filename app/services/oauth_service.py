@@ -1,6 +1,7 @@
 
 import logging
 import secrets
+from urllib.parse import urlencode
 from flask import current_app, session, url_for, request
 import google_auth_oauthlib.flow
 import google.auth.transport.requests
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class OAuthService:
     """Service for handling OAuth authentication"""
+    _FACEBOOK_GRAPH_API_VERSION = "v19.0"
 
     @staticmethod
     def create_google_oauth_flow():
@@ -121,6 +123,90 @@ class OAuthService:
             return None, None
 
     @staticmethod
+    def get_facebook_authorization_url(state: str):
+        """Build Facebook OAuth authorization URL."""
+        try:
+            if not OAuthService.is_facebook_oauth_configured():
+                logger.warning("Facebook OAuth not configured")
+                return None
+
+            app_id = current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+            redirect_uri = url_for("auth.oauth_facebook_callback", _external=True).replace("http://", "https://")
+            query = urlencode(
+                {
+                    "client_id": app_id,
+                    "redirect_uri": redirect_uri,
+                    "state": state,
+                    "scope": "email,public_profile",
+                    "response_type": "code",
+                }
+            )
+            return f"https://www.facebook.com/{OAuthService._FACEBOOK_GRAPH_API_VERSION}/dialog/oauth?{query}"
+        except Exception as e:
+            logger.error(f"Error building Facebook authorization URL: {str(e)}")
+            return None
+
+    @staticmethod
+    def exchange_facebook_code_for_token(code: str):
+        """Exchange Facebook OAuth code for access token."""
+        try:
+            if not OAuthService.is_facebook_oauth_configured():
+                return None
+
+            app_id = current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+            app_secret = current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
+            redirect_uri = url_for("auth.oauth_facebook_callback", _external=True).replace("http://", "https://")
+
+            response = requests.get(
+                f"https://graph.facebook.com/{OAuthService._FACEBOOK_GRAPH_API_VERSION}/oauth/access_token",
+                params={
+                    "client_id": app_id,
+                    "client_secret": app_secret,
+                    "redirect_uri": redirect_uri,
+                    "code": code,
+                },
+                timeout=10,
+            )
+            if response.status_code != 200:
+                logger.error(
+                    "Facebook token exchange failed: status=%s body=%s",
+                    response.status_code,
+                    response.text[:500],
+                )
+                return None
+            payload = response.json() or {}
+            return payload.get("access_token")
+        except Exception as e:
+            logger.error(f"Error exchanging Facebook code for token: {str(e)}")
+            return None
+
+    @staticmethod
+    def get_facebook_user_info(access_token: str):
+        """Retrieve user profile from Facebook Graph API."""
+        try:
+            if not access_token:
+                return None
+            response = requests.get(
+                f"https://graph.facebook.com/{OAuthService._FACEBOOK_GRAPH_API_VERSION}/me",
+                params={
+                    "fields": "id,email,first_name,last_name,name",
+                    "access_token": access_token,
+                },
+                timeout=10,
+            )
+            if response.status_code != 200:
+                logger.error(
+                    "Failed to get Facebook user info: status=%s body=%s",
+                    response.status_code,
+                    response.text[:500],
+                )
+                return None
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting Facebook user info: {str(e)}")
+            return None
+
+    @staticmethod
     def complete_google_flow(session_obj, code, state):
         """Complete Google OAuth flow with state verification"""
         try:
@@ -208,23 +294,42 @@ class OAuthService:
     @staticmethod
     def is_oauth_configured():
         """Check if OAuth is properly configured"""
+        return OAuthService.is_google_oauth_configured()
+
+    @staticmethod
+    def is_google_oauth_configured():
+        """Check if Google OAuth is configured."""
         client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
         client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
-        
         configured = bool(client_id and client_secret)
-        
         if not configured:
             logger.debug(f"OAuth configuration check: Client ID present: {bool(client_id)}, Client Secret present: {bool(client_secret)}")
         else:
             logger.debug("OAuth is properly configured")
-            
         return configured
-        
+
+    @staticmethod
+    def is_facebook_oauth_configured():
+        """Check if Facebook OAuth is configured."""
+        app_id = current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+        app_secret = current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
+        return bool(app_id and app_secret)
+
+    @staticmethod
+    def get_enabled_providers():
+        """Return provider-level availability for auth templates/routes."""
+        return {
+            "google": OAuthService.is_google_oauth_configured(),
+            "facebook": OAuthService.is_facebook_oauth_configured(),
+        }
+
     @staticmethod
     def get_configuration_status():
         """Get detailed OAuth configuration status for debugging"""
         client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
         client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
+        facebook_app_id = current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+        facebook_app_secret = current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
         
         # Check which keys are missing
         missing_keys = []
@@ -232,12 +337,22 @@ class OAuthService:
             missing_keys.append('GOOGLE_OAUTH_CLIENT_ID')
         if not client_secret:
             missing_keys.append('GOOGLE_OAUTH_CLIENT_SECRET')
-        
+        google_configured = bool(client_id and client_secret)
+        facebook_configured = bool(facebook_app_id and facebook_app_secret)
+        if google_configured or facebook_configured:
+            missing_keys = []
+
         return {
-            'is_configured': bool(client_id and client_secret),
+            'is_configured': bool(google_configured or facebook_configured),
+            'google_configured': google_configured,
+            'facebook_configured': facebook_configured,
             'has_client_id': bool(client_id),
             'has_client_secret': bool(client_secret),
+            'has_facebook_app_id': bool(facebook_app_id),
+            'has_facebook_app_secret': bool(facebook_app_secret),
             'client_id_length': len(client_id) if client_id else 0,
             'client_secret_length': len(client_secret) if client_secret else 0,
+            'facebook_app_id_length': len(facebook_app_id) if facebook_app_id else 0,
+            'facebook_app_secret_length': len(facebook_app_secret) if facebook_app_secret else 0,
             'missing_keys': missing_keys
         }

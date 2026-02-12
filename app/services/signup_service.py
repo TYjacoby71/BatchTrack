@@ -100,17 +100,31 @@ class SignupService:
         session_metadata = SignupService._object_to_dict(getattr(checkout_session, 'metadata', {}))
         customer_details = SignupService._object_to_dict(getattr(checkout_session, 'customer_details', {}))
         customer_metadata = SignupService._object_to_dict(getattr(customer_obj, 'metadata', {}))
+        pending_extra_metadata = pending_signup.extra_metadata or {}
         custom_fields = getattr(checkout_session, 'custom_fields', None)
 
         pending_signup.stripe_checkout_session_id = pending_signup.stripe_checkout_session_id or getattr(checkout_session, 'id', None)
         pending_signup.stripe_customer_id = pending_signup.stripe_customer_id or getattr(customer_obj, 'id', None)
         pending_signup.mark_status('checkout_completed')
 
+        oauth_email = SignupService._first_non_empty(
+            session_metadata.get('oauth_email'),
+            pending_extra_metadata.get('oauth_email'),
+        )
         email = SignupService._first_non_empty(
             customer_details.get('email'),
             getattr(customer_obj, 'email', None),
+            oauth_email,
             pending_signup.email,
         )
+        # Never keep placeholder pending email when we have an OAuth identity email.
+        if (
+            email
+            and isinstance(email, str)
+            and email.endswith("@signup.batchtrack")
+            and oauth_email
+        ):
+            email = oauth_email
         if not email:
             raise ValueError("Stripe checkout session missing customer email")
 
@@ -127,19 +141,31 @@ class SignupService:
             getattr(customer_obj, 'name', None),
         )
         first_name, last_name = SignupService._split_name(full_name)
+        metadata_first_name = SignupService._first_non_empty(
+            session_metadata.get('first_name'),
+            pending_extra_metadata.get('first_name'),
+        )
+        metadata_last_name = SignupService._first_non_empty(
+            session_metadata.get('last_name'),
+            pending_extra_metadata.get('last_name'),
+        )
         custom_first = SignupService._extract_custom_field(custom_fields, 'first_name')
         custom_last = SignupService._extract_custom_field(custom_fields, 'last_name')
         if custom_first and not first_name:
             first_name = custom_first
         if custom_last and not last_name:
             last_name = custom_last
+        if metadata_first_name and not first_name:
+            first_name = metadata_first_name
+        if metadata_last_name and not last_name:
+            last_name = metadata_last_name
 
         workspace_field = SignupService._extract_custom_field(custom_fields, 'workspace_name')
         org_name = (
             workspace_field
             or session_metadata.get('org_name')
             or customer_metadata.get('org_name')
-            or (pending_signup.extra_metadata.get('org_name') if pending_signup.extra_metadata else None)
+            or pending_extra_metadata.get('org_name')
         )
         if not org_name:
             org_name = f"{first_name or 'New'}'s Workspace"

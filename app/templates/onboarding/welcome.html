@@ -81,7 +81,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Billing / Contact Email</label>
-                            <input type="email" class="form-control form-control-lg" name="org_contact_email" value="{{ organization.contact_email or '' }}" placeholder="owner@example.com">
+                            <input type="email" class="form-control form-control-lg" name="org_contact_email" value="{{ organization.contact_email or current_user.email or '' }}" placeholder="owner@example.com">
                         </div>
                     </div>
 

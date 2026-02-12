@@ -52,6 +52,7 @@ class BillingService:
 
     _pricing_cache_ttl_seconds = 600  # 10 minutes
     _pricing_error_cache_ttl_seconds = 60
+    _related_price_cache_miss_sentinel = "__missing__"
     _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
     _pricing_registry_lock = Lock()
 
@@ -59,6 +60,11 @@ class BillingService:
     @classmethod
     def _pricing_cache_key(cls, lookup_key: str) -> str:
         return f"billing:price:{lookup_key}"
+
+    # Purpose: Build cache key for cross-cycle related price lookups.
+    @classmethod
+    def _related_price_cache_key(cls, lookup_key: str, billing_cycle: str) -> str:
+        return f"billing:related-price:{lookup_key}:{billing_cycle}"
 
     # Purpose: Get a lock for pricing refresh concurrency.
     @classmethod
@@ -685,9 +691,7 @@ class BillingService:
 
                 amount = price_obj.unit_amount / 100
                 currency = price_obj.currency.upper()
-                billing_cycle = 'one-time'
-                if price_obj.recurring:
-                    billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
+                billing_cycle = BillingService._stripe_price_billing_cycle(price_obj)
 
                 if resolution_strategy != 'lookup_key':
                     logger.info(
@@ -762,6 +766,119 @@ class BillingService:
             # Propagate to caller for centralized logging/handling
             raise
 
+    # Purpose: Normalize Stripe recurring metadata into app billing cycle labels.
+    @staticmethod
+    def _stripe_price_billing_cycle(price_obj) -> str:
+        recurring = getattr(price_obj, "recurring", None)
+        if not recurring:
+            return "one-time"
+
+        interval = str(getattr(recurring, "interval", "") or "").lower()
+        interval_count = getattr(recurring, "interval_count", 1)
+        try:
+            interval_count = int(interval_count or 1)
+        except (TypeError, ValueError):
+            interval_count = 1
+
+        if interval == "year":
+            return "yearly"
+        if interval == "month" and interval_count == 12:
+            return "yearly"
+        return "monthly"
+
+    # Purpose: Discover a related price key on the same Stripe product.
+    @classmethod
+    def find_related_price_lookup_key(cls, base_lookup_key: str | None, *, billing_cycle: str) -> str | None:
+        """Find an active related price key for the same product and billing cycle.
+
+        This fallback supports legacy tiers that store `price_*` IDs or lookup keys
+        that do not follow the `_monthly/_yearly/_lifetime` naming convention.
+        """
+        normalized_cycle = str(billing_cycle or "").strip().lower()
+        if normalized_cycle not in {"monthly", "yearly", "one-time"}:
+            return None
+
+        base_key = str(base_lookup_key or "").strip()
+        if not base_key:
+            return None
+
+        cache_key = cls._related_price_cache_key(base_key, normalized_cycle)
+        cached = app_cache.get(cache_key)
+        if cached == cls._related_price_cache_miss_sentinel:
+            return None
+        if cached:
+            return str(cached)
+
+        if not cls.ensure_stripe():
+            app_cache.set(cache_key, cls._related_price_cache_miss_sentinel, ttl=cls._pricing_error_cache_ttl_seconds)
+            return None
+
+        try:
+            base_price_obj, _ = cls._resolve_price_for_lookup_key(base_key)
+            if not base_price_obj:
+                app_cache.set(
+                    cache_key,
+                    cls._related_price_cache_miss_sentinel,
+                    ttl=cls._pricing_error_cache_ttl_seconds,
+                )
+                return None
+
+            product_id = getattr(base_price_obj, "product", None)
+            if not product_id:
+                app_cache.set(
+                    cache_key,
+                    cls._related_price_cache_miss_sentinel,
+                    ttl=cls._pricing_error_cache_ttl_seconds,
+                )
+                return None
+
+            price_list = stripe.Price.list(product=product_id, active=True, limit=100)
+            candidates: list[tuple[int, str]] = []
+            for candidate in getattr(price_list, "data", []) or []:
+                candidate_cycle = cls._stripe_price_billing_cycle(candidate)
+                if candidate_cycle != normalized_cycle:
+                    continue
+
+                candidate_lookup_key = getattr(candidate, "lookup_key", None)
+                candidate_identifier = str(candidate_lookup_key or getattr(candidate, "id", "")).strip()
+                if not candidate_identifier:
+                    continue
+
+                # Prefer stable lookup keys and cycle-specific naming hints.
+                score = 0
+                if candidate_lookup_key:
+                    score += 2
+                lookup_hint = str(candidate_lookup_key or "").strip().lower()
+                if normalized_cycle == "yearly" and ("yearly" in lookup_hint or "annual" in lookup_hint):
+                    score += 2
+                elif normalized_cycle == "monthly" and "monthly" in lookup_hint:
+                    score += 2
+                elif normalized_cycle == "one-time" and (
+                    "lifetime" in lookup_hint or "one_time" in lookup_hint or "one-time" in lookup_hint
+                ):
+                    score += 2
+                if candidate_identifier != base_key:
+                    score += 1
+                candidates.append((score, candidate_identifier))
+
+            if not candidates:
+                app_cache.set(cache_key, cls._related_price_cache_miss_sentinel, ttl=cls._pricing_error_cache_ttl_seconds)
+                return None
+
+            candidates.sort(key=lambda item: item[0], reverse=True)
+            resolved_key = candidates[0][1]
+            app_cache.set(cache_key, resolved_key, ttl=cls._pricing_cache_ttl_seconds)
+            return resolved_key
+        except StripeError as exc:
+            logger.warning(
+                "Unable to discover related Stripe price for %s (%s): %s",
+                base_key,
+                normalized_cycle,
+                exc,
+            )
+            app_cache.set(cache_key, cls._related_price_cache_miss_sentinel, ttl=cls._pricing_error_cache_ttl_seconds)
+            return None
+
     # Purpose: Create a checkout session for a specific tier.
     @staticmethod
     def create_checkout_session_for_tier(
@@ -817,26 +934,6 @@ class BillingService:
                     'billing_cycle': pricing.get('billing_cycle', ''),
                     **(metadata or {})
                 },
-                'custom_fields': [
-                    {
-                        'key': 'workspace_name',
-                        'label': {'type': 'custom', 'custom': 'Workspace / brand name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 2, 'maximum_length': 60},
-                    },
-                    {
-                        'key': 'first_name',
-                        'label': {'type': 'custom', 'custom': 'First name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 1, 'maximum_length': 40},
-                    },
-                    {
-                        'key': 'last_name',
-                        'label': {'type': 'custom', 'custom': 'Last name'},
-                        'type': 'text',
-                        'text': {'minimum_length': 1, 'maximum_length': 60},
-                    },
-                ],
             }
 
             if stripe_promotion_code_id:

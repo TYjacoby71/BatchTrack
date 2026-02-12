@@ -266,6 +266,17 @@ class LifetimePricingService:
             if expected_cycle and pricing.get("billing_cycle") != expected_cycle:
                 continue
             return candidate
+
+        # Final fallback: discover related prices on the same Stripe product.
+        if expected_cycle:
+            product_related_key = cls._resolve_variant_by_product(
+                base_lookup_key=base_lookup_key,
+                expected_cycle=expected_cycle,
+            )
+            if product_related_key:
+                pricing = cls._get_lookup_key_pricing(product_related_key)
+                if pricing and pricing.get("billing_cycle") == expected_cycle:
+                    return product_related_key
         return None
 
     @classmethod
@@ -279,12 +290,14 @@ class LifetimePricingService:
         primary = cls._derive_lookup_variant(lookup, target_variant)
         if primary:
             variants.append(primary)
+        variants.extend(cls._append_variant_candidates(lookup, target_variant))
 
         stripped = cls._strip_version_suffix(lookup)
         if stripped and stripped != lookup:
             secondary = cls._derive_lookup_variant(stripped, target_variant)
             if secondary:
                 variants.append(secondary)
+            variants.extend(cls._append_variant_candidates(stripped, target_variant))
 
         expanded = []
         for value in variants:
@@ -299,6 +312,42 @@ class LifetimePricingService:
             seen.add(cleaned)
             deduped.append(cleaned)
         return deduped
+
+    @classmethod
+    def _append_variant_candidates(cls, base_lookup_key: str, target_variant: str) -> list[str]:
+        base = (base_lookup_key or "").strip()
+        if not base:
+            return []
+
+        output: list[str] = []
+        for suffix in cls._variant_suffixes(target_variant):
+            if base.endswith(suffix):
+                continue
+            output.append(f"{base}{suffix}")
+        return output
+
+    @staticmethod
+    def _variant_suffixes(target_variant: str) -> tuple[str, ...]:
+        variant = str(target_variant or "").strip().lower()
+        if variant == "yearly":
+            return ("_yearly", "-yearly", "_annual", "-annual")
+        if variant == "lifetime":
+            return ("_lifetime", "-lifetime", "_one_time", "-one-time", "_onetime", "-onetime")
+        if variant == "monthly":
+            return ("_monthly", "-monthly")
+        return ()
+
+    @staticmethod
+    def _resolve_variant_by_product(*, base_lookup_key: str | None, expected_cycle: str) -> str | None:
+        base_key = (base_lookup_key or "").strip()
+        if not base_key or not expected_cycle:
+            return None
+        try:
+            from .billing_service import BillingService
+
+            return BillingService.find_related_price_lookup_key(base_key, billing_cycle=expected_cycle)
+        except Exception:
+            return None
 
     @classmethod
     def _strip_version_suffix(cls, lookup_key: str | None) -> str:

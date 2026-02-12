@@ -17,7 +17,27 @@
                     {% if oauth_user_info %}
                     <div class="alert alert-success mb-4">
                         <i class="fas fa-check-circle me-2"></i>
-                        Signed in with Google as <strong>{{ oauth_user_info.email }}</strong>
+                        Signed in with {{ (oauth_user_info.oauth_provider or 'OAuth')|title }} as <strong>{{ oauth_user_info.email }}</strong>
+                    </div>
+                    {% endif %}
+
+                    {% set google_oauth_enabled = (oauth_providers.google if oauth_providers is defined else false) %}
+                    {% set facebook_oauth_enabled = (oauth_providers.facebook if oauth_providers is defined else false) %}
+                    {% if not oauth_user_info and (google_oauth_enabled or facebook_oauth_enabled) %}
+                    <div class="text-center mb-4">
+                        <p class="text-muted small mb-2">Optional: sign in before checkout for faster setup.</p>
+                        <div class="d-flex flex-column flex-md-row gap-2 justify-content-center">
+                            {% if google_oauth_enabled %}
+                            <a href="{{ url_for('auth.oauth_google', next=request.full_path) }}" class="btn btn-outline-danger">
+                                <i class="fab fa-google me-2"></i>Continue with Google
+                            </a>
+                            {% endif %}
+                            {% if facebook_oauth_enabled %}
+                            <a href="{{ url_for('auth.oauth_facebook', next=request.full_path) }}" class="btn btn-outline-primary">
+                                <i class="fab fa-facebook-f me-2"></i>Continue with Facebook
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
 
