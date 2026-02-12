@@ -31,13 +31,16 @@
 
   function computeWater(lyeAdjusted, totalOils, method, waterPct, lyeConcentration, waterRatio){
     let waterG = 0;
-    if (lyeAdjusted <= 0) {
-      return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
-    }
     if (method === 'concentration') {
+      if (lyeAdjusted <= 0) {
+        return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
+      }
       const conc = lyeConcentration > 0 ? lyeConcentration : 33;
       waterG = lyeAdjusted * ((100 - conc) / conc);
     } else if (method === 'ratio') {
+      if (lyeAdjusted <= 0) {
+        return { waterG: 0, lyeConcentration: 0, waterRatio: 0 };
+      }
       const ratio = waterRatio > 0 ? waterRatio : 2;
       waterG = lyeAdjusted * ratio;
     } else {

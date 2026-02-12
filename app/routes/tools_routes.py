@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.tools.soap_calculator import SoapToolCalculatorService
 from app.models import GlobalItem
 from app.models import FeatureFlag
 from app.extensions import limiter
@@ -115,6 +116,15 @@ def tools_herbal():
 @tools_bp.route('/baker')
 def tools_baker():
     return _render_tool('tools/baker.html', 'TOOLS_BAKING')
+
+
+@tools_bp.route('/api/soap/calculate', methods=['POST'])
+@limiter.limit("60000/hour;5000/minute")
+def tools_soap_calculate():
+    """Calculate soap lye/water values through structured service package."""
+    payload = request.get_json(silent=True) or {}
+    result = SoapToolCalculatorService.calculate(payload)
+    return jsonify({"success": True, "result": result.to_dict()})
 
 
 @tools_bp.route('/draft', methods=['POST'])

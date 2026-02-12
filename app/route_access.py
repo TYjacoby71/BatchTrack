@@ -53,6 +53,7 @@ class RouteAccessConfig:
         "tools_bp.tools_lotions",
         "tools_bp.tools_herbal",
         "tools_bp.tools_baker",
+        "tools_bp.tools_soap_calculate",
         "tools_bp.tools_draft",
         "exports.soap_inci_tool",
         "exports.candle_label_tool",
