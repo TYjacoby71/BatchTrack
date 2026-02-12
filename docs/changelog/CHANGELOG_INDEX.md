@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-12: Homepage Brand Logo and Favicon Integration](2026-02-12-homepage-brand-logo-and-favicon-integration.md)**
+  - Added stable branding asset routes for full logo and square app tile SVGs.
+  - Replaced text-only shared header brand labels with the full logo image.
+  - Wired homepage/public shell favicon links to the square app tile.
 - **[2026-02-11: Stripe Cancellation During Customer Deletion](2026-02-11-stripe-cancellation-on-customer-deletion.md)**
   - Added pre-delete Stripe cancellation guard for organization hard-delete and final-customer hard-delete.
   - Deletions now abort when Stripe cancellation fails to prevent orphan billing.

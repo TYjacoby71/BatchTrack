@@ -10,9 +10,10 @@ Glossary:
 
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
-from flask import Flask, current_app, redirect, render_template, url_for
+from flask import Flask, abort, current_app, redirect, render_template, send_file, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
@@ -31,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 # --- Create app ---
 # Purpose: Build and configure the Flask application instance.
+# Inputs: Optional runtime config overrides.
+# Outputs: Configured Flask application object.
 def create_app(config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, static_folder="static", static_url_path="/static")
     os.makedirs(app.instance_path, exist_ok=True)
@@ -72,6 +75,8 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
 
 # --- Load base config ---
 # Purpose: Apply base configuration and environment diagnostics.
+# Inputs: Flask app instance and optional override dictionary.
+# Outputs: Mutates app config in place.
 def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.from_object("app.config.Config")
     if config:
@@ -94,6 +99,8 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
 
 # --- Warn pool settings ---
 # Purpose: Emit warnings for risky SQLAlchemy pool configurations.
+# Inputs: Flask app and resolved SQLAlchemy engine options dictionary.
+# Outputs: Log warnings/info for unsafe production pool settings.
 def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
     env_name = (app.config.get("ENV") or app.config.get("FLASK_ENV") or "").lower()
     if env_name not in {"production", "staging"}:
@@ -143,6 +150,8 @@ def _warn_sqlalchemy_pool_settings(app: Flask, engine_opts: dict) -> None:
 
 # --- Configure cache ---
 # Purpose: Initialize Flask-Caching with Redis or fallback cache.
+# Inputs: Flask app with cache-related configuration values.
+# Outputs: Initializes global cache extension for the app.
 def _configure_cache(app: Flask) -> None:
     redis_url = app.config.get("REDIS_URL")
     cache_config = {
@@ -171,6 +180,8 @@ def _configure_cache(app: Flask) -> None:
 
 # --- Configure sessions ---
 # Purpose: Initialize server-side session storage.
+# Inputs: Flask app with Redis/session configuration.
+# Outputs: Initializes server-side session backend on the app.
 def _configure_sessions(app: Flask) -> None:
     session_backend = None
     session_redis = None
@@ -205,6 +216,8 @@ def _configure_sessions(app: Flask) -> None:
 
 # --- Configure rate limiter ---
 # Purpose: Initialize Flask-Limiter and its Redis backing store.
+# Inputs: Flask app with limiter storage configuration.
+# Outputs: Initializes limiter extension and validates production safety.
 def _configure_rate_limiter(app: Flask) -> None:
     storage_uri = app.config.get("RATELIMIT_STORAGE_URI") or "memory://"
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
@@ -223,6 +236,8 @@ def _configure_rate_limiter(app: Flask) -> None:
 
 # --- Optional create_all ---
 # Purpose: Allow optional db.create_all() for local setups.
+# Inputs: Flask app and SQLALCHEMY_CREATE_ALL environment flag.
+# Outputs: Optionally creates database tables for local development.
 def _run_optional_create_all(app: Flask) -> None:
     def _env_flag(key: str):
         value = os.environ.get(key)
@@ -255,6 +270,8 @@ def _run_optional_create_all(app: Flask) -> None:
 
 # --- Configure SQLite options ---
 # Purpose: Remove invalid SQLAlchemy pool settings for SQLite.
+# Inputs: Flask app carrying SQLAlchemy engine configuration.
+# Outputs: Mutates SQLAlchemy engine options for SQLite/test compatibility.
 def _configure_sqlite_engine_options(app):
     """Configure SQLite engine options for testing/memory databases"""
     uri = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
@@ -271,6 +288,8 @@ def _configure_sqlite_engine_options(app):
 
 # --- Configure DB timeouts ---
 # Purpose: Apply statement and lock timeouts to the DB engine.
+# Inputs: Flask app with DB timeout configuration values.
+# Outputs: Registers SQLAlchemy connect hook that sets session timeouts.
 def _configure_db_timeouts(app: Flask) -> None:
     uri = app.config.get("SQLALCHEMY_DATABASE_URI", "") or ""
     if not uri or uri.startswith("sqlite"):
@@ -307,6 +326,8 @@ def _configure_db_timeouts(app: Flask) -> None:
 
 # --- Install resilience handlers ---
 # Purpose: Add global error handlers for known failure modes.
+# Inputs: Flask app to decorate with teardown/error handlers.
+# Outputs: Registers rollback and maintenance/CSRF response handlers.
 def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""
     from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
@@ -362,8 +383,28 @@ def _install_global_resilience_handlers(app):
 
 # --- Add core routes ---
 # Purpose: Register basic app-wide routes like health checks.
+# Inputs: Flask app used to register route handlers.
+# Outputs: Adds public homepage routes and branding asset routes.
 def _add_core_routes(app):
     """Add core application routes"""
+
+    def _serve_brand_asset(filename: str):
+        """Serve attached brand SVG assets used by public templates."""
+        asset_path = Path(current_app.root_path).parent / "attached_assets" / filename
+        if not asset_path.is_file():
+            abort(404)
+        return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
+
+    @app.route("/branding/full-logo.svg")
+    def branding_full_logo():
+        """Full horizontal logo used in marketing headers."""
+        return _serve_brand_asset("Full Logo.svg")
+
+    @app.route("/branding/app-tile.svg")
+    def branding_app_tile():
+        """Square logo tile used for browser icon links."""
+        return _serve_brand_asset("App card logo.svg")
+
     def _render_public_homepage_response():
         """
         Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
@@ -420,6 +461,8 @@ def _add_core_routes(app):
 
 # --- Setup logging ---
 # Purpose: Configure log levels and app log formatters.
+# Inputs: Flask app placeholder for backward compatibility.
+# Outputs: No-op; logging remains delegated to logging_config.
 def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass
