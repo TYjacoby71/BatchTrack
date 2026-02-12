@@ -35,6 +35,18 @@ class UserService:
     def list_customer_users():
         return User.query.filter(User.user_type != "developer").all()
 
+    # --- List customer users with pagination ---
+    # Purpose: Fetch non-developer users with deterministic ordering for paged views.
+    # Inputs: page number and per-page size.
+    # Outputs: Flask-SQLAlchemy Pagination object.
+    @staticmethod
+    def list_customer_users_paginated(page: int, per_page: int):
+        return (
+            User.query.filter(User.user_type != "developer")
+            .order_by(User.created_at.desc(), User.id.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+
     # --- List developer users ---
     # Purpose: Fetch internal developer accounts for role/admin views.
     # Inputs: None.
@@ -42,6 +54,18 @@ class UserService:
     @staticmethod
     def list_developer_users():
         return User.query.filter(User.user_type == "developer").all()
+
+    # --- List developer users with pagination ---
+    # Purpose: Fetch developer users with deterministic ordering for paged views.
+    # Inputs: page number and per-page size.
+    # Outputs: Flask-SQLAlchemy Pagination object.
+    @staticmethod
+    def list_developer_users_paginated(page: int, per_page: int):
+        return (
+            User.query.filter(User.user_type == "developer")
+            .order_by(User.created_at.desc(), User.id.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
 
     # --- Toggle user active flag ---
     # Purpose: Flip active/inactive state for a user account.

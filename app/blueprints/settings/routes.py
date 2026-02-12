@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from . import settings_bp
@@ -182,29 +184,58 @@ def save_profile():
         # Handle both JSON and form data
         if payload is not None:
             data = payload
+            username = data.get('username', current_user.username)
             first_name = data.get('first_name', '').strip()
             last_name = data.get('last_name', '').strip()
             email = data.get('email', '').strip()
             phone = data.get('phone', '').strip()
             timezone = data.get('timezone', current_user.timezone)
         else:
+            username = request.form.get('username', current_user.username)
             first_name = request.form.get('first_name', '').strip()
             last_name = request.form.get('last_name', '').strip()
             email = request.form.get('email', '').strip()
             phone = request.form.get('phone', '').strip()
             timezone = request.form.get('timezone', current_user.timezone)
 
-        print(f"Parsed data - First: '{first_name}', Last: '{last_name}', Email: '{email}', Phone: '{phone}'")
+        username = (username or '').strip()
+        print(f"Parsed data - Username: '{username}', First: '{first_name}', Last: '{last_name}', Email: '{email}', Phone: '{phone}'")
 
         # Validate required fields
-        if not first_name or not last_name or not email:
-            error_msg = 'First name, last name, and email are required'
+        if not username or not first_name or not last_name or not email:
+            error_msg = 'Username, first name, last name, and email are required'
+            if expects_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(request.referrer or url_for('settings.index'))
+
+        if len(username) > 64:
+            error_msg = 'Username must be 64 characters or fewer'
+            if expects_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(request.referrer or url_for('settings.index'))
+
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+', username):
+            error_msg = 'Username may only include letters, numbers, underscore, hyphen, and dot'
+            if expects_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(request.referrer or url_for('settings.index'))
+
+        existing_user = User.query.filter(
+            User.username == username,
+            User.id != current_user.id,
+        ).first()
+        if existing_user:
+            error_msg = 'Username is already in use'
             if expects_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
             flash(error_msg, 'error')
             return redirect(request.referrer or url_for('settings.index'))
 
         # Update user fields
+        current_user.username = username
         current_user.first_name = first_name
         current_user.last_name = last_name
         current_user.email = email

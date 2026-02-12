@@ -27,12 +27,28 @@ from ..routes import developer_bp
 @require_developer_permission("dev.manage_users")
 def users():
     """User management dashboard."""
-    customer_users = UserService.list_customer_users()
-    developer_users = UserService.list_developer_users()
+    customer_page = request.args.get("customer_page", 1, type=int) or 1
+    developer_page = request.args.get("developer_page", 1, type=int) or 1
+    per_page = request.args.get("per_page", 25, type=int) or 25
+
+    customer_page = max(customer_page, 1)
+    developer_page = max(developer_page, 1)
+    per_page = max(10, min(per_page, 100))
+
+    customer_users_pagination = UserService.list_customer_users_paginated(
+        page=customer_page, per_page=per_page
+    )
+    developer_users_pagination = UserService.list_developer_users_paginated(
+        page=developer_page, per_page=per_page
+    )
+
     return render_template(
         "developer/users.html",
-        customer_users=customer_users,
-        developer_users=developer_users,
+        customer_users_pagination=customer_users_pagination,
+        developer_users_pagination=developer_users_pagination,
+        customer_page=customer_page,
+        developer_page=developer_page,
+        per_page=per_page,
     )
 
 
