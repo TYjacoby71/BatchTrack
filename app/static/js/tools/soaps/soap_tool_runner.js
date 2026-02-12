@@ -4,7 +4,7 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp, getStorage } = SoapTool.helpers;
   const { formatWeight, formatPercent } = SoapTool.units;
-  const { computeLyeTotals, computeWater, computeIodine, computeFattyAcids, computeQualities } = SoapTool.calc;
+  const { computeIodine, computeFattyAcids, computeQualities } = SoapTool.calc;
   const state = SoapTool.state;
 
   function getLyeSelection(){
@@ -39,6 +39,46 @@
     document.querySelectorAll('.water-input').forEach(el => {
       el.classList.toggle('d-none', el.dataset.method !== method);
     });
+    updateStageWaterSummary(null, method);
+  }
+
+  function getWaterMethodHelp(method){
+    if (method === 'concentration') {
+      return 'Concentration mode uses lye amount, so superfat and purity change water.';
+    }
+    if (method === 'ratio') {
+      return 'Ratio mode uses lye amount, so superfat and purity change water.';
+    }
+    return 'Percent mode uses oils total, so superfat changes lye but not water.';
+  }
+
+  function updateStageWaterSummary(summary = null, explicitMethod = null){
+    const waterOutput = document.getElementById('stageWaterOutput');
+    const hintOutput = document.getElementById('stageWaterComputedHint');
+    const method = explicitMethod || summary?.waterMethod || document.getElementById('waterMethod')?.value || 'percent';
+
+    if (waterOutput) {
+      const hasWater = summary && isFinite(summary.waterG) && summary.waterG > 0;
+      waterOutput.textContent = hasWater ? formatWeight(summary.waterG) : '--';
+    }
+    if (!hintOutput) return;
+
+    if (!summary || !isFinite(summary.totalOils) || summary.totalOils <= 0) {
+      hintOutput.textContent = `Set oils in Stage 2 to calculate water. ${getWaterMethodHelp(method)}`;
+      return;
+    }
+
+    if (method === 'concentration') {
+      const concentration = summary.lyeConcentrationInput || summary.lyeConcentration || 0;
+      hintOutput.textContent = `Using ${round(concentration, 1)}% lye concentration from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+      return;
+    }
+    if (method === 'ratio') {
+      const ratio = summary.waterRatioInput || summary.waterRatio || 0;
+      hintOutput.textContent = `Using ${round(ratio, 2)} : 1 water-to-lye ratio from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+      return;
+    }
+    hintOutput.textContent = `Using ${round(summary.waterPct || 0, 1)}% of total oils (${formatWeight(summary.totalOils)}).`;
   }
 
   function validateCalculation(){
@@ -93,7 +133,6 @@
       if (!waterPct || waterPct <= 0) {
         waterPct = 33;
       }
-      waterPct = clamp(waterPct, 20, 50);
       const input = document.getElementById('waterPct');
       if (input) input.value = round(waterPct, 1);
     }
@@ -178,17 +217,78 @@
     }
   }
 
-  function calculateAll(options = {}){
+  function deriveSapAverage(oils){
+    let sapWeighted = 0;
+    let sapWeightG = 0;
+    (oils || []).forEach(oil => {
+      const sapKoh = toNumber(oil?.sapKoh);
+      const grams = toNumber(oil?.grams);
+      if (sapKoh > 0 && grams > 0) {
+        sapWeighted += sapKoh * grams;
+        sapWeightG += grams;
+      }
+    });
+    return sapWeightG > 0 ? sapWeighted / sapWeightG : 0;
+  }
+
+  function buildServicePayload({ oils, selection, superfat, purity, waterMethod, waterPct, lyeConcentration, waterRatio }){
+    return {
+      oils: (oils || []).map(oil => ({
+        grams: oil.grams || 0,
+        sap_koh: oil.sapKoh || 0,
+      })),
+      lye: {
+        selected: selection?.selected || 'NaOH',
+        superfat,
+        purity,
+      },
+      water: {
+        method: waterMethod,
+        water_pct: waterPct,
+        lye_concentration: lyeConcentration,
+        water_ratio: waterRatio,
+      },
+    };
+  }
+
+  async function calculateWithSoapService(payload){
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 1200);
+    try {
+      const response = await fetch('/tools/api/soap/calculate', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRFToken': token } : {}),
+        },
+        body: JSON.stringify(payload || {}),
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (!data || data.success !== true || typeof data.result !== 'object') return null;
+      return data.result;
+    } catch (_) {
+      return null;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  async function calculateAll(options = {}){
     const settings = {
       consumeQuota: false,
       showAlerts: true,
       ...options
     };
+    try {
     if (settings.showAlerts) {
       SoapTool.ui.clearSoapAlerts();
     }
     const validation = validateCalculation();
     if (!validation.ok) {
+      updateStageWaterSummary(null);
       if (settings.showAlerts) {
         SoapTool.ui.showSoapAlert('warning', `<strong>Missing info:</strong><ul class="mb-0">${validation.errors.map(err => `<li>${err}</li>`).join('')}</ul>`, { dismissible: true, persist: true });
       }
@@ -206,20 +306,67 @@
     superfat = clamp(superfat, 0, 20);
     if (superfatInput) superfatInput.value = round(superfat, 1);
     const selection = getLyeSelection();
-    const lyeType = selection.lyeType || 'NaOH';
     const sanitized = sanitizeLyeInputs();
-    const purity = sanitized.purity;
-    const waterMethod = sanitized.waterMethod;
-    const waterPct = sanitized.waterPct;
-    const lyeConcentration = sanitized.lyeConcentration;
-    const waterRatio = sanitized.waterRatio;
+    let purity = sanitized.purity;
+    let waterMethod = sanitized.waterMethod;
+    let waterPct = sanitized.waterPct;
+    let lyeConcentration = sanitized.lyeConcentration;
+    let waterRatio = sanitized.waterRatio;
 
-    let oils = validation.oils;
-    let totalOils = validation.totals.totalWeight;
-    const lyeTotals = computeLyeTotals(oils, lyeType);
-    const lyePure = lyeTotals.lyeTotal * (1 - superfat / 100);
-    const lyeAdjusted = purity > 0 ? lyePure / (purity / 100) : lyePure;
-    const waterData = computeWater(lyeAdjusted, totalOils, waterMethod, waterPct, lyeConcentration, waterRatio);
+    const oils = validation.oils;
+    const requestSeq = (state.calcRequestSeq || 0) + 1;
+    state.calcRequestSeq = requestSeq;
+    const servicePayload = buildServicePayload({
+      oils,
+      selection,
+      superfat,
+      purity,
+      waterMethod,
+      waterPct,
+      lyeConcentration,
+      waterRatio,
+    });
+    const serviceResult = await calculateWithSoapService(servicePayload);
+    if (requestSeq !== state.calcRequestSeq) {
+      return state.lastCalc;
+    }
+    if (!serviceResult) {
+      if (settings.showAlerts) {
+        SoapTool.ui.showSoapAlert('danger', 'Soap calculator service is unavailable. Please try again.', { dismissible: true, timeoutMs: 6000 });
+      }
+      return null;
+    }
+
+    const lyeType = serviceResult.lye_type || selection.lyeType || 'NaOH';
+    const totalOils = toNumber(serviceResult.total_oils_g) || validation.totals.totalWeight;
+    const lyeTotals = {
+      lyeTotal: toNumber(serviceResult.lye_total_g),
+      sapAvg: toNumber(serviceResult.sap_avg_koh),
+      usedFallback: !!serviceResult.used_sap_fallback,
+    };
+    const lyePure = toNumber(serviceResult.lye_pure_g);
+    const lyeAdjusted = toNumber(serviceResult.lye_adjusted_g);
+    purity = toNumber(serviceResult.lye_purity_pct) || purity;
+    waterMethod = serviceResult.water_method || waterMethod;
+    waterPct = toNumber(serviceResult.water_pct) || waterPct;
+    lyeConcentration = toNumber(serviceResult.lye_concentration_input_pct) || lyeConcentration;
+    waterRatio = toNumber(serviceResult.water_ratio_input) || waterRatio;
+    const waterData = {
+      waterG: toNumber(serviceResult.water_g),
+      lyeConcentration: toNumber(serviceResult.lye_concentration_pct),
+      waterRatio: toNumber(serviceResult.water_lye_ratio),
+    };
+    updateStageWaterSummary({
+      waterG: waterData.waterG,
+      lyeAdjusted,
+      totalOils,
+      waterMethod,
+      waterPct,
+      lyeConcentrationInput: lyeConcentration,
+      waterRatioInput: waterRatio,
+      lyeConcentration: waterData.lyeConcentration,
+      waterRatio: waterData.waterRatio,
+    });
     const additives = SoapTool.additives.updateAdditivesOutput(totalOils);
     const batchYield = totalOils + lyeAdjusted + waterData.waterG + additives.fragranceG + additives.lactateG + additives.sugarG + additives.saltG + additives.citricG;
 
@@ -293,6 +440,8 @@
       waterPct,
       lyeConcentration: waterData.lyeConcentration,
       waterRatio: waterData.waterRatio,
+      sapAvg: lyeTotals.sapAvg,
+      usedSapFallback: lyeTotals.usedFallback,
       additives,
       batchYield,
     };
@@ -300,14 +449,20 @@
       consumeCalcQuota();
     }
     return state.lastCalc;
+    } catch (_) {
+      if (settings.showAlerts) {
+        SoapTool.ui.showSoapAlert('danger', 'Unable to run the soap calculation right now. Please try again.', { dismissible: true, timeoutMs: 6000 });
+      }
+      return null;
+    }
   }
 
   function buildSoapNotesBlob(calc){
     const iodineData = computeIodine(calc.oils || []);
     const fatty = computeFattyAcids(calc.oils || []);
     const qualities = computeQualities(fatty.percent || {});
-    const lyeTotals = computeLyeTotals(calc.oils || [], calc.lyeType);
-    const ins = (lyeTotals.sapAvg && iodineData.iodine) ? (lyeTotals.sapAvg - iodineData.iodine) : 0;
+    const sapAvg = (isFinite(calc.sapAvg) && calc.sapAvg > 0) ? calc.sapAvg : deriveSapAverage(calc.oils || []);
+    const ins = (sapAvg && iodineData.iodine) ? (sapAvg - iodineData.iodine) : 0;
     const mold = SoapTool.mold.getMoldSettings();
     return {
       source: 'soap_tool',
@@ -364,7 +519,7 @@
         creamy: round(qualities.creamy || 0, 1),
         iodine: round(iodineData.iodine || 0, 1),
         ins: round(ins || 0, 1),
-        sap_avg: round(lyeTotals.sapAvg || 0, 1),
+        sap_avg: round(sapAvg || 0, 1),
       },
       fatty_acids: fatty.percent || {},
       updated_at: new Date().toISOString(),

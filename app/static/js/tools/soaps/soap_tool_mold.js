@@ -9,13 +9,15 @@
     const settings = getMoldSettings();
     const targetInput = document.getElementById('oilTotalTarget');
     const targetHint = document.getElementById('oilTargetHint');
-    if (settings.targetOils > 0 && targetInput) {
-      targetInput.value = round(fromGrams(settings.targetOils), 2);
-      targetInput.setAttribute('readonly', 'readonly');
-      if (targetHint) targetHint.textContent = 'Derived from mold sizing.';
-    } else if (targetInput) {
-      targetInput.removeAttribute('readonly');
-      if (targetHint) targetHint.textContent = 'Auto-fills when mold sizing is set.';
+    if (targetInput && settings.effectiveCapacity > 0 && toGrams(targetInput.value) <= 0) {
+      targetInput.value = settings.targetOils > 0 ? round(fromGrams(settings.targetOils), 2) : '';
+    }
+    if (targetHint) {
+      if (settings.effectiveCapacity > 0) {
+        targetHint.textContent = 'Linked to mold sizing. Edit oil % or total oils target to update the other.';
+      } else {
+        targetHint.textContent = 'Auto-fills when mold sizing is set.';
+      }
     }
     const note = document.getElementById('moldSuggestionNote');
     if (note) {
@@ -29,6 +31,40 @@
       }
       note.textContent = message;
     }
+  }
+
+  function syncTargetFromMold(){
+    const targetInput = document.getElementById('oilTotalTarget');
+    const settings = getMoldSettings();
+    if (!targetInput) return settings;
+    if (settings.effectiveCapacity > 0) {
+      targetInput.value = settings.targetOils > 0 ? round(fromGrams(settings.targetOils), 2) : '';
+    }
+    updateMoldSuggested();
+    return settings;
+  }
+
+  function syncMoldPctFromTarget(){
+    const targetInput = document.getElementById('oilTotalTarget');
+    const moldOilPct = document.getElementById('moldOilPct');
+    if (!targetInput || !moldOilPct) {
+      const settings = getMoldSettings();
+      updateMoldSuggested();
+      return settings;
+    }
+    const settings = getMoldSettings();
+    if (settings.effectiveCapacity > 0) {
+      const target = toGrams(targetInput.value);
+      const cappedTarget = clamp(target, 0, settings.effectiveCapacity);
+      if (target > settings.effectiveCapacity + 0.01) {
+        targetInput.value = round(fromGrams(cappedTarget), 2);
+      }
+      const nextPct = cappedTarget > 0 ? (cappedTarget / settings.effectiveCapacity) * 100 : 0;
+      moldOilPct.value = cappedTarget > 0 ? round(nextPct, 2) : '';
+    }
+    const nextSettings = getMoldSettings();
+    updateMoldSuggested();
+    return nextSettings;
   }
 
   function getMoldSettings(){
@@ -61,6 +97,8 @@
 
   SoapTool.mold = {
     updateMoldSuggested,
+    syncTargetFromMold,
+    syncMoldPctFromTarget,
     getMoldSettings,
     updateMoldShapeUI,
   };

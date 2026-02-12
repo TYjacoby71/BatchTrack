@@ -41,6 +41,109 @@ def test_users_page_renders(client, developer_user):
     assert resp.status_code == 200
 
 
+def test_users_page_supports_independent_customer_and_developer_pagination(
+    client, developer_user, app
+):
+    _login_as_developer(client, developer_user)
+
+    with app.app_context():
+        for idx in range(25):
+            db.session.add(
+                User(
+                    username=f"pagetest_customer_{idx:02d}",
+                    email=f"pagetest_customer_{idx:02d}@example.com",
+                    user_type="customer",
+                    is_active=True,
+                )
+            )
+        for idx in range(23):
+            db.session.add(
+                User(
+                    username=f"pagetest_dev_{idx:02d}",
+                    email=f"pagetest_dev_{idx:02d}@example.com",
+                    user_type="developer",
+                    is_active=True,
+                )
+            )
+        db.session.commit()
+
+    resp = client.get("/developer/users?per_page=10&customer_page=2&developer_page=2")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+
+    # Customer page 2 should include 14..05, not page 1 or page 3 users.
+    assert "pagetest_customer_14" in body
+    assert "pagetest_customer_05" in body
+    assert "pagetest_customer_24" not in body
+    assert "pagetest_customer_04" not in body
+
+    # Developer page 2 should include 12..03, not page 1 or page 3 users.
+    assert "pagetest_dev_12" in body
+    assert "pagetest_dev_03" in body
+    assert "pagetest_dev_22" not in body
+    assert "pagetest_dev_02" not in body
+
+
+def test_save_profile_allows_developer_username_change(client, developer_user, app):
+    _login_as_developer(client, developer_user)
+    new_username = f"renamed_dev_{uuid.uuid4().hex[:8]}"
+
+    resp = client.post(
+        "/developer/api/profile/update",
+        json={
+            "username": new_username,
+            "first_name": "Dev",
+            "last_name": "User",
+            "email": f"{new_username}@example.com",
+            "phone": "555-1111",
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["success"] is True
+
+    with app.app_context():
+        updated = db.session.get(User, developer_user.id)
+        assert updated.username == new_username
+
+
+def test_save_profile_rejects_duplicate_username(client, developer_user, app):
+    _login_as_developer(client, developer_user)
+    taken_username = "already_taken_username"
+
+    with app.app_context():
+        db.session.add(
+            User(
+                username=taken_username,
+                email="taken_username@example.com",
+                user_type="developer",
+                is_active=True,
+            )
+        )
+        db.session.commit()
+
+    resp = client.post(
+        "/developer/api/profile/update",
+        json={
+            "username": taken_username,
+            "first_name": "Dev",
+            "last_name": "User",
+            "email": "developer_profile@example.com",
+            "phone": "555-2222",
+        },
+    )
+
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["success"] is False
+    assert "already in use" in data["error"]
+
+    with app.app_context():
+        updated = db.session.get(User, developer_user.id)
+        assert updated.username != taken_username
+
+
 def test_toggle_user_active_endpoint(client, developer_user, app):
     _login_as_developer(client, developer_user)
     customer_id = _create_customer(app)

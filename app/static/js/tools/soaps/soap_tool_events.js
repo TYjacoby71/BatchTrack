@@ -7,8 +7,8 @@
   const { formatWeight, formatPercent, toGrams } = SoapTool.units;
   const state = SoapTool.state;
 
-  function getCalcForExport(){
-    const calc = state.lastCalc || SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
+  async function getCalcForExport(){
+    const calc = state.lastCalc || await SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
     if (!calc) {
       if (SoapTool.ui?.showSoapAlert) {
         SoapTool.ui.showSoapAlert('warning', 'Run a calculation before exporting or printing.', { dismissible: true, timeoutMs: 6000 });
@@ -480,6 +480,7 @@
   const oilTotalTarget = document.getElementById('oilTotalTarget');
   if (oilTotalTarget) {
     oilTotalTarget.addEventListener('input', function(){
+      SoapTool.mold.syncMoldPctFromTarget();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -586,7 +587,7 @@
   const moldWaterWeight = document.getElementById('moldWaterWeight');
   if (moldWaterWeight) {
     moldWaterWeight.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -596,7 +597,7 @@
   const moldOilPct = document.getElementById('moldOilPct');
   if (moldOilPct) {
     moldOilPct.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -607,6 +608,7 @@
   if (moldShape) {
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -616,7 +618,7 @@
   const moldCylinderCorrection = document.getElementById('moldCylinderCorrection');
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -626,7 +628,7 @@
   const moldCylinderFactor = document.getElementById('moldCylinderFactor');
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
-      SoapTool.mold.updateMoldSuggested();
+      SoapTool.mold.syncTargetFromMold();
       SoapTool.oils.scaleOilsToTarget();
       SoapTool.oils.updateOilTotals();
       SoapTool.storage.queueStateSave();
@@ -694,8 +696,8 @@
 
   const calcLyeBtn = document.getElementById('calcLyeBtn');
   if (calcLyeBtn) {
-    calcLyeBtn.addEventListener('click', function(){
-      SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
+    calcLyeBtn.addEventListener('click', async function(){
+      await SoapTool.runner.calculateAll({ consumeQuota: true, showAlerts: true });
       SoapTool.storage.queueStateSave();
     });
   }
@@ -704,7 +706,7 @@
   if (saveSoapToolBtn) {
     saveSoapToolBtn.addEventListener('click', async function(){
       try {
-        const calc = state.lastCalc || SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
+        const calc = state.lastCalc || await SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
         if (!calc) return;
         const payload = SoapTool.runner.buildSoapRecipePayload(calc);
         state.lastRecipePayload = payload;
@@ -724,8 +726,8 @@
 
   const exportSoapCsvBtn = document.getElementById('exportSoapCsv');
   if (exportSoapCsvBtn) {
-    exportSoapCsvBtn.addEventListener('click', function(){
-      const calc = getCalcForExport();
+    exportSoapCsvBtn.addEventListener('click', async function(){
+      const calc = await getCalcForExport();
       if (!calc) return;
       const rows = buildFormulaCsv(calc);
       const csvText = buildCsvString(rows);
@@ -735,8 +737,8 @@
 
   const printSoapSheetBtn = document.getElementById('printSoapSheet');
   if (printSoapSheetBtn) {
-    printSoapSheetBtn.addEventListener('click', function(){
-      const calc = getCalcForExport();
+    printSoapSheetBtn.addEventListener('click', async function(){
+      const calc = await getCalcForExport();
       if (!calc) return;
       const html = buildPrintSheet(calc);
       const win = window.open('', '_blank', 'width=960,height=720');

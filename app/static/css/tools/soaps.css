@@ -125,11 +125,15 @@ soapToolPage {
 }
 #soapToolPage .quality-target-marker {
   position: absolute;
-  top: -4px;
-  bottom: -4px;
-  border-left: 2px dashed var(--color-primary);
-  width: 0;
-  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #111111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+  z-index: 6;
+  opacity: 1;
 }
 #soapToolPage .quality-target-label {
   display: none;
@@ -373,6 +377,13 @@ soapToolPage {
 #soapToolPage .soap-input-suffix .form-control {
   padding-right: calc(var(--soap-addon-width) + var(--space-1));
 }
+#soapToolPage .soap-input-suffix .form-control.is-invalid,
+#soapToolPage .soap-input-suffix .form-control.is-valid,
+#soapToolPage .was-validated .soap-input-suffix .form-control:invalid,
+#soapToolPage .was-validated .soap-input-suffix .form-control:valid {
+  padding-right: calc(var(--soap-addon-width) + 1.6rem + var(--space-1));
+  background-position: right calc(var(--soap-addon-width) - 0.15rem) center;
+}
 #soapToolPage .soap-stage-body .form-select {
   min-height: var(--soap-field-height);
   height: var(--soap-field-height);
@@ -574,11 +585,15 @@ soapToolPage {
 }
 #soapToolPage .quality-target-marker {
   position: absolute;
-  top: -4px;
-  bottom: -4px;
-  border-left: 2px dashed var(--color-primary);
-  width: 0;
-  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #111111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+  z-index: 6;
+  opacity: 1;
 }
 #soapToolPage .quality-target-label {
   display: none;
@@ -879,7 +894,10 @@ soapToolPage {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 #soapToolPage .oil-profile-float {
   position: absolute;

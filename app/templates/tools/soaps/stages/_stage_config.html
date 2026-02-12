@@ -26,7 +26,7 @@
         <div class="soap-field-stack water-input" data-method="percent">
           <label class="form-label">Water of oils</label>
           <div class="soap-input-suffix" data-suffix="%">
-            <input type="number" class="form-control" id="waterPct" min="20" max="50" step="0.1" value="33">
+            <input type="number" class="form-control" id="waterPct" min="0" step="0.1" value="33">
           </div>
         </div>
         <div class="soap-field-stack water-input d-none" data-method="concentration">
@@ -55,6 +55,17 @@
           <input type="number" class="form-control" id="lyeSuperfat" name="superfat" min="0" max="20" step="0.1" value="5">
         </div>
         <div class="form-text soap-stage-note">5% is a balanced default.</div>
+      </div>
+    </div>
+    <div class="row g-2 align-items-start soap-stage-form-row soap-config-row soap-stage-grid mt-2">
+      <div class="col-12">
+        <div class="soap-output-tile">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="small text-muted">Calculated water</div>
+            <div class="fw-semibold soap-animate-number" id="stageWaterOutput">--</div>
+          </div>
+          <div class="small text-muted" id="stageWaterComputedHint">Set oils and lye settings to calculate water.</div>
+        </div>
       </div>
     </div>
     {% set stage_index = 2 %}

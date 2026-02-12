@@ -306,6 +306,15 @@
       if (cylCorrection) cylCorrection.checked = !!data.mold.cylinder_correction;
       const cylFactor = document.getElementById('moldCylinderFactor');
       if (cylFactor) cylFactor.value = data.mold.cylinder_factor || '0.85';
+      const targetInput = document.getElementById('oilTotalTarget');
+      if (SoapTool.mold?.syncMoldPctFromTarget && SoapTool.mold?.syncTargetFromMold) {
+        const restoredTarget = SoapTool.units.toGrams(targetInput?.value);
+        if (restoredTarget > 0) {
+          SoapTool.mold.syncMoldPctFromTarget();
+        } else {
+          SoapTool.mold.syncTargetFromMold();
+        }
+      }
     }
     if (data.quality) {
       const preset = document.getElementById('qualityPreset');
