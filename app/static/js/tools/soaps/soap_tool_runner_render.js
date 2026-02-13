@@ -168,6 +168,9 @@
       + additives.saltG
       + additives.citricG
     );
+    if (SoapTool.mold?.updateWetBatterWarning) {
+      SoapTool.mold.updateWetBatterWarning(batchYield);
+    }
 
     renderResultsCard({
       resultsCard,

@@ -514,12 +514,19 @@
     });
   });
 
+  const rescaleOilsFromStageOne = () => {
+    SoapTool.oils.scaleOilsToTarget(undefined, { force: true });
+    SoapTool.oils.updateOilTotals();
+    if (SoapTool.mold?.updateWetBatterWarning) {
+      SoapTool.mold.updateWetBatterWarning(null);
+    }
+  };
+
   const oilTotalTarget = document.getElementById('oilTotalTarget');
   if (oilTotalTarget) {
     oilTotalTarget.addEventListener('input', function(){
       SoapTool.mold.syncMoldPctFromTarget();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -622,8 +629,7 @@
   if (moldWaterWeight) {
     moldWaterWeight.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -632,8 +638,7 @@
   if (moldOilPct) {
     moldOilPct.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -643,8 +648,7 @@
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -653,8 +657,7 @@
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -663,8 +666,7 @@
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });

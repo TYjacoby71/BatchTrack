@@ -31,6 +31,53 @@
       }
       note.textContent = message;
     }
+    updateWetBatterWarning();
+  }
+
+  function updateWetBatterWarning(batchYieldG = null){
+    const warning = document.getElementById('moldWetBatterWarning');
+    if (!warning) return;
+
+    const hide = () => {
+      warning.classList.add('d-none');
+      warning.textContent = '';
+    };
+
+    const settings = getMoldSettings();
+    const state = SoapTool.state || {};
+    const lastCalc = state.lastCalc || null;
+    const currentTotalOils = SoapTool.oils?.getTotalOilsGrams ? SoapTool.oils.getTotalOilsGrams() : 0;
+    const calcTotalOils = toNumber(lastCalc?.totalOils);
+    let batchYield = toNumber(batchYieldG);
+    if (!isFinite(batchYield) || batchYield <= 0) {
+      batchYield = toNumber(lastCalc?.batchYield);
+    }
+
+    // Avoid stale warnings while stage inputs have changed but a fresh calc is pending.
+    if (
+      (batchYieldG === null || batchYieldG === undefined)
+      && calcTotalOils > 0
+      && currentTotalOils > 0
+      && Math.abs(calcTotalOils - currentTotalOils) > 0.01
+    ) {
+      hide();
+      return;
+    }
+
+    if (!isFinite(batchYield) || batchYield <= 0 || settings.effectiveCapacity <= 0) {
+      hide();
+      return;
+    }
+
+    const overBy = batchYield - settings.effectiveCapacity;
+    if (overBy <= 0.01) {
+      hide();
+      return;
+    }
+
+    const unit = state.currentUnit || 'g';
+    warning.textContent = `Full wet batter is ${round(fromGrams(batchYield), 2)} ${unit}, exceeding mold capacity ${round(fromGrams(settings.effectiveCapacity), 2)} ${unit} by ${round(fromGrams(overBy), 2)} ${unit}. Reduce oils target/% of mold or lower water/additives.`;
+    warning.classList.remove('d-none');
   }
 
   function syncTargetFromMold(){
@@ -97,6 +144,7 @@
 
   SoapTool.mold = {
     updateMoldSuggested,
+    updateWetBatterWarning,
     syncTargetFromMold,
     syncMoldPctFromTarget,
     getMoldSettings,

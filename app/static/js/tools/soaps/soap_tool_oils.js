@@ -202,9 +202,10 @@
     }
   }
 
-  function scaleOilsToTarget(target){
+  function scaleOilsToTarget(target, options = {}){
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
     const nextTarget = target ?? getOilTargetGrams();
+    const force = !!options.force;
     if (!nextTarget || nextTarget <= 0 || !rows.length) {
       state.lastOilTarget = nextTarget;
       return;
@@ -215,7 +216,7 @@
       state.lastOilTarget = nextTarget;
       return;
     }
-    if (state.lastOilTarget && Math.abs(state.lastOilTarget - nextTarget) < 0.01) {
+    if (!force && state.lastOilTarget && Math.abs(state.lastOilTarget - nextTarget) < 0.01) {
       return;
     }
     if (totalPct > 0) {
@@ -223,8 +224,12 @@
         const pctInput = row.querySelector('.oil-percent');
         const gramsInput = row.querySelector('.oil-grams');
         const pct = clamp(toNumber(pctInput?.value), 0);
+        const share = totalPct > 0 ? (pct / totalPct) : 0;
         if (gramsInput) {
-          gramsInput.value = pct > 0 ? round(fromGrams(nextTarget * (pct / 100)), 2) : '';
+          gramsInput.value = share > 0 ? round(fromGrams(nextTarget * share), 2) : '';
+        }
+        if (pctInput) {
+          pctInput.value = share > 0 ? round(share * 100, 2) : '';
         }
       });
     } else if (totalWeight > 0) {
