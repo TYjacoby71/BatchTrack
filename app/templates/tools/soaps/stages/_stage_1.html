@@ -17,21 +17,21 @@
       <div class="col-lg-4 col-md-6 soap-field-stack">
         <label class="form-label">Mold water weight</label>
         <div class="soap-input-suffix unit-suffix" data-suffix="g">
-          <input type="number" class="form-control" id="moldWaterWeight" min="0" step="0.1" placeholder="e.g., 1200">
+          <input type="number" class="form-control" id="moldWaterWeight" step="0.1" placeholder="e.g., 1200">
         </div>
         <div class="form-text">Fill the mold with water and weigh it.</div>
       </div>
       <div class="col-lg-4 col-md-6 soap-field-stack">
         <label class="form-label">Oils of mold</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="moldOilPct" min="0" max="100" step="0.1" value="65" title="Normal range is 50-80%.">
+          <input type="number" class="form-control" id="moldOilPct" step="0.1" value="65" title="Normal range is 50-80%.">
         </div>
         <div class="form-text soap-stage-note">Normal range is 50-80%.</div>
       </div>
       <div class="col-lg-4 col-md-6 soap-field-stack">
         <label class="form-label">Total oils target</label>
         <div class="soap-input-suffix unit-suffix" data-suffix="g">
-          <input type="number" class="form-control" id="oilTotalTarget" min="0" step="0.1" placeholder="Auto from mold or enter manually">
+          <input type="number" class="form-control" id="oilTotalTarget" step="0.1" placeholder="Auto from mold or enter manually">
         </div>
         <div class="form-text soap-stage-note" id="oilTargetHint">Auto-fills when mold sizing is set.</div>
       </div>
@@ -59,7 +59,7 @@
             </div>
             <div class="col-lg-6 col-md-12 soap-field-stack">
               <label class="form-label">Cylinder fill factor</label>
-              <input type="number" class="form-control" id="moldCylinderFactor" min="0.5" max="1" step="0.05" value="0.85">
+              <input type="number" class="form-control" id="moldCylinderFactor" step="0.05" value="0.85">
               <div class="form-text soap-stage-note">0.85 means fill to 85% of measured capacity.</div>
             </div>
           </div>

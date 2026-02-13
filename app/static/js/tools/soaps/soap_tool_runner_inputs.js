@@ -8,27 +8,26 @@
   function getLyeSelection(){
     const selected = document.querySelector('input[name="lye_type"]:checked')?.value || 'NaOH';
     const purityInput = document.getElementById('lyePurity');
+    const purityRaw = purityInput?.value;
     let purity = toNumber(purityInput?.value);
     const lyeType = selected === 'NaOH' ? 'NaOH' : 'KOH';
-    if (selected === 'KOH90') {
-      purity = 90;
+    if (purityRaw === '' || purityRaw === null || purityRaw === undefined || !isFinite(purity)) {
+      purity = 100;
     }
     return { selected, lyeType, purity };
   }
 
   function applyLyeSelection(){
     const purityInput = document.getElementById('lyePurity');
-    if (!purityInput) return;
     const selection = getLyeSelection();
+    if (!purityInput) return;
+    purityInput.removeAttribute('readonly');
     if (selection.selected === 'KOH90') {
-      purityInput.value = '90';
-      purityInput.setAttribute('readonly', 'readonly');
       const hint = document.getElementById('lyePurityHint');
-      if (hint) hint.textContent = '90% KOH selected (purity locked).';
+      if (hint) hint.textContent = '90% KOH selected. Safe default purity is 90%.';
     } else {
-      purityInput.removeAttribute('readonly');
       const hint = document.getElementById('lyePurityHint');
-      if (hint) hint.textContent = 'Most calculators assume 100%.';
+      if (hint) hint.textContent = 'Safe default is 100%.';
     }
   }
 
@@ -162,27 +161,17 @@
     const superfatInput = document.getElementById('lyeSuperfat');
     const superfatRaw = superfatInput?.value;
     let superfat = toNumber(superfatRaw);
-    if (superfatRaw === '' || superfatRaw === null || superfatRaw === undefined) {
+    if (superfatRaw === '' || superfatRaw === null || superfatRaw === undefined || !isFinite(superfat)) {
       superfat = 5;
     }
-    superfat = clamp(superfat, 0, 20);
-    if (superfatInput) superfatInput.value = round(superfat, 1);
     return superfat;
   }
 
   function sanitizeLyeInputs(){
     const selection = getLyeSelection();
-    const purityInput = document.getElementById('lyePurity');
     let purity = selection.purity;
-    if (!purity || purity <= 0) {
+    if (!isFinite(purity)) {
       purity = 100;
-    }
-    purity = Math.min(100, Math.max(90, purity));
-    if (selection.selected === 'KOH90') {
-      purity = 90;
-    }
-    if (purityInput) {
-      purityInput.value = round(purity, 1);
     }
 
     const waterMethod = document.getElementById('waterMethod')?.value || 'percent';

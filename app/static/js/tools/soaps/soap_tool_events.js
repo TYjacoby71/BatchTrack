@@ -565,20 +565,17 @@
       });
     });
   const additiveWeights = [
-    { weightId: 'additiveLactateWeight', pctId: 'additiveLactatePct' },
-    { weightId: 'additiveSugarWeight', pctId: 'additiveSugarPct' },
-    { weightId: 'additiveSaltWeight', pctId: 'additiveSaltPct' },
-    { weightId: 'additiveCitricWeight', pctId: 'additiveCitricPct' },
+    { weightId: 'additiveLactateWeight' },
+    { weightId: 'additiveSugarWeight' },
+    { weightId: 'additiveSaltWeight' },
+    { weightId: 'additiveCitricWeight' },
   ];
-  additiveWeights.forEach(({ weightId, pctId }) => {
+  additiveWeights.forEach(({ weightId }) => {
     const weightInput = document.getElementById(weightId);
-    const pctInput = document.getElementById(pctId);
-    if (!weightInput || !pctInput) return;
+    if (!weightInput) return;
     weightInput.addEventListener('input', () => {
       const totalOils = SoapTool.oils.getTotalOilsGrams();
       if (!totalOils) return;
-      const grams = SoapTool.units.toGrams(weightInput.value);
-      pctInput.value = grams > 0 ? SoapTool.helpers.round((grams / totalOils) * 100, 2) : '';
       SoapTool.additives.updateAdditivesOutput(totalOils);
       SoapTool.stages.updateStageStatuses();
       SoapTool.storage.queueStateSave();

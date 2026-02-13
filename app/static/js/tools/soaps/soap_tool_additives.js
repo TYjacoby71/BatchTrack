@@ -45,12 +45,25 @@
     });
   }
 
+  function readAdditivePct({ pctId, weightId }){
+    const pctInput = document.getElementById(pctId);
+    const pctRaw = pctInput?.value;
+    if (pctRaw !== '' && pctRaw !== null && pctRaw !== undefined) {
+      return toNumber(pctRaw);
+    }
+    const totalOils = clamp(SoapTool.oils?.getTotalOilsGrams?.() || 0, 0);
+    if (totalOils <= 0) return 0;
+    const weightGrams = toGrams(document.getElementById(weightId)?.value);
+    if (weightGrams <= 0) return 0;
+    return (weightGrams / totalOils) * 100;
+  }
+
   function collectAdditiveSettings(){
     return {
-      lactatePct: toNumber(document.getElementById('additiveLactatePct')?.value),
-      sugarPct: toNumber(document.getElementById('additiveSugarPct')?.value),
-      saltPct: toNumber(document.getElementById('additiveSaltPct')?.value),
-      citricPct: toNumber(document.getElementById('additiveCitricPct')?.value),
+      lactatePct: readAdditivePct({ pctId: 'additiveLactatePct', weightId: 'additiveLactateWeight' }),
+      sugarPct: readAdditivePct({ pctId: 'additiveSugarPct', weightId: 'additiveSugarWeight' }),
+      saltPct: readAdditivePct({ pctId: 'additiveSaltPct', weightId: 'additiveSaltWeight' }),
+      citricPct: readAdditivePct({ pctId: 'additiveCitricPct', weightId: 'additiveCitricWeight' }),
       lactateName: document.getElementById('additiveLactateName')?.value?.trim() || 'Sodium Lactate',
       sugarName: document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar',
       saltName: document.getElementById('additiveSaltName')?.value?.trim() || 'Salt',
@@ -148,26 +161,19 @@
     rows.forEach(row => {
       const gramsInput = row.querySelector('.fragrance-grams');
       const pctInput = row.querySelector('.fragrance-percent');
-      let grams = toGrams(gramsInput?.value);
-      let pct = clamp(toNumber(pctInput?.value), 0);
+      const grams = toGrams(gramsInput?.value);
+      const pct = clamp(toNumber(pctInput?.value), 0);
+      let effectiveGrams = grams;
+      let effectivePct = pct;
       if (target > 0) {
-        if (state.lastFragranceEdit && state.lastFragranceEdit.row === row && state.lastFragranceEdit.field === 'percent') {
-          grams = pct > 0 ? target * (pct / 100) : 0;
-          if (gramsInput) gramsInput.value = grams > 0 ? round(fromGrams(grams), 2) : '';
-        } else {
-          if (grams > 0) {
-            pct = (grams / target) * 100;
-            if (pctInput) pctInput.value = round(pct, 2);
-          } else if (pct > 0) {
-            grams = target * (pct / 100);
-            if (gramsInput) gramsInput.value = round(fromGrams(grams), 2);
-          }
+        if (effectiveGrams <= 0 && effectivePct > 0) {
+          effectiveGrams = target * (effectivePct / 100);
+        } else if (effectivePct <= 0 && effectiveGrams > 0) {
+          effectivePct = (effectiveGrams / target) * 100;
         }
-        totalPct += pct;
-      } else {
-        totalPct += pct;
       }
-      if (grams > 0) totalGrams += grams;
+      if (effectiveGrams > 0) totalGrams += effectiveGrams;
+      totalPct += effectivePct;
     });
     const totalPctEl = document.getElementById('fragrancePercentTotal');
     if (totalPctEl) totalPctEl.textContent = round(totalPct, 2);

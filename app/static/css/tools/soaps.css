@@ -361,6 +361,15 @@ soapToolPage {
   min-width: 0;
   line-height: 1.1;
 }
+#soapToolPage input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+#soapToolPage input[type="number"]::-webkit-outer-spin-button,
+#soapToolPage input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 #soapToolPage .soap-input-suffix {
   position: relative;
 }
