@@ -20,6 +20,14 @@ depends_on = None
 
 
 def upgrade():
+    if is_postgresql():
+        # Older Alembic version tables default to VARCHAR(32), which truncates
+        # descriptive revision IDs like this migration's identifier.
+        op.execute(
+            "ALTER TABLE alembic_version "
+            "ALTER COLUMN version_num TYPE VARCHAR(255)"
+        )
+
     # Cross-dialect composite index aligned to tools global-oils listing predicates.
     safe_create_index(
         "ix_global_item_type_archived_name",
