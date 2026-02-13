@@ -514,12 +514,19 @@
     });
   });
 
+  const rescaleOilsFromStageOne = () => {
+    SoapTool.oils.scaleOilsToTarget(undefined, { force: true });
+    SoapTool.oils.updateOilTotals();
+    if (SoapTool.mold?.updateWetBatterWarning) {
+      SoapTool.mold.updateWetBatterWarning(null);
+    }
+  };
+
   const oilTotalTarget = document.getElementById('oilTotalTarget');
   if (oilTotalTarget) {
     oilTotalTarget.addEventListener('input', function(){
       SoapTool.mold.syncMoldPctFromTarget();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -565,20 +572,17 @@
       });
     });
   const additiveWeights = [
-    { weightId: 'additiveLactateWeight', pctId: 'additiveLactatePct' },
-    { weightId: 'additiveSugarWeight', pctId: 'additiveSugarPct' },
-    { weightId: 'additiveSaltWeight', pctId: 'additiveSaltPct' },
-    { weightId: 'additiveCitricWeight', pctId: 'additiveCitricPct' },
+    { weightId: 'additiveLactateWeight' },
+    { weightId: 'additiveSugarWeight' },
+    { weightId: 'additiveSaltWeight' },
+    { weightId: 'additiveCitricWeight' },
   ];
-  additiveWeights.forEach(({ weightId, pctId }) => {
+  additiveWeights.forEach(({ weightId }) => {
     const weightInput = document.getElementById(weightId);
-    const pctInput = document.getElementById(pctId);
-    if (!weightInput || !pctInput) return;
+    if (!weightInput) return;
     weightInput.addEventListener('input', () => {
       const totalOils = SoapTool.oils.getTotalOilsGrams();
       if (!totalOils) return;
-      const grams = SoapTool.units.toGrams(weightInput.value);
-      pctInput.value = grams > 0 ? SoapTool.helpers.round((grams / totalOils) * 100, 2) : '';
       SoapTool.additives.updateAdditivesOutput(totalOils);
       SoapTool.stages.updateStageStatuses();
       SoapTool.storage.queueStateSave();
@@ -625,8 +629,7 @@
   if (moldWaterWeight) {
     moldWaterWeight.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -635,8 +638,7 @@
   if (moldOilPct) {
     moldOilPct.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -646,8 +648,7 @@
     moldShape.addEventListener('change', function(){
       SoapTool.mold.updateMoldShapeUI();
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -656,8 +657,7 @@
   if (moldCylinderCorrection) {
     moldCylinderCorrection.addEventListener('change', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });
@@ -666,8 +666,7 @@
   if (moldCylinderFactor) {
     moldCylinderFactor.addEventListener('input', function(){
       SoapTool.mold.syncTargetFromMold();
-      SoapTool.oils.scaleOilsToTarget();
-      SoapTool.oils.updateOilTotals();
+      rescaleOilsFromStageOne();
       SoapTool.storage.queueStateSave();
       SoapTool.storage.queueAutoCalc();
     });

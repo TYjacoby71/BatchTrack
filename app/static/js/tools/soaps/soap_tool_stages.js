@@ -42,6 +42,9 @@
       if (correction) correction.checked = false;
       document.getElementById('moldCylinderFactor').value = '0.85';
       SoapTool.mold.updateMoldShapeUI();
+      if (SoapTool.mold?.updateWetBatterWarning) {
+        SoapTool.mold.updateWetBatterWarning(0);
+      }
     }
     if (stageId === 2) {
       const oilRows = document.getElementById('oilRows');

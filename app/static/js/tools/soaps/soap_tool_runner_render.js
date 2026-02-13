@@ -119,6 +119,8 @@
   }){
     const lyeType = serviceResult.lye_type || selection.lyeType || 'NaOH';
     const totalOils = toNumber(serviceResult.total_oils_g) || validation.totals.totalWeight;
+    const resolvedSuperfat = toNumber(serviceResult.superfat_pct);
+    const superfatValue = isFinite(resolvedSuperfat) ? resolvedSuperfat : superfat;
     const lyeTotals = {
       sapAvg: toNumber(serviceResult.sap_avg_koh),
       usedFallback: !!serviceResult.used_sap_fallback,
@@ -166,6 +168,9 @@
       + additives.saltG
       + additives.citricG
     );
+    if (SoapTool.mold?.updateWetBatterWarning) {
+      SoapTool.mold.updateWetBatterWarning(batchYield);
+    }
 
     renderResultsCard({
       resultsCard,
@@ -173,7 +178,7 @@
       waterData,
       batchYield,
       totalOils,
-      superfat,
+      superfat: superfatValue,
     });
     SoapTool.ui.updateResultsWarnings(waterData);
     SoapTool.ui.updateResultsMeta();
@@ -185,7 +190,7 @@
       iodine: toNumber(qualityReport.iodine),
       ins: toNumber(qualityReport.ins),
       sapAvg: lyeTotals.sapAvg,
-      superfat,
+      superfat: superfatValue,
       waterData,
       additives,
       oils: oilsForState,
@@ -207,7 +212,7 @@
       totalOils,
       oils: oilsForState,
       lyeType,
-      superfat,
+      superfat: superfatValue,
       purity: resolvedPurity,
       lyePure,
       lyeAdjusted,
