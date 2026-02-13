@@ -26,6 +26,15 @@ flask init-production
 python run.py
 ```
 
+## 🚢 Render Deployment Commands
+
+For source-controlled, repeatable Render deploys, use:
+
+- **Build Command:** `./scripts/render-build.sh`
+- **Start Command:** `gunicorn wsgi:app`
+
+The build script installs Python and Node dependencies, runs `flask db upgrade`, and then runs `flask build-assets`.
+
 ## 🎯 Core Mission
 
 **For:** Small-batch makers who need robust batch tracking without enterprise complexity
