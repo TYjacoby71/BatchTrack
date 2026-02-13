@@ -23,7 +23,7 @@
     "url": "https://github.com/TYjacoby71/BatchTrack/issues"
   },
   "homepage": "https://github.com/TYjacoby71/BatchTrack#readme",
-  "devDependencies": {
+  "dependencies": {
     "esbuild": "^0.27.3"
   }
 }
