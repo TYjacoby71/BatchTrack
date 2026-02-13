@@ -285,7 +285,6 @@
           <div class="lifetime-seat-copy">
             Only <strong>{{ offer.display_spots_left or 0 }}</strong> seats left / {{ offer.seat_total or 0 }}.
           </div>
-          <div class="small text-muted mb-3">Coupon: <code>{{ offer.coupon_code }}</code></div>
           <div class="mt-auto d-grid">
             {% if tier.signup_lifetime_url %}
             <a href="{{ tier.signup_lifetime_url }}" class="btn btn-warning">
