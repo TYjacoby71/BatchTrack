@@ -17,6 +17,7 @@
 - **Inventory Turn Analysis**: Track inventory velocity, waste patterns, and optimization opportunities
 - **Production Efficiency Metrics**: Batch timing, yield analysis, and bottleneck identification
 - **Supplier Performance**: Cost trends, delivery tracking, and vendor comparison analytics
+- **Site Statistics / Traffic Analytics Service Integration**: Add a dedicated analytics service layer that ingests GA4/Search Console + server-side route telemetry, normalizes acquisition/funnel metrics, and feeds product + marketing dashboards for conversion and SEO performance tracking.
 
 ### **Database Additions Required**
 - Historical price tables with detailed timestamps
