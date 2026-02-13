@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from migrations.postgres_helpers import is_postgresql, safe_create_index, safe_drop_index
 
 
-revision = "0024_global_item_soap_catalog_indexes"
+revision = "0024_saop_c_indexes"
 down_revision = "0023_recipe_list_lineage_indexes"
 branch_labels = None
 depends_on = None
