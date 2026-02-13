@@ -138,7 +138,6 @@ class PublicPricingPageService:
                 billing_mode="lifetime",
                 lifetime_tier=offer.get("key"),
                 tier=tier_id,
-                promo=offer.get("coupon_code"),
                 source=f"pricing_{tier_key}_lifetime",
             )
             if has_lifetime_remaining
