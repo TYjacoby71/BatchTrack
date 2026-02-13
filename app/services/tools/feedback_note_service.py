@@ -37,7 +37,7 @@ class ToolFeedbackNoteService:
         "glitch": "Glitch",
         "bad_preset_data": "Bad preset data",
     }
-    _SOURCE_SANITIZER = re.compile(r"[^a-z0-9._-]+")
+    _SOURCE_SANITIZER = re.compile(r"[^a-z0-9_-]+")
     _FLOW_SANITIZER = re.compile(r"[^a-z0-9_]+")
     _FLOW_ALIASES = {
         "missing": "missing_feature",
