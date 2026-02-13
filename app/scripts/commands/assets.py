@@ -1,77 +1,59 @@
 """Static asset pipeline and operations commands."""
 
 from pathlib import Path
+import subprocess
 
 import click
 from flask import current_app
 from flask.cli import with_appcontext
 
 
+def _run_npm_script(script_name: str) -> None:
+    project_root = Path(current_app.root_path).parent
+    command = ["npm", "run", script_name]
+    try:
+        subprocess.run(command, cwd=project_root, check=True)
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            "npm is not installed or not available on PATH. Install Node.js/npm first."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        raise click.ClickException(
+            f"Asset build failed while running: {' '.join(command)}"
+        ) from exc
+
+
+@click.command("build-assets")
+@with_appcontext
+def build_assets_command():
+    """Build hashed JS assets and manifest via the esbuild pipeline."""
+    _run_npm_script("build:assets")
+    click.echo("Asset build complete: app/static/dist/manifest.json updated.")
+
+
+@click.command("build-soap-assets")
+@with_appcontext
+def build_soap_assets_command():
+    """Build Soap-only bundle entry via scoped esbuild pipeline."""
+    _run_npm_script("build:soap-bundle")
+    click.echo("Soap asset build complete.")
+
+
 @click.command("minify-static")
 @with_appcontext
 def minify_static_command():
-    """Generate minified .min.js/.min.css assets under the static folder."""
-    try:
-        from rcssmin import cssmin
-        from rjsmin import jsmin
-    except ImportError as exc:
-        raise click.ClickException(
-            "Missing minifier dependency. Install `rjsmin` and `rcssmin` to run this command."
-        ) from exc
-
-    static_folder = Path(current_app.static_folder or "static")
-    if not static_folder.is_dir():
-        raise click.ClickException(f"Static folder not found: {static_folder}")
-
-    processed = 0
-    written = 0
-    unchanged = 0
-    failed = 0
-
-    for source_path in sorted(static_folder.rglob("*")):
-        if not source_path.is_file():
-            continue
-        suffix = source_path.suffix.lower()
-        if suffix not in {".js", ".css"}:
-            continue
-        if source_path.name.endswith(f".min{suffix}"):
-            continue
-        if suffix == ".js" and source_path.name.endswith(".config.js"):
-            # Build-time config files are not served as browser assets.
-            continue
-
-        processed += 1
-        target_path = source_path.with_name(f"{source_path.stem}.min{suffix}")
-
-        try:
-            source_text = source_path.read_text(encoding="utf-8")
-            minified_text = jsmin(source_text) if suffix == ".js" else cssmin(source_text)
-            if minified_text and not minified_text.endswith("\n"):
-                minified_text += "\n"
-
-            if target_path.exists():
-                existing_text = target_path.read_text(encoding="utf-8")
-                if existing_text == minified_text:
-                    unchanged += 1
-                    continue
-
-            target_path.write_text(minified_text, encoding="utf-8")
-            written += 1
-            click.echo(
-                f"minified: {source_path.relative_to(static_folder).as_posix()} "
-                f"-> {target_path.relative_to(static_folder).as_posix()}"
-            )
-        except Exception as exc:
-            failed += 1
-            click.echo(f"failed: {source_path.relative_to(static_folder).as_posix()} ({exc})")
-
+    """Deprecated compatibility alias for build-assets."""
     click.echo(
-        f"Static minification complete. processed={processed}, written={written}, "
-        f"unchanged={unchanged}, failed={failed}"
+        "WARNING: `flask minify-static` is deprecated. "
+        "Using hashed bundler pipeline via `flask build-assets`."
     )
-    if failed:
-        raise click.ClickException("One or more static assets failed to minify.")
+    _run_npm_script("build:assets")
+    click.echo("Asset build complete: app/static/dist/manifest.json updated.")
 
 
-ASSET_COMMANDS = [minify_static_command]
+ASSET_COMMANDS = [
+    build_assets_command,
+    build_soap_assets_command,
+    minify_static_command,
+]
 
