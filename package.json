@@ -8,8 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "build:soap-bundle": "node scripts/build_soap_bundle.mjs",
-    "build:assets": "npm run build:soap-bundle",
+    "build:assets": "node scripts/build_assets.mjs",
+    "build:soap-bundle": "node scripts/build_assets.mjs --scope=soap",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
