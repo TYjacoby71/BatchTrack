@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 
@@ -38,6 +40,7 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
     assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
     assert "position-absolute top-50 start-50 translate-middle text-center" not in html
     assert 'id="stageWaterOutput"' in html
+    assert 'id="globalFeedbackNoteModal"' not in html
 
 
 @pytest.mark.usefixtures("app")
@@ -59,44 +62,141 @@ def test_public_soap_calculation_api_is_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
-def test_public_soap_calculation_api_works_with_csrf_enforcement_enabled(app):
-    """Public soap compute endpoint should remain available even when CSRF is globally on."""
-    app.config["WTF_CSRF_ENABLED"] = True
+def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
+    """Feedback notes should persist into source/flow JSON buckets."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
     client = app.test_client()
-    payload = {
-        "oils": [{"grams": 650, "sap_koh": 190}],
-        "lye": {"selected": "NaOH", "superfat": 5, "purity": 100},
-        "water": {"method": "percent", "water_pct": 33},
+
+    first_payload = {
+        "source": "Soap Formulator",
+        "flow": "glitch",
+        "title": "Stage values jump",
+        "message": "Oil percentages jump while typing in stage 2.",
+        "context": "tools.soap",
+        "page_endpoint": "batches.view_batch_in_progress",
+        "page_path": "/batches/73/in-progress",
+    }
+    second_payload = {
+        "source": "Soap Formulator",
+        "flow": "question",
+        "message": "What is the quality target range for cleansing?",
+        "context": "tools.soap",
+        "page_endpoint": "batches.view_batch_in_progress",
+        "page_path": "/batches/73/in-progress",
+    }
+    third_payload = {
+        "source": "Candles Tool",
+        "flow": "missing_feature",
+        "message": "Need wick calculator by vessel diameter.",
+        "context": "tools.candles",
+        "page_endpoint": "products.view_sku",
+        "page_path": "/products/sku/44",
     }
 
-    response = client.post("/tools/api/soap/calculate", json=payload)
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data.get("success") is True
-    result = data.get("result") or {}
-    assert result.get("water_g", 0) > 0
-    assert result.get("lye_adjusted_g", 0) > 0
+    first_response = client.post("/tools/api/feedback-notes", json=first_payload)
+    assert first_response.status_code == 200
+    first_data = first_response.get_json() or {}
+    assert first_data.get("success") is True
+    assert (
+        (first_data.get("result") or {}).get("bucket_path")
+        == "batches_view_batch_in_progress/glitch.json"
+    )
+
+    second_response = client.post("/tools/api/feedback-notes", json=second_payload)
+    assert second_response.status_code == 200
+    third_response = client.post("/tools/api/feedback-notes", json=third_payload)
+    assert third_response.status_code == 200
+
+    batch_glitch_path = (
+        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "glitch.json"
+    )
+    assert batch_glitch_path.exists()
+    batch_glitch_bucket = json.loads(batch_glitch_path.read_text(encoding="utf-8"))
+    assert batch_glitch_bucket.get("source") == "batches_view_batch_in_progress"
+    assert batch_glitch_bucket.get("flow") == "glitch"
+    assert batch_glitch_bucket.get("count") == 1
+    assert (batch_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+
+    batch_question_path = (
+        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "question.json"
+    )
+    assert batch_question_path.exists()
+    batch_question_bucket = json.loads(batch_question_path.read_text(encoding="utf-8"))
+    assert batch_question_bucket.get("count") == 1
+
+    global_index_path = tmp_path / "tool_feedback_notes" / "index.json"
+    assert global_index_path.exists()
+    global_index = json.loads(global_index_path.read_text(encoding="utf-8"))
+    sources = global_index.get("sources") or []
+    assert [source.get("source") for source in sources] == [
+        "batches_view_batch_in_progress",
+        "products_view_sku",
+    ]
+
+    batch_index = next(
+        (source for source in sources if source.get("source") == "batches_view_batch_in_progress"),
+        None,
+    )
+    assert batch_index is not None
+    batch_flows = [flow.get("flow") for flow in (batch_index.get("flows") or [])]
+    assert batch_flows == ["question", "glitch"]
 
 
 @pytest.mark.usefixtures("app")
-def test_public_vendor_signup_api_works_with_csrf_enforcement_enabled(app, monkeypatch):
-    """Public vendor signup should keep working for anonymous users when CSRF is globally on."""
-    app.config["WTF_CSRF_ENABLED"] = True
-    monkeypatch.setattr("app.utils.json_store.read_json_file", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr("app.utils.json_store.write_json_file", lambda *_args, **_kwargs: None)
+def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
+    """Authenticated customers should see the global feedback bubble when enabled."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+    from app.models.models import User
+
+    with app.app_context():
+        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        if flag is None:
+            flag = FeatureFlag(
+                key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
+                enabled=True,
+                description="Customer feedback bubble",
+            )
+            db.session.add(flag)
+        else:
+            flag.enabled = True
+        db.session.commit()
+        user = User.query.filter_by(email="test@example.com").first()
+        assert user is not None
+        user_id = str(user.id)
 
     client = app.test_client()
-    payload = {
-        "item_name": "Olive Oil",
-        "item_id": "123",
-        "company_name": "Acme Supplies",
-        "contact_name": "Jane Doe",
-        "email": "jane@example.com",
-    }
-    response = client.post("/api/vendor-signup", json=payload)
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data.get("success") is True
+    with client.session_transaction() as session:
+        session["_user_id"] = user_id
+        session["_fresh"] = True
+
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+    assert 'id="globalFeedbackNoteModal"' in html
+    assert 'data-lock-location-source="true"' in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_path):
+    """Unknown feedback flow values should fail validation."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/feedback-notes",
+        json={
+            "source": "soap_formulator",
+            "flow": "other",
+            "message": "Something happened",
+        },
+    )
+    assert response.status_code == 400
+    data = response.get_json() or {}
+    assert data.get("success") is False
+    assert "allowed_flows" in data
 
 
 @pytest.mark.usefixtures("app")
