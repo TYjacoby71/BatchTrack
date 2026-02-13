@@ -1,0 +1,159 @@
+{% macro render_feedback_note_widget(
+  modal_id='feedbackNoteModal',
+  default_source='unknown_source',
+  source_options=None,
+  lock_source_to_location=False,
+  location_label='',
+  trigger_mode='floating',
+  trigger_text='Leave a note',
+  title='Leave a note',
+  subtitle='Questions, missing features, glitches, or bad preset data.',
+  endpoint='/tools/api/feedback-notes',
+  context='',
+  default_flow='question',
+  floating_bottom_offset='5rem'
+) -%}
+{% set title_id = modal_id ~ 'Title' %}
+{% set selected_flow = default_flow if default_flow else 'question' %}
+{% set resolved_sources = source_options if source_options else [{'value': default_source, 'label': default_source|replace('_', ' ')|title}] %}
+<div
+  class="feedback-note-widget"
+  data-feedback-note-widget
+  data-endpoint="{{ endpoint }}"
+  data-default-source="{{ default_source }}"
+  data-default-flow="{{ selected_flow }}"
+  data-context="{{ context }}"
+  data-lock-location-source="{{ 'true' if lock_source_to_location else 'false' }}"
+  data-location-label="{{ location_label }}"
+>
+  {% if trigger_mode == 'button' %}
+  <button type="button" class="btn btn-outline-primary feedback-note-trigger-inline" data-bs-toggle="modal" data-bs-target="#{{ modal_id }}">
+    <i class="fas fa-comment-dots me-1" aria-hidden="true"></i>{{ trigger_text }}
+  </button>
+  {% else %}
+  <button
+    type="button"
+    class="btn btn-primary feedback-note-trigger-floating"
+    style="--feedback-note-bottom-offset: {{ floating_bottom_offset }};"
+    data-bs-toggle="modal"
+    data-bs-target="#{{ modal_id }}"
+    aria-label="{{ trigger_text }}"
+  >
+    <i class="fas fa-comment-dots me-1" aria-hidden="true"></i>
+    <span>{{ trigger_text }}</span>
+  </button>
+  {% endif %}
+
+  <div class="modal fade feedback-note-modal" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ title_id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-1" id="{{ title_id }}">{{ title }}</h5>
+            <p class="small text-muted mb-0">{{ subtitle }}</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" data-feedback-error role="alert"></div>
+          <form data-feedback-note-form novalidate>
+            <section data-feedback-step="sort">
+              <h6 class="mb-2">Step 1: Sort this note</h6>
+              <div class="mb-3">
+                {% if lock_source_to_location %}
+                <label class="form-label" for="{{ modal_id }}SourceLocked">Source</label>
+                <input type="hidden" id="{{ modal_id }}SourceLocked" name="source" value="{{ default_source }}">
+                <div class="form-control" aria-readonly="true">{{ location_label or default_source }}</div>
+                <div class="form-text">This note is automatically grouped by your current page location.</div>
+                {% else %}
+                <label class="form-label" for="{{ modal_id }}Source">Source</label>
+                <select class="form-select" id="{{ modal_id }}Source" name="source" required>
+                  {% for source in resolved_sources %}
+                  <option value="{{ source.value }}" {% if source.value == default_source %}selected{% endif %}>{{ source.label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Pick where this happened so notes are grouped correctly.</div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label class="form-label d-block">What do you need?</label>
+                <div class="feedback-note-flow-grid">
+                  {% set flow_options = [
+                    {'value': 'question', 'label': 'Question', 'hint': 'Need clarification or guidance'},
+                    {'value': 'missing_feature', 'label': 'Missing feature', 'hint': 'Something important is not there yet'},
+                    {'value': 'glitch', 'label': 'Glitch', 'hint': 'Unexpected behavior or broken flow'},
+                    {'value': 'bad_preset_data', 'label': 'Bad preset data', 'hint': 'Preset values/info look wrong'},
+                  ] %}
+                  {% for option in flow_options %}
+                  <label class="feedback-note-flow-option">
+                    <input
+                      class="form-check-input me-2"
+                      type="radio"
+                      name="flow"
+                      value="{{ option.value }}"
+                      {% if option.value == selected_flow %}checked{% endif %}
+                    >
+                    <span>
+                      <span class="d-block fw-semibold">{{ option.label }}</span>
+                      <span class="small text-muted">{{ option.hint }}</span>
+                    </span>
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="small text-muted mb-3" data-feedback-sort-summary></div>
+              <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-primary" data-feedback-next>Continue</button>
+              </div>
+            </section>
+
+            <section class="d-none" data-feedback-step="details">
+              <h6 class="mb-2">Step 2: Submit note</h6>
+              <div class="mb-3">
+                <label class="form-label" for="{{ modal_id }}Title">Short title (optional)</label>
+                <input class="form-control" id="{{ modal_id }}Title" name="title" maxlength="160" placeholder="Example: Preset hardness range seems off">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ modal_id }}Message">Details</label>
+                <textarea
+                  class="form-control"
+                  id="{{ modal_id }}Message"
+                  name="message"
+                  rows="5"
+                  maxlength="4000"
+                  required
+                  placeholder="Tell us what happened, what you expected, and where you saw it."
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ modal_id }}Email">Email for follow-up (optional)</label>
+                <input class="form-control" id="{{ modal_id }}Email" name="contact_email" type="email" maxlength="254" placeholder="you@example.com">
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-secondary" data-feedback-back>Back</button>
+                <button type="submit" class="btn btn-primary" data-feedback-submit>
+                  <span data-feedback-submit-default>Submit note</span>
+                  <span class="d-none" data-feedback-submit-loading><i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>Submitting...</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="d-none" data-feedback-step="success">
+              <div class="text-center py-2">
+                <div class="feedback-note-success-icon mb-2"><i class="fas fa-check-circle" aria-hidden="true"></i></div>
+                <h6 class="mb-1">Note saved</h6>
+                <p class="small text-muted mb-2">Thanks for helping improve this tool.</p>
+                <p class="small text-muted mb-3" data-feedback-saved-path></p>
+                <div class="d-flex justify-content-center gap-2">
+                  <button type="button" class="btn btn-outline-secondary" data-feedback-submit-another>Submit another</button>
+                  <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+                </div>
+              </div>
+            </section>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

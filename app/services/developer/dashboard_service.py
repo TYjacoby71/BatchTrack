@@ -81,6 +81,13 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "default_enabled": False,
                 "description": "Bulk inventory adjustments and high-volume update tooling.",
             },
+            {
+                "key": "FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
+                "label": "Customer Feedback Bubble",
+                "status": "wired",
+                "default_enabled": False,
+                "description": "Show a global feedback bubble for authenticated customer pages.",
+            },
         ],
     },
     {
