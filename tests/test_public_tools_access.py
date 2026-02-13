@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 
@@ -38,6 +40,8 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
     assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
     assert "position-absolute top-50 start-50 translate-middle text-center" not in html
     assert 'id="stageWaterOutput"' in html
+    assert 'id="soapFeedbackNoteModal"' in html
+    assert 'Leave a note' in html
 
 
 @pytest.mark.usefixtures("app")
@@ -56,6 +60,94 @@ def test_public_soap_calculation_api_is_accessible(app):
     result = data.get("result") or {}
     assert result.get("water_g", 0) > 0
     assert result.get("lye_adjusted_g", 0) > 0
+
+
+@pytest.mark.usefixtures("app")
+def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
+    """Feedback notes should persist into source/flow JSON buckets."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    client = app.test_client()
+
+    first_payload = {
+        "source": "Soap Formulator",
+        "flow": "glitch",
+        "title": "Stage values jump",
+        "message": "Oil percentages jump while typing in stage 2.",
+        "context": "tools.soap",
+        "page_path": "/tools/soap",
+    }
+    second_payload = {
+        "source": "Soap Formulator",
+        "flow": "question",
+        "message": "What is the quality target range for cleansing?",
+        "context": "tools.soap",
+        "page_path": "/tools/soap",
+    }
+    third_payload = {
+        "source": "Candles Tool",
+        "flow": "missing_feature",
+        "message": "Need wick calculator by vessel diameter.",
+        "context": "tools.candles",
+        "page_path": "/tools/candles",
+    }
+
+    first_response = client.post("/tools/api/feedback-notes", json=first_payload)
+    assert first_response.status_code == 200
+    first_data = first_response.get_json() or {}
+    assert first_data.get("success") is True
+    assert (first_data.get("result") or {}).get("bucket_path") == "soap_formulator/glitch.json"
+
+    second_response = client.post("/tools/api/feedback-notes", json=second_payload)
+    assert second_response.status_code == 200
+    third_response = client.post("/tools/api/feedback-notes", json=third_payload)
+    assert third_response.status_code == 200
+
+    soap_glitch_path = tmp_path / "tool_feedback_notes" / "soap_formulator" / "glitch.json"
+    assert soap_glitch_path.exists()
+    soap_glitch_bucket = json.loads(soap_glitch_path.read_text(encoding="utf-8"))
+    assert soap_glitch_bucket.get("source") == "soap_formulator"
+    assert soap_glitch_bucket.get("flow") == "glitch"
+    assert soap_glitch_bucket.get("count") == 1
+    assert (soap_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+
+    soap_question_path = tmp_path / "tool_feedback_notes" / "soap_formulator" / "question.json"
+    assert soap_question_path.exists()
+    soap_question_bucket = json.loads(soap_question_path.read_text(encoding="utf-8"))
+    assert soap_question_bucket.get("count") == 1
+
+    global_index_path = tmp_path / "tool_feedback_notes" / "index.json"
+    assert global_index_path.exists()
+    global_index = json.loads(global_index_path.read_text(encoding="utf-8"))
+    sources = global_index.get("sources") or []
+    assert [source.get("source") for source in sources] == ["candles_tool", "soap_formulator"]
+
+    soap_index = next((source for source in sources if source.get("source") == "soap_formulator"), None)
+    assert soap_index is not None
+    soap_flows = [flow.get("flow") for flow in (soap_index.get("flows") or [])]
+    assert soap_flows == ["question", "glitch"]
+
+
+@pytest.mark.usefixtures("app")
+def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_path):
+    """Unknown feedback flow values should fail validation."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/feedback-notes",
+        json={
+            "source": "soap_formulator",
+            "flow": "other",
+            "message": "Something happened",
+        },
+    )
+    assert response.status_code == 400
+    data = response.get_json() or {}
+    assert data.get("success") is False
+    assert "allowed_flows" in data
 
 
 @pytest.mark.usefixtures("app")

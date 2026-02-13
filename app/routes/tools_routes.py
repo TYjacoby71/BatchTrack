@@ -14,6 +14,7 @@ from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.tools.soap_tool import SoapToolComputationService, get_bulk_catalog_page
+from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.models import FeatureFlag
 from app.extensions import limiter
 from app.utils.cache_utils import should_bypass_cache
@@ -205,6 +206,54 @@ def tools_soap_oils_catalog():
         bypass_cache=should_bypass_cache(),
     )
     return jsonify({"success": True, "result": result_payload})
+
+
+# --- Public tool feedback notes route ---
+# Purpose: Persist public feedback notes into JSON buckets by source/flow.
+# Inputs: JSON payload containing source, flow, and note message/details.
+# Outputs: JSON response with saved bucket metadata.
+@tools_bp.route('/api/feedback-notes', methods=['POST'])
+@limiter.limit("1200/hour;120/minute")
+def tools_feedback_notes():
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    ip_value = (forwarded_for or request.remote_addr or "").split(",")[0].strip() or None
+    request_meta = {
+        "ip": ip_value,
+        "user_agent": request.headers.get("User-Agent"),
+        "referer": request.headers.get("Referer"),
+    }
+
+    try:
+        result = ToolFeedbackNoteService.save_note(
+            payload,
+            request_meta=request_meta,
+            user=current_user,
+        )
+    except ValueError as exc:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "allowed_flows": ToolFeedbackNoteService.allowed_flows(),
+                }
+            ),
+            400,
+        )
+    except Exception:
+        return jsonify({"success": False, "error": "Unable to save your note right now."}), 500
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Thanks. Your note was saved.",
+            "result": result,
+        }
+    )
 
 
 # --- Public draft capture route ---
