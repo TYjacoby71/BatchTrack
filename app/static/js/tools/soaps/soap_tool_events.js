@@ -401,6 +401,36 @@
   }
 
   const stageTabContent = document.getElementById('soapStageTabContent');
+  const getActiveStageScrollContainer = () => {
+    if (!stageTabContent) return null;
+    const activePane = stageTabContent.querySelector('.tab-pane.active') || stageTabContent.querySelector('.tab-pane.show.active');
+    if (!activePane) return null;
+    return activePane.querySelector('.soap-stage-body') || activePane;
+  };
+  const bindStageWheelGuard = () => {
+    if (!stageTabContent) return;
+    stageTabContent.addEventListener('wheel', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const numberInput = target.closest('input[type="number"]');
+      if (!(numberInput instanceof HTMLInputElement)) return;
+      const scrollContainer = getActiveStageScrollContainer();
+      if (!(scrollContainer instanceof HTMLElement)) return;
+      if (scrollContainer.scrollHeight <= scrollContainer.clientHeight + 1) return;
+      if (document.activeElement === numberInput && typeof numberInput.blur === 'function') {
+        numberInput.blur();
+      }
+      const atTop = scrollContainer.scrollTop <= 0;
+      const atBottom = (
+        scrollContainer.scrollTop + scrollContainer.clientHeight
+      ) >= (scrollContainer.scrollHeight - 1);
+      if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
+        return;
+      }
+      scrollContainer.scrollTop += event.deltaY;
+      event.preventDefault();
+    }, { passive: false });
+  };
   if (stageTabContent) {
     stageTabContent.addEventListener('click', event => {
       const actionBtn = event.target.closest('[data-stage-action]');
@@ -440,6 +470,7 @@
       if (action === 'next') SoapTool.stages.openStageByIndex(Math.min(SoapTool.constants.STAGE_CONFIGS.length - 1, index + 1));
       if (action === 'reset') SoapTool.stages.resetStage(index + 1);
     });
+    bindStageWheelGuard();
   }
   const stageTabList = document.getElementById('soapStageTabList');
   const updateStageTabSizing = () => {
