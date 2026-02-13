@@ -59,6 +59,26 @@ def test_public_soap_calculation_api_is_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_calculation_api_works_with_csrf_enforcement_enabled(app):
+    """Public soap compute endpoint should remain available even when CSRF is globally on."""
+    app.config["WTF_CSRF_ENABLED"] = True
+    client = app.test_client()
+    payload = {
+        "oils": [{"grams": 650, "sap_koh": 190}],
+        "lye": {"selected": "NaOH", "superfat": 5, "purity": 100},
+        "water": {"method": "percent", "water_pct": 33},
+    }
+
+    response = client.post("/tools/api/soap/calculate", json=payload)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert result.get("water_g", 0) > 0
+    assert result.get("lye_adjusted_g", 0) > 0
+
+
+@pytest.mark.usefixtures("app")
 def test_anonymous_workflow_can_browse_public_site(app):
     """
     Simulate a public visitor navigating marketing pages so we detect regressions
