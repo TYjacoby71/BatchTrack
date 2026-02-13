@@ -417,8 +417,17 @@
       refs.scrollEl.addEventListener('scroll', handleScroll);
     }
     if (refs.bodyEl) {
-      refs.bodyEl.addEventListener('input', handleBodyInput);
       refs.bodyEl.addEventListener('change', handleBodyInput);
+      refs.bodyEl.addEventListener('keydown', event => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        const isCommitField = target.classList.contains('bulk-oil-pct')
+          || target.classList.contains('bulk-oil-weight');
+        if (!isCommitField || event.key !== 'Enter') return;
+        // Commit numeric edits only when the user confirms the field.
+        event.preventDefault();
+        target.blur();
+      });
     }
     refs.modalEl.querySelectorAll('.bulk-oil-sort').forEach(button => {
       button.addEventListener('click', handleSortClick);
