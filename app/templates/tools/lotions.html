@@ -55,8 +55,8 @@
     <a class="btn btn-outline-secondary" href="{{ url_for('exports.lotion_inci_tool') }}">View INCI Summary</a>
   </div>
 </div>
-<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/tool_lines.js') }}"></script>
+<script src="{{ static_asset('js/components/suggestions.js') }}"></script>
+<script src="{{ static_asset('js/components/tool_lines.js') }}"></script>
 <script>
 (function(){
   function round(v){ return Math.round(v*1000)/1000 }

@@ -3,8 +3,8 @@
 
 {% block scripts %}
 <!-- Only include necessary scripts for this page -->
-<script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/products/product_inventory.js') }}"></script>
+<script src="{{ static_asset('js/utils/utils.js') }}"></script>
+<script src="{{ static_asset('js/products/product_inventory.js') }}"></script>
 
 <script>
 // Global functions that were missing after componentization
