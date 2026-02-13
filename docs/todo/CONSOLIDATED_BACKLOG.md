@@ -42,3 +42,4 @@
 - Author and execute the inventory data migration plan (backups, rollback, verification scripts) before moving legacy data into the FIFO system.
 - Expand retention program analytics post-launch: retention KPIs, objection performance, offer optimization, predictive churn modeling, and automated win-back sequences.
 - Future unit-mapping roadmap items: mapping templates, AI-assisted suggestions, and shared community mapping libraries for common custom units.
+- Complete static asset pipeline hardening: JS bundling + hashed manifest resolution is now in place for template-referenced entrypoints with legacy `app/static/js/**/*.min.js` removed. Remaining work is CSS bundling, CI enforcement (`npm ci && npm run build:assets`), and immutable cache-header rollout.

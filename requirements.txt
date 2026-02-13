@@ -53,3 +53,5 @@ openpyxl
 pandas
 xlrd
 xlrd==2.0.1
+rjsmin
+rcssmin

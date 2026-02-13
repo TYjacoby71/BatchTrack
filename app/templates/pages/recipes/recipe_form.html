@@ -738,11 +738,11 @@
 
 <!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
-<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
-<script src="{{ url_for('static', filename='js/recipes/recipe_form.js') }}"></script>
-<script src="{{ url_for('static', filename='js/recipes/skins/category_skins.js') }}"></script>
-<script src="{{ url_for('static', filename='js/recipes/skins/baking_skin.js') }}"></script>
-<script src="{{ url_for('static', filename='js/recipes/skins/cosmetics_skin.js') }}"></script>
+<script src="{{ static_asset('js/components/suggestions.js') }}"></script>
+<script src="{{ static_asset('js/recipes/recipe_form.js') }}"></script>
+<script src="{{ static_asset('js/recipes/skins/category_skins.js') }}"></script>
+<script src="{{ static_asset('js/recipes/skins/baking_skin.js') }}"></script>
+<script src="{{ static_asset('js/recipes/skins/cosmetics_skin.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 const saveModeInput = document.getElementById('saveModeInput');

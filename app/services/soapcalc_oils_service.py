@@ -1,10 +1,10 @@
-import csv
-import os
-import re
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from flask import current_app
+from app.services.soapcalc_catalog_data_service import (
+    load_soapcalc_catalog_rows,
+    normalize_soapcalc_unit,
+)
 
 DEFAULT_OIL_CATEGORY = "Oils (Carrier & Fixed)"
 DEFAULT_BUTTER_CATEGORY = "Butters & Solid Fats"
@@ -36,39 +36,6 @@ BUTTER_FAT_KEYWORDS = (
     "milk fat",
     "ghee",
 )
-FATTY_KEYS = (
-    "lauric",
-    "myristic",
-    "palmitic",
-    "stearic",
-    "ricinoleic",
-    "oleic",
-    "linoleic",
-    "linolenic",
-)
-_RANGE_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$")
-
-
-def _soapcalc_csv_path() -> str:
-    primary = os.path.abspath(
-        os.path.join(current_app.root_path, os.pardir, "attached_assets", "soapcalc_tool_items.csv")
-    )
-    if os.path.exists(primary):
-        return primary
-    return os.path.abspath(
-        os.path.join(current_app.root_path, os.pardir, "attached_assets", "soapcalc_oils_enrichment.csv")
-    )
-
-
-def _normalize_unit(raw: Optional[str]) -> Optional[str]:
-    if not raw:
-        return None
-    cleaned = str(raw).strip().lower()
-    if cleaned in {"ml", "milliliter", "milliliters"}:
-        return "milliliter"
-    if cleaned in {"g", "gram", "grams"}:
-        return "gram"
-    return cleaned
 
 
 def _infer_category(name: str) -> str:
@@ -86,80 +53,32 @@ def _infer_default_unit(category: Optional[str]) -> str:
     return "gram"
 
 
-def _parse_aliases(raw: Optional[str]) -> List[str]:
-    if not raw:
-        return []
-    aliases = []
-    for chunk in re.split(r"[;,]", str(raw)):
-        cleaned = chunk.strip()
-        if cleaned:
-            aliases.append(cleaned)
-    return aliases
-
-
-def _parse_float(raw: Optional[str]) -> Optional[float]:
-    if raw is None:
-        return None
-    cleaned = str(raw).strip()
-    if not cleaned:
-        return None
-    lowered = cleaned.lower()
-    if lowered in {"low", "high"}:
-        return None
-    cleaned = cleaned.replace("+", "")
-    match = _RANGE_RE.match(cleaned)
-    if match:
-        start = float(match.group(1))
-        end = float(match.group(2))
-        return (start + end) / 2
-    try:
-        return float(cleaned)
-    except ValueError:
-        return None
-
-
 @lru_cache(maxsize=1)
-def _load_item_records() -> List[Dict[str, Any]]:
-    path = _soapcalc_csv_path()
-    if not os.path.exists(path):
-        current_app.logger.warning("Soapcalc oil enrichment CSV not found at %s", path)
-        return []
-    records: List[Dict[str, Any]] = []
-    with open(path, newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            name = (row.get("name") or "").strip()
-            if not name:
-                continue
-            raw_aliases = (row.get("aliases") or "").strip()
-            aliases = _parse_aliases(raw_aliases)
-            saponification_value = _parse_float(row.get("sap_koh"))
-            iodine_value = _parse_float(row.get("iodine"))
-            fatty_profile: Dict[str, float] = {}
-            for key in FATTY_KEYS:
-                value = _parse_float(row.get(key))
-                if value is not None:
-                    fatty_profile[key] = value
-            category = (row.get("ingredient_category_name") or "").strip()
-            if not category:
-                category = _infer_category(name)
-            default_unit = _normalize_unit(row.get("default_unit")) or _infer_default_unit(category)
-            records.append(
-                {
-                    "name": name,
-                    "aliases": aliases,
-                    "search_blob": f"{name} {' '.join(aliases)}".strip().lower(),
-                    "ingredient_category_name": category,
-                    "default_unit": default_unit,
-                    "saponification_value": saponification_value,
-                    "iodine_value": iodine_value,
-                    "fatty_acid_profile": fatty_profile or None,
-                }
-            )
+def _load_item_records() -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for row in load_soapcalc_catalog_rows():
+        name = (row.get("name") or "").strip()
+        if not name:
+            continue
+        aliases = list(row.get("aliases") or [])
+        category = (row.get("ingredient_category_name") or "").strip() or _infer_category(name)
+        default_unit = normalize_soapcalc_unit(row.get("default_unit")) or _infer_default_unit(category)
+        records.append(
+            {
+                "name": name,
+                "aliases": aliases,
+                "search_blob": f"{name} {' '.join(aliases)}".strip().lower(),
+                "ingredient_category_name": category,
+                "default_unit": default_unit,
+                "saponification_value": row.get("sap_koh"),
+                "iodine_value": row.get("iodine"),
+                "fatty_acid_profile": row.get("fatty_profile") or None,
+            }
+        )
     return records
 
 
-def _score_record(record: Dict[str, Any], query: str) -> tuple:
+def _score_record(record: dict[str, Any], query: str) -> tuple:
     name = (record.get("name") or "").lower()
     alias_list = record.get("aliases") or []
     aliases = " ".join(alias_list).lower()
@@ -178,7 +97,7 @@ def _score_record(record: Dict[str, Any], query: str) -> tuple:
     return (5, len(name))
 
 
-def _build_item_payload(record: Dict[str, Any]) -> Dict[str, Any]:
+def _build_item_payload(record: dict[str, Any]) -> dict[str, Any]:
     name = record.get("name")
     return {
         "id": None,
@@ -196,7 +115,7 @@ def _build_item_payload(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _build_group_payload(record: Dict[str, Any]) -> Dict[str, Any]:
+def _build_group_payload(record: dict[str, Any]) -> dict[str, Any]:
     name = record.get("name")
     category = record.get("ingredient_category_name")
     return {
@@ -232,7 +151,7 @@ def _build_group_payload(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def search_soapcalc_items(query: str, *, limit: int = 25, group: bool = False) -> List[Dict[str, Any]]:
+def search_soapcalc_items(query: str, *, limit: int = 25, group: bool = False) -> list[dict[str, Any]]:
     if not query:
         return []
     normalized = query.strip().lower()
@@ -252,5 +171,5 @@ def search_soapcalc_items(query: str, *, limit: int = 25, group: bool = False) -
     return [_build_item_payload(record) for record in records]
 
 
-def search_soapcalc_oils(query: str, *, limit: int = 25, group: bool = False) -> List[Dict[str, Any]]:
+def search_soapcalc_oils(query: str, *, limit: int = 25, group: bool = False) -> list[dict[str, Any]]:
     return search_soapcalc_items(query, limit=limit, group=group)

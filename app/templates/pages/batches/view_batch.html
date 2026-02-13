@@ -3,7 +3,7 @@
    Glossary: Lineage ID = recipe version identifier; Target version = recipe used for batch. #}
 {% extends 'layout.html' %}
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+<link rel="stylesheet" href="{{ static_asset('css/print.css') }}">
 {% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% if batch.status in ['completed', 'failed'] %}
 {% include 'components/batch/fifo_insight_modal.html' %}
 
-<script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
+<script src="{{ static_asset('js/batches/fifo_modal.js') }}"></script>
 {% endif %}
 
 {% endblock %}

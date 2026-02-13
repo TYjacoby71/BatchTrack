@@ -10,10 +10,11 @@ Glossary:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Flask, current_app, request, session
+from flask import Flask, current_app, request, session, url_for
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
@@ -36,6 +37,11 @@ from .utils.timezone_utils import TimezoneUtils
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
 _MARKETING_CONTEXT_ENDPOINTS = {"index", "homepage", "public_page"}
+_ASSET_MANIFEST_CACHE: Dict[str, Any] = {
+    "path": None,
+    "mtime": None,
+    "data": {},
+}
 
 
 def _default_marketing_context() -> Dict[str, Any]:
@@ -210,6 +216,10 @@ def register_template_context(app: Flask) -> None:
         }
 
     @app.context_processor
+    def _inject_static_helpers() -> Dict[str, Any]:
+        return {"static_asset": static_asset_url}
+
+    @app.context_processor
     def _inject_marketing_content() -> Dict[str, Any]:
         # Most templates do not consume marketing payloads; avoid unnecessary
         # DB and Stripe lookups on unrelated pages (e.g., auth/login redirects).
@@ -299,6 +309,84 @@ def static_file_exists_filter(relative_path: str) -> bool:
         return (static_folder / relative_path).exists()
     except Exception:
         return False
+
+
+def _minified_variant(relative_path: str) -> str | None:
+    """Return a `.min` variant path for JS/CSS assets."""
+    source_path = Path(relative_path)
+    suffix = source_path.suffix.lower()
+    if suffix not in {".js", ".css"}:
+        return None
+    if source_path.name.endswith(f".min{suffix}"):
+        return None
+    candidate = source_path.with_name(f"{source_path.stem}.min{suffix}")
+    return candidate.as_posix()
+
+
+def _load_asset_manifest() -> Dict[str, str]:
+    """Load hashed asset manifest produced by the JS bundler."""
+    try:
+        static_folder = Path(getattr(current_app, "static_folder", None) or "static")
+        manifest_path = static_folder / "dist" / "manifest.json"
+        if not manifest_path.exists():
+            _ASSET_MANIFEST_CACHE["path"] = str(manifest_path)
+            _ASSET_MANIFEST_CACHE["mtime"] = None
+            _ASSET_MANIFEST_CACHE["data"] = {}
+            return {}
+
+        mtime = manifest_path.stat().st_mtime
+        if (
+            _ASSET_MANIFEST_CACHE.get("path") == str(manifest_path)
+            and _ASSET_MANIFEST_CACHE.get("mtime") == mtime
+        ):
+            cached = _ASSET_MANIFEST_CACHE.get("data")
+            if isinstance(cached, dict):
+                return cached
+
+        raw = manifest_path.read_text(encoding="utf-8")
+        parsed = json.loads(raw)
+        data = parsed if isinstance(parsed, dict) else {}
+        _ASSET_MANIFEST_CACHE["path"] = str(manifest_path)
+        _ASSET_MANIFEST_CACHE["mtime"] = mtime
+        _ASSET_MANIFEST_CACHE["data"] = data
+        return data
+    except Exception:
+        return {}
+
+
+def static_asset_url(relative_path: str, *, include_version: bool = True) -> str:
+    """
+    Resolve a static asset URL with optional minified and versioned variants.
+
+    For `.js` and `.css`, this helper prefers a sibling `.min` file when one
+    exists (for example, `main.js` -> `main.min.js`). It then appends an
+    `mtime`-based query parameter (`v=`) so deploys invalidate stale caches.
+    """
+    requested_path = str(relative_path or "").lstrip("/")
+    if not requested_path:
+        return url_for("static", filename=requested_path)
+
+    manifest = _load_asset_manifest()
+    manifest_path = manifest.get(requested_path)
+    if isinstance(manifest_path, str) and manifest_path and static_file_exists_filter(manifest_path):
+        # Hashed manifest assets are already cache-busted by filename.
+        return url_for("static", filename=manifest_path)
+
+    selected_path = requested_path
+    minified_candidate = _minified_variant(requested_path)
+    if minified_candidate and static_file_exists_filter(minified_candidate):
+        selected_path = minified_candidate
+
+    if not include_version:
+        return url_for("static", filename=selected_path)
+
+    try:
+        static_folder = Path(getattr(current_app, "static_folder", None) or "static")
+        version = int((static_folder / selected_path).stat().st_mtime)
+    except Exception:
+        return url_for("static", filename=selected_path)
+
+    return url_for("static", filename=selected_path, v=version)
 
 
 def _effective_org_id():

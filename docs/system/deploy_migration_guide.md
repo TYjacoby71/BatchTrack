@@ -29,6 +29,15 @@
    flask db upgrade
    ```
 
+## Render Build/Start Configuration
+
+Use source-controlled deploy commands to avoid dashboard drift:
+
+- Build Command: `./scripts/render-build.sh`
+- Start Command: `gunicorn wsgi:app`
+
+`scripts/render-build.sh` performs dependency installation, migration, and asset build in order.
+
 ## Test Users & Billing
 
 - **Exempt Organizations**: Will work without billing (tier = 'exempt')

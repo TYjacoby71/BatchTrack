@@ -11,9 +11,6 @@ Glossary:
 from __future__ import annotations
 
 import copy
-import csv
-import os
-import re
 from functools import lru_cache
 from typing import Any
 
@@ -23,18 +20,15 @@ from sqlalchemy.orm import selectinload
 from app.extensions import cache
 from app.models import GlobalItem, IngredientDefinition
 from app.services.cache_invalidation import global_library_cache_key
+from app.services.soapcalc_catalog_data_service import (
+    SOAPCALC_FATTY_KEYS,
+    load_soapcalc_catalog_rows,
+    parse_soapcalc_aliases,
+    parse_soapcalc_float,
+)
 from app.utils.cache_utils import stable_cache_key
 
-SOAP_BULK_FATTY_KEYS = (
-    "lauric",
-    "myristic",
-    "palmitic",
-    "stearic",
-    "ricinoleic",
-    "oleic",
-    "linoleic",
-    "linolenic",
-)
+SOAP_BULK_FATTY_KEYS = SOAPCALC_FATTY_KEYS
 SOAP_BULK_SORT_KEYS = {"name", *SOAP_BULK_FATTY_KEYS}
 SOAP_BULK_PAGE_DEFAULT = 25
 SOAP_BULK_PAGE_MAX = 25
@@ -45,7 +39,6 @@ SOAP_BULK_ALLOWED_CATEGORIES = {
     "butters & solid fats",
     "waxes",
 }
-SOAP_BULK_RANGE_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$")
 
 
 # --- Soap bulk integer parser ---
@@ -64,24 +57,7 @@ def _to_int(raw_value: Any, fallback: int) -> int:
 # Inputs: Raw value from CSV/database payload.
 # Outputs: Float value when parseable, otherwise None.
 def _parse_soap_catalog_float(raw: Any) -> float | None:
-    if raw is None:
-        return None
-    cleaned = str(raw).strip()
-    if not cleaned:
-        return None
-    lowered = cleaned.lower()
-    if lowered in {"low", "high", "n/a", "na"}:
-        return None
-    cleaned = cleaned.replace("+", "")
-    range_match = SOAP_BULK_RANGE_RE.match(cleaned)
-    if range_match:
-        start = float(range_match.group(1))
-        end = float(range_match.group(2))
-        return (start + end) / 2.0
-    try:
-        return float(cleaned)
-    except ValueError:
-        return None
+    return parse_soapcalc_float(raw)
 
 
 # --- Soap catalog aliases parser ---
@@ -89,18 +65,7 @@ def _parse_soap_catalog_float(raw: Any) -> float | None:
 # Inputs: Raw alias value from CSV/global payload.
 # Outputs: List of alias strings.
 def _parse_soap_catalog_aliases(raw: Any) -> list[str]:
-    if not raw:
-        return []
-    aliases: list[str] = []
-    if isinstance(raw, (list, tuple)):
-        parts = [str(chunk) for chunk in raw]
-    else:
-        parts = re.split(r"[;,]", str(raw))
-    for chunk in parts:
-        cleaned = str(chunk).strip()
-        if cleaned:
-            aliases.append(cleaned)
-    return aliases
+    return parse_soapcalc_aliases(raw)
 
 
 # --- Soap catalog fatty-profile normalizer ---
@@ -118,76 +83,33 @@ def _normalize_soap_catalog_fatty_profile(raw_profile: Any) -> dict[str, float]:
     return profile
 
 
-# --- Soap CSV path resolver ---
-# Purpose: Resolve absolute path to the canonical soapcalc catalog CSV file.
-# Inputs: Flask app path context.
-# Outputs: Absolute filesystem path to soap catalog CSV.
-def _soap_catalog_csv_path() -> str:
-    primary = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            "attached_assets",
-            "soapcalc_tool_items.csv",
-        )
-    )
-    if os.path.exists(primary):
-        return primary
-    return os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            "data_builder",
-            "ingredients",
-            "data_sources",
-            "soapcalc_oils_enrichment.csv",
-        )
-    )
-
-
 # --- Soapcalc catalog loader ---
 # Purpose: Load base soapcalc oils catalog from CSV for bulk-pick basics mode.
 # Inputs: None.
 # Outputs: List of normalized soap catalog records.
 @lru_cache(maxsize=1)
 def _load_soapcalc_catalog_records() -> list[dict[str, Any]]:
-    path = _soap_catalog_csv_path()
-    if not os.path.exists(path):
-        return []
     records: list[dict[str, Any]] = []
-    with open(path, newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            name = (row.get("name") or "").strip()
-            if not name:
-                continue
-            fatty_profile: dict[str, float] = {}
-            for key in SOAP_BULK_FATTY_KEYS:
-                value = _parse_soap_catalog_float(row.get(key))
-                if value is not None:
-                    fatty_profile[key] = value
-            category_name = (row.get("ingredient_category_name") or "").strip() or "Oils (Carrier & Fixed)"
-            records.append(
-                {
-                    "key": f"soapcalc:{name.lower()}",
-                    "name": name,
-                    "aliases": _parse_soap_catalog_aliases(row.get("aliases")),
-                    "sap_koh": _parse_soap_catalog_float(row.get("sap_koh")),
-                    "iodine": _parse_soap_catalog_float(row.get("iodine")),
-                    "fatty_profile": fatty_profile,
-                    "default_unit": (row.get("default_unit") or "").strip() or "gram",
-                    "ingredient_category_name": category_name,
-                    "global_item_id": None,
-                    "source": "soapcalc",
-                    "is_basic": True,
-                }
-            )
+    for row in load_soapcalc_catalog_rows():
+        name = (row.get("name") or "").strip()
+        if not name:
+            continue
+        category_name = (row.get("ingredient_category_name") or "").strip() or "Oils (Carrier & Fixed)"
+        records.append(
+            {
+                "key": f"soapcalc:{name.lower()}",
+                "name": name,
+                "aliases": _parse_soap_catalog_aliases(row.get("aliases")),
+                "sap_koh": _parse_soap_catalog_float(row.get("sap_koh")),
+                "iodine": _parse_soap_catalog_float(row.get("iodine")),
+                "fatty_profile": _normalize_soap_catalog_fatty_profile(row.get("fatty_profile")),
+                "default_unit": (row.get("default_unit") or "").strip() or "gram",
+                "ingredient_category_name": category_name,
+                "global_item_id": None,
+                "source": "soapcalc",
+                "is_basic": True,
+            }
+        )
     return records
 
 

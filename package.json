@@ -1,0 +1,29 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "**Multi-tenant production and inventory management for small-batch makers**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build:assets": "node scripts/build_assets.mjs",
+    "build:soap-bundle": "node scripts/build_assets.mjs --scope=soap",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TYjacoby71/BatchTrack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TYjacoby71/BatchTrack/issues"
+  },
+  "homepage": "https://github.com/TYjacoby71/BatchTrack#readme",
+  "dependencies": {
+    "esbuild": "^0.27.3"
+  }
+}

@@ -23,6 +23,9 @@
       if (!validation.ok) {
         runnerInputs.updateStageWaterSummary(null);
         runnerInputs.updateLiveCalculationPreview(null);
+        if (SoapTool.mold?.updateWetBatterWarning) {
+          SoapTool.mold.updateWetBatterWarning(0);
+        }
         if (settings.showAlerts) {
           SoapTool.ui.showSoapAlert(
             'warning',
