@@ -164,18 +164,41 @@ document.addEventListener('alpine:init', () => {
       }, 1000);
     },
 
+    parseTimerStart(timer) {
+      if (!timer.start_time) return null;
+
+      const directParse = new Date(timer.start_time);
+      if (!Number.isNaN(directParse.getTime())) {
+        return directParse;
+      }
+
+      if (typeof timer.start_time === 'string') {
+        const fallbackParse = new Date(`${timer.start_time}Z`);
+        if (!Number.isNaN(fallbackParse.getTime())) {
+          return fallbackParse;
+        }
+      }
+
+      return null;
+    },
+
     isTimerExpired(timer) {
-      if (!timer.start_time) return false;
-      const start = new Date(timer.start_time + 'Z');
+      const start = this.parseTimerStart(timer);
+      if (!start) return false;
+      const totalSeconds = Number(timer.duration_seconds);
+      if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return false;
       const now = new Date();
       const elapsedSeconds = Math.floor((now - start) / 1000);
-      return elapsedSeconds > timer.duration_seconds;
+      return elapsedSeconds > totalSeconds;
     },
 
     formatDuration(seconds) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const remainingSeconds = seconds % 60;
+      const safeSeconds = Number.isFinite(Number(seconds))
+        ? Math.max(0, Math.floor(Number(seconds)))
+        : 0;
+      const hours = Math.floor(safeSeconds / 3600);
+      const minutes = Math.floor((safeSeconds % 3600) / 60);
+      const remainingSeconds = safeSeconds % 60;
 
       if (hours > 0) {
         return `${hours}h ${minutes}m ${remainingSeconds}s`;
@@ -188,9 +211,11 @@ document.addEventListener('alpine:init', () => {
       if (timer.status === 'paused') return 'Paused';
       if (!timer.start_time) return 'Not Started';
 
-      const start = new Date(timer.start_time + 'Z');
+      const start = this.parseTimerStart(timer);
+      if (!start) return 'Unavailable';
       const now = new Date();
-      const totalSeconds = parseInt(timer.duration_seconds);
+      const totalSeconds = Number(timer.duration_seconds);
+      if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return 'Unavailable';
       const elapsedSeconds = Math.floor((now - start) / 1000);
       const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 

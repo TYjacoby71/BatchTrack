@@ -340,10 +340,14 @@ def view_batch_in_progress(batch_identifier):
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
 
+        # BatchTimer timestamps are stored in naive UTC columns; keep `now` naive
+        # for template arithmetic to avoid mixing aware/naive datetimes.
+        template_now = TimezoneUtils.utc_now().replace(tzinfo=None)
+
         return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
-            now=TimezoneUtils.utc_now(),
+            now=template_now,
             has_active_timers=has_active_timers,
             timedelta=timedelta,
             **nav_data,
