@@ -123,19 +123,6 @@ def _normalize_soap_catalog_fatty_profile(raw_profile: Any) -> dict[str, float]:
 # Inputs: Flask app path context.
 # Outputs: Absolute filesystem path to soap catalog CSV.
 def _soap_catalog_csv_path() -> str:
-    primary = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            "attached_assets",
-            "soapcalc_tool_items.csv",
-        )
-    )
-    if os.path.exists(primary):
-        return primary
     return os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -146,7 +133,7 @@ def _soap_catalog_csv_path() -> str:
             "data_builder",
             "ingredients",
             "data_sources",
-            "soapcalc_oils_enrichment.csv",
+            "soapcalc_source_verified.csv",
         )
     )
 

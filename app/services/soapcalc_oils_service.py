@@ -50,13 +50,15 @@ _RANGE_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$")
 
 
 def _soapcalc_csv_path() -> str:
-    primary = os.path.abspath(
-        os.path.join(current_app.root_path, os.pardir, "attached_assets", "soapcalc_tool_items.csv")
-    )
-    if os.path.exists(primary):
-        return primary
     return os.path.abspath(
-        os.path.join(current_app.root_path, os.pardir, "attached_assets", "soapcalc_oils_enrichment.csv")
+        os.path.join(
+            current_app.root_path,
+            os.pardir,
+            "data_builder",
+            "ingredients",
+            "data_sources",
+            "soapcalc_source_verified.csv",
+        )
     )
 
 
