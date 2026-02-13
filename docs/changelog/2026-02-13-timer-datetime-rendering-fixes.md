@@ -13,6 +13,7 @@
   - `now_for_timer_math`
   - `timer_start_for_math`
   - `timer_end_for_math`
+- Kept route-level timestamp sourcing unchanged and localized the timezone fix to timer-render surfaces.
 - Added robust timestamp parsing in timer management JavaScript with `parseTimerStart(timer)` and safer numeric guards in duration/countdown calculations.
 - Added targeted regression tests for:
   - in-progress batch rendering with active timer data
