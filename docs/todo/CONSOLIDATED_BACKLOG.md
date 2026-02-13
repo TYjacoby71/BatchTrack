@@ -42,4 +42,4 @@
 - Author and execute the inventory data migration plan (backups, rollback, verification scripts) before moving legacy data into the FIFO system.
 - Expand retention program analytics post-launch: retention KPIs, objection performance, offer optimization, predictive churn modeling, and automated win-back sequences.
 - Future unit-mapping roadmap items: mapping templates, AI-assisted suggestions, and shared community mapping libraries for common custom units.
-- Migrate static assets to a real bundler pipeline (Vite/esbuild/webpack) with hashed build outputs + manifest-based template resolution, CI build automation, and immutable cache headers so production no longer depends on manually committed `.min.js`/`.min.css` siblings.
+- Complete repo-wide static-asset bundler migration (Soap phase delivered with single `soap_tool_bundle.min.js`; legacy Soap `*.min.js` siblings removed). Remaining work: expand bundling to non-Soap entrypoints, add hashed build outputs + manifest-based template resolution, wire CI build automation, and enable immutable cache headers so production no longer depends on manually committed `.min.js`/`.min.css` siblings.
