@@ -51,6 +51,10 @@ class ToolFeedbackNoteService:
         "bad_preset_info": "bad_preset_data",
         "bad_data_on_preset_info_like_soap_values": "bad_preset_data",
     }
+    _PATH_SEGMENT_SANITIZER = re.compile(r"[^a-z0-9._-]+")
+    _LIKELY_DYNAMIC_SEGMENT = re.compile(
+        r"^(?:\d+|[0-9a-f]{8,}|[0-9a-f]{8}-[0-9a-f-]{27,})$"
+    )
 
     @classmethod
     def allowed_flows(cls) -> list[str]:
@@ -62,6 +66,34 @@ class ToolFeedbackNoteService:
             return cls.DEFAULT_SOURCE
         cleaned = cls._SOURCE_SANITIZER.sub("_", raw_source.strip().lower()).strip("._-")
         return cleaned or cls.DEFAULT_SOURCE
+
+    @classmethod
+    def derive_location_source(
+        cls,
+        *,
+        page_endpoint: Any = None,
+        page_path: Any = None,
+        fallback_source: Any = None,
+    ) -> str:
+        endpoint_value = cls._clean_text(page_endpoint, max_len=180)
+        if endpoint_value:
+            return cls.normalize_source(endpoint_value)
+
+        path_value = cls._clean_text(page_path, max_len=512)
+        if path_value:
+            without_query = path_value.split("?", 1)[0].split("#", 1)[0]
+            pieces: list[str] = []
+            for part in without_query.split("/"):
+                segment = cls._PATH_SEGMENT_SANITIZER.sub("_", part.strip().lower()).strip("._-")
+                if not segment:
+                    continue
+                if cls._LIKELY_DYNAMIC_SEGMENT.match(segment):
+                    continue
+                pieces.append(segment)
+            if pieces:
+                return cls.normalize_source("_".join(pieces))
+
+        return cls.normalize_source(fallback_source)
 
     @classmethod
     def normalize_flow(cls, raw_flow: Any) -> str | None:
@@ -119,8 +151,9 @@ class ToolFeedbackNoteService:
         *,
         request_meta: dict[str, Any] | None = None,
         user: Any = None,
+        source_override: str | None = None,
     ) -> dict[str, Any]:
-        source = cls.normalize_source(payload.get("source"))
+        source = cls.normalize_source(source_override or payload.get("source"))
         flow = cls.normalize_flow(
             payload.get("flow") or payload.get("type") or payload.get("note_type")
         )
@@ -249,9 +282,15 @@ class ToolFeedbackNoteService:
         *,
         request_meta: dict[str, Any] | None = None,
         user: Any = None,
+        source_override: str | None = None,
     ) -> dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}
-        entry = cls._entry_payload(payload, request_meta=request_meta, user=user)
+        entry = cls._entry_payload(
+            payload,
+            request_meta=request_meta,
+            user=user,
+            source_override=source_override,
+        )
         source = entry["source"]
         flow = entry["flow"]
         bucket_path = cls._bucket_path(source, flow)

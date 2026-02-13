@@ -226,12 +226,18 @@ def tools_feedback_notes():
         "user_agent": request.headers.get("User-Agent"),
         "referer": request.headers.get("Referer"),
     }
+    source_override = ToolFeedbackNoteService.derive_location_source(
+        page_endpoint=payload.get("page_endpoint"),
+        page_path=payload.get("page_path"),
+        fallback_source=payload.get("source"),
+    )
 
     try:
         result = ToolFeedbackNoteService.save_note(
             payload,
             request_meta=request_meta,
             user=current_user,
+            source_override=source_override,
         )
     except ValueError as exc:
         return (

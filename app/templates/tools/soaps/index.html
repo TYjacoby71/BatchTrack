@@ -3,12 +3,10 @@
 {% set navbar_center_title = 'Soap Formulator' %}
 {% set page_title = "BatchTrack.com | Soap Formulator & Batch Calculator" %}
 {% set page_description = "Free soap formulator: build recipes with lye, oils, superfat, quality targets, and FIFO lot tracking. Calm and neurodivergent-friendly." %}
-{% from 'components/shared/feedback_note_modal.html' import render_feedback_note_widget %}
 
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ static_asset('css/tools/soaps.css') }}">
-<link rel="stylesheet" href="{{ static_asset('css/tools/feedback_note_modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -52,28 +50,7 @@
   {% include 'tools/soaps/_modals.html' %}
   {% include 'tools/soaps/_toasts.html' %}
 
-  {% set soap_feedback_sources = [
-    {'value': 'soap_formulator', 'label': 'Soap Formulator'},
-    {'value': 'soap_bulk_oils_picker', 'label': 'Soap Bulk Oils Picker'},
-    {'value': 'soap_quality_targets', 'label': 'Soap Quality Targets'},
-    {'value': 'tools_public_shell', 'label': 'Tools Public Shell'},
-  ] %}
-  {{ render_feedback_note_widget(
-    modal_id='soapFeedbackNoteModal',
-    default_source='soap_formulator',
-    source_options=soap_feedback_sources,
-    trigger_mode='floating',
-    trigger_text='Leave a note',
-    title='Soap Formulator notes',
-    subtitle='Questions, missing features, glitches, or bad preset data.',
-    endpoint=url_for('tools_bp.tools_feedback_notes'),
-    context='tools.soap',
-    default_flow='question',
-    floating_bottom_offset='5.25rem'
-  ) }}
-
 </div>
 
 <script type="module" src="{{ static_asset('js/tools/soaps/soap_tool_bundle_entry.js') }}"></script>
-<script src="{{ static_asset('js/components/feedback_note_modal.js') }}"></script>
 {% endblock %}

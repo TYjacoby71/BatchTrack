@@ -48,7 +48,23 @@
     return flowInput ? cleanText(flowInput.value) : '';
   }
 
+  function isLocationLocked(widget){
+    return cleanText(widget.dataset.lockLocationSource).toLowerCase() === 'true';
+  }
+
+  function sourceField(widget){
+    return widget.querySelector('[name="source"]');
+  }
+
+  function selectedSourceValue(widget){
+    const field = sourceField(widget);
+    return field ? cleanText(field.value) : '';
+  }
+
   function selectedSourceLabel(widget){
+    if (isLocationLocked(widget)) {
+      return cleanText(widget.dataset.locationLabel) || selectedSourceValue(widget) || 'Current page';
+    }
     const sourceSelect = widget.querySelector('select[name="source"]');
     if (!sourceSelect) return '';
     const option = sourceSelect.options[sourceSelect.selectedIndex];
@@ -74,8 +90,7 @@
   }
 
   function validateSortStep(widget){
-    const sourceSelect = widget.querySelector('select[name="source"]');
-    const sourceValue = sourceSelect ? cleanText(sourceSelect.value) : '';
+    const sourceValue = selectedSourceValue(widget);
     const flowValue = selectedFlowValue(widget);
     if (!sourceValue) {
       setError(widget, 'Pick a source before continuing.');
@@ -114,12 +129,14 @@
 
   function buildPayload(widget){
     const form = widget.querySelector('[data-feedback-note-form]');
-    const sourceSelect = form ? form.querySelector('select[name="source"]') : null;
+    const sourceInput = form ? form.querySelector('[name="source"]') : null;
     const titleInput = form ? form.querySelector('input[name="title"]') : null;
     const messageInput = form ? form.querySelector('textarea[name="message"]') : null;
     const emailInput = form ? form.querySelector('input[name="contact_email"]') : null;
+    const body = document.body;
+    const pageEndpoint = body ? cleanText(body.dataset.pageEndpoint) : '';
 
-    const source = sourceSelect ? cleanText(sourceSelect.value) : cleanText(widget.dataset.defaultSource);
+    const source = sourceInput ? cleanText(sourceInput.value) : cleanText(widget.dataset.defaultSource);
     const flow = selectedFlowValue(widget) || cleanText(widget.dataset.defaultFlow);
     const title = titleInput ? cleanText(titleInput.value) : '';
     const message = messageInput ? cleanText(messageInput.value) : '';
@@ -133,6 +150,7 @@
       message,
       contact_email: contactEmail,
       context,
+      page_endpoint: pageEndpoint,
       page_path: window.location.pathname,
       page_url: window.location.href,
       metadata: {
@@ -147,9 +165,9 @@
     form.reset();
 
     const defaultSource = cleanText(widget.dataset.defaultSource);
-    const sourceSelect = form.querySelector('select[name="source"]');
-    if (sourceSelect && defaultSource) {
-      sourceSelect.value = defaultSource;
+    const sourceInput = form.querySelector('[name="source"]');
+    if (sourceInput && defaultSource) {
+      sourceInput.value = defaultSource;
     }
 
     const defaultFlow = cleanText(widget.dataset.defaultFlow || 'question');
@@ -273,7 +291,7 @@
     });
 
     const sourceSelect = widget.querySelector('select[name="source"]');
-    if (sourceSelect) {
+    if (sourceSelect && !isLocationLocked(widget)) {
       sourceSelect.addEventListener('change', () => {
         updateSortSummary(widget);
       });

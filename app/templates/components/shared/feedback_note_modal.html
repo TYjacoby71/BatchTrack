@@ -2,6 +2,8 @@
   modal_id='feedbackNoteModal',
   default_source='unknown_source',
   source_options=None,
+  lock_source_to_location=False,
+  location_label='',
   trigger_mode='floating',
   trigger_text='Leave a note',
   title='Leave a note',
@@ -21,6 +23,8 @@
   data-default-source="{{ default_source }}"
   data-default-flow="{{ selected_flow }}"
   data-context="{{ context }}"
+  data-lock-location-source="{{ 'true' if lock_source_to_location else 'false' }}"
+  data-location-label="{{ location_label }}"
 >
   {% if trigger_mode == 'button' %}
   <button type="button" class="btn btn-outline-primary feedback-note-trigger-inline" data-bs-toggle="modal" data-bs-target="#{{ modal_id }}">
@@ -56,6 +60,12 @@
             <section data-feedback-step="sort">
               <h6 class="mb-2">Step 1: Sort this note</h6>
               <div class="mb-3">
+                {% if lock_source_to_location %}
+                <label class="form-label" for="{{ modal_id }}SourceLocked">Source</label>
+                <input type="hidden" id="{{ modal_id }}SourceLocked" name="source" value="{{ default_source }}">
+                <div class="form-control" aria-readonly="true">{{ location_label or default_source }}</div>
+                <div class="form-text">This note is automatically grouped by your current page location.</div>
+                {% else %}
                 <label class="form-label" for="{{ modal_id }}Source">Source</label>
                 <select class="form-select" id="{{ modal_id }}Source" name="source" required>
                   {% for source in resolved_sources %}
@@ -63,6 +73,7 @@
                   {% endfor %}
                 </select>
                 <div class="form-text">Pick where this happened so notes are grouped correctly.</div>
+                {% endif %}
               </div>
               <div class="mb-3">
                 <label class="form-label d-block">What do you need?</label>

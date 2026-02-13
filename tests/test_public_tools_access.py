@@ -40,8 +40,7 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
     assert '<span class="navbar-text fw-semibold">Soap Formulator</span>' not in html
     assert "position-absolute top-50 start-50 translate-middle text-center" not in html
     assert 'id="stageWaterOutput"' in html
-    assert 'id="soapFeedbackNoteModal"' in html
-    assert 'Leave a note' in html
+    assert 'id="globalFeedbackNoteModal"' not in html
 
 
 @pytest.mark.usefixtures("app")
@@ -76,57 +75,107 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
         "title": "Stage values jump",
         "message": "Oil percentages jump while typing in stage 2.",
         "context": "tools.soap",
-        "page_path": "/tools/soap",
+        "page_endpoint": "batches.view_batch_in_progress",
+        "page_path": "/batches/73/in-progress",
     }
     second_payload = {
         "source": "Soap Formulator",
         "flow": "question",
         "message": "What is the quality target range for cleansing?",
         "context": "tools.soap",
-        "page_path": "/tools/soap",
+        "page_endpoint": "batches.view_batch_in_progress",
+        "page_path": "/batches/73/in-progress",
     }
     third_payload = {
         "source": "Candles Tool",
         "flow": "missing_feature",
         "message": "Need wick calculator by vessel diameter.",
         "context": "tools.candles",
-        "page_path": "/tools/candles",
+        "page_endpoint": "products.view_sku",
+        "page_path": "/products/sku/44",
     }
 
     first_response = client.post("/tools/api/feedback-notes", json=first_payload)
     assert first_response.status_code == 200
     first_data = first_response.get_json() or {}
     assert first_data.get("success") is True
-    assert (first_data.get("result") or {}).get("bucket_path") == "soap_formulator/glitch.json"
+    assert (
+        (first_data.get("result") or {}).get("bucket_path")
+        == "batches_view_batch_in_progress/glitch.json"
+    )
 
     second_response = client.post("/tools/api/feedback-notes", json=second_payload)
     assert second_response.status_code == 200
     third_response = client.post("/tools/api/feedback-notes", json=third_payload)
     assert third_response.status_code == 200
 
-    soap_glitch_path = tmp_path / "tool_feedback_notes" / "soap_formulator" / "glitch.json"
-    assert soap_glitch_path.exists()
-    soap_glitch_bucket = json.loads(soap_glitch_path.read_text(encoding="utf-8"))
-    assert soap_glitch_bucket.get("source") == "soap_formulator"
-    assert soap_glitch_bucket.get("flow") == "glitch"
-    assert soap_glitch_bucket.get("count") == 1
-    assert (soap_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+    batch_glitch_path = (
+        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "glitch.json"
+    )
+    assert batch_glitch_path.exists()
+    batch_glitch_bucket = json.loads(batch_glitch_path.read_text(encoding="utf-8"))
+    assert batch_glitch_bucket.get("source") == "batches_view_batch_in_progress"
+    assert batch_glitch_bucket.get("flow") == "glitch"
+    assert batch_glitch_bucket.get("count") == 1
+    assert (batch_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
 
-    soap_question_path = tmp_path / "tool_feedback_notes" / "soap_formulator" / "question.json"
-    assert soap_question_path.exists()
-    soap_question_bucket = json.loads(soap_question_path.read_text(encoding="utf-8"))
-    assert soap_question_bucket.get("count") == 1
+    batch_question_path = (
+        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "question.json"
+    )
+    assert batch_question_path.exists()
+    batch_question_bucket = json.loads(batch_question_path.read_text(encoding="utf-8"))
+    assert batch_question_bucket.get("count") == 1
 
     global_index_path = tmp_path / "tool_feedback_notes" / "index.json"
     assert global_index_path.exists()
     global_index = json.loads(global_index_path.read_text(encoding="utf-8"))
     sources = global_index.get("sources") or []
-    assert [source.get("source") for source in sources] == ["candles_tool", "soap_formulator"]
+    assert [source.get("source") for source in sources] == [
+        "batches_view_batch_in_progress",
+        "products_view_sku",
+    ]
 
-    soap_index = next((source for source in sources if source.get("source") == "soap_formulator"), None)
-    assert soap_index is not None
-    soap_flows = [flow.get("flow") for flow in (soap_index.get("flows") or [])]
-    assert soap_flows == ["question", "glitch"]
+    batch_index = next(
+        (source for source in sources if source.get("source") == "batches_view_batch_in_progress"),
+        None,
+    )
+    assert batch_index is not None
+    batch_flows = [flow.get("flow") for flow in (batch_index.get("flows") or [])]
+    assert batch_flows == ["question", "glitch"]
+
+
+@pytest.mark.usefixtures("app")
+def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
+    """Authenticated customers should see the global feedback bubble when enabled."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+    from app.models.models import User
+
+    with app.app_context():
+        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        if flag is None:
+            flag = FeatureFlag(
+                key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
+                enabled=True,
+                description="Customer feedback bubble",
+            )
+            db.session.add(flag)
+        else:
+            flag.enabled = True
+        db.session.commit()
+        user = User.query.filter_by(email="test@example.com").first()
+        assert user is not None
+        user_id = str(user.id)
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = user_id
+        session["_fresh"] = True
+
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+    assert 'id="globalFeedbackNoteModal"' in html
+    assert 'data-lock-location-source="true"' in html
 
 
 @pytest.mark.usefixtures("app")
