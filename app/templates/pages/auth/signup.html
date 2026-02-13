@@ -46,40 +46,43 @@
                             {% for tier_id, tier_data in available_tiers.items() %}
                             {% set lifetime_offer = (lifetime_offers | selectattr('tier_id', 'equalto', tier_id) | list | first) %}
                             <div class="col">
-                                <article
-                                    class="tier-choice-card h-100 {% if tier_data.name|lower == 'enthusiast' %}is-recommended{% endif %}"
-                                    data-tier-id="{{ tier_id }}"
-                                    role="button"
-                                    tabindex="0"
-                                    aria-pressed="false"
-                                >
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
+                                <div class="tier-choice-card-shell h-100">
+                                    {% if tier_data.name|lower == 'enthusiast' %}
+                                    <div class="tier-choice-card-topline">
+                                        <span class="badge bg-success">Recommended</span>
+                                    </div>
+                                    {% endif %}
+
+                                    <article
+                                        class="tier-choice-card h-100 {% if tier_data.name|lower == 'enthusiast' %}is-recommended{% endif %}"
+                                        data-tier-id="{{ tier_id }}"
+                                        role="button"
+                                        tabindex="0"
+                                        aria-pressed="false"
+                                    >
+                                        <div class="mb-2">
                                             <h3 class="h5 fw-bold mb-1">{{ tier_data.name }}</h3>
                                             <p class="small text-muted mb-0">
                                                 {{ lifetime_offer.tagline if lifetime_offer else 'Choose this tier for your next step.' }}
                                             </p>
                                         </div>
-                                        {% if tier_data.name|lower == 'enthusiast' %}
-                                        <span class="badge bg-success">Recommended</span>
-                                        {% endif %}
-                                    </div>
 
-                                    <div class="tier-choice-mode-badge mb-2" data-role="modeBadge" data-mode="lifetime">Lifetime</div>
-                                    <div class="tier-choice-price mb-2" data-role="priceText">
-                                        {% if lifetime_offer and lifetime_offer.has_remaining %}
-                                            {{ lifetime_offer.lifetime_price_copy }}
-                                        {% elif tier_data.yearly_price_display %}
-                                            {{ tier_data.yearly_price_display }}
-                                        {% elif tier_data.monthly_price_display %}
-                                            {{ tier_data.monthly_price_display }}
-                                        {% else %}
-                                            Contact Sales
-                                        {% endif %}
-                                    </div>
-                                    <p class="small mb-2" data-role="statusText">Select this tier to continue.</p>
-                                    <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
-                                </article>
+                                        <div class="tier-choice-mode-badge mb-2" data-role="modeBadge" data-mode="lifetime">Lifetime</div>
+                                        <div class="tier-choice-price mb-2" data-role="priceText">
+                                            {% if lifetime_offer and lifetime_offer.has_remaining %}
+                                                {{ lifetime_offer.lifetime_price_copy }}
+                                            {% elif tier_data.yearly_price_display %}
+                                                {{ tier_data.yearly_price_display }}
+                                            {% elif tier_data.monthly_price_display %}
+                                                {{ tier_data.monthly_price_display }}
+                                            {% else %}
+                                                Contact Sales
+                                            {% endif %}
+                                        </div>
+                                        <p class="small mb-2" data-role="statusText">Select this tier to continue.</p>
+                                        <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
+                                    </article>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
@@ -227,9 +230,6 @@ function resolveTierSelection(tierId) {
             modeBadgeText = 'Lifetime';
             priceText = lifetimeOffer.lifetime_price_copy || 'One-time payment';
             statusText = `Only ${lifetimeOffer.display_spots_left} spots left / ${lifetimeOffer.seat_total}.`;
-            if (lifetimeOffer.coupon_code) {
-                fallbackText = `Coupon auto-applied: ${lifetimeOffer.coupon_code}`;
-            }
         } else {
             fallbackFromLifetime = true;
             statusText = 'No lifetime offers remain for this tier.';
@@ -589,6 +589,22 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <style>
+.tier-choice-card-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tier-choice-card-topline {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.4rem;
+}
+
+.tier-choice-card-shell .tier-choice-card {
+    flex: 1 1 auto;
+}
+
 .tier-choice-card {
     border: 2px solid #d8e0ef;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);

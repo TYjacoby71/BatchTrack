@@ -12,6 +12,7 @@ import logging
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from threading import Lock
 
 import stripe
@@ -689,7 +690,26 @@ class BillingService:
                     app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
                     return None
 
-                amount = price_obj.unit_amount / 100
+                unit_amount = getattr(price_obj, "unit_amount_decimal", None)
+                if unit_amount is None:
+                    unit_amount = getattr(price_obj, "unit_amount", None)
+                if unit_amount is None:
+                    logger.warning("Stripe price %s is missing unit_amount", getattr(price_obj, "id", "unknown"))
+                    app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
+                    return None
+
+                try:
+                    amount_decimal = Decimal(str(unit_amount)) / Decimal("100")
+                except (InvalidOperation, TypeError, ValueError):
+                    logger.warning(
+                        "Stripe price %s returned invalid unit_amount %s",
+                        getattr(price_obj, "id", "unknown"),
+                        unit_amount,
+                    )
+                    app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
+                    return None
+
+                amount = float(amount_decimal)
                 currency = price_obj.currency.upper()
                 billing_cycle = BillingService._stripe_price_billing_cycle(price_obj)
 
@@ -704,7 +724,7 @@ class BillingService:
                 data = {
                     'price_id': price_obj.id,
                     'amount': amount,
-                    'formatted_price': f'${amount:.0f}',
+                    'formatted_price': f'${amount_decimal:.2f}',
                     'currency': currency,
                     'billing_cycle': billing_cycle,
                     'lookup_key': lookup_key,
@@ -996,7 +1016,7 @@ class BillingService:
             tier_obj = SubscriptionTier.query.filter_by(stripe_lookup_key=lookup_key).first()
             if tier_obj:
                 # Update pricing info
-                tier_obj.fallback_price = f"${price.unit_amount / 100:.0f}"
+                tier_obj.fallback_price = f"${(price.unit_amount or 0) / 100:.2f}"
                 tier_obj.last_billing_sync = TimezoneUtils.utc_now()
 
                 # Store Stripe metadata
