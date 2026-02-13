@@ -15,6 +15,7 @@
   const SEARCH_DEBOUNCE_MS = 260;
   const DEFAULT_MODAL_STATE = {
     mode: 'basics',
+    viewSelected: false,
     query: '',
     sortKey: 'name',
     sortDir: 'asc',
@@ -42,6 +43,7 @@
       openBtn: document.getElementById('openBulkOilModal'),
       searchInput: document.getElementById('bulkOilSearchInput'),
       modeToggle: document.getElementById('bulkOilDisplayAllToggle'),
+      viewSelectedToggle: document.getElementById('bulkOilViewSelectedToggle'),
       statusEl: document.getElementById('bulkOilCatalogStatus'),
       summaryEl: document.getElementById('bulkOilSelectedSummary'),
       stageCountEl: document.getElementById('bulkOilSelectionCount'),
@@ -66,6 +68,7 @@
     }
     const modalState = state.bulkOilModal;
     modalState.mode = modalState.mode === 'all' ? 'all' : 'basics';
+    modalState.viewSelected = !!modalState.viewSelected;
     modalState.query = typeof modalState.query === 'string' ? modalState.query : '';
     modalState.sortKey = isSupportedSortKey(modalState.sortKey) ? modalState.sortKey : 'name';
     modalState.sortDir = modalState.sortDir === 'desc' ? 'desc' : 'asc';
@@ -166,6 +169,7 @@
     const modalState = ensureModalState();
     return {
       mode: modalState.mode,
+      view_selected: !!modalState.viewSelected,
       query: modalState.query,
       sort_key: modalState.sortKey,
       sort_dir: modalState.sortDir,
@@ -189,6 +193,7 @@
   function restoreState(savedState){
     const modalState = ensureModalState();
     modalState.mode = savedState?.mode === 'all' ? 'all' : 'basics';
+    modalState.viewSelected = !!savedState?.view_selected;
     modalState.query = typeof savedState?.query === 'string' ? savedState.query : '';
     modalState.sortKey = isSupportedSortKey(savedState?.sort_key) ? savedState.sort_key : 'name';
     modalState.sortDir = savedState?.sort_dir === 'desc' ? 'desc' : 'asc';
