@@ -79,6 +79,27 @@ def test_public_soap_calculation_api_works_with_csrf_enforcement_enabled(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_vendor_signup_api_works_with_csrf_enforcement_enabled(app, monkeypatch):
+    """Public vendor signup should keep working for anonymous users when CSRF is globally on."""
+    app.config["WTF_CSRF_ENABLED"] = True
+    monkeypatch.setattr("app.utils.json_store.read_json_file", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr("app.utils.json_store.write_json_file", lambda *_args, **_kwargs: None)
+
+    client = app.test_client()
+    payload = {
+        "item_name": "Olive Oil",
+        "item_id": "123",
+        "company_name": "Acme Supplies",
+        "contact_name": "Jane Doe",
+        "email": "jane@example.com",
+    }
+    response = client.post("/api/vendor-signup", json=payload)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data.get("success") is True
+
+
+@pytest.mark.usefixtures("app")
 def test_anonymous_workflow_can_browse_public_site(app):
     """
     Simulate a public visitor navigating marketing pages so we detect regressions
