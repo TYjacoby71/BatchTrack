@@ -25,16 +25,9 @@ const sharedConfig = {
 async function run(){
   await build({
     ...sharedConfig,
-    outfile: path.join(outputDir, 'soap_tool_bundle.js'),
-    minify: false,
-    sourcemap: true,
-  });
-
-  await build({
-    ...sharedConfig,
     outfile: path.join(outputDir, 'soap_tool_bundle.min.js'),
     minify: true,
-    sourcemap: true,
+    sourcemap: false,
   });
 }
 
