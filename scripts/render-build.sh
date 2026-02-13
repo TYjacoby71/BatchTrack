@@ -11,11 +11,23 @@ if [[ -f "package.json" ]]; then
   fi
 
   if [[ -f "package-lock.json" ]]; then
-    echo "==> Installing Node dependencies with npm ci"
-    npm ci
+    if [[ "${SKIP_ASSET_BUILD:-0}" == "1" ]]; then
+      echo "==> Installing Node dependencies with npm ci"
+      npm ci
+    else
+      # Asset bundling uses Node build tooling; include dev deps even on live envs.
+      echo "==> Installing Node dependencies with npm ci --include=dev"
+      npm ci --include=dev
+    fi
   else
-    echo "==> Installing Node dependencies with npm install (no lockfile found)"
-    npm install
+    if [[ "${SKIP_ASSET_BUILD:-0}" == "1" ]]; then
+      echo "==> Installing Node dependencies with npm install (no lockfile found)"
+      npm install
+    else
+      # Keep behavior consistent with npm ci --include=dev for asset builds.
+      echo "==> Installing Node dependencies with npm install --include=dev (no lockfile found)"
+      npm install --include=dev
+    fi
   fi
 else
   echo "==> Skipping Node dependency install (package.json not found)"
