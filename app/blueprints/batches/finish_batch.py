@@ -34,64 +34,6 @@ def _parse_adjustment_result(result):
     return success, message
 
 
-def _ensure_sku_adjustment_unit(sku, desired_unit: str) -> str:
-    """Align empty legacy SKUs to desired unit when conversion is impossible."""
-    target_unit = (str(desired_unit or "")).strip()
-    if not target_unit:
-        return target_unit
-
-    inventory_item = getattr(sku, "inventory_item", None)
-    current_unit = (
-        (getattr(inventory_item, "unit", None) or getattr(sku, "unit", None) or "")
-        .strip()
-    )
-    if not current_unit or current_unit == target_unit:
-        return target_unit
-
-    # If units are convertible, let canonical adjustment core handle conversion.
-    try:
-        from ...services.unit_conversion import ConversionEngine
-
-        conversion = ConversionEngine.convert_units(
-            amount=1.0,
-            from_unit=target_unit,
-            to_unit=current_unit,
-            ingredient_id=(getattr(inventory_item, "id", None) or getattr(sku, "inventory_item_id", None)),
-            density=getattr(inventory_item, "density", None),
-            rounding_decimals=None,
-        )
-        if conversion and conversion.get("success") and conversion.get("converted_value") is not None:
-            return target_unit
-    except Exception:
-        pass
-
-    item_id = getattr(inventory_item, "id", None) or getattr(sku, "inventory_item_id", None)
-    has_remaining_lots = False
-    if item_id:
-        lots_query = InventoryLot.query.filter_by(inventory_item_id=item_id)
-        org_id = getattr(inventory_item, "organization_id", None)
-        if org_id:
-            lots_query = lots_query.filter_by(organization_id=org_id)
-        has_remaining_lots = lots_query.filter(InventoryLot.remaining_quantity_base > 0).first() is not None
-
-    try:
-        current_qty = float(getattr(inventory_item, "quantity", 0) or 0)
-    except Exception:
-        current_qty = 0.0
-
-    if has_remaining_lots or current_qty > 0:
-        raise ValueError(
-            f"Cannot finish batch into SKU unit '{current_unit}' using output unit '{target_unit}'. "
-            "Use a matching-unit SKU or convert existing inventory first."
-        )
-
-    # Safe for empty legacy SKU records: rebase unit metadata to the batch output unit.
-    if inventory_item is not None:
-        inventory_item.unit = target_unit
-    sku.unit = target_unit
-    return target_unit
-
-
 # =========================================================
 # FINISH BATCH
 # =========================================================
@@ -481,7 +423,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     item_id=sku.inventory_item_id,
                     quantity=final_portions,
                     change_type='finished_batch',
-                    unit=_ensure_sku_adjustment_unit(sku, 'count'),
+                    unit='count',
                     notes=f'Batch {batch.label_code} completed - {final_portions} portions',
                     created_by=(getattr(current_user, 'id', None) or batch.created_by),
                     custom_expiration_date=expiration_date,
@@ -687,7 +629,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             item_id=product_sku.inventory_item_id,
             quantity=quantity,  # Number of containers
             change_type='finished_batch',
-            unit=_ensure_sku_adjustment_unit(product_sku, 'count'),  # Unit is count for containers
+            unit='count',  # Unit is count for containers
             notes=f'Batch {batch.label_code} completed - {quantity} containers of {size_label}',
             created_by=(getattr(current_user, 'id', None) or batch.created_by),
             custom_expiration_date=expiration_date,
@@ -740,7 +682,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             item_id=bulk_sku.inventory_item_id,
             quantity=quantity,
             change_type='finished_batch',
-            unit=_ensure_sku_adjustment_unit(bulk_sku, unit),
+            unit=unit,
             notes=f'Batch {batch.label_code} completed - bulk remainder',
             created_by=(getattr(current_user, 'id', None) or batch.created_by),
             custom_expiration_date=expiration_date,

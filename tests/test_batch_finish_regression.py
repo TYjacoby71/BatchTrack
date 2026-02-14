@@ -122,8 +122,8 @@ def test_complete_batch_fails_when_portion_credit_fails(app, monkeypatch):
 
 
 @pytest.mark.usefixtures('app_context')
-def test_complete_batch_rebases_empty_legacy_bulk_sku_unit(app):
-    """Legacy empty bulk SKU unit should align to batch output unit."""
+def test_complete_batch_creates_separate_bulk_sku_for_incompatible_unit(app):
+    """If existing Bulk unit is incompatible, completion should create a new Bulk SKU."""
     with app.test_request_context('/'):
         user = User.query.first()
         login_user(user)
@@ -148,7 +148,7 @@ def test_complete_batch_rebases_empty_legacy_bulk_sku_unit(app):
         db.session.flush()
         db.session.commit()
 
-        # Simulate legacy bulk SKU that exists with the wrong unit and no stock.
+        # Existing Bulk SKU in incompatible unit.
         legacy_bulk_sku = ProductService.get_or_create_sku(
             product_name=product.name,
             variant_name=variant.name,
@@ -182,11 +182,12 @@ def test_complete_batch_rebases_empty_legacy_bulk_sku_unit(app):
         assert success is True, f"Complete batch failed unexpectedly: {message}"
         assert batch.status == 'completed'
 
-        refreshed_bulk = ProductSKU.query.filter_by(
+        refreshed_bulk_skus = ProductSKU.query.filter_by(
             product_id=product.id,
             variant_id=variant.id,
             size_label='Bulk'
-        ).first()
-        assert refreshed_bulk is not None
-        assert refreshed_bulk.unit == 'floz'
-        assert refreshed_bulk.inventory_item.unit == 'floz'
+        ).all()
+        assert len(refreshed_bulk_skus) >= 2
+        units = {sku.unit for sku in refreshed_bulk_skus}
+        assert 'oz' in units
+        assert 'floz' in units
