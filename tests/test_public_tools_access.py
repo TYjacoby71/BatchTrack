@@ -176,6 +176,10 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
     html = response.get_data(as_text=True)
     assert 'id="globalFeedbackNoteModal"' in html
     assert 'data-lock-location-source="true"' in html
+    assert 'id="globalFeedbackNoteModalSource"' not in html
+    assert 'id="globalFeedbackNoteModalSourceLocked"' not in html
+    assert "data-feedback-sort-summary" not in html
+    assert "data-feedback-saved-path" not in html
 
 
 @pytest.mark.usefixtures("app")
@@ -202,6 +206,10 @@ def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
     html = response.get_data(as_text=True)
     assert 'id="globalFeedbackNoteModal"' in html
     assert 'data-lock-location-source="true"' in html
+    assert 'id="globalFeedbackNoteModalSource"' not in html
+    assert 'id="globalFeedbackNoteModalSourceLocked"' not in html
+    assert "data-feedback-sort-summary" not in html
+    assert "data-feedback-saved-path" not in html
 
 
 @pytest.mark.usefixtures("app")
