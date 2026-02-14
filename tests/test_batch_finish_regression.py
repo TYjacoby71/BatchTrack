@@ -2,9 +2,10 @@ import pytest
 from flask_login import login_user
 
 from app.extensions import db
-from app.models import Batch, Product, ProductCategory, ProductVariant, Recipe
+from app.models import Batch, Product, ProductCategory, ProductVariant, ProductSKU, Recipe
 from app.models.models import User
 from app.services.batch_service.batch_operations import BatchOperationsService
+from app.services.product_service import ProductService
 
 
 def _setup_recipe_for_user(user, name: str, label_prefix: str) -> Recipe:
@@ -118,3 +119,74 @@ def test_complete_batch_fails_when_portion_credit_fails(app, monkeypatch):
         assert success is False
         assert 'forced portion credit failure' in message
         assert batch.status == 'in_progress'
+
+
+@pytest.mark.usefixtures('app_context')
+def test_complete_batch_rebases_empty_legacy_bulk_sku_unit(app):
+    """Legacy empty bulk SKU unit should align to batch output unit."""
+    with app.test_request_context('/'):
+        user = User.query.first()
+        login_user(user)
+
+        category = ProductCategory.query.filter_by(name='Uncategorized').first()
+        recipe = _setup_recipe_for_user(user, 'Bulk Unit Rebase Recipe', 'BULKREB')
+        product = Product(
+            name='Bulk Unit Rebase Product',
+            category_id=category.id,
+            organization_id=user.organization_id,
+            created_by=user.id
+        )
+        db.session.add(product)
+        db.session.flush()
+        variant = ProductVariant(
+            product_id=product.id,
+            name='Base',
+            organization_id=user.organization_id,
+            created_by=user.id
+        )
+        db.session.add(variant)
+        db.session.flush()
+        db.session.commit()
+
+        # Simulate legacy bulk SKU that exists with the wrong unit and no stock.
+        legacy_bulk_sku = ProductService.get_or_create_sku(
+            product_name=product.name,
+            variant_name=variant.name,
+            size_label='Bulk',
+            unit='oz'
+        )
+        legacy_bulk_sku.inventory_item.quantity = 0.0
+        db.session.commit()
+        assert legacy_bulk_sku.inventory_item.unit == 'oz'
+
+        batch = Batch(
+            recipe_id=recipe.id,
+            label_code='BULKREB-001',
+            batch_type='product',
+            status='in_progress',
+            organization_id=user.organization_id,
+            created_by=user.id
+        )
+        db.session.add(batch)
+        db.session.commit()
+
+        success, message = BatchOperationsService.complete_batch(batch.id, {
+            'output_type': 'product',
+            'product_id': product.id,
+            'variant_id': variant.id,
+            'final_quantity': '12',
+            'output_unit': 'floz'
+        })
+
+        db.session.refresh(batch)
+        assert success is True, f"Complete batch failed unexpectedly: {message}"
+        assert batch.status == 'completed'
+
+        refreshed_bulk = ProductSKU.query.filter_by(
+            product_id=product.id,
+            variant_id=variant.id,
+            size_label='Bulk'
+        ).first()
+        assert refreshed_bulk is not None
+        assert refreshed_bulk.unit == 'floz'
+        assert refreshed_bulk.inventory_item.unit == 'floz'
