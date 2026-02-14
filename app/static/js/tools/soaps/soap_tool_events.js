@@ -214,6 +214,9 @@
     const lyeWeightLabel = `${formatWeight(totalLye)}${extraLye > 0 ? '*' : ''}`;
     const assumptionNotes = buildAssumptionNotes(calc);
     const assumptionsHtml = assumptionNotes.map(note => `<div class="footnote">* ${note}</div>`).join('');
+    const assumptionsBlockHtml = assumptionNotes.length
+      ? `<div class="footnotes"><h2 class="footnotes-heading">Assumptions</h2>${assumptionsHtml}</div>`
+      : '';
 
     return `<!doctype html>
 <html>
@@ -233,6 +236,7 @@
       .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
       .text-muted { color: #666; }
       .footnotes { margin-top: 10px; }
+      .footnotes-heading { font-size: 14px; margin: 12px 0 4px; }
       .footnote { font-size: 11px; color: #555; margin-top: 6px; }
     </style>
   </head>
@@ -284,7 +288,7 @@
       </thead>
       <tbody>${additiveRows}</tbody>
     </table>
-    <div class="footnotes">${assumptionsHtml}</div>
+    ${assumptionsBlockHtml}
   </body>
 </html>`;
   }

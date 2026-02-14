@@ -226,6 +226,11 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     if extra_lye > 0:
         lye_total_text = f"{lye_total_text}*"
     assumptions_html = "".join(f"<div class='footnote'>* {escape(note)}</div>" for note in assumption_notes)
+    assumptions_block_html = (
+        f"<div class='footnotes'><h2 class='footnotes-heading'>Assumptions</h2>{assumptions_html}</div>"
+        if assumption_notes
+        else ""
+    )
     sat_unsat = quality_report.get("sat_unsat") or {}
     sat_value = float(sat_unsat.get("saturated") or 0.0)
     unsat_value = float(sat_unsat.get("unsaturated") or 0.0)
@@ -260,6 +265,7 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
       .summary-item {{ display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }}
       .text-muted {{ color: #666; }}
       .footnotes {{ margin-top: 10px; }}
+      .footnotes-heading {{ font-size: 14px; margin: 12px 0 4px; }}
       .footnote {{ font-size: 11px; color: #555; margin-top: 6px; }}
     </style>
   </head>
@@ -311,7 +317,7 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
       <thead><tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
       <tbody>{additive_rows_html}</tbody>
     </table>
-    <div class="footnotes">{assumptions_html}</div>
+    {assumptions_block_html}
   </body>
 </html>"""
 

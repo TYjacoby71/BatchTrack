@@ -134,6 +134,7 @@ def test_citric_extra_lye_uses_lye_type_multiplier():
     koh_result = SoapToolComputationService.calculate(koh_payload)
     koh_citric_g = float(koh_result["additives"]["citricG"])
     assert round(float(koh_result["additives"]["citricLyeG"]), 3) == round(koh_citric_g * 0.71, 3)
+    assert "Assumptions" in koh_result["export"]["sheet_html"]
     assert "0.71 x citric acid because KOH was selected." in koh_result["export"]["sheet_html"]
     assert any(
         row[0] == "Notes" and "0.71 x citric acid because KOH was selected." in str(row[1])
