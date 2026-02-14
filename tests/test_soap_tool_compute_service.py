@@ -66,3 +66,39 @@ def test_compute_service_lye_is_method_independent():
     assert round(percent["lye_adjusted_g"], 3) == round(concentration["lye_adjusted_g"], 3)
     assert round(percent["lye_adjusted_g"], 3) == round(ratio["lye_adjusted_g"], 3)
 
+
+def test_compute_service_sheet_shows_fragrance_and_additives_when_present():
+    result = SoapToolComputationService.calculate(_payload())
+    html = result["export"]["sheet_html"]
+
+    assert "Fragrance & Essential Oils" in html
+    assert "Lavender EO" in html
+    assert "Additives" in html
+    assert "Sodium Lactate" in html
+
+
+def test_compute_service_sheet_rolls_citric_lye_into_total_with_footnote():
+    payload = _payload()
+    payload["additives"]["citric_pct"] = 2.0
+
+    result = SoapToolComputationService.calculate(payload)
+    html = result["export"]["sheet_html"]
+    csv_rows = result["export"]["csv_rows"]
+
+    extra_lye = float(result["additives"]["citricLyeG"])
+    assert extra_lye > 0
+
+    expected_total_lye = round(float(result["lye_adjusted_g"]) + extra_lye, 2)
+    lye_rows = [row for row in csv_rows if row[0] == "Lye"]
+    assert len(lye_rows) == 1
+    assert lye_rows[0][1].endswith("*")
+    assert round(float(lye_rows[0][2]), 2) == expected_total_lye
+    assert any(
+        row[0] == "Notes" and "lye added extra to accommodate the extra citrus" in str(row[1])
+        for row in csv_rows
+    )
+
+    assert "Sodium Hydroxide (NaOH)*" in html
+    assert f"{expected_total_lye} g*" in html
+    assert "lye added extra to accommodate the extra citrus." in html
+
