@@ -4,8 +4,14 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { LACTATE_CATEGORY_SET, SUGAR_CATEGORY_SET, SALT_CATEGORY_SET, CITRIC_CATEGORY_SET } = SoapTool.constants;
   const { round, toNumber, clamp } = SoapTool.helpers;
-  const { formatWeight, formatPercent, toGrams } = SoapTool.units;
+  const { formatWeight, formatPercent, toGrams, fromGrams } = SoapTool.units;
   const state = SoapTool.state;
+  const PRINT_CONFIRM_MIN_FILL_PCT = 90;
+  const PRINT_CONFIRM_MAX_FILL_PCT = 120;
+  const PRINT_CONFIRM_STRONG_LOW_FILL_PCT = 80;
+  const PRINT_CONFIRM_STRONG_HIGH_FILL_PCT = 130;
+  const PRINT_NORMALIZE_MIN_PCT = 50;
+  const PRINT_NORMALIZE_MAX_PCT = 200;
 
   async function getCalcForExport(){
     const calc = state.lastCalc || await SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
@@ -168,7 +174,238 @@
     URL.revokeObjectURL(url);
   }
 
-  function buildPrintSheet(calc){
+  function getMoldFillSummary(calc){
+    const moldSettings = SoapTool.mold?.getMoldSettings ? SoapTool.mold.getMoldSettings() : null;
+    const moldCapacityG = toNumber(moldSettings?.effectiveCapacity);
+    const batchYieldG = toNumber(calc?.batchYield);
+    if (moldCapacityG <= 0 || batchYieldG <= 0) {
+      return null;
+    }
+    const fillPct = (batchYieldG / moldCapacityG) * 100;
+    return {
+      moldCapacityG,
+      batchYieldG,
+      fillPct,
+      differenceG: batchYieldG - moldCapacityG,
+    };
+  }
+
+  function shouldShowPrintFillConfirmation(fillSummary){
+    if (!fillSummary) return false;
+    return fillSummary.fillPct < PRINT_CONFIRM_MIN_FILL_PCT || fillSummary.fillPct > PRINT_CONFIRM_MAX_FILL_PCT;
+  }
+
+  function getPrintFillGuidance(fillPct){
+    if (fillPct < PRINT_CONFIRM_MIN_FILL_PCT) {
+      const isStrong = fillPct < PRINT_CONFIRM_STRONG_LOW_FILL_PCT;
+      return {
+        toneClass: isStrong ? 'text-danger' : 'text-warning',
+        messageClass: isStrong ? 'alert-danger' : 'alert-warning',
+        message: isStrong
+          ? 'This recipe is far below mold capacity and may underfill bars.'
+          : 'This recipe is below your target range and may leave extra headspace.',
+      };
+    }
+    if (fillPct > PRINT_CONFIRM_MAX_FILL_PCT) {
+      const isStrong = fillPct > PRINT_CONFIRM_STRONG_HIGH_FILL_PCT;
+      return {
+        toneClass: isStrong ? 'text-danger' : 'text-warning',
+        messageClass: isStrong ? 'alert-danger' : 'alert-warning',
+        message: isStrong
+          ? 'This recipe is far above mold capacity and has a high overflow risk.'
+          : 'This recipe is above your target range and may overflow this mold.',
+      };
+    }
+    return {
+      toneClass: 'text-success',
+      messageClass: 'alert-success',
+      message: 'This recipe is inside your target fill range.',
+    };
+  }
+
+  function formatSignedWeight(weightG){
+    const safe = toNumber(weightG);
+    if (!isFinite(safe) || Math.abs(safe) < 0.01) {
+      return `0 ${state.currentUnit || 'g'}`;
+    }
+    const sign = safe > 0 ? '+' : '-';
+    return `${sign}${round(fromGrams(Math.abs(safe)), 2)} ${state.currentUnit || 'g'}`;
+  }
+
+  function scaleExportRows(rows, factor){
+    const safeFactor = toNumber(factor);
+    if (!Array.isArray(rows) || !isFinite(safeFactor) || safeFactor <= 0) {
+      return [];
+    }
+    return rows.map(row => ({
+      ...row,
+      grams: toNumber(row?.grams) * safeFactor,
+    }));
+  }
+
+  function buildScaledPrintCalc(calc, scaleFactor, targetBatchYieldG){
+    const safeFactor = toNumber(scaleFactor);
+    if (!isFinite(safeFactor) || safeFactor <= 0 || !calc || typeof calc !== 'object') {
+      return null;
+    }
+    const scaledAdditives = {
+      ...(calc.additives || {}),
+    };
+    ['lactateG', 'sugarG', 'saltG', 'citricG', 'citricLyeG', 'fragranceG'].forEach(key => {
+      scaledAdditives[key] = toNumber(scaledAdditives[key]) * safeFactor;
+    });
+    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
+    return {
+      ...calc,
+      totalOils: toNumber(calc.totalOils) * safeFactor,
+      oils: (calc.oils || []).map(oil => ({
+        ...oil,
+        grams: toNumber(oil?.grams) * safeFactor,
+      })),
+      lyePure: toNumber(calc.lyePure) * safeFactor,
+      lyeAdjustedBase: hasBaseLye ? (toNumber(calc.lyeAdjustedBase) * safeFactor) : calc.lyeAdjustedBase,
+      lyeAdjusted: toNumber(calc.lyeAdjusted) * safeFactor,
+      water: toNumber(calc.water) * safeFactor,
+      batchYield: toNumber(targetBatchYieldG) > 0 ? toNumber(targetBatchYieldG) : (toNumber(calc.batchYield) * safeFactor),
+      additives: scaledAdditives,
+      export: null,
+    };
+  }
+
+  function buildNormalizedPrintPayload(calc, fillSummary, targetFillPct){
+    if (!fillSummary || !calc) return null;
+    const desiredPct = clamp(
+      toNumber(targetFillPct) > 0 ? toNumber(targetFillPct) : 100,
+      PRINT_NORMALIZE_MIN_PCT,
+      PRINT_NORMALIZE_MAX_PCT
+    );
+    const targetBatchYieldG = fillSummary.moldCapacityG * (desiredPct / 100);
+    const currentBatchYieldG = toNumber(calc.batchYield);
+    if (!isFinite(targetBatchYieldG) || targetBatchYieldG <= 0 || !isFinite(currentBatchYieldG) || currentBatchYieldG <= 0) {
+      return null;
+    }
+    const scaleFactor = targetBatchYieldG / currentBatchYieldG;
+    const scaledCalc = buildScaledPrintCalc(calc, scaleFactor, targetBatchYieldG);
+    if (!scaledCalc) return null;
+    const fragrances = scaleExportRows(collectFragranceExportRows(toNumber(calc.totalOils)), scaleFactor);
+    const additives = scaleExportRows(collectAdditiveExportRows(calc.additives), scaleFactor);
+    return {
+      calc: scaledCalc,
+      fragrances,
+      additives,
+      normalizationNote: `Normalized to ${round(desiredPct, 1)}% mold fill (${formatWeight(targetBatchYieldG)} target batch).`,
+    };
+  }
+
+  function showPrintFillConfirmationModal(fillSummary){
+    return new Promise(resolve => {
+      const modalEl = document.getElementById('soapPrintConfirmModal');
+      if (!modalEl || !window.bootstrap) {
+        resolve({ action: 'print-as-is' });
+        return;
+      }
+      const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+      const batchYieldEl = document.getElementById('soapPrintConfirmBatchYield');
+      const moldCapacityEl = document.getElementById('soapPrintConfirmMoldCapacity');
+      const fillPctEl = document.getElementById('soapPrintConfirmFillPct');
+      const diffEl = document.getElementById('soapPrintConfirmDiff');
+      const messageEl = document.getElementById('soapPrintConfirmMessage');
+      const normalizePctInput = document.getElementById('soapPrintNormalizePct');
+      const printAsIsBtn = document.getElementById('soapPrintAsIsBtn');
+      const normalizeBtn = document.getElementById('soapNormalizePrintBtn');
+
+      if (!printAsIsBtn || !normalizeBtn) {
+        resolve({ action: 'print-as-is' });
+        return;
+      }
+
+      const guidance = getPrintFillGuidance(fillSummary.fillPct);
+      if (batchYieldEl) batchYieldEl.textContent = formatWeight(fillSummary.batchYieldG);
+      if (moldCapacityEl) moldCapacityEl.textContent = formatWeight(fillSummary.moldCapacityG);
+      if (diffEl) diffEl.textContent = formatSignedWeight(fillSummary.differenceG);
+      if (fillPctEl) {
+        fillPctEl.textContent = `${round(fillSummary.fillPct, 1)}%`;
+        fillPctEl.classList.remove('text-success', 'text-warning', 'text-danger');
+        fillPctEl.classList.add(guidance.toneClass);
+      }
+      if (messageEl) {
+        messageEl.textContent = guidance.message;
+        messageEl.classList.remove('alert-success', 'alert-info', 'alert-warning', 'alert-danger');
+        messageEl.classList.add(guidance.messageClass);
+      }
+      if (normalizePctInput) {
+        normalizePctInput.value = '100';
+      }
+
+      let settled = false;
+      const cleanup = () => {
+        printAsIsBtn.removeEventListener('click', handleAsIsClick);
+        normalizeBtn.removeEventListener('click', handleNormalizeClick);
+        if (normalizePctInput) {
+          normalizePctInput.removeEventListener('keydown', handleNormalizeEnter);
+        }
+        modalEl.removeEventListener('hidden.bs.modal', handleModalHidden);
+      };
+      const settle = (payload) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(payload);
+      };
+      const handleAsIsClick = () => {
+        settle({ action: 'print-as-is' });
+        modal.hide();
+      };
+      const handleNormalizeClick = () => {
+        const rawTarget = toNumber(normalizePctInput?.value);
+        const safeTarget = clamp(rawTarget > 0 ? rawTarget : 100, PRINT_NORMALIZE_MIN_PCT, PRINT_NORMALIZE_MAX_PCT);
+        if (normalizePctInput) {
+          normalizePctInput.value = round(safeTarget, 2);
+        }
+        settle({ action: 'normalize', targetPct: safeTarget });
+        modal.hide();
+      };
+      const handleNormalizeEnter = (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        handleNormalizeClick();
+      };
+      const handleModalHidden = () => {
+        settle(null);
+      };
+
+      printAsIsBtn.addEventListener('click', handleAsIsClick);
+      normalizeBtn.addEventListener('click', handleNormalizeClick);
+      if (normalizePctInput) {
+        normalizePctInput.addEventListener('keydown', handleNormalizeEnter);
+      }
+      modalEl.addEventListener('hidden.bs.modal', handleModalHidden);
+      modal.show();
+      if (normalizePctInput) {
+        window.setTimeout(() => normalizePctInput.focus(), 120);
+      }
+    });
+  }
+
+  function openPrintWindow(html){
+    const win = window.open('', '_blank', 'width=960,height=720');
+    if (!win) {
+      if (SoapTool.ui?.showSoapAlert) {
+        SoapTool.ui.showSoapAlert('warning', 'Pop-up blocked. Allow pop-ups to print the sheet.', { dismissible: true, timeoutMs: 6000 });
+      }
+      return false;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.onload = () => {
+      win.print();
+    };
+    return true;
+  }
+
+  function buildPrintSheet(calc, options = {}){
     if (typeof calc?.export?.sheet_html === 'string' && calc.export.sheet_html.trim()) {
       return calc.export.sheet_html;
     }
@@ -178,8 +415,15 @@
       grams: oil.grams || 0,
       pct: totalOils > 0 ? (oil.grams / totalOils) * 100 : 0,
     }));
-    const fragrances = collectFragranceExportRows(totalOils);
-    const additives = collectAdditiveExportRows(calc.additives);
+    const fragrances = Array.isArray(options?.fragrances)
+      ? options.fragrances
+      : collectFragranceExportRows(totalOils);
+    const additives = Array.isArray(options?.additives)
+      ? options.additives
+      : collectAdditiveExportRows(calc.additives);
+    const normalizationNote = typeof options?.normalizationNote === 'string'
+      ? options.normalizationNote.trim()
+      : '';
     const now = new Date().toLocaleString();
     const oilRows = oils.length
       ? oils.map(oil => `
@@ -243,6 +487,7 @@
   <body>
     <h1>Soap Formula Sheet</h1>
     <div class="meta">Generated ${now}</div>
+    ${normalizationNote ? `<div class="meta">${normalizationNote}</div>` : ''}
     <div class="summary-grid">
       <div class="summary-item"><span>Lye type</span><span>${calc.lyeType || '--'}</span></div>
       <div class="summary-item"><span>Superfat</span><span>${formatPercent(calc.superfat || 0)}</span></div>
@@ -833,21 +1078,26 @@
     printSoapSheetBtn.addEventListener('click', async function(){
       const calc = await getCalcForExport();
       if (!calc) return;
-      const html = buildPrintSheet(calc);
-      const win = window.open('', '_blank', 'width=960,height=720');
-      if (!win) {
-        if (SoapTool.ui?.showSoapAlert) {
-          SoapTool.ui.showSoapAlert('warning', 'Pop-up blocked. Allow pop-ups to print the sheet.', { dismissible: true, timeoutMs: 6000 });
+      const fillSummary = getMoldFillSummary(calc);
+      let sheetCalc = calc;
+      let sheetOptions = {};
+      if (shouldShowPrintFillConfirmation(fillSummary)) {
+        const choice = await showPrintFillConfirmationModal(fillSummary);
+        if (!choice) return;
+        if (choice.action === 'normalize') {
+          const normalized = buildNormalizedPrintPayload(calc, fillSummary, choice.targetPct);
+          if (normalized?.calc) {
+            sheetCalc = normalized.calc;
+            sheetOptions = {
+              fragrances: normalized.fragrances,
+              additives: normalized.additives,
+              normalizationNote: normalized.normalizationNote,
+            };
+          }
         }
-        return;
       }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      win.onload = () => {
-        win.print();
-      };
+      const html = buildPrintSheet(sheetCalc, sheetOptions);
+      openPrintWindow(html);
     });
   }
 
