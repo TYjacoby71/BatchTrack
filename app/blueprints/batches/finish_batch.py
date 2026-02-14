@@ -22,6 +22,16 @@ from app.utils.permissions import role_required
 finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)
 
+
+def _normalize_adjustment_result(result):
+    """Normalize adjustment return format to (success, message)."""
+    if isinstance(result, tuple):
+        success = bool(result[0]) if len(result) > 0 else False
+        message = str(result[1]) if len(result) > 1 and result[1] is not None else ''
+        return success, message
+    return bool(result), ''
+
+
 # =========================================================
 # FINISH BATCH
 # =========================================================
@@ -243,7 +253,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
 
         # Process inventory adjustment through CANONICAL entry point
         logger.info(f"🔧 INTERMEDIATE INGREDIENT: Adding {final_quantity} {output_unit} to inventory item {inventory_item.id}")
-        success = process_inventory_adjustment(
+        adjustment_result = process_inventory_adjustment(
             item_id=inventory_item.id,
             quantity=final_quantity,
             change_type='finished_batch',
@@ -253,9 +263,10 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             custom_expiration_date=expiration_date,
             batch_id=batch.id  # Add batch traceability
         )
+        success, error_message = _normalize_adjustment_result(adjustment_result)
 
         if not success:
-            raise ValueError(f"Failed to add intermediate ingredient inventory via canonical service")
+            raise ValueError(error_message or "Failed to add intermediate ingredient inventory via canonical service")
 
         logger.info(f"Created intermediate ingredient via canonical service: {ingredient_name}, quantity: {final_quantity} {output_unit}")
 
@@ -406,7 +417,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     db.session.flush()
 
                 # Credit inventory as number of portions to the SKU's inventory item
-                success = process_inventory_adjustment(
+                adjustment_result = process_inventory_adjustment(
                     item_id=sku.inventory_item_id,
                     quantity=final_portions,
                     change_type='finished_batch',
@@ -417,8 +428,9 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     cost_override=portion_unit_cost,
                     batch_id=batch.id
                 )
+                success, error_message = _normalize_adjustment_result(adjustment_result)
                 if not success:
-                    raise ValueError('Failed to credit portion inventory')
+                    raise ValueError(error_message or 'Failed to credit portion inventory')
 
                 portion_lot = InventoryLot.query.filter_by(
                     inventory_item_id=sku.inventory_item_id,
@@ -429,6 +441,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     created_lots.append(portion_lot)
             except Exception as e:
                 logger.error(f"Error creating portion-based SKU: {e}")
+                raise
 
         logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity if not getattr(batch, 'is_portioned', False) else 0} {bulk_unit if (bulk_quantity > 0 and not getattr(batch, 'is_portioned', False)) else ''} bulk")
         return {'total_container_volume': total_container_volume, 'created_lots': [lot for lot in created_lots if lot]}
@@ -610,7 +623,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             product_sku.inventory_item.shelf_life_days = batch.shelf_life_days
 
         # Add containers to inventory - quantity is number of containers
-        success = process_inventory_adjustment(
+        adjustment_result = process_inventory_adjustment(
             item_id=product_sku.inventory_item_id,
             quantity=quantity,  # Number of containers
             change_type='finished_batch',
@@ -621,9 +634,10 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             cost_override=total_cost_per_container,  # Pass calculated cost per container
             batch_id=batch.id
         )
+        success, error_message = _normalize_adjustment_result(adjustment_result)
 
         if not success:
-            raise ValueError(f"Failed to add container inventory for {size_label}")
+            raise ValueError(error_message or f"Failed to add container inventory for {size_label}")
 
         logger.info(f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers at ${total_cost_per_container:.2f} per container")
 
@@ -662,7 +676,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             bulk_sku.inventory_item.shelf_life_days = batch.shelf_life_days
 
         # Add bulk quantity to inventory with calculated unit cost
-        success = process_inventory_adjustment(
+        adjustment_result = process_inventory_adjustment(
             item_id=bulk_sku.inventory_item_id,
             quantity=quantity,
             change_type='finished_batch',
@@ -673,9 +687,10 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             cost_override=ingredient_unit_cost,  # Pass ingredient unit cost for bulk
             batch_id=batch.id
         )
+        success, error_message = _normalize_adjustment_result(adjustment_result)
 
         if not success:
-            raise ValueError(f"Failed to add bulk inventory for {quantity} {unit}")
+            raise ValueError(error_message or f"Failed to add bulk inventory for {quantity} {unit}")
 
         logger.info(f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}")
         bulk_lot = InventoryLot.query.filter_by(
