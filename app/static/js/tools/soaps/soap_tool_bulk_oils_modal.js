@@ -239,7 +239,6 @@
       modalInstance = window.bootstrap.Modal.getOrCreateInstance(refs.modalEl);
     }
     if (refs.searchInput) refs.searchInput.value = modalState.query || '';
-    if (refs.modeToggle) refs.modeToggle.checked = modalState.mode === 'all';
     if (refs.viewSelectedToggle) refs.viewSelectedToggle.checked = !!modalState.viewSelected;
     if (refs.unitLabelEl) refs.unitLabelEl.textContent = state.currentUnit || 'g';
     if (modalInstance) modalInstance.show();
@@ -291,17 +290,6 @@
     }
     notifyStageOilChanged();
     queueStateSave();
-  }
-
-  async function handleModeToggle(checked){
-    const modalState = ensureModalState();
-    modalState.mode = checked ? 'all' : 'basics';
-    queueStateSave();
-    try {
-      await fetchCatalogPage({ reset: true });
-    } catch (_) {
-      showAlert('danger', 'Unable to load bulk oils catalog right now.');
-    }
   }
 
   function handleViewSelectedToggle(checked){
@@ -424,11 +412,6 @@
         modalState.query = refs.searchInput.value || '';
         queueStateSave();
         scheduleSearchReload();
-      });
-    }
-    if (refs.modeToggle) {
-      refs.modeToggle.addEventListener('change', async () => {
-        await handleModeToggle(!!refs.modeToggle.checked);
       });
     }
     if (refs.viewSelectedToggle) {
