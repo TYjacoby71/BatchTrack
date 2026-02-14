@@ -37,7 +37,7 @@
     const total = modalState.totalCount;
     const moreHint = modalState.hasMore ? ' • scroll for more' : '';
     const queryHint = modalState.query ? ` • search: "${modalState.query}"` : '';
-    updateStatusText(`Loaded ${loaded}/${total}${queryHint}${moreHint}`);
+    updateStatusText(`Showing ${loaded} of ${total} oils${queryHint}${moreHint}`);
   }
 
   function compareValues(aValue, bValue, dir){
