@@ -23,13 +23,15 @@ finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)
 
 
-def _normalize_adjustment_result(result):
-    """Normalize adjustment return format to (success, message)."""
-    if isinstance(result, tuple):
-        success = bool(result[0]) if len(result) > 0 else False
-        message = str(result[1]) if len(result) > 1 and result[1] is not None else ''
-        return success, message
-    return bool(result), ''
+def _parse_adjustment_result(result):
+    """Strictly parse canonical adjustment return shape (success, message)."""
+    if not isinstance(result, tuple) or len(result) < 2:
+        raise TypeError(
+            "process_inventory_adjustment must return (success, message)"
+        )
+    success = bool(result[0])
+    message = str(result[1]) if result[1] is not None else ""
+    return success, message
 
 
 # =========================================================
@@ -263,7 +265,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             custom_expiration_date=expiration_date,
             batch_id=batch.id  # Add batch traceability
         )
-        success, error_message = _normalize_adjustment_result(adjustment_result)
+        success, error_message = _parse_adjustment_result(adjustment_result)
 
         if not success:
             raise ValueError(error_message or "Failed to add intermediate ingredient inventory via canonical service")
@@ -428,7 +430,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     cost_override=portion_unit_cost,
                     batch_id=batch.id
                 )
-                success, error_message = _normalize_adjustment_result(adjustment_result)
+                success, error_message = _parse_adjustment_result(adjustment_result)
                 if not success:
                     raise ValueError(error_message or 'Failed to credit portion inventory')
 
@@ -634,7 +636,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             cost_override=total_cost_per_container,  # Pass calculated cost per container
             batch_id=batch.id
         )
-        success, error_message = _normalize_adjustment_result(adjustment_result)
+        success, error_message = _parse_adjustment_result(adjustment_result)
 
         if not success:
             raise ValueError(error_message or f"Failed to add container inventory for {size_label}")
@@ -687,7 +689,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             cost_override=ingredient_unit_cost,  # Pass ingredient unit cost for bulk
             batch_id=batch.id
         )
-        success, error_message = _normalize_adjustment_result(adjustment_result)
+        success, error_message = _parse_adjustment_result(adjustment_result)
 
         if not success:
             raise ValueError(error_message or f"Failed to add bulk inventory for {quantity} {unit}")
