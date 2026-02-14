@@ -16,7 +16,7 @@
 {% set title_id = modal_id ~ 'Title' %}
 {% set selected_flow = default_flow if default_flow else 'question' %}
 {% set resolved_sources = source_options if source_options else [{'value': default_source, 'label': default_source|replace('_', ' ')|title}] %}
-{% set effective_source = default_source or (resolved_sources[0].value if resolved_sources else 'unknown_source') %}
+{% set effective_source = default_source or ((resolved_sources[0].value if resolved_sources else '') or 'unknown_source') %}
 <div
   class="feedback-note-widget"
   data-feedback-note-widget
