@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
+  - Fixed timezone-mixed timer math on batch in-progress rendering paths.
+  - Hardened timer management timestamp parsing to prevent `NaN` countdown output.
+  - Added targeted regression tests for timer display stability.
 - **[2026-02-12: Soap Tool Service Orchestration and JS Thinning](2026-02-12-soap-tool-service-orchestration-and-js-thinning.md)**
   - Added a dedicated `app/services/tools/soap_tool/` package to compile lye/water, additives, quality report data, and export payloads in one backend authority.
   - Updated `/tools/api/soap/calculate` and front-end runner wiring to consume service-computed bundles instead of duplicating calculations in JS.

@@ -50,6 +50,38 @@ def _build_results_card(lye_water: dict, additives: dict, quality_report: dict, 
     }
 
 
+# --- Citric-acid lye reconciliation ---
+# Purpose: Fold citric-acid extra lye into total lye and water outputs.
+# Inputs: Base lye/water payload and additive outputs.
+# Outputs: Updated lye/water payload with total lye and recalculated water metrics.
+def _apply_citric_lye_adjustment(lye_water: dict, additives: dict) -> dict:
+    merged = dict(lye_water or {})
+    base_adjusted = _to_float(merged.get("lye_adjusted_g"), 0.0)
+    extra_lye = _to_float(additives.get("citricLyeG"), 0.0)
+    total_adjusted = base_adjusted + extra_lye
+
+    merged["lye_adjusted_base_g"] = base_adjusted
+    merged["lye_adjusted_g"] = total_adjusted
+    merged["citric_lye_g"] = extra_lye
+
+    method = str(merged.get("water_method") or "percent").strip().lower()
+    water_g = _to_float(merged.get("water_g"), 0.0)
+    if method == "concentration":
+        concentration_input = _to_float(merged.get("lye_concentration_input_pct"), 0.0)
+        water_g = total_adjusted * ((100.0 - concentration_input) / concentration_input) if concentration_input > 0 else 0.0
+    elif method == "ratio":
+        ratio_input = _to_float(merged.get("water_ratio_input"), 0.0)
+        water_g = total_adjusted * ratio_input if total_adjusted > 0 else 0.0
+    merged["water_g"] = water_g
+
+    if (total_adjusted + water_g) > 0:
+        merged["lye_concentration_pct"] = (total_adjusted / (total_adjusted + water_g)) * 100.0
+    else:
+        merged["lye_concentration_pct"] = 0.0
+    merged["water_lye_ratio"] = (water_g / total_adjusted) if total_adjusted > 0 else 0.0
+    return merged
+
+
 # --- Soap tool computation orchestrator ---
 # Purpose: Provide one canonical service entrypoint for soap tool outputs.
 # Inputs: Raw soap tool payload mapping.
@@ -66,6 +98,7 @@ class SoapToolComputationService:
             additive_settings=request.additives,
             fragrances=request.fragrances,
         )
+        lye_water = _apply_citric_lye_adjustment(lye_water, additives)
         quality_report = build_quality_report(
             oils=request.oils,
             total_oils=total_oils,

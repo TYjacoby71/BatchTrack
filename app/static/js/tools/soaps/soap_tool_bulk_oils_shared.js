@@ -14,7 +14,7 @@
   const SCROLL_FETCH_THRESHOLD = 140;
   const SEARCH_DEBOUNCE_MS = 260;
   const DEFAULT_MODAL_STATE = {
-    mode: 'basics',
+    mode: 'all',
     viewSelected: false,
     query: '',
     sortKey: 'name',
@@ -42,7 +42,6 @@
       modalEl: document.getElementById('bulkOilModal'),
       openBtn: document.getElementById('openBulkOilModal'),
       searchInput: document.getElementById('bulkOilSearchInput'),
-      modeToggle: document.getElementById('bulkOilDisplayAllToggle'),
       viewSelectedToggle: document.getElementById('bulkOilViewSelectedToggle'),
       statusEl: document.getElementById('bulkOilCatalogStatus'),
       summaryEl: document.getElementById('bulkOilSelectedSummary'),
@@ -67,7 +66,7 @@
       state.bulkOilModal = JSON.parse(JSON.stringify(DEFAULT_MODAL_STATE));
     }
     const modalState = state.bulkOilModal;
-    modalState.mode = modalState.mode === 'all' ? 'all' : 'basics';
+    modalState.mode = 'all';
     modalState.viewSelected = !!modalState.viewSelected;
     modalState.query = typeof modalState.query === 'string' ? modalState.query : '';
     modalState.sortKey = isSupportedSortKey(modalState.sortKey) ? modalState.sortKey : 'name';
@@ -168,7 +167,7 @@
   function serializeSelection(){
     const modalState = ensureModalState();
     return {
-      mode: modalState.mode,
+      mode: 'all',
       view_selected: !!modalState.viewSelected,
       query: modalState.query,
       sort_key: modalState.sortKey,
@@ -192,7 +191,7 @@
 
   function restoreState(savedState){
     const modalState = ensureModalState();
-    modalState.mode = savedState?.mode === 'all' ? 'all' : 'basics';
+    modalState.mode = 'all';
     modalState.viewSelected = !!savedState?.view_selected;
     modalState.query = typeof savedState?.query === 'string' ? savedState.query : '';
     modalState.sortKey = isSupportedSortKey(savedState?.sort_key) ? savedState.sort_key : 'name';

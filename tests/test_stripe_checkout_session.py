@@ -41,6 +41,7 @@ def test_get_live_pricing_falls_back_to_price_id(app):
 
         assert pricing['price_id'] == 'price_fallback'
         assert pricing['billing_cycle'] == 'monthly'
+        assert pricing['formatted_price'] == '$50.00'
         mock_price_list.assert_called_once()
         mock_retrieve.assert_called_once_with('price_fallback')
 
@@ -59,6 +60,23 @@ def test_get_live_pricing_treats_12_month_interval_as_yearly(app):
             patch('app.services.billing_service.stripe.Price.list', return_value=SimpleNamespace(data=[price_obj])):
         pricing = BillingService.get_live_pricing_for_lookup_key('batchtrack_team_yearly')
         assert pricing['billing_cycle'] == 'yearly'
+
+
+def test_get_live_pricing_keeps_cents_from_stripe(app):
+    price_obj = SimpleNamespace(
+        id='price_precise',
+        unit_amount=1499,
+        currency='usd',
+        active=True,
+        recurring=SimpleNamespace(interval='month', interval_count=1),
+    )
+
+    with app.app_context(), \
+            patch('app.services.billing_service.BillingService.ensure_stripe', return_value=True), \
+            patch('app.services.billing_service.stripe.Price.list', return_value=SimpleNamespace(data=[price_obj])):
+        pricing = BillingService.get_live_pricing_for_lookup_key('batchtrack_precise_monthly')
+        assert pricing['amount'] == pytest.approx(14.99)
+        assert pricing['formatted_price'] == '$14.99'
 
 
 def test_checkout_session_drops_customer_update_without_customer(app):

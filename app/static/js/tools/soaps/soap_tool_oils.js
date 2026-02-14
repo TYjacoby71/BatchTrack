@@ -368,6 +368,9 @@
     document.getElementById('oilPercentTotal').textContent = round(totalPct, 2);
     updateOilLimitWarning({ totalWeight, totalPct, target, capped: state.wasCapped });
     SoapTool.additives.updateAdditivesOutput(totalWeight);
+    if (SoapTool.fragrances?.updateFragranceTotals) {
+      SoapTool.fragrances.updateFragranceTotals(totalWeight);
+    }
     SoapTool.mold.updateMoldSuggested();
     updateOilTips();
     return { totalWeight, totalPct, target };

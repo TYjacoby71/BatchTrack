@@ -14,6 +14,8 @@ from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.tools.soap_tool import SoapToolComputationService, get_bulk_catalog_page
+from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+from app.services.public_bot_trap_service import PublicBotTrapService
 from app.models import FeatureFlag
 from app.extensions import limiter
 from app.utils.cache_utils import should_bypass_cache
@@ -205,6 +207,100 @@ def tools_soap_oils_catalog():
         bypass_cache=should_bypass_cache(),
     )
     return jsonify({"success": True, "result": result_payload})
+
+
+# --- Public tool feedback notes route ---
+# Purpose: Persist public feedback notes into JSON buckets by source/flow.
+# Inputs: JSON payload containing source, flow, and note message/details.
+# Outputs: JSON response with saved bucket metadata.
+@tools_bp.route('/api/feedback-notes', methods=['POST'])
+@limiter.limit("1200/hour;120/minute")
+def tools_feedback_notes():
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    trap_value = (payload.get("website") or payload.get("company") or "").strip()
+    trap_email = (payload.get("contact_email") or payload.get("email") or "").strip().lower() or None
+    requester_ip = PublicBotTrapService.resolve_request_ip(request)
+    requester_user_id = getattr(current_user, "id", None) if getattr(current_user, "is_authenticated", False) else None
+    note_source = ToolFeedbackNoteService.derive_location_source(
+        page_endpoint=payload.get("page_endpoint"),
+        page_path=payload.get("page_path"),
+        fallback_source=payload.get("source"),
+    )
+
+    def _success_passthrough():
+        return jsonify({"success": True, "message": "Thanks. Your note was saved."})
+
+    if trap_value:
+        PublicBotTrapService.record_hit(
+            request=request,
+            source=note_source,
+            reason="feedback_note_honeypot",
+            email=trap_email,
+            user_id=requester_user_id,
+            extra={"field": "website"},
+            block=False,
+        )
+        if trap_email:
+            blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
+            PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
+        else:
+            PublicBotTrapService.add_block(ip=requester_ip, user_id=requester_user_id)
+        return _success_passthrough()
+
+    if PublicBotTrapService.is_blocked(
+        ip=requester_ip,
+        email=trap_email,
+        user_id=requester_user_id,
+    ):
+        PublicBotTrapService.record_hit(
+            request=request,
+            source=note_source,
+            reason="feedback_note_blocked",
+            email=trap_email,
+            user_id=requester_user_id,
+            extra={"page_path": payload.get("page_path")},
+            block=False,
+        )
+        return _success_passthrough()
+
+    request_meta = {
+        "ip": requester_ip,
+        "user_agent": request.headers.get("User-Agent"),
+        "referer": request.headers.get("Referer"),
+    }
+    source_override = note_source
+
+    try:
+        result = ToolFeedbackNoteService.save_note(
+            payload,
+            request_meta=request_meta,
+            user=current_user,
+            source_override=source_override,
+        )
+    except ValueError as exc:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "allowed_flows": ToolFeedbackNoteService.allowed_flows(),
+                }
+            ),
+            400,
+        )
+    except Exception:
+        return jsonify({"success": False, "error": "Unable to save your note right now."}), 500
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Thanks. Your note was saved.",
+            "result": result,
+        }
+    )
 
 
 # --- Public draft capture route ---

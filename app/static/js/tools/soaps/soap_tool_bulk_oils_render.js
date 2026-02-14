@@ -24,7 +24,6 @@
 
   function refreshCatalogStatus(){
     const modalState = ensureModalState();
-    const modeLabel = modalState.mode === 'all' ? 'all oils' : 'SoapCalc basics';
     if (modalState.loading && !modalState.visibleRecords.length) {
       updateStatusText('Loading oils...');
       return;
@@ -38,7 +37,7 @@
     const total = modalState.totalCount;
     const moreHint = modalState.hasMore ? ' • scroll for more' : '';
     const queryHint = modalState.query ? ` • search: "${modalState.query}"` : '';
-    updateStatusText(`Loaded ${loaded}/${total} in ${modeLabel}${queryHint}${moreHint}`);
+    updateStatusText(`Showing ${loaded} of ${total} oils${queryHint}${moreHint}`);
   }
 
   function compareValues(aValue, bValue, dir){

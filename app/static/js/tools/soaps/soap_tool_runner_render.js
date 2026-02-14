@@ -118,6 +118,7 @@
     showAlerts,
   }){
     const lyeType = serviceResult.lye_type || selection.lyeType || 'NaOH';
+    const lyeSelected = serviceResult.lye_selected || selection.selected || null;
     const totalOils = toNumber(serviceResult.total_oils_g) || validation.totals.totalWeight;
     const resolvedSuperfat = toNumber(serviceResult.superfat_pct);
     const superfatValue = isFinite(resolvedSuperfat) ? resolvedSuperfat : superfat;
@@ -126,6 +127,8 @@
       usedFallback: !!serviceResult.used_sap_fallback,
     };
     const lyePure = toNumber(serviceResult.lye_pure_g);
+    const hasLyeAdjustedBase = Object.prototype.hasOwnProperty.call(serviceResult, 'lye_adjusted_base_g');
+    const lyeAdjustedBase = hasLyeAdjustedBase ? toNumber(serviceResult.lye_adjusted_base_g) : null;
     const lyeAdjusted = toNumber(serviceResult.lye_adjusted_g);
     const resolvedPurity = toNumber(serviceResult.lye_purity_pct) || purity;
     const resolvedWaterMethod = serviceResult.water_method || waterMethod;
@@ -212,9 +215,11 @@
       totalOils,
       oils: oilsForState,
       lyeType,
+      lyeSelected,
       superfat: superfatValue,
       purity: resolvedPurity,
       lyePure,
+      lyeAdjustedBase,
       lyeAdjusted,
       water: waterData.waterG,
       waterMethod: resolvedWaterMethod,

@@ -64,6 +64,10 @@ CSRF_EXEMPT_VIEWS: tuple[str, ...] = (
     "inventory.adjust_inventory",
     "inventory.api_bulk_inventory_adjustments",
     "waitlist.join_waitlist",
+    # Public vendor lead capture endpoint is anonymous by design.
+    "app_routes.vendor_signup",
+    # Public compute endpoint is read-only and used by anonymous tool visitors.
+    "tools_bp.tools_soap_calculate",
     "tools_bp.tools_draft",
 )
 
