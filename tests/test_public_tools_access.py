@@ -179,6 +179,32 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
+    """Anonymous users should also see the bubble when the global flag is enabled."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    with app.app_context():
+        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        if flag is None:
+            flag = FeatureFlag(
+                key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
+                enabled=True,
+                description="Customer feedback bubble",
+            )
+            db.session.add(flag)
+        else:
+            flag.enabled = True
+        db.session.commit()
+
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+    assert 'id="globalFeedbackNoteModal"' in html
+    assert 'data-lock-location-source="true"' in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_path):
     """Unknown feedback flow values should fail validation."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService

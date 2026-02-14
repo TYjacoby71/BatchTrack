@@ -19,7 +19,7 @@ Glossary:
       {% set resolved_og_image = page_og_image or url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
       {% set use_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else false) %}
       {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
-      {% set customer_feedback_bubble_enabled = current_user.is_authenticated and is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') %}
+      {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and current_user.user_type == 'developer') %}
       <title>{{ resolved_title }}</title>
       <meta name="description" content="{{ resolved_description }}">
       <link rel="canonical" href="{{ resolved_canonical }}">
