@@ -64,6 +64,36 @@
     return rows;
   }
 
+  function buildAssumptionNotes(calc){
+    const notes = [];
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const citricG = toNumber(calc.additives?.citricG);
+    const lyeType = String(calc.lyeType || 'NaOH').toUpperCase();
+    if (extraLye > 0 && citricG > 0) {
+      if (lyeType === 'KOH') {
+        notes.push('Citric-acid lye adjustment used 0.71 x citric acid because KOH was selected.');
+      } else {
+        notes.push('Citric-acid lye adjustment used 0.624 x citric acid because NaOH was selected.');
+      }
+      notes.push(`${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.`);
+    }
+    if (calc.usedSapFallback) {
+      notes.push('Average SAP fallback was used for oils missing SAP values.');
+    }
+    if (String(calc.lyeSelected || '').toUpperCase() === 'KOH90') {
+      notes.push('KOH90 selection assumes 90% lye purity.');
+    }
+    const oils = Array.isArray(calc.oils) ? calc.oils : [];
+    const hasDecimalSap = oils.some(oil => {
+      const sap = toNumber(oil?.sapKoh);
+      return sap > 0 && sap <= 1;
+    });
+    if (hasDecimalSap) {
+      notes.push('SAP values at or below 1.0 were treated as decimal SAP and converted to mg KOH/g.');
+    }
+    return notes;
+  }
+
   function buildFormulaCsv(calc){
     if (Array.isArray(calc?.export?.csv_rows) && calc.export.csv_rows.length) {
       return calc.export.csv_rows;
@@ -107,9 +137,9 @@
     additiveRows.forEach(row => {
       rows.push(['Additives', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
     });
-    if (extraLye > 0) {
-      rows.push(['Notes', `* ${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.`, '', '', '']);
-    }
+    buildAssumptionNotes(calc).forEach(note => {
+      rows.push(['Notes', `* ${note}`, '', '', '']);
+    });
     return rows;
   }
 
@@ -182,9 +212,8 @@
       : toNumber(calc.lyeAdjusted);
     const lyeLabel = `${calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)'}${extraLye > 0 ? '*' : ''}`;
     const lyeWeightLabel = `${formatWeight(totalLye)}${extraLye > 0 ? '*' : ''}`;
-    const lyeFootnote = extraLye > 0
-      ? `<div class="footnote">* ${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.</div>`
-      : '';
+    const assumptionNotes = buildAssumptionNotes(calc);
+    const assumptionsHtml = assumptionNotes.map(note => `<div class="footnote">* ${note}</div>`).join('');
 
     return `<!doctype html>
 <html>
@@ -203,6 +232,7 @@
       .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
       .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
       .text-muted { color: #666; }
+      .footnotes { margin-top: 10px; }
       .footnote { font-size: 11px; color: #555; margin-top: 6px; }
     </style>
   </head>
@@ -238,7 +268,6 @@
         <tr><td>Distilled Water</td><td class="text-end">${formatWeight(calc.water || 0)}</td></tr>
       </tbody>
     </table>
-    ${lyeFootnote}
 
     <h2>Fragrance & Essential Oils</h2>
     <table>
@@ -255,6 +284,7 @@
       </thead>
       <tbody>${additiveRows}</tbody>
     </table>
+    <div class="footnotes">${assumptionsHtml}</div>
   </body>
 </html>`;
   }

@@ -126,6 +126,7 @@ def test_citric_extra_lye_uses_lye_type_multiplier():
     naoh_result = SoapToolComputationService.calculate(naoh_payload)
     citric_g = float(naoh_result["additives"]["citricG"])
     assert round(float(naoh_result["additives"]["citricLyeG"]), 3) == round(citric_g * 0.624, 3)
+    assert "0.624 x citric acid because NaOH was selected." in naoh_result["export"]["sheet_html"]
 
     koh_payload = _payload()
     koh_payload["lye"]["selected"] = "KOH"
@@ -133,4 +134,9 @@ def test_citric_extra_lye_uses_lye_type_multiplier():
     koh_result = SoapToolComputationService.calculate(koh_payload)
     koh_citric_g = float(koh_result["additives"]["citricG"])
     assert round(float(koh_result["additives"]["citricLyeG"]), 3) == round(koh_citric_g * 0.71, 3)
+    assert "0.71 x citric acid because KOH was selected." in koh_result["export"]["sheet_html"]
+    assert any(
+        row[0] == "Notes" and "0.71 x citric acid because KOH was selected." in str(row[1])
+        for row in koh_result["export"]["csv_rows"]
+    )
 
