@@ -161,7 +161,7 @@
       },
       bulk_oils: (SoapTool.bulkOilsModal && typeof SoapTool.bulkOilsModal.serializeSelection === 'function')
         ? SoapTool.bulkOilsModal.serializeSelection()
-        : { mode: 'basics', selections: [] },
+        : { mode: 'all', selections: [] },
       updated_at: Date.now(),
     };
     try {
