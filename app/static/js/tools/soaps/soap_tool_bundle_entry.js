@@ -5,6 +5,7 @@ import './soap_tool_constants.js';
 import './soap_tool_calc.js';
 import './soap_tool_units.js';
 import './soap_tool_ui.js';
+import './soap_tool_guidance.js';
 import './soap_tool_layout.js';
 import './soap_tool_mold.js';
 import './soap_tool_oils.js';
