@@ -200,6 +200,35 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
 
 
 @pytest.mark.usefixtures("app")
+def test_public_feedback_note_api_honeypot_skips_note_write(app, monkeypatch, tmp_path):
+    """Honeypot-triggered submissions should not write feedback note files."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(PublicBotTrapService, "record_hit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(PublicBotTrapService, "add_block", lambda *args, **kwargs: None)
+    monkeypatch.setattr(PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None)
+
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/feedback-notes",
+        json={
+            "source": "batches.view_batch_in_progress",
+            "flow": "glitch",
+            "message": "bot payload",
+            "website": "spam.example",
+            "page_endpoint": "batches.view_batch_in_progress",
+            "page_path": "/batches/1/in-progress",
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json() or {}
+    assert data.get("success") is True
+    assert not (tmp_path / "tool_feedback_notes").exists()
+
+
+@pytest.mark.usefixtures("app")
 def test_anonymous_workflow_can_browse_public_site(app):
     """
     Simulate a public visitor navigating marketing pages so we detect regressions
