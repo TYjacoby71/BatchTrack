@@ -179,6 +179,32 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
+    """Anonymous users should also see the bubble when the global flag is enabled."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    with app.app_context():
+        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        if flag is None:
+            flag = FeatureFlag(
+                key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
+                enabled=True,
+                description="Customer feedback bubble",
+            )
+            db.session.add(flag)
+        else:
+            flag.enabled = True
+        db.session.commit()
+
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+    assert 'id="globalFeedbackNoteModal"' in html
+    assert 'data-lock-location-source="true"' in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_path):
     """Unknown feedback flow values should fail validation."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
@@ -197,6 +223,35 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
     data = response.get_json() or {}
     assert data.get("success") is False
     assert "allowed_flows" in data
+
+
+@pytest.mark.usefixtures("app")
+def test_public_feedback_note_api_honeypot_skips_note_write(app, monkeypatch, tmp_path):
+    """Honeypot-triggered submissions should not write feedback note files."""
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(PublicBotTrapService, "record_hit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(PublicBotTrapService, "add_block", lambda *args, **kwargs: None)
+    monkeypatch.setattr(PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None)
+
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/feedback-notes",
+        json={
+            "source": "batches.view_batch_in_progress",
+            "flow": "glitch",
+            "message": "bot payload",
+            "website": "spam.example",
+            "page_endpoint": "batches.view_batch_in_progress",
+            "page_path": "/batches/1/in-progress",
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json() or {}
+    assert data.get("success") is True
+    assert not (tmp_path / "tool_feedback_notes").exists()
 
 
 @pytest.mark.usefixtures("app")

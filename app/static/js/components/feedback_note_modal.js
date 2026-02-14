@@ -130,6 +130,7 @@
   function buildPayload(widget){
     const form = widget.querySelector('[data-feedback-note-form]');
     const sourceInput = form ? form.querySelector('[name="source"]') : null;
+    const trapInput = form ? form.querySelector('input[name="website"]') : null;
     const titleInput = form ? form.querySelector('input[name="title"]') : null;
     const messageInput = form ? form.querySelector('textarea[name="message"]') : null;
     const emailInput = form ? form.querySelector('input[name="contact_email"]') : null;
@@ -145,6 +146,7 @@
 
     return {
       source,
+      website: trapInput ? cleanText(trapInput.value) : '',
       flow,
       title,
       message,
