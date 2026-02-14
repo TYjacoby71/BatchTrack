@@ -379,6 +379,29 @@
     closeModal();
   }
 
+  function focusSiblingColumnInput(currentInput, direction){
+    if (!(currentInput instanceof HTMLInputElement)) return false;
+    const refs = getRefs();
+    const body = refs.bodyEl;
+    if (!(body instanceof HTMLElement)) return false;
+    const fieldClass = currentInput.classList.contains('bulk-oil-pct')
+      ? 'bulk-oil-pct'
+      : (currentInput.classList.contains('bulk-oil-weight') ? 'bulk-oil-weight' : '');
+    if (!fieldClass) return false;
+    const inputs = Array.from(body.querySelectorAll(`input.${fieldClass}`));
+    const index = inputs.indexOf(currentInput);
+    if (index < 0) return false;
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= inputs.length) return false;
+    const nextInput = inputs[nextIndex];
+    if (!(nextInput instanceof HTMLInputElement)) return false;
+    nextInput.focus();
+    if (typeof nextInput.select === 'function') {
+      nextInput.select();
+    }
+    return true;
+  }
+
   function onUnitChanged(){
     const refs = getRefs();
     if (refs.unitLabelEl) refs.unitLabelEl.textContent = state.currentUnit || 'g';
@@ -417,8 +440,26 @@
       refs.scrollEl.addEventListener('scroll', handleScroll);
     }
     if (refs.bodyEl) {
-      refs.bodyEl.addEventListener('input', handleBodyInput);
       refs.bodyEl.addEventListener('change', handleBodyInput);
+      refs.bodyEl.addEventListener('keydown', event => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        const isCommitField = target.classList.contains('bulk-oil-pct')
+          || target.classList.contains('bulk-oil-weight');
+        if (!isCommitField) return;
+        if (event.key === 'Enter') {
+          // Commit numeric edits only when the user confirms the field.
+          event.preventDefault();
+          target.blur();
+          return;
+        }
+        if (event.key === 'Tab') {
+          const moved = focusSiblingColumnInput(target, event.shiftKey ? -1 : 1);
+          if (moved) {
+            event.preventDefault();
+          }
+        }
+      });
     }
     refs.modalEl.querySelectorAll('.bulk-oil-sort').forEach(button => {
       button.addEventListener('click', handleSortClick);

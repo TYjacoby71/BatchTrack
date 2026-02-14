@@ -71,11 +71,68 @@
     };
   }
 
+  function getLyeTypeForCitric(){
+    const selected = document.querySelector('input[name="lye_type"]:checked')?.value || 'NaOH';
+    return selected === 'NaOH' ? 'NaOH' : 'KOH';
+  }
+
+  function computeAdditiveOutputs(totalOils){
+    const baseOils = clamp(toNumber(totalOils), 0);
+    const lactatePct = clamp(readAdditivePct({ pctId: 'additiveLactatePct', weightId: 'additiveLactateWeight' }), 0);
+    const sugarPct = clamp(readAdditivePct({ pctId: 'additiveSugarPct', weightId: 'additiveSugarWeight' }), 0);
+    const saltPct = clamp(readAdditivePct({ pctId: 'additiveSaltPct', weightId: 'additiveSaltWeight' }), 0);
+    const citricPct = clamp(readAdditivePct({ pctId: 'additiveCitricPct', weightId: 'additiveCitricWeight' }), 0);
+    const lactateG = baseOils * (lactatePct / 100);
+    const sugarG = baseOils * (sugarPct / 100);
+    const saltG = baseOils * (saltPct / 100);
+    const citricG = baseOils * (citricPct / 100);
+    const citricFactor = getLyeTypeForCitric() === 'KOH' ? 0.719 : 0.624;
+    return {
+      lactatePct,
+      sugarPct,
+      saltPct,
+      citricPct,
+      lactateG,
+      sugarG,
+      saltG,
+      citricG,
+      citricLyeG: citricG * citricFactor,
+    };
+  }
+
+  function syncAdditivePair({ pctId, weightId, sourceField, totalOils }){
+    const pctInput = document.getElementById(pctId);
+    const weightInput = document.getElementById(weightId);
+    if (!pctInput || !weightInput) return;
+    const target = clamp(toNumber(totalOils), 0);
+    if (target <= 0) return;
+    if (sourceField === 'weight') {
+      const weightRaw = weightInput.value;
+      if (weightRaw === '' || weightRaw === null || weightRaw === undefined) {
+        pctInput.value = '';
+        return;
+      }
+      const grams = clamp(toGrams(weightRaw), 0);
+      const pct = grams > 0 ? (grams / target) * 100 : 0;
+      pctInput.value = pct > 0 ? round(pct, 2) : '';
+      return;
+    }
+    const pctRaw = pctInput.value;
+    if (pctRaw === '' || pctRaw === null || pctRaw === undefined) {
+      weightInput.value = '';
+      return;
+    }
+    const pct = clamp(toNumber(pctRaw), 0);
+    const grams = target * (pct / 100);
+    weightInput.value = grams > 0 ? round(fromGrams(grams), 2) : '';
+  }
+
   function applyComputedOutputs(outputs){
     const setOutput = (id, value) => {
       const el = document.getElementById(id);
       if (!el) return;
       if (el.tagName === 'INPUT') {
+        if (document.activeElement === el) return;
         el.value = value;
       } else {
         el.textContent = value;
@@ -91,12 +148,7 @@
 
   function updateAdditivesOutput(totalOils){
     const expectedOils = clamp(toNumber(totalOils), 0);
-    const calc = SoapTool.state?.lastCalc;
-    const calcOils = clamp(toNumber(calc?.totalOils), 0);
-    const oilsMatch = Math.abs(calcOils - expectedOils) < 0.01;
-    const outputs = (calc?.additives && oilsMatch)
-      ? calc.additives
-      : { lactateG: 0, sugarG: 0, saltG: 0, citricG: 0, citricLyeG: 0 };
+    const outputs = computeAdditiveOutputs(expectedOils);
     applyComputedOutputs(outputs);
     return outputs;
   }
@@ -161,15 +213,30 @@
     rows.forEach(row => {
       const gramsInput = row.querySelector('.fragrance-grams');
       const pctInput = row.querySelector('.fragrance-percent');
-      const grams = toGrams(gramsInput?.value);
-      const pct = clamp(toNumber(pctInput?.value), 0);
-      let effectiveGrams = grams;
-      let effectivePct = pct;
+      if (!gramsInput || !pctInput) return;
+      const gramsRaw = gramsInput.value;
+      const pctRaw = pctInput.value;
+      let effectiveGrams = toGrams(gramsRaw);
+      let effectivePct = clamp(toNumber(pctRaw), 0);
+      const lastEdit = SoapTool.state.lastFragranceEdit;
+      const editedField = (lastEdit && lastEdit.row === row) ? lastEdit.field : null;
       if (target > 0) {
-        if (effectiveGrams <= 0 && effectivePct > 0) {
+        if (editedField === 'percent') {
           effectiveGrams = target * (effectivePct / 100);
-        } else if (effectivePct <= 0 && effectiveGrams > 0) {
+          gramsInput.value = effectiveGrams > 0 ? round(fromGrams(effectiveGrams), 2) : '';
+        } else if (editedField === 'grams') {
           effectivePct = (effectiveGrams / target) * 100;
+          pctInput.value = effectivePct > 0 ? round(effectivePct, 2) : '';
+        } else if (effectiveGrams > 0) {
+          effectivePct = (effectiveGrams / target) * 100;
+          if (document.activeElement !== pctInput) {
+            pctInput.value = round(effectivePct, 2);
+          }
+        } else if (effectivePct > 0) {
+          effectiveGrams = target * (effectivePct / 100);
+          if (document.activeElement !== gramsInput) {
+            gramsInput.value = round(fromGrams(effectiveGrams), 2);
+          }
         }
       }
       if (effectiveGrams > 0) totalGrams += effectiveGrams;
@@ -224,6 +291,7 @@
   SoapTool.additives = {
     attachAdditiveTypeahead,
     collectAdditiveSettings,
+    syncAdditivePair,
     applyComputedOutputs,
     updateAdditivesOutput,
     updateVisualGuidance,
