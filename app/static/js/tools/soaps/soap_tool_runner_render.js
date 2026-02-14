@@ -126,6 +126,7 @@
       usedFallback: !!serviceResult.used_sap_fallback,
     };
     const lyePure = toNumber(serviceResult.lye_pure_g);
+    const lyeAdjustedBase = toNumber(serviceResult.lye_adjusted_base_g);
     const lyeAdjusted = toNumber(serviceResult.lye_adjusted_g);
     const resolvedPurity = toNumber(serviceResult.lye_purity_pct) || purity;
     const resolvedWaterMethod = serviceResult.water_method || waterMethod;
@@ -215,6 +216,7 @@
       superfat: superfatValue,
       purity: resolvedPurity,
       lyePure,
+      lyeAdjustedBase: isFinite(lyeAdjustedBase) ? lyeAdjustedBase : null,
       lyeAdjusted,
       water: waterData.waterG,
       waterMethod: resolvedWaterMethod,

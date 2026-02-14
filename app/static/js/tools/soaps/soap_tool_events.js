@@ -84,8 +84,17 @@
       const pct = totalOils > 0 ? round((oil.grams / totalOils) * 100, 2) : '';
       rows.push(['Oils', oil.name || 'Oil', round(oil.grams || 0, 2), 'gram', pct]);
     });
-    if (calc.lyeAdjusted > 0) {
-      rows.push(['Lye', calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)', round(calc.lyeAdjusted, 2), 'gram', '']);
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
+    const totalLye = hasBaseLye
+      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
+      : toNumber(calc.lyeAdjusted);
+    if (totalLye > 0) {
+      let lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+      if (extraLye > 0) {
+        lyeLabel += '*';
+      }
+      rows.push(['Lye', lyeLabel, round(totalLye, 2), 'gram', '']);
     }
     if (calc.water > 0) {
       rows.push(['Water', 'Distilled Water', round(calc.water, 2), 'gram', '']);
@@ -98,8 +107,8 @@
     additiveRows.forEach(row => {
       rows.push(['Additives', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
     });
-    if (calc.additives?.citricLyeG > 0) {
-      rows.push(['Additives', 'Extra Lye for Citric Acid', round(calc.additives.citricLyeG, 2), 'gram', '']);
+    if (extraLye > 0) {
+      rows.push(['Notes', `* ${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.`, '', '', '']);
     }
     return rows;
   }
@@ -166,9 +175,15 @@
             <td class="text-end">${formatPercent(item.pct)}</td>
           </tr>`).join('')
       : '<tr><td colspan="3" class="text-muted">No additives added.</td></tr>';
-    const lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
-    const extraLyeRow = calc.additives?.citricLyeG > 0
-      ? `<tr><td>Extra Lye for Citric Acid</td><td class="text-end">${formatWeight(calc.additives.citricLyeG)}</td></tr>`
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
+    const totalLye = hasBaseLye
+      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
+      : toNumber(calc.lyeAdjusted);
+    const lyeLabel = `${calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)'}${extraLye > 0 ? '*' : ''}`;
+    const lyeWeightLabel = `${formatWeight(totalLye)}${extraLye > 0 ? '*' : ''}`;
+    const lyeFootnote = extraLye > 0
+      ? `<div class="footnote">* ${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.</div>`
       : '';
 
     return `<!doctype html>
@@ -188,6 +203,7 @@
       .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
       .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
       .text-muted { color: #666; }
+      .footnote { font-size: 11px; color: #555; margin-top: 6px; }
     </style>
   </head>
   <body>
@@ -218,11 +234,11 @@
         <tr><th>Item</th><th class="text-end">Weight</th></tr>
       </thead>
       <tbody>
-        <tr><td>${lyeLabel}</td><td class="text-end">${formatWeight(calc.lyeAdjusted || 0)}</td></tr>
+        <tr><td>${lyeLabel}</td><td class="text-end">${lyeWeightLabel}</td></tr>
         <tr><td>Distilled Water</td><td class="text-end">${formatWeight(calc.water || 0)}</td></tr>
-        ${extraLyeRow}
       </tbody>
     </table>
+    ${lyeFootnote}
 
     <h2>Fragrance & Essential Oils</h2>
     <table>

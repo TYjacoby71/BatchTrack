@@ -88,7 +88,11 @@ def test_compute_service_sheet_rolls_citric_lye_into_total_with_footnote():
     extra_lye = float(result["additives"]["citricLyeG"])
     assert extra_lye > 0
 
-    expected_total_lye = round(float(result["lye_adjusted_g"]) + extra_lye, 2)
+    base_lye = float(result["lye_adjusted_base_g"])
+    total_lye = float(result["lye_adjusted_g"])
+    assert round(base_lye + extra_lye, 3) == round(total_lye, 3)
+
+    expected_total_lye = round(total_lye, 2)
     lye_rows = [row for row in csv_rows if row[0] == "Lye"]
     assert len(lye_rows) == 1
     assert lye_rows[0][1].endswith("*")
@@ -101,4 +105,32 @@ def test_compute_service_sheet_rolls_citric_lye_into_total_with_footnote():
     assert "Sodium Hydroxide (NaOH)*" in html
     assert f"{expected_total_lye} g*" in html
     assert "lye added extra to accommodate the extra citrus." in html
+
+
+def test_citric_extra_lye_recalculates_water_for_concentration_method():
+    payload = _payload(method="concentration")
+    payload["water"]["lye_concentration"] = 20
+    payload["additives"]["citric_pct"] = 2.0
+
+    result = SoapToolComputationService.calculate(payload)
+    total_lye = float(result["lye_adjusted_g"])
+    expected_water = total_lye * ((100 - 20) / 20)
+
+    assert round(float(result["water_g"]), 3) == round(expected_water, 3)
+    assert round(float(result["lye_concentration_pct"]), 3) == 20.0
+
+
+def test_citric_extra_lye_uses_lye_type_multiplier():
+    naoh_payload = _payload()
+    naoh_payload["additives"]["citric_pct"] = 2.0
+    naoh_result = SoapToolComputationService.calculate(naoh_payload)
+    citric_g = float(naoh_result["additives"]["citricG"])
+    assert round(float(naoh_result["additives"]["citricLyeG"]), 3) == round(citric_g * 0.624, 3)
+
+    koh_payload = _payload()
+    koh_payload["lye"]["selected"] = "KOH"
+    koh_payload["additives"]["citric_pct"] = 2.0
+    koh_result = SoapToolComputationService.calculate(koh_payload)
+    koh_citric_g = float(koh_result["additives"]["citricG"])
+    assert round(float(koh_result["additives"]["citricLyeG"]), 3) == round(koh_citric_g * 0.71, 3)
 

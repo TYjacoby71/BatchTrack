@@ -48,6 +48,13 @@ def _format_percent(value: float) -> str:
     return f"{round(value or 0.0, 1)}%"
 
 
+def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
+    base_adjusted = result.get("lye_adjusted_base_g")
+    if base_adjusted is not None:
+        return float(base_adjusted or 0.0) + extra_lye
+    return float(result.get("lye_adjusted_g") or 0.0) + extra_lye
+
+
 # --- CSV rows builder ---
 # Purpose: Build canonical soap formula CSV row matrix.
 # Inputs: Computed soap result dictionary and unit display.
@@ -80,8 +87,7 @@ def build_formula_csv_rows(result: dict, unit_display: str) -> list[list[str | f
         pct = round((grams / total_oils) * 100.0, 2) if total_oils > 0 else ""
         rows.append(["Oils", oil.get("name") or "Oil", round(_from_grams(grams, unit_display), 2), unit_display, pct])
 
-    lye_adjusted = float(result.get("lye_adjusted_g") or 0.0)
-    lye_total_display = lye_adjusted + extra_lye
+    lye_total_display = _resolve_total_lye_g(result, extra_lye)
     if lye_total_display > 0:
         lye_name = "Potassium Hydroxide (KOH)" if result.get("lye_type") == "KOH" else "Sodium Hydroxide (NaOH)"
         if extra_lye > 0:
@@ -192,9 +198,8 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     ) or "<tr><td colspan='3' class='text-muted'>No additives added.</td></tr>"
 
     lye_label = "Potassium Hydroxide (KOH)" if result.get("lye_type") == "KOH" else "Sodium Hydroxide (NaOH)"
-    lye_adjusted = float(result.get("lye_adjusted_g") or 0.0)
     extra_lye = float(additives.get("citricLyeG") or 0.0)
-    lye_total = lye_adjusted + extra_lye
+    lye_total = _resolve_total_lye_g(result, extra_lye)
     lye_label_display = f"{lye_label}*" if extra_lye > 0 else lye_label
     lye_total_text = _format_weight(lye_total, unit_display)
     if extra_lye > 0:
