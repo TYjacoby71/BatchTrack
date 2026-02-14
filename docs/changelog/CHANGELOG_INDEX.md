@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-14: Soap Print Fill Confirmation Modal](2026-02-14-soap-print-fill-confirmation-modal.md)**
+  - Added a print-time mold-fill confirmation modal to the Soap Formulator print finalization flow.
+  - Added optional normalize-and-print scaling to fit a user-selected mold-fill percentage.
+  - Kept reactive stage editing unchanged while moving mold-fit confirmation to print time.
 - **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
   - Fixed timezone-mixed timer math on batch in-progress rendering paths.
   - Hardened timer management timestamp parsing to prevent `NaN` countdown output.
