@@ -392,6 +392,9 @@
       const removeButton = e.target.closest('.remove-fragrance');
       if (!removeButton) return;
       const row = removeButton.closest('.fragrance-row');
+      if (row && SoapTool.state.lastFragranceEdit?.row === row) {
+        SoapTool.state.lastFragranceEdit = null;
+      }
       if (row) row.remove();
       SoapTool.fragrances.updateFragranceTotals(SoapTool.oils.getTotalOilsGrams());
       SoapTool.stages.updateStageStatuses();
@@ -561,33 +564,35 @@
     });
   });
 
-  ['additiveLactatePct', 'additiveSugarPct', 'additiveSaltPct', 'additiveCitricPct']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => {
-        SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
+  const additivePairs = [
+    { pctId: 'additiveLactatePct', weightId: 'additiveLactateWeight' },
+    { pctId: 'additiveSugarPct', weightId: 'additiveSugarWeight' },
+    { pctId: 'additiveSaltPct', weightId: 'additiveSaltWeight' },
+    { pctId: 'additiveCitricPct', weightId: 'additiveCitricWeight' },
+  ];
+  additivePairs.forEach(({ pctId, weightId }) => {
+    const pctInput = document.getElementById(pctId);
+    const weightInput = document.getElementById(weightId);
+    if (pctInput) {
+      pctInput.addEventListener('input', () => {
+        const totalOils = SoapTool.oils.getTotalOilsGrams();
+        SoapTool.additives.syncAdditivePair({ pctId, weightId, sourceField: 'pct', totalOils });
+        SoapTool.additives.updateAdditivesOutput(totalOils);
         SoapTool.stages.updateStageStatuses();
         SoapTool.storage.queueStateSave();
         SoapTool.storage.queueAutoCalc();
       });
-    });
-  const additiveWeights = [
-    { weightId: 'additiveLactateWeight' },
-    { weightId: 'additiveSugarWeight' },
-    { weightId: 'additiveSaltWeight' },
-    { weightId: 'additiveCitricWeight' },
-  ];
-  additiveWeights.forEach(({ weightId }) => {
-    const weightInput = document.getElementById(weightId);
-    if (!weightInput) return;
-    weightInput.addEventListener('input', () => {
-      const totalOils = SoapTool.oils.getTotalOilsGrams();
-      if (!totalOils) return;
-      SoapTool.additives.updateAdditivesOutput(totalOils);
-      SoapTool.stages.updateStageStatuses();
-      SoapTool.storage.queueStateSave();
-      SoapTool.storage.queueAutoCalc();
-    });
+    }
+    if (weightInput) {
+      weightInput.addEventListener('input', () => {
+        const totalOils = SoapTool.oils.getTotalOilsGrams();
+        SoapTool.additives.syncAdditivePair({ pctId, weightId, sourceField: 'weight', totalOils });
+        SoapTool.additives.updateAdditivesOutput(totalOils);
+        SoapTool.stages.updateStageStatuses();
+        SoapTool.storage.queueStateSave();
+        SoapTool.storage.queueAutoCalc();
+      });
+    }
   });
 
   document.querySelectorAll('.additive-typeahead').forEach(input => {
