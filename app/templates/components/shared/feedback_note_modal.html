@@ -16,6 +16,7 @@
 {% set title_id = modal_id ~ 'Title' %}
 {% set selected_flow = default_flow if default_flow else 'question' %}
 {% set resolved_sources = source_options if source_options else [{'value': default_source, 'label': default_source|replace('_', ' ')|title}] %}
+{% set effective_source = default_source or (resolved_sources[0].value if resolved_sources else 'unknown_source') %}
 <div
   class="feedback-note-widget"
   data-feedback-note-widget
@@ -60,22 +61,7 @@
             <input type="text" class="bot-trap-field" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
             <section data-feedback-step="sort">
               <h6 class="mb-2">Step 1: Sort this note</h6>
-              <div class="mb-3">
-                {% if lock_source_to_location %}
-                <label class="form-label" for="{{ modal_id }}SourceLocked">Source</label>
-                <input type="hidden" id="{{ modal_id }}SourceLocked" name="source" value="{{ default_source }}">
-                <div class="form-control" aria-readonly="true">{{ location_label or default_source }}</div>
-                <div class="form-text">This note is automatically grouped by your current page location.</div>
-                {% else %}
-                <label class="form-label" for="{{ modal_id }}Source">Source</label>
-                <select class="form-select" id="{{ modal_id }}Source" name="source" required>
-                  {% for source in resolved_sources %}
-                  <option value="{{ source.value }}" {% if source.value == default_source %}selected{% endif %}>{{ source.label }}</option>
-                  {% endfor %}
-                </select>
-                <div class="form-text">Pick where this happened so notes are grouped correctly.</div>
-                {% endif %}
-              </div>
+              <input type="hidden" name="source" value="{{ effective_source }}">
               <div class="mb-3">
                 <label class="form-label d-block">What do you need?</label>
                 <div class="feedback-note-flow-grid">
@@ -102,7 +88,6 @@
                   {% endfor %}
                 </div>
               </div>
-              <div class="small text-muted mb-3" data-feedback-sort-summary></div>
               <div class="d-flex justify-content-end">
                 <button type="button" class="btn btn-primary" data-feedback-next>Continue</button>
               </div>
@@ -144,7 +129,6 @@
                 <div class="feedback-note-success-icon mb-2"><i class="fas fa-check-circle" aria-hidden="true"></i></div>
                 <h6 class="mb-1">Note saved</h6>
                 <p class="small text-muted mb-2">Thanks for helping improve this tool.</p>
-                <p class="small text-muted mb-3" data-feedback-saved-path></p>
                 <div class="d-flex justify-content-center gap-2">
                   <button type="button" class="btn btn-outline-secondary" data-feedback-submit-another>Submit another</button>
                   <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
