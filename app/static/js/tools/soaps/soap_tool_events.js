@@ -64,6 +64,36 @@
     return rows;
   }
 
+  function buildAssumptionNotes(calc){
+    const notes = [];
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const citricG = toNumber(calc.additives?.citricG);
+    const lyeType = String(calc.lyeType || 'NaOH').toUpperCase();
+    if (extraLye > 0 && citricG > 0) {
+      if (lyeType === 'KOH') {
+        notes.push('Citric-acid lye adjustment used 0.71 x citric acid because KOH was selected.');
+      } else {
+        notes.push('Citric-acid lye adjustment used 0.624 x citric acid because NaOH was selected.');
+      }
+      notes.push(`${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.`);
+    }
+    if (calc.usedSapFallback) {
+      notes.push('Average SAP fallback was used for oils missing SAP values.');
+    }
+    if (String(calc.lyeSelected || '').toUpperCase() === 'KOH90') {
+      notes.push('KOH90 selection assumes 90% lye purity.');
+    }
+    const oils = Array.isArray(calc.oils) ? calc.oils : [];
+    const hasDecimalSap = oils.some(oil => {
+      const sap = toNumber(oil?.sapKoh);
+      return sap > 0 && sap <= 1;
+    });
+    if (hasDecimalSap) {
+      notes.push('SAP values at or below 1.0 were treated as decimal SAP and converted to mg KOH/g.');
+    }
+    return notes;
+  }
+
   function buildFormulaCsv(calc){
     if (Array.isArray(calc?.export?.csv_rows) && calc.export.csv_rows.length) {
       return calc.export.csv_rows;
@@ -84,8 +114,17 @@
       const pct = totalOils > 0 ? round((oil.grams / totalOils) * 100, 2) : '';
       rows.push(['Oils', oil.name || 'Oil', round(oil.grams || 0, 2), 'gram', pct]);
     });
-    if (calc.lyeAdjusted > 0) {
-      rows.push(['Lye', calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)', round(calc.lyeAdjusted, 2), 'gram', '']);
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
+    const totalLye = hasBaseLye
+      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
+      : toNumber(calc.lyeAdjusted);
+    if (totalLye > 0) {
+      let lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
+      if (extraLye > 0) {
+        lyeLabel += '*';
+      }
+      rows.push(['Lye', lyeLabel, round(totalLye, 2), 'gram', '']);
     }
     if (calc.water > 0) {
       rows.push(['Water', 'Distilled Water', round(calc.water, 2), 'gram', '']);
@@ -98,9 +137,9 @@
     additiveRows.forEach(row => {
       rows.push(['Additives', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
     });
-    if (calc.additives?.citricLyeG > 0) {
-      rows.push(['Additives', 'Extra Lye for Citric Acid', round(calc.additives.citricLyeG, 2), 'gram', '']);
-    }
+    buildAssumptionNotes(calc).forEach(note => {
+      rows.push(['Notes', `* ${note}`, '', '', '']);
+    });
     return rows;
   }
 
@@ -166,9 +205,17 @@
             <td class="text-end">${formatPercent(item.pct)}</td>
           </tr>`).join('')
       : '<tr><td colspan="3" class="text-muted">No additives added.</td></tr>';
-    const lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
-    const extraLyeRow = calc.additives?.citricLyeG > 0
-      ? `<tr><td>Extra Lye for Citric Acid</td><td class="text-end">${formatWeight(calc.additives.citricLyeG)}</td></tr>`
+    const extraLye = toNumber(calc.additives?.citricLyeG);
+    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
+    const totalLye = hasBaseLye
+      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
+      : toNumber(calc.lyeAdjusted);
+    const lyeLabel = `${calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)'}${extraLye > 0 ? '*' : ''}`;
+    const lyeWeightLabel = `${formatWeight(totalLye)}${extraLye > 0 ? '*' : ''}`;
+    const assumptionNotes = buildAssumptionNotes(calc);
+    const assumptionsHtml = assumptionNotes.map(note => `<div class="footnote">* ${note}</div>`).join('');
+    const assumptionsBlockHtml = assumptionNotes.length
+      ? `<div class="footnotes"><h2 class="footnotes-heading">Assumptions</h2>${assumptionsHtml}</div>`
       : '';
 
     return `<!doctype html>
@@ -188,6 +235,9 @@
       .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
       .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
       .text-muted { color: #666; }
+      .footnotes { margin-top: 10px; }
+      .footnotes-heading { font-size: 14px; margin: 12px 0 4px; }
+      .footnote { font-size: 11px; color: #555; margin-top: 6px; }
     </style>
   </head>
   <body>
@@ -218,9 +268,8 @@
         <tr><th>Item</th><th class="text-end">Weight</th></tr>
       </thead>
       <tbody>
-        <tr><td>${lyeLabel}</td><td class="text-end">${formatWeight(calc.lyeAdjusted || 0)}</td></tr>
+        <tr><td>${lyeLabel}</td><td class="text-end">${lyeWeightLabel}</td></tr>
         <tr><td>Distilled Water</td><td class="text-end">${formatWeight(calc.water || 0)}</td></tr>
-        ${extraLyeRow}
       </tbody>
     </table>
 
@@ -239,6 +288,7 @@
       </thead>
       <tbody>${additiveRows}</tbody>
     </table>
+    ${assumptionsBlockHtml}
   </body>
 </html>`;
   }

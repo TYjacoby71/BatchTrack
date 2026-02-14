@@ -65,7 +65,8 @@ def compute_additives(
     sugar_g = base_oils * (sugar_pct / 100.0)
     salt_g = base_oils * (salt_pct / 100.0)
     citric_g = base_oils * (citric_pct / 100.0)
-    citric_factor = 0.719 if str(lye_type).upper() == "KOH" else 0.624
+    # Standard calculator multipliers for citric-acid neutralization.
+    citric_factor = 0.71 if str(lye_type).upper() == "KOH" else 0.624
     citric_lye_g = citric_g * citric_factor
 
     return {

@@ -48,6 +48,40 @@ def _format_percent(value: float) -> str:
     return f"{round(value or 0.0, 1)}%"
 
 
+def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
+    base_adjusted = result.get("lye_adjusted_base_g")
+    if base_adjusted is not None:
+        return float(base_adjusted or 0.0) + extra_lye
+    return float(result.get("lye_adjusted_g") or 0.0) + extra_lye
+
+
+def _build_assumption_notes(result: dict, additives: dict, unit_display: str) -> list[str]:
+    notes: list[str] = []
+    extra_lye = float(additives.get("citricLyeG") or 0.0)
+    citric_g = float(additives.get("citricG") or 0.0)
+    lye_type = str(result.get("lye_type") or "NaOH").upper()
+
+    if extra_lye > 0 and citric_g > 0:
+        if lye_type == "KOH":
+            notes.append("Citric-acid lye adjustment used 0.71 x citric acid because KOH was selected.")
+        else:
+            notes.append("Citric-acid lye adjustment used 0.624 x citric acid because NaOH was selected.")
+        notes.append(f"{_format_weight(extra_lye, unit_display)} lye added extra to accommodate the extra citrus.")
+
+    if bool(result.get("used_sap_fallback")):
+        notes.append("Average SAP fallback was used for oils missing SAP values.")
+
+    if str(result.get("lye_selected") or "").upper() == "KOH90":
+        notes.append("KOH90 selection assumes 90% lye purity.")
+
+    oils = result.get("oils") or []
+    has_decimal_sap = any(0.0 < float((oil or {}).get("sap_koh") or 0.0) <= 1.0 for oil in oils)
+    if has_decimal_sap:
+        notes.append("SAP values at or below 1.0 were treated as decimal SAP and converted to mg KOH/g.")
+
+    return notes
+
+
 # --- CSV rows builder ---
 # Purpose: Build canonical soap formula CSV row matrix.
 # Inputs: Computed soap result dictionary and unit display.
@@ -55,6 +89,8 @@ def _format_percent(value: float) -> str:
 def build_formula_csv_rows(result: dict, unit_display: str) -> list[list[str | float]]:
     total_oils = float(result.get("total_oils_g") or 0.0)
     additives = result.get("additives") or {}
+    extra_lye = float(additives.get("citricLyeG") or 0.0)
+    assumption_notes = _build_assumption_notes(result, additives, unit_display)
     rows: list[list[str | float]] = [["section", "name", "quantity", "unit", "percent"]]
     rows.append(["Summary", "Lye Type", result.get("lye_type") or "", "", ""])
     rows.append(["Summary", "Superfat", round(float(result.get("superfat_pct") or 0.0), 2), "%", ""])
@@ -79,10 +115,12 @@ def build_formula_csv_rows(result: dict, unit_display: str) -> list[list[str | f
         pct = round((grams / total_oils) * 100.0, 2) if total_oils > 0 else ""
         rows.append(["Oils", oil.get("name") or "Oil", round(_from_grams(grams, unit_display), 2), unit_display, pct])
 
-    lye_adjusted = float(result.get("lye_adjusted_g") or 0.0)
-    if lye_adjusted > 0:
+    lye_total_display = _resolve_total_lye_g(result, extra_lye)
+    if lye_total_display > 0:
         lye_name = "Potassium Hydroxide (KOH)" if result.get("lye_type") == "KOH" else "Sodium Hydroxide (NaOH)"
-        rows.append(["Lye", lye_name, round(_from_grams(lye_adjusted, unit_display), 2), unit_display, ""])
+        if extra_lye > 0:
+            lye_name = f"{lye_name}*"
+        rows.append(["Lye", lye_name, round(_from_grams(lye_total_display, unit_display), 2), unit_display, ""])
 
     water_g = float(result.get("water_g") or 0.0)
     if water_g > 0:
@@ -110,16 +148,8 @@ def build_formula_csv_rows(result: dict, unit_display: str) -> list[list[str | f
             continue
         rows.append(["Additives", name, round(_from_grams(grams, unit_display), 2), unit_display, round(pct, 2)])
 
-    if float(additives.get("citricLyeG") or 0.0) > 0:
-        rows.append(
-            [
-                "Additives",
-                "Extra Lye for Citric Acid",
-                round(_from_grams(float(additives.get("citricLyeG") or 0.0), unit_display), 2),
-                unit_display,
-                "",
-            ]
-        )
+    for note in assumption_notes:
+        rows.append(["Notes", f"* {note}", "", "", ""])
     return rows
 
 
@@ -145,6 +175,8 @@ def build_formula_csv_text(rows: list[list[str | float]]) -> str:
 def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     total_oils = float(result.get("total_oils_g") or 0.0)
     additives = result.get("additives") or {}
+    quality_report = result.get("quality_report") or {}
+    assumption_notes = _build_assumption_notes(result, additives, unit_display)
     oils = result.get("oils") or []
     fragrance_rows = additives.get("fragranceRows") or []
     additive_rows = []
@@ -188,11 +220,30 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
 
     lye_label = "Potassium Hydroxide (KOH)" if result.get("lye_type") == "KOH" else "Sodium Hydroxide (NaOH)"
     extra_lye = float(additives.get("citricLyeG") or 0.0)
-    extra_lye_row = (
-        f"<tr><td>Extra Lye for Citric Acid</td><td class='text-end'>{_format_weight(extra_lye, unit_display)}</td></tr>"
-        if extra_lye > 0
+    lye_total = _resolve_total_lye_g(result, extra_lye)
+    lye_label_display = f"{lye_label}*" if extra_lye > 0 else lye_label
+    lye_total_text = _format_weight(lye_total, unit_display)
+    if extra_lye > 0:
+        lye_total_text = f"{lye_total_text}*"
+    assumptions_html = "".join(f"<div class='footnote'>* {escape(note)}</div>" for note in assumption_notes)
+    assumptions_block_html = (
+        f"<div class='footnotes'><h2 class='footnotes-heading'>Assumptions</h2>{assumptions_html}</div>"
+        if assumption_notes
         else ""
     )
+    sat_unsat = quality_report.get("sat_unsat") or {}
+    sat_value = float(sat_unsat.get("saturated") or 0.0)
+    unsat_value = float(sat_unsat.get("unsaturated") or 0.0)
+    sat_unsat_text = f"{round(sat_value, 0)} : {round(unsat_value, 0)}" if (sat_value + unsat_value) > 0 else "--"
+    water_ratio = float(result.get("water_lye_ratio") or 0.0)
+    water_ratio_text = f"{round(water_ratio, 2)}:1" if water_ratio > 0 else "--"
+    iodine = float(quality_report.get("iodine") or 0.0)
+    iodine_text = round(iodine, 1) if iodine > 0 else "--"
+    ins = float(quality_report.get("ins") or 0.0)
+    ins_text = round(ins, 1) if ins > 0 else "--"
+    fragrance_pct = float(additives.get("fragrancePct") or 0.0)
+    fragrance_ratio_text = _format_percent(fragrance_pct) if fragrance_pct > 0 else "--"
+    fragrance_weight = float(additives.get("fragranceG") or 0.0)
     generated = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     batch_yield = float((result.get("results_card") or {}).get("batch_yield_g") or 0.0)
 
@@ -213,6 +264,9 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
       .summary-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }}
       .summary-item {{ display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }}
       .text-muted {{ color: #666; }}
+      .footnotes {{ margin-top: 10px; }}
+      .footnotes-heading {{ font-size: 14px; margin: 12px 0 4px; }}
+      .footnote {{ font-size: 11px; color: #555; margin-top: 6px; }}
     </style>
   </head>
   <body>
@@ -223,10 +277,18 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
       <div class="summary-item"><span>Superfat</span><span>{_format_percent(float(result.get("superfat_pct") or 0.0))}</span></div>
       <div class="summary-item"><span>Lye purity</span><span>{_format_percent(float(result.get("lye_purity_pct") or 0.0))}</span></div>
       <div class="summary-item"><span>Total oils</span><span>{_format_weight(total_oils, unit_display)}</span></div>
+      <div class="summary-item"><span>Total lye</span><span>{lye_total_text}</span></div>
       <div class="summary-item"><span>Water</span><span>{_format_weight(float(result.get("water_g") or 0.0), unit_display)}</span></div>
       <div class="summary-item"><span>Batch yield</span><span>{_format_weight(batch_yield, unit_display)}</span></div>
       <div class="summary-item"><span>Water method</span><span>{escape(str(result.get("water_method") or "--"))}</span></div>
+      <div class="summary-item"><span>Water %</span><span>{_format_percent(float(result.get("water_pct") or 0.0))}</span></div>
       <div class="summary-item"><span>Lye concentration</span><span>{_format_percent(float(result.get("lye_concentration_pct") or 0.0))}</span></div>
+      <div class="summary-item"><span>Water : Lye Ratio</span><span>{water_ratio_text}</span></div>
+      <div class="summary-item"><span>Sat : Unsat Ratio</span><span>{sat_unsat_text}</span></div>
+      <div class="summary-item"><span>Iodine</span><span>{iodine_text}</span></div>
+      <div class="summary-item"><span>INS</span><span>{ins_text}</span></div>
+      <div class="summary-item"><span>Fragrance Ratio</span><span>{fragrance_ratio_text}</span></div>
+      <div class="summary-item"><span>Fragrance Weight</span><span>{_format_weight(fragrance_weight, unit_display)}</span></div>
     </div>
 
     <h2>Oils</h2>
@@ -239,9 +301,8 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     <table>
       <thead><tr><th>Item</th><th class="text-end">Weight</th></tr></thead>
       <tbody>
-        <tr><td>{lye_label}</td><td class="text-end">{_format_weight(float(result.get("lye_adjusted_g") or 0.0), unit_display)}</td></tr>
+        <tr><td>{lye_label_display}</td><td class="text-end">{lye_total_text}</td></tr>
         <tr><td>Distilled Water</td><td class="text-end">{_format_weight(float(result.get("water_g") or 0.0), unit_display)}</td></tr>
-        {extra_lye_row}
       </tbody>
     </table>
 
@@ -256,6 +317,7 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
       <thead><tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
       <tbody>{additive_rows_html}</tbody>
     </table>
+    {assumptions_block_html}
   </body>
 </html>"""
 
