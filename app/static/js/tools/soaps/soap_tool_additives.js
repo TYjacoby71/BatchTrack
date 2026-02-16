@@ -272,12 +272,18 @@
   }
 
   function updateVisualGuidance(data){
-    const list = document.getElementById('soapVisualGuidanceList');
-    if (!list) return;
     const tips = Array.isArray(data?.tips) && data.tips.length
       ? data.tips
-      : ['No visual flags detected for this formula.'];
-    list.innerHTML = tips.map(tip => `<li>${tip}</li>`).join('');
+      : [];
+    if (!tips.length) {
+      SoapTool.guidance?.clearSection('visual-guidance');
+      return;
+    }
+    SoapTool.guidance?.setSection('visual-guidance', {
+      title: 'Visual guidance',
+      tone: 'info',
+      items: tips,
+    });
   }
 
   function getItemCategoryName(item){

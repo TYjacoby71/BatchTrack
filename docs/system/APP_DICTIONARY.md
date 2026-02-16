@@ -224,6 +224,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **PR Documentation Guard** → Automated PR validator for synopsis/glossary, functional-unit headers, dictionary coverage, and changelog alignment (see `scripts/validate_pr_documentation.py` and `.github/workflows/documentation-guard.yml`)
 - **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
+- **Soap Static Asset Manifest Outputs** → Hashed soap bundle map and generated runtime bundle emitted by the scoped asset build pipeline for production cache-busting (see `app/static/dist/manifest.json` and `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FCLB3YPR.js`)
 - **flask update-permissions** → Sync permission catalog
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
