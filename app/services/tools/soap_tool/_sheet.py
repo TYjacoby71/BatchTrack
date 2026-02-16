@@ -352,7 +352,7 @@ def build_formula_sheet_html(result: dict, unit_display: str, normalization_note
         lye_total_text = f"{lye_total_text}*"
 
     context = {
-        "generated": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "normalization_note": (normalization_note or "").strip(),
         "summary_items": _build_formula_summary_items(result, additives, quality_report, unit),
         "oil_rows": _build_oil_rows(result, unit),
