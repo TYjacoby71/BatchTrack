@@ -28,6 +28,50 @@ class SignupPlanCatalogService:
         for tier_obj in db_tiers:
             raw_features = [p.name for p in getattr(tier_obj, "permissions", [])]
             feature_highlights, feature_total = LifetimePricingService.summarize_features(raw_features, limit=9)
+            allowed_addons = list(getattr(tier_obj, "allowed_addons", []) or [])
+            included_addons = list(getattr(tier_obj, "included_addons", []) or [])
+
+            allowed_addon_keys = sorted(
+                {
+                    str(addon.key).strip().lower()
+                    for addon in allowed_addons
+                    if addon and getattr(addon, "key", None)
+                }
+            )
+            included_addon_keys = sorted(
+                {
+                    str(addon.key).strip().lower()
+                    for addon in included_addons
+                    if addon and getattr(addon, "key", None)
+                }
+            )
+            all_addon_keys = sorted(set(allowed_addon_keys) | set(included_addon_keys))
+
+            allowed_addon_function_keys = sorted(
+                {
+                    str(addon.function_key).strip().lower()
+                    for addon in allowed_addons
+                    if addon and getattr(addon, "function_key", None)
+                }
+            )
+            included_addon_function_keys = sorted(
+                {
+                    str(addon.function_key).strip().lower()
+                    for addon in included_addons
+                    if addon and getattr(addon, "function_key", None)
+                }
+            )
+            all_addon_function_keys = sorted(
+                set(allowed_addon_function_keys) | set(included_addon_function_keys)
+            )
+
+            addon_permission_names = sorted(
+                {
+                    str(addon.permission_name).strip().lower()
+                    for addon in (allowed_addons + included_addons)
+                    if addon and getattr(addon, "permission_name", None)
+                }
+            )
 
             monthly_pricing = None
             if tier_obj.stripe_lookup_key:
@@ -57,6 +101,20 @@ class SignupPlanCatalogService:
                 "feature_total": feature_total,
                 "all_features": raw_features,
                 "user_limit": tier_obj.user_limit,
+                "max_recipes": tier_obj.max_recipes,
+                "max_batches": tier_obj.max_batches,
+                "max_products": tier_obj.max_products,
+                "max_monthly_batches": tier_obj.max_monthly_batches,
+                "max_batchbot_requests": tier_obj.max_batchbot_requests,
+                "retention_policy": getattr(tier_obj, "retention_policy", None),
+                "retention_label": getattr(tier_obj, "retention_label", None),
+                "allowed_addon_keys": allowed_addon_keys,
+                "included_addon_keys": included_addon_keys,
+                "all_addon_keys": all_addon_keys,
+                "allowed_addon_function_keys": allowed_addon_function_keys,
+                "included_addon_function_keys": included_addon_function_keys,
+                "all_addon_function_keys": all_addon_function_keys,
+                "addon_permission_names": addon_permission_names,
                 "whop_product_id": tier_obj.whop_product_key or "",
             }
         return available_tiers

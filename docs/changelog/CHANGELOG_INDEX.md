@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-16: Pricing Feature Catalog-Driven Comparison Table](2026-02-16-pricing-feature-catalog-driven-comparison-table.md)**
+  - Replaced raw permission-style pricing rows with grouped customer-facing feature and limit sections.
+  - Added tier metadata plumbing for limits, add-ons, and retention policy rendering.
+  - Updated pricing page comparison UI to support boolean and text cells.
 - **[2026-02-16: Tier Feature Catalog and Entitlement Mapping Rules](2026-02-16-tier-feature-catalog-and-mapping-rules.md)**
   - Added a customer-facing feature taxonomy mapped to permissions, add-ons, flags, and limits.
   - Documented which tier limits are currently hard-enforced versus metadata-only.
