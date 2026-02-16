@@ -94,13 +94,59 @@ class ProductService:
             except Exception:
                 pass
 
-        # Get or create ProductSKU
-        sku = ProductSKU.query.filter_by(
+        # Get existing ProductSKU candidates.
+        # For Bulk, prefer exact unit match, then convertible-unit match.
+        org_id = (getattr(current_user, 'organization_id', None) or product.organization_id or 1)
+        sku_candidates = ProductSKU.query.filter_by(
             product_id=product.id,
             variant_id=variant.id,
             size_label=size_label,
-            organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1)
-        ).first()
+            organization_id=org_id
+        ).all()
+        desired_unit = (str(unit or '')).strip()
+        is_bulk_label = str(size_label or '').strip().lower() == 'bulk'
+
+        sku = None
+        if sku_candidates:
+            if is_bulk_label and desired_unit:
+                # 1) Exact unit match first
+                for candidate in sku_candidates:
+                    candidate_unit = (
+                        (getattr(candidate.inventory_item, 'unit', None) or candidate.unit or '')
+                        .strip()
+                    )
+                    if candidate_unit == desired_unit:
+                        sku = candidate
+                        break
+
+                # 2) Any unit-convertible bulk SKU can be reused
+                if not sku:
+                    from ..services.unit_conversion import ConversionEngine
+                    for candidate in sku_candidates:
+                        candidate_item = getattr(candidate, 'inventory_item', None)
+                        candidate_unit = (
+                            (getattr(candidate_item, 'unit', None) or candidate.unit or '')
+                            .strip()
+                        )
+                        if not candidate_unit or candidate_unit == desired_unit:
+                            continue
+                        try:
+                            conversion = ConversionEngine.convert_units(
+                                amount=1.0,
+                                from_unit=desired_unit,
+                                to_unit=candidate_unit,
+                                ingredient_id=(getattr(candidate_item, 'id', None) or candidate.inventory_item_id),
+                                density=getattr(candidate_item, 'density', None),
+                                rounding_decimals=None
+                            )
+                            if conversion and conversion.get('success') and conversion.get('converted_value') is not None:
+                                sku = candidate
+                                break
+                        except Exception:
+                            continue
+            else:
+                # Preserve existing behavior for non-bulk labels
+                sku = sku_candidates[0]
 
         if not sku:
             # Create inventory item for this SKU
