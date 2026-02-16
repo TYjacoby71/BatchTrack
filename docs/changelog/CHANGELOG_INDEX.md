@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-14: Soap Guidance Dock Consolidation (Stage + Quality Hint Unification)](2026-02-14-soap-guidance-dock-consolidation.md)**
+  - Consolidated scattered soap stage/quality hints into one bottom guidance dock with active-hint summary.
+  - Added upward-expanding overlay guidance panel with caret toggle while keeping action controls in one place.
+  - Rerouted dynamic hint/warning/tip writers to a centralized guidance manager and removed in-card hint duplication.
 - **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
   - Fixed timezone-mixed timer math on batch in-progress rendering paths.
   - Hardened timer management timestamp parsing to prevent `NaN` countdown output.

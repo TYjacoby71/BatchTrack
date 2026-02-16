@@ -278,10 +278,10 @@
     } = data;
 
     const hasCoverage = coveragePct > 0;
+    const qualityFeelHints = [];
 
     function setQuality(name, value){
       const label = document.getElementById(`quality${name}Value`);
-      const hintEl = document.getElementById(`quality${name}Hint`);
       if (!label) return;
       label.textContent = hasCoverage && isFinite(value) ? round(value, 1) : '--';
       pulseValue(label);
@@ -302,15 +302,11 @@
           fillResult.bar.title = `${name}: -- (safe ${range[0]}-${range[1]}). ${QUALITY_HINTS[rangeKey] || ''}`.trim();
         }
       }
-      if (hintEl && range) {
-        if (!hasCoverage || !isFinite(value)) {
-          hintEl.textContent = '';
-        } else if (value < range[0]) {
-          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.low || '';
+      if (range && hasCoverage && isFinite(value)) {
+        if (value < range[0]) {
+          qualityFeelHints.push(`${name}: ${QUALITY_FEEL_HINTS[rangeKey]?.low || 'Below preferred range.'}`);
         } else if (value > range[1]) {
-          hintEl.textContent = QUALITY_FEEL_HINTS[rangeKey]?.high || '';
-        } else {
-          hintEl.textContent = '';
+          qualityFeelHints.push(`${name}: ${QUALITY_FEEL_HINTS[rangeKey]?.high || 'Above preferred range.'}`);
         }
       }
     }
@@ -364,13 +360,23 @@
     updateQualityTargets();
 
     const warnings = Array.isArray(serviceWarnings) ? serviceWarnings.slice() : [];
-    const warningBox = document.getElementById('soapQualityWarnings');
-    if (warnings.length) {
-      warningBox.classList.remove('d-none');
-      warningBox.innerHTML = `<strong>Guidance & flags:</strong><ul class="mb-0">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`;
+    if (qualityFeelHints.length) {
+      SoapTool.guidance?.setSection('quality-feel-hints', {
+        title: 'Quality feel hints',
+        tone: 'info',
+        items: qualityFeelHints,
+      });
     } else {
-      warningBox.classList.add('d-none');
-      warningBox.textContent = '';
+      SoapTool.guidance?.clearSection('quality-feel-hints');
+    }
+    if (warnings.length) {
+      SoapTool.guidance?.setSection('quality-warning-flags', {
+        title: 'Quality flags',
+        tone: 'warning',
+        items: warnings,
+      });
+    } else {
+      SoapTool.guidance?.clearSection('quality-warning-flags');
     }
     SoapTool.layout.scheduleStageHeightSync();
   }
