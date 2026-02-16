@@ -23,11 +23,13 @@
     if (!purityInput) return;
     purityInput.removeAttribute('readonly');
     if (selection.selected === 'KOH90') {
-      const hint = document.getElementById('lyePurityHint');
-      if (hint) hint.textContent = '90% KOH selected. Safe default purity is 90%.';
+      SoapTool.guidance?.setSection('lye-purity', {
+        title: 'Lye setup',
+        tone: 'info',
+        items: ['90% KOH selected. Safe default purity is 90%.'],
+      });
     } else {
-      const hint = document.getElementById('lyePurityHint');
-      if (hint) hint.textContent = 'Safe default is 100%.';
+      SoapTool.guidance?.clearSection('lye-purity');
     }
   }
 
@@ -43,31 +45,31 @@
 
   function updateStageWaterSummary(summary = null, explicitMethod = null){
     const waterOutput = document.getElementById('stageWaterOutput');
-    const hintOutput = document.getElementById('stageWaterComputedHint');
     const method = explicitMethod || summary?.waterMethod || document.getElementById('waterMethod')?.value || 'percent';
 
     if (waterOutput) {
       const hasWater = summary && isFinite(summary.waterG) && summary.waterG > 0;
       waterOutput.textContent = hasWater ? formatWeight(summary.waterG) : '--';
     }
-    if (!hintOutput) return;
+    let waterHint = '';
 
     if (!summary || !isFinite(summary.totalOils) || summary.totalOils <= 0) {
-      hintOutput.textContent = `Set oils in Stage 2 to calculate water. ${getWaterMethodHelp(method)}`;
-      return;
+      waterHint = `Set oils in Stage 2 to calculate water. ${getWaterMethodHelp(method)}`;
+    } else if (method === 'concentration') {
+      const concentration = summary.lyeConcentrationInput || summary.lyeConcentration || 0;
+      waterHint = `Using ${round(concentration, 1)}% lye concentration from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+    } else if (method === 'ratio') {
+      const ratio = summary.waterRatioInput || summary.waterRatio || 0;
+      waterHint = `Using ${round(ratio, 2)} : 1 water-to-lye ratio from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
+    } else {
+      waterHint = `Using ${round(summary.waterPct || 0, 1)}% of total oils (${formatWeight(summary.totalOils)}).`;
     }
 
-    if (method === 'concentration') {
-      const concentration = summary.lyeConcentrationInput || summary.lyeConcentration || 0;
-      hintOutput.textContent = `Using ${round(concentration, 1)}% lye concentration from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
-      return;
-    }
-    if (method === 'ratio') {
-      const ratio = summary.waterRatioInput || summary.waterRatio || 0;
-      hintOutput.textContent = `Using ${round(ratio, 2)} : 1 water-to-lye ratio from ${formatWeight(summary.lyeAdjusted || 0)} lye.`;
-      return;
-    }
-    hintOutput.textContent = `Using ${round(summary.waterPct || 0, 1)}% of total oils (${formatWeight(summary.totalOils)}).`;
+    SoapTool.guidance?.setSection('water-method', {
+      title: 'Lye & water hints',
+      tone: 'info',
+      items: [waterHint],
+    });
   }
 
   function updateLiveCalculationPreview(summary = null, explicitMethod = null){

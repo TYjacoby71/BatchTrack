@@ -124,3 +124,39 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="soapPrintConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm mold fill before printing</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Your final batch is outside your preferred mold-fill range.</p>
+        <div class="small border rounded p-2 bg-light mb-2">
+          <div class="d-flex justify-content-between"><span>Batch yield</span><strong id="soapPrintConfirmBatchYield">--</strong></div>
+          <div class="d-flex justify-content-between"><span>Mold capacity</span><strong id="soapPrintConfirmMoldCapacity">--</strong></div>
+          <div class="d-flex justify-content-between"><span>Fill level</span><strong id="soapPrintConfirmFillPct">--</strong></div>
+          <div class="d-flex justify-content-between"><span>Difference</span><strong id="soapPrintConfirmDiff">--</strong></div>
+        </div>
+        <div class="alert alert-warning small mb-2" id="soapPrintConfirmMessage">
+          This fill level may underfill or overflow your mold.
+        </div>
+        <div class="small text-muted mb-2">
+          Most makers target around 90-120% at final wet batter depending on headspace preference.
+        </div>
+        <label class="form-label mb-1" for="soapPrintNormalizePct">Normalize printed sheet to mold fill (%)</label>
+        <div class="input-group input-group-sm">
+          <input type="number" class="form-control" id="soapPrintNormalizePct" value="100" min="50" max="200" step="1">
+          <span class="input-group-text">%</span>
+        </div>
+        <div class="form-text">Use 100 for exact mold capacity, or set your own target fill.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" id="soapPrintAsIsBtn">Print As-Is</button>
+        <button class="btn btn-primary" type="button" id="soapNormalizePrintBtn">Normalize &amp; Print</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,14 @@ This directory contains the complete history of all fixes, improvements, and cha
   - Restored canonical master/variation names when promoting test versions to current.
   - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.
   - Added regression tests for promotion naming and post-promotion variation display.
+- **[2026-02-14: Soap Print Fill Confirmation Modal](2026-02-14-soap-print-fill-confirmation-modal.md)**
+  - Added a print-time mold-fill confirmation modal to the Soap Formulator print finalization flow.
+  - Added optional normalize-and-print scaling to fit a user-selected mold-fill percentage.
+  - Kept reactive stage editing unchanged while moving mold-fit confirmation to print time.
+- **[2026-02-14: Soap Guidance Dock Consolidation (Stage + Quality Hint Unification)](2026-02-14-soap-guidance-dock-consolidation.md)**
+  - Consolidated scattered soap stage/quality hints into one bottom guidance dock with active-hint summary.
+  - Added upward-expanding overlay guidance panel with caret toggle while keeping action controls in one place.
+  - Rerouted dynamic hint/warning/tip writers to a centralized guidance manager and removed in-card hint duplication.
 - **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
   - Fixed timezone-mixed timer math on batch in-progress rendering paths.
   - Hardened timer management timestamp parsing to prevent `NaN` countdown output.

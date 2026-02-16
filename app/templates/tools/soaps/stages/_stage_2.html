@@ -25,14 +25,12 @@
                 <div class="soap-input-suffix unit-suffix" data-suffix="g">
                   <input type="number" class="form-control oil-grams" step="0.1">
                 </div>
-                <div class="small text-warning oil-limit-hint" data-role="oil-grams-hint"></div>
               </div>
               <div class="col-lg-2 col-md-2 soap-field-stack oil-percent-col">
                 <label class="form-label">Percent</label>
                 <div class="soap-input-suffix" data-suffix="%">
                   <input type="number" class="form-control oil-percent" step="0.1">
                 </div>
-                <div class="small text-warning oil-limit-hint" data-role="oil-percent-hint"></div>
               </div>
               <div class="col-lg-1 col-md-1 d-flex align-items-end justify-content-center oil-remove-col">
                 <button class="btn btn-outline-danger soap-icon-btn remove-oil" type="button" aria-label="Remove oil" title="Remove oil">
@@ -53,8 +51,6 @@
           <div class="small text-muted">Current oils: <span id="oilTotalComputed">--</span></div>
           <div class="small text-muted">Bulk selected: <span id="bulkOilSelectionCount">0</span></div>
         </div>
-        <div class="alert alert-warning small mt-1 d-none" id="oilLimitWarning"></div>
-        <div class="alert alert-light border small mt-1 d-none" id="oilBlendTips"></div>
       </div>
     </div>
     {% set stage_index = 1 %}
