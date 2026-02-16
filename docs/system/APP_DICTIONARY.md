@@ -186,6 +186,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Default Social Preview Image** → App-wide Open Graph/Twitter fallback image used when a page does not provide a custom `page_og_image` (see `app/static/images/og/batchtrack-default-og.svg` and `app/templates/layout.html`)
 - **Tool Tiles** → Nested tool selectors within a category card (see `app/templates/tools/index.html`)
 - **Soap Formulator (Public Tool)** → Batch-first soap recipe builder with quality targets, stage-based oil entry, and modal-driven bulk oil selection/import (see `app/templates/tools/soaps/index.html`, `app/templates/tools/soaps/stages/_stage_2.html`, and `app/templates/tools/soaps/_modals.html`)
+- **Soap Formulator Stage Row Partials** → Reusable template partials that define oil-row and fragrance-row DOM templates consumed by JS row builders without changing visual output (see `app/templates/tools/soaps/stages/partials/_oil_row_template.html`, `app/templates/tools/soaps/stages/partials/_fragrance_row_template.html`, `app/templates/tools/soaps/stages/_stage_2.html`, and `app/templates/tools/soaps/stages/_stage_5.html`)
 - **Edit Published Recipe Modal** → Confirmation gate for forced edits (see `app/templates/pages/recipes/view_recipe.html`)
 - **Recipe Notes Panel** → Add and review timestamped recipe notes (see `app/templates/pages/recipes/view_recipe.html`)
 - **Auto Label Prefix Field** → Locked prefix auto-generation on recipe forms (see `app/templates/pages/recipes/recipe_form.html`)

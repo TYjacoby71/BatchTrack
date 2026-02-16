@@ -22,6 +22,7 @@
 - Simplified `soap_tool_events_exports.js` to consume service-provided `export.csv_text` and `export.sheet_html` only, including stale-calc detection before export actions.
 - Refactored `app/services/tools/soap_tool/_sheet.py` to render print HTML through a dedicated template file.
 - Added a new print export template at `app/templates/tools/soaps/exports/print_sheet.html`.
+- Extracted stage row `<template>` markup into reusable template partial files for oils and fragrance rows.
 - Updated `soap_tool_bundle_entry.js` imports to include the new module graph in deterministic order.
 - Rebuilt hashed soap frontend assets and updated manifest mapping.
 
@@ -35,6 +36,10 @@
 - `app/static/js/tools/soaps/soap_tool_bundle_entry.js`
 - `app/services/tools/soap_tool/_sheet.py`
 - `app/templates/tools/soaps/exports/print_sheet.html`
+- `app/templates/tools/soaps/stages/partials/_oil_row_template.html`
+- `app/templates/tools/soaps/stages/partials/_fragrance_row_template.html`
+- `app/templates/tools/soaps/stages/_stage_2.html`
+- `app/templates/tools/soaps/stages/_stage_5.html`
 - `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FJ5WEHMO.js`
 - `app/static/dist/manifest.json`
 - `docs/system/APP_DICTIONARY.md`

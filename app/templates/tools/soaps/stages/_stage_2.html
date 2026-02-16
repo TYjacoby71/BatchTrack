@@ -4,46 +4,7 @@
       <div class="row g-2 soap-stage-grid">
         <div class="col-12">
           <div id="oilRows"></div>
-          <template id="oilRowTemplate">
-            <div class="row g-2 align-items-end oil-row mb-1">
-              <div class="col-lg-6 col-md-6 soap-field-stack oil-name-col">
-                <label class="form-label">Oil, fat, or wax</label>
-                <div class="position-relative">
-                  <input type="text" class="form-control oil-typeahead" placeholder="Search oils, butters, waxes...">
-                  <input type="hidden" class="oil-sap-koh">
-                  <input type="hidden" class="oil-iodine">
-                  <input type="hidden" class="oil-fatty">
-                  <input type="hidden" class="oil-gi-id">
-                  <input type="hidden" class="oil-default-unit">
-                  <input type="hidden" class="oil-category">
-                  <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
-                </div>
-                <div class="form-text small text-muted">Filtered to oils, butters, and waxes.</div>
-              </div>
-              <div class="col-lg-3 col-md-3 soap-field-stack oil-weight-col">
-                <label class="form-label">Weight</label>
-                <div class="soap-input-suffix unit-suffix" data-suffix="g">
-                  <input type="number" class="form-control oil-grams" step="0.1">
-                </div>
-                <div class="small text-warning oil-limit-hint" data-role="oil-grams-hint"></div>
-              </div>
-              <div class="col-lg-2 col-md-2 soap-field-stack oil-percent-col">
-                <label class="form-label">Percent</label>
-                <div class="soap-input-suffix" data-suffix="%">
-                  <input type="number" class="form-control oil-percent" step="0.1">
-                </div>
-                <div class="small text-warning oil-limit-hint" data-role="oil-percent-hint"></div>
-              </div>
-              <div class="col-lg-1 col-md-1 d-flex align-items-end justify-content-center oil-remove-col">
-                <button class="btn btn-outline-danger soap-icon-btn remove-oil" type="button" aria-label="Remove oil" title="Remove oil">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-              </div>
-              <div class="col-12 d-lg-none mt-2">
-                <button class="btn btn-sm btn-outline-secondary w-100 oil-profile-open" type="button">View oil profile</button>
-              </div>
-            </div>
-          </template>
+          {% include 'tools/soaps/stages/partials/_oil_row_template.html' %}
         </div>
         <div class="d-flex flex-wrap gap-1 align-items-center mt-2">
           <button class="btn btn-sm btn-outline-primary" id="addOil" type="button" data-soap-action="add-oil">Add Oil</button>
