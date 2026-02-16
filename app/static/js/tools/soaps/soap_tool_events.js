@@ -4,14 +4,8 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { LACTATE_CATEGORY_SET, SUGAR_CATEGORY_SET, SALT_CATEGORY_SET, CITRIC_CATEGORY_SET } = SoapTool.constants;
   const { round, toNumber, clamp } = SoapTool.helpers;
-  const { formatWeight, formatPercent, toGrams, fromGrams } = SoapTool.units;
+  const { formatWeight, fromGrams } = SoapTool.units;
   const state = SoapTool.state;
-  const PRINT_CONFIRM_MIN_FILL_PCT = 90;
-  const PRINT_CONFIRM_MAX_FILL_PCT = 120;
-  const PRINT_CONFIRM_STRONG_LOW_FILL_PCT = 80;
-  const PRINT_CONFIRM_STRONG_HIGH_FILL_PCT = 130;
-  const PRINT_NORMALIZE_MIN_PCT = 50;
-  const PRINT_NORMALIZE_MAX_PCT = 200;
 
   async function getCalcForExport(){
     const calc = state.lastCalc || await SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
@@ -24,142 +18,57 @@
     return calc;
   }
 
-  function collectFragranceExportRows(totalOils){
-    const rows = [];
-    document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
-      const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
-      const gramsInput = row.querySelector('.fragrance-grams')?.value;
-      const pctInput = row.querySelector('.fragrance-percent')?.value;
-      let grams = toGrams(gramsInput);
-      let pct = clamp(toNumber(pctInput), 0);
-      if (grams <= 0 && pct > 0 && totalOils > 0) {
-        grams = totalOils * (pct / 100);
-      }
-      if (grams <= 0 && pct <= 0 && !name) return;
-      if (!pct && grams > 0 && totalOils > 0) {
-        pct = (grams / totalOils) * 100;
-      }
-      rows.push({
-        name: name || 'Fragrance/Essential Oils',
-        grams,
-        pct,
-      });
-    });
-    return rows;
+  function getPrintPolicy(){
+    const fallback = {
+      confirmMinPct: 90,
+      confirmMaxPct: 120,
+      strongLowPct: 80,
+      strongHighPct: 130,
+      normalizeMinPct: 50,
+      normalizeMaxPct: 200,
+      guidance: {
+        strong_low: {
+          toneClass: 'text-danger',
+          messageClass: 'alert-danger',
+          message: 'This recipe is far below mold capacity and may underfill bars.',
+        },
+        low: {
+          toneClass: 'text-warning',
+          messageClass: 'alert-warning',
+          message: 'This recipe is below your target range and may leave extra headspace.',
+        },
+        high: {
+          toneClass: 'text-warning',
+          messageClass: 'alert-warning',
+          message: 'This recipe is above your target range and may overflow this mold.',
+        },
+        strong_high: {
+          toneClass: 'text-danger',
+          messageClass: 'alert-danger',
+          message: 'This recipe is far above mold capacity and has a high overflow risk.',
+        },
+        ok: {
+          toneClass: 'text-success',
+          messageClass: 'alert-success',
+          message: 'This recipe is inside your target fill range.',
+        },
+      },
+    };
+    const configured = SoapTool.config?.printPolicy;
+    if (!configured || typeof configured !== 'object') return fallback;
+    return {
+      ...fallback,
+      ...configured,
+      guidance: {
+        ...fallback.guidance,
+        ...(configured.guidance || {}),
+      },
+    };
   }
 
-  function collectAdditiveExportRows(additives){
-    const rows = [];
-    if (!additives) return rows;
-    const lactateName = document.getElementById('additiveLactateName')?.value?.trim() || 'Sodium Lactate';
-    const sugarName = document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar';
-    const saltName = document.getElementById('additiveSaltName')?.value?.trim() || 'Salt';
-    const citricName = document.getElementById('additiveCitricName')?.value?.trim() || 'Citric Acid';
-    if (additives.lactateG > 0) {
-      rows.push({ name: lactateName, grams: additives.lactateG, pct: additives.lactatePct });
-    }
-    if (additives.sugarG > 0) {
-      rows.push({ name: sugarName, grams: additives.sugarG, pct: additives.sugarPct });
-    }
-    if (additives.saltG > 0) {
-      rows.push({ name: saltName, grams: additives.saltG, pct: additives.saltPct });
-    }
-    if (additives.citricG > 0) {
-      rows.push({ name: citricName, grams: additives.citricG, pct: additives.citricPct });
-    }
-    return rows;
-  }
-
-  function buildAssumptionNotes(calc){
-    const notes = [];
-    const extraLye = toNumber(calc.additives?.citricLyeG);
-    const citricG = toNumber(calc.additives?.citricG);
-    const lyeType = String(calc.lyeType || 'NaOH').toUpperCase();
-    if (extraLye > 0 && citricG > 0) {
-      if (lyeType === 'KOH') {
-        notes.push('Citric-acid lye adjustment used 0.71 x citric acid because KOH was selected.');
-      } else {
-        notes.push('Citric-acid lye adjustment used 0.624 x citric acid because NaOH was selected.');
-      }
-      notes.push(`${formatWeight(extraLye)} lye added extra to accommodate the extra citrus.`);
-    }
-    if (calc.usedSapFallback) {
-      notes.push('Average SAP fallback was used for oils missing SAP values.');
-    }
-    if (String(calc.lyeSelected || '').toUpperCase() === 'KOH90') {
-      notes.push('KOH90 selection assumes 90% lye purity.');
-    }
-    const oils = Array.isArray(calc.oils) ? calc.oils : [];
-    const hasDecimalSap = oils.some(oil => {
-      const sap = toNumber(oil?.sapKoh);
-      return sap > 0 && sap <= 1;
-    });
-    if (hasDecimalSap) {
-      notes.push('SAP values at or below 1.0 were treated as decimal SAP and converted to mg KOH/g.');
-    }
-    return notes;
-  }
-
-  function buildFormulaCsv(calc){
-    if (Array.isArray(calc?.export?.csv_rows) && calc.export.csv_rows.length) {
-      return calc.export.csv_rows;
-    }
-    const totalOils = calc.totalOils || 0;
-    const rows = [['section', 'name', 'quantity', 'unit', 'percent']];
-    rows.push(['Summary', 'Lye Type', calc.lyeType || '', '', '']);
-    rows.push(['Summary', 'Superfat', round(calc.superfat || 0, 2), '%', '']);
-    rows.push(['Summary', 'Lye Purity', round(calc.purity || 0, 1), '%', '']);
-    rows.push(['Summary', 'Water Method', calc.waterMethod || '', '', '']);
-    rows.push(['Summary', 'Water %', round(calc.waterPct || 0, 1), '%', '']);
-    rows.push(['Summary', 'Lye Concentration', round(calc.lyeConcentration || 0, 1), '%', '']);
-    rows.push(['Summary', 'Water Ratio', round(calc.waterRatio || 0, 2), '', '']);
-    rows.push(['Summary', 'Total Oils', round(totalOils, 2), 'gram', '']);
-    rows.push(['Summary', 'Batch Yield', round(calc.batchYield || 0, 2), 'gram', '']);
-
-    (calc.oils || []).forEach(oil => {
-      const pct = totalOils > 0 ? round((oil.grams / totalOils) * 100, 2) : '';
-      rows.push(['Oils', oil.name || 'Oil', round(oil.grams || 0, 2), 'gram', pct]);
-    });
-    const extraLye = toNumber(calc.additives?.citricLyeG);
-    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
-    const totalLye = hasBaseLye
-      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
-      : toNumber(calc.lyeAdjusted);
-    if (totalLye > 0) {
-      let lyeLabel = calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)';
-      if (extraLye > 0) {
-        lyeLabel += '*';
-      }
-      rows.push(['Lye', lyeLabel, round(totalLye, 2), 'gram', '']);
-    }
-    if (calc.water > 0) {
-      rows.push(['Water', 'Distilled Water', round(calc.water, 2), 'gram', '']);
-    }
-    const fragrances = collectFragranceExportRows(totalOils);
-    fragrances.forEach(row => {
-      rows.push(['Fragrance', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
-    });
-    const additiveRows = collectAdditiveExportRows(calc.additives);
-    additiveRows.forEach(row => {
-      rows.push(['Additives', row.name, round(row.grams || 0, 2), 'gram', round(row.pct || 0, 2)]);
-    });
-    buildAssumptionNotes(calc).forEach(note => {
-      rows.push(['Notes', `* ${note}`, '', '', '']);
-    });
-    return rows;
-  }
-
-  function csvEscape(value){
-    if (value === null || value === undefined) return '';
-    const str = String(value);
-    if (/[",\n]/.test(str)) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  }
-
-  function buildCsvString(rows){
-    return rows.map(row => row.map(csvEscape).join(',')).join('\n');
+  function getExportCsvText(calc){
+    const csvText = calc?.export?.csv_text;
+    return (typeof csvText === 'string' && csvText.trim()) ? csvText : '';
   }
 
   function triggerCsvDownload(csvText, filename){
@@ -192,31 +101,20 @@
 
   function shouldShowPrintFillConfirmation(fillSummary){
     if (!fillSummary) return false;
-    return fillSummary.fillPct < PRINT_CONFIRM_MIN_FILL_PCT || fillSummary.fillPct > PRINT_CONFIRM_MAX_FILL_PCT;
+    const policy = getPrintPolicy();
+    return fillSummary.fillPct < policy.confirmMinPct || fillSummary.fillPct > policy.confirmMaxPct;
   }
 
   function getPrintFillGuidance(fillPct){
-    if (fillPct < PRINT_CONFIRM_MIN_FILL_PCT) {
-      const isStrong = fillPct < PRINT_CONFIRM_STRONG_LOW_FILL_PCT;
-      return {
-        toneClass: isStrong ? 'text-danger' : 'text-warning',
-        messageClass: isStrong ? 'alert-danger' : 'alert-warning',
-        message: isStrong
-          ? 'This recipe is far below mold capacity and may underfill bars.'
-          : 'This recipe is below your target range and may leave extra headspace.',
-      };
+    const policy = getPrintPolicy();
+    const guidance = policy.guidance || {};
+    if (fillPct < policy.confirmMinPct) {
+      return (fillPct < policy.strongLowPct ? guidance.strong_low : guidance.low) || guidance.low || guidance.ok;
     }
-    if (fillPct > PRINT_CONFIRM_MAX_FILL_PCT) {
-      const isStrong = fillPct > PRINT_CONFIRM_STRONG_HIGH_FILL_PCT;
-      return {
-        toneClass: isStrong ? 'text-danger' : 'text-warning',
-        messageClass: isStrong ? 'alert-danger' : 'alert-warning',
-        message: isStrong
-          ? 'This recipe is far above mold capacity and has a high overflow risk.'
-          : 'This recipe is above your target range and may overflow this mold.',
-      };
+    if (fillPct > policy.confirmMaxPct) {
+      return (fillPct > policy.strongHighPct ? guidance.strong_high : guidance.high) || guidance.high || guidance.ok;
     }
-    return {
+    return guidance.ok || {
       toneClass: 'text-success',
       messageClass: 'alert-success',
       message: 'This recipe is inside your target fill range.',
@@ -232,69 +130,15 @@
     return `${sign}${round(fromGrams(Math.abs(safe)), 2)} ${state.currentUnit || 'g'}`;
   }
 
-  function scaleExportRows(rows, factor){
-    const safeFactor = toNumber(factor);
-    if (!Array.isArray(rows) || !isFinite(safeFactor) || safeFactor <= 0) {
-      return [];
-    }
-    return rows.map(row => ({
-      ...row,
-      grams: toNumber(row?.grams) * safeFactor,
-    }));
-  }
-
-  function buildScaledPrintCalc(calc, scaleFactor, targetBatchYieldG){
-    const safeFactor = toNumber(scaleFactor);
-    if (!isFinite(safeFactor) || safeFactor <= 0 || !calc || typeof calc !== 'object') {
-      return null;
-    }
-    const scaledAdditives = {
-      ...(calc.additives || {}),
-    };
-    ['lactateG', 'sugarG', 'saltG', 'citricG', 'citricLyeG', 'fragranceG'].forEach(key => {
-      scaledAdditives[key] = toNumber(scaledAdditives[key]) * safeFactor;
+  async function requestNormalizedPrintSheet(calc, fillSummary, targetFillPct){
+    if (!calc || !fillSummary) return null;
+    if (!SoapTool.runnerService?.requestNormalizedPrintSheet) return null;
+    return SoapTool.runnerService.requestNormalizedPrintSheet({
+      calc,
+      moldCapacityG: fillSummary.moldCapacityG,
+      targetFillPct,
+      unitDisplay: state.currentUnit || 'g',
     });
-    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
-    return {
-      ...calc,
-      totalOils: toNumber(calc.totalOils) * safeFactor,
-      oils: (calc.oils || []).map(oil => ({
-        ...oil,
-        grams: toNumber(oil?.grams) * safeFactor,
-      })),
-      lyePure: toNumber(calc.lyePure) * safeFactor,
-      lyeAdjustedBase: hasBaseLye ? (toNumber(calc.lyeAdjustedBase) * safeFactor) : calc.lyeAdjustedBase,
-      lyeAdjusted: toNumber(calc.lyeAdjusted) * safeFactor,
-      water: toNumber(calc.water) * safeFactor,
-      batchYield: toNumber(targetBatchYieldG) > 0 ? toNumber(targetBatchYieldG) : (toNumber(calc.batchYield) * safeFactor),
-      additives: scaledAdditives,
-      export: null,
-    };
-  }
-
-  function buildNormalizedPrintPayload(calc, fillSummary, targetFillPct){
-    if (!fillSummary || !calc) return null;
-    const desiredPct = clamp(
-      toNumber(targetFillPct) > 0 ? toNumber(targetFillPct) : 100,
-      PRINT_NORMALIZE_MIN_PCT,
-      PRINT_NORMALIZE_MAX_PCT
-    );
-    const targetBatchYieldG = fillSummary.moldCapacityG * (desiredPct / 100);
-    const currentBatchYieldG = toNumber(calc.batchYield);
-    if (!isFinite(targetBatchYieldG) || targetBatchYieldG <= 0 || !isFinite(currentBatchYieldG) || currentBatchYieldG <= 0) {
-      return null;
-    }
-    const scaleFactor = targetBatchYieldG / currentBatchYieldG;
-    const scaledCalc = buildScaledPrintCalc(calc, scaleFactor, targetBatchYieldG);
-    if (!scaledCalc) return null;
-    const fragrances = scaleExportRows(collectFragranceExportRows(toNumber(calc.totalOils)), scaleFactor);
-    const additives = scaleExportRows(collectAdditiveExportRows(calc.additives), scaleFactor);
-    return {
-      calc: scaledCalc,
-      fragrances,
-      additives,
-      normalizationNote: `Normalized to ${round(desiredPct, 1)}% mold fill (${formatWeight(targetBatchYieldG)} target batch).`,
-    };
   }
 
   function showPrintFillConfirmationModal(fillSummary){
@@ -313,6 +157,7 @@
       const normalizePctInput = document.getElementById('soapPrintNormalizePct');
       const printAsIsBtn = document.getElementById('soapPrintAsIsBtn');
       const normalizeBtn = document.getElementById('soapNormalizePrintBtn');
+      const policy = getPrintPolicy();
 
       if (!printAsIsBtn || !normalizeBtn) {
         resolve({ action: 'print-as-is' });
@@ -335,6 +180,8 @@
       }
       if (normalizePctInput) {
         normalizePctInput.value = '100';
+        normalizePctInput.min = String(policy.normalizeMinPct);
+        normalizePctInput.max = String(policy.normalizeMaxPct);
       }
 
       let settled = false;
@@ -358,7 +205,7 @@
       };
       const handleNormalizeClick = () => {
         const rawTarget = toNumber(normalizePctInput?.value);
-        const safeTarget = clamp(rawTarget > 0 ? rawTarget : 100, PRINT_NORMALIZE_MIN_PCT, PRINT_NORMALIZE_MAX_PCT);
+        const safeTarget = clamp(rawTarget > 0 ? rawTarget : 100, policy.normalizeMinPct, policy.normalizeMaxPct);
         if (normalizePctInput) {
           normalizePctInput.value = round(safeTarget, 2);
         }
@@ -403,139 +250,6 @@
       win.print();
     };
     return true;
-  }
-
-  function buildPrintSheet(calc, options = {}){
-    if (typeof calc?.export?.sheet_html === 'string' && calc.export.sheet_html.trim()) {
-      return calc.export.sheet_html;
-    }
-    const totalOils = calc.totalOils || 0;
-    const oils = (calc.oils || []).map(oil => ({
-      name: oil.name || 'Oil',
-      grams: oil.grams || 0,
-      pct: totalOils > 0 ? (oil.grams / totalOils) * 100 : 0,
-    }));
-    const fragrances = Array.isArray(options?.fragrances)
-      ? options.fragrances
-      : collectFragranceExportRows(totalOils);
-    const additives = Array.isArray(options?.additives)
-      ? options.additives
-      : collectAdditiveExportRows(calc.additives);
-    const normalizationNote = typeof options?.normalizationNote === 'string'
-      ? options.normalizationNote.trim()
-      : '';
-    const now = new Date().toLocaleString();
-    const oilRows = oils.length
-      ? oils.map(oil => `
-          <tr>
-            <td>${oil.name}</td>
-            <td class="text-end">${formatWeight(oil.grams)}</td>
-            <td class="text-end">${formatPercent(oil.pct)}</td>
-          </tr>`).join('')
-      : '<tr><td colspan="3" class="text-muted">No oils added.</td></tr>';
-    const fragranceRows = fragrances.length
-      ? fragrances.map(item => `
-          <tr>
-            <td>${item.name}</td>
-            <td class="text-end">${formatWeight(item.grams)}</td>
-            <td class="text-end">${formatPercent(item.pct)}</td>
-          </tr>`).join('')
-      : '<tr><td colspan="3" class="text-muted">No fragrances added.</td></tr>';
-    const additiveRows = additives.length
-      ? additives.map(item => `
-          <tr>
-            <td>${item.name}</td>
-            <td class="text-end">${formatWeight(item.grams)}</td>
-            <td class="text-end">${formatPercent(item.pct)}</td>
-          </tr>`).join('')
-      : '<tr><td colspan="3" class="text-muted">No additives added.</td></tr>';
-    const extraLye = toNumber(calc.additives?.citricLyeG);
-    const hasBaseLye = calc.lyeAdjustedBase !== null && calc.lyeAdjustedBase !== undefined && calc.lyeAdjustedBase !== '';
-    const totalLye = hasBaseLye
-      ? (toNumber(calc.lyeAdjustedBase) + extraLye)
-      : toNumber(calc.lyeAdjusted);
-    const lyeLabel = `${calc.lyeType === 'KOH' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)'}${extraLye > 0 ? '*' : ''}`;
-    const lyeWeightLabel = `${formatWeight(totalLye)}${extraLye > 0 ? '*' : ''}`;
-    const assumptionNotes = buildAssumptionNotes(calc);
-    const assumptionsHtml = assumptionNotes.map(note => `<div class="footnote">* ${note}</div>`).join('');
-    const assumptionsBlockHtml = assumptionNotes.length
-      ? `<div class="footnotes"><h2 class="footnotes-heading">Assumptions</h2>${assumptionsHtml}</div>`
-      : '';
-
-    return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Soap Formula Sheet</title>
-    <style>
-      body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
-      h1 { font-size: 20px; margin-bottom: 4px; }
-      h2 { font-size: 16px; margin-top: 20px; }
-      .meta { font-size: 12px; color: #555; margin-bottom: 12px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }
-      th { background: #f3f4f6; text-align: left; }
-      .text-end { text-align: right; }
-      .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
-      .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
-      .text-muted { color: #666; }
-      .footnotes { margin-top: 10px; }
-      .footnotes-heading { font-size: 14px; margin: 12px 0 4px; }
-      .footnote { font-size: 11px; color: #555; margin-top: 6px; }
-    </style>
-  </head>
-  <body>
-    <h1>Soap Formula Sheet</h1>
-    <div class="meta">Generated ${now}</div>
-    ${normalizationNote ? `<div class="meta">${normalizationNote}</div>` : ''}
-    <div class="summary-grid">
-      <div class="summary-item"><span>Lye type</span><span>${calc.lyeType || '--'}</span></div>
-      <div class="summary-item"><span>Superfat</span><span>${formatPercent(calc.superfat || 0)}</span></div>
-      <div class="summary-item"><span>Lye purity</span><span>${formatPercent(calc.purity || 0)}</span></div>
-      <div class="summary-item"><span>Total oils</span><span>${formatWeight(totalOils)}</span></div>
-      <div class="summary-item"><span>Water</span><span>${formatWeight(calc.water || 0)}</span></div>
-      <div class="summary-item"><span>Batch yield</span><span>${formatWeight(calc.batchYield || 0)}</span></div>
-      <div class="summary-item"><span>Water method</span><span>${calc.waterMethod || '--'}</span></div>
-      <div class="summary-item"><span>Lye concentration</span><span>${formatPercent(calc.lyeConcentration || 0)}</span></div>
-    </div>
-
-    <h2>Oils</h2>
-    <table>
-      <thead>
-        <tr><th>Oil</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
-      </thead>
-      <tbody>${oilRows}</tbody>
-    </table>
-
-    <h2>Lye & Water</h2>
-    <table>
-      <thead>
-        <tr><th>Item</th><th class="text-end">Weight</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>${lyeLabel}</td><td class="text-end">${lyeWeightLabel}</td></tr>
-        <tr><td>Distilled Water</td><td class="text-end">${formatWeight(calc.water || 0)}</td></tr>
-      </tbody>
-    </table>
-
-    <h2>Fragrance & Essential Oils</h2>
-    <table>
-      <thead>
-        <tr><th>Fragrance</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
-      </thead>
-      <tbody>${fragranceRows}</tbody>
-    </table>
-
-    <h2>Additives</h2>
-    <table>
-      <thead>
-        <tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr>
-      </thead>
-      <tbody>${additiveRows}</tbody>
-    </table>
-    ${assumptionsBlockHtml}
-  </body>
-</html>`;
   }
 
   const oilRows = document.getElementById('oilRows');
@@ -1065,10 +779,13 @@
     exportSoapCsvBtn.addEventListener('click', async function(){
       const calc = await getCalcForExport();
       if (!calc) return;
-      const rows = buildFormulaCsv(calc);
-      const csvText = (typeof calc?.export?.csv_text === 'string' && calc.export.csv_text)
-        ? calc.export.csv_text
-        : buildCsvString(rows);
+      const csvText = getExportCsvText(calc);
+      if (!csvText) {
+        if (SoapTool.ui?.showSoapAlert) {
+          SoapTool.ui.showSoapAlert('warning', 'No CSV export is available yet. Run a fresh calculation and try again.', { dismissible: true, timeoutMs: 6000 });
+        }
+        return;
+      }
       triggerCsvDownload(csvText, 'soap_formula.csv');
     });
   }
@@ -1078,25 +795,28 @@
     printSoapSheetBtn.addEventListener('click', async function(){
       const calc = await getCalcForExport();
       if (!calc) return;
+      let html = (typeof calc?.export?.sheet_html === 'string' && calc.export.sheet_html.trim())
+        ? calc.export.sheet_html
+        : '';
       const fillSummary = getMoldFillSummary(calc);
-      let sheetCalc = calc;
-      let sheetOptions = {};
       if (shouldShowPrintFillConfirmation(fillSummary)) {
         const choice = await showPrintFillConfirmationModal(fillSummary);
         if (!choice) return;
         if (choice.action === 'normalize') {
-          const normalized = buildNormalizedPrintPayload(calc, fillSummary, choice.targetPct);
-          if (normalized?.calc) {
-            sheetCalc = normalized.calc;
-            sheetOptions = {
-              fragrances: normalized.fragrances,
-              additives: normalized.additives,
-              normalizationNote: normalized.normalizationNote,
-            };
+          const normalized = await requestNormalizedPrintSheet(calc, fillSummary, choice.targetPct);
+          if (normalized?.sheet_html) {
+            html = normalized.sheet_html;
+          } else if (SoapTool.ui?.showSoapAlert) {
+            SoapTool.ui.showSoapAlert('warning', 'Unable to normalize print output right now. Printing the current sheet instead.', { dismissible: true, timeoutMs: 6000 });
           }
         }
       }
-      const html = buildPrintSheet(sheetCalc, sheetOptions);
+      if (!html) {
+        if (SoapTool.ui?.showSoapAlert) {
+          SoapTool.ui.showSoapAlert('warning', 'No print sheet is available yet. Run a fresh calculation and try again.', { dismissible: true, timeoutMs: 6000 });
+        }
+        return;
+      }
       openPrintWindow(html);
     });
   }

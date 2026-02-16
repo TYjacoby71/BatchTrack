@@ -11,6 +11,8 @@ Glossary:
 from ._core import SoapToolComputationService
 from ._catalog import get_bulk_catalog_page
 from ._lye_water import compute_lye_water_values
+from ._print_policy import get_print_policy
+from ._sheet import build_normalized_print_sheet_payload
 from .types import SoapToolComputeRequest
 
 __all__ = [
@@ -18,5 +20,7 @@ __all__ = [
     "SoapToolComputeRequest",
     "compute_lye_water_values",
     "get_bulk_catalog_page",
+    "get_print_policy",
+    "build_normalized_print_sheet_payload",
 ]
 

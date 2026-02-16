@@ -24,7 +24,8 @@
     window.SOAP_CALC_TIER = {{ calc_tier|tojson if calc_tier is defined else '"guest"' }};
     window.soapToolConfig = {
       unitOptionsHtml: `{% for unit in global_units %}<option value="{{ unit.name }}">{{ unit.name }}</option>{% endfor %}`,
-      useCsvPrimary: {{ is_feature_enabled('TOOLS_SOAP_CSV_PRIMARY')|tojson }}
+      useCsvPrimary: {{ is_feature_enabled('TOOLS_SOAP_CSV_PRIMARY')|tojson }},
+      printPolicy: {{ soap_print_policy|default({})|tojson }}
     };
   </script>
   <div id="soapAlertStack" class="mb-3"></div>

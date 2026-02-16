@@ -85,8 +85,46 @@
     }
   }
 
+  async function requestNormalizedPrintSheet({
+    calc,
+    moldCapacityG,
+    targetFillPct,
+    unitDisplay,
+  } = {}){
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 4000);
+    try {
+      const response = await fetch('/tools/api/soap/print-normalized', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRFToken': token } : {}),
+        },
+        body: JSON.stringify({
+          calc: (calc && typeof calc === 'object') ? calc : {},
+          unit_display: unitDisplay || state.currentUnit || 'g',
+          normalization: {
+            mold_capacity_g: moldCapacityG,
+            target_fill_pct: targetFillPct,
+          },
+        }),
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (!data || data.success !== true || typeof data.result !== 'object') return null;
+      return data.result;
+    } catch (_) {
+      return null;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
   SoapTool.runnerService = {
     buildServicePayload,
     calculateWithSoapService,
+    requestNormalizedPrintSheet,
   };
 })(window);

@@ -13,7 +13,12 @@ Glossary:
 from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.services.tools.soap_tool import SoapToolComputationService, get_bulk_catalog_page
+from app.services.tools.soap_tool import (
+    SoapToolComputationService,
+    build_normalized_print_sheet_payload,
+    get_bulk_catalog_page,
+    get_print_policy,
+)
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.models import FeatureFlag
@@ -138,7 +143,13 @@ def tools_index():
 @tools_bp.route('/soap')
 def tools_soap():
     calc_limit, calc_tier = _soap_calc_limit()
-    return _render_tool('tools/soaps/index.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
+    return _render_tool(
+        'tools/soaps/index.html',
+        'TOOLS_SOAP',
+        calc_limit=calc_limit,
+        calc_tier=calc_tier,
+        soap_print_policy=get_print_policy(),
+    )
 
 
 # --- Candles tool route ---
@@ -188,6 +199,44 @@ def tools_soap_calculate():
     payload = request.get_json(silent=True) or {}
     result = SoapToolComputationService.calculate(payload)
     return jsonify({"success": True, "result": result})
+
+
+# --- Soap normalized print-sheet API route ---
+# Purpose: Build normalized printable sheet HTML from current calc snapshot.
+# Inputs: JSON payload with calc snapshot and normalization settings.
+# Outputs: JSON success response containing normalized sheet HTML.
+@tools_bp.route('/api/soap/print-normalized', methods=['POST'])
+@limiter.limit("60000/hour;5000/minute")
+def tools_soap_print_normalized():
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    calc_snapshot = payload.get("calc")
+    if not isinstance(calc_snapshot, dict):
+        return jsonify({"success": False, "error": "Missing calculated soap payload."}), 400
+
+    normalization = payload.get("normalization")
+    if not isinstance(normalization, dict):
+        normalization = {}
+
+    normalized = build_normalized_print_sheet_payload(
+        calc_snapshot=calc_snapshot,
+        mold_capacity_g=normalization.get("mold_capacity_g"),
+        target_fill_pct=normalization.get("target_fill_pct"),
+        unit_display=payload.get("unit_display") or "g",
+    )
+    if normalized is None:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Unable to normalize print sheet for this mold configuration.",
+                }
+            ),
+            400,
+        )
+    return jsonify({"success": True, "result": normalized})
 
 
 # --- Soap bulk-oils catalog API route ---

@@ -89,6 +89,69 @@ def test_public_soap_calculation_api_is_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_normalized_print_api_is_accessible(app):
+    """Anonymous users should be able to request normalized print-sheet output."""
+    client = app.test_client()
+    calc_snapshot = {
+        "totalOils": 650,
+        "oils": [
+            {"name": "Olive Oil", "grams": 500, "sapKoh": 0.188},
+            {"name": "Coconut Oil 76", "grams": 150, "sapKoh": 0.257},
+        ],
+        "lyeType": "NaOH",
+        "lyeSelected": "NAOH",
+        "superfat": 5,
+        "purity": 100,
+        "lyePure": 89.91,
+        "lyeAdjustedBase": 89.91,
+        "lyeAdjusted": 89.91,
+        "water": 214.5,
+        "waterMethod": "percent",
+        "waterPct": 33,
+        "lyeConcentration": 29.54,
+        "waterRatio": 2.39,
+        "usedSapFallback": False,
+        "additives": {
+            "fragrancePct": 3,
+            "fragranceG": 19.5,
+            "fragranceRows": [{"name": "Lavender EO", "grams": 19.5, "pct": 3}],
+            "lactatePct": 1,
+            "lactateG": 6.5,
+            "lactateName": "Sodium Lactate",
+            "sugarPct": 1,
+            "sugarG": 6.5,
+            "sugarName": "Sugar",
+            "saltPct": 0.5,
+            "saltG": 3.25,
+            "saltName": "Salt",
+            "citricPct": 0,
+            "citricG": 0,
+            "citricLyeG": 0,
+            "citricName": "Citric Acid",
+        },
+        "batchYield": 983.66,
+    }
+    response = client.post(
+        "/tools/api/soap/print-normalized",
+        json={
+            "calc": calc_snapshot,
+            "unit_display": "g",
+            "normalization": {
+                "mold_capacity_g": 900,
+                "target_fill_pct": 100,
+            },
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json() or {}
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert "<html" in str(result.get("sheet_html", "")).lower()
+    assert "Soap Formula Sheet" in str(result.get("sheet_html", ""))
+    assert "Normalized to 100.0% mold fill" in str(result.get("normalization_note", ""))
+
+
+@pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
     """Feedback notes should persist into source/flow JSON buckets."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService

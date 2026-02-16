@@ -8,6 +8,7 @@
     calcLimit: Number.isFinite(window.SOAP_CALC_LIMIT) ? window.SOAP_CALC_LIMIT : null,
     calcTier: window.SOAP_CALC_TIER || 'guest',
     useCsvPrimary: !!(window.soapToolConfig && window.soapToolConfig.useCsvPrimary),
+    printPolicy: (window.soapToolConfig && window.soapToolConfig.printPolicy) || null,
     isAuthenticated: window.__IS_AUTHENTICATED__ === true,
   };
 
