@@ -404,11 +404,16 @@ class PublicPricingPageService:
 
         if permissions_all and not permissions_all.issubset(permission_set):
             return False
-        if permissions_any and permission_set.isdisjoint(permissions_any):
-            return False
-        if addon_keys_any and addon_key_set.isdisjoint(addon_keys_any):
-            return False
-        if addon_functions_any and addon_function_set.isdisjoint(addon_functions_any):
+
+        has_any_entitlement_rule = bool(permissions_any or addon_keys_any or addon_functions_any)
+        entitlement_match = False
+        if permissions_any and not permission_set.isdisjoint(permissions_any):
+            entitlement_match = True
+        if addon_keys_any and not addon_key_set.isdisjoint(addon_keys_any):
+            entitlement_match = True
+        if addon_functions_any and not addon_function_set.isdisjoint(addon_functions_any):
+            entitlement_match = True
+        if has_any_entitlement_rule and not entitlement_match:
             return False
 
         min_user_limit = cls._coerce_int(row_spec.get("min_user_limit"))
