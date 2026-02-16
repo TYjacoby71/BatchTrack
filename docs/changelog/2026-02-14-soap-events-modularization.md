@@ -35,7 +35,7 @@
 - `app/static/js/tools/soaps/soap_tool_bundle_entry.js`
 - `app/services/tools/soap_tool/_sheet.py`
 - `app/templates/tools/soaps/exports/print_sheet.html`
-- `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-QRFF44Q2.js`
+- `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FJ5WEHMO.js`
 - `app/static/dist/manifest.json`
 - `docs/system/APP_DICTIONARY.md`
 - `docs/changelog/CHANGELOG_INDEX.md`

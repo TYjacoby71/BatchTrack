@@ -57,6 +57,10 @@ def _format_percent(value: float) -> str:
     return f"{round(value or 0.0, 1)}%"
 
 
+# --- Total lye resolver ---
+# Purpose: Resolve final lye grams including optional citric-acid extra lye.
+# Inputs: Computation result payload and extra-lye grams.
+# Outputs: Total lye grams for export display.
 def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
     base_adjusted = result.get("lye_adjusted_base_g")
     if base_adjusted is not None:
@@ -64,6 +68,10 @@ def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
     return float(result.get("lye_adjusted_g") or 0.0) + extra_lye
 
 
+# --- Assumption notes compiler ---
+# Purpose: Build export footnotes describing conversion/assumption choices.
+# Inputs: Computation result payload, additive payload, and display unit token.
+# Outputs: Ordered note strings rendered in CSV and print exports.
 def _build_assumption_notes(result: dict, additives: dict, unit_display: str) -> list[str]:
     notes: list[str] = []
     extra_lye = float(additives.get("citricLyeG") or 0.0)
