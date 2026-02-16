@@ -45,6 +45,39 @@ from .. import recipes_bp
 
 logger = logging.getLogger(__name__)
 
+
+def _group_variations_for_masters(recipes, *, organization_id: int | None) -> dict[int, list[Recipe]]:
+    """Return non-test, non-archived variations bucketed by recipe group."""
+    group_ids = sorted(
+        {
+            int(recipe.recipe_group_id)
+            for recipe in recipes
+            if getattr(recipe, "recipe_group_id", None)
+        }
+    )
+    if not group_ids:
+        return {}
+
+    query = Recipe.query.filter(
+        Recipe.recipe_group_id.in_(group_ids),
+        Recipe.is_master.is_(False),
+        Recipe.test_sequence.is_(None),
+        Recipe.is_archived.is_(False),
+    )
+    if organization_id:
+        query = query.filter(Recipe.organization_id == organization_id)
+
+    grouped: dict[int, list[Recipe]] = {}
+    for variation in (
+        query.order_by(
+            Recipe.recipe_group_id.asc(),
+            Recipe.variation_name.asc().nullsfirst(),
+            Recipe.version_number.desc(),
+        ).all()
+    ):
+        grouped.setdefault(int(variation.recipe_group_id), []).append(variation)
+    return grouped
+
 # =========================================================
 # LISTING & VIEW
 # =========================================================
@@ -132,6 +165,19 @@ def list_recipes():
         recipe.ingredient_count = int(ingredient_count or 0)
         recipe.batch_count = int(batch_count or 0)
         recipes.append(recipe)
+
+    group_variations = _group_variations_for_masters(
+        recipes,
+        organization_id=getattr(current_user, "organization_id", None),
+    )
+    for recipe in recipes:
+        fallback_variations = [
+            variation
+            for variation in getattr(recipe, "variations", [])
+            if variation.test_sequence is None and not variation.is_archived
+        ]
+        recipe.group_variations = group_variations.get(recipe.recipe_group_id, fallback_variations)
+
     inventory_units = get_global_unit_list()
     rendered = render_template(
         'pages/recipes/recipe_list.html',
@@ -164,7 +210,21 @@ def view_recipe(recipe_id):
         lineage_id = generate_lineage_id(recipe)
         batch_count = Batch.query.filter_by(recipe_id=recipe.id).count()
         has_batches = batch_count > 0
-        variation_count = Recipe.query.filter_by(parent_recipe_id=recipe.id).count()
+        if recipe.recipe_group_id:
+            variation_count = Recipe.query.filter(
+                Recipe.recipe_group_id == recipe.recipe_group_id,
+                Recipe.is_master.is_(False),
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
+        else:
+            variation_count = Recipe.query.filter(
+                Recipe.parent_recipe_id == recipe.id,
+                Recipe.test_sequence.is_(None),
+                Recipe.is_archived.is_(False),
+                Recipe.is_current.is_(True),
+            ).count()
         is_test = recipe.test_sequence is not None
         is_published_locked = recipe.status == 'published' and not is_test
         is_archived = bool(recipe.is_archived)

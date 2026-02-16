@@ -10,6 +10,7 @@ Glossary:
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, Tuple
 
 import sqlalchemy as sa
@@ -21,6 +22,13 @@ from ._current import apply_current_flag
 from ._lineage import _log_lineage_event
 
 logger = logging.getLogger(__name__)
+_TEST_SUFFIX_PATTERN = re.compile(r"\s*-\s*test\s+\d+\s*$", re.IGNORECASE)
+
+
+def _strip_test_suffix(value: str | None) -> str:
+    if not value:
+        return ""
+    return _TEST_SUFFIX_PATTERN.sub("", value).strip()
 
 
 # --- Build test template ---
@@ -141,6 +149,28 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
 
     recipe.version_number = int(max_version) + 1
     recipe.test_sequence = None
+    if recipe.is_master:
+        restored_master_name = (
+            (recipe.recipe_group.name if recipe.recipe_group else None)
+            or (
+                parent_recipe.recipe_group.name
+                if parent_recipe and parent_recipe.recipe_group
+                else None
+            )
+            or (parent_recipe.name if parent_recipe else None)
+            or _strip_test_suffix(recipe.name)
+        )
+        if restored_master_name:
+            recipe.name = restored_master_name
+    else:
+        restored_variation_name = (
+            recipe.variation_name
+            or (parent_recipe.variation_name if parent_recipe else None)
+            or (parent_recipe.name if parent_recipe else None)
+            or _strip_test_suffix(recipe.name)
+        )
+        if restored_variation_name:
+            recipe.name = restored_variation_name
     if parent_recipe:
         if recipe.is_master:
             recipe.parent_recipe_id = None
