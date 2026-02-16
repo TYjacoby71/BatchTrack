@@ -375,7 +375,10 @@ function updatePlanSummary() {
         return;
     }
 
-    const features = tierData.features || [];
+    const features = tierData.presentation_features || tierData.features || [];
+    const featureTotal = Number(
+        tierData.presentation_feature_total || tierData.feature_total || features.length
+    );
     features.forEach((feature) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
@@ -387,10 +390,10 @@ function updatePlanSummary() {
         featuresList.appendChild(item);
     });
 
-    if (tierData.feature_total && tierData.feature_total > features.length) {
+    if (featureTotal > features.length) {
         const moreItem = document.createElement('li');
         moreItem.className = 'text-muted';
-        moreItem.textContent = `...and ${tierData.feature_total - features.length} more capabilities inside the app.`;
+        moreItem.textContent = `...and ${featureTotal - features.length} more capabilities inside the app.`;
         featuresList.appendChild(moreItem);
     }
 

@@ -59,6 +59,78 @@ class TierPresentationCore:
             sections.append({"title": str(section_spec.get("title") or ""), "rows": rows})
         return sections
 
+    def build_single_tier_sections(
+        self,
+        *,
+        tier: dict[str, Any],
+        include_not_included: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Return sectioned rows for one selected tier."""
+        sections: list[dict[str, Any]] = []
+        for section_spec in self._feature_sections:
+            section_rows: list[dict[str, Any]] = []
+            for row_spec in section_spec.get("rows", ()):
+                kind = str(row_spec.get("kind") or "boolean").strip().lower()
+                cell = build_comparison_cell(tier=tier, row_spec=row_spec)
+
+                if not include_not_included and kind == "boolean" and not bool(cell.get("value")):
+                    continue
+                if (
+                    not include_not_included
+                    and kind in {"limit", "batchbot_limit"}
+                    and str(cell.get("display") or "").strip().lower() in {"not included", "no assistant access"}
+                ):
+                    continue
+
+                section_rows.append(
+                    {
+                        "label": str(row_spec.get("label") or ""),
+                        "kind": kind,
+                        "cell": cell,
+                    }
+                )
+            if section_rows:
+                sections.append({"title": str(section_spec.get("title") or ""), "rows": section_rows})
+        return sections
+
+    def build_single_tier_feature_list(
+        self,
+        *,
+        tier: dict[str, Any],
+        max_items: int | None = None,
+    ) -> list[str]:
+        """Return a flat feature checklist for one selected tier."""
+        sections = self.build_single_tier_sections(tier=tier, include_not_included=False)
+        items: list[str] = []
+        seen: set[str] = set()
+        for section in sections:
+            for row in section.get("rows", ()):
+                kind = str(row.get("kind") or "boolean").strip().lower()
+                label = str(row.get("label") or "").strip()
+                cell = row.get("cell") or {}
+                display = str(cell.get("display") or "").strip()
+                if not label:
+                    continue
+
+                if kind == "boolean":
+                    item = label
+                elif kind == "text":
+                    item = f"{label}: {display}" if display else label
+                else:
+                    if not display:
+                        continue
+                    item = f"{label}: {display}"
+
+                normalized_item = normalize_feature_label(item)
+                if not normalized_item or normalized_item in seen:
+                    continue
+                seen.add(normalized_item)
+                items.append(item)
+
+                if max_items is not None and max_items > 0 and len(items) >= max_items:
+                    return items
+        return items
+
     def resolve_tier_highlights(
         self,
         *,
