@@ -3,7 +3,6 @@
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp } = SoapTool.helpers;
-  const { computeFattyAcids, computeQualities, computeOilQualityScores } = SoapTool.calc;
   const {
     QUALITY_RANGES,
     QUALITY_HINTS,
@@ -176,16 +175,19 @@
     });
   }
 
-  function applyQualityTargets(){
+  async function applyQualityTargets(){
     const targets = getQualityTargets();
     if (!targets) {
       showSoapAlert('info', 'Select a quality target to nudge the blend.', { dismissible: true, timeoutMs: 5000 });
       return;
     }
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
-    const oils = rows.map(row => {
+    const oils = rows.map((row, rowIndex) => {
       const grams = SoapTool.units.toGrams(row.querySelector('.oil-grams')?.value);
       const fattyRaw = row.querySelector('.oil-fatty')?.value || '';
+      const name = row.querySelector('.oil-typeahead')?.value?.trim() || null;
+      const sapKoh = toNumber(row.querySelector('.oil-sap-koh')?.value);
+      const iodine = toNumber(row.querySelector('.oil-iodine')?.value);
       let fattyProfile = null;
       if (fattyRaw) {
         try {
@@ -194,75 +196,55 @@
           fattyProfile = null;
         }
       }
-      return { row, grams, fattyProfile };
+      return { row, rowIndex, name, grams, sapKoh, iodine, fattyProfile };
     }).filter(item => item.grams > 0);
 
     if (!oils.length) {
       showSoapAlert('warning', 'Add oils before nudging toward a target.', { dismissible: true, timeoutMs: 5000 });
       return;
     }
-
-    const fatty = computeFattyAcids(oils.map(oil => ({
-      grams: oil.grams,
-      fattyProfile: oil.fattyProfile,
-    })));
-    const currentQualities = computeQualities(fatty.percent);
-    const deltas = {
-      hardness: clamp((targets.hardness - currentQualities.hardness) / 100, -1, 1),
-      cleansing: clamp((targets.cleansing - currentQualities.cleansing) / 100, -1, 1),
-      conditioning: clamp((targets.conditioning - currentQualities.conditioning) / 100, -1, 1),
-      bubbly: clamp((targets.bubbly - currentQualities.bubbly) / 100, -1, 1),
-      creamy: clamp((targets.creamy - currentQualities.creamy) / 100, -1, 1),
+    const targetOils = SoapTool.oils.getOilTargetGrams() || oils.reduce((sum, oil) => sum + oil.grams, 0);
+    const requestPayload = {
+      oils: oils.map(item => ({
+        row_index: item.rowIndex,
+        name: item.name,
+        grams: item.grams,
+        sap_koh: item.sapKoh,
+        iodine: item.iodine,
+        fatty_profile: item.fattyProfile,
+      })),
+      targets,
+      target_oils_g: targetOils,
     };
-
-    const totalOils = oils.reduce((sum, oil) => sum + oil.grams, 0);
-    const adjusted = [];
-    let totalAdjusted = 0;
-    const strength = 0.8;
-    const missingFatty = oils.filter(oil => !oil.fattyProfile || typeof oil.fattyProfile !== 'object').length;
-    if (missingFatty === oils.length) {
-      showSoapAlert('warning', 'None of the selected oils have fatty acid data, so targets cannot be applied.', { dismissible: true, timeoutMs: 6000 });
+    const response = await SoapTool.runnerService?.applyQualityNudge?.(requestPayload);
+    if (!response || response.ok !== true) {
+      const errorMessage = response?.error || 'Unable to nudge blend right now. Please try again.';
+      showSoapAlert('warning', errorMessage, { dismissible: true, timeoutMs: 6000 });
       return;
     }
-    if (missingFatty) {
-      showSoapAlert('info', 'Some oils are missing fatty acid data. The nudge will only use oils with profiles.', { dismissible: true, timeoutMs: 5000 });
-    }
-
-    oils.forEach(oil => {
-      const scores = computeOilQualityScores(oil.fattyProfile);
-      const adjustment = (deltas.hardness * scores.hardness)
-        + (deltas.cleansing * scores.cleansing)
-        + (deltas.conditioning * scores.conditioning)
-        + (deltas.bubbly * scores.bubbly)
-        + (deltas.creamy * scores.creamy);
-      const factor = clamp(1 + adjustment * strength, 0.2, 1.8);
-      const next = oil.grams * factor;
-      adjusted.push({ row: oil.row, grams: next });
-      totalAdjusted += next;
+    const warnings = Array.isArray(response.warnings) ? response.warnings : [];
+    warnings.forEach(message => {
+      showSoapAlert('info', message, { dismissible: true, timeoutMs: 5000 });
     });
-
-    if (totalAdjusted <= 0) {
-      showSoapAlert('warning', 'Unable to adjust blend with current data.', { dismissible: true, timeoutMs: 5000 });
-      return;
-    }
-
-    const scale = totalOils / totalAdjusted;
-    const target = SoapTool.oils.getOilTargetGrams() || totalOils;
-    adjusted.forEach(item => {
-      const grams = item.grams * scale;
-      const gramsInput = item.row.querySelector('.oil-grams');
-      const pctInput = item.row.querySelector('.oil-percent');
+    const adjustedRows = Array.isArray(response.adjusted_rows) ? response.adjusted_rows : [];
+    adjustedRows.forEach(item => {
+      const index = Number(item?.index);
+      const grams = toNumber(item?.grams);
+      if (!isFinite(index) || index < 0 || !isFinite(grams)) return;
+      const row = rows[index];
+      if (!row) return;
+      const gramsInput = row.querySelector('.oil-grams');
+      const pctInput = row.querySelector('.oil-percent');
       if (gramsInput) gramsInput.value = grams > 0 ? round(SoapTool.units.fromGrams(grams), 2) : '';
-      if (pctInput && target > 0) {
-        const percent = (grams / target) * 100;
+      if (pctInput && targetOils > 0) {
+        const percent = (grams / targetOils) * 100;
         pctInput.value = percent > 0 ? round(percent, 2) : '';
       }
     });
-
     SoapTool.oils.updateOilTotals();
     SoapTool.storage.queueStateSave();
     SoapTool.storage.queueAutoCalc();
-    showSoapAlert('info', 'Blend nudged toward selected targets. Re-check results and adjust as needed.', { dismissible: true, timeoutMs: 6000 });
+    showSoapAlert('info', response.message || 'Blend nudged toward selected targets. Re-check results and adjust as needed.', { dismissible: true, timeoutMs: 6000 });
   }
 
   function updateQualitiesDisplay(data){

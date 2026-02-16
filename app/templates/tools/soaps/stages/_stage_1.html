@@ -1,3 +1,4 @@
+{% set soap_defaults = soap_policy.default_inputs if soap_policy is defined and soap_policy.default_inputs is defined else {} %}
 <div class="tab-pane fade show active" id="soapStage1Pane" role="tabpanel" aria-labelledby="soapStage1Tab">
   <div class="soap-stage-body p-3" data-stage-index="0">
     <div class="row g-3 align-items-start soap-stage-form-row soap-config-row soap-stage-grid">
@@ -24,7 +25,7 @@
       <div class="col-lg-4 col-md-6 soap-field-stack">
         <label class="form-label">Oils of mold</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="moldOilPct" step="0.1" value="65" title="Normal range is 50-80%.">
+          <input type="number" class="form-control" id="moldOilPct" step="0.1" value="{{ soap_defaults.mold_oil_pct|default(65) }}" title="Normal range is 50-80%.">
         </div>
         <div class="form-text soap-stage-note">Normal range is 50-80%.</div>
       </div>
@@ -59,7 +60,7 @@
             </div>
             <div class="col-lg-6 col-md-12 soap-field-stack">
               <label class="form-label">Cylinder fill factor</label>
-              <input type="number" class="form-control" id="moldCylinderFactor" step="0.05" value="0.85">
+              <input type="number" class="form-control" id="moldCylinderFactor" step="0.05" value="{{ soap_defaults.mold_cylinder_factor|default(0.85) }}">
               <div class="form-text soap-stage-note">0.85 means fill to 85% of measured capacity.</div>
             </div>
           </div>

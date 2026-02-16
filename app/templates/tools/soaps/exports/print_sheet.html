@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Soap Formula Sheet</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      h2 { font-size: 16px; margin-top: 20px; }
+      .meta { font-size: 12px; color: #555; margin-bottom: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }
+      th { background: #f3f4f6; text-align: left; }
+      .text-end { text-align: right; }
+      .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }
+      .summary-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
+      .text-muted { color: #666; }
+      .footnotes { margin-top: 10px; }
+      .footnotes-heading { font-size: 14px; margin: 12px 0 4px; }
+      .footnote { font-size: 11px; color: #555; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Soap Formula Sheet</h1>
+    <div class="meta">Generated {{ generated }}</div>
+    <div class="summary-grid">
+      {% for item in summary_items %}
+      <div class="summary-item"><span>{{ item.label }}</span><span>{{ item.value }}</span></div>
+      {% endfor %}
+    </div>
+
+    <h2>Oils</h2>
+    <table>
+      <thead><tr><th>Oil</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
+      <tbody>
+        {% if oil_rows %}
+          {% for row in oil_rows %}
+          <tr><td>{{ row.name }}</td><td class="text-end">{{ row.weight }}</td><td class="text-end">{{ row.percent }}</td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="3" class="text-muted">No oils added.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <h2>Lye &amp; Water</h2>
+    <table>
+      <thead><tr><th>Item</th><th class="text-end">Weight</th></tr></thead>
+      <tbody>
+        <tr><td>{{ lye_label_display }}</td><td class="text-end">{{ lye_total_text }}</td></tr>
+        <tr><td>Distilled Water</td><td class="text-end">{{ water_text }}</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Fragrance &amp; Essential Oils</h2>
+    <table>
+      <thead><tr><th>Fragrance</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
+      <tbody>
+        {% if fragrance_rows %}
+          {% for row in fragrance_rows %}
+          <tr><td>{{ row.name }}</td><td class="text-end">{{ row.weight }}</td><td class="text-end">{{ row.percent }}</td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="3" class="text-muted">No fragrances added.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <h2>Additives</h2>
+    <table>
+      <thead><tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
+      <tbody>
+        {% if additive_rows %}
+          {% for row in additive_rows %}
+          <tr><td>{{ row.name }}</td><td class="text-end">{{ row.weight }}</td><td class="text-end">{{ row.percent }}</td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="3" class="text-muted">No additives added.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% if assumption_notes %}
+    <div class="footnotes">
+      <h2 class="footnotes-heading">Assumptions</h2>
+      {% for note in assumption_notes %}
+      <div class="footnote">* {{ note }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </body>
+</html>

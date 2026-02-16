@@ -89,6 +89,94 @@ def test_public_soap_calculation_api_is_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_recipe_payload_api_is_accessible(app):
+    """Anonymous users should be able to build soap draft payloads via tool API."""
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/soap/recipe-payload",
+        json={
+            "calc": {
+                "totalOils": 650,
+                "batchYield": 984,
+                "lyeType": "NaOH",
+                "superfat": 5,
+                "purity": 100,
+                "lyeAdjusted": 90,
+                "water": 214,
+                "waterMethod": "percent",
+                "waterPct": 33,
+                "lyeConcentration": 29.6,
+                "waterRatio": 2.38,
+                "oils": [
+                    {
+                        "name": "Olive Oil",
+                        "grams": 650,
+                    }
+                ],
+                "additives": {},
+                "qualityReport": {},
+            },
+            "draft_lines": {"ingredients": [], "consumables": [], "containers": []},
+            "context": {"unit_display": "g"},
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert result.get("category_name") == "Soaps"
+    assert result.get("predicted_yield_unit") == "gram"
+    assert isinstance(result.get("notes"), str)
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_quality_nudge_api_is_accessible(app):
+    """Anonymous users should be able to request backend quality-target nudging."""
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/soap/quality-nudge",
+        json={
+            "oils": [
+                {
+                    "name": "Olive Oil",
+                    "grams": 500,
+                    "fatty_profile": {"oleic": 69, "linoleic": 12, "palmitic": 14, "stearic": 3},
+                },
+                {
+                    "name": "Coconut Oil 76",
+                    "grams": 150,
+                    "fatty_profile": {"lauric": 48, "myristic": 19, "palmitic": 9, "stearic": 3, "oleic": 8},
+                },
+            ],
+            "targets": {
+                "hardness": 40,
+                "cleansing": 15,
+                "conditioning": 55,
+                "bubbly": 25,
+                "creamy": 25,
+            },
+            "target_oils_g": 650,
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json() or {}
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert result.get("ok") is True
+    assert isinstance(result.get("adjusted_rows"), list)
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_page_injects_backend_policy_config(app):
+    """Soap tool page should inject backend-owned policy JSON for JS constants."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+    assert "window.soapToolPolicy =" in html
+    assert '"quality_ranges"' in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
     """Feedback notes should persist into source/flow JSON buckets."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService

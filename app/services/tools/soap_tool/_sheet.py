@@ -11,13 +11,22 @@ Glossary:
 from __future__ import annotations
 
 from datetime import datetime
-from html import escape
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 UNIT_FACTORS = {
     "g": 1.0,
     "oz": 28.3495,
     "lb": 453.592,
 }
+
+APP_ROOT = Path(__file__).resolve().parents[3]
+_TEMPLATE_ENV = Environment(
+    loader=FileSystemLoader(str(APP_ROOT / "templates")),
+    autoescape=select_autoescape(enabled_extensions=("html", "xml"), default=True),
+)
+_PRINT_SHEET_TEMPLATE = "tools/soaps/exports/print_sheet.html"
 
 
 # --- Unit conversion helper ---
@@ -48,6 +57,10 @@ def _format_percent(value: float) -> str:
     return f"{round(value or 0.0, 1)}%"
 
 
+# --- Total lye resolver ---
+# Purpose: Resolve final lye grams including optional citric-acid extra lye.
+# Inputs: Computation result payload and extra-lye grams.
+# Outputs: Total lye grams for export display.
 def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
     base_adjusted = result.get("lye_adjusted_base_g")
     if base_adjusted is not None:
@@ -55,6 +68,10 @@ def _resolve_total_lye_g(result: dict, extra_lye: float) -> float:
     return float(result.get("lye_adjusted_g") or 0.0) + extra_lye
 
 
+# --- Assumption notes compiler ---
+# Purpose: Build export footnotes describing conversion/assumption choices.
+# Inputs: Computation result payload, additive payload, and display unit token.
+# Outputs: Ordered note strings rendered in CSV and print exports.
 def _build_assumption_notes(result: dict, additives: dict, unit_display: str) -> list[str]:
     notes: list[str] = []
     extra_lye = float(additives.get("citricLyeG") or 0.0)
@@ -197,27 +214,6 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
             }
         )
 
-    oil_rows_html = "".join(
-        f"<tr><td>{escape(str(oil.get('name') or 'Oil'))}</td>"
-        f"<td class='text-end'>{_format_weight(float(oil.get('grams') or 0.0), unit_display)}</td>"
-        f"<td class='text-end'>{_format_percent(((float(oil.get('grams') or 0.0) / total_oils) * 100.0) if total_oils > 0 else 0.0)}</td></tr>"
-        for oil in oils
-    ) or "<tr><td colspan='3' class='text-muted'>No oils added.</td></tr>"
-
-    fragrance_rows_html = "".join(
-        f"<tr><td>{escape(str(row.get('name') or 'Fragrance/Essential Oils'))}</td>"
-        f"<td class='text-end'>{_format_weight(float(row.get('grams') or 0.0), unit_display)}</td>"
-        f"<td class='text-end'>{_format_percent(float(row.get('pct') or 0.0))}</td></tr>"
-        for row in fragrance_rows
-    ) or "<tr><td colspan='3' class='text-muted'>No fragrances added.</td></tr>"
-
-    additive_rows_html = "".join(
-        f"<tr><td>{escape(str(row['name']))}</td>"
-        f"<td class='text-end'>{_format_weight(float(row['grams']), unit_display)}</td>"
-        f"<td class='text-end'>{_format_percent(float(row['pct']))}</td></tr>"
-        for row in additive_rows
-    ) or "<tr><td colspan='3' class='text-muted'>No additives added.</td></tr>"
-
     lye_label = "Potassium Hydroxide (KOH)" if result.get("lye_type") == "KOH" else "Sodium Hydroxide (NaOH)"
     extra_lye = float(additives.get("citricLyeG") or 0.0)
     lye_total = _resolve_total_lye_g(result, extra_lye)
@@ -225,12 +221,6 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     lye_total_text = _format_weight(lye_total, unit_display)
     if extra_lye > 0:
         lye_total_text = f"{lye_total_text}*"
-    assumptions_html = "".join(f"<div class='footnote'>* {escape(note)}</div>" for note in assumption_notes)
-    assumptions_block_html = (
-        f"<div class='footnotes'><h2 class='footnotes-heading'>Assumptions</h2>{assumptions_html}</div>"
-        if assumption_notes
-        else ""
-    )
     sat_unsat = quality_report.get("sat_unsat") or {}
     sat_value = float(sat_unsat.get("saturated") or 0.0)
     unsat_value = float(sat_unsat.get("unsaturated") or 0.0)
@@ -246,80 +236,62 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     fragrance_weight = float(additives.get("fragranceG") or 0.0)
     generated = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     batch_yield = float((result.get("results_card") or {}).get("batch_yield_g") or 0.0)
+    summary_items = [
+        {"label": "Lye type", "value": str(result.get("lye_type") or "--")},
+        {"label": "Superfat", "value": _format_percent(float(result.get("superfat_pct") or 0.0))},
+        {"label": "Lye purity", "value": _format_percent(float(result.get("lye_purity_pct") or 0.0))},
+        {"label": "Total oils", "value": _format_weight(total_oils, unit_display)},
+        {"label": "Total lye", "value": lye_total_text},
+        {"label": "Water", "value": _format_weight(float(result.get("water_g") or 0.0), unit_display)},
+        {"label": "Batch yield", "value": _format_weight(batch_yield, unit_display)},
+        {"label": "Water method", "value": str(result.get("water_method") or "--")},
+        {"label": "Water %", "value": _format_percent(float(result.get("water_pct") or 0.0))},
+        {"label": "Lye concentration", "value": _format_percent(float(result.get("lye_concentration_pct") or 0.0))},
+        {"label": "Water : Lye Ratio", "value": water_ratio_text},
+        {"label": "Sat : Unsat Ratio", "value": sat_unsat_text},
+        {"label": "Iodine", "value": iodine_text},
+        {"label": "INS", "value": ins_text},
+        {"label": "Fragrance Ratio", "value": fragrance_ratio_text},
+        {"label": "Fragrance Weight", "value": _format_weight(fragrance_weight, unit_display)},
+    ]
 
-    return f"""<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Soap Formula Sheet</title>
-    <style>
-      body {{ font-family: Arial, sans-serif; color: #111; margin: 24px; }}
-      h1 {{ font-size: 20px; margin-bottom: 4px; }}
-      h2 {{ font-size: 16px; margin-top: 20px; }}
-      .meta {{ font-size: 12px; color: #555; margin-bottom: 12px; }}
-      table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
-      th, td {{ border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }}
-      th {{ background: #f3f4f6; text-align: left; }}
-      .text-end {{ text-align: right; }}
-      .summary-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12px; }}
-      .summary-item {{ display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }}
-      .text-muted {{ color: #666; }}
-      .footnotes {{ margin-top: 10px; }}
-      .footnotes-heading {{ font-size: 14px; margin: 12px 0 4px; }}
-      .footnote {{ font-size: 11px; color: #555; margin-top: 6px; }}
-    </style>
-  </head>
-  <body>
-    <h1>Soap Formula Sheet</h1>
-    <div class="meta">Generated {generated}</div>
-    <div class="summary-grid">
-      <div class="summary-item"><span>Lye type</span><span>{escape(str(result.get("lye_type") or "--"))}</span></div>
-      <div class="summary-item"><span>Superfat</span><span>{_format_percent(float(result.get("superfat_pct") or 0.0))}</span></div>
-      <div class="summary-item"><span>Lye purity</span><span>{_format_percent(float(result.get("lye_purity_pct") or 0.0))}</span></div>
-      <div class="summary-item"><span>Total oils</span><span>{_format_weight(total_oils, unit_display)}</span></div>
-      <div class="summary-item"><span>Total lye</span><span>{lye_total_text}</span></div>
-      <div class="summary-item"><span>Water</span><span>{_format_weight(float(result.get("water_g") or 0.0), unit_display)}</span></div>
-      <div class="summary-item"><span>Batch yield</span><span>{_format_weight(batch_yield, unit_display)}</span></div>
-      <div class="summary-item"><span>Water method</span><span>{escape(str(result.get("water_method") or "--"))}</span></div>
-      <div class="summary-item"><span>Water %</span><span>{_format_percent(float(result.get("water_pct") or 0.0))}</span></div>
-      <div class="summary-item"><span>Lye concentration</span><span>{_format_percent(float(result.get("lye_concentration_pct") or 0.0))}</span></div>
-      <div class="summary-item"><span>Water : Lye Ratio</span><span>{water_ratio_text}</span></div>
-      <div class="summary-item"><span>Sat : Unsat Ratio</span><span>{sat_unsat_text}</span></div>
-      <div class="summary-item"><span>Iodine</span><span>{iodine_text}</span></div>
-      <div class="summary-item"><span>INS</span><span>{ins_text}</span></div>
-      <div class="summary-item"><span>Fragrance Ratio</span><span>{fragrance_ratio_text}</span></div>
-      <div class="summary-item"><span>Fragrance Weight</span><span>{_format_weight(fragrance_weight, unit_display)}</span></div>
-    </div>
+    oil_rows = [
+        {
+            "name": str(oil.get("name") or "Oil"),
+            "weight": _format_weight(float(oil.get("grams") or 0.0), unit_display),
+            "percent": _format_percent(((float(oil.get("grams") or 0.0) / total_oils) * 100.0) if total_oils > 0 else 0.0),
+        }
+        for oil in oils
+    ]
+    fragrance_display_rows = [
+        {
+            "name": str(row.get("name") or "Fragrance/Essential Oils"),
+            "weight": _format_weight(float(row.get("grams") or 0.0), unit_display),
+            "percent": _format_percent(float(row.get("pct") or 0.0)),
+        }
+        for row in fragrance_rows
+    ]
+    additive_display_rows = [
+        {
+            "name": str(row.get("name") or "Additive"),
+            "weight": _format_weight(float(row.get("grams") or 0.0), unit_display),
+            "percent": _format_percent(float(row.get("pct") or 0.0)),
+        }
+        for row in additive_rows
+    ]
 
-    <h2>Oils</h2>
-    <table>
-      <thead><tr><th>Oil</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
-      <tbody>{oil_rows_html}</tbody>
-    </table>
-
-    <h2>Lye & Water</h2>
-    <table>
-      <thead><tr><th>Item</th><th class="text-end">Weight</th></tr></thead>
-      <tbody>
-        <tr><td>{lye_label_display}</td><td class="text-end">{lye_total_text}</td></tr>
-        <tr><td>Distilled Water</td><td class="text-end">{_format_weight(float(result.get("water_g") or 0.0), unit_display)}</td></tr>
-      </tbody>
-    </table>
-
-    <h2>Fragrance & Essential Oils</h2>
-    <table>
-      <thead><tr><th>Fragrance</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
-      <tbody>{fragrance_rows_html}</tbody>
-    </table>
-
-    <h2>Additives</h2>
-    <table>
-      <thead><tr><th>Additive</th><th class="text-end">Weight</th><th class="text-end">Percent</th></tr></thead>
-      <tbody>{additive_rows_html}</tbody>
-    </table>
-    {assumptions_block_html}
-  </body>
-</html>"""
+    template = _TEMPLATE_ENV.get_template(_PRINT_SHEET_TEMPLATE)
+    return template.render(
+        generated=generated,
+        summary_items=summary_items,
+        oil_rows=oil_rows,
+        fragrance_rows=fragrance_display_rows,
+        additive_rows=additive_display_rows,
+        lye_label_display=lye_label_display,
+        lye_total_text=lye_total_text,
+        water_text=_format_weight(float(result.get("water_g") or 0.0), unit_display),
+        assumption_notes=assumption_notes,
+    )
 
 
 __all__ = [
