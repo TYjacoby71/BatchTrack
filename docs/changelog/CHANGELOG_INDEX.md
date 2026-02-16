@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-16: Recipe Variation Promotion Name and Group Visibility Fixes](2026-02-16-recipe-variation-promotion-name-and-group-visibility-fixes.md)**
+  - Restored canonical master/variation names when promoting test versions to current.
+  - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.
+  - Added regression tests for promotion naming and post-promotion variation display.
 - **[2026-02-14: Soap Print Fill Confirmation Modal](2026-02-14-soap-print-fill-confirmation-modal.md)**
   - Added a print-time mold-fill confirmation modal to the Soap Formulator print finalization flow.
   - Added optional normalize-and-print scaling to fit a user-selected mold-fill percentage.
