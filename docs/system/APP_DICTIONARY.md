@@ -192,6 +192,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Lineage Selector (Master/Variation)** → Filtered lineage navigation (see `app/templates/pages/recipes/view_recipe.html`)
 - **Lineage History Panel** → Master/variation version timelines with tests (see `app/templates/pages/recipes/recipe_lineage.html`)
 - **Origin Summary (Origin/Root Recipe)** → Origin + predecessor display (see `app/templates/pages/recipes/view_recipe.html`)
+- **Recipe Group List Cards (Group-Scoped Variations)** → Recipe list card/table variation sections source rows by recipe group lineage so master-version promotions do not hide variation visibility (see `app/templates/pages/recipes/recipe_list.html` and `app/blueprints/recipes/views/manage_routes.py`)
 - **Start Batch Modal** → Master + variation selection (see [SYSTEM_INDEX.md](SYSTEM_INDEX.md))
 - **Batch In-Progress Timer Component** → Embedded timer table/actions for active batches, including timezone-safe display arithmetic for countdown and status badges (see `app/templates/components/batch/timer_component.html`)
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)

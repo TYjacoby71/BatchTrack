@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 _TEST_SUFFIX_PATTERN = re.compile(r"\s*-\s*test\s+\d+\s*$", re.IGNORECASE)
 
 
+# --- Strip test suffix ---
+# Purpose: Remove a trailing " - Test N" marker from a recipe name.
+# Inputs: Raw recipe name string, which may include a test suffix.
+# Outputs: Normalized base name without the trailing test marker.
 def _strip_test_suffix(value: str | None) -> str:
     if not value:
         return ""
@@ -33,6 +37,8 @@ def _strip_test_suffix(value: str | None) -> str:
 
 # --- Build test template ---
 # Purpose: Build a test recipe template from a base.
+# Inputs: Base recipe and optional explicit test sequence number.
+# Outputs: Unsaved Recipe model prefilled with branch/test metadata.
 def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Recipe:
     test_name = base.name
     if not base.is_master and base.variation_name:
@@ -78,6 +84,8 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
 
 # --- Create test version ---
 # Purpose: Create a test version from a base recipe.
+# Inputs: Base recipe, request payload, and target lifecycle status.
+# Outputs: Tuple indicating success and either created Recipe or error payload.
 def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: str) -> Tuple[bool, Any]:
     next_test_sequence = _next_test_sequence(
         base.recipe_group_id,
@@ -113,6 +121,8 @@ def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: st
 
 # --- Next test sequence ---
 # Purpose: Expose next test sequence for a base recipe.
+# Inputs: Base recipe used to resolve branch scope.
+# Outputs: Integer test sequence number for the next test in branch.
 def get_next_test_sequence(base: Recipe) -> int:
     return _next_test_sequence(
         base.recipe_group_id,
@@ -123,6 +133,8 @@ def get_next_test_sequence(base: Recipe) -> int:
 
 # --- Promote test ---
 # Purpose: Promote a test to the current version.
+# Inputs: Recipe id for the test version being promoted.
+# Outputs: Tuple indicating success and the promoted Recipe or an error message.
 def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.test_sequence is None:
@@ -210,6 +222,8 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
 
 # --- Unique recipe name ---
 # Purpose: Generate a unique recipe name within an org.
+# Inputs: Desired base recipe-group name and organization id.
+# Outputs: Collision-safe name string for recipe-group creation flows.
 def _unique_recipe_name(base_name: str, org_id: int | None) -> str:
     if not org_id:
         return base_name
@@ -226,6 +240,8 @@ def _unique_recipe_name(base_name: str, org_id: int | None) -> str:
 
 # --- Promote to master ---
 # Purpose: Promote a variation to master in the same group.
+# Inputs: Variation recipe id that should be promoted into master branch.
+# Outputs: Tuple indicating success and created master Recipe or error message.
 def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:
@@ -287,6 +303,8 @@ def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
 
 # --- Promote to new group ---
 # Purpose: Promote a variation to a new recipe group.
+# Inputs: Variation recipe id and optional override group name.
+# Outputs: Tuple indicating success and created master Recipe or error message.
 def promote_variation_to_new_group(recipe_id: int, group_name: str | None = None) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:

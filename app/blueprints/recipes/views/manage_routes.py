@@ -46,6 +46,10 @@ from .. import recipes_bp
 logger = logging.getLogger(__name__)
 
 
+# --- Group variations for masters ---
+# Purpose: Fetch group-scoped non-test variations for listed master rows.
+# Inputs: Master recipe rows and optional organization scope identifier.
+# Outputs: Mapping of recipe_group_id to variation Recipe rows.
 def _group_variations_for_masters(recipes, *, organization_id: int | None) -> dict[int, list[Recipe]]:
     """Return non-test, non-archived variations bucketed by recipe group."""
     group_ids = sorted(
@@ -83,6 +87,8 @@ def _group_variations_for_masters(recipes, *, organization_id: int | None) -> di
 # =========================================================
 # --- List recipes ---
 # Purpose: List master recipes for the organization.
+# Inputs: Request query args for pagination plus authenticated organization scope.
+# Outputs: Rendered recipe list HTML response with group-aware variation payloads.
 @recipes_bp.route('/')
 @login_required
 @require_permission('recipes.view')
@@ -195,6 +201,8 @@ def list_recipes():
 
 # --- View recipe ---
 # Purpose: View a recipe, its lineage context, and note history.
+# Inputs: Recipe id path parameter and authenticated user context.
+# Outputs: Rendered recipe detail page or redirect with flash messaging.
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
 @require_permission('recipes.view')
@@ -334,6 +342,8 @@ def view_recipe(recipe_id):
 
 # --- Add recipe note ---
 # Purpose: Store timestamped notes for a recipe.
+# Inputs: Recipe id path parameter and submitted note body from form data.
+# Outputs: Redirect response back to recipe view with success/error flash.
 @recipes_bp.route('/<int:recipe_id>/notes', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -373,6 +383,8 @@ def add_recipe_note(recipe_id):
 # =========================================================
 # --- Delete recipe ---
 # Purpose: Legacy destructive delete for a recipe.
+# Inputs: Recipe id path parameter identifying recipe to delete.
+# Outputs: Redirect response to list page with deletion result flash.
 @recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
 @login_required
 @require_permission('recipes.delete')
@@ -392,6 +404,8 @@ def delete_recipe_route(recipe_id):
 
 # --- Make parent (legacy) ---
 # Purpose: Legacy promote-to-parent flow (compatibility).
+# Inputs: Recipe id path parameter for variation being converted.
+# Outputs: Redirect response to recipe view with conversion status flash.
 @recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -445,6 +459,8 @@ def make_parent_recipe(recipe_id):
 # =========================================================
 # --- Lock recipe ---
 # Purpose: Lock a recipe to prevent edits.
+# Inputs: Recipe id path parameter to lock.
+# Outputs: Redirect response to recipe view after lock persistence.
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -458,6 +474,8 @@ def lock_recipe(recipe_id):
 
 # --- Unlock recipe ---
 # Purpose: Unlock a recipe for edits.
+# Inputs: Recipe id path parameter plus unlock password form value.
+# Outputs: Redirect response to recipe view with unlock validation flash.
 @recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -480,6 +498,8 @@ def unlock_recipe(recipe_id):
 # =========================================================
 # --- Publish test ---
 # Purpose: Promote a test to current version.
+# Inputs: Test recipe id path parameter for promotion target.
+# Outputs: Redirect response to promoted version or source recipe on error.
 @recipes_bp.route('/<int:recipe_id>/publish-test', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -500,6 +520,8 @@ def publish_test_version(recipe_id):
 
 # --- Set current version ---
 # Purpose: Make a published version the current recipe.
+# Inputs: Published recipe id path parameter for target branch.
+# Outputs: Redirect response to selected version with status flash.
 @recipes_bp.route('/<int:recipe_id>/set-current', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -520,6 +542,8 @@ def set_current_version_route(recipe_id):
 
 # --- Promote to master ---
 # Purpose: Promote a variation to master in the same group.
+# Inputs: Variation recipe id path parameter.
+# Outputs: Redirect response to created master or source recipe on failure.
 @recipes_bp.route('/<int:recipe_id>/promote-to-master', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -540,6 +564,8 @@ def promote_variation_to_master(recipe_id):
 
 # --- Promote to new group ---
 # Purpose: Promote a variation to a new recipe group.
+# Inputs: Variation recipe id path parameter and optional group_name form value.
+# Outputs: Redirect response to newly created group master or source on error.
 @recipes_bp.route('/<int:recipe_id>/promote-to-new-group', methods=['POST'])
 @login_required
 @require_permission('recipes.create_variations')
@@ -571,6 +597,8 @@ def promote_variation_to_new_group(recipe_id):
 # =========================================================
 # --- Archive recipe ---
 # Purpose: Archive a recipe (soft-hide + lock).
+# Inputs: Recipe id path parameter and optional next redirect URL query arg.
+# Outputs: Redirect response to provided next path or recipe detail page.
 @recipes_bp.route('/<int:recipe_id>/archive', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -586,6 +614,8 @@ def archive_recipe_route(recipe_id):
 
 # --- Restore recipe ---
 # Purpose: Restore an archived recipe.
+# Inputs: Recipe id path parameter and optional next redirect URL query arg.
+# Outputs: Redirect response to provided next path or recipe detail page.
 @recipes_bp.route('/<int:recipe_id>/restore', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')
@@ -601,6 +631,8 @@ def restore_recipe_route(recipe_id):
 
 # --- Deactivate listing ---
 # Purpose: Deactivate a marketplace listing for the recipe.
+# Inputs: Recipe id path parameter and optional next redirect URL query arg.
+# Outputs: Redirect response to provided next path or recipe detail page.
 @recipes_bp.route('/<int:recipe_id>/unlist', methods=['POST'])
 @login_required
 @require_permission('recipes.edit')

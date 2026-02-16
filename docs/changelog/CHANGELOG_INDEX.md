@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-16: Recipe Variation Promotion Name and Group Visibility Fixes](2026-02-16-recipe-variation-promotion-name-and-group-visibility-fixes.md)**
+  - Restored canonical master/variation names when promoting test versions to current.
+  - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.
+  - Added regression tests for promotion naming and post-promotion variation display.
 - **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
   - Fixed timezone-mixed timer math on batch in-progress rendering paths.
   - Hardened timer management timestamp parsing to prevent `NaN` countdown output.
