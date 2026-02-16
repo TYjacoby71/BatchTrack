@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-16: Tier Feature Catalog and Entitlement Mapping Rules](2026-02-16-tier-feature-catalog-and-mapping-rules.md)**
+  - Added a customer-facing feature taxonomy mapped to permissions, add-ons, flags, and limits.
+  - Documented which tier limits are currently hard-enforced versus metadata-only.
+  - Added tier-construction dependency rules for multi-user, BatchBot, marketplace, retention, and bulk operations.
 - **[2026-02-16: Recipe Variation Promotion Name and Group Visibility Fixes](2026-02-16-recipe-variation-promotion-name-and-group-visibility-fixes.md)**
   - Restored canonical master/variation names when promoting test versions to current.
   - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.
