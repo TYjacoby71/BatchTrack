@@ -59,6 +59,10 @@
   }
 
   function collectAdditiveSettings(){
+    const lactateGiRaw = document.getElementById('additiveLactateGi')?.value || '';
+    const sugarGiRaw = document.getElementById('additiveSugarGi')?.value || '';
+    const saltGiRaw = document.getElementById('additiveSaltGi')?.value || '';
+    const citricGiRaw = document.getElementById('additiveCitricGi')?.value || '';
     return {
       lactatePct: readAdditivePct({ pctId: 'additiveLactatePct', weightId: 'additiveLactateWeight' }),
       sugarPct: readAdditivePct({ pctId: 'additiveSugarPct', weightId: 'additiveSugarWeight' }),
@@ -68,6 +72,18 @@
       sugarName: document.getElementById('additiveSugarName')?.value?.trim() || 'Sugar',
       saltName: document.getElementById('additiveSaltName')?.value?.trim() || 'Salt',
       citricName: document.getElementById('additiveCitricName')?.value?.trim() || 'Citric Acid',
+      lactateGlobalItemId: lactateGiRaw ? parseInt(lactateGiRaw) : undefined,
+      sugarGlobalItemId: sugarGiRaw ? parseInt(sugarGiRaw) : undefined,
+      saltGlobalItemId: saltGiRaw ? parseInt(saltGiRaw) : undefined,
+      citricGlobalItemId: citricGiRaw ? parseInt(citricGiRaw) : undefined,
+      lactateDefaultUnit: document.getElementById('additiveLactateUnit')?.value || undefined,
+      sugarDefaultUnit: document.getElementById('additiveSugarUnit')?.value || undefined,
+      saltDefaultUnit: document.getElementById('additiveSaltUnit')?.value || undefined,
+      citricDefaultUnit: document.getElementById('additiveCitricUnit')?.value || undefined,
+      lactateCategoryName: document.getElementById('additiveLactateCategory')?.value || undefined,
+      sugarCategoryName: document.getElementById('additiveSugarCategory')?.value || undefined,
+      saltCategoryName: document.getElementById('additiveSaltCategory')?.value || undefined,
+      citricCategoryName: document.getElementById('additiveCitricCategory')?.value || undefined,
     };
   }
 
@@ -249,6 +265,34 @@
     return { totalGrams, totalPct };
   }
 
+  function collectFragranceRows(totalOils){
+    const rows = [];
+    const target = clamp(totalOils || SoapTool.oils.getTotalOilsGrams() || 0, 0);
+    document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
+      const name = row.querySelector('.fragrance-typeahead')?.value?.trim();
+      const giRaw = row.querySelector('.fragrance-gi-id')?.value || '';
+      const defaultUnit = row.querySelector('.fragrance-default-unit')?.value || '';
+      const categoryName = row.querySelector('.fragrance-category')?.value || '';
+      const gramsInput = row.querySelector('.fragrance-grams')?.value;
+      const pctInput = row.querySelector('.fragrance-percent')?.value;
+      let grams = toGrams(gramsInput);
+      const pct = clamp(toNumber(pctInput), 0);
+      if (grams <= 0 && pct > 0 && target > 0) {
+        grams = target * (pct / 100);
+      }
+      if (!name && !giRaw && grams <= 0) return;
+      rows.push({
+        name: name || 'Fragrance/Essential Oils',
+        globalItemId: giRaw ? parseInt(giRaw) : undefined,
+        defaultUnit: defaultUnit || undefined,
+        categoryName: categoryName || undefined,
+        grams,
+        pct,
+      });
+    });
+    return rows;
+  }
+
   function collectFragranceData(){
     const rows = [];
     document.querySelectorAll('#fragranceRows .fragrance-row').forEach(row => {
@@ -299,6 +343,7 @@
   SoapTool.fragrances = {
     buildFragranceRow,
     updateFragranceTotals,
+    collectFragranceRows,
     collectFragranceData,
   };
 })(window);

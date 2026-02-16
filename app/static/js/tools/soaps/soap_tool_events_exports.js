@@ -80,7 +80,11 @@
       try {
         const calc = state.lastCalc || await SoapTool.runner.calculateAll({ consumeQuota: false, showAlerts: true });
         if (!calc) return;
-        const payload = SoapTool.runner.buildSoapRecipePayload(calc);
+        const payload = await SoapTool.runner.buildSoapRecipePayload(calc);
+        if (!payload) {
+          SoapTool.ui.showSoapAlert('danger', 'Unable to prepare the recipe payload. Please try again.', { dismissible: true, persist: true });
+          return;
+        }
         state.lastRecipePayload = payload;
         try {
           const storage = SoapTool.helpers.getStorage();

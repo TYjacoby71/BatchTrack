@@ -13,7 +13,12 @@ Glossary:
 from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import current_user
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.services.tools.soap_tool import SoapToolComputationService, get_bulk_catalog_page
+from app.services.tools.soap_tool import (
+    SoapToolComputationService,
+    build_soap_recipe_payload,
+    get_bulk_catalog_page,
+    get_soap_tool_policy,
+)
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.models import FeatureFlag
@@ -138,7 +143,13 @@ def tools_index():
 @tools_bp.route('/soap')
 def tools_soap():
     calc_limit, calc_tier = _soap_calc_limit()
-    return _render_tool('tools/soaps/index.html', 'TOOLS_SOAP', calc_limit=calc_limit, calc_tier=calc_tier)
+    return _render_tool(
+        'tools/soaps/index.html',
+        'TOOLS_SOAP',
+        calc_limit=calc_limit,
+        calc_tier=calc_tier,
+        soap_policy=get_soap_tool_policy(),
+    )
 
 
 # --- Candles tool route ---
@@ -187,6 +198,18 @@ def tools_soap_calculate():
     """Calculate soap stage outputs through structured service package."""
     payload = request.get_json(silent=True) or {}
     result = SoapToolComputationService.calculate(payload)
+    return jsonify({"success": True, "result": result})
+
+
+# --- Soap recipe payload API route ---
+# Purpose: Build canonical soap recipe payloads from calc snapshots and UI context.
+# Inputs: JSON payload with calc result snapshot, draft lines, and context metadata.
+# Outputs: JSON success response with normalized recipe payload.
+@tools_bp.route('/api/soap/recipe-payload', methods=['POST'])
+@limiter.limit("60000/hour;5000/minute")
+def tools_soap_recipe_payload():
+    payload = request.get_json(silent=True) or {}
+    result = build_soap_recipe_payload(payload)
     return jsonify({"success": True, "result": result})
 
 

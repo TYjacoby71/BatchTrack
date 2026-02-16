@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-14: Soap Backend Policy Injection + Recipe Payload API](2026-02-14-soap-backend-policy-and-recipe-payload-api.md)**
+  - Moved soap policy/constants ownership to backend-injected config consumed by frontend runtime modules.
+  - Added `/tools/api/soap/recipe-payload` to assemble canonical soap draft payloads in Python services.
+  - Preserved existing soap display while removing browser-side payload composition logic.
 - **[2026-02-14: Soap Events Modularization](2026-02-14-soap-events-modularization.md)**
   - Split soap event orchestration into focused modules for rows, forms, exports, mobile drawer behavior, and initialization.
   - Replaced the previous large events file with a thin orchestrator layer.

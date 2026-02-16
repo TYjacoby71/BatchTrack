@@ -25,6 +25,10 @@ def normalize_fragrance_rows(
     for row in fragrances:
         grams = _clamp(float(row.grams), 0.0)
         pct = _clamp(float(row.pct), 0.0, 100.0)
+        default_unit = str(row.default_unit).strip() if row.default_unit else ""
+        ingredient_category_name = (
+            str(row.ingredient_category_name).strip() if row.ingredient_category_name else ""
+        )
         if grams <= 0 and pct > 0 and total_oils_g > 0:
             grams = total_oils_g * (pct / 100.0)
         if pct <= 0 and grams > 0 and total_oils_g > 0:
@@ -36,6 +40,9 @@ def normalize_fragrance_rows(
                 "name": row.name or "Fragrance/Essential Oils",
                 "grams": grams,
                 "pct": pct,
+                "global_item_id": row.global_item_id,
+                "default_unit": default_unit or None,
+                "ingredient_category_name": ingredient_category_name or None,
             }
         )
     return tuple(rows)
@@ -86,6 +93,18 @@ def compute_additives(
         "sugarName": additive_settings.sugar_name,
         "saltName": additive_settings.salt_name,
         "citricName": additive_settings.citric_name,
+        "lactateGlobalItemId": additive_settings.lactate_global_item_id,
+        "sugarGlobalItemId": additive_settings.sugar_global_item_id,
+        "saltGlobalItemId": additive_settings.salt_global_item_id,
+        "citricGlobalItemId": additive_settings.citric_global_item_id,
+        "lactateDefaultUnit": additive_settings.lactate_default_unit or None,
+        "sugarDefaultUnit": additive_settings.sugar_default_unit or None,
+        "saltDefaultUnit": additive_settings.salt_default_unit or None,
+        "citricDefaultUnit": additive_settings.citric_default_unit or None,
+        "lactateCategoryName": additive_settings.lactate_category_name or None,
+        "sugarCategoryName": additive_settings.sugar_category_name or None,
+        "saltCategoryName": additive_settings.salt_category_name or None,
+        "citricCategoryName": additive_settings.citric_category_name or None,
     }
 
 

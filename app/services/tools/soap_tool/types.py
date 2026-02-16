@@ -120,6 +120,9 @@ class SoapToolFragranceInput:
     name: str
     grams: float
     pct: float
+    global_item_id: int | None = None
+    default_unit: str | None = None
+    ingredient_category_name: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "SoapToolFragranceInput":
@@ -127,6 +130,11 @@ class SoapToolFragranceInput:
             name=_text(payload.get("name"), "Fragrance/Essential Oils"),
             grams=_clamp(_to_float(payload.get("grams"), 0.0), 0.0),
             pct=_clamp(_to_float(payload.get("pct"), 0.0), 0.0, 100.0),
+            global_item_id=_to_int(payload.get("global_item_id", payload.get("globalItemId"))),
+            default_unit=_text(payload.get("default_unit", payload.get("defaultUnit"))),
+            ingredient_category_name=_text(
+                payload.get("ingredient_category_name", payload.get("ingredientCategoryName"))
+            ),
         )
 
 
@@ -144,6 +152,18 @@ class SoapToolAdditivesInput:
     sugar_name: str
     salt_name: str
     citric_name: str
+    lactate_global_item_id: int | None = None
+    sugar_global_item_id: int | None = None
+    salt_global_item_id: int | None = None
+    citric_global_item_id: int | None = None
+    lactate_default_unit: str | None = None
+    sugar_default_unit: str | None = None
+    salt_default_unit: str | None = None
+    citric_default_unit: str | None = None
+    lactate_category_name: str | None = None
+    sugar_category_name: str | None = None
+    salt_category_name: str | None = None
+    citric_category_name: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "SoapToolAdditivesInput":
@@ -156,6 +176,18 @@ class SoapToolAdditivesInput:
             sugar_name=_text(payload.get("sugar_name", payload.get("sugarName")), "Sugar"),
             salt_name=_text(payload.get("salt_name", payload.get("saltName")), "Salt"),
             citric_name=_text(payload.get("citric_name", payload.get("citricName")), "Citric Acid"),
+            lactate_global_item_id=_to_int(payload.get("lactate_global_item_id", payload.get("lactateGlobalItemId"))),
+            sugar_global_item_id=_to_int(payload.get("sugar_global_item_id", payload.get("sugarGlobalItemId"))),
+            salt_global_item_id=_to_int(payload.get("salt_global_item_id", payload.get("saltGlobalItemId"))),
+            citric_global_item_id=_to_int(payload.get("citric_global_item_id", payload.get("citricGlobalItemId"))),
+            lactate_default_unit=_text(payload.get("lactate_default_unit", payload.get("lactateDefaultUnit"))),
+            sugar_default_unit=_text(payload.get("sugar_default_unit", payload.get("sugarDefaultUnit"))),
+            salt_default_unit=_text(payload.get("salt_default_unit", payload.get("saltDefaultUnit"))),
+            citric_default_unit=_text(payload.get("citric_default_unit", payload.get("citricDefaultUnit"))),
+            lactate_category_name=_text(payload.get("lactate_category_name", payload.get("lactateCategoryName"))),
+            sugar_category_name=_text(payload.get("sugar_category_name", payload.get("sugarCategoryName"))),
+            salt_category_name=_text(payload.get("salt_category_name", payload.get("saltCategoryName"))),
+            citric_category_name=_text(payload.get("citric_category_name", payload.get("citricCategoryName"))),
         )
 
 
