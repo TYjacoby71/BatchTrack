@@ -215,6 +215,8 @@ OIL_TIP_RULES = (
 
 UNIT_FACTORS = {"g": 1.0, "oz": 28.3495, "lb": 453.592}
 
+CITRIC_LYE_FACTORS = {"NaOH": 0.624, "KOH": 0.71}
+
 STAGE_CONFIGS = (
     {"id": 1, "tab_id": "soapStage1Tab", "pane_id": "soapStage1Pane", "required": True},
     {"id": 2, "tab_id": "soapStage2Tab", "pane_id": "soapStage2Pane", "required": True},
@@ -230,6 +232,27 @@ INGREDIENT_CATEGORY_FILTERS = {
     "sugar_additives": ("Sugars & Syrups",),
     "salt_additives": ("Salts & Minerals",),
     "citric_additives": ("Preservatives & Additives", "Salts & Minerals", "Aqueous Solutions & Blends"),
+}
+
+DEFAULT_INPUTS = {
+    "unit": "g",
+    "mold_oil_pct": 65,
+    "mold_shape": "loaf",
+    "mold_cylinder_correction": False,
+    "mold_cylinder_factor": 0.85,
+    "lye_type": "NaOH",
+    "water_method": "percent",
+    "superfat_pct": 5,
+    "lye_purity_pct": 100,
+    "water_pct": 33,
+    "lye_concentration_pct": 33,
+    "water_ratio": 2,
+    "additive_lactate_pct": 1,
+    "additive_sugar_pct": 1,
+    "additive_salt_pct": 0.5,
+    "additive_citric_pct": 0,
+    "quality_preset": "balanced",
+    "fragrance_pct": 3,
 }
 
 
@@ -252,8 +275,10 @@ def get_soap_tool_policy() -> dict:
         "fatty_display_keys": FATTY_DISPLAY_KEYS,
         "oil_tip_rules": OIL_TIP_RULES,
         "unit_factors": UNIT_FACTORS,
+        "citric_lye_factors": CITRIC_LYE_FACTORS,
         "stage_configs": STAGE_CONFIGS,
         "ingredient_category_filters": INGREDIENT_CATEGORY_FILTERS,
+        "default_inputs": DEFAULT_INPUTS,
     }
 
 
@@ -261,5 +286,7 @@ __all__ = [
     "QUALITY_RANGES",
     "IODINE_RANGE",
     "INS_RANGE",
+    "CITRIC_LYE_FACTORS",
+    "DEFAULT_INPUTS",
     "get_soap_tool_policy",
 ]

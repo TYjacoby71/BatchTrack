@@ -103,6 +103,43 @@ def test_public_soap_recipe_payload_api_is_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_quality_nudge_api_is_accessible(app):
+    """Anonymous users should be able to request backend quality-target nudging."""
+    client = app.test_client()
+    response = client.post(
+        "/tools/api/soap/quality-nudge",
+        json={
+            "oils": [
+                {
+                    "name": "Olive Oil",
+                    "grams": 500,
+                    "fatty_profile": {"oleic": 69, "linoleic": 12, "palmitic": 14, "stearic": 3},
+                },
+                {
+                    "name": "Coconut Oil 76",
+                    "grams": 150,
+                    "fatty_profile": {"lauric": 48, "myristic": 19, "palmitic": 9, "stearic": 3, "oleic": 8},
+                },
+            ],
+            "targets": {
+                "hardness": 40,
+                "cleansing": 15,
+                "conditioning": 55,
+                "bubbly": 25,
+                "creamy": 25,
+            },
+            "target_oils_g": 650,
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json() or {}
+    assert data.get("success") is True
+    result = data.get("result") or {}
+    assert result.get("ok") is True
+    assert isinstance(result.get("adjusted_rows"), list)
+
+
+@pytest.mark.usefixtures("app")
 def test_public_soap_page_injects_backend_policy_config(app):
     """Soap tool page should inject backend-owned policy JSON for JS constants."""
     client = app.test_client()

@@ -119,9 +119,14 @@
     return postJson('/tools/api/soap/recipe-payload', payload, 3500);
   }
 
+  async function applyQualityNudge(payload){
+    return postJson('/tools/api/soap/quality-nudge', payload, 3500);
+  }
+
   SoapTool.runnerService = {
     buildServicePayload,
     calculateWithSoapService,
     buildRecipePayload,
+    applyQualityNudge,
   };
 })(window);

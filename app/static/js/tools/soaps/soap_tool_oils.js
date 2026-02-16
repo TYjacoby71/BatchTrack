@@ -4,7 +4,7 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { toGrams, fromGrams } = SoapTool.units;
-  const { OIL_CATEGORY_SET, OIL_TIP_RULES } = SoapTool.constants;
+  const { OIL_CATEGORY_SET } = SoapTool.constants;
   const { computeQualities } = SoapTool.calc;
   const state = SoapTool.state;
 
@@ -285,7 +285,7 @@
     }
     if (messages.length) {
       warning.classList.remove('d-none');
-      warning.innerHTML = `${messages.join(' ')} Adjust oils or mold % to continue.`;
+      warning.textContent = `${messages.join(' ')} Adjust oils or mold % to continue.`;
     } else {
       warning.classList.add('d-none');
       warning.textContent = '';
@@ -534,54 +534,39 @@
   function updateOilTips(){
     const tipBox = document.getElementById('oilBlendTips');
     if (!tipBox) return;
-    const oils = collectOilData().filter(oil => oil.grams > 0 || oil.percent > 0);
-    if (!oils.length) {
+    const calc = state.lastCalc;
+    const totalOils = state.totalOilsGrams || 0;
+    const calcTotal = toNumber(calc?.totalOils);
+    if (!calc || calcTotal <= 0 || totalOils <= 0 || Math.abs(calcTotal - totalOils) > 0.01) {
       tipBox.classList.add('d-none');
       tipBox.textContent = '';
       return;
     }
-    const tips = new Set();
-    oils.forEach(oil => {
-      const name = (oil.name || '').toLowerCase();
-      if (name) {
-        OIL_TIP_RULES.forEach(rule => {
-          if (rule.match.test(name)) tips.add(rule.tip);
-        });
-      }
-      if (oil.fattyProfile && typeof oil.fattyProfile === 'object') {
-        const lauric = toNumber(oil.fattyProfile.lauric);
-        const myristic = toNumber(oil.fattyProfile.myristic);
-        const palmitic = toNumber(oil.fattyProfile.palmitic);
-        const stearic = toNumber(oil.fattyProfile.stearic);
-        const ricinoleic = toNumber(oil.fattyProfile.ricinoleic);
-        const oleic = toNumber(oil.fattyProfile.oleic);
-        const linoleic = toNumber(oil.fattyProfile.linoleic);
-        const linolenic = toNumber(oil.fattyProfile.linolenic);
-        if (lauric + myristic >= 30) {
-          tips.add(`${oil.name || 'This oil'} is high in lauric/myristic; expect faster trace and stronger cleansing.`);
-        }
-        if (palmitic + stearic >= 40) {
-          tips.add(`${oil.name || 'This oil'} is high in palmitic/stearic; expect a harder bar and quicker set-up.`);
-        }
-        if (oleic >= 60) {
-          tips.add(`${oil.name || 'This oil'} is high oleic; trace may be slow and bars may start softer.`);
-        }
-        if (linoleic + linolenic >= 20) {
-          tips.add(`${oil.name || 'This oil'} is high in PUFAs; keep the % lower to reduce DOS risk.`);
-        }
-        if (ricinoleic >= 60) {
-          tips.add(`${oil.name || 'This oil'} boosts lather but can feel tacky; keep under 10-15%.`);
-        }
-      }
-    });
-    const tipList = Array.from(tips).slice(0, 6);
+    const tipList = Array.isArray(calc?.qualityReport?.blend_tips)
+      ? calc.qualityReport.blend_tips.filter(item => typeof item === 'string' && item.trim()).slice(0, 6)
+      : [];
     if (!tipList.length) {
       tipBox.classList.add('d-none');
       tipBox.textContent = '';
       return;
     }
     tipBox.classList.remove('d-none');
-    tipBox.innerHTML = `<strong>Blend behavior tips:</strong><ul class="mb-0">${tipList.map(tip => `<li>${tip}</li>`).join('')}</ul>`;
+    SoapTool.ui.renderTitledList(tipBox, 'Blend behavior tips:', tipList);
+  }
+
+  function renderOilTips(tips){
+    const tipBox = document.getElementById('oilBlendTips');
+    if (!tipBox) return;
+    const tipList = Array.isArray(tips)
+      ? tips.filter(item => typeof item === 'string' && item.trim()).slice(0, 6)
+      : [];
+    if (!tipList.length) {
+      tipBox.classList.add('d-none');
+      tipBox.textContent = '';
+      return;
+    }
+    tipBox.classList.remove('d-none');
+    SoapTool.ui.renderTitledList(tipBox, 'Blend behavior tips:', tipList);
   }
 
   function getTotalOilsGrams(){
@@ -629,6 +614,7 @@
     setSelectedOilProfileFromRow,
     clearSelectedOilProfile,
     updateOilTips,
+    renderOilTips,
     getTotalOilsGrams,
     serializeOilRow,
     validateOilEntry,

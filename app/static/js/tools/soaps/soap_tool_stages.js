@@ -3,7 +3,7 @@
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { toNumber } = SoapTool.helpers;
-  const { STAGE_CONFIGS } = SoapTool.constants;
+  const { STAGE_CONFIGS, DEFAULT_INPUTS } = SoapTool.constants;
 
   function openStageByIndex(index){
     const stage = STAGE_CONFIGS[index];
@@ -30,17 +30,19 @@
   }
 
   function resetStage(stageId){
+    const defaults = DEFAULT_INPUTS || {};
     if (stageId === 1) {
-      const unitGrams = document.getElementById('unitGrams');
+      const defaultUnit = defaults.unit || 'g';
+      const unitGrams = document.querySelector(`input[name="weight_unit"][value="${defaultUnit}"]`) || document.getElementById('unitGrams');
       if (unitGrams) unitGrams.checked = true;
-      SoapTool.units.setUnit('g', { skipAutoCalc: true });
+      SoapTool.units.setUnit(defaultUnit, { skipAutoCalc: true });
       document.getElementById('moldWaterWeight').value = '';
-      document.getElementById('moldOilPct').value = '65';
+      document.getElementById('moldOilPct').value = String(defaults.moldOilPct ?? 65);
       document.getElementById('oilTotalTarget').value = '';
-      document.getElementById('moldShape').value = 'loaf';
+      document.getElementById('moldShape').value = defaults.moldShape || 'loaf';
       const correction = document.getElementById('moldCylinderCorrection');
-      if (correction) correction.checked = false;
-      document.getElementById('moldCylinderFactor').value = '0.85';
+      if (correction) correction.checked = !!defaults.moldCylinderCorrection;
+      document.getElementById('moldCylinderFactor').value = String(defaults.moldCylinderFactor ?? 0.85);
       SoapTool.mold.updateMoldShapeUI();
       if (SoapTool.mold?.updateWetBatterWarning) {
         SoapTool.mold.updateWetBatterWarning(0);
@@ -55,29 +57,30 @@
       SoapTool.oils.updateOilTotals();
     }
     if (stageId === 3) {
-      const lyeNaoh = document.getElementById('lyeTypeNaoh');
-      if (lyeNaoh) lyeNaoh.checked = true;
+      const defaultLyeType = defaults.lyeType || 'NaOH';
+      const lyeInput = document.querySelector(`input[name="lye_type"][value="${defaultLyeType}"]`) || document.getElementById('lyeTypeNaoh');
+      if (lyeInput) lyeInput.checked = true;
       const waterMethod = document.getElementById('waterMethod');
-      if (waterMethod) waterMethod.value = 'percent';
+      if (waterMethod) waterMethod.value = defaults.waterMethod || 'percent';
       const superfat = document.getElementById('lyeSuperfat');
-      if (superfat) superfat.value = '5';
+      if (superfat) superfat.value = String(defaults.superfatPct ?? 5);
       const purity = document.getElementById('lyePurity');
-      if (purity) purity.value = '100';
+      if (purity) purity.value = String(defaults.lyePurityPct ?? 100);
       const waterPct = document.getElementById('waterPct');
-      if (waterPct) waterPct.value = '33';
+      if (waterPct) waterPct.value = String(defaults.waterPct ?? 33);
       const lyeConcentration = document.getElementById('lyeConcentration');
-      if (lyeConcentration) lyeConcentration.value = '33';
+      if (lyeConcentration) lyeConcentration.value = String(defaults.lyeConcentrationPct ?? 33);
       const waterRatio = document.getElementById('waterRatio');
-      if (waterRatio) waterRatio.value = '2';
+      if (waterRatio) waterRatio.value = String(defaults.waterRatio ?? 2);
       SoapTool.runner.applyLyeSelection();
       SoapTool.runner.setWaterMethod();
       SoapTool.additives.updateAdditivesOutput(SoapTool.oils.getTotalOilsGrams());
     }
     if (stageId === 4) {
-      document.getElementById('additiveLactatePct').value = '1';
-      document.getElementById('additiveSugarPct').value = '1';
-      document.getElementById('additiveSaltPct').value = '0.5';
-      document.getElementById('additiveCitricPct').value = '0';
+      document.getElementById('additiveLactatePct').value = String(defaults.additiveLactatePct ?? 1);
+      document.getElementById('additiveSugarPct').value = String(defaults.additiveSugarPct ?? 1);
+      document.getElementById('additiveSaltPct').value = String(defaults.additiveSaltPct ?? 0.5);
+      document.getElementById('additiveCitricPct').value = String(defaults.additiveCitricPct ?? 0);
       ['additiveLactateName', 'additiveSugarName', 'additiveSaltName', 'additiveCitricName']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['additiveLactateGi', 'additiveSugarGi', 'additiveSaltGi', 'additiveCitricGi']

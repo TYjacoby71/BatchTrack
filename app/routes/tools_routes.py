@@ -18,6 +18,7 @@ from app.services.tools.soap_tool import (
     build_soap_recipe_payload,
     get_bulk_catalog_page,
     get_soap_tool_policy,
+    run_quality_nudge,
 )
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.services.public_bot_trap_service import PublicBotTrapService
@@ -210,6 +211,18 @@ def tools_soap_calculate():
 def tools_soap_recipe_payload():
     payload = request.get_json(silent=True) or {}
     result = build_soap_recipe_payload(payload)
+    return jsonify({"success": True, "result": result})
+
+
+# --- Soap quality nudge API route ---
+# Purpose: Rebalance oil grams toward selected quality targets in backend authority.
+# Inputs: JSON payload with oil rows, selected targets, and optional target oils grams.
+# Outputs: JSON success response containing nudge status and adjusted rows.
+@tools_bp.route('/api/soap/quality-nudge', methods=['POST'])
+@limiter.limit("60000/hour;5000/minute")
+def tools_soap_quality_nudge():
+    payload = request.get_json(silent=True) or {}
+    result = run_quality_nudge(payload)
     return jsonify({"success": True, "result": result})
 
 

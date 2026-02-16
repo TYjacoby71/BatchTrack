@@ -4,7 +4,7 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { toNumber, round, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { formatWeight, toGrams, fromGrams } = SoapTool.units;
-  const { FRAGRANCE_CATEGORY_SET } = SoapTool.constants;
+  const { FRAGRANCE_CATEGORY_SET, CITRIC_LYE_FACTORS } = SoapTool.constants;
   const state = SoapTool.state;
 
   function attachAdditiveTypeahead(inputId, hiddenId, categorySet, unitId, categoryId){
@@ -102,7 +102,9 @@
     const sugarG = baseOils * (sugarPct / 100);
     const saltG = baseOils * (saltPct / 100);
     const citricG = baseOils * (citricPct / 100);
-    const citricFactor = getLyeTypeForCitric() === 'KOH' ? 0.719 : 0.624;
+    const citricFactor = getLyeTypeForCitric() === 'KOH'
+      ? (CITRIC_LYE_FACTORS?.KOH ?? 0.71)
+      : (CITRIC_LYE_FACTORS?.NaOH ?? 0.624);
     return {
       lactatePct,
       sugarPct,
@@ -321,7 +323,12 @@
     const tips = Array.isArray(data?.tips) && data.tips.length
       ? data.tips
       : ['No visual flags detected for this formula.'];
-    list.innerHTML = tips.map(tip => `<li>${tip}</li>`).join('');
+    list.innerHTML = '';
+    tips.forEach(tip => {
+      const item = document.createElement('li');
+      item.textContent = tip;
+      list.appendChild(item);
+    });
   }
 
   function getItemCategoryName(item){

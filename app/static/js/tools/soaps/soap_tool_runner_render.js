@@ -200,6 +200,9 @@
       totalOils,
       warnings: qualityReport.warnings || [],
     });
+    if (SoapTool.oils?.renderOilTips) {
+      SoapTool.oils.renderOilTips(qualityReport.blend_tips || []);
+    }
     SoapTool.additives.updateVisualGuidance({
       tips: qualityReport.visual_guidance || [],
     });

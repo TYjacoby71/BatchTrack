@@ -100,17 +100,89 @@
     setTimeout(() => target.classList.remove('soap-stage-highlight'), 900);
   }
 
+  function getTemplateClone(id){
+    const template = document.getElementById(id);
+    const fragment = template?.content?.cloneNode?.(true);
+    if (!fragment) return null;
+    const firstElement = fragment.firstElementChild || fragment.querySelector('*');
+    return { fragment, root: firstElement };
+  }
+
+  function renderTitledList(container, title, items){
+    if (!container) return;
+    const values = Array.isArray(items) ? items.filter(item => typeof item === 'string' && item.trim()) : [];
+    if (!values.length) {
+      container.textContent = '';
+      return;
+    }
+    const cloned = getTemplateClone('soapTitledListTemplate');
+    if (cloned?.root) {
+      const titleEl = cloned.root.querySelector('[data-role="title"]');
+      const listEl = cloned.root.querySelector('[data-role="list"]');
+      if (titleEl) titleEl.textContent = title || '';
+      if (listEl) {
+        listEl.innerHTML = '';
+        values.forEach(value => {
+          const item = document.createElement('li');
+          item.textContent = value;
+          listEl.appendChild(item);
+        });
+      }
+      container.replaceChildren(cloned.fragment);
+      return;
+    }
+    container.innerHTML = '';
+    const strong = document.createElement('strong');
+    strong.textContent = title || '';
+    const list = document.createElement('ul');
+    list.className = 'mb-0';
+    values.forEach(value => {
+      const item = document.createElement('li');
+      item.textContent = value;
+      list.appendChild(item);
+    });
+    container.appendChild(strong);
+    container.appendChild(list);
+  }
+
   function showSoapAlert(type, message, options = {}){
     const alertStack = document.getElementById('soapAlertStack');
     if (!alertStack) return;
     const icon = ALERT_ICONS[type] || ALERT_ICONS.info;
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} d-flex align-items-start gap-2`;
-    alert.innerHTML = `
-      <i class="fas ${icon} mt-1"></i>
-      <div class="flex-grow-1">${message}</div>
-      ${options.dismissible ? '<button type="button" class="btn-close" data-role="dismiss"></button>' : ''}
-    `;
+    const cloned = getTemplateClone('soapAlertTemplate');
+    const alert = cloned?.root || document.createElement('div');
+    if (!cloned) {
+      alert.className = 'alert d-flex align-items-start gap-2';
+      const iconEl = document.createElement('i');
+      iconEl.className = `fas ${icon} mt-1`;
+      const messageEl = document.createElement('div');
+      messageEl.className = 'flex-grow-1';
+      messageEl.innerHTML = message;
+      alert.appendChild(iconEl);
+      alert.appendChild(messageEl);
+      if (options.dismissible) {
+        const dismissBtn = document.createElement('button');
+        dismissBtn.type = 'button';
+        dismissBtn.className = 'btn-close';
+        dismissBtn.dataset.role = 'dismiss';
+        alert.appendChild(dismissBtn);
+      }
+    } else {
+      alert.classList.add(`alert-${type}`);
+      const iconEl = alert.querySelector('[data-role="icon"]');
+      if (iconEl) {
+        iconEl.classList.add(icon);
+      }
+      const messageEl = alert.querySelector('[data-role="message"]');
+      if (messageEl) {
+        messageEl.innerHTML = message;
+      }
+      const dismissBtn = alert.querySelector('[data-role="dismiss"]');
+      if (dismissBtn) {
+        dismissBtn.classList.toggle('d-none', !options.dismissible);
+      }
+    }
+    alert.classList.add(`alert-${type}`, 'd-flex', 'align-items-start', 'gap-2');
     if (options.dismissible) {
       alert.querySelector('[data-role="dismiss"]')?.addEventListener('click', () => alert.remove());
     }
@@ -138,6 +210,7 @@
     applyHelperVisibility,
     validateNumericField,
     flashStage,
+    renderTitledList,
     showSoapAlert,
     clearSoapAlerts,
   };

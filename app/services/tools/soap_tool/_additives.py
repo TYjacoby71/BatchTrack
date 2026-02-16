@@ -10,6 +10,7 @@ Glossary:
 
 from __future__ import annotations
 
+from ._policy import CITRIC_LYE_FACTORS
 from .types import SoapToolAdditivesInput, SoapToolFragranceInput, _clamp
 
 
@@ -73,7 +74,7 @@ def compute_additives(
     salt_g = base_oils * (salt_pct / 100.0)
     citric_g = base_oils * (citric_pct / 100.0)
     # Standard calculator multipliers for citric-acid neutralization.
-    citric_factor = 0.71 if str(lye_type).upper() == "KOH" else 0.624
+    citric_factor = CITRIC_LYE_FACTORS["KOH"] if str(lye_type).upper() == "KOH" else CITRIC_LYE_FACTORS["NaOH"]
     citric_lye_g = citric_g * citric_factor
 
     return {

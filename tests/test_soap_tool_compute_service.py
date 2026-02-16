@@ -1,4 +1,5 @@
 from app.services.tools.soap_tool import SoapToolComputationService
+from app.services.tools.soap_tool._advisory import run_quality_nudge
 
 
 def _payload(method="percent"):
@@ -54,6 +55,7 @@ def test_compute_service_returns_full_bundle():
     assert "quality_report" in result
     assert "warnings" in result["quality_report"]
     assert "visual_guidance" in result["quality_report"]
+    assert "blend_tips" in result["quality_report"]
     assert "export" in result
     assert isinstance(result["export"]["csv_rows"], list)
     assert "<html" in result["export"]["sheet_html"].lower()
@@ -140,4 +142,19 @@ def test_citric_extra_lye_uses_lye_type_multiplier():
         row[0] == "Notes" and "0.71 x citric acid because KOH was selected." in str(row[1])
         for row in koh_result["export"]["csv_rows"]
     )
+
+
+def test_quality_nudge_returns_adjusted_rows():
+    payload = _payload()
+    result = run_quality_nudge(
+        {
+            "oils": payload["oils"],
+            "targets": {"hardness": 45, "cleansing": 14, "conditioning": 55, "bubbly": 26, "creamy": 24},
+            "target_oils_g": 650,
+        }
+    )
+    assert result["ok"] is True
+    rows = result.get("adjusted_rows") or []
+    assert rows
+    assert all(float(row.get("grams") or 0) > 0 for row in rows)
 

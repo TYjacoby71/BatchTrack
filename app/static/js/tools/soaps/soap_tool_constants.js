@@ -11,171 +11,12 @@
       bubbly: [14, 46],
       creamy: [16, 48],
     },
-    quality_hints: {
-      hardness: 'Durable bar that resists mush.',
-      cleansing: 'Higher values feel more stripping.',
-      conditioning: 'Silky, moisturizing feel.',
-      bubbly: 'Fluffy lather and big bubbles.',
-      creamy: 'Stable, creamy lather.',
-    },
-    quality_feel_hints: {
-      hardness: {
-        low: 'Soft bar, slower unmold.',
-        ok: 'Balanced hardness for daily use.',
-        high: 'Very hard bar, can feel brittle.',
-      },
-      cleansing: {
-        low: 'Very mild cleansing.',
-        ok: 'Balanced cleansing.',
-        high: 'Strong cleansing, can be drying.',
-      },
-      conditioning: {
-        low: 'Less conditioning feel.',
-        ok: 'Smooth and conditioning.',
-        high: 'Very conditioning, may feel oily.',
-      },
-      bubbly: {
-        low: 'Low bubbly lather.',
-        ok: 'Balanced bubbly lather.',
-        high: 'Very bubbly, big foam.',
-      },
-      creamy: {
-        low: 'Light creamy lather.',
-        ok: 'Creamy and stable.',
-        high: 'Dense creamy lather.',
-      },
-    },
     iodine_range: [41, 70],
     iodine_scale_max: 100,
     ins_range: [136, 170],
     ins_scale_max: 250,
-    quality_base: {
-      hardness: 41.5,
-      cleansing: 17,
-      conditioning: 56.5,
-      bubbly: 30,
-      creamy: 32,
-    },
-    quality_presets: {
-      balanced: {
-        hardness: 40,
-        cleansing: 15,
-        conditioning: 55,
-        bubbly: 25,
-        creamy: 25,
-        iodine: 55,
-        ins: 160,
-      },
-      bubbly: {
-        hardness: 35,
-        cleansing: 20,
-        conditioning: 50,
-        bubbly: 35,
-        creamy: 25,
-        iodine: 60,
-        ins: 150,
-      },
-      creamy: {
-        hardness: 45,
-        cleansing: 12,
-        conditioning: 60,
-        bubbly: 20,
-        creamy: 35,
-        iodine: 50,
-        ins: 155,
-      },
-      hard: {
-        hardness: 50,
-        cleansing: 18,
-        conditioning: 48,
-        bubbly: 22,
-        creamy: 28,
-        iodine: 45,
-        ins: 165,
-      },
-      gentle: {
-        hardness: 35,
-        cleansing: 10,
-        conditioning: 65,
-        bubbly: 15,
-        creamy: 20,
-        iodine: 65,
-        ins: 140,
-      },
-      castile: {
-        hardness: 20,
-        cleansing: 5,
-        conditioning: 75,
-        bubbly: 10,
-        creamy: 15,
-        iodine: 80,
-        ins: 110,
-      },
-      shampoo: {
-        hardness: 30,
-        cleansing: 22,
-        conditioning: 50,
-        bubbly: 30,
-        creamy: 25,
-        iodine: 60,
-        ins: 145,
-      },
-      utility: {
-        hardness: 70,
-        cleansing: 50,
-        conditioning: 20,
-        bubbly: 50,
-        creamy: 20,
-        iodine: 10,
-        ins: 250,
-      },
-      luxury: {
-        hardness: 55,
-        cleansing: 10,
-        conditioning: 55,
-        bubbly: 15,
-        creamy: 40,
-        iodine: 50,
-        ins: 150,
-      },
-      palmFree: {
-        hardness: 42,
-        cleansing: 16,
-        conditioning: 58,
-        bubbly: 22,
-        creamy: 28,
-        iodine: 55,
-        ins: 155,
-      },
-    },
-    fatty_bar_colors: {
-      lauric: 'var(--color-primary)',
-      myristic: 'var(--color-info)',
-      palmitic: 'var(--color-warning)',
-      stearic: 'var(--color-muted)',
-      ricinoleic: 'var(--color-info-hover)',
-      oleic: 'var(--color-success)',
-      linoleic: 'var(--color-primary-hover)',
-      linolenic: 'var(--color-danger)',
-    },
-    fatty_display_keys: [
-      'lauric',
-      'myristic',
-      'palmitic',
-      'stearic',
-      'ricinoleic',
-      'oleic',
-      'linoleic',
-      'linolenic',
-    ],
-    oil_tip_rules: [
-      { pattern: 'coconut|palm kernel|babassu|murumuru', flags: 'i', tip: 'High lauric oils trace fast and feel cleansing; keep superfat >= 5%.' },
-      { pattern: 'olive|avocado|rice bran|canola|sunflower|safflower|almond|apricot|macadamia|camellia|grapeseed|hazelnut', flags: 'i', tip: 'High-oleic liquid oils trace slowly and stay softer early on; allow a longer cure.' },
-      { pattern: 'castor', flags: 'i', tip: 'Castor boosts lather but can feel sticky above 10-15%.' },
-      { pattern: 'cocoa|shea|mango|kokum|sal|illipe|tallow|lard|palm|stearic', flags: 'i', tip: 'Hard fats/butters set up quickly; melt fully and keep batter warm for a smooth pour.' },
-      { pattern: 'beeswax|candelilla|carnauba|wax', flags: 'i', tip: 'Waxes harden fast and can seize; keep usage low and add hot.' },
-      { pattern: 'hemp|flax|linseed|evening primrose|borage|rosehip|black currant|chia|pomegranate', flags: 'i', tip: 'High-PUFA oils shorten shelf life; keep low and add antioxidant.' },
-    ],
+    quality_base: {},
+    fatty_display_keys: ['lauric', 'myristic', 'palmitic', 'stearic', 'ricinoleic', 'oleic', 'linoleic', 'linolenic'],
     unit_factors: { g: 1, oz: 28.3495, lb: 453.592 },
     stage_configs: [
       { id: 1, tab_id: 'soapStage1Tab', pane_id: 'soapStage1Pane', required: true },
@@ -191,6 +32,27 @@
       sugar_additives: ['Sugars & Syrups'],
       salt_additives: ['Salts & Minerals'],
       citric_additives: ['Preservatives & Additives', 'Salts & Minerals', 'Aqueous Solutions & Blends'],
+    },
+    citric_lye_factors: { NaOH: 0.624, KOH: 0.71 },
+    default_inputs: {
+      unit: 'g',
+      mold_oil_pct: 65,
+      mold_shape: 'loaf',
+      mold_cylinder_correction: false,
+      mold_cylinder_factor: 0.85,
+      lye_type: 'NaOH',
+      water_method: 'percent',
+      superfat_pct: 5,
+      lye_purity_pct: 100,
+      water_pct: 33,
+      lye_concentration_pct: 33,
+      water_ratio: 2,
+      additive_lactate_pct: 1,
+      additive_sugar_pct: 1,
+      additive_salt_pct: 0.5,
+      additive_citric_pct: 0,
+      quality_preset: 'balanced',
+      fragrance_pct: 3,
     },
   };
 
@@ -221,11 +83,11 @@
 
   const injectedPolicy = asObject(window.soapToolPolicy);
   const qualityRangeSource = { ...FALLBACK_POLICY.quality_ranges, ...asObject(injectedPolicy.quality_ranges) };
-  const qualityHintSource = { ...FALLBACK_POLICY.quality_hints, ...asObject(injectedPolicy.quality_hints) };
-  const qualityFeelHintSource = { ...FALLBACK_POLICY.quality_feel_hints, ...asObject(injectedPolicy.quality_feel_hints) };
+  const qualityHintSource = asObject(injectedPolicy.quality_hints);
+  const qualityFeelHintSource = asObject(injectedPolicy.quality_feel_hints);
   const qualityBaseSource = { ...FALLBACK_POLICY.quality_base, ...asObject(injectedPolicy.quality_base) };
-  const qualityPresetSource = { ...FALLBACK_POLICY.quality_presets, ...asObject(injectedPolicy.quality_presets) };
-  const fattyColorSource = { ...FALLBACK_POLICY.fatty_bar_colors, ...asObject(injectedPolicy.fatty_bar_colors) };
+  const qualityPresetSource = asObject(injectedPolicy.quality_presets);
+  const fattyColorSource = asObject(injectedPolicy.fatty_bar_colors);
   const unitFactorSource = { ...FALLBACK_POLICY.unit_factors, ...asObject(injectedPolicy.unit_factors) };
   const categoryFilterSource = {
     ...FALLBACK_POLICY.ingredient_category_filters,
@@ -241,19 +103,19 @@
   };
 
   const QUALITY_HINTS = {
-    hardness: qualityHintSource.hardness || FALLBACK_POLICY.quality_hints.hardness,
-    cleansing: qualityHintSource.cleansing || FALLBACK_POLICY.quality_hints.cleansing,
-    conditioning: qualityHintSource.conditioning || FALLBACK_POLICY.quality_hints.conditioning,
-    bubbly: qualityHintSource.bubbly || FALLBACK_POLICY.quality_hints.bubbly,
-    creamy: qualityHintSource.creamy || FALLBACK_POLICY.quality_hints.creamy,
+    hardness: qualityHintSource.hardness || '',
+    cleansing: qualityHintSource.cleansing || '',
+    conditioning: qualityHintSource.conditioning || '',
+    bubbly: qualityHintSource.bubbly || '',
+    creamy: qualityHintSource.creamy || '',
   };
 
   const QUALITY_FEEL_HINTS = {
-    hardness: { ...FALLBACK_POLICY.quality_feel_hints.hardness, ...asObject(qualityFeelHintSource.hardness) },
-    cleansing: { ...FALLBACK_POLICY.quality_feel_hints.cleansing, ...asObject(qualityFeelHintSource.cleansing) },
-    conditioning: { ...FALLBACK_POLICY.quality_feel_hints.conditioning, ...asObject(qualityFeelHintSource.conditioning) },
-    bubbly: { ...FALLBACK_POLICY.quality_feel_hints.bubbly, ...asObject(qualityFeelHintSource.bubbly) },
-    creamy: { ...FALLBACK_POLICY.quality_feel_hints.creamy, ...asObject(qualityFeelHintSource.creamy) },
+    hardness: asObject(qualityFeelHintSource.hardness),
+    cleansing: asObject(qualityFeelHintSource.cleansing),
+    conditioning: asObject(qualityFeelHintSource.conditioning),
+    bubbly: asObject(qualityFeelHintSource.bubbly),
+    creamy: asObject(qualityFeelHintSource.creamy),
   };
 
   const IODINE_RANGE = asRange(injectedPolicy.iodine_range, FALLBACK_POLICY.iodine_range);
@@ -269,7 +131,7 @@
     creamy: asNumber(qualityBaseSource.creamy, (QUALITY_RANGES.creamy[0] + QUALITY_RANGES.creamy[1]) / 2),
   };
 
-  const QUALITY_PRESETS = {};
+  const QUALITY_PRESETS = { balanced: { ...QUALITY_BASE } };
   Object.entries(qualityPresetSource).forEach(([presetName, presetValues]) => {
     if (!presetValues || typeof presetValues !== 'object') return;
     QUALITY_PRESETS[presetName] = { ...presetValues };
@@ -281,22 +143,7 @@
     FALLBACK_POLICY.fatty_display_keys
   );
 
-  const OIL_TIP_RULES = (
-    Array.isArray(injectedPolicy.oil_tip_rules) ? injectedPolicy.oil_tip_rules : FALLBACK_POLICY.oil_tip_rules
-  )
-    .map(rule => {
-      const source = asObject(rule);
-      const pattern = typeof source.pattern === 'string' ? source.pattern : '';
-      const flags = typeof source.flags === 'string' ? source.flags : 'i';
-      const tip = typeof source.tip === 'string' ? source.tip : '';
-      if (!pattern || !tip) return null;
-      try {
-        return { match: new RegExp(pattern, flags), tip };
-      } catch (_) {
-        return null;
-      }
-    })
-    .filter(Boolean);
+  const OIL_TIP_RULES = [];
 
   const UNIT_FACTORS = {
     g: asNumber(unitFactorSource.g, FALLBACK_POLICY.unit_factors.g),
@@ -338,6 +185,32 @@
   const SUGAR_CATEGORY_SET = new Set(asStringArray(categoryFilterSource.sugar_additives, FALLBACK_POLICY.ingredient_category_filters.sugar_additives));
   const SALT_CATEGORY_SET = new Set(asStringArray(categoryFilterSource.salt_additives, FALLBACK_POLICY.ingredient_category_filters.salt_additives));
   const CITRIC_CATEGORY_SET = new Set(asStringArray(categoryFilterSource.citric_additives, FALLBACK_POLICY.ingredient_category_filters.citric_additives));
+  const citricFactors = { ...FALLBACK_POLICY.citric_lye_factors, ...asObject(injectedPolicy.citric_lye_factors) };
+  const CITRIC_LYE_FACTORS = {
+    NaOH: asNumber(citricFactors.NaOH, FALLBACK_POLICY.citric_lye_factors.NaOH),
+    KOH: asNumber(citricFactors.KOH, FALLBACK_POLICY.citric_lye_factors.KOH),
+  };
+  const defaultInputsSource = { ...FALLBACK_POLICY.default_inputs, ...asObject(injectedPolicy.default_inputs) };
+  const DEFAULT_INPUTS = {
+    unit: defaultInputsSource.unit || FALLBACK_POLICY.default_inputs.unit,
+    moldOilPct: asNumber(defaultInputsSource.mold_oil_pct, FALLBACK_POLICY.default_inputs.mold_oil_pct),
+    moldShape: defaultInputsSource.mold_shape || FALLBACK_POLICY.default_inputs.mold_shape,
+    moldCylinderCorrection: !!defaultInputsSource.mold_cylinder_correction,
+    moldCylinderFactor: asNumber(defaultInputsSource.mold_cylinder_factor, FALLBACK_POLICY.default_inputs.mold_cylinder_factor),
+    lyeType: defaultInputsSource.lye_type || FALLBACK_POLICY.default_inputs.lye_type,
+    waterMethod: defaultInputsSource.water_method || FALLBACK_POLICY.default_inputs.water_method,
+    superfatPct: asNumber(defaultInputsSource.superfat_pct, FALLBACK_POLICY.default_inputs.superfat_pct),
+    lyePurityPct: asNumber(defaultInputsSource.lye_purity_pct, FALLBACK_POLICY.default_inputs.lye_purity_pct),
+    waterPct: asNumber(defaultInputsSource.water_pct, FALLBACK_POLICY.default_inputs.water_pct),
+    lyeConcentrationPct: asNumber(defaultInputsSource.lye_concentration_pct, FALLBACK_POLICY.default_inputs.lye_concentration_pct),
+    waterRatio: asNumber(defaultInputsSource.water_ratio, FALLBACK_POLICY.default_inputs.water_ratio),
+    additiveLactatePct: asNumber(defaultInputsSource.additive_lactate_pct, FALLBACK_POLICY.default_inputs.additive_lactate_pct),
+    additiveSugarPct: asNumber(defaultInputsSource.additive_sugar_pct, FALLBACK_POLICY.default_inputs.additive_sugar_pct),
+    additiveSaltPct: asNumber(defaultInputsSource.additive_salt_pct, FALLBACK_POLICY.default_inputs.additive_salt_pct),
+    additiveCitricPct: asNumber(defaultInputsSource.additive_citric_pct, FALLBACK_POLICY.default_inputs.additive_citric_pct),
+    qualityPreset: defaultInputsSource.quality_preset || FALLBACK_POLICY.default_inputs.quality_preset,
+    fragrancePct: asNumber(defaultInputsSource.fragrance_pct, FALLBACK_POLICY.default_inputs.fragrance_pct),
+  };
 
   SoapTool.constants = {
     QUALITY_RANGES,
@@ -360,5 +233,7 @@
     SUGAR_CATEGORY_SET,
     SALT_CATEGORY_SET,
     CITRIC_CATEGORY_SET,
+    CITRIC_LYE_FACTORS,
+    DEFAULT_INPUTS,
   };
 })(window);

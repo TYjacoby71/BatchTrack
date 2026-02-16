@@ -1,10 +1,11 @@
+{% set soap_defaults = soap_policy.default_inputs if soap_policy is defined and soap_policy.default_inputs is defined else {} %}
 <div class="tab-pane fade" id="soapStage4Pane" role="tabpanel" aria-labelledby="soapStage4Tab">
   <div class="soap-stage-body p-3" data-stage-index="3">
     <div class="row g-2 soap-stage-grid align-items-end additive-row">
       <div class="col-lg-3 col-md-3 soap-field-stack additive-percent-col">
         <label class="form-label">Sodium lactate</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="additiveLactatePct" step="0.1" value="1">
+          <input type="number" class="form-control" id="additiveLactatePct" step="0.1" value="{{ soap_defaults.additive_lactate_pct|default(1) }}">
         </div>
       </div>
       <div class="col-lg-3 col-md-3 soap-field-stack additive-weight-col">
@@ -28,7 +29,7 @@
       <div class="col-lg-3 col-md-3 soap-field-stack additive-percent-col">
         <label class="form-label">Sugar</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="additiveSugarPct" step="0.1" value="1">
+          <input type="number" class="form-control" id="additiveSugarPct" step="0.1" value="{{ soap_defaults.additive_sugar_pct|default(1) }}">
         </div>
       </div>
       <div class="col-lg-3 col-md-3 soap-field-stack additive-weight-col">
@@ -52,7 +53,7 @@
       <div class="col-lg-3 col-md-3 soap-field-stack additive-percent-col">
         <label class="form-label">Salt</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="additiveSaltPct" step="0.1" value="0.5">
+          <input type="number" class="form-control" id="additiveSaltPct" step="0.1" value="{{ soap_defaults.additive_salt_pct|default(0.5) }}">
         </div>
       </div>
       <div class="col-lg-3 col-md-3 soap-field-stack additive-weight-col">
@@ -76,7 +77,7 @@
       <div class="col-lg-3 col-md-3 soap-field-stack additive-percent-col">
         <label class="form-label">Citric acid</label>
         <div class="soap-input-suffix" data-suffix="%">
-          <input type="number" class="form-control" id="additiveCitricPct" step="0.1" value="0">
+          <input type="number" class="form-control" id="additiveCitricPct" step="0.1" value="{{ soap_defaults.additive_citric_pct|default(0) }}">
         </div>
       </div>
       <div class="col-lg-3 col-md-3 soap-field-stack additive-weight-col">

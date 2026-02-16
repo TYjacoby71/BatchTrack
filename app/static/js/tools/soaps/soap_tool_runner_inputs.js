@@ -4,15 +4,17 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp } = SoapTool.helpers;
   const { formatWeight, formatPercent } = SoapTool.units;
+  const { DEFAULT_INPUTS } = SoapTool.constants;
 
   function getLyeSelection(){
-    const selected = document.querySelector('input[name="lye_type"]:checked')?.value || 'NaOH';
+    const defaults = DEFAULT_INPUTS || {};
+    const selected = document.querySelector('input[name="lye_type"]:checked')?.value || defaults.lyeType || 'NaOH';
     const purityInput = document.getElementById('lyePurity');
     const purityRaw = purityInput?.value;
     let purity = toNumber(purityInput?.value);
     const lyeType = selected === 'NaOH' ? 'NaOH' : 'KOH';
     if (purityRaw === '' || purityRaw === null || purityRaw === undefined || !isFinite(purity)) {
-      purity = 100;
+      purity = defaults.lyePurityPct ?? 100;
     }
     return { selected, lyeType, purity };
   }
@@ -158,20 +160,22 @@
   }
 
   function readSuperfatInput(){
+    const defaults = DEFAULT_INPUTS || {};
     const superfatInput = document.getElementById('lyeSuperfat');
     const superfatRaw = superfatInput?.value;
     let superfat = toNumber(superfatRaw);
     if (superfatRaw === '' || superfatRaw === null || superfatRaw === undefined || !isFinite(superfat)) {
-      superfat = 5;
+      superfat = defaults.superfatPct ?? 5;
     }
     return superfat;
   }
 
   function sanitizeLyeInputs(){
+    const defaults = DEFAULT_INPUTS || {};
     const selection = getLyeSelection();
     let purity = selection.purity;
     if (!isFinite(purity)) {
-      purity = 100;
+      purity = defaults.lyePurityPct ?? 100;
     }
 
     const waterMethod = document.getElementById('waterMethod')?.value || 'percent';
