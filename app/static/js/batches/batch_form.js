@@ -266,3 +266,16 @@ function cancelBatch() {
     form.submit();
   }
 }
+
+// Keep these handlers available for inline template attributes.
+// The bundler wraps files in an IIFE, so explicit window exports are required.
+if (typeof window !== 'undefined') {
+    Object.assign(window, {
+        markBatchFailed,
+        updateRowCost,
+        addExtraItemRow,
+        saveExtras,
+        saveBatchNotes,
+        cancelBatch
+    });
+}

@@ -76,7 +76,7 @@ def test_batch_start_routes_all_deductions_through_canonical_service(app, db_ses
 
 
 @pytest.mark.usefixtures('app', 'db_session')
-def test_expiration_service_uses_canonical_adjustment(app, db_session, test_user):
+def test_expiration_service_uses_canonical_adjustment_from_inventory_routes(app, db_session, test_user):
     item = InventoryItem(
         name=f"Perishable {uuid4().hex}",
         type='ingredient',

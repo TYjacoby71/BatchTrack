@@ -93,7 +93,8 @@
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
     {% set group_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
-    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    {% set variation_source = recipe.group_variations if recipe.group_variations is defined else recipe.variations %}
+    {% set current_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
     {% set published_variations = current_variations %}
     <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
         <div class="card h-100 shadow-sm recipe-group-card">
@@ -312,8 +313,9 @@
     {% for recipe in recipes if not recipe.parent_recipe_id %}
     {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
     {% set group_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
-    {% set current_variations = recipe.variations | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
-    {% set table_variations = recipe.variations | selectattr('test_sequence', 'none') | list %}
+    {% set variation_source = recipe.group_variations if recipe.group_variations is defined else recipe.variations %}
+    {% set current_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
+    {% set table_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | list %}
     <tr class="recipe-row" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
         {% if can_create_variations %}
         <td>

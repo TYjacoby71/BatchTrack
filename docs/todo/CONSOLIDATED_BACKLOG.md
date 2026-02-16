@@ -34,6 +34,13 @@
 - Complete Inventory FIFO upgrade gaps: remove `Batch.remaining_quantity`, add purchase history and adjustment interfaces, show effective cost in UI, and QA mobile responsiveness.
 - Build comprehensive testing/migration assets: multi-purchase/mixed-source/mixed-unit/cost-averaging/concurrency tests, migration/rollback/backups/data-integrity scripts, and dependent-service audit updates.
 
+## Test Suite Hygiene Backlog
+- Run a relevance pass on older tests (especially files last touched before `2026-01-01`) and either update assertions to current service contracts or retire obsolete cases.
+- Consolidate overlapping canonicalization coverage (`inventory`, `expiration`, `POS`, `reservation`) so behavior is tested once at the right service boundary with thin route smoke tests.
+- Reduce broad permission bypass usage (`SKIP_PERMISSIONS=True`) in integration tests by defaulting to authenticated fixtures and using bypass only when explicitly required by scenario.
+- Add lightweight test taxonomy markers (for example `@pytest.mark.inventory`, `@pytest.mark.billing`, `@pytest.mark.auth`) to support selective CI execution and ownership reviews.
+- Add a quarterly duplicate-name and duplicate-intent audit to catch drift early and keep test naming/intent unique across files.
+
 ## Future Features & Growth
 - Ship the multi-step retention/cancellation experience end-to-end: redirect from billing to a retention landing page (video/value props/testimonials), present four objection-specific paths (discount/downgrade, ROI/training, pause/reactivation reminders, migration help), gate final cancellation behind warnings + alternate actions, capture exit survey responses, and persist all analytics (intent events, offers shown/accepted, time-on-step). Ensure FTC-compliant easy cancellation, data export options, follow-up win-back emails, and phased rollout (A/B test → optimization → 100% launch) backed by RetentionFlow/Offer/AccountPause/ChurnAnalytics services and dedicated frontend components.
 - Finish custom unit mapping experience: fully functional `CustomUnitMapping` flows with user attribution, density prompts for cross-type conversions, recipe editor enforcement against unmapped units, mapping-form training content/video guidance, clearer messaging, and status badges inside Unit Manager so users know which units are unmapped or pending density.

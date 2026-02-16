@@ -23,7 +23,9 @@ from app.models.product_category import ProductCategory
 from app.models.global_item import GlobalItem
 from app.services.recipe_service import (
     create_recipe,
+    create_test_version,
     duplicate_recipe,
+    promote_test_to_current,
     update_recipe,
 )
 
@@ -52,6 +54,19 @@ def _create_ingredient(org: Organization | None = None) -> InventoryItem:
     db.session.add(ingredient)
     db.session.commit()
     return ingredient
+
+
+def _test_recipe_payload(*, ingredient_id: int, category_id: int, instructions: str) -> dict:
+    return {
+        'instructions': instructions,
+        'yield_amount': 6,
+        'yield_unit': 'oz',
+        'ingredients': [{'item_id': ingredient_id, 'quantity': 6, 'unit': 'oz'}],
+        'consumables': [],
+        'allowed_containers': [],
+        'label_prefix': '',
+        'category_id': category_id,
+    }
 
 
 @pytest.mark.usefixtures('app_context')
@@ -493,3 +508,102 @@ def test_update_recipe_toggles_public_private_controls():
     assert refreshed.is_for_sale is False
     assert refreshed.sale_price is None
     assert refreshed.marketplace_status == 'draft'
+
+
+@pytest.mark.usefixtures('app_context')
+def test_promote_test_to_current_restores_master_name():
+    category = _create_category("MasterPromotion")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Royal Whipped Tallow")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions='Base blend',
+        yield_amount=6,
+        yield_unit='oz',
+        ingredients=[{'item_id': ingredient.id, 'quantity': 6, 'unit': 'oz'}],
+        allowed_containers=[],
+        label_prefix='RWT',
+        category_id=category.id,
+        status='published',
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions='Master test update',
+        ),
+        target_status='published',
+    )
+    assert test_ok, test_recipe
+    assert "test" in (test_recipe.name or "").lower()
+
+    promote_ok, promoted = promote_test_to_current(test_recipe.id)
+    assert promote_ok, promoted
+    assert promoted.test_sequence is None
+    assert promoted.is_current is True
+    assert promoted.name == master.recipe_group.name
+    assert "test" not in promoted.name.lower()
+
+
+def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, client):
+    with app.app_context():
+        user_id = User.query.first().id
+        category = _create_category("ListGrouping")
+        ingredient = _create_ingredient()
+
+        create_ok, master = create_recipe(
+            name=_unique_name("Grouped Master"),
+            instructions='Master instructions',
+            yield_amount=6,
+            yield_unit='oz',
+            ingredients=[{'item_id': ingredient.id, 'quantity': 6, 'unit': 'oz'}],
+            allowed_containers=[],
+            label_prefix='GRP',
+            category_id=category.id,
+            status='published',
+        )
+        assert create_ok, master
+
+        variation_ok, variation = create_recipe(
+            name=_unique_name("Grouped Variation"),
+            instructions='Variation instructions',
+            yield_amount=6,
+            yield_unit='oz',
+            ingredients=[{'item_id': ingredient.id, 'quantity': 6, 'unit': 'oz'}],
+            allowed_containers=[],
+            label_prefix='',
+            category_id=category.id,
+            parent_recipe_id=master.id,
+            status='published',
+        )
+        assert variation_ok, variation
+        variation_label = variation.variation_name or variation.name
+
+        test_ok, master_test = create_test_version(
+            base=master,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions='Master revision that should retain group variations',
+            ),
+            target_status='published',
+        )
+        assert test_ok, master_test
+
+        promote_ok, promoted_master = promote_test_to_current(master_test.id)
+        assert promote_ok, promoted_master
+        promoted_master_id = promoted_master.id
+
+    with client.session_transaction() as session:
+        session['_user_id'] = str(user_id)
+        session['_fresh'] = True
+
+    response = client.get('/recipes/')
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert variation_label in body
+    assert f"/recipes/{promoted_master_id}/view" in body

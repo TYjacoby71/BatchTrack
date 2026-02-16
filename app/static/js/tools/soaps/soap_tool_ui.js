@@ -53,6 +53,7 @@
   function updateResultsWarnings(waterData){
     const concentrationEl = document.getElementById('lyeConcentrationWarning');
     const ratioEl = document.getElementById('waterRatioWarning');
+    const guidanceWarnings = [];
     if (concentrationEl) {
       const concentration = waterData?.lyeConcentration || 0;
       let message = '';
@@ -60,6 +61,9 @@
       if (concentration > 0 && concentration < 25) message = 'Low concentration';
       concentrationEl.textContent = message;
       concentrationEl.classList.toggle('d-none', !message);
+      if (message) {
+        guidanceWarnings.push(`Lye concentration: ${message.toLowerCase()}.`);
+      }
     }
     if (ratioEl) {
       const ratio = waterData?.waterRatio || 0;
@@ -68,6 +72,18 @@
       if (ratio > 2.7) message = 'High water';
       ratioEl.textContent = message;
       ratioEl.classList.toggle('d-none', !message);
+      if (message) {
+        guidanceWarnings.push(`Water to lye ratio: ${message.toLowerCase()}.`);
+      }
+    }
+    if (guidanceWarnings.length) {
+      SoapTool.guidance?.setSection('results-water-warnings', {
+        title: 'Process warnings',
+        tone: 'warning',
+        items: guidanceWarnings,
+      });
+    } else {
+      SoapTool.guidance?.clearSection('results-water-warnings');
     }
   }
 

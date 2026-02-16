@@ -51,7 +51,7 @@
         <div class="soap-input-suffix" data-suffix="%">
           <input type="number" class="form-control" id="lyePurity" step="0.1" value="{{ soap_defaults.lye_purity_pct|default(100) }}" placeholder="Safe default: 100">
         </div>
-        <div class="form-text soap-stage-note" id="lyePurityHint">Safe default is 100%.</div>
+        <div class="form-text soap-stage-note">Safe default is 100%.</div>
       </div>
       <div class="col-lg-6 col-md-12 soap-field-stack">
         <label class="form-label">Superfat</label>
@@ -68,7 +68,6 @@
             <div class="small text-muted">Calculated water</div>
             <div class="fw-semibold soap-animate-number" id="stageWaterOutput">--</div>
           </div>
-          <div class="small text-muted" id="stageWaterComputedHint">Set oils and lye settings to calculate water.</div>
         </div>
       </div>
     </div>

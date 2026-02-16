@@ -1,28 +1,35 @@
-<div class="card mt-2 mb-2" id="soapResultsActionsCard">
-  <div class="card-header">
-    <strong>Guidance &amp; Actions</strong>
-  </div>
-  <div class="card-body">
-    <div class="alert alert-info mb-2">
-      Always add lye to water (never water to lye) and wear protective gear.
-    </div>
-    <div class="alert alert-warning mt-3 d-none" id="soapQualityWarnings"></div>
-    <div class="border rounded p-2 mt-3">
-      <div class="small text-muted mb-1">Visual guidance</div>
-      <ul class="small mb-0" id="soapVisualGuidanceList"></ul>
-    </div>
-    <div class="small text-muted mt-2">
-      Batch yield includes water and additives; expect weight loss during cure.
-    </div>
-    <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        {% if is_feature_enabled('TOOLS_SOAP_PUSH') %}
-          <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
-        {% endif %}
-        <button class="btn btn-outline-secondary" id="exportSoapCsv" type="button">Export CSV</button>
-        <button class="btn btn-outline-primary" id="printSoapSheet" type="button">Print Sheet</button>
+<div class="soap-guidance-dock mt-2 mb-2" id="soapGuidanceDock">
+  <div class="card soap-guidance-card" id="soapResultsActionsCard">
+    <div class="card-header soap-guidance-header">
+      <div class="soap-guidance-header-meta">
+        <div class="d-flex align-items-center gap-2">
+          <strong>Guidance</strong>
+          <span class="badge text-bg-secondary" id="soapGuidanceCount">0</span>
+        </div>
+        <div class="small text-muted text-truncate" id="soapGuidanceSummary">No active formula hints from your current configuration.</div>
       </div>
-      <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
+      <button class="btn btn-sm btn-outline-secondary soap-guidance-toggle" type="button" id="soapGuidanceToggle" aria-expanded="false" aria-label="Expand guidance panel" title="Expand guidance panel">
+        <i class="fas fa-caret-up" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="soap-guidance-overlay" id="soapGuidanceOverlay" aria-hidden="true">
+      <div class="card-body soap-guidance-body">
+        <div class="small text-muted mb-2" id="soapGuidanceEmpty">No guidance sections are active yet.</div>
+        <div class="soap-guidance-sections" id="soapGuidanceSections"></div>
+        <div class="small text-muted mt-2">
+          Batch yield includes water and additives; expect weight loss during cure.
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3 align-items-center justify-content-between">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {% if is_feature_enabled('TOOLS_SOAP_PUSH') %}
+              <button class="btn btn-success" id="saveSoapTool" type="button">Push to Recipes</button>
+            {% endif %}
+            <button class="btn btn-outline-secondary" id="exportSoapCsv" type="button">Export CSV</button>
+            <button class="btn btn-outline-primary" id="printSoapSheet" type="button">Print Sheet</button>
+          </div>
+          <div class="small text-muted" id="resultsUpdatedAt">No calculation yet</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

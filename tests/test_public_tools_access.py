@@ -44,6 +44,33 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_page_uses_centralized_guidance_dock(app):
+    """Soap page should render the single centralized guidance dock surface."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert 'id="soapGuidanceDock"' in html
+    assert 'id="soapGuidanceToggle"' in html
+    assert 'id="soapGuidanceSummary"' in html
+    assert 'id="soapGuidanceSections"' in html
+    assert 'id="soapResultsActionsCard"' in html
+
+    # Legacy scattered guidance surfaces should no longer be rendered.
+    assert 'id="soapQualityWarnings"' not in html
+    assert 'id="soapVisualGuidanceList"' not in html
+    assert 'id="lyePurityHint"' not in html
+    assert 'id="stageWaterComputedHint"' not in html
+    assert 'id="oilLimitWarning"' not in html
+    assert 'id="oilBlendTips"' not in html
+    assert 'id="qualityHardnessHint"' not in html
+    assert 'id="qualityCleansingHint"' not in html
+    assert 'id="qualityConditioningHint"' not in html
+    assert 'id="qualityBubblyHint"' not in html
+    assert 'id="qualityCreamyHint"' not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_soap_calculation_api_is_accessible(app):
     """Anonymous users should be able to run soap calculations via tool API."""
     client = app.test_client()

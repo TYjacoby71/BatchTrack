@@ -227,16 +227,16 @@ def _ensure_sqlite_schema_columns():
     })
 
 
-@pytest.fixture
-def test_org(db_session):
+@pytest.fixture(name="test_org")
+def org_fixture(db_session):
     org = Organization(name="Test Org")
     db_session.add(org)
     db_session.commit()
     return org
 
 
-@pytest.fixture
-def test_user(app):
+@pytest.fixture(name="test_user")
+def customer_user_fixture(app):
     """Create a test customer user with basic permissions and organization"""
     with app.app_context():
         # Use unique username per test to avoid conflicts
