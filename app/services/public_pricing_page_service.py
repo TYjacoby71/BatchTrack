@@ -68,16 +68,21 @@ class PublicPricingPageService:
         available_tiers: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
         """Build one tier card payload for public pricing display."""
-        tier_id = str(offer.get("tier_id") or "")
-        tier_data = available_tiers.get(tier_id) if tier_id else None
+        tier_id = ""
+        tier_data = None
+
+        # Resolve by canonical pricing key first so cards/table columns stay stable
+        # even when lifetime offer tier mappings drift.
+        for candidate_tier_id, candidate_tier_data in available_tiers.items():
+            candidate_name = str(candidate_tier_data.get("name", "")).strip().lower()
+            if candidate_name == tier_key:
+                tier_data = candidate_tier_data
+                tier_id = str(candidate_tier_id)
+                break
 
         if not tier_data:
-            for candidate_tier_id, candidate_tier_data in available_tiers.items():
-                candidate_name = str(candidate_tier_data.get("name", "")).strip().lower()
-                if candidate_name == tier_key:
-                    tier_data = candidate_tier_data
-                    tier_id = str(candidate_tier_id)
-                    break
+            tier_id = str(offer.get("tier_id") or "")
+            tier_data = available_tiers.get(tier_id) if tier_id else None
 
         raw_feature_names = (tier_data or {}).get("all_features") or []
         permission_set = normalize_token_set(raw_feature_names)
