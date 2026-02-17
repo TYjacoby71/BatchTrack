@@ -48,11 +48,11 @@ ROUTE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.blueprints.bulk_stock.routes", "bulk_stock_bp", "/bulk-stock", "Bulk Stock"),
     BlueprintSpec("app.blueprints.faults.routes", "faults_bp", "/faults", "Fault Log"),
     BlueprintSpec("app.blueprints.tag_manager.routes", "tag_manager_bp", "/tag-manager", "Tag Manager"),
-    BlueprintSpec("app.routes.global_library_routes", "global_library_bp", None, "Global Library"),
-    BlueprintSpec("app.routes.recipe_library_routes", "recipe_library_bp", None, "Recipe Library"),
+    BlueprintSpec("app.blueprints.global_library.routes", "global_library_bp", None, "Global Library"),
+    BlueprintSpec("app.blueprints.recipe_library.routes", "recipe_library_bp", None, "Recipe Library"),
     BlueprintSpec("app.blueprints.waitlist.routes", "waitlist_bp", None, "Waitlist"),
-    BlueprintSpec("app.routes.help_routes", "help_bp", None, "Help & Instructions"),
-    BlueprintSpec("app.routes.tools_routes", "tools_bp", "/tools", "Public Tools"),
+    BlueprintSpec("app.blueprints.help.routes", "help_bp", None, "Help & Instructions"),
+    BlueprintSpec("app.blueprints.tools.routes", "tools_bp", "/tools", "Public Tools"),
 )
 
 EXTRA_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
