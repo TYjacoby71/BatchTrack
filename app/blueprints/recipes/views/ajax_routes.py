@@ -33,7 +33,7 @@ def quick_add_unit():
         existing = Unit.query.filter(
             func.lower(Unit.name) == func.lower(db.literal(name)),
             (
-                (not Unit.is_custom)
+                (Unit.is_custom.is_(False))
                 | (Unit.organization_id == current_user.organization_id)
             ),
         ).first()
