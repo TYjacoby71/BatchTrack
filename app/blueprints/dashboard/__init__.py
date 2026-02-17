@@ -1,6 +1,8 @@
+"""Dashboard blueprint package."""
 
-from flask import Blueprint
+from .routes import app_routes_bp
 
-dashboard_bp = Blueprint('dashboard', __name__, template_folder='templates')
+# Backward-compatible alias for legacy imports.
+dashboard_bp = app_routes_bp
 
-# Routes will be imported when needed
+__all__ = ["app_routes_bp", "dashboard_bp"]
