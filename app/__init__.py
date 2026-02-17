@@ -330,10 +330,49 @@ def _configure_db_timeouts(app: Flask) -> None:
 # Outputs: Registers rollback and maintenance/CSRF response handlers.
 def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""
-    from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
+    from sqlalchemy.exc import OperationalError, DBAPIError
     from .extensions import db
-    from flask import render_template, request
+    from flask import flash, jsonify, redirect, render_template, request, url_for
+    from flask_login import current_user
     from flask_wtf.csrf import CSRFError
+    from urllib.parse import urlparse
+
+    def _csrf_wants_json_response() -> bool:
+        try:
+            from .utils.http import wants_json
+
+            return (
+                wants_json(request)
+                or request.is_json
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            )
+        except Exception:
+            return bool(request.is_json)
+
+    def _csrf_redirect_target() -> str:
+        default_target = (
+            url_for("app_routes.dashboard")
+            if current_user.is_authenticated
+            else url_for("auth.login")
+        )
+        referrer = request.referrer
+        if not referrer:
+            return default_target
+
+        try:
+            parsed_referrer = urlparse(referrer)
+            parsed_host = urlparse(request.host_url or "")
+            # Avoid open redirects by requiring same host when netloc is provided.
+            if parsed_referrer.netloc and parsed_referrer.netloc != parsed_host.netloc:
+                return default_target
+            path = parsed_referrer.path or "/"
+            target = f"{path}?{parsed_referrer.query}" if parsed_referrer.query else path
+            # If we cannot trust referrer or it points to a POST route, use a safe default.
+            if target == request.path:
+                return default_target
+            return target
+        except Exception:
+            return default_target
 
     @app.teardown_request
     def _rollback_on_error(exc):
@@ -363,7 +402,7 @@ def _install_global_resilience_handlers(app):
 
     @app.errorhandler(CSRFError)
     def _csrf_error_handler(err: CSRFError):
-        """Emit structured diagnostics so load tests can see *why* CSRF failed."""
+        """Log diagnostics and keep users on a navigable page."""
         details = {
             "path": request.path,
             "endpoint": request.endpoint,
@@ -372,14 +411,19 @@ def _install_global_resilience_handlers(app):
             "reason": err.description,
         }
         app.logger.warning("CSRF validation failed: %s", details)
-        rendered = None
-        try:
-            rendered = render_template("errors/csrf.html", reason=err.description, details=details)
-        except Exception:
-            pass
-        if rendered is not None:
-            return rendered, 400
-        return "CSRF validation failed. Please refresh and try again.", 400
+        if _csrf_wants_json_response():
+            return (
+                jsonify(
+                    {
+                        "error": "csrf_validation_failed",
+                        "message": "Your session expired or this form is out of date. Refresh and try again.",
+                        "reason": err.description,
+                    }
+                ),
+                400,
+            )
+        flash("Your session expired or this form is out of date. Please try again.", "warning")
+        return redirect(_csrf_redirect_target(), code=303)
 
 # --- Add core routes ---
 # Purpose: Register basic app-wide routes like health checks.
