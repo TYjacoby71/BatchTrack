@@ -22,6 +22,10 @@ from .profiles import (
 )
 
 
+# --- Tier presentation core ---
+# Purpose: Orchestrate catalog rules into table sections and single-tier feature payloads.
+# Inputs: Normalized tier fact dictionaries plus optional profile/cap settings.
+# Outputs: Render-ready sections, feature lists, and highlight strings for pricing/signup surfaces.
 class TierPresentationCore:
     """Build feature-table and highlight payloads from declarative rules."""
 

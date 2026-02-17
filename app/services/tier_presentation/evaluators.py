@@ -17,6 +17,10 @@ from .formatters import format_numeric_limit, format_retention_cell
 from .helpers import coerce_int, normalize_token_set
 
 
+# --- Match tier against row spec ---
+# Purpose: Evaluate entitlement and limit predicates for one tier/row pair.
+# Inputs: Tier fact dictionary and declarative row specification dictionary.
+# Outputs: True when the tier satisfies all row requirements; otherwise False.
 def tier_matches_row_spec(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> bool:
     """Return True when the tier satisfies row entitlement and limit rules."""
     permission_set = set(tier.get("permission_set") or set())
@@ -54,6 +58,10 @@ def tier_matches_row_spec(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> 
     return True
 
 
+# --- Build comparison cell ---
+# Purpose: Produce typed cell payloads used by table renderers.
+# Inputs: Tier fact dictionary and declarative row specification dictionary.
+# Outputs: Cell dictionary containing type/value/display fields for the row.
 def build_comparison_cell(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> dict[str, Any]:
     """Build one display cell payload for a row/tier pair."""
     kind = str(row_spec.get("kind") or "boolean").strip().lower()
@@ -81,6 +89,10 @@ def build_comparison_cell(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> 
     }
 
 
+# --- Format limit cell ---
+# Purpose: Render a tier-specific limit row using row field metadata.
+# Inputs: Tier fact dictionary and limit-row specification dictionary.
+# Outputs: Customer-facing limit copy for one table cell.
 def format_limit_cell(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> str:
     """Render a limit row for one tier."""
     if not tier_matches_row_spec(tier=tier, row_spec=row_spec):
@@ -104,6 +116,10 @@ def format_limit_cell(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> str:
     )
 
 
+# --- Format BatchBot limit cell ---
+# Purpose: Render BatchBot access + request-cap copy for one tier.
+# Inputs: Tier fact dictionary with entitlements and max_batchbot_requests limit.
+# Outputs: Display string describing BatchBot availability/capacity.
 def format_batchbot_limit_cell(tier: dict[str, Any]) -> str:
     """Render BatchBot request capacity copy for one tier."""
     has_access = tier_matches_row_spec(

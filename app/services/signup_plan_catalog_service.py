@@ -1,6 +1,13 @@
 """Signup pricing catalog helpers.
 
-This module keeps view-ready tier payload construction out of Flask route files.
+Synopsis:
+Builds customer-facing tier payloads used by signup and checkout surfaces.
+Combines billing price data, permission/add-on entitlements, and tier
+presentation outputs into a concise view model.
+
+Glossary:
+- Available tier payload: JSON-serializable plan dictionary used by templates.
+- Presentation features: Customer-facing single-tier feature list from tier rules.
 """
 
 from __future__ import annotations
@@ -12,6 +19,10 @@ from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import coerce_int, normalize_token_set
 
 
+# --- Signup plan catalog service ---
+# Purpose: Provide normalized tier payloads for signup UIs and pricing APIs.
+# Inputs: Customer-facing SubscriptionTier ORM records and pricing lookup services.
+# Outputs: Mapping keyed by tier id with prices, limits, add-ons, and presentation features.
 class SignupPlanCatalogService:
     """Build concise plan payloads for signup pages and APIs."""
 

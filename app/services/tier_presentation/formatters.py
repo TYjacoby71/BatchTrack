@@ -11,6 +11,10 @@ Glossary:
 from __future__ import annotations
 
 
+# --- Format numeric limit ---
+# Purpose: Render count limits into customer-readable plan copy.
+# Inputs: Numeric limit value and singular/plural/none display tokens.
+# Outputs: Display string describing included quantity or entitlement status.
 def format_numeric_limit(
     *,
     value: int | None,
@@ -30,6 +34,10 @@ def format_numeric_limit(
     return f"Up to {value} {plural}"
 
 
+# --- Format retention cell ---
+# Purpose: Convert retention entitlements/policy metadata into display text.
+# Inputs: Retention entitlement flag plus optional label/policy values.
+# Outputs: Human-readable retention policy string for table cells.
 def format_retention_cell(
     *,
     has_retention_entitlement: bool,

@@ -21,6 +21,10 @@ from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import coerce_int, normalize_feature_label, normalize_token_set
 
 
+# --- Public pricing page service ---
+# Purpose: Build pricing-page tier cards and comparison-table payloads for templates.
+# Inputs: Signup checkout request context and tier/lifetime catalog payloads.
+# Outputs: Render-ready dictionary with pricing tiers, grouped comparison sections, and capacity flags.
 class PublicPricingPageService:
     """Compose public pricing page data from signup catalog services."""
 
