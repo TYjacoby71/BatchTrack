@@ -1,92 +1,61 @@
-# PlanSnapshot (Immutable Batch Plan)
+# PlanSnapshot (Batch Start Authority)
 
-This document delineates the PlanSnapshot DTO end‑to‑end. The snapshot is the single source of truth for starting a batch and protecting in‑progress batches from recipe edits.
+## Synopsis
+`PlanSnapshot` is the immutable payload that defines what a batch starts with: scaled lines, yield projection, portioning, container selections, and category-specific extension data. It is built server-side and persisted to `batch.plan_snapshot` when batch start succeeds.
 
-## Purpose
-- Freeze all inputs required to start a batch (portions, yield, scaled lines, containers).
-- Persist verbatim at batch start in `batch.plan_snapshot` for read‑only displays and auditing.
-- Ensure deductions and batch rows match the snapshot quantities.
+## Glossary
+- **PlanSnapshot**: Frozen batch-start payload (`app/services/production_planning/types.py`).
+- **Category extension**: Structured category-specific JSON copied from recipe context.
+- **Planned vs actual**: Snapshot intent versus post-start batch row changes (including extras).
 
-## Schema (conceptual)
-```json
-{
-  "recipe_id": 12,
-  "scale": 1.0,
-  "batch_type": "product",
-  "projected_yield": 10.0,
-  "projected_yield_unit": "oz",
-  "portioning": {
-    "is_portioned": true,
-    "portion_name": "bars",
-    "portion_unit_id": 120,
-    "portion_count": 20
-  },
-  "containers": [
-    { "id": 11, "quantity": 4 }
-  ],
-  "ingredients_plan": [
-    { "inventory_item_id": 42, "quantity": 2.0, "unit": "count" }
-  ],
-  "consumables_plan": [
-    { "inventory_item_id": 77, "quantity": 1.0, "unit": "count" }
-  ],
-  "category_extension": {
-    // Mirrors `recipe.category_data` at plan build time (verbatim copy)
-  }
-}
-```
+## Canonical Shape (Current)
 
-## Field Definitions
-- recipe_id: Integer. The recipe used to build the plan.
-- scale: Float. Scale factor applied when generating projected yield and scaling lines.
-- batch_type: String. "ingredient" or "product".
-- projected_yield / projected_yield_unit: Frozen values used for batch.projected_yield/unit.
-- portioning (always present):
-  - is_portioned: Boolean. If false, other portion fields may be null.
-  - portion_name: String | null. User‑defined count unit name (e.g., "bars").
-  - portion_unit_id: Integer | null. Unit ID for the portion name (when defined as a Unit).
-  - portion_count: Integer | null. Planned portions for the batch scale.
-- containers: Array of selections; immutable planned container usage (id, quantity).
-- ingredients_plan / consumables_plan: Scaled lines (recipe × scale); the quantities the batch will deduct at start.
-- category_extension: Optional, namespaced JSON for category‑specific fields (e.g., lye ratios, steep times, wick lengths).
+Core fields in `PlanSnapshot` include:
+- `recipe_id`
+- `target_version_id`
+- `lineage_snapshot`
+- `scale`
+- `batch_type`
+- `notes`
+- `projected_yield`
+- `projected_yield_unit`
+- `portioning` (`is_portioned`, `portion_name`, `portion_unit_id`, `portion_count`)
+- `ingredients_plan[]` (`inventory_item_id`, `quantity`, `unit`)
+- `consumables_plan[]` (`inventory_item_id`, `quantity`, `unit`)
+- `containers[]` (`id`, `quantity`)
+- `requires_containers`
+- `category_extension`
 
 ## Lifecycle
-1) Build during Production Planning (server‑side):
-   - `PlanProductionService.build_plan(recipe, scale, batch_type, notes?, containers?)`
-   - Scales recipe lines, freezes projected yield/unit, merges portioning from recipe’s additive fields, freezes container selections.
+1. **Build snapshot**  
+   `PlanProductionService.build_plan(recipe, scale, batch_type, notes, containers)`
 
-2) Submit to Start Batch (client → API):
-   - `POST /batches/api/start-batch` with `{ plan_snapshot: PlanSnapshot }`.
-   - API validates and forwards snapshot to `BatchOperationsService.start_batch(plan_snapshot)`.
+2. **Submit start request**  
+   `POST /batches/api/start-batch` (or start route variant) passes snapshot payload.
 
-3) Start Batch (service):
-   - Persists `batch.projected_yield`, `batch.projected_yield_unit`, portion fields, and `batch.plan_snapshot` verbatim.
-   - Performs unit conversion + inventory deductions using the same scaled quantities (matching snapshot).
-   - Creates `BatchIngredient`, `BatchConsumable`, and `BatchContainer` rows consistent with the snapshot.
-   - Any error → rollback; no partial starts.
+3. **Start batch transaction**  
+   `BatchOperationsService.start_batch(plan_snapshot)`:
+   - writes projected fields and snapshot onto `Batch`
+   - performs deductions
+   - creates batch line rows
+   - emits start event on success
 
-4) In‑Progress and Record Views:
-   - Planned (read‑only): read from `batch.plan_snapshot` (ingredients_plan, consumables_plan, containers, portioning, projected yield/unit).
-   - Actual: read from batch rows (ingredients/consumables/containers) and extras added after start.
-   - Notes are edited post‑start via a separate endpoint and are not part of the snapshot.
-
-## Mapping to Batch
-- batch.projected_yield ← snapshot.projected_yield
-- batch.projected_yield_unit ← snapshot.projected_yield_unit
-- batch.is_portioned / portion_name / projected_portions ← snapshot.portioning
-- batch.plan_snapshot ← snapshot (verbatim)
-- BatchIngredient/BatchConsumable rows reflect snapshot scaled quantities (after conversions and deductions)
-- BatchContainer rows reflect snapshot containers selections
+4. **View semantics**
+   - Planned values: read from `batch.plan_snapshot`.
+   - Actual values: read from `BatchIngredient`/`BatchConsumable`/`BatchContainer` and extras.
 
 ## Guarantees
-- Immutability: Snapshot never changes after start.
-- Protection: Changing a recipe later does not affect an in‑progress batch’s planned view.
-- Consistency: Deductions and batch rows match snapshot quantities.
+- Snapshot is persisted only when start succeeds.
+- Start is transactional: deduction/row failures rollback.
+- Recipe edits after batch start do not mutate stored snapshot intent.
 
-## Validation & Errors
-- API rejects missing/invalid `plan_snapshot` (400) and surfaces start errors (deduction failures).
-- Service rolls back on error; no partial inventory changes.
+## Notes on Extended Payload Keys
+Batch start logic also tolerates optional operational keys (for example skip lists or forced-start summaries) when provided by upstream flows.
 
-## Future Extensions
-- Add a JSON Schema for PlanSnapshot validation.
-- Version field inside the snapshot for forward compatibility of category_extension.
+## Relevance Check (2026-02-17)
+Validated against:
+- `app/services/production_planning/types.py`
+- `app/services/production_planning/service.py`
+- `app/services/batch_service/batch_operations.py`
+- `app/blueprints/batches/routes.py`
+- `app/models/batch.py` (`plan_snapshot` + computed projection columns)
