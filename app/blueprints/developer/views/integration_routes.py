@@ -216,19 +216,19 @@ def integrations_checklist():
         {
             "endpoint": "GET /global-items",
             "limit": "500/hour",
-            "source": "app/routes/global_library_routes.py::global_library",
+            "source": "app/blueprints/global_library/routes.py::global_library",
             "notes": "Public global item library browsing.",
         },
         {
             "endpoint": "GET /tools",
             "limit": "800/hour",
-            "source": "app/routes/tools_routes.py::tools_index",
+            "source": "app/blueprints/tools/routes.py::tools_index",
             "notes": "Public calculator tools.",
         },
         {
             "endpoint": "GET /recipes/library",
             "limit": "400/hour",
-            "source": "app/routes/recipe_library_routes.py::recipe_library",
+            "source": "app/blueprints/recipe_library/routes.py::recipe_library",
             "notes": "Public recipe browsing and marketplace.",
         },
         {
