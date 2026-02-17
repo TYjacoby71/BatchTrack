@@ -43,6 +43,28 @@ def _format_currency(value: Any) -> str:
         return "$0.00"
 
 
+def _format_unit_cost(value: Any) -> str:
+    """
+    Format unit costs with extra precision for sub-cent values.
+
+    Example:
+    - 0.15   -> $0.15
+    - 0.0042 -> $0.0042
+    """
+    if value is None:
+        return "$0.00"
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "$0.00"
+
+    if numeric == 0:
+        return "$0.00"
+    if abs(numeric) < 0.01:
+        return f"${numeric:.4f}"
+    return f"${numeric:.2f}"
+
+
 def _format_percentage(value: Any, decimal_places: int = 1) -> str:
     if value is None:
         return "0%"
@@ -310,6 +332,7 @@ def register_template_filters(app) -> None:
 
     filter_map: Dict[str, Callable[..., Any]] = {
         "format_currency": _format_currency,
+        "format_unit_cost": _format_unit_cost,
         "format_percentage": _format_percentage,
         "pluralize": _pluralize,
         "nl2br": _nl2br,

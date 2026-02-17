@@ -202,7 +202,7 @@
                     <td>{{ ing.inventory_item.name }}</td>
                     <td>{{ "%.2f"|format(amount) }}</td>
                     <td>{{ ing.unit }}</td>
-                    <td>${{ "%.2f"|format(cost) }}</td>
+                    <td>{{ cost|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
@@ -217,7 +217,7 @@
                     <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                     <td>-</td>
-                    <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
+                    <td>{{ (container.cost_each|float or 0)|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.container_total = ns.container_total + line_cost %}
@@ -232,7 +232,7 @@
                     <td>{{ cons.inventory_item.name }}</td>
                     <td>{{ "%.3f"|format(cons.quantity_used|float or 0) }}</td>
                     <td>{{ cons.unit }}</td>
-                    <td>${{ "%.2f"|format(cons.cost_per_unit|float or 0) }}</td>
+                    <td>{{ (cons.cost_per_unit|float or 0)|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.consumable_total = ns.consumable_total + line_cost %}
@@ -247,7 +247,7 @@
                     <td>{{ extra.inventory_item.name }}</td>
                     <td>{{ "%.3f"|format(extra.quantity_used|float or 0) }}</td>
                     <td>{{ extra.unit }}</td>
-                    <td>${{ "%.2f"|format(extra.cost_per_unit) }}</td>
+                    <td>{{ (extra.cost_per_unit|float or 0)|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.extras_total = ns.extras_total + line_cost %}
@@ -262,7 +262,7 @@
                     <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ container.quantity_used }}</td>
                     <td>-</td>
-                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>{{ (container.cost_each|float or 0)|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
@@ -277,7 +277,7 @@
                     <td>{{ extra.inventory_item.name }}</td>
                     <td>{{ "%.3f"|format(extra.quantity_used|float or 0) }}</td>
                     <td>{{ extra.unit }}</td>
-                    <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
+                    <td>{{ (extra.cost_per_unit|float or 0)|format_unit_cost }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% set ns.extra_consumable_total = ns.extra_consumable_total + line_cost %}
@@ -333,7 +333,7 @@
                             <td>{{ ing.inventory_item.name }}</td>
                             <td>{{ "%.2f"|format(amount) }}</td>
                             <td>{{ ing.unit }}</td>
-                            <td>${{ "%.2f"|format(cost) }}</td>
+                            <td>{{ cost|format_unit_cost }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                         </tr>
                         {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
@@ -352,7 +352,7 @@
                             <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                             <td></td>
-                            <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
+                            <td>{{ (container.cost_each|float or 0)|format_unit_cost }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                         </tr>
                         {% set ns.container_total = ns.container_total + line_cost %}
@@ -371,7 +371,7 @@
                             <td>{{ extra.inventory_item.name }}</td>
                             <td>{{ "%.3f"|format(extra.quantity_used|float or 0) }}</td>
                             <td>{{ extra.unit }}</td>
-                            <td>${{ "%.2f"|format(extra.cost_per_unit) }}</td>
+                            <td>{{ (extra.cost_per_unit|float or 0)|format_unit_cost }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                         </tr>
                         {% set ns.extras_total = ns.extras_total + line_cost %}
@@ -390,7 +390,7 @@
                             <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ container.quantity_used }}</td>
                             <td></td>
-                            <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                            <td>{{ (container.cost_each|float or 0)|format_unit_cost }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                         </tr>
                         {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
