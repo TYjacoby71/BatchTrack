@@ -20,6 +20,8 @@
   - Introduced grouped feature-section specs used to build comparison rows.
   - Added row evaluators for boolean capabilities and text-based limit/retention cells.
   - Added curated tier card highlights based on capabilities (inventory/FIFO, batches, products, marketplace, integrations, BatchBot, retention).
+  - Updated tier resolution to prefer canonical tier-name mapping (`hobbyist` / `enthusiast` / `fanatic`) before lifetime-offer tier IDs so comparison section ordering stays consistent across all pricing sections.
+  - Added offer reconciliation by canonical `tier_id` and made display names canonical to resolved subscription tiers to keep every column mapped to one stable tier identity across cards and comparison cells.
 - `app/templates/pages/public/pricing.html`
   - Updated comparison table to render grouped sections and mixed cell types (checkmarks + textual limits/policies).
   - Updated copy from generic feature checklist language to customer-facing “features and limits” language.

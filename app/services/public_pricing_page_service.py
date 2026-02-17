@@ -40,12 +40,16 @@ class PublicPricingPageService:
         offers_by_key = {
             str(offer.get("key", "")).strip().lower(): offer for offer in lifetime_offers if offer
         }
+        offers_by_tier_id = {
+            str(offer.get("tier_id") or ""): offer for offer in lifetime_offers if offer and offer.get("tier_id")
+        }
 
         pricing_tiers: list[dict[str, Any]] = []
         for tier_key in cls._ORDERED_TIER_KEYS:
             tier_payload = cls._build_tier_payload(
                 tier_key=tier_key,
                 offer=offers_by_key.get(tier_key, {}),
+                offers_by_tier_id=offers_by_tier_id,
                 available_tiers=available_tiers,
             )
             pricing_tiers.append(tier_payload)
@@ -65,19 +69,29 @@ class PublicPricingPageService:
         *,
         tier_key: str,
         offer: dict[str, Any],
+        offers_by_tier_id: dict[str, dict[str, Any]],
         available_tiers: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
         """Build one tier card payload for public pricing display."""
-        tier_id = str(offer.get("tier_id") or "")
-        tier_data = available_tiers.get(tier_id) if tier_id else None
+        tier_id = ""
+        tier_data = None
+
+        # Resolve by canonical pricing key first so cards/table columns stay stable
+        # even when lifetime offer tier mappings drift.
+        for candidate_tier_id, candidate_tier_data in available_tiers.items():
+            candidate_name = str(candidate_tier_data.get("name", "")).strip().lower()
+            if candidate_name == tier_key:
+                tier_data = candidate_tier_data
+                tier_id = str(candidate_tier_id)
+                break
 
         if not tier_data:
-            for candidate_tier_id, candidate_tier_data in available_tiers.items():
-                candidate_name = str(candidate_tier_data.get("name", "")).strip().lower()
-                if candidate_name == tier_key:
-                    tier_data = candidate_tier_data
-                    tier_id = str(candidate_tier_id)
-                    break
+            tier_id = str(offer.get("tier_id") or "")
+            tier_data = available_tiers.get(tier_id) if tier_id else None
+
+        resolved_offer = offer or {}
+        if tier_id:
+            resolved_offer = offers_by_tier_id.get(tier_id, resolved_offer)
 
         raw_feature_names = (tier_data or {}).get("all_features") or []
         permission_set = normalize_token_set(raw_feature_names)
@@ -119,7 +133,7 @@ class PublicPricingPageService:
         )
 
         has_yearly_price = bool((tier_data or {}).get("yearly_price_display"))
-        has_lifetime_remaining = bool(offer.get("has_remaining") and tier_id)
+        has_lifetime_remaining = bool(resolved_offer.get("has_remaining") and tier_id)
 
         monthly_url = (
             url_for(
@@ -147,7 +161,7 @@ class PublicPricingPageService:
             url_for(
                 "auth.signup_checkout",
                 billing_mode="lifetime",
-                lifetime_tier=offer.get("key"),
+                lifetime_tier=resolved_offer.get("key"),
                 tier=tier_id,
                 source=f"pricing_{tier_key}_lifetime",
             )
@@ -157,9 +171,9 @@ class PublicPricingPageService:
 
         return {
             "key": tier_key,
-            "name": str(offer.get("name") or tier_key.title()),
-            "tagline": str(offer.get("tagline") or "Built for makers"),
-            "future_scope": str(offer.get("future_scope") or ""),
+            "name": str((tier_data or {}).get("name") or tier_key.title()),
+            "tagline": str(resolved_offer.get("tagline") or "Built for makers"),
+            "future_scope": str(resolved_offer.get("future_scope") or ""),
             "tier_id": tier_id,
             "monthly_price_display": (tier_data or {}).get("monthly_price_display"),
             "yearly_price_display": (tier_data or {}).get("yearly_price_display"),
@@ -175,7 +189,7 @@ class PublicPricingPageService:
             "retention_label": retention_label,
             "has_retention_entitlement": has_retention_entitlement,
             "feature_total": int((tier_data or {}).get("feature_total") or len(all_feature_labels)),
-            "lifetime_offer": offer,
+            "lifetime_offer": resolved_offer,
             "lifetime_has_remaining": has_lifetime_remaining,
             "signup_monthly_url": monthly_url,
             "signup_yearly_url": yearly_url,
