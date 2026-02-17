@@ -110,6 +110,7 @@ def _build_recipe_with_missing_inventory(*, include_output_tracking: bool = True
 
 
 def test_api_start_batch_requires_override_before_force(app, monkeypatch):
+    app.config['SKIP_PERMISSIONS'] = True
     with app.app_context():
         user_id, recipe_id, ingredient_id, consumable_id = _build_recipe_with_missing_inventory(
             include_output_tracking=True
@@ -161,6 +162,7 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
 
 
 def test_api_start_batch_forces_untracked_when_output_tracking_tier_permission_missing(app, monkeypatch):
+    app.config['SKIP_PERMISSIONS'] = True
     with app.app_context():
         user_id, recipe_id, ingredient_id, consumable_id = _build_recipe_with_missing_inventory(
             include_output_tracking=False
