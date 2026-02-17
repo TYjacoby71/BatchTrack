@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Stale System Docs Wave 2 Refresh (Next 10)](2026-02-17-stale-system-docs-wave-2-refresh.md)**
+  - Refreshed the next 10 stalest system docs to current schema (`Synopsis` + `Glossary`) and current implementation behavior.
+  - Replaced stale routes/service references across exports, free-tier, public-tools, plan-snapshot, and tracking docs.
+  - Converted outdated SEO/deprecation planning language into present-state system guidance with active backlog notes.
 - **[2026-02-17: Documentation Guard Whole-File Coverage Clarification](2026-02-17-doc-guard-whole-file-coverage-clarification.md)**
   - Clarified checklist and APP_DICTIONARY wording to require functional-header coverage across the entire touched Python file.
   - Updated documentation-structure enforcement text to match whole-file validation behavior.
