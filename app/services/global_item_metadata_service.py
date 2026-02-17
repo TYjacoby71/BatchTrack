@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-
 USE_CASE_MAP = {
     "ingredient": [
         "Lock formulas to a single density source for accurate conversions.",
@@ -97,23 +96,27 @@ class GlobalItemMetadataService:
         faqs = [
             {
                 "question": f"What is the default unit for {item.name}?",
-                "answer": f"{item.name} uses {item.default_unit or 'gram'} by default so calculations stay consistent across recipes."
+                "answer": f"{item.name} uses {item.default_unit or 'gram'} by default so calculations stay consistent across recipes.",
             },
             {
                 "question": f"How is {item.name} used inside BatchTrack?",
-                "answer": "Teams link this global item to inventory, recipes, and public tools so updates to specs or costs flow everywhere automatically."
+                "answer": "Teams link this global item to inventory, recipes, and public tools so updates to specs or costs flow everywhere automatically.",
             },
         ]
         if item.density:
-            faqs.append({
-                "question": f"What density should I use for {item.name}?",
-                "answer": f"BatchTrack stores a working density of {item.density:.3f} g/mL for this entry. Override it per-organization if your supplier provides a different spec."
-            })
+            faqs.append(
+                {
+                    "question": f"What density should I use for {item.name}?",
+                    "answer": f"BatchTrack stores a working density of {item.density:.3f} g/mL for this entry. Override it per-organization if your supplier provides a different spec.",
+                }
+            )
         if item.default_is_perishable and item.recommended_shelf_life_days:
-            faqs.append({
-                "question": f"What is the recommended shelf life for {item.name}?",
-                "answer": f"The default shelf life is {item.recommended_shelf_life_days} days. Adjust it per location if lab results differ."
-            })
+            faqs.append(
+                {
+                    "question": f"What is the recommended shelf life for {item.name}?",
+                    "answer": f"The default shelf life is {item.recommended_shelf_life_days} days. Adjust it per location if lab results differ.",
+                }
+            )
         return faqs
 
     @staticmethod

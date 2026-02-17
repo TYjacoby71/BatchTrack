@@ -5,16 +5,18 @@ from __future__ import annotations
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
-from . import auth_bp
 from ...extensions import limiter
 from ...services.lifetime_pricing_service import LifetimePricingService
 from ...services.oauth_service import OAuthService
 from ...services.signup_checkout_service import SignupCheckoutService
 from ...services.signup_plan_catalog_service import SignupPlanCatalogService
+from . import auth_bp
 
 
 def load_tiers_config():
-    raise RuntimeError("load_tiers_config has been removed. Use DB via SubscriptionTier queries.")
+    raise RuntimeError(
+        "load_tiers_config has been removed. Use DB via SubscriptionTier queries."
+    )
 
 
 def _build_signup_fallback_url(
@@ -78,17 +80,27 @@ def signup_checkout():
     )
 
     selected_tier = request.args.get("tier") or signup_context.preselected_tier or ""
-    selected_mode = request.args.get("billing_mode") or signup_context.billing_mode or "standard"
+    selected_mode = (
+        request.args.get("billing_mode") or signup_context.billing_mode or "standard"
+    )
     if selected_mode not in {"standard", "lifetime"}:
         selected_mode = "standard"
 
-    selected_cycle = request.args.get("billing_cycle") or signup_context.standard_billing_cycle
+    selected_cycle = (
+        request.args.get("billing_cycle") or signup_context.standard_billing_cycle
+    )
     if selected_cycle not in {"monthly", "yearly"}:
         selected_cycle = signup_context.standard_billing_cycle
 
-    selected_lifetime_tier = request.args.get("lifetime_tier") or signup_context.selected_lifetime_tier or ""
+    selected_lifetime_tier = (
+        request.args.get("lifetime_tier") or signup_context.selected_lifetime_tier or ""
+    )
     selected_promo = request.args.get("promo") or signup_context.promo_code or ""
-    signup_source = request.args.get("source") or signup_context.signup_source or "pricing_direct_checkout"
+    signup_source = (
+        request.args.get("source")
+        or signup_context.signup_source
+        or "pricing_direct_checkout"
+    )
 
     submission_payload = {
         "selected_tier": selected_tier,
@@ -145,7 +157,10 @@ def signup():
 
         if result.flash_message:
             flash(result.flash_message, result.flash_category)
-        view_state = result.view_state or SignupCheckoutService.build_initial_view_state(signup_context)
+        view_state = (
+            result.view_state
+            or SignupCheckoutService.build_initial_view_state(signup_context)
+        )
     else:
         view_state = SignupCheckoutService.build_initial_view_state(signup_context)
 

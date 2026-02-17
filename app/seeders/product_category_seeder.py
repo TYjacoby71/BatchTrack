@@ -1,21 +1,49 @@
-
 from app.extensions import db
 from app.models.product_category import ProductCategory
 
-
 DEFAULT_CATEGORIES = [
     # Portioned categories use derivative portion size attributes
-    {"name": "Soaps", "is_portioned": True, "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
-    {"name": "Baked Goods", "is_portioned": True, "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
-    {"name": "Confectionery", "is_portioned": True, "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
-
+    {
+        "name": "Soaps",
+        "is_portioned": True,
+        "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})",
+    },
+    {
+        "name": "Baked Goods",
+        "is_portioned": True,
+        "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})",
+    },
+    {
+        "name": "Confectionery",
+        "is_portioned": True,
+        "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})",
+    },
     # Container-defined categories use the container-derived label
-    {"name": "Candles", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    {"name": "Cosmetics", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    {"name": "Preserves", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    {"name": "Beverages", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    {"name": "Miscellaneous", "is_portioned": False, "template": "{variant} {product} ({container})"},
-
+    {
+        "name": "Candles",
+        "is_portioned": False,
+        "template": "{variant} {product} ({container})",
+    },
+    {
+        "name": "Cosmetics",
+        "is_portioned": False,
+        "template": "{variant} {product} ({container})",
+    },
+    {
+        "name": "Preserves",
+        "is_portioned": False,
+        "template": "{variant} {product} ({container})",
+    },
+    {
+        "name": "Beverages",
+        "is_portioned": False,
+        "template": "{variant} {product} ({container})",
+    },
+    {
+        "name": "Miscellaneous",
+        "is_portioned": False,
+        "template": "{variant} {product} ({container})",
+    },
     # Add Uncategorized as default fallback category
     {"name": "Uncategorized", "is_portioned": False, "template": "{variant} {product}"},
 ]
@@ -29,7 +57,9 @@ def seed_product_categories():
     categories_updated = 0
 
     for row in DEFAULT_CATEGORIES:
-        existing = ProductCategory.query.filter(ProductCategory.name.ilike(row["name"])).first()
+        existing = ProductCategory.query.filter(
+            ProductCategory.name.ilike(row["name"])
+        ).first()
 
         if not existing:
             # Create new category
@@ -37,7 +67,7 @@ def seed_product_categories():
                 name=row["name"],
                 is_typically_portioned=row["is_portioned"],
                 sku_name_template=row["template"],
-                skin_enabled=False
+                skin_enabled=False,
             )
             db.session.add(new_category)
             categories_created += 1
@@ -64,7 +94,9 @@ def seed_product_categories():
 
     try:
         db.session.commit()
-        print(f"✅ Product categories seeded successfully! (Created: {categories_created}, Updated: {categories_updated})")
+        print(
+            f"✅ Product categories seeded successfully! (Created: {categories_created}, Updated: {categories_updated})"
+        )
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error seeding product categories: {e}")

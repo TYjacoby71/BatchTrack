@@ -2,11 +2,10 @@
 Base handler class for inventory category handlers
 """
 
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
 from typing import Optional
 
-from app.models import InventoryItem
 from ..types import StockCheckRequest, StockCheckResult, StockStatus
 
 logger = logging.getLogger(__name__)
@@ -22,7 +21,9 @@ class BaseInventoryHandler(ABC):
     """
 
     @abstractmethod
-    def check_availability(self, request: StockCheckRequest, organization_id: int) -> StockCheckResult:
+    def check_availability(
+        self, request: StockCheckRequest, organization_id: int
+    ) -> StockCheckResult:
         """
         Check availability for a specific inventory item.
 
@@ -60,6 +61,6 @@ class BaseInventoryHandler(ABC):
         if available >= needed:
             return StockStatus.OK
         elif available >= needed * 0.5:
-            return StockStatus.LOW  
+            return StockStatus.LOW
         else:
             return StockStatus.NEEDED

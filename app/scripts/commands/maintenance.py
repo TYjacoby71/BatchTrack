@@ -13,7 +13,9 @@ def update_permissions_command():
     try:
         print("🔄 Updating permissions from consolidated_permissions.json...")
 
-        from ...seeders.consolidated_permission_seeder import seed_consolidated_permissions
+        from ...seeders.consolidated_permission_seeder import (
+            seed_consolidated_permissions,
+        )
 
         seed_consolidated_permissions()
 
@@ -71,9 +73,24 @@ def update_subscription_tiers_command():
 
 
 @click.command("dispatch-domain-events")
-@click.option("--poll-interval", default=5.0, show_default=True, help="Seconds to wait between polls when idle.")
-@click.option("--batch-size", default=100, show_default=True, type=int, help="Maximum events to process per batch.")
-@click.option("--once", is_flag=True, help="Process a single batch instead of running continuously.")
+@click.option(
+    "--poll-interval",
+    default=5.0,
+    show_default=True,
+    help="Seconds to wait between polls when idle.",
+)
+@click.option(
+    "--batch-size",
+    default=100,
+    show_default=True,
+    type=int,
+    help="Maximum events to process per batch.",
+)
+@click.option(
+    "--once",
+    is_flag=True,
+    help="Process a single batch instead of running continuously.",
+)
 @with_appcontext
 def dispatch_domain_events_command(poll_interval: float, batch_size: int, once: bool):
     """Run the asynchronous dispatcher that delivers pending domain events."""
@@ -99,4 +116,3 @@ MAINTENANCE_COMMANDS = [
     update_subscription_tiers_command,
     dispatch_domain_events_command,
 ]
-

@@ -6,7 +6,9 @@ import pytest
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
     """Helper to ensure a GET stays public and does not bounce to login."""
     response = client.get(path, follow_redirects=False, **kwargs)
-    assert response.status_code == 200, f"{label} should be public (got {response.status_code})"
+    assert (
+        response.status_code == 200
+    ), f"{label} should be public (got {response.status_code})"
     location = response.headers.get("Location", "")
     assert "/auth/login" not in location, f"{label} unexpectedly redirected to login"
     return response
@@ -140,12 +142,23 @@ def test_public_soap_quality_nudge_api_is_accessible(app):
                 {
                     "name": "Olive Oil",
                     "grams": 500,
-                    "fatty_profile": {"oleic": 69, "linoleic": 12, "palmitic": 14, "stearic": 3},
+                    "fatty_profile": {
+                        "oleic": 69,
+                        "linoleic": 12,
+                        "palmitic": 14,
+                        "stearic": 3,
+                    },
                 },
                 {
                     "name": "Coconut Oil 76",
                     "grams": 150,
-                    "fatty_profile": {"lauric": 48, "myristic": 19, "palmitic": 9, "stearic": 3, "oleic": 8},
+                    "fatty_profile": {
+                        "lauric": 48,
+                        "myristic": 19,
+                        "palmitic": 9,
+                        "stearic": 3,
+                        "oleic": 8,
+                    },
                 },
             ],
             "targets": {
@@ -177,11 +190,15 @@ def test_public_soap_page_injects_backend_policy_config(app):
 
 
 @pytest.mark.usefixtures("app")
-def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
+def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
+    app, monkeypatch, tmp_path
+):
     """Feedback notes should persist into source/flow JSON buckets."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
     client = app.test_client()
 
     first_payload = {
@@ -214,10 +231,9 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     assert first_response.status_code == 200
     first_data = first_response.get_json() or {}
     assert first_data.get("success") is True
-    assert (
-        (first_data.get("result") or {}).get("bucket_path")
-        == "batches_view_batch_in_progress/glitch.json"
-    )
+    assert (first_data.get("result") or {}).get(
+        "bucket_path"
+    ) == "batches_view_batch_in_progress/glitch.json"
 
     second_response = client.post("/tools/api/feedback-notes", json=second_payload)
     assert second_response.status_code == 200
@@ -225,17 +241,25 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     assert third_response.status_code == 200
 
     batch_glitch_path = (
-        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "glitch.json"
+        tmp_path
+        / "tool_feedback_notes"
+        / "batches_view_batch_in_progress"
+        / "glitch.json"
     )
     assert batch_glitch_path.exists()
     batch_glitch_bucket = json.loads(batch_glitch_path.read_text(encoding="utf-8"))
     assert batch_glitch_bucket.get("source") == "batches_view_batch_in_progress"
     assert batch_glitch_bucket.get("flow") == "glitch"
     assert batch_glitch_bucket.get("count") == 1
-    assert (batch_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+    assert (batch_glitch_bucket.get("entries") or [])[0].get(
+        "message"
+    ) == first_payload["message"]
 
     batch_question_path = (
-        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "question.json"
+        tmp_path
+        / "tool_feedback_notes"
+        / "batches_view_batch_in_progress"
+        / "question.json"
     )
     assert batch_question_path.exists()
     batch_question_bucket = json.loads(batch_question_path.read_text(encoding="utf-8"))
@@ -251,7 +275,11 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     ]
 
     batch_index = next(
-        (source for source in sources if source.get("source") == "batches_view_batch_in_progress"),
+        (
+            source
+            for source in sources
+            if source.get("source") == "batches_view_batch_in_progress"
+        ),
         None,
     )
     assert batch_index is not None
@@ -267,7 +295,9 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
     from app.models.models import User
 
     with app.app_context():
-        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        flag = FeatureFlag.query.filter_by(
+            key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE"
+        ).first()
         if flag is None:
             flag = FeatureFlag(
                 key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
@@ -304,7 +334,9 @@ def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
     from app.models.feature_flag import FeatureFlag
 
     with app.app_context():
-        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        flag = FeatureFlag.query.filter_by(
+            key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE"
+        ).first()
         if flag is None:
             flag = FeatureFlag(
                 key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
@@ -332,7 +364,9 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
     """Unknown feedback flow values should fail validation."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
     client = app.test_client()
     response = client.post(
         "/tools/api/feedback-notes",
@@ -351,13 +385,19 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
 @pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_honeypot_skips_note_write(app, monkeypatch, tmp_path):
     """Honeypot-triggered submissions should not write feedback note files."""
-    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
     from app.services.public_bot_trap_service import PublicBotTrapService
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
-    monkeypatch.setattr(PublicBotTrapService, "record_hit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
+    monkeypatch.setattr(
+        PublicBotTrapService, "record_hit", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(PublicBotTrapService, "add_block", lambda *args, **kwargs: None)
-    monkeypatch.setattr(PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None
+    )
 
     client = app.test_client()
     response = client.post(
@@ -396,7 +436,9 @@ def test_anonymous_workflow_can_browse_public_site(app):
     _assert_public_get(client, "/recipes/library", label="recipe library")
     _assert_public_get(client, "/help/how-it-works", label="how it works")
     _assert_public_get(client, "/lp/hormozi", label="landing page (results-first)")
-    _assert_public_get(client, "/lp/robbins", label="landing page (transformation-first)")
+    _assert_public_get(
+        client, "/lp/robbins", label="landing page (transformation-first)"
+    )
     _assert_public_get(client, "/auth/signup", label="signup page")
 
 

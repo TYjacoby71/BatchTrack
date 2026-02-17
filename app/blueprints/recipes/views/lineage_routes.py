@@ -7,20 +7,29 @@ Glossary:
 - Lineage tree: Graph of recipe versions and variations.
 - Current version: Flagged active recipe in a branch.
 """
+
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import get_recipe_details
-from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
+from app.utils.permissions import (
+    _org_tier_includes_permission,
+    has_permission,
+    require_permission,
+)
 from app.utils.settings import is_feature_enabled
 
 from .. import recipes_bp
-from ..lineage_utils import build_lineage_path, build_version_branches, serialize_lineage_tree
+from ..lineage_utils import (
+    build_lineage_path,
+    build_version_branches,
+    serialize_lineage_tree,
+)
 
 
 # =========================================================
@@ -30,22 +39,22 @@ from ..lineage_utils import build_lineage_path, build_version_branches, serializ
 # Purpose: Render the lineage tree for a recipe.
 # Inputs: Recipe identifier from route path.
 # Outputs: Rendered lineage page response or redirect on error.
-@recipes_bp.route('/<int:recipe_id>/lineage')
+@recipes_bp.route("/<int:recipe_id>/lineage")
 @login_required
-@require_permission('recipes.view')
+@require_permission("recipes.view")
 def recipe_lineage(recipe_id):
     try:
         recipe = get_recipe_details(recipe_id)
     except PermissionError:
         flash("You do not have access to this recipe.", "error")
-        return redirect(url_for('recipes.list_recipes'))
+        return redirect(url_for("recipes.list_recipes"))
     except Exception as exc:
         flash(f"Unable to load recipe lineage: {exc}", "error")
-        return redirect(url_for('recipes.list_recipes'))
+        return redirect(url_for("recipes.list_recipes"))
 
     if not recipe:
-        flash('Recipe not found.', 'error')
-        return redirect(url_for('recipes.list_recipes'))
+        flash("Recipe not found.", "error")
+        return redirect(url_for("recipes.list_recipes"))
 
     root_id = recipe.root_recipe_id or recipe.id
     relatives = (
@@ -55,16 +64,13 @@ def recipe_lineage(recipe_id):
         .all()
     )
 
-    nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    nodes = {rel.id: {"recipe": rel, "children": []} for rel in relatives}
     master_parent_overrides: dict[int, int] = {}
     variation_parent_overrides: dict[int, int] = {}
 
     # Display lineage as version chains so variation versions step down correctly.
     master_versions = sorted(
-        [
-            rel for rel in relatives
-            if rel.is_master and rel.test_sequence is None
-        ],
+        [rel for rel in relatives if rel.is_master and rel.test_sequence is None],
         key=lambda row: (int(getattr(row, "version_number", 0) or 0), int(row.id)),
     )
     for previous, current in zip(master_versions, master_versions[1:]):
@@ -79,34 +85,44 @@ def recipe_lineage(recipe_id):
             continue
         variation_versions_by_name.setdefault(variation_key, []).append(rel)
     for versions in variation_versions_by_name.values():
-        versions.sort(key=lambda row: (int(getattr(row, "version_number", 0) or 0), int(row.id)))
+        versions.sort(
+            key=lambda row: (int(getattr(row, "version_number", 0) or 0), int(row.id))
+        )
         for previous, current in zip(versions, versions[1:]):
             variation_parent_overrides[current.id] = previous.id
 
     for rel in relatives:
         parent_id = None
         edge_type = None
-        if rel.test_sequence is None and rel.is_master and rel.id in master_parent_overrides:
+        if (
+            rel.test_sequence is None
+            and rel.is_master
+            and rel.id in master_parent_overrides
+        ):
             parent_id = master_parent_overrides[rel.id]
-            edge_type = 'master'
-        elif rel.test_sequence is None and not rel.is_master and rel.id in variation_parent_overrides:
+            edge_type = "master"
+        elif (
+            rel.test_sequence is None
+            and not rel.is_master
+            and rel.id in variation_parent_overrides
+        ):
             parent_id = variation_parent_overrides[rel.id]
-            edge_type = 'variation'
+            edge_type = "variation"
         elif rel.parent_recipe_id and rel.parent_recipe_id in nodes:
             parent_id = rel.parent_recipe_id
-            edge_type = 'test' if rel.test_sequence else 'variation'
+            edge_type = "test" if rel.test_sequence else "variation"
         elif rel.cloned_from_id and rel.cloned_from_id in nodes:
             parent_id = rel.cloned_from_id
-            edge_type = 'clone'
+            edge_type = "clone"
         elif rel.id != root_id and rel.root_recipe_id and rel.root_recipe_id in nodes:
             parent_id = rel.root_recipe_id
-            edge_type = 'root'
+            edge_type = "root"
 
         if parent_id and edge_type:
-            nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
+            nodes[parent_id]["children"].append({"id": rel.id, "edge": edge_type})
 
-    root_recipe = nodes.get(root_id, {'recipe': recipe})
-    lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes)
+    root_recipe = nodes.get(root_id, {"recipe": recipe})
+    lineage_tree = serialize_lineage_tree(root_recipe["recipe"], nodes)
     lineage_path = build_lineage_path(recipe.id, nodes, root_id)
     master_branches = []
     variation_branches = []
@@ -140,9 +156,7 @@ def recipe_lineage(recipe_id):
     if events_page < 1:
         events_page = 1
     events_pagination = (
-        RecipeLineage.query.options(
-            selectinload(RecipeLineage.source_recipe)
-        )
+        RecipeLineage.query.options(selectinload(RecipeLineage.source_recipe))
         .filter_by(recipe_id=recipe.id)
         .order_by(RecipeLineage.created_at.desc())
         .paginate(page=events_page, per_page=10, error_out=False)
@@ -165,7 +179,7 @@ def recipe_lineage(recipe_id):
     )
 
     return render_template(
-        'pages/recipes/recipe_lineage.html',
+        "pages/recipes/recipe_lineage.html",
         recipe=recipe,
         origin_source_org=origin_source_org,
         lineage_tree=lineage_tree,

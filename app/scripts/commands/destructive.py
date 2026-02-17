@@ -27,31 +27,53 @@ def clear_all_users_command():
 
         print("🗑️  Clearing user role assignments...")
         if user_ids:
-            db.session.execute(db.text("DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
+            db.session.execute(
+                db.text(
+                    "DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"
+                ),
+                {"user_ids": user_ids},
+            )
 
         print("🗑️  Clearing user statistics...")
         if user_ids:
-            db.session.execute(db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
+            db.session.execute(
+                db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"),
+                {"user_ids": user_ids},
+            )
 
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(
-                db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids}
+                db.text(
+                    "DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
             )
 
         print("🗑️  Clearing user preferences...")
         if user_ids:
-            db.session.execute(db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
+            db.session.execute(
+                db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"),
+                {"user_ids": user_ids},
+            )
 
         print("🗑️  Clearing ingredient categories...")
         if org_ids:
             db.session.execute(
-                db.text("DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids}
+                db.text(
+                    "DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
             )
 
         print("🗑️  Clearing custom unit mappings...")
         if org_ids:
-            db.session.execute(db.text("DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+            db.session.execute(
+                db.text(
+                    "DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
+            )
 
         organization_tables = [
             "recipe",
@@ -71,20 +93,25 @@ def clear_all_users_command():
             try:
                 if org_ids:
                     result = db.session.execute(
-                        db.text(
-                            """
+                        db.text("""
                         SELECT column_name FROM information_schema.columns
                         WHERE table_name = :table_name
                         AND column_name = 'organization_id'
-                    """
-                        ),
+                    """),
                         {"table_name": table},
                     ).fetchone()
 
                     if result:
-                        db.session.execute(db.text(f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+                        db.session.execute(
+                            db.text(
+                                f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"
+                            ),
+                            {"org_ids": org_ids},
+                        )
                     else:
-                        print(f"   ⚠️  {table} doesn't have organization_id column - skipping")
+                        print(
+                            f"   ⚠️  {table} doesn't have organization_id column - skipping"
+                        )
             except Exception as table_error:
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
 
@@ -137,14 +164,14 @@ def clear_dev_users_command():
         dev_user_ids = [user.id for user in dev_users]
 
         print("🗑️  Clearing developer role assignments...")
-        assignments_deleted = UserRoleAssignment.query.filter(UserRoleAssignment.user_id.in_(dev_user_ids)).delete(
-            synchronize_session=False
-        )
+        assignments_deleted = UserRoleAssignment.query.filter(
+            UserRoleAssignment.user_id.in_(dev_user_ids)
+        ).delete(synchronize_session=False)
 
         print("🗑️  Clearing developer user preferences...")
-        prefs_deleted = UserPreferences.query.filter(UserPreferences.user_id.in_(dev_user_ids)).delete(
-            synchronize_session=False
-        )
+        prefs_deleted = UserPreferences.query.filter(
+            UserPreferences.user_id.in_(dev_user_ids)
+        ).delete(synchronize_session=False)
 
         print("🗑️  Clearing developer users...")
         users_deleted = User.query.filter_by(user_type="developer").delete()
@@ -179,36 +206,60 @@ def clear_customer_users_command():
 
         from ...models import Organization, User
 
-        customer_user_ids = [u.id for u in User.query.filter_by(user_type="customer").all()]
+        customer_user_ids = [
+            u.id for u in User.query.filter_by(user_type="customer").all()
+        ]
         org_ids = [o.id for o in Organization.query.all()]
 
         print("🗑️  Clearing customer user role assignments...")
         if customer_user_ids:
-            db.session.execute(db.text("DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
+            db.session.execute(
+                db.text(
+                    "DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"
+                ),
+                {"user_ids": customer_user_ids},
+            )
 
         print("🗑️  Clearing customer user statistics...")
         if customer_user_ids:
-            db.session.execute(db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
+            db.session.execute(
+                db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"),
+                {"user_ids": customer_user_ids},
+            )
 
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(
-                db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids}
+                db.text(
+                    "DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
             )
 
         print("🗑️  Clearing customer user preferences...")
         if customer_user_ids:
-            db.session.execute(db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
+            db.session.execute(
+                db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"),
+                {"user_ids": customer_user_ids},
+            )
 
         print("🗑️  Clearing ingredient categories...")
         if org_ids:
             db.session.execute(
-                db.text("DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids}
+                db.text(
+                    "DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
             )
 
         print("🗑️  Clearing custom unit mappings...")
         if org_ids:
-            db.session.execute(db.text("DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+            db.session.execute(
+                db.text(
+                    "DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"
+                ),
+                {"org_ids": org_ids},
+            )
 
         organization_tables = [
             "recipe",
@@ -228,20 +279,25 @@ def clear_customer_users_command():
             try:
                 if org_ids:
                     result = db.session.execute(
-                        db.text(
-                            """
+                        db.text("""
                         SELECT column_name FROM information_schema.columns
                         WHERE table_name = :table_name
                         AND column_name = 'organization_id'
-                    """
-                        ),
+                    """),
                         {"table_name": table},
                     ).fetchone()
 
                     if result:
-                        db.session.execute(db.text(f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+                        db.session.execute(
+                            db.text(
+                                f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"
+                            ),
+                            {"org_ids": org_ids},
+                        )
                     else:
-                        print(f"   ⚠️  {table} doesn't have organization_id column - skipping")
+                        print(
+                            f"   ⚠️  {table} doesn't have organization_id column - skipping"
+                        )
             except Exception as table_error:
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
 
@@ -261,26 +317,30 @@ def clear_customer_users_command():
                 if customer_user_ids:
                     for column in columns:
                         result = db.session.execute(
-                            db.text(
-                                """
+                            db.text("""
                             SELECT column_name FROM information_schema.columns
                             WHERE table_name = :table_name
                             AND column_name = :column_name
-                        """
-                            ),
+                        """),
                             {"table_name": table, "column_name": column},
                         ).fetchone()
 
                         if result:
                             db.session.execute(
-                                db.text(f"UPDATE {table} SET {column} = NULL WHERE {column} = ANY(:user_ids)"),
+                                db.text(
+                                    f"UPDATE {table} SET {column} = NULL WHERE {column} = ANY(:user_ids)"
+                                ),
                                 {"user_ids": customer_user_ids},
                             )
                             print(f"   ✅ Cleared {column} references in {table}")
                         else:
-                            print(f"   ⚠️  Column {column} doesn't exist in {table} - skipping")
+                            print(
+                                f"   ⚠️  Column {column} doesn't exist in {table} - skipping"
+                            )
             except Exception as table_error:
-                print(f"   ⚠️  Could not clear user references in {table}: {table_error}")
+                print(
+                    f"   ⚠️  Could not clear user references in {table}: {table_error}"
+                )
 
         print("🗑️  Clearing customer users...")
         db.session.execute(db.text("DELETE FROM \"user\" WHERE user_type = 'customer'"))
@@ -311,4 +371,3 @@ DESTRUCTIVE_COMMANDS = [
     clear_dev_users_command,
     clear_customer_users_command,
 ]
-

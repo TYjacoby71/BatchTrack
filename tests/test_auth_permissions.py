@@ -1,9 +1,9 @@
 from uuid import uuid4
-from flask import jsonify
 
+from flask import jsonify
 from flask_login import login_user, logout_user
 
-from app.models import User, Organization, Role, Permission, SubscriptionTier
+from app.models import Organization, Permission, Role, SubscriptionTier, User
 from app.utils.permissions import permission_required
 
 
@@ -17,7 +17,7 @@ def _create_org_with_permission(db_session):
 
     tier = SubscriptionTier(
         name=f"Tier-{suffix}",
-        billing_provider='exempt',
+        billing_provider="exempt",
         user_limit=5,
     )
     tier.permissions.append(permission)
@@ -27,7 +27,7 @@ def _create_org_with_permission(db_session):
     org = Organization(
         name=f"Org-{suffix}",
         subscription_tier_id=tier.id,
-        billing_status='active',
+        billing_status="active",
     )
     db_session.add(org)
     db_session.flush()
@@ -66,12 +66,12 @@ def _create_org_with_permission(db_session):
 def _login(client, user_id):
     with client.session_transaction() as sess:
         sess.clear()
-        sess['_user_id'] = str(user_id)
-        sess['_fresh'] = True
+        sess["_user_id"] = str(user_id)
+        sess["_fresh"] = True
 
 
 def test_permission_required_allows_authorized_user(app, client, db_session):
-    app.config['SKIP_PERMISSIONS'] = False
+    app.config["SKIP_PERMISSIONS"] = False
 
     with app.app_context():
         perm_name, user_id, _ = _create_org_with_permission(db_session)
@@ -98,7 +98,7 @@ def test_permission_required_allows_authorized_user(app, client, db_session):
 
 
 def test_permission_required_denies_user_without_permission(app, client, db_session):
-    app.config['SKIP_PERMISSIONS'] = False
+    app.config["SKIP_PERMISSIONS"] = False
 
     with app.app_context():
         perm_name, privileged_user_id, org_id = _create_org_with_permission(db_session)
@@ -132,14 +132,21 @@ def test_permission_required_denies_user_without_permission(app, client, db_sess
         assert privileged_user is not None
         assert privileged_user.has_permission(perm_name)
         from app.models.user_role_assignment import UserRoleAssignment
-        assignments = UserRoleAssignment.query.filter_by(user_id=privileged_user_id, is_active=True).all()
+
+        assignments = UserRoleAssignment.query.filter_by(
+            user_id=privileged_user_id, is_active=True
+        ).all()
         assert assignments, "Role assignment should exist"
 
     # Authenticate the unprivileged user via request context
     other = db_session.get(User, other_user_id)
-    with app.test_request_context(f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}):
+    with app.test_request_context(
+        f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}
+    ):
         login_user(other)
-        response = app.make_response(app.view_functions[f"api_protected_{route_suffix}"]())
+        response = app.make_response(
+            app.view_functions[f"api_protected_{route_suffix}"]()
+        )
         logout_user()
 
     assert response.status_code == 403
@@ -149,16 +156,20 @@ def test_permission_required_denies_user_without_permission(app, client, db_sess
 
     # Control: privileged user should still pass
     privileged = db_session.get(User, privileged_user_id)
-    with app.test_request_context(f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}):
+    with app.test_request_context(
+        f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}
+    ):
         login_user(privileged)
-        ok_response = app.make_response(app.view_functions[f"api_protected_{route_suffix}"]())
+        ok_response = app.make_response(
+            app.view_functions[f"api_protected_{route_suffix}"]()
+        )
         logout_user()
 
     assert ok_response.status_code == 200, ok_response.get_json()
 
 
 def test_permission_required_requires_authentication(app, client, db_session):
-    app.config['SKIP_PERMISSIONS'] = False
+    app.config["SKIP_PERMISSIONS"] = False
 
     with app.app_context():
         perm_name, _, _ = _create_org_with_permission(db_session)

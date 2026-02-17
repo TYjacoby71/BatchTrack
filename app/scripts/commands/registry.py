@@ -29,4 +29,3 @@ def register_commands(app):
 
     for command in ASSET_COMMANDS:
         app.cli.add_command(command)
-

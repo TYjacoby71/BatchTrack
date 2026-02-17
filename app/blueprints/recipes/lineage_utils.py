@@ -7,6 +7,7 @@ Glossary:
 - Lineage tree: Hierarchy of versions, variations, and clones.
 - Current node: Version flagged as current for a branch.
 """
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
@@ -41,27 +42,29 @@ def _lineage_display_name(node_recipe: Recipe) -> str:
 # Outputs: Nested dictionary payload consumed by lineage UI.
 def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
     node_payload = {
-        'id': node_recipe.id,
-        'name': node_recipe.name,
-        'display_name': _lineage_display_name(node_recipe),
-        'version_number': int(getattr(node_recipe, "version_number", 0) or 0),
-        'organization_name': node_recipe.organization.name if node_recipe.organization else None,
-        'organization_id': node_recipe.organization_id,
-        'origin_type': node_recipe.org_origin_type,
-        'origin_purchased': node_recipe.org_origin_purchased,
-        'is_current': bool(getattr(node_recipe, "is_current", False)),
-        'test_sequence': getattr(node_recipe, "test_sequence", None),
-        'is_master': bool(getattr(node_recipe, "is_master", False)),
-        'status': node_recipe.status,
-        'children': [],
+        "id": node_recipe.id,
+        "name": node_recipe.name,
+        "display_name": _lineage_display_name(node_recipe),
+        "version_number": int(getattr(node_recipe, "version_number", 0) or 0),
+        "organization_name": (
+            node_recipe.organization.name if node_recipe.organization else None
+        ),
+        "organization_id": node_recipe.organization_id,
+        "origin_type": node_recipe.org_origin_type,
+        "origin_purchased": node_recipe.org_origin_purchased,
+        "is_current": bool(getattr(node_recipe, "is_current", False)),
+        "test_sequence": getattr(node_recipe, "test_sequence", None),
+        "is_master": bool(getattr(node_recipe, "is_master", False)),
+        "status": node_recipe.status,
+        "children": [],
     }
 
-    for child in nodes.get(node_recipe.id, {}).get('children', []):
-        child_recipe = nodes[child['id']]['recipe']
-        node_payload['children'].append(
+    for child in nodes.get(node_recipe.id, {}).get("children", []):
+        child_recipe = nodes[child["id"]]["recipe"]
+        node_payload["children"].append(
             {
-                'edge_type': child['edge'],
-                'node': serialize_lineage_tree(child_recipe, nodes),
+                "edge_type": child["edge"],
+                "node": serialize_lineage_tree(child_recipe, nodes),
             }
         )
 
@@ -72,14 +75,16 @@ def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
 # Purpose: Build a path list from root to selected node.
 # Inputs: Target recipe id, lineage node map, and optional root id.
 # Outputs: Ordered list of recipe ids from root to target.
-def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional[int]) -> List[int]:
+def build_lineage_path(
+    target_id: int, nodes: Dict[int, dict], root_id: Optional[int]
+) -> List[int]:
     path: List[int] = []
     seen: set[int] = set()
     current_id = target_id
     parent_lookup: Dict[int, int] = {}
     for parent_id, payload in nodes.items():
-        for child in payload.get('children', []):
-            child_id = child.get('id')
+        for child in payload.get("children", []):
+            child_id = child.get("id")
             if child_id:
                 parent_lookup[int(child_id)] = int(parent_id)
 
@@ -89,7 +94,7 @@ def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional
         if current_id in parent_lookup and parent_lookup[current_id] not in seen:
             current_id = parent_lookup[current_id]
             continue
-        recipe = nodes.get(current_id, {}).get('recipe')
+        recipe = nodes.get(current_id, {}).get("recipe")
         if not recipe:
             break
         if recipe.parent_recipe_id and recipe.parent_recipe_id in nodes:
@@ -117,18 +122,23 @@ def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional
 # Outputs: Tuple of master branch data and variation branch data.
 def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict]]:
     masters = [
-        r for r in recipes
+        r
+        for r in recipes
         if getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is None
     ]
     masters.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
 
     master_tests = [
-        r for r in recipes
-        if getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is not None
+        r
+        for r in recipes
+        if getattr(r, "is_master", False)
+        and getattr(r, "test_sequence", None) is not None
     ]
     master_tests_by_parent: Dict[int, List[Recipe]] = {}
     for test in master_tests:
-        parent_id = getattr(test, "parent_recipe_id", None) or getattr(test, "parent_master_id", None)
+        parent_id = getattr(test, "parent_recipe_id", None) or getattr(
+            test, "parent_master_id", None
+        )
         if parent_id:
             master_tests_by_parent.setdefault(int(parent_id), []).append(test)
     for tests in master_tests_by_parent.values():
@@ -143,14 +153,20 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
     ]
 
     variations = [
-        r for r in recipes
-        if not getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is None
+        r
+        for r in recipes
+        if not getattr(r, "is_master", False)
+        and getattr(r, "test_sequence", None) is None
     ]
-    variations.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
+    variations.sort(
+        key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True
+    )
 
     variation_tests = [
-        r for r in recipes
-        if not getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is not None
+        r
+        for r in recipes
+        if not getattr(r, "is_master", False)
+        and getattr(r, "test_sequence", None) is not None
     ]
     variation_tests_by_parent: Dict[int, List[Recipe]] = {}
     for test in variation_tests:

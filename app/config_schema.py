@@ -126,7 +126,9 @@ def _parse_bool(value: str | None, default: Any) -> tuple[Any, str | None]:
 
 # --- Parse value ---
 # Purpose: Dispatch raw values to the appropriate type parser.
-def _parse_value(field: ConfigField, raw: str | None, default: Any) -> tuple[Any, str | None]:
+def _parse_value(
+    field: ConfigField, raw: str | None, default: Any
+) -> tuple[Any, str | None]:
     if field.cast == "int":
         return _parse_int(raw, default)
     if field.cast == "float":
@@ -138,7 +140,9 @@ def _parse_value(field: ConfigField, raw: str | None, default: Any) -> tuple[Any
 
 # --- Resolve settings ---
 # Purpose: Convert raw env values into typed config values and warnings.
-def resolve_settings(env: Mapping[str, str], env_name: str) -> tuple[dict[str, Any], dict[str, ResolvedField], list[str]]:
+def resolve_settings(
+    env: Mapping[str, str], env_name: str
+) -> tuple[dict[str, Any], dict[str, ResolvedField], list[str]]:
     warnings: list[str] = []
     values: dict[str, Any] = {}
     resolved: dict[str, ResolvedField] = {}
@@ -149,7 +153,11 @@ def resolve_settings(env: Mapping[str, str], env_name: str) -> tuple[dict[str, A
         value, error = _parse_value(field, raw, default)
         source = "env" if raw not in (None, "") else "default"
         is_required = field.is_required(env_name)
-        present = raw not in (None, "") if is_required else (raw not in (None, "") or value not in (None, ""))
+        present = (
+            raw not in (None, "")
+            if is_required
+            else (raw not in (None, "") or value not in (None, ""))
+        )
         if error:
             warnings.append(f"{field.key} {error}; falling back to {default!r}.")
         if is_required and raw in (None, ""):
@@ -179,7 +187,9 @@ def iter_sections() -> Iterable[ConfigSection]:
 
 # --- Build checklist sections ---
 # Purpose: Transform schema fields into the integrations checklist payload.
-def build_integration_sections(env: Mapping[str, str], env_name: str) -> list[dict[str, Any]]:
+def build_integration_sections(
+    env: Mapping[str, str], env_name: str
+) -> list[dict[str, Any]]:
     _, resolved, _ = resolve_settings(env, env_name)
     sections: list[dict[str, Any]] = []
     for section in CONFIG_SECTIONS:
@@ -264,7 +274,9 @@ _PART_ORDER = (
 def _load_part(module_name: str):
     parts_dir = Path(__file__).with_name("config_schema_parts")
     module_path = parts_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(f"config_schema_part_{module_name}", module_path)
+    spec = importlib.util.spec_from_file_location(
+        f"config_schema_part_{module_name}", module_path
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load schema part {module_name}")
     module = importlib.util.module_from_spec(spec)

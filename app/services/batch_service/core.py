@@ -1,58 +1,69 @@
-
 import logging
-from datetime import datetime
-from sqlalchemy import extract, func
-from sqlalchemy.orm.attributes import set_committed_value
-from flask_login import current_user
-from flask import session
 
-from app.models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer
-from app.models import ExtraBatchIngredient, ExtraBatchContainer, BatchTimer
-from app.utils.timezone_utils import TimezoneUtils
+from flask_login import current_user
+from sqlalchemy.orm.attributes import set_committed_value
+
+from app.models import Batch, BatchTimer, Recipe, db
 from app.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
+
 class BatchService(BaseService):
     """Core batch service for basic CRUD operations and queries"""
-    
+
     @classmethod
     def get_batch_by_identifier(cls, batch_identifier):
         """Get batch by ID or label code with proper scoping"""
         try:
             print(f"DEBUG: get_batch_by_identifier called with: {batch_identifier}")
-            print(f"DEBUG: Current user organization_id: {current_user.organization_id}")
+            print(
+                f"DEBUG: Current user organization_id: {current_user.organization_id}"
+            )
 
             if str(batch_identifier).isdigit():
                 # Check if batch exists without scoping first for debugging
                 batch_exists = Batch.query.filter_by(id=int(batch_identifier)).first()
                 print(f"DEBUG: Batch exists (unscoped): {batch_exists is not None}")
                 if batch_exists:
-                    print(f"DEBUG: Batch organization_id: {batch_exists.organization_id}")
+                    print(
+                        f"DEBUG: Batch organization_id: {batch_exists.organization_id}"
+                    )
 
                 batch = Batch.scoped().filter_by(id=int(batch_identifier)).first()
             else:
-                batch = Batch.scoped().filter_by(label_code=str(batch_identifier)).first()
+                batch = (
+                    Batch.scoped().filter_by(label_code=str(batch_identifier)).first()
+                )
 
             if batch:
                 print(f"DEBUG: Found batch: {batch.label_code}, status: {batch.status}")
-            
+
             return batch
 
         except Exception as e:
             print(f"DEBUG: Error in get_batch_by_identifier: {str(e)}")
-            logger.error(f"Error getting batch by identifier {batch_identifier}: {str(e)}")
+            logger.error(
+                f"Error getting batch by identifier {batch_identifier}: {str(e)}"
+            )
             return None
 
     @classmethod
-    def get_batches_with_filters(cls, status=None, recipe_id=None, start_date=None, end_date=None, sort_by='date_desc'):
+    def get_batches_with_filters(
+        cls,
+        status=None,
+        recipe_id=None,
+        start_date=None,
+        end_date=None,
+        sort_by="date_desc",
+    ):
         """Get filtered and sorted batches"""
         try:
             # Build base query with organization scoping
             base_query = Batch.scoped()
 
             # Apply filters
-            if status and status != 'all':
+            if status and status != "all":
                 base_query = base_query.filter_by(status=status)
             if recipe_id:
                 base_query = base_query.filter_by(recipe_id=recipe_id)
@@ -62,15 +73,15 @@ class BatchService(BaseService):
                 base_query = base_query.filter(Batch.started_at <= end_date)
 
             # Apply sorting
-            if sort_by == 'date_asc':
+            if sort_by == "date_asc":
                 base_query = base_query.order_by(Batch.started_at.asc())
-            elif sort_by == 'date_desc':
+            elif sort_by == "date_desc":
                 base_query = base_query.order_by(Batch.started_at.desc())
-            elif sort_by == 'recipe_asc':
+            elif sort_by == "recipe_asc":
                 base_query = base_query.join(Recipe).order_by(Recipe.name.asc())
-            elif sort_by == 'recipe_desc':
+            elif sort_by == "recipe_desc":
                 base_query = base_query.join(Recipe).order_by(Recipe.name.desc())
-            elif sort_by == 'status_asc':
+            elif sort_by == "status_asc":
                 base_query = base_query.order_by(Batch.status.asc())
             else:
                 base_query = base_query.order_by(Batch.started_at.desc())
@@ -82,7 +93,9 @@ class BatchService(BaseService):
             raise
 
     @classmethod
-    def get_paginated_batches(cls, status_filter, per_page=10, page=1, sort_by='date_desc'):
+    def get_paginated_batches(
+        cls, status_filter, per_page=10, page=1, sort_by="date_desc"
+    ):
         """Get paginated batches for a specific status"""
         try:
             query = cls.get_batches_with_filters(status=status_filter, sort_by=sort_by)
@@ -96,16 +109,20 @@ class BatchService(BaseService):
         """Get previous and next batches for navigation"""
         try:
             target_status = status or batch.status
-            
-            prev_batch = Batch.scoped().filter(
-                Batch.status == target_status,
-                Batch.id < batch.id
-            ).order_by(Batch.id.desc()).first()
 
-            next_batch = Batch.scoped().filter(
-                Batch.status == target_status,
-                Batch.id > batch.id
-            ).order_by(Batch.id.asc()).first()
+            prev_batch = (
+                Batch.scoped()
+                .filter(Batch.status == target_status, Batch.id < batch.id)
+                .order_by(Batch.id.desc())
+                .first()
+            )
+
+            next_batch = (
+                Batch.scoped()
+                .filter(Batch.status == target_status, Batch.id > batch.id)
+                .order_by(Batch.id.asc())
+                .first()
+            )
 
             return prev_batch, next_batch
 
@@ -118,19 +135,37 @@ class BatchService(BaseService):
         """Calculate total costs for a list of batches"""
         try:
             for batch in batches:
-                ingredient_total = sum((ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients)
-                container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
+                ingredient_total = sum(
+                    (ing.quantity_used or 0) * (ing.cost_per_unit or 0)
+                    for ing in batch.batch_ingredients
+                )
+                container_total = sum(
+                    (c.quantity_used or 0) * (c.cost_each or 0)
+                    for c in batch.containers
+                )
                 # Consumables
                 try:
-                    consumable_total = sum((c.quantity_used or 0) * (c.cost_per_unit or 0) for c in getattr(batch, 'consumables', []) or [])
+                    consumable_total = sum(
+                        (c.quantity_used or 0) * (c.cost_per_unit or 0)
+                        for c in getattr(batch, "consumables", []) or []
+                    )
                 except Exception:
                     consumable_total = 0
 
                 # Extras
-                extra_ingredient_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
-                extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
+                extra_ingredient_total = sum(
+                    (e.quantity_used or 0) * (e.cost_per_unit or 0)
+                    for e in batch.extra_ingredients
+                )
+                extra_container_total = sum(
+                    (e.quantity_used or 0) * (e.cost_each or 0)
+                    for e in batch.extra_containers
+                )
                 try:
-                    extra_consumable_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in getattr(batch, 'extra_consumables', []) or [])
+                    extra_consumable_total = sum(
+                        (e.quantity_used or 0) * (e.cost_per_unit or 0)
+                        for e in getattr(batch, "extra_consumables", []) or []
+                    )
                 except Exception:
                     extra_consumable_total = 0
 
@@ -160,7 +195,10 @@ class BatchService(BaseService):
                 return False, "Batch not found"
 
             # Validate ownership
-            if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+            if (
+                batch.created_by != current_user.id
+                and batch.organization_id != current_user.organization_id
+            ):
                 return False, "Permission denied"
 
             # Update fields
@@ -189,9 +227,9 @@ class BatchService(BaseService):
             remaining_data = []
 
             return {
-                'success': True,
-                'batch_label': batch.label_code,
-                'remaining_items': remaining_data
+                "success": True,
+                "batch_label": batch.label_code,
+                "remaining_items": remaining_data,
             }, None
 
         except Exception as e:
@@ -208,12 +246,11 @@ class BatchService(BaseService):
 
             # Query timers - match batch organization
             timers = BatchTimer.query.filter_by(
-                batch_id=batch.id,
-                organization_id=batch.organization_id
+                batch_id=batch.id, organization_id=batch.organization_id
             ).all()
 
             # Check for active timers
-            has_active_timers = any(timer.status == 'active' for timer in timers)
+            has_active_timers = any(timer.status == "active" for timer in timers)
 
             logger.info(f"Found {len(timers)} timers for batch {batch.id}")
             return timers, has_active_timers
@@ -223,7 +260,7 @@ class BatchService(BaseService):
             return [], False
 
     @classmethod
-    def validate_batch_access(cls, batch, operation='view'):
+    def validate_batch_access(cls, batch, operation="view"):
         """Validate user access to batch operations"""
         try:
             if not batch:
@@ -234,12 +271,15 @@ class BatchService(BaseService):
                 return False, "Access denied - wrong organization"
 
             # For edit operations, check creator or organization ownership
-            if operation in ['edit', 'cancel', 'complete']:
-                if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+            if operation in ["edit", "cancel", "complete"]:
+                if (
+                    batch.created_by != current_user.id
+                    and batch.organization_id != current_user.organization_id
+                ):
                     return False, "Permission denied - not batch creator"
 
             # For in-progress operations, ensure batch is still in progress
-            if operation == 'edit' and batch.status != 'in_progress':
+            if operation == "edit" and batch.status != "in_progress":
                 return False, "Batch is no longer in progress"
 
             return True, None

@@ -1,7 +1,7 @@
 """Static asset pipeline and operations commands."""
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import click
 from flask import current_app
@@ -56,4 +56,3 @@ ASSET_COMMANDS = [
     build_soap_assets_command,
     minify_static_command,
 ]
-

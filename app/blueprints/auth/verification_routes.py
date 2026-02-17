@@ -16,11 +16,11 @@ from datetime import timedelta
 from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
-from . import auth_bp
 from ...extensions import db, limiter
 from ...models import User
 from ...services.email_service import EmailService
 from ...utils.timezone_utils import TimezoneUtils
+from . import auth_bp
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +57,13 @@ def verify_email(token):
             return redirect(url_for("auth.login"))
 
         if user.email_verification_sent_at:
-            expires_at = user.email_verification_sent_at + timedelta(hours=_verification_expiry_hours())
+            expires_at = user.email_verification_sent_at + timedelta(
+                hours=_verification_expiry_hours()
+            )
             if TimezoneUtils.utc_now() > expires_at:
-                flash("Verification link has expired. Please request a new one.", "error")
+                flash(
+                    "Verification link has expired. Please request a new one.", "error"
+                )
                 return redirect(url_for("auth.resend_verification"))
 
         user.email_verified = True
@@ -81,10 +85,9 @@ def verify_email(token):
 # Purpose: Re-issue verification links in prompt/required environments.
 def resend_verification():
     """Resend email verification."""
-    prefill_email = (
-        (request.args.get("email") or "").strip().lower()
-        or ((current_user.email if current_user.is_authenticated else "") or "").strip().lower()
-    )
+    prefill_email = (request.args.get("email") or "").strip().lower() or (
+        (current_user.email if current_user.is_authenticated else "") or ""
+    ).strip().lower()
 
     if not EmailService.should_issue_verification_tokens():
         flash("Email verification is disabled for this environment.", "info")
@@ -92,9 +95,7 @@ def resend_verification():
 
     if request.method == "POST":
         email = ((request.form.get("email") or prefill_email) or "").strip().lower()
-        generic_message = (
-            "If an account with that email exists and is unverified, a verification email has been sent."
-        )
+        generic_message = "If an account with that email exists and is unverified, a verification email has been sent."
 
         if email and "@" in email:
             try:
@@ -113,4 +114,6 @@ def resend_verification():
         flash(generic_message, "info")
         return redirect(url_for("auth.login"))
 
-    return render_template("pages/auth/resend_verification.html", prefill_email=prefill_email)
+    return render_template(
+        "pages/auth/resend_verification.html", prefill_email=prefill_email
+    )

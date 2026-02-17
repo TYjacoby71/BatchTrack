@@ -3,17 +3,9 @@ from __future__ import annotations
 import json
 import logging
 
-from flask import (
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
+from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import and_, exists, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import GlobalItem
@@ -26,13 +18,15 @@ from app.models.ingredient_reference import (
     PhysicalForm,
     Variation,
 )
-from app.utils.seo import slugify_value
 from app.services.global_item_listing_service import (
     DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
-    SCOPE_LABELS as GLOBAL_SCOPE_LABELS,
+)
+from app.services.global_item_listing_service import SCOPE_LABELS as GLOBAL_SCOPE_LABELS
+from app.services.global_item_listing_service import (
     fetch_global_item_listing,
 )
 from app.services.global_item_sync_service import GlobalItemSyncService
+from app.utils.seo import slugify_value
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
@@ -95,7 +89,9 @@ def _apply_tag_collection(item, attr_name: str, model, raw_value: str | None):
     setattr(item, attr_name, _get_or_create_tags(model, names))
 
 
-def _determine_ingredient_layer(form_data, ingredient_category_id, *, current_ingredient=None):
+def _determine_ingredient_layer(
+    form_data, ingredient_category_id, *, current_ingredient=None
+):
     fallback_mode = "existing" if current_ingredient else "new"
     mode = (form_data.get("ingredient_mode") or fallback_mode).lower()
 
@@ -104,7 +100,9 @@ def _determine_ingredient_layer(form_data, ingredient_category_id, *, current_in
             current_ingredient.id if current_ingredient else None
         )
         if not existing_id:
-            raise FormValidationError("Select an ingredient definition or create a new one.")
+            raise FormValidationError(
+                "Select an ingredient definition or create a new one."
+            )
         try:
             ingredient_id = int(existing_id)
         except (TypeError, ValueError):
@@ -114,14 +112,19 @@ def _determine_ingredient_layer(form_data, ingredient_category_id, *, current_in
         if not ingredient:
             raise FormValidationError("Ingredient definition not found.")
 
-        if ingredient_category_id and ingredient.ingredient_category_id != ingredient_category_id:
+        if (
+            ingredient_category_id
+            and ingredient.ingredient_category_id != ingredient_category_id
+        ):
             ingredient.ingredient_category_id = ingredient_category_id
 
         return ingredient, True
 
     name = (form_data.get("new_ingredient_name") or "").strip()
     if not name:
-        raise FormValidationError("Ingredient name is required when defining a new ingredient.")
+        raise FormValidationError(
+            "Ingredient name is required when defining a new ingredient."
+        )
 
     slug_field = (form_data.get("new_ingredient_slug") or "").strip()
     slug = _generate_unique_slug(IngredientDefinition, slug_field or name)
@@ -161,7 +164,9 @@ def _determine_variation_layer(form_data, *, current_variation=None):
 
     name = (form_data.get("new_variation_name") or "").strip()
     if not name:
-        raise FormValidationError("Variation name is required when creating a new entry.")
+        raise FormValidationError(
+            "Variation name is required when creating a new entry."
+        )
 
     physical_form_id = form_data.get("new_variation_physical_form_id")
     physical_form = None
@@ -169,18 +174,26 @@ def _determine_variation_layer(form_data, *, current_variation=None):
         try:
             physical_form = PhysicalForm.query.get(int(physical_form_id))
         except (TypeError, ValueError):
-            raise FormValidationError("Invalid physical form selected for the variation.")
+            raise FormValidationError(
+                "Invalid physical form selected for the variation."
+            )
 
     slug_field = (form_data.get("new_variation_slug") or "").strip()
     slug = _generate_unique_slug(Variation, slug_field or name)
-    form_bypass_flag = (form_data.get("new_variation_form_bypass") or "").lower() in {"1", "true", "yes", "on"}
+    form_bypass_flag = (form_data.get("new_variation_form_bypass") or "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
     variation = Variation(
         name=name,
         slug=slug,
         physical_form=physical_form,
         description=(form_data.get("new_variation_description") or "").strip() or None,
-        default_unit=(form_data.get("new_variation_default_unit") or "").strip() or None,
+        default_unit=(form_data.get("new_variation_default_unit") or "").strip()
+        or None,
         form_bypass=form_bypass_flag,
         is_active=True,
     )
@@ -240,9 +253,13 @@ def _compose_ingredient_name(ingredient, variation, *, fallback=None):
     return fallback
 
 
-def _generate_item_name(item_type, form_data, *, ingredient=None, variation=None, existing_item=None):
+def _generate_item_name(
+    item_type, form_data, *, ingredient=None, variation=None, existing_item=None
+):
     if item_type == "ingredient":
-        name = _compose_ingredient_name(ingredient, variation, fallback=form_data.get("name") if form_data else None)
+        name = _compose_ingredient_name(
+            ingredient, variation, fallback=form_data.get("name") if form_data else None
+        )
         return (name or "").strip()
     if item_type == "container":
         name = _compose_container_name(form_data, existing_item=existing_item)
@@ -283,7 +300,9 @@ def global_items_admin():
     pagination = listing["pagination"]
     per_page_value = listing["per_page"]
 
-    def _shared_query_params(include_category_for_scope: str | None = None) -> dict[str, str]:
+    def _shared_query_params(
+        include_category_for_scope: str | None = None,
+    ) -> dict[str, str]:
         params: dict[str, str] = {}
         params["scope"] = include_category_for_scope or active_scope
         if search_query:
@@ -292,7 +311,11 @@ def global_items_admin():
             params["page_size"] = str(per_page_value)
         if include_category_for_scope == "ingredient" and selected_category:
             params["category"] = selected_category
-        elif include_category_for_scope is None and active_scope == "ingredient" and selected_category:
+        elif (
+            include_category_for_scope is None
+            and active_scope == "ingredient"
+            and selected_category
+        ):
             params["category"] = selected_category
         return params
 
@@ -359,7 +382,7 @@ def global_item_detail(item_id):
         existing_items = (
             GlobalItem.query.filter(
                 GlobalItem.ingredient_id == selected_ingredient.id,
-                GlobalItem.is_archived != True,
+                not GlobalItem.is_archived,
             )
             .order_by(GlobalItem.name.asc())
             .all()
@@ -426,7 +449,9 @@ def global_item_edit(item_id):
     item.capacity = float(capacity) if capacity not in (None, "") else None
     item.capacity_unit = form_data.get("capacity_unit", item.capacity_unit)
     try:
-        item.container_material = (form_data.get("container_material") or "").strip() or None
+        item.container_material = (
+            form_data.get("container_material") or ""
+        ).strip() or None
         item.container_type = (form_data.get("container_type") or "").strip() or None
         item.container_style = (form_data.get("container_style") or "").strip() or None
         item.container_color = (form_data.get("container_color") or "").strip() or None
@@ -434,13 +459,17 @@ def global_item_edit(item_id):
         pass
     item.default_is_perishable = form_data.get("default_is_perishable") == "on"
     shelf_life = form_data.get("recommended_shelf_life_days")
-    item.recommended_shelf_life_days = int(shelf_life) if shelf_life not in (None, "") else None
+    item.recommended_shelf_life_days = (
+        int(shelf_life) if shelf_life not in (None, "") else None
+    )
 
     aliases = form_data.get("aliases")
     if aliases is not None:
         item.aliases = [n.strip() for n in aliases.split(",") if n.strip()]
 
-    item.recommended_fragrance_load_pct = form_data.get("recommended_fragrance_load_pct") or None
+    item.recommended_fragrance_load_pct = (
+        form_data.get("recommended_fragrance_load_pct") or None
+    )
     item.is_active_ingredient = form_data.get("is_active_ingredient") == "on"
     item.inci_name = form_data.get("inci_name") or None
     try:
@@ -452,13 +481,19 @@ def global_item_edit(item_id):
     item.protein_content_pct = float(protein) if protein not in (None, "") else None
 
     brewing_color = form_data.get("brewing_color_srm")
-    item.brewing_color_srm = float(brewing_color) if brewing_color not in (None, "") else None
+    item.brewing_color_srm = (
+        float(brewing_color) if brewing_color not in (None, "") else None
+    )
 
     brewing_potential = form_data.get("brewing_potential_sg")
-    item.brewing_potential_sg = float(brewing_potential) if brewing_potential not in (None, "") else None
+    item.brewing_potential_sg = (
+        float(brewing_potential) if brewing_potential not in (None, "") else None
+    )
 
     brewing_dp = form_data.get("brewing_diastatic_power_lintner")
-    item.brewing_diastatic_power_lintner = float(brewing_dp) if brewing_dp not in (None, "") else None
+    item.brewing_diastatic_power_lintner = (
+        float(brewing_dp) if brewing_dp not in (None, "") else None
+    )
 
     fatty_acid_profile_raw = form_data.get("fatty_acid_profile")
     if fatty_acid_profile_raw is not None:
@@ -467,7 +502,10 @@ def global_item_edit(item_id):
             try:
                 item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
             except json.JSONDecodeError:
-                flash("Invalid JSON for fatty acid profile. Please provide valid JSON.", "error")
+                flash(
+                    "Invalid JSON for fatty acid profile. Please provide valid JSON.",
+                    "error",
+                )
         else:
             item.fatty_acid_profile = None
 
@@ -487,33 +525,52 @@ def global_item_edit(item_id):
             ).first()
             if not category:
                 db.session.rollback()
-                flash(f'Ingredient category ID "{ingredient_category_id}" not found or invalid.', "error")
-                return redirect(url_for("developer.global_item_detail", item_id=item.id))
+                flash(
+                    f'Ingredient category ID "{ingredient_category_id}" not found or invalid.',
+                    "error",
+                )
+                return redirect(
+                    url_for("developer.global_item_detail", item_id=item.id)
+                )
             ingredient_category_id_value = category.id
         else:
             db.session.rollback()
-            flash(f"Invalid Ingredient Category ID format: '{ingredient_category_id}'", "error")
+            flash(
+                f"Invalid Ingredient Category ID format: '{ingredient_category_id}'",
+                "error",
+            )
             return redirect(url_for("developer.global_item_detail", item_id=item.id))
     item.ingredient_category_id = ingredient_category_id_value
 
     if new_item_type == "ingredient":
         try:
             ingredient_obj, _ = _determine_ingredient_layer(
-                form_data, ingredient_category_id_value, current_ingredient=item.ingredient
+                form_data,
+                ingredient_category_id_value,
+                current_ingredient=item.ingredient,
             )
-            physical_form_obj, _ = _determine_physical_form_layer(
-                form_data, current_physical_form=item.physical_form
+            variation_obj, _ = _determine_variation_layer(
+                form_data, current_variation=item.variation
             )
             item.ingredient = ingredient_obj
-            item.physical_form = physical_form_obj
-            _apply_tag_collection(item, "functions", FunctionTag, form_data.get("function_tags"))
-            _apply_tag_collection(item, "applications", ApplicationTag, form_data.get("application_tags"))
-            _apply_tag_collection(item, "category_tags", IngredientCategoryTag, form_data.get("category_tags"))
+            item.variation = variation_obj
+            _apply_tag_collection(
+                item, "functions", FunctionTag, form_data.get("function_tags")
+            )
+            _apply_tag_collection(
+                item, "applications", ApplicationTag, form_data.get("application_tags")
+            )
+            _apply_tag_collection(
+                item,
+                "category_tags",
+                IngredientCategoryTag,
+                form_data.get("category_tags"),
+            )
             name_candidate = _generate_item_name(
                 new_item_type,
                 form_data,
                 ingredient=ingredient_obj,
-                physical_form=physical_form_obj,
+                variation=variation_obj,
                 existing_item=item,
             )
             if name_candidate:
@@ -529,7 +586,9 @@ def global_item_edit(item_id):
         item.applications.clear()
         item.category_tags.clear()
         if new_item_type == "container":
-            name_candidate = _generate_item_name(new_item_type, form_data, existing_item=item)
+            name_candidate = _generate_item_name(
+                new_item_type, form_data, existing_item=item
+            )
             if name_candidate:
                 item.name = name_candidate
         elif submitted_name:
@@ -573,7 +632,9 @@ def global_item_stats_view(item_id):
 def create_global_item():
     """Create a new global item."""
 
-    def render_form(form_data=None, selected_ingredient=None, selected_physical_form=None):
+    def render_form(
+        form_data=None, selected_ingredient=None, selected_physical_form=None
+    ):
         global_ingredient_categories = (
             IngredientCategory.query.filter_by(
                 organization_id=None,
@@ -586,10 +647,14 @@ def create_global_item():
         physical_forms = PhysicalForm.query.order_by(PhysicalForm.name).all()
 
         ingredient_id = (
-            selected_ingredient.id if selected_ingredient else request.args.get("ingredient_id")
+            selected_ingredient.id
+            if selected_ingredient
+            else request.args.get("ingredient_id")
         )
         physical_form_id = (
-            selected_physical_form.id if selected_physical_form else request.args.get("physical_form_id")
+            selected_physical_form.id
+            if selected_physical_form
+            else request.args.get("physical_form_id")
         )
 
         if not selected_ingredient and ingredient_id:
@@ -603,7 +668,7 @@ def create_global_item():
             existing_items = (
                 GlobalItem.query.filter(
                     GlobalItem.ingredient_id == selected_ingredient.id,
-                    GlobalItem.is_archived != True,
+                    not GlobalItem.is_archived,
                 )
                 .order_by(GlobalItem.name.asc())
                 .all()
@@ -641,9 +706,13 @@ def create_global_item():
 
         try:
             name = (form_data.get("name") or "").strip()
-            item_type = (form_data.get("item_type") or "ingredient").strip() or "ingredient"
+            item_type = (
+                form_data.get("item_type") or "ingredient"
+            ).strip() or "ingredient"
             default_unit = form_data.get("default_unit", "").strip() or None
-            ingredient_category_id_str = form_data.get("ingredient_category_id", "").strip() or None
+            ingredient_category_id_str = (
+                form_data.get("ingredient_category_id", "").strip() or None
+            )
 
             if not name:
                 return _error_response("Name is required")
@@ -667,26 +736,32 @@ def create_global_item():
                         f"Invalid Ingredient Category ID format: '{ingredient_category_id_str}'"
                     )
 
-            existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
+            existing = GlobalItem.query.filter_by(
+                name=name, item_type=item_type
+            ).first()
             if existing and not existing.is_archived:
-                return _error_response(f'Global item "{name}" of type "{item_type}" already exists')
+                return _error_response(
+                    f'Global item "{name}" of type "{item_type}" already exists'
+                )
 
             ingredient_obj = None
-            physical_form_obj = None
+            variation_obj = None
             if item_type == "ingredient":
                 ingredient_obj, ingredient_is_existing = _determine_ingredient_layer(
                     form_data, ingredient_category_id
                 )
                 if ingredient_is_existing:
                     selected_ingredient_for_render = ingredient_obj
-                physical_form_obj, physical_is_existing = _determine_physical_form_layer(form_data)
-                if physical_is_existing:
-                    selected_physical_form_for_render = physical_form_obj
+                variation_obj, variation_is_existing = _determine_variation_layer(
+                    form_data
+                )
+                if variation_is_existing and variation_obj:
+                    selected_physical_form_for_render = variation_obj.physical_form
                 name = _generate_item_name(
                     item_type,
                     form_data,
                     ingredient=ingredient_obj,
-                    physical_form=physical_form_obj,
+                    variation=variation_obj,
                 )
             elif item_type == "container":
                 name = _generate_item_name(item_type, form_data)
@@ -717,14 +792,26 @@ def create_global_item():
 
             new_item.capacity_unit = form_data.get("capacity_unit", "").strip() or None
             try:
-                new_item.container_material = (form_data.get("container_material") or "").strip() or None
-                new_item.container_type = (form_data.get("container_type") or "").strip() or None
-                new_item.container_style = (form_data.get("container_style") or "").strip() or None
-                new_item.container_color = (form_data.get("container_color") or "").strip() or None
+                new_item.container_material = (
+                    form_data.get("container_material") or ""
+                ).strip() or None
+                new_item.container_type = (
+                    form_data.get("container_type") or ""
+                ).strip() or None
+                new_item.container_style = (
+                    form_data.get("container_style") or ""
+                ).strip() or None
+                new_item.container_color = (
+                    form_data.get("container_color") or ""
+                ).strip() or None
             except Exception:
                 pass
-            new_item.default_is_perishable = form_data.get("default_is_perishable") == "on"
-            new_item.is_active_ingredient = form_data.get("is_active_ingredient") == "on"
+            new_item.default_is_perishable = (
+                form_data.get("default_is_perishable") == "on"
+            )
+            new_item.is_active_ingredient = (
+                form_data.get("is_active_ingredient") == "on"
+            )
 
             shelf_life = form_data.get("recommended_shelf_life_days")
             if shelf_life:
@@ -738,7 +825,9 @@ def create_global_item():
             )
             new_item.inci_name = form_data.get("inci_name", "").strip() or None
             try:
-                new_item.cas_number = (form_data.get("cas_number") or "").strip() or None
+                new_item.cas_number = (
+                    form_data.get("cas_number") or ""
+                ).strip() or None
             except Exception:
                 new_item.cas_number = None
 
@@ -779,21 +868,33 @@ def create_global_item():
 
             certifications_raw = form_data.get("certifications", "").strip()
             if certifications_raw:
-                new_item.certifications = [c.strip() for c in certifications_raw.split(",") if c.strip()]
+                new_item.certifications = [
+                    c.strip() for c in certifications_raw.split(",") if c.strip()
+                ]
 
             aliases_raw = form_data.get("aliases", "").strip()
             if aliases_raw:
-                new_item.aliases = [n.strip() for n in aliases_raw.split(",") if n.strip()]
+                new_item.aliases = [
+                    n.strip() for n in aliases_raw.split(",") if n.strip()
+                ]
 
             if item_type == "ingredient":
                 new_item.ingredient = ingredient_obj
-                new_item.physical_form = physical_form_obj
-                _apply_tag_collection(new_item, "functions", FunctionTag, form_data.get("function_tags"))
+                new_item.variation = variation_obj
                 _apply_tag_collection(
-                    new_item, "applications", ApplicationTag, form_data.get("application_tags")
+                    new_item, "functions", FunctionTag, form_data.get("function_tags")
                 )
                 _apply_tag_collection(
-                    new_item, "category_tags", IngredientCategoryTag, form_data.get("category_tags")
+                    new_item,
+                    "applications",
+                    ApplicationTag,
+                    form_data.get("application_tags"),
+                )
+                _apply_tag_collection(
+                    new_item,
+                    "category_tags",
+                    IngredientCategoryTag,
+                    form_data.get("category_tags"),
                 )
             else:
                 new_item.ingredient = None
@@ -807,7 +908,9 @@ def create_global_item():
 
                 category_name = None
                 if new_item.ingredient_category_id:
-                    cat_obj = db.session.get(IngredientCategory, new_item.ingredient_category_id)
+                    cat_obj = db.session.get(
+                        IngredientCategory, new_item.ingredient_category_id
+                    )
                     category_name = cat_obj.name if cat_obj else None
                 EventEmitter.emit(
                     event_name="global_item_created",
@@ -824,7 +927,9 @@ def create_global_item():
                 pass
 
             flash(f'Global item "{name}" created successfully', "success")
-            return redirect(url_for("developer.global_item_detail", item_id=new_item.id))
+            return redirect(
+                url_for("developer.global_item_detail", item_id=new_item.id)
+            )
         except FormValidationError as exc:
             db.session.rollback()
             flash(str(exc), "error")
@@ -857,7 +962,10 @@ def delete_global_item(item_id):
         item = GlobalItem.query.get_or_404(item_id)
         if confirm_name != item.name:
             return jsonify(
-                {"success": False, "error": f'Confirmation text must match exactly: "{item.name}"'}
+                {
+                    "success": False,
+                    "error": f'Confirmation text must match exactly: "{item.name}"',
+                }
             )
 
         from app.models.inventory import InventoryItem

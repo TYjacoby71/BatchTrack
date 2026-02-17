@@ -78,9 +78,13 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     @classmethod
-    def build_request_context(cls, *, request, oauth_user_info: dict | None) -> SignupRequestContext:
+    def build_request_context(
+        cls, *, request, oauth_user_info: dict | None
+    ) -> SignupRequestContext:
         db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
-        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(db_tiers)
+        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
+            db_tiers
+        )
         lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
         lifetime_by_key = LifetimePricingService.map_by_key(lifetime_offers)
         lifetime_by_tier_id = LifetimePricingService.map_by_tier_id(lifetime_offers)
@@ -89,19 +93,37 @@ class SignupCheckoutService:
         referral_code = request.args.get("ref", request.form.get("ref"))
         promo_code = request.args.get("promo", request.form.get("promo"))
         preselected_tier = request.args.get("tier")
-        selected_lifetime_tier = request.args.get("lifetime_tier", request.form.get("lifetime_tier", ""))
-        requested_billing_mode = request.args.get("billing_mode", request.form.get("billing_mode", ""))
-        requested_billing_cycle = request.args.get("billing_cycle", request.form.get("billing_cycle", ""))
+        selected_lifetime_tier = request.args.get(
+            "lifetime_tier", request.form.get("lifetime_tier", "")
+        )
+        requested_billing_mode = request.args.get(
+            "billing_mode", request.form.get("billing_mode", "")
+        )
+        requested_billing_cycle = request.args.get(
+            "billing_cycle", request.form.get("billing_cycle", "")
+        )
 
-        prefill_email = request.form.get("contact_email") or ((oauth_user_info or {}).get("email") or "")
+        prefill_email = request.form.get("contact_email") or (
+            (oauth_user_info or {}).get("email") or ""
+        )
         prefill_phone = request.form.get("contact_phone") or ""
 
-        has_lifetime_capacity = LifetimePricingService.any_seats_remaining(lifetime_offers)
+        has_lifetime_capacity = LifetimePricingService.any_seats_remaining(
+            lifetime_offers
+        )
         default_billing_mode = "lifetime" if has_lifetime_capacity else "standard"
-        billing_mode = requested_billing_mode if requested_billing_mode in {"standard", "lifetime"} else default_billing_mode
-        default_standard_billing_cycle = "monthly" if has_lifetime_capacity else "yearly"
+        billing_mode = (
+            requested_billing_mode
+            if requested_billing_mode in {"standard", "lifetime"}
+            else default_billing_mode
+        )
+        default_standard_billing_cycle = (
+            "monthly" if has_lifetime_capacity else "yearly"
+        )
         standard_billing_cycle = (
-            requested_billing_cycle if requested_billing_cycle in {"monthly", "yearly"} else default_standard_billing_cycle
+            requested_billing_cycle
+            if requested_billing_cycle in {"monthly", "yearly"}
+            else default_standard_billing_cycle
         )
 
         if not has_lifetime_capacity:
@@ -128,7 +150,11 @@ class SignupCheckoutService:
 
         if not preselected_tier and db_tiers:
             preferred_default_tier = next(
-                (tier for tier in db_tiers if (getattr(tier, "name", "") or "").strip().lower() == "enthusiast"),
+                (
+                    tier
+                    for tier in db_tiers
+                    if (getattr(tier, "name", "") or "").strip().lower() == "enthusiast"
+                ),
                 None,
             )
             preselected_tier = str((preferred_default_tier or db_tiers[0]).id)
@@ -173,7 +199,9 @@ class SignupCheckoutService:
         oauth_providers: dict[str, bool] | None,
         canonical_url: str,
     ) -> dict[str, Any]:
-        default_tier_id = view_state.selected_tier or (str(context.db_tiers[0].id) if context.db_tiers else "")
+        default_tier_id = view_state.selected_tier or (
+            str(context.db_tiers[0].id) if context.db_tiers else ""
+        )
         page_title = "BatchTrack Signup | Choose Your Plan"
         page_description = (
             "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly, yearly, and limited lifetime options."
@@ -203,7 +231,9 @@ class SignupCheckoutService:
         }
 
     @classmethod
-    def process_submission(cls, *, context: SignupRequestContext, form_data) -> SignupFlowResult:
+    def process_submission(
+        cls, *, context: SignupRequestContext, form_data
+    ) -> SignupFlowResult:
         submission = cls._build_submission(context=context, form_data=form_data)
 
         if not submission.selected_tier:
@@ -223,10 +253,9 @@ class SignupCheckoutService:
         tier_obj = cls._load_selected_tier(submission.selected_tier)
 
         if submission.selected_mode == "lifetime":
-            lifetime_offer = (
-                context.lifetime_by_key.get(submission.selected_lifetime_key)
-                or context.lifetime_by_tier_id.get(str(submission.selected_tier))
-            )
+            lifetime_offer = context.lifetime_by_key.get(
+                submission.selected_lifetime_key
+            ) or context.lifetime_by_tier_id.get(str(submission.selected_tier))
             if not lifetime_offer:
                 return cls._error_result(
                     "Please choose a valid lifetime tier option.",
@@ -239,7 +268,8 @@ class SignupCheckoutService:
                 return cls._error_result(
                     "That lifetime tier is sold out. Please pick another option.",
                     submission=submission,
-                    selected_tier=lifetime_offer.get("tier_id") or submission.selected_tier,
+                    selected_tier=lifetime_offer.get("tier_id")
+                    or submission.selected_tier,
                     selected_lifetime_key=lifetime_offer.get("key", ""),
                     selected_standard_cycle="yearly",
                 )
@@ -250,8 +280,12 @@ class SignupCheckoutService:
                 submission.selected_tier = mapped_tier_id
                 tier_obj = cls._load_selected_tier(submission.selected_tier)
 
-            submission.effective_promo_code = lifetime_offer.get("coupon_code") or submission.effective_promo_code
-            submission.price_lookup_key_override = lifetime_offer.get("lifetime_lookup_key") or None
+            submission.effective_promo_code = (
+                lifetime_offer.get("coupon_code") or submission.effective_promo_code
+            )
+            submission.price_lookup_key_override = (
+                lifetime_offer.get("lifetime_lookup_key") or None
+            )
             if not submission.price_lookup_key_override:
                 return cls._error_result(
                     "Lifetime pricing is not configured for this tier yet.",
@@ -261,8 +295,13 @@ class SignupCheckoutService:
                     selected_standard_cycle="yearly",
                 )
 
-            lifetime_pricing = BillingService.get_live_pricing_for_lookup_key(submission.price_lookup_key_override)
-            if not lifetime_pricing or lifetime_pricing.get("billing_cycle") != "one-time":
+            lifetime_pricing = BillingService.get_live_pricing_for_lookup_key(
+                submission.price_lookup_key_override
+            )
+            if (
+                not lifetime_pricing
+                or lifetime_pricing.get("billing_cycle") != "one-time"
+            ):
                 return cls._error_result(
                     "Lifetime pricing must be configured as a one-time Stripe price.",
                     submission=submission,
@@ -272,7 +311,9 @@ class SignupCheckoutService:
                 )
 
             submission.stripe_coupon_id = lifetime_offer.get("stripe_coupon_id") or None
-            submission.stripe_promotion_code_id = lifetime_offer.get("stripe_promotion_code_id") or None
+            submission.stripe_promotion_code_id = (
+                lifetime_offer.get("stripe_promotion_code_id") or None
+            )
 
         if not tier_obj:
             return cls._error_result(
@@ -280,8 +321,13 @@ class SignupCheckoutService:
                 submission=submission,
             )
 
-        if submission.selected_mode == "standard" and submission.selected_standard_cycle == "yearly":
-            yearly_lookup_key = LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+        if (
+            submission.selected_mode == "standard"
+            and submission.selected_standard_cycle == "yearly"
+        ):
+            yearly_lookup_key = (
+                LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+            )
             if not yearly_lookup_key:
                 if not submission.billing_cycle_explicit:
                     submission.selected_standard_cycle = "monthly"
@@ -292,8 +338,13 @@ class SignupCheckoutService:
                         selected_standard_cycle="monthly",
                     )
             else:
-                yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
-                if not yearly_pricing or yearly_pricing.get("billing_cycle") != "yearly":
+                yearly_pricing = BillingService.get_live_pricing_for_lookup_key(
+                    yearly_lookup_key
+                )
+                if (
+                    not yearly_pricing
+                    or yearly_pricing.get("billing_cycle") != "yearly"
+                ):
                     if not submission.billing_cycle_explicit:
                         submission.selected_standard_cycle = "monthly"
                     else:
@@ -305,7 +356,9 @@ class SignupCheckoutService:
                 else:
                     submission.price_lookup_key_override = yearly_lookup_key
 
-        metadata = cls._build_checkout_metadata(context=context, submission=submission, tier_obj=tier_obj)
+        metadata = cls._build_checkout_metadata(
+            context=context, submission=submission, tier_obj=tier_obj
+        )
 
         try:
             pending_signup = SignupService.create_pending_signup_record(
@@ -333,14 +386,29 @@ class SignupCheckoutService:
             )
 
         metadata["pending_signup_id"] = str(pending_signup.id)
-        success_url = url_for("billing.complete_signup_from_stripe", _external=True) + "?session_id={CHECKOUT_SESSION_ID}"
+        success_url = (
+            url_for("billing.complete_signup_from_stripe", _external=True)
+            + "?session_id={CHECKOUT_SESSION_ID}"
+        )
         cancel_url = url_for(
             "auth.signup",
             _external=True,
             billing_mode=submission.selected_mode,
-            billing_cycle=submission.selected_standard_cycle if submission.selected_mode == "standard" else None,
-            lifetime_tier=submission.selected_lifetime_key if submission.selected_mode == "lifetime" else None,
-            promo=submission.effective_promo_code if submission.selected_mode == "lifetime" else None,
+            billing_cycle=(
+                submission.selected_standard_cycle
+                if submission.selected_mode == "standard"
+                else None
+            ),
+            lifetime_tier=(
+                submission.selected_lifetime_key
+                if submission.selected_mode == "lifetime"
+                else None
+            ),
+            promo=(
+                submission.effective_promo_code
+                if submission.selected_mode == "lifetime"
+                else None
+            ),
         )
 
         checkout_kwargs = {
@@ -352,13 +420,19 @@ class SignupCheckoutService:
             "phone_required": False,
         }
         if submission.price_lookup_key_override:
-            checkout_kwargs["price_lookup_key_override"] = submission.price_lookup_key_override
+            checkout_kwargs["price_lookup_key_override"] = (
+                submission.price_lookup_key_override
+            )
         if submission.stripe_coupon_id:
             checkout_kwargs["stripe_coupon_id"] = submission.stripe_coupon_id
         if submission.stripe_promotion_code_id:
-            checkout_kwargs["stripe_promotion_code_id"] = submission.stripe_promotion_code_id
+            checkout_kwargs["stripe_promotion_code_id"] = (
+                submission.stripe_promotion_code_id
+            )
 
-        stripe_session = BillingService.create_checkout_session_for_tier(tier_obj, **checkout_kwargs)
+        stripe_session = BillingService.create_checkout_session_for_tier(
+            tier_obj, **checkout_kwargs
+        )
         if stripe_session:
             pending_signup.stripe_checkout_session_id = stripe_session.id
             pending_signup.mark_status("checkout_created")
@@ -386,25 +460,46 @@ class SignupCheckoutService:
         )
         if preferred_offer:
             return preferred_offer
-        return next((offer for offer in lifetime_offers if offer.get("tier_id") and offer.get("has_remaining")), None)
+        return next(
+            (
+                offer
+                for offer in lifetime_offers
+                if offer.get("tier_id") and offer.get("has_remaining")
+            ),
+            None,
+        )
 
     @classmethod
-    def _build_submission(cls, *, context: SignupRequestContext, form_data) -> SignupSubmission:
+    def _build_submission(
+        cls, *, context: SignupRequestContext, form_data
+    ) -> SignupSubmission:
         selected_mode = form_data.get("billing_mode", "standard")
-        selected_mode = selected_mode if selected_mode in {"standard", "lifetime"} else "standard"
+        selected_mode = (
+            selected_mode if selected_mode in {"standard", "lifetime"} else "standard"
+        )
         raw_billing_cycle = form_data.get("billing_cycle")
         billing_cycle_explicit = bool(raw_billing_cycle and raw_billing_cycle.strip())
         selected_standard_cycle = raw_billing_cycle or context.standard_billing_cycle
         selected_standard_cycle = (
-            selected_standard_cycle if selected_standard_cycle in {"monthly", "yearly"} else context.standard_billing_cycle
+            selected_standard_cycle
+            if selected_standard_cycle in {"monthly", "yearly"}
+            else context.standard_billing_cycle
         )
-        selected_lifetime_key = form_data.get("lifetime_tier", context.selected_lifetime_tier)
-        selected_lifetime_key = selected_lifetime_key if selected_lifetime_key in context.lifetime_by_key else ""
+        selected_lifetime_key = form_data.get(
+            "lifetime_tier", context.selected_lifetime_tier
+        )
+        selected_lifetime_key = (
+            selected_lifetime_key
+            if selected_lifetime_key in context.lifetime_by_key
+            else ""
+        )
 
         submission = SignupSubmission(
             selected_tier=form_data.get("selected_tier"),
             oauth_signup=form_data.get("oauth_signup") == "true",
-            contact_email=(form_data.get("contact_email") or context.prefill_email or "").strip(),
+            contact_email=(
+                form_data.get("contact_email") or context.prefill_email or ""
+            ).strip(),
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
@@ -442,10 +537,16 @@ class SignupCheckoutService:
         promo: str | None = None,
     ) -> SignupFlowResult:
         view_state = SignupViewState(
-            selected_tier=selected_tier if selected_tier is not None else submission.selected_tier,
-            selected_mode=selected_mode if selected_mode is not None else submission.selected_mode,
+            selected_tier=(
+                selected_tier if selected_tier is not None else submission.selected_tier
+            ),
+            selected_mode=(
+                selected_mode if selected_mode is not None else submission.selected_mode
+            ),
             selected_lifetime_key=(
-                selected_lifetime_key if selected_lifetime_key is not None else submission.selected_lifetime_key
+                selected_lifetime_key
+                if selected_lifetime_key is not None
+                else submission.selected_lifetime_key
             ),
             selected_standard_cycle=(
                 selected_standard_cycle
@@ -475,7 +576,11 @@ class SignupCheckoutService:
             "signup_source": context.signup_source,
             "oauth_signup": str(submission.oauth_signup),
             "billing_mode": submission.selected_mode,
-            "billing_cycle": "lifetime" if submission.selected_mode == "lifetime" else submission.selected_standard_cycle,
+            "billing_cycle": (
+                "lifetime"
+                if submission.selected_mode == "lifetime"
+                else submission.selected_standard_cycle
+            ),
         }
 
         if submission.detected_timezone:
@@ -484,11 +589,17 @@ class SignupCheckoutService:
 
         if context.oauth_user_info:
             metadata["oauth_email"] = context.oauth_user_info.get("email", "")
-            metadata["oauth_provider"] = context.oauth_user_info.get("oauth_provider", "")
-            metadata["oauth_provider_id"] = context.oauth_user_info.get("oauth_provider_id", "")
+            metadata["oauth_provider"] = context.oauth_user_info.get(
+                "oauth_provider", ""
+            )
+            metadata["oauth_provider_id"] = context.oauth_user_info.get(
+                "oauth_provider_id", ""
+            )
             metadata["first_name"] = context.oauth_user_info.get("first_name", "")
             metadata["last_name"] = context.oauth_user_info.get("last_name", "")
-            metadata["username"] = context.oauth_user_info.get("email", "").split("@")[0]
+            metadata["username"] = context.oauth_user_info.get("email", "").split("@")[
+                0
+            ]
             metadata["email_verified"] = "true"
 
         if submission.selected_mode == "lifetime":

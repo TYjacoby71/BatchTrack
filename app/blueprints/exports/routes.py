@@ -28,7 +28,11 @@ def _recipe_or_404(recipe_id: int) -> Recipe:
     user_org = getattr(current_user, "organization_id", None)
     if user_org and recipe.organization_id != user_org:
         abort(403)
-    if user_org and recipe.organization_id == user_org and not recipe.org_origin_purchased:
+    if (
+        user_org
+        and recipe.organization_id == user_org
+        and not recipe.org_origin_purchased
+    ):
         updated = False
         if recipe.org_origin_recipe_id != recipe.id:
             recipe.org_origin_recipe_id = recipe.id
@@ -58,7 +62,9 @@ def _render_tool(template: str):
 @login_required
 @require_permission("reports.export")
 def soap_inci_recipe(recipe_id: int):
-    return render_template("exports/soap_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe")
+    return render_template(
+        "exports/soap_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe"
+    )
 
 
 # --- Candle label (HTML) ---
@@ -67,7 +73,9 @@ def soap_inci_recipe(recipe_id: int):
 @login_required
 @require_permission("reports.export")
 def candle_label_recipe(recipe_id: int):
-    return render_template("exports/candle_label.html", recipe=_recipe_or_404(recipe_id), source="recipe")
+    return render_template(
+        "exports/candle_label.html", recipe=_recipe_or_404(recipe_id), source="recipe"
+    )
 
 
 # --- Baker sheet (HTML) ---
@@ -76,7 +84,9 @@ def candle_label_recipe(recipe_id: int):
 @login_required
 @require_permission("reports.export")
 def baker_sheet_recipe(recipe_id: int):
-    return render_template("exports/baker_sheet.html", recipe=_recipe_or_404(recipe_id), source="recipe")
+    return render_template(
+        "exports/baker_sheet.html", recipe=_recipe_or_404(recipe_id), source="recipe"
+    )
 
 
 # --- Lotion INCI (HTML) ---
@@ -85,7 +95,9 @@ def baker_sheet_recipe(recipe_id: int):
 @login_required
 @require_permission("reports.export")
 def lotion_inci_recipe(recipe_id: int):
-    return render_template("exports/lotion_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe")
+    return render_template(
+        "exports/lotion_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe"
+    )
 
 
 # =========================================================

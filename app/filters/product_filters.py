@@ -50,7 +50,9 @@ def product_variant_name(sku: Any) -> str:
         return f"{product_name} - {variant_name}".strip(" -")
 
     if getattr(sku, "variant_name", None):
-        product_name = getattr(sku, "product_name", "") or getattr(getattr(sku, "product", None), "name", "")
+        product_name = getattr(sku, "product_name", "") or getattr(
+            getattr(sku, "product", None), "name", ""
+        )
         return f"{product_name} - {sku.variant_name}".strip(" -")
 
     return getattr(sku, "product_name", None) or str(sku)

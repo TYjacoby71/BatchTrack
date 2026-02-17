@@ -237,7 +237,10 @@ def test_reset_link_verifies_email_for_unverified_account(client, app):
 
     response = client.post(
         f"/auth/reset-password/{token}",
-        data={"password": "final-password-123", "confirm_password": "final-password-123"},
+        data={
+            "password": "final-password-123",
+            "confirm_password": "final-password-123",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 302

@@ -22,23 +22,23 @@ from ._constants import _CENTS, _UNSET
 def _normalize_sharing_scope(value: str | None) -> str:
     """Clamp sharing scope to supported values."""
     if not value:
-        return 'private'
+        return "private"
     normalized = str(value).strip().lower()
-    if normalized in {'public', 'pub', 'shared'}:
-        return 'public'
-    return 'private'
+    if normalized in {"public", "pub", "shared"}:
+        return "public"
+    return "private"
 
 
 # --- Default marketplace status ---
 # Purpose: Choose default marketplace status.
 def _default_marketplace_status(is_public: bool) -> str:
-    return 'listed' if is_public else 'draft'
+    return "listed" if is_public else "draft"
 
 
 # --- Normalize sale price ---
 # Purpose: Normalize sale price input.
 def _normalize_sale_price(value: Any) -> Optional[Decimal]:
-    if value in (None, '', _UNSET):
+    if value in (None, "", _UNSET):
         return None
     try:
         price = Decimal(str(value))
@@ -69,16 +69,18 @@ def _apply_marketplace_settings(
 ) -> None:
     target_scope = sharing_scope
     if target_scope is None and is_public is not None:
-        target_scope = 'public' if bool(is_public) else 'private'
+        target_scope = "public" if bool(is_public) else "private"
     if target_scope is None:
-        target_scope = getattr(recipe, 'sharing_scope', None)
+        target_scope = getattr(recipe, "sharing_scope", None)
     scope_value = _normalize_sharing_scope(target_scope)
 
-    current_scope = getattr(recipe, 'sharing_scope', None)
-    scope_changed = (current_scope or 'private') != scope_value
+    current_scope = getattr(recipe, "sharing_scope", None)
+    scope_changed = (current_scope or "private") != scope_value
     recipe.sharing_scope = scope_value
 
-    final_is_public = bool(is_public) if is_public is not None else scope_value == 'public'
+    final_is_public = (
+        bool(is_public) if is_public is not None else scope_value == "public"
+    )
     recipe.is_public = final_is_public
 
     if is_for_sale is not None:
@@ -87,7 +89,9 @@ def _apply_marketplace_settings(
         recipe.is_for_sale = False
 
     if sale_price is not None or not recipe.is_for_sale:
-        recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
+        recipe.sale_price = (
+            _normalize_sale_price(sale_price) if recipe.is_for_sale else None
+        )
 
     if getattr(recipe, "is_sellable", True) is False:
         recipe.is_for_sale = False
@@ -105,7 +109,7 @@ def _apply_marketplace_settings(
         recipe.public_description = public_description
 
     if product_store_url is not None:
-        recipe.product_store_url = (product_store_url or '').strip() or None
+        recipe.product_store_url = (product_store_url or "").strip() or None
     if skin_opt_in is not None:
         recipe.skin_opt_in = bool(skin_opt_in)
 

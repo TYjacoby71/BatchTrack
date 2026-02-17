@@ -19,7 +19,9 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from flask import current_app, has_app_context
-from sqlalchemy import Table, inspect as sa_inspect, or_
+from sqlalchemy import Table
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import Recipe
@@ -167,7 +169,9 @@ def archive_marketplace_recipes(organization, recipes: Sequence[Recipe]) -> str 
 
     archive_dir = _archive_directory()
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    archive_path = archive_dir / f"org_{organization.id}_marketplace_recipes_{timestamp}.json"
+    archive_path = (
+        archive_dir / f"org_{organization.id}_marketplace_recipes_{timestamp}.json"
+    )
 
     payload = {
         "archived_at": datetime.now(timezone.utc).isoformat(),
@@ -198,22 +202,19 @@ def detach_external_recipe_links(
         return 0
 
     touched = 0
-    external_recipes = (
-        Recipe.query.filter(
-            or_(Recipe.organization_id.is_(None), Recipe.organization_id != deleted_org_id),
-            or_(
-                Recipe.origin_organization_id == deleted_org_id,
-                Recipe.origin_recipe_id.in_(recipe_ids),
-                Recipe.org_origin_source_org_id == deleted_org_id,
-                Recipe.org_origin_source_recipe_id.in_(recipe_ids),
-                Recipe.parent_recipe_id.in_(recipe_ids),
-                Recipe.parent_master_id.in_(recipe_ids),
-                Recipe.cloned_from_id.in_(recipe_ids),
-                Recipe.root_recipe_id.in_(recipe_ids),
-            ),
-        )
-        .all()
-    )
+    external_recipes = Recipe.query.filter(
+        or_(Recipe.organization_id.is_(None), Recipe.organization_id != deleted_org_id),
+        or_(
+            Recipe.origin_organization_id == deleted_org_id,
+            Recipe.origin_recipe_id.in_(recipe_ids),
+            Recipe.org_origin_source_org_id == deleted_org_id,
+            Recipe.org_origin_source_recipe_id.in_(recipe_ids),
+            Recipe.parent_recipe_id.in_(recipe_ids),
+            Recipe.parent_master_id.in_(recipe_ids),
+            Recipe.cloned_from_id.in_(recipe_ids),
+            Recipe.root_recipe_id.in_(recipe_ids),
+        ),
+    ).all()
 
     for recipe in external_recipes:
         changed = False
@@ -252,7 +253,10 @@ def detach_external_recipe_links(
                 )
 
     lineage_rows = RecipeLineage.query.filter(
-        or_(RecipeLineage.organization_id.is_(None), RecipeLineage.organization_id != deleted_org_id),
+        or_(
+            RecipeLineage.organization_id.is_(None),
+            RecipeLineage.organization_id != deleted_org_id,
+        ),
         RecipeLineage.source_recipe_id.in_(recipe_ids),
     ).all()
     for event in lineage_rows:
@@ -266,7 +270,9 @@ def detach_external_recipe_links(
 # Purpose: Produce a safe child-before-parent order for FK-connected tables.
 # Inputs: Candidate table names and dependency map.
 # Outputs: Ordered table names minimizing FK delete violations.
-def _topological_child_first(nodes: Sequence[str], dependencies: dict[str, set[str]]) -> list[str]:
+def _topological_child_first(
+    nodes: Sequence[str], dependencies: dict[str, set[str]]
+) -> list[str]:
     node_set = set(nodes)
     indegree = {node: 0 for node in node_set}
     adjacency: dict[str, set[str]] = {node: set() for node in node_set}
@@ -301,7 +307,9 @@ def _topological_child_first(nodes: Sequence[str], dependencies: dict[str, set[s
 # Purpose: Delete rows from tables with organization_id in FK-safe order.
 # Inputs: Organization ID and optional table exclusions.
 # Outputs: List of table names that received scoped delete statements.
-def delete_org_scoped_rows(org_id: int, *, exclude_tables: set[str] | None = None) -> list[str]:
+def delete_org_scoped_rows(
+    org_id: int, *, exclude_tables: set[str] | None = None
+) -> list[str]:
     exclude = set(exclude_tables or set())
     inspector = sa_inspect(db.engine)
 
@@ -347,7 +355,9 @@ def clear_user_foreign_keys(user_ids: Sequence[int]) -> None:
     for table_name in inspector.get_table_names():
         table = _resolve_table(table_name)
 
-        column_info = {column["name"]: column for column in inspector.get_columns(table_name)}
+        column_info = {
+            column["name"]: column for column in inspector.get_columns(table_name)
+        }
         nullable_columns: list[str] = []
         non_nullable_columns: list[str] = []
 

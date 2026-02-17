@@ -148,7 +148,9 @@ def test_toggle_user_active_endpoint(client, developer_user, app):
     _login_as_developer(client, developer_user)
     customer_id = _create_customer(app)
 
-    resp = client.post(f"/developer/users/{customer_id}/toggle-active", follow_redirects=False)
+    resp = client.post(
+        f"/developer/users/{customer_id}/toggle-active", follow_redirects=False
+    )
 
     assert resp.status_code == 302
     with app.app_context():
@@ -183,7 +185,9 @@ def test_container_options_api(client, developer_user):
     data = resp.get_json()
     assert resp.status_code == 200
     assert data["success"] is True
-    assert all(key in data["options"] for key in ("materials", "types", "styles", "colors"))
+    assert all(
+        key in data["options"] for key in ("materials", "types", "styles", "colors")
+    )
 
 
 def test_organizations_page_renders(client, developer_user):
@@ -208,9 +212,10 @@ def test_create_organization_flow(client, developer_user, app):
         "phone": "",
     }
 
-    resp = client.post("/developer/organizations/create", data=form, follow_redirects=False)
+    resp = client.post(
+        "/developer/organizations/create", data=form, follow_redirects=False
+    )
 
     assert resp.status_code == 302
     with client.application.app_context():
         assert User.query.filter_by(username=form["username"]).first() is not None
-

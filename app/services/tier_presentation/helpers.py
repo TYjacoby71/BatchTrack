@@ -51,4 +51,3 @@ def normalize_feature_label(value: str | None) -> str:
     """Normalize a display label for stable matching."""
     cleaned = " ".join(str(value or "").replace(".", " ").replace("_", " ").split())
     return cleaned.strip().lower()
-

@@ -64,7 +64,9 @@ class EnvReader:
         try:
             return int(value)
         except ValueError:
-            self.warn(f"{key} expected integer but received {value!r}; falling back to {default}.")
+            self.warn(
+                f"{key} expected integer but received {value!r}; falling back to {default}."
+            )
             return default
 
     def float(self, key: str, default: float = 0.0) -> float:
@@ -74,7 +76,9 @@ class EnvReader:
         try:
             return float(value)
         except ValueError:
-            self.warn(f"{key} expected float but received {value!r}; falling back to {default}.")
+            self.warn(
+                f"{key} expected float but received {value!r}; falling back to {default}."
+            )
             return default
 
     def bool(self, key: str, default: bool = False) -> bool:
@@ -86,7 +90,9 @@ class EnvReader:
             return True
         if lowered in _FALSE_VALUES:
             return False
-        self.warn(f"{key} expected boolean but received {value!r}; falling back to {default}.")
+        self.warn(
+            f"{key} expected boolean but received {value!r}; falling back to {default}."
+        )
         return default
 
     def raw(self, key: str) -> str | None:
@@ -106,7 +112,11 @@ def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
-    return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
+    return (
+        "postgresql://" + url[len("postgres://") :]
+        if url.startswith("postgres://")
+        else url
+    )
 
 
 # --- Extract host ---
@@ -161,16 +171,18 @@ def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
 # --- Resolve base URL ---
 # Purpose: Determine APP_BASE_URL for the active environment.
 def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
-    value = reader.str('APP_BASE_URL')
+    value = reader.str("APP_BASE_URL")
     if value:
         return value
-    if env_name in {'development', 'testing'}:
-        fallback = 'http://localhost:5000'
+    if env_name in {"development", "testing"}:
+        fallback = "http://localhost:5000"
         reader.warn(
             "APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments."
         )
         return fallback
-    raise RuntimeError('APP_BASE_URL must be set for staging and production environments.')
+    raise RuntimeError(
+        "APP_BASE_URL must be set for staging and production environments."
+    )
 
 
 # --- Preferred scheme ---
@@ -179,7 +191,7 @@ def _preferred_scheme(base_url: str, env_name: str) -> str:
     scheme = _derive_scheme(base_url)
     if scheme:
         return scheme
-    return 'http' if env_name == 'development' else 'https'
+    return "http" if env_name == "development" else "https"
 
 
 env = EnvReader()
@@ -198,7 +210,9 @@ if not _BASE_URL:
     _BASE_URL = _resolve_base_url(env, ENV_INFO.name)
 _CANONICAL_HOST = SETTINGS.get("APP_HOST") or _extract_host(_BASE_URL)
 _PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
-_AUTH_EMAIL_VERIFICATION_MODE = (env.str("AUTH_EMAIL_VERIFICATION_MODE", "prompt") or "prompt").strip().lower()
+_AUTH_EMAIL_VERIFICATION_MODE = (
+    (env.str("AUTH_EMAIL_VERIFICATION_MODE", "prompt") or "prompt").strip().lower()
+)
 if _AUTH_EMAIL_VERIFICATION_MODE not in {"off", "prompt", "required"}:
     env.warn(
         "AUTH_EMAIL_VERIFICATION_MODE expected one of {'off','prompt','required'}; falling back to 'prompt'."
@@ -218,12 +232,12 @@ class BaseConfig:
     SESSION_LIFETIME_MINUTES = SETTINGS.get("SESSION_LIFETIME_MINUTES", 60)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=SESSION_LIFETIME_MINUTES)
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = "Lax"
     WTF_CSRF_ENABLED = True
     SESSION_USE_SIGNER = True
     SESSION_PERMANENT = True
 
-    UPLOAD_FOLDER = 'static/product_images'
+    UPLOAD_FOLDER = "static/product_images"
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
     APP_BASE_URL = _BASE_URL
@@ -234,7 +248,9 @@ class BaseConfig:
     RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri(SETTINGS)
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
     RATELIMIT_ENABLED = SETTINGS.get("RATELIMIT_ENABLED", True)
-    RATELIMIT_DEFAULT = SETTINGS.get("RATELIMIT_DEFAULT", "5000 per hour;1000 per minute")
+    RATELIMIT_DEFAULT = SETTINGS.get(
+        "RATELIMIT_DEFAULT", "5000 per hour;1000 per minute"
+    )
     RATELIMIT_SWALLOW_ERRORS = SETTINGS.get("RATELIMIT_SWALLOW_ERRORS", True)
 
     REDIS_URL = SETTINGS.get("REDIS_URL")
@@ -288,13 +304,16 @@ class BaseConfig:
     GOOGLE_OAUTH_CLIENT_SECRET = SETTINGS.get("GOOGLE_OAUTH_CLIENT_SECRET")
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': SETTINGS.get("SQLALCHEMY_POOL_SIZE", 15),
-        'max_overflow': SETTINGS.get("SQLALCHEMY_MAX_OVERFLOW", 5),
-        'pool_pre_ping': True,
-        'pool_recycle': SETTINGS.get("SQLALCHEMY_POOL_RECYCLE", 900),
-        'pool_timeout': SETTINGS.get("SQLALCHEMY_POOL_TIMEOUT", 15),
-        'pool_use_lifo': SETTINGS.get("SQLALCHEMY_POOL_USE_LIFO", True),
-        'pool_reset_on_return': SETTINGS.get("SQLALCHEMY_POOL_RESET_ON_RETURN", "commit") or "commit",
+        "pool_size": SETTINGS.get("SQLALCHEMY_POOL_SIZE", 15),
+        "max_overflow": SETTINGS.get("SQLALCHEMY_MAX_OVERFLOW", 5),
+        "pool_pre_ping": True,
+        "pool_recycle": SETTINGS.get("SQLALCHEMY_POOL_RECYCLE", 900),
+        "pool_timeout": SETTINGS.get("SQLALCHEMY_POOL_TIMEOUT", 15),
+        "pool_use_lifo": SETTINGS.get("SQLALCHEMY_POOL_USE_LIFO", True),
+        "pool_reset_on_return": SETTINGS.get(
+            "SQLALCHEMY_POOL_RESET_ON_RETURN", "commit"
+        )
+        or "commit",
     }
     DB_STATEMENT_TIMEOUT_MS = SETTINGS.get("DB_STATEMENT_TIMEOUT_MS", 15000)
     DB_LOCK_TIMEOUT_MS = SETTINGS.get("DB_LOCK_TIMEOUT_MS", 5000)
@@ -307,20 +326,36 @@ class BaseConfig:
     FEATURE_BATCHBOT = SETTINGS.get("FEATURE_BATCHBOT", True)
 
     GOOGLE_AI_API_KEY = SETTINGS.get("GOOGLE_AI_API_KEY")
-    GOOGLE_AI_DEFAULT_MODEL = SETTINGS.get("GOOGLE_AI_DEFAULT_MODEL") or "gemini-1.5-flash"
-    GOOGLE_AI_BATCHBOT_MODEL = SETTINGS.get("GOOGLE_AI_BATCHBOT_MODEL") or GOOGLE_AI_DEFAULT_MODEL or "gemini-1.5-pro"
-    GOOGLE_AI_PUBLICBOT_MODEL = SETTINGS.get("GOOGLE_AI_PUBLICBOT_MODEL") or "gemini-1.5-flash"
+    GOOGLE_AI_DEFAULT_MODEL = (
+        SETTINGS.get("GOOGLE_AI_DEFAULT_MODEL") or "gemini-1.5-flash"
+    )
+    GOOGLE_AI_BATCHBOT_MODEL = (
+        SETTINGS.get("GOOGLE_AI_BATCHBOT_MODEL")
+        or GOOGLE_AI_DEFAULT_MODEL
+        or "gemini-1.5-pro"
+    )
+    GOOGLE_AI_PUBLICBOT_MODEL = (
+        SETTINGS.get("GOOGLE_AI_PUBLICBOT_MODEL") or "gemini-1.5-flash"
+    )
     GOOGLE_AI_ENABLE_SEARCH = SETTINGS.get("GOOGLE_AI_ENABLE_SEARCH", True)
     GOOGLE_AI_ENABLE_FILE_SEARCH = SETTINGS.get("GOOGLE_AI_ENABLE_FILE_SEARCH", True)
     GOOGLE_AI_SEARCH_TOOL = SETTINGS.get("GOOGLE_AI_SEARCH_TOOL") or "google_search"
-    BATCHBOT_REQUEST_TIMEOUT_SECONDS = SETTINGS.get("BATCHBOT_REQUEST_TIMEOUT_SECONDS", 45)
+    BATCHBOT_REQUEST_TIMEOUT_SECONDS = SETTINGS.get(
+        "BATCHBOT_REQUEST_TIMEOUT_SECONDS", 45
+    )
     BATCHBOT_DEFAULT_MAX_REQUESTS = SETTINGS.get("BATCHBOT_DEFAULT_MAX_REQUESTS", 0)
     BATCHBOT_REQUEST_WINDOW_DAYS = SETTINGS.get("BATCHBOT_REQUEST_WINDOW_DAYS", 30)
     BATCHBOT_CHAT_MAX_MESSAGES = SETTINGS.get("BATCHBOT_CHAT_MAX_MESSAGES", 60)
-    BATCHBOT_COST_PER_MILLION_INPUT = SETTINGS.get("BATCHBOT_COST_PER_MILLION_INPUT", 0.35)
-    BATCHBOT_COST_PER_MILLION_OUTPUT = SETTINGS.get("BATCHBOT_COST_PER_MILLION_OUTPUT", 0.53)
+    BATCHBOT_COST_PER_MILLION_INPUT = SETTINGS.get(
+        "BATCHBOT_COST_PER_MILLION_INPUT", 0.35
+    )
+    BATCHBOT_COST_PER_MILLION_OUTPUT = SETTINGS.get(
+        "BATCHBOT_COST_PER_MILLION_OUTPUT", 0.53
+    )
     BATCHBOT_SIGNUP_BONUS_REQUESTS = SETTINGS.get("BATCHBOT_SIGNUP_BONUS_REQUESTS", 20)
-    BATCHBOT_REFILL_LOOKUP_KEY = SETTINGS.get("BATCHBOT_REFILL_LOOKUP_KEY") or "batchbot_refill_100"
+    BATCHBOT_REFILL_LOOKUP_KEY = (
+        SETTINGS.get("BATCHBOT_REFILL_LOOKUP_KEY") or "batchbot_refill_100"
+    )
 
     DOMAIN_EVENT_WEBHOOK_URL = SETTINGS.get("DOMAIN_EVENT_WEBHOOK_URL")
 
@@ -328,7 +363,7 @@ class BaseConfig:
 # --- DevelopmentConfig ---
 # Purpose: Override settings for local development defaults.
 class DevelopmentConfig(BaseConfig):
-    ENV = 'development'
+    ENV = "development"
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
@@ -337,40 +372,44 @@ class DevelopmentConfig(BaseConfig):
     if _db_url:
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
-        instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
+        instance_path = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), "..", "instance"
+        )
         os.makedirs(instance_path, exist_ok=True)
         os.chmod(instance_path, 0o777)
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
+        SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(
+            instance_path, "batchtrack.db"
+        )
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 3600,
-        'echo': False,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "echo": False,
     }
 
 
 # --- TestingConfig ---
 # Purpose: Override settings for tests and in-memory databases.
 class TestingConfig(BaseConfig):
-    ENV = 'testing'
+    ENV = "testing"
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
+        "pool_pre_ping": True,
     }
-    RATELIMIT_STORAGE_URI = SETTINGS.get("RATELIMIT_STORAGE_URI") or 'memory://'
+    RATELIMIT_STORAGE_URI = SETTINGS.get("RATELIMIT_STORAGE_URI") or "memory://"
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
-    SESSION_TYPE = 'filesystem'
+    SESSION_TYPE = "filesystem"
 
 
 # --- StagingConfig ---
 # Purpose: Override settings for staging deployments.
 class StagingConfig(BaseConfig):
-    ENV = 'staging'
+    ENV = "staging"
     SESSION_COOKIE_SECURE = True
-    PREFERRED_URL_SCHEME = 'https'
+    PREFERRED_URL_SCHEME = "https"
     DEBUG = False
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
@@ -379,19 +418,19 @@ class StagingConfig(BaseConfig):
 # --- ProductionConfig ---
 # Purpose: Override settings for production deployments.
 class ProductionConfig(BaseConfig):
-    ENV = 'production'
+    ENV = "production"
     SESSION_COOKIE_SECURE = True
-    PREFERRED_URL_SCHEME = 'https'
+    PREFERRED_URL_SCHEME = "https"
     DEBUG = False
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(SETTINGS.get("DATABASE_URL"))
 
 
 config_map = {
-    'development': DevelopmentConfig,
-    'testing': TestingConfig,
-    'staging': StagingConfig,
-    'production': ProductionConfig,
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "staging": StagingConfig,
+    "production": ProductionConfig,
 }
 
 
@@ -409,8 +448,8 @@ def get_config():
 
 Config = config_map[ENV_INFO.name]
 ENV_DIAGNOSTICS = {
-    'active': ENV_INFO.name,
-    'source': ENV_INFO.source,
-    'variables': {ENV_INFO.source: ENV_INFO.raw_value},
-    'warnings': tuple(env.warnings),
+    "active": ENV_INFO.name,
+    "source": ENV_INFO.source,
+    "variables": {ENV_INFO.source: ENV_INFO.raw_value},
+    "warnings": tuple(env.warnings),
 }

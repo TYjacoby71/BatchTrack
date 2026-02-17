@@ -33,7 +33,9 @@ class PerformanceMonitor:
         g.perf_metrics["query_time"] += max(duration, 0.0)
 
     @staticmethod
-    def log_slow_calls(threshold: float = DEFAULT_QUERY_THRESHOLD) -> Callable[[TFunc], TFunc]:
+    def log_slow_calls(
+        threshold: float = DEFAULT_QUERY_THRESHOLD,
+    ) -> Callable[[TFunc], TFunc]:
         """
         Decorator that logs whenever the wrapped callable exceeds *threshold* seconds.
         Intended for instrumenting ORM or service-layer methods without external tooling.
@@ -62,7 +64,9 @@ class PerformanceMonitor:
         log_target.warning("%s (%.3fs)", message, duration)
 
 
-def profile_route(func: TFunc, *, threshold: float = PerformanceMonitor.DEFAULT_ROUTE_THRESHOLD) -> TFunc:
+def profile_route(
+    func: TFunc, *, threshold: float = PerformanceMonitor.DEFAULT_ROUTE_THRESHOLD
+) -> TFunc:
     """Decorator for view functions to log requests exceeding *threshold* seconds."""
 
     @wraps(func)
@@ -71,9 +75,7 @@ def profile_route(func: TFunc, *, threshold: float = PerformanceMonitor.DEFAULT_
         response = func(*args, **kwargs)
         duration = time.perf_counter() - start
         if duration >= threshold:
-            PerformanceMonitor._emit_warning(
-                f"Slow route: {func.__name__}", duration
-            )
+            PerformanceMonitor._emit_warning(f"Slow route: {func.__name__}", duration)
         return response
 
     return wrapper  # type: ignore[return-value]

@@ -67,7 +67,9 @@ class BillingAccessPolicyService:
             )
 
         is_active = bool(getattr(organization, "is_active", True))
-        billing_status = (getattr(organization, "billing_status", "active") or "active").lower()
+        billing_status = (
+            getattr(organization, "billing_status", "active") or "active"
+        ).lower()
         tier_obj = getattr(organization, "subscription_tier_obj", None)
         tier_is_billing_exempt = bool(getattr(tier_obj, "is_billing_exempt", False))
 

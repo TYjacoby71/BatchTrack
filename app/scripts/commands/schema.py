@@ -16,11 +16,11 @@ def create_app_command():
 
         print("📦 Dynamically importing all models...")
 
-        from ... import models
-
         import importlib
         import os
         import pkgutil
+
+        from ... import models
 
         models_imported = 0
 
@@ -73,11 +73,11 @@ def sync_schema_command():
         print("🚀 Syncing database schema to match models (safe mode)...")
         print("📦 Dynamically importing all models...")
 
-        from ... import models
-
         import importlib
         import os
         import pkgutil
+
+        from ... import models
 
         models_imported = 0
 
@@ -111,7 +111,9 @@ def sync_schema_command():
         new_tables = tables_after - existing_tables
 
         if new_tables:
-            print(f"✅ Added {len(new_tables)} new tables: {', '.join(sorted(new_tables))}")
+            print(
+                f"✅ Added {len(new_tables)} new tables: {', '.join(sorted(new_tables))}"
+            )
         else:
             print("✅ No new tables needed")
 
@@ -119,13 +121,18 @@ def sync_schema_command():
         columns_added = 0
 
         for table_name in existing_tables:
-            existing_columns = {col["name"]: col for col in inspector.get_columns(table_name)}
+            existing_columns = {
+                col["name"]: col for col in inspector.get_columns(table_name)
+            }
 
             model_class = None
             for model_name in models.__all__:
                 if hasattr(models, model_name):
                     model_cls = getattr(models, model_name)
-                    if hasattr(model_cls, "__tablename__") and model_cls.__tablename__ == table_name:
+                    if (
+                        hasattr(model_cls, "__tablename__")
+                        and model_cls.__tablename__ == table_name
+                    ):
                         model_class = model_cls
                         break
 
@@ -137,10 +144,14 @@ def sync_schema_command():
             for column_name, column in model_class.__table__.columns.items():
                 expected_columns[column_name] = column
 
-            missing_columns = set(expected_columns.keys()) - set(existing_columns.keys())
+            missing_columns = set(expected_columns.keys()) - set(
+                existing_columns.keys()
+            )
 
             if missing_columns:
-                print(f"   📋 Table '{table_name}' missing columns: {', '.join(missing_columns)}")
+                print(
+                    f"   📋 Table '{table_name}' missing columns: {', '.join(missing_columns)}"
+                )
 
                 for column_name in missing_columns:
                     column = expected_columns[column_name]
@@ -185,7 +196,9 @@ def sync_schema_command():
         print(f"📊 Total tables: {len(tables_after)}")
         print(f"📊 Total columns added: {columns_added}")
         print("✅ Database schema safely synced to match models!")
-        print("🔄 Note: This only adds missing tables/columns - existing data is preserved")
+        print(
+            "🔄 Note: This only adds missing tables/columns - existing data is preserved"
+        )
         print("⚠️  New columns are added as nullable for safety")
 
     except Exception as e:
@@ -198,4 +211,3 @@ def sync_schema_command():
 
 
 SCHEMA_COMMANDS = [create_app_command, sync_schema_command]
-

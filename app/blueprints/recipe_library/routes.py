@@ -10,19 +10,28 @@ Glossary:
 
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, url_for, abort, session, current_app
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user
-from sqlalchemy import func, or_, nullslast
+from sqlalchemy import func, nullslast, or_
 from sqlalchemy.orm import joinedload
 
-from app.extensions import db, limiter, cache
-from app.models import Recipe, ProductCategory, Organization
-from app.models.statistics import RecipeStats, BatchStats
+from app.extensions import cache, db, limiter
+from app.models import Organization, ProductCategory, Recipe
+from app.models.statistics import BatchStats
+from app.services.cache_invalidation import recipe_library_cache_key
 from app.services.statistics import AnalyticsDataService
-from app.utils.seo import slugify_value
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 from app.utils.permissions import _org_tier_includes_permission
-from app.services.cache_invalidation import recipe_library_cache_key
+from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
 
 recipe_library_bp = Blueprint("recipe_library_bp", __name__)
@@ -94,7 +103,8 @@ def recipe_library():
             Recipe.test_sequence.is_(None),
             Recipe.is_archived.is_(False),
             Recipe.is_current.is_(True),
-            (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
+            (Organization.recipe_library_blocked.is_(False))
+            | (Organization.recipe_library_blocked.is_(None)),
         )
     )
 
@@ -112,7 +122,8 @@ def recipe_library():
         query = query.filter(Recipe.org_origin_purchased.is_(True))
     elif origin_filter == "authored":
         query = query.filter(
-            (Recipe.org_origin_type.in_(["authored", "published"])) | (Recipe.org_origin_type.is_(None))
+            (Recipe.org_origin_type.in_(["authored", "published"]))
+            | (Recipe.org_origin_type.is_(None))
         )
 
     if search_query:
@@ -169,14 +180,14 @@ def recipe_library():
 
     stats = AnalyticsDataService.get_recipe_library_metrics(force_refresh=False)
     # Ensure all required stats have default values
-    stats.setdefault('total_public', 0)
-    stats.setdefault('total_for_sale', 0)
-    stats.setdefault('average_sale_price', 0.0)
-    stats.setdefault('sale_percentage', 0)
-    stats.setdefault('blocked_listings', 0)
-    stats.setdefault('total_downloads', 0)
-    stats.setdefault('total_purchases', 0)
-    stats.setdefault('batchtrack_native_count', 0)
+    stats.setdefault("total_public", 0)
+    stats.setdefault("total_for_sale", 0)
+    stats.setdefault("average_sale_price", 0.0)
+    stats.setdefault("sale_percentage", 0)
+    stats.setdefault("blocked_listings", 0)
+    stats.setdefault("total_downloads", 0)
+    stats.setdefault("total_purchases", 0)
+    stats.setdefault("batchtrack_native_count", 0)
 
     rendered = render_template(
         "library/recipe_library.html",
@@ -192,7 +203,11 @@ def recipe_library():
         sort_mode=sort_mode,
         show_public_header=True,
     )
-    cache.set(cache_key, rendered, timeout=current_app.config.get("RECIPE_LIBRARY_CACHE_TTL", 180))
+    cache.set(
+        cache_key,
+        rendered,
+        timeout=current_app.config.get("RECIPE_LIBRARY_CACHE_TTL", 180),
+    )
     return rendered
 
 
@@ -216,7 +231,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
             Recipe.test_sequence.is_(None),
             Recipe.is_archived.is_(False),
             Recipe.is_current.is_(True),
-            (Organization.recipe_library_blocked.is_(False)) | (Organization.recipe_library_blocked.is_(None)),
+            (Organization.recipe_library_blocked.is_(False))
+            | (Organization.recipe_library_blocked.is_(None)),
         )
         .first_or_404()
     )
@@ -272,20 +288,17 @@ def organization_marketplace(organization_id: int):
     sale_filter = (request.args.get("sale") or "any").lower()
     sort_mode = (request.args.get("sort") or "newest").lower()
 
-    query = (
-        Recipe.query.options(
-            joinedload(Recipe.product_category),
-            joinedload(Recipe.stats),
-        )
-        .filter(
-            Recipe.organization_id == org.id,
-            Recipe.is_public.is_(True),
-            Recipe.status == "published",
-            Recipe.marketplace_status == "listed",
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-        )
+    query = Recipe.query.options(
+        joinedload(Recipe.product_category),
+        joinedload(Recipe.stats),
+    ).filter(
+        Recipe.organization_id == org.id,
+        Recipe.is_public.is_(True),
+        Recipe.status == "published",
+        Recipe.marketplace_status == "listed",
+        Recipe.test_sequence.is_(None),
+        Recipe.is_archived.is_(False),
+        Recipe.is_current.is_(True),
     )
 
     if sale_filter == "sale":
@@ -345,7 +358,9 @@ def organization_marketplace(organization_id: int):
     )
 
 
-def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None) -> dict:
+def _serialize_recipe_for_public(
+    recipe: Recipe, cost_rollup: dict | None = None
+) -> dict:
     stats = recipe.stats[0] if getattr(recipe, "stats", None) else None
     cover_url = None
     if recipe.cover_image_path:
@@ -354,8 +369,15 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         cover_url = recipe.cover_image_url
 
     yield_per_dollar = None
-    if stats and stats.avg_cost_per_batch and stats.avg_cost_per_batch > 0 and recipe.predicted_yield:
-        yield_per_dollar = float(recipe.predicted_yield or 0) / float(stats.avg_cost_per_batch)
+    if (
+        stats
+        and stats.avg_cost_per_batch
+        and stats.avg_cost_per_batch > 0
+        and recipe.predicted_yield
+    ):
+        yield_per_dollar = float(recipe.predicted_yield or 0) / float(
+            stats.avg_cost_per_batch
+        )
 
     ingredient_cost = None
     total_cost = None
@@ -376,7 +398,9 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         "name": recipe.name,
         "category": recipe.product_category.name if recipe.product_category else None,
         "is_for_sale": recipe.is_for_sale,
-        "sale_price": float(recipe.sale_price) if recipe.sale_price is not None else None,
+        "sale_price": (
+            float(recipe.sale_price) if recipe.sale_price is not None else None
+        ),
         "product_store_url": recipe.product_store_url,
         "cover_url": cover_url,
         "instructions": recipe.instructions,
@@ -400,9 +424,11 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
             "type": recipe.org_origin_type,
             "purchased": recipe.org_origin_purchased,
             "source_org_id": recipe.org_origin_source_org_id,
-            "source_org_name": recipe.org_origin_source_org.name
-            if recipe.org_origin_source_org
-            else None,
+            "source_org_name": (
+                recipe.org_origin_source_org.name
+                if recipe.org_origin_source_org
+                else None
+            ),
         },
         "download_count": recipe.download_count,
         "purchase_count": recipe.purchase_count,

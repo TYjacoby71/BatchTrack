@@ -9,12 +9,21 @@ from flask import current_app
 from sqlalchemy import asc, desc
 
 from app.extensions import db
-from app.models import Batch, InventoryItem, Recipe, FreshnessSnapshot, Product
+from app.models import Batch, FreshnessSnapshot, InventoryItem, Product, Recipe
 from app.services.ai import GoogleAIClient
 from app.services.batchbot_credit_service import BatchBotCreditService, CreditSnapshot
-from app.services.batchbot_usage_service import BatchBotUsageService, BatchBotUsageSnapshot
-from app.services.bulk_inventory_service import BulkInventoryService, BulkInventoryServiceError
-from app.services.inventory_adjustment import create_inventory_item, process_inventory_adjustment
+from app.services.batchbot_usage_service import (
+    BatchBotUsageService,
+    BatchBotUsageSnapshot,
+)
+from app.services.bulk_inventory_service import (
+    BulkInventoryService,
+    BulkInventoryServiceError,
+)
+from app.services.inventory_adjustment import (
+    create_inventory_item,
+    process_inventory_adjustment,
+)
 from app.services.recipe_service import create_recipe
 from app.services.statistics.analytics_service import AnalyticsDataService
 from app.utils.timezone_utils import TimezoneUtils
@@ -40,7 +49,9 @@ class BatchBotService:
         if not current_app.config.get("FEATURE_BATCHBOT", False):
             raise BatchBotServiceError("BatchBot feature is disabled.")
         if not user or not getattr(user, "organization", None):
-            raise BatchBotServiceError("BatchBot requires an authenticated organization user.")
+            raise BatchBotServiceError(
+                "BatchBot requires an authenticated organization user."
+            )
 
         self.user = user
         self.organization = user.organization
@@ -98,7 +109,9 @@ class BatchBotService:
                 },
             )
         else:
-            quota = BatchBotUsageService.record_chat(org=self.organization, user=self.user, delta=1)
+            quota = BatchBotUsageService.record_chat(
+                org=self.organization, user=self.user, delta=1
+            )
         credit_snapshot = BatchBotCreditService.snapshot(self.organization)
 
         return BatchBotResponse(
@@ -112,7 +125,9 @@ class BatchBotService:
     # ------------------------------------------------------------------
     # Prompt + Context Builders
     # ------------------------------------------------------------------
-    def _compose_prompt(self, prompt: str, metadata: Optional[Mapping[str, Any]]) -> str:
+    def _compose_prompt(
+        self, prompt: str, metadata: Optional[Mapping[str, Any]]
+    ) -> str:
         context_blob = json.dumps(
             self._build_context_snapshot(metadata),
             default=_json_default,
@@ -139,7 +154,9 @@ class BatchBotService:
             normalized.append({"role": role, "parts": [{"text": str(content)}]})
         return normalized
 
-    def _build_context_snapshot(self, metadata: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+    def _build_context_snapshot(
+        self, metadata: Optional[Mapping[str, Any]]
+    ) -> Mapping[str, Any]:
         inventory_items = (
             InventoryItem.query.filter_by(organization_id=self.organization.id)
             .order_by(asc(InventoryItem.quantity))
@@ -180,10 +197,16 @@ class BatchBotService:
             "organization": {
                 "id": self.organization.id,
                 "name": self.organization.name,
-                "subscription": getattr(self.organization.tier, "name", "unknown") if self.organization.tier else "trial",
+                "subscription": (
+                    getattr(self.organization.tier, "name", "unknown")
+                    if self.organization.tier
+                    else "trial"
+                ),
             },
             "limits": {
-                "max_batchbot_requests": getattr(self.organization.tier, "max_batchbot_requests", None),
+                "max_batchbot_requests": getattr(
+                    self.organization.tier, "max_batchbot_requests", None
+                ),
             },
             "credits": {
                 "remaining": BatchBotCreditService.available_credits(self.organization),
@@ -194,8 +217,12 @@ class BatchBotService:
                     {
                         "id": product.id,
                         "name": product.name,
-                        "sync_status": getattr(product, "marketplace_sync_status", None),
-                        "last_sync": _iso_dt(getattr(product, "marketplace_last_sync", None)),
+                        "sync_status": getattr(
+                            product, "marketplace_sync_status", None
+                        ),
+                        "last_sync": _iso_dt(
+                            getattr(product, "marketplace_last_sync", None)
+                        ),
                     }
                     for product in marketplace_products
                 ],
@@ -268,12 +295,30 @@ class BatchBotService:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "inventory_item_id": {"type": "integer", "description": "Existing inventory item ID."},
-                        "inventory_item_name": {"type": "string", "description": "Name search fallback when ID is unknown."},
-                        "quantity": {"type": "number", "description": "Quantity purchased in the provided unit."},
-                        "unit": {"type": "string", "description": "Unit matching the quantity provided. Defaults to the item's canonical unit."},
-                        "cost_per_unit": {"type": "number", "description": "Optional cost override for this purchase."},
-                        "notes": {"type": "string", "description": "Any note that should accompany the adjustment."},
+                        "inventory_item_id": {
+                            "type": "integer",
+                            "description": "Existing inventory item ID.",
+                        },
+                        "inventory_item_name": {
+                            "type": "string",
+                            "description": "Name search fallback when ID is unknown.",
+                        },
+                        "quantity": {
+                            "type": "number",
+                            "description": "Quantity purchased in the provided unit.",
+                        },
+                        "unit": {
+                            "type": "string",
+                            "description": "Unit matching the quantity provided. Defaults to the item's canonical unit.",
+                        },
+                        "cost_per_unit": {
+                            "type": "number",
+                            "description": "Optional cost override for this purchase.",
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Any note that should accompany the adjustment.",
+                        },
                     },
                     "required": ["quantity"],
                 },
@@ -447,7 +492,9 @@ class BatchBotService:
 
         return {"name": name, "arguments": args, "result": result}
 
-    def _tool_log_inventory_purchase(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _tool_log_inventory_purchase(
+        self, args: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
         item = self._locate_inventory_item(
             item_id=args.get("inventory_item_id"),
             name=args.get("inventory_item_name"),
@@ -461,7 +508,10 @@ class BatchBotService:
 
         unit = args.get("unit") or item.unit
         cost_per_unit = args.get("cost_per_unit")
-        notes = args.get("notes") or f"BatchBot restock logged by {self.user.full_name or self.user.username}"
+        notes = (
+            args.get("notes")
+            or f"BatchBot restock logged by {self.user.full_name or self.user.username}"
+        )
 
         success, message = process_inventory_adjustment(
             item_id=item.id,
@@ -502,7 +552,11 @@ class BatchBotService:
                 {
                     "id": ingredient.id,
                     "inventory_item_id": ingredient.inventory_item_id,
-                    "name": ingredient.inventory_item.name if ingredient.inventory_item else None,
+                    "name": (
+                        ingredient.inventory_item.name
+                        if ingredient.inventory_item
+                        else None
+                    ),
                     "quantity": _safe_float(ingredient.quantity),
                     "unit": ingredient.unit,
                 }
@@ -525,7 +579,7 @@ class BatchBotService:
         }
 
     def _tool_fetch_report_snapshot(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
-        report_type = args.get("report_type") or "inventory_health"
+        args.get("report_type") or "inventory_health"
         inventory_items = (
             InventoryItem.query.filter_by(organization_id=self.organization.id)
             .order_by(asc(InventoryItem.quantity))
@@ -533,14 +587,18 @@ class BatchBotService:
             .all()
         )
 
-        total_quantity = sum(_safe_float(item.quantity) or 0 for item in inventory_items)
+        total_quantity = sum(
+            _safe_float(item.quantity) or 0 for item in inventory_items
+        )
         total_value = sum(
             (_safe_float(item.quantity) or 0) * (_safe_float(item.cost_per_unit) or 0)
             for item in inventory_items
         )
 
         low_stock = [
-            self._serialize_inventory_item(item) for item in inventory_items if (item.quantity or 0) <= 3
+            self._serialize_inventory_item(item)
+            for item in inventory_items
+            if (item.quantity or 0) <= 3
         ][:5]
 
         batches = (
@@ -561,7 +619,7 @@ class BatchBotService:
             for batch in batches
         ]
 
-        payload = {
+        {
             "inventory_health": {
                 "total_items": len(inventory_items),
                 "total_quantity": total_quantity,
@@ -573,7 +631,9 @@ class BatchBotService:
             },
             "costing": {
                 "estimated_inventory_value": total_value,
-                "average_cost_per_unit": (total_value / total_quantity) if total_quantity else None,
+                "average_cost_per_unit": (
+                    (total_value / total_quantity) if total_quantity else None
+                ),
             },
         }
 
@@ -595,7 +655,9 @@ class BatchBotService:
 
         for idx, descriptor in enumerate(ingredients_payload, start=1):
             try:
-                item, created = self._ensure_inventory_item(descriptor, default_type=descriptor.get("type") or "ingredient")
+                item, created = self._ensure_inventory_item(
+                    descriptor, default_type=descriptor.get("type") or "ingredient"
+                )
                 quantity = _safe_float(descriptor.get("quantity")) or 0.0
                 unit = descriptor.get("unit") or item.unit or "gram"
                 if quantity <= 0:
@@ -613,7 +675,11 @@ class BatchBotService:
                 errors.append(f"Ingredient {idx}: {exc}")
 
         if errors:
-            return {"success": False, "errors": errors, "created_inventory_items": created_items}
+            return {
+                "success": False,
+                "errors": errors,
+                "created_inventory_items": created_items,
+            }
 
         yield_amount = _safe_float(args.get("yield_amount")) or 0.0
         yield_unit = args.get("yield_unit") or "unit"
@@ -642,12 +708,18 @@ class BatchBotService:
             "created_inventory_items": created_items,
         }
 
-    def _tool_submit_bulk_inventory_update(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _tool_submit_bulk_inventory_update(
+        self, args: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
         lines = args.get("lines") or []
         submit_now = args.get("submit_now", True)
-        service = BulkInventoryService(organization_id=self.organization.id, user=self.user)
+        service = BulkInventoryService(
+            organization_id=self.organization.id, user=self.user
+        )
 
-        def _note_builder(change_type: str, item: InventoryItem, line: Mapping[str, Any]) -> str:
+        def _note_builder(
+            change_type: str, item: InventoryItem, line: Mapping[str, Any]
+        ) -> str:
             return line.get("notes") or f"BatchBot bulk update ({change_type})"
 
         try:
@@ -659,9 +731,13 @@ class BatchBotService:
         except BulkInventoryServiceError as exc:
             return {"success": False, "error": str(exc)}
 
-    def _tool_fetch_insight_snapshot(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _tool_fetch_insight_snapshot(
+        self, args: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
         focus = (args.get("focus") or "overview").lower()
-        org_dashboard = AnalyticsDataService.get_organization_dashboard(self.organization.id) or {}
+        org_dashboard = (
+            AnalyticsDataService.get_organization_dashboard(self.organization.id) or {}
+        )
         global_metrics = AnalyticsDataService.get_inventory_metrics()
         cost_hotspots = self._organization_cost_hotspots(limit=5)
         freshness_risks = self._organization_freshness_risks(limit=5)
@@ -679,7 +755,9 @@ class BatchBotService:
 
         return {"success": True, "data": payload}
 
-    def _tool_fetch_marketplace_status(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _tool_fetch_marketplace_status(
+        self, args: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
         limit = max(1, min(int(args.get("limit", 5)), 20))
         products = (
             Product.query.filter_by(organization_id=self.organization.id)
@@ -688,14 +766,16 @@ class BatchBotService:
             .all()
         )
 
-        total_products = Product.query.filter_by(organization_id=self.organization.id).count()
+        total_products = Product.query.filter_by(
+            organization_id=self.organization.id
+        ).count()
         pending = Product.query.filter_by(
             organization_id=self.organization.id,
-            marketplace_sync_status='pending',
+            marketplace_sync_status="pending",
         ).count()
         failed = Product.query.filter_by(
             organization_id=self.organization.id,
-            marketplace_sync_status='failed',
+            marketplace_sync_status="failed",
         ).count()
 
         return {
@@ -710,7 +790,9 @@ class BatchBotService:
                     "id": product.id,
                     "name": product.name,
                     "sync_status": getattr(product, "marketplace_sync_status", None),
-                    "last_sync": _iso_dt(getattr(product, "marketplace_last_sync", None)),
+                    "last_sync": _iso_dt(
+                        getattr(product, "marketplace_last_sync", None)
+                    ),
                 }
                 for product in products
             ],
@@ -752,7 +834,9 @@ class BatchBotService:
             "cost_per_unit": _safe_float(item.cost_per_unit),
             "reorder_point": getattr(item, "reorder_point", None),
             "is_perishable": getattr(item, "is_perishable", False),
-            "updated_at": _iso_dt(item.updated_at if hasattr(item, "updated_at") else None),
+            "updated_at": _iso_dt(
+                item.updated_at if hasattr(item, "updated_at") else None
+            ),
         }
 
     def _organization_cost_hotspots(self, *, limit: int = 5) -> List[Dict[str, Any]]:
@@ -803,30 +887,34 @@ class BatchBotService:
                     "freshness_score": snapshot.freshness_efficiency_score,
                     "avg_days_to_usage": snapshot.avg_days_to_usage,
                     "avg_days_to_spoilage": snapshot.avg_days_to_spoilage,
-                    "snapshot_date": snapshot.snapshot_date.isoformat() if snapshot.snapshot_date else None,
+                    "snapshot_date": (
+                        snapshot.snapshot_date.isoformat()
+                        if snapshot.snapshot_date
+                        else None
+                    ),
                 }
             )
         return results
 
-    def _ensure_inventory_item(self, descriptor: Mapping[str, Any], *, default_type: str = "ingredient") -> tuple[InventoryItem, bool]:
+    def _ensure_inventory_item(
+        self, descriptor: Mapping[str, Any], *, default_type: str = "ingredient"
+    ) -> tuple[InventoryItem, bool]:
         item_id = descriptor.get("inventory_item_id")
         if item_id:
-            item = (
-                InventoryItem.query.filter_by(id=item_id, organization_id=self.organization.id)
-                .first()
-            )
+            item = InventoryItem.query.filter_by(
+                id=item_id, organization_id=self.organization.id
+            ).first()
             if item:
                 return item, False
 
-        name = (descriptor.get("inventory_item_name") or descriptor.get("name") or "").strip()
+        name = (
+            descriptor.get("inventory_item_name") or descriptor.get("name") or ""
+        ).strip()
         if name:
-            item = (
-                InventoryItem.query.filter(
-                    InventoryItem.organization_id == self.organization.id,
-                    InventoryItem.name.ilike(name),
-                )
-                .first()
-            )
+            item = InventoryItem.query.filter(
+                InventoryItem.organization_id == self.organization.id,
+                InventoryItem.name.ilike(name),
+            ).first()
             if item:
                 return item, False
 
@@ -835,7 +923,9 @@ class BatchBotService:
             or (descriptor.get("change_type") == "create")
         )
         if not allow_create:
-            raise BatchBotServiceError(f"Inventory item '{name}' was not found and creation was not permitted.")
+            raise BatchBotServiceError(
+                f"Inventory item '{name}' was not found and creation was not permitted."
+            )
 
         form_data = {
             "name": name or "Untitled Item",
@@ -851,11 +941,15 @@ class BatchBotService:
             created_by=self.user.id,
         )
         if not success or not new_item_id:
-            raise BatchBotServiceError(message or f"Failed to create inventory item '{name}'.")
+            raise BatchBotServiceError(
+                message or f"Failed to create inventory item '{name}'."
+            )
 
         item = db.session.get(InventoryItem, int(new_item_id))
         if not item:
-            raise BatchBotServiceError("Newly created inventory item could not be loaded.")
+            raise BatchBotServiceError(
+                "Newly created inventory item could not be loaded."
+            )
         return item, True
 
 

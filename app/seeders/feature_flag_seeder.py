@@ -63,9 +63,7 @@ def seed_feature_flags() -> None:
                 )
                 created += 1
         db.session.commit()
-        print(
-            f"✅ Feature flags seeded: {created} created, {updated} updated"
-        )
+        print(f"✅ Feature flags seeded: {created} created, {updated} updated")
     except Exception as exc:
         db.session.rollback()
         print(f"❌ Error seeding feature flags: {exc}")

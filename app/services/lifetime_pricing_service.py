@@ -57,10 +57,15 @@ class LifetimePricingService:
     )
 
     @classmethod
-    def build_lifetime_offers(cls, paid_tiers: Sequence[SubscriptionTier] | None = None) -> list[dict]:
+    def build_lifetime_offers(
+        cls, paid_tiers: Sequence[SubscriptionTier] | None = None
+    ) -> list[dict]:
         """Return normalized lifetime offers mapped to existing paid tiers."""
         tiers = cls._sort_paid_tiers(paid_tiers or cls._load_paid_tiers())
-        coupon_codes = [str(blueprint["default_coupon_code"]).lower() for blueprint in cls.DEFAULT_TIER_BLUEPRINTS]
+        coupon_codes = [
+            str(blueprint["default_coupon_code"]).lower()
+            for blueprint in cls.DEFAULT_TIER_BLUEPRINTS
+        ]
         sold_counts = cls._sold_count_by_coupon(coupon_codes)
 
         offers: list[dict] = []
@@ -72,9 +77,13 @@ class LifetimePricingService:
             display_floor = int(blueprint["display_floor"])
             threshold = max(0, seat_total - display_floor)
             true_spots_left = max(0, seat_total - sold_count)
-            display_spots_left = display_floor if sold_count < threshold else true_spots_left
+            display_spots_left = (
+                display_floor if sold_count < threshold else true_spots_left
+            )
 
-            monthly_lookup_key = (getattr(tier, "stripe_lookup_key", None) or "").strip() if tier else ""
+            monthly_lookup_key = (
+                (getattr(tier, "stripe_lookup_key", None) or "").strip() if tier else ""
+            )
             yearly_lookup_key = cls.resolve_standard_yearly_lookup_key(tier)
             lifetime_lookup_key = cls.resolve_standard_lifetime_lookup_key(tier)
 
@@ -85,15 +94,23 @@ class LifetimePricingService:
             lifetime_price_is_valid = bool(
                 lifetime_pricing and lifetime_pricing.get("billing_cycle") == "one-time"
             )
-            has_remaining = bool(tier and lifetime_price_is_valid and true_spots_left > 0)
+            has_remaining = bool(
+                tier and lifetime_price_is_valid and true_spots_left > 0
+            )
 
             lifetime_price_copy = "Configure lifetime Stripe price"
             if lifetime_price_is_valid and lifetime_pricing:
-                lifetime_price_copy = f"{lifetime_pricing.get('formatted_price')} one-time"
+                lifetime_price_copy = (
+                    f"{lifetime_pricing.get('formatted_price')} one-time"
+                )
             elif yearly_pricing:
-                lifetime_price_copy = f"{yearly_pricing.get('formatted_price')} yearly available"
+                lifetime_price_copy = (
+                    f"{yearly_pricing.get('formatted_price')} yearly available"
+                )
             elif monthly_pricing:
-                lifetime_price_copy = f"{monthly_pricing.get('formatted_price')} monthly available"
+                lifetime_price_copy = (
+                    f"{monthly_pricing.get('formatted_price')} monthly available"
+                )
 
             offer = {
                 "key": blueprint["key"],
@@ -113,11 +130,19 @@ class LifetimePricingService:
                 "tier_id": str(tier.id) if tier else "",
                 "base_tier_name": tier.name if tier else "Unavailable",
                 "monthly_lookup_key": monthly_lookup_key or None,
-                "monthly_price_display": monthly_pricing.get("formatted_price") if monthly_pricing else None,
+                "monthly_price_display": (
+                    monthly_pricing.get("formatted_price") if monthly_pricing else None
+                ),
                 "yearly_lookup_key": yearly_lookup_key,
-                "yearly_price_display": yearly_pricing.get("formatted_price") if yearly_pricing else None,
+                "yearly_price_display": (
+                    yearly_pricing.get("formatted_price") if yearly_pricing else None
+                ),
                 "lifetime_lookup_key": lifetime_lookup_key,
-                "lifetime_price_display": lifetime_pricing.get("formatted_price") if lifetime_pricing else None,
+                "lifetime_price_display": (
+                    lifetime_pricing.get("formatted_price")
+                    if lifetime_pricing
+                    else None
+                ),
                 "lifetime_price_copy": lifetime_price_copy,
             }
             offers.append(offer)
@@ -156,7 +181,9 @@ class LifetimePricingService:
         return " ".join(part.capitalize() for part in cleaned.split())
 
     @classmethod
-    def summarize_features(cls, permission_names: Sequence[str], limit: int = 8) -> tuple[list[str], int]:
+    def summarize_features(
+        cls, permission_names: Sequence[str], limit: int = 8
+    ) -> tuple[list[str], int]:
         """Return a concise list of display-ready feature labels."""
         labels = []
         seen = set()
@@ -174,7 +201,9 @@ class LifetimePricingService:
         return labels[: max(1, limit)], total
 
     @classmethod
-    def resolve_standard_yearly_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
+    def resolve_standard_yearly_lookup_key(
+        cls, tier: SubscriptionTier | None
+    ) -> str | None:
         """Resolve yearly lookup key from a tier's single configured lookup key."""
         if not tier:
             return None
@@ -185,7 +214,9 @@ class LifetimePricingService:
         )
 
     @classmethod
-    def resolve_standard_lifetime_lookup_key(cls, tier: SubscriptionTier | None) -> str | None:
+    def resolve_standard_lifetime_lookup_key(
+        cls, tier: SubscriptionTier | None
+    ) -> str | None:
         """Resolve lifetime lookup key from a tier's single configured lookup key."""
         if not tier:
             return None
@@ -198,7 +229,9 @@ class LifetimePricingService:
     @classmethod
     def _load_paid_tiers(cls) -> list[SubscriptionTier]:
         return (
-            SubscriptionTier.query.filter_by(is_customer_facing=True, billing_provider="stripe")
+            SubscriptionTier.query.filter_by(
+                is_customer_facing=True, billing_provider="stripe"
+            )
             .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
             .all()
         )
@@ -207,13 +240,17 @@ class LifetimePricingService:
     def _sort_paid_tiers(tiers: Sequence[SubscriptionTier]) -> list[SubscriptionTier]:
         def _tier_sort_key(tier: SubscriptionTier):
             user_limit = getattr(tier, "user_limit", None)
-            limit_sort_value = 1_000_000 if user_limit in (None, -1) else int(user_limit)
+            limit_sort_value = (
+                1_000_000 if user_limit in (None, -1) else int(user_limit)
+            )
             return (limit_sort_value, int(getattr(tier, "id", 0) or 0))
 
         return sorted(list(tiers or []), key=_tier_sort_key)
 
     @staticmethod
-    def _derive_lookup_variant(base_lookup_key: str | None, target_variant: str) -> str | None:
+    def _derive_lookup_variant(
+        base_lookup_key: str | None, target_variant: str
+    ) -> str | None:
         """Derive related lookup keys via naming convention.
 
         Supported conventions:
@@ -280,7 +317,9 @@ class LifetimePricingService:
         return None
 
     @classmethod
-    def _lookup_variant_candidates(cls, base_lookup_key: str | None, target_variant: str) -> list[str]:
+    def _lookup_variant_candidates(
+        cls, base_lookup_key: str | None, target_variant: str
+    ) -> list[str]:
         lookup = (base_lookup_key or "").strip()
         if not lookup:
             return []
@@ -314,7 +353,9 @@ class LifetimePricingService:
         return deduped
 
     @classmethod
-    def _append_variant_candidates(cls, base_lookup_key: str, target_variant: str) -> list[str]:
+    def _append_variant_candidates(
+        cls, base_lookup_key: str, target_variant: str
+    ) -> list[str]:
         base = (base_lookup_key or "").strip()
         if not base:
             return []
@@ -332,20 +373,31 @@ class LifetimePricingService:
         if variant == "yearly":
             return ("_yearly", "-yearly", "_annual", "-annual")
         if variant == "lifetime":
-            return ("_lifetime", "-lifetime", "_one_time", "-one-time", "_onetime", "-onetime")
+            return (
+                "_lifetime",
+                "-lifetime",
+                "_one_time",
+                "-one-time",
+                "_onetime",
+                "-onetime",
+            )
         if variant == "monthly":
             return ("_monthly", "-monthly")
         return ()
 
     @staticmethod
-    def _resolve_variant_by_product(*, base_lookup_key: str | None, expected_cycle: str) -> str | None:
+    def _resolve_variant_by_product(
+        *, base_lookup_key: str | None, expected_cycle: str
+    ) -> str | None:
         base_key = (base_lookup_key or "").strip()
         if not base_key or not expected_cycle:
             return None
         try:
             from .billing_service import BillingService
 
-            return BillingService.find_related_price_lookup_key(base_key, billing_cycle=expected_cycle)
+            return BillingService.find_related_price_lookup_key(
+                base_key, billing_cycle=expected_cycle
+            )
         except Exception:
             return None
 
@@ -367,7 +419,9 @@ class LifetimePricingService:
 
     @staticmethod
     def _sold_count_by_coupon(coupon_codes_lower: Sequence[str]) -> dict[str, int]:
-        cleaned_codes = [code.strip().lower() for code in coupon_codes_lower if code and code.strip()]
+        cleaned_codes = [
+            code.strip().lower() for code in coupon_codes_lower if code and code.strip()
+        ]
         if not cleaned_codes:
             return {}
 
@@ -381,7 +435,9 @@ class LifetimePricingService:
             .group_by(func.lower(Organization.promo_code))
             .all()
         )
-        return {str(row.promo_code): int(row.total or 0) for row in rows if row.promo_code}
+        return {
+            str(row.promo_code): int(row.total or 0) for row in rows if row.promo_code
+        }
 
     @staticmethod
     def _get_lookup_key_pricing(lookup_key: str | None) -> dict | None:

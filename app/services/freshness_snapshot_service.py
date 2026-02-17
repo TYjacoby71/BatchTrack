@@ -1,13 +1,14 @@
-from datetime import datetime, date, timedelta
+from datetime import date, datetime
 from typing import Optional
-from flask_login import current_user
 
-from app.models import db, UnifiedInventoryHistory, InventoryItem, FreshnessSnapshot
+from app.models import FreshnessSnapshot, InventoryItem, UnifiedInventoryHistory, db
 
 
 class FreshnessSnapshotService:
     @staticmethod
-    def compute_for_item(inventory_item_id: int, snapshot_date: date) -> Optional[FreshnessSnapshot]:
+    def compute_for_item(
+        inventory_item_id: int, snapshot_date: date
+    ) -> Optional[FreshnessSnapshot]:
         """Compute freshness metrics for a single item for the given date.
         Uses events up to end-of-day snapshot_date.
         """
@@ -20,7 +21,7 @@ class FreshnessSnapshotService:
         # Query recent movement events for this item up to the snapshot date
         events = UnifiedInventoryHistory.query.filter(
             UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-            UnifiedInventoryHistory.timestamp <= day_end
+            UnifiedInventoryHistory.timestamp <= day_end,
         ).all()
 
         def age_days(e):
@@ -31,30 +32,42 @@ class FreshnessSnapshotService:
                 return None
             return None
 
-        spoilage_events = [ev for ev in events if ev.change_type in ['spoil', 'expired', 'damaged', 'trash']]
-        usage_events = [ev for ev in events if ev.change_type in ['use', 'production', 'batch']]
+        spoilage_events = [
+            ev
+            for ev in events
+            if ev.change_type in ["spoil", "expired", "damaged", "trash"]
+        ]
+        usage_events = [
+            ev for ev in events if ev.change_type in ["use", "production", "batch"]
+        ]
 
-        spoilage_days = [d for d in (age_days(ev) for ev in spoilage_events) if d is not None]
+        spoilage_days = [
+            d for d in (age_days(ev) for ev in spoilage_events) if d is not None
+        ]
         usage_days = [d for d in (age_days(ev) for ev in usage_events) if d is not None]
 
-        avg_days_to_spoilage = (sum(spoilage_days) / len(spoilage_days)) if spoilage_days else None
+        avg_days_to_spoilage = (
+            (sum(spoilage_days) / len(spoilage_days)) if spoilage_days else None
+        )
         avg_days_to_usage = (sum(usage_days) / len(usage_days)) if usage_days else None
 
         total_events = len(spoilage_events) + len(usage_events)
-        freshness_efficiency_score = (len(usage_events) / total_events * 100.0) if total_events > 0 else None
+        freshness_efficiency_score = (
+            (len(usage_events) / total_events * 100.0) if total_events > 0 else None
+        )
 
         # Upsert snapshot row
         snap = FreshnessSnapshot.query.filter_by(
             snapshot_date=snapshot_date,
             organization_id=item.organization_id,
-            inventory_item_id=item.id
+            inventory_item_id=item.id,
         ).first()
 
         if not snap:
             snap = FreshnessSnapshot(
                 snapshot_date=snapshot_date,
                 organization_id=item.organization_id,
-                inventory_item_id=item.id
+                inventory_item_id=item.id,
             )
             db.session.add(snap)
 
@@ -79,9 +92,9 @@ class FreshnessSnapshotService:
     def compute_for_all(snapshot_date: date) -> int:
         """Compute snapshots for all organizations on a date. Returns total count."""
         from app.models import Organization
+
         orgs = Organization.query.all()
         total = 0
         for org in orgs:
             total += FreshnessSnapshotService.compute_for_org(org.id, snapshot_date)
         return total
-

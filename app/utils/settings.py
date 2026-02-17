@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict
 import copy
+from typing import Any, Dict
 
 DEFAULT_SETTINGS_KEY = "settings"
 
@@ -56,7 +56,9 @@ def _read_settings() -> Dict[str, Any]:
     return get_settings()
 
 
-def _resolve_nested(settings: Dict[str, Any], dotted_key: str, default: Any = None) -> Any:
+def _resolve_nested(
+    settings: Dict[str, Any], dotted_key: str, default: Any = None
+) -> Any:
     if not dotted_key:
         return settings
     parts = dotted_key.split(".")

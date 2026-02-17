@@ -8,9 +8,9 @@ Glossary:
 - Soap tool compute: End-to-end calculation bundle for the public soap UI.
 """
 
-from ._core import SoapToolComputationService
 from ._advisory import run_quality_nudge
 from ._catalog import get_bulk_catalog_page
+from ._core import SoapToolComputationService
 from ._lye_water import compute_lye_water_values
 from ._policy import get_soap_tool_policy
 from ._recipe_payload import build_soap_recipe_payload
@@ -25,4 +25,3 @@ __all__ = [
     "get_soap_tool_policy",
     "build_soap_recipe_payload",
 ]
-

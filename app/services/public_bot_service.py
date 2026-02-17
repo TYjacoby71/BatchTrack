@@ -6,7 +6,6 @@ from flask import current_app
 
 from app.services.ai import GoogleAIClient
 
-
 PUBLIC_HELP_CONTEXT = """
 BatchTrack (batchtrack.com) overview:
 - Production OS for makers of soap, candles, cosmetics, food, and other batch goods.
@@ -34,9 +33,13 @@ class PublicBotService:
         if not cfg.get("GOOGLE_AI_API_KEY"):
             raise PublicBotServiceError("GOOGLE_AI_API_KEY is not configured.")
         self.client = GoogleAIClient.from_app()
-        self.model_name = cfg.get("GOOGLE_AI_PUBLICBOT_MODEL") or cfg.get("GOOGLE_AI_DEFAULT_MODEL")
+        self.model_name = cfg.get("GOOGLE_AI_PUBLICBOT_MODEL") or cfg.get(
+            "GOOGLE_AI_DEFAULT_MODEL"
+        )
 
-    def answer(self, prompt: str, *, tone: Optional[str] = None) -> Mapping[str, object]:
+    def answer(
+        self, prompt: str, *, tone: Optional[str] = None
+    ) -> Mapping[str, object]:
         if not prompt:
             raise PublicBotServiceError("Question is required.")
 

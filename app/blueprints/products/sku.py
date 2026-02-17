@@ -8,94 +8,124 @@ Glossary:
 - Variant: Product option associated with a SKU.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
-from ...utils.permissions import require_permission
-from sqlalchemy import or_
-from datetime import datetime, timezone, timedelta
-from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
-from app.utils.settings import is_feature_enabled
-from ...utils.unit_utils import get_global_unit_list
-from ...utils.timezone_utils import TimezoneUtils
 import logging
+from datetime import datetime, timedelta, timezone
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from app.utils.settings import is_feature_enabled
+
+from ...models import (
+    InventoryItem,
+    ProductSKU,
+    Reservation,
+    UnifiedInventoryHistory,
+    db,
+)
+from ...utils.permissions import require_permission
+from ...utils.timezone_utils import TimezoneUtils
+from ...utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
 
 # Create the sku blueprint
-sku_bp = Blueprint('sku', __name__)
+sku_bp = Blueprint("sku", __name__)
 
 
 def _merge_skus_enabled() -> bool:
     return is_feature_enabled("FEATURE_MERGE_SKUS")
+
 
 # =========================================================
 # SKU VIEWS
 # =========================================================
 # --- SKU view ---
 # Purpose: Render SKU detail page and history.
-@sku_bp.route('/<int:inventory_item_id>')
+@sku_bp.route("/<int:inventory_item_id>")
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def view_sku(inventory_item_id):
     """View individual SKU details"""
     sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
-    history = UnifiedInventoryHistory.query.filter_by(
-        inventory_item_id=sku.inventory_item_id,
-        organization_id=current_user.organization_id
-    ).order_by(UnifiedInventoryHistory.timestamp.desc()).all()
+    history = (
+        UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=sku.inventory_item_id,
+            organization_id=current_user.organization_id,
+        )
+        .order_by(UnifiedInventoryHistory.timestamp.desc())
+        .all()
+    )
 
     # Debug logging
     print(f"DEBUG: SKU {sku.inventory_item_id} history count: {len(history)}")
     for h in history:
-        print(f"DEBUG: History entry {h.id}: {h.change_type} {h.quantity_change} at {h.timestamp}")
+        print(
+            f"DEBUG: History entry {h.id}: {h.change_type} {h.quantity_change} at {h.timestamp}"
+        )
 
     # Calculate total quantity from inventory_item
     total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
 
-    return render_template('pages/products/view_sku.html',
-                         abs=abs,
-                         sku=sku,
-                         history=history,
-                         total_quantity=total_quantity,
-                         get_global_unit_list=get_global_unit_list,
-                         fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
-                         now=TimezoneUtils.now().replace(tzinfo=None),  # Use naive datetime for template comparisons
-                         timedelta=timedelta,
-                         TimezoneUtils=TimezoneUtils,
-                         breadcrumb_items=[
-                            {'label': 'Product Dashboard', 'url': url_for('products.list_products')},
-                            {'label': sku.product_name + ' Overview', 'url': url_for('products.view_product', product_id=sku.product_id)},
-                            {'label': sku.variant_name + ' Sizes', 'url': url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name)},
-                            {'label': sku.size_label + ' SKU'}
-                         ])
+    return render_template(
+        "pages/products/view_sku.html",
+        abs=abs,
+        sku=sku,
+        history=history,
+        total_quantity=total_quantity,
+        get_global_unit_list=get_global_unit_list,
+        fifo_filter=request.args.get("fifo", "false").lower() == "true",
+        now=TimezoneUtils.now().replace(
+            tzinfo=None
+        ),  # Use naive datetime for template comparisons
+        timedelta=timedelta,
+        TimezoneUtils=TimezoneUtils,
+        breadcrumb_items=[
+            {"label": "Product Dashboard", "url": url_for("products.list_products")},
+            {
+                "label": sku.product_name + " Overview",
+                "url": url_for("products.view_product", product_id=sku.product_id),
+            },
+            {
+                "label": sku.variant_name + " Sizes",
+                "url": url_for(
+                    "product_variants.view_variant",
+                    product_id=sku.product_id,
+                    variant_name=sku.variant_name,
+                ),
+            },
+            {"label": sku.size_label + " SKU"},
+        ],
+    )
+
 
 # --- SKU edit ---
 # Purpose: Update SKU attributes from form data.
-@sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
+@sku_bp.route("/<int:inventory_item_id>/edit", methods=["POST"])
 @login_required
-@require_permission('products.manage_variants')
+@require_permission("products.manage_variants")
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
     sku = ProductSKU.query.filter_by(
         inventory_item_id=inventory_item_id,
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
     ).first_or_404()
 
     try:
         # Update basic fields
-        sku.sku_code = request.form.get('sku_code')
-        sku.size_label = request.form.get('size_label')
-        sku.location_name = request.form.get('location_name')
+        sku.sku_code = request.form.get("sku_code")
+        sku.size_label = request.form.get("size_label")
+        sku.location_name = request.form.get("location_name")
 
         # Update pricing
-        retail_price = request.form.get('retail_price')
+        retail_price = request.form.get("retail_price")
         if retail_price:
             sku.retail_price = float(retail_price)
 
         # Update unit if provided
-        unit = request.form.get('unit')
+        unit = request.form.get("unit")
         if unit:
             clean_unit = unit.strip()
             if clean_unit:
@@ -104,12 +134,10 @@ def edit_sku(inventory_item_id):
                     sku.inventory_item.unit = clean_unit
 
         # Update thresholds
-        low_stock_enabled = request.form.get('low_stock_threshold_enabled') == 'on'
+        low_stock_enabled = request.form.get("low_stock_threshold_enabled") == "on"
         if low_stock_enabled:
-            low_stock_threshold = request.form.get('low_stock_threshold')
-            threshold_value = (
-                float(low_stock_threshold) if low_stock_threshold else 0.0
-            )
+            low_stock_threshold = request.form.get("low_stock_threshold")
+            threshold_value = float(low_stock_threshold) if low_stock_threshold else 0.0
         else:
             threshold_value = 0.0
         sku.low_stock_threshold = threshold_value
@@ -117,17 +145,17 @@ def edit_sku(inventory_item_id):
             sku.inventory_item.low_stock_threshold = threshold_value
 
         # Handle unit cost override
-        if request.form.get('override_unit_cost'):
-            unit_cost = request.form.get('unit_cost')
+        if request.form.get("override_unit_cost"):
+            unit_cost = request.form.get("unit_cost")
             if unit_cost and sku.inventory_item:
                 # Update the underlying inventory item cost
                 sku.inventory_item.cost_per_unit = float(unit_cost)
 
         # Handle perishable settings - update the underlying inventory item
         if sku.inventory_item:
-            sku.inventory_item.is_perishable = bool(request.form.get('is_perishable'))
+            sku.inventory_item.is_perishable = bool(request.form.get("is_perishable"))
             if sku.inventory_item.is_perishable:
-                shelf_life_days = request.form.get('shelf_life_days')
+                shelf_life_days = request.form.get("shelf_life_days")
                 if shelf_life_days:
                     sku.inventory_item.shelf_life_days = int(shelf_life_days)
 
@@ -142,8 +170,10 @@ def edit_sku(inventory_item_id):
                     for lot in lots:
                         lot.shelf_life_days = int(shelf_life_days)
                         if lot.received_date:
-                            lot.expiration_date = ExpirationService.calculate_expiration_date(
-                                lot.received_date, int(shelf_life_days)
+                            lot.expiration_date = (
+                                ExpirationService.calculate_expiration_date(
+                                    lot.received_date, int(shelf_life_days)
+                                )
                             )
 
                         history_entries = UnifiedInventoryHistory.query.filter(
@@ -153,8 +183,10 @@ def edit_sku(inventory_item_id):
                             entry.is_perishable = True
                             entry.shelf_life_days = int(shelf_life_days)
                             if entry.timestamp:
-                                entry.expiration_date = ExpirationService.calculate_expiration_date(
-                                    entry.timestamp, int(shelf_life_days)
+                                entry.expiration_date = (
+                                    ExpirationService.calculate_expiration_date(
+                                        entry.timestamp, int(shelf_life_days)
+                                    )
                                 )
             else:
                 sku.inventory_item.shelf_life_days = None
@@ -169,15 +201,19 @@ def edit_sku(inventory_item_id):
                     entry.shelf_life_days = None
                     entry.expiration_date = None
 
-        flash('SKU updated successfully. Expiration data updated for all FIFO entries.', 'success')
+        flash(
+            "SKU updated successfully. Expiration data updated for all FIFO entries.",
+            "success",
+        )
 
         db.session.commit()
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error updating SKU: {str(e)}', 'error')
+        flash(f"Error updating SKU: {str(e)}", "error")
 
-    return redirect(url_for('sku.view_sku', inventory_item_id=sku.inventory_item_id))
+    return redirect(url_for("sku.view_sku", inventory_item_id=sku.inventory_item_id))
+
 
 # Legacy adjustment route removed - all adjustments must go through centralized service
 
@@ -187,129 +223,173 @@ def edit_sku(inventory_item_id):
 # --- Merge select ---
 # Purpose: Render SKU merge selection UI.
 
-@sku_bp.route('/merge/select')
+
+@sku_bp.route("/merge/select")
 @login_required
-@require_permission('products.manage_variants')
+@require_permission("products.manage_variants")
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
     if not _merge_skus_enabled():
         flash("SKU merge is not enabled for your plan.", "warning")
-        return redirect(url_for('products.list_products'))
-    skus = ProductSKU.query.join(
-        InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-    ).filter(
-        ProductSKU.organization_id == current_user.organization_id,
-        ProductSKU.is_active == True
-    ).order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label).all()
+        return redirect(url_for("products.list_products"))
+    skus = (
+        ProductSKU.query.join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        )
+        .filter(
+            ProductSKU.organization_id == current_user.organization_id,
+            ProductSKU.is_active,
+        )
+        .order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label)
+        .all()
+    )
 
-    return render_template('pages/products/merge_select.html', skus=skus)
+    return render_template("pages/products/merge_select.html", skus=skus)
+
 
 # --- Merge configure ---
 # Purpose: Prepare merge configuration for selected SKUs.
-@sku_bp.route('/merge/configure', methods=['POST'])
+@sku_bp.route("/merge/configure", methods=["POST"])
 @login_required
-@require_permission('products.manage_variants')
+@require_permission("products.manage_variants")
 def configure_merge():
     """Configure merge settings for selected SKUs"""
     if not _merge_skus_enabled():
         flash("SKU merge is not enabled for your plan.", "warning")
-        return redirect(request.referrer or url_for('products.list_products'))
-    sku_ids = request.form.getlist('sku_ids')
+        return redirect(request.referrer or url_for("products.list_products"))
+    sku_ids = request.form.getlist("sku_ids")
 
     if len(sku_ids) < 2:
-        flash('Please select at least 2 SKUs to merge', 'error')
-        return redirect(url_for('sku.select_skus_to_merge'))
+        flash("Please select at least 2 SKUs to merge", "error")
+        return redirect(url_for("sku.select_skus_to_merge"))
 
     # Get selected SKUs
     skus = ProductSKU.query.filter(
         ProductSKU.inventory_item_id.in_(sku_ids),
-        ProductSKU.organization_id == current_user.organization_id
+        ProductSKU.organization_id == current_user.organization_id,
     ).all()
 
     # Validate all SKUs have same product and variant
     if len(set((sku.product_id, sku.variant_id) for sku in skus)) > 1:
-        flash('Can only merge SKUs of the same product and variant', 'error')
-        return redirect(url_for('sku.select_skus_to_merge'))
+        flash("Can only merge SKUs of the same product and variant", "error")
+        return redirect(url_for("sku.select_skus_to_merge"))
 
     # Validate all SKUs have same unit
     if len(set(sku.unit for sku in skus)) > 1:
-        flash('Can only merge SKUs with the same unit', 'error')
-        return redirect(url_for('sku.select_skus_to_merge'))
+        flash("Can only merge SKUs with the same unit", "error")
+        return redirect(url_for("sku.select_skus_to_merge"))
 
     # Get merge configuration data
     merge_config = {
-        'skus': skus,
-        'attributes': [
-            {'key': 'size_label', 'label': 'Size Label', 'type': 'text'},
-            {'key': 'sku_code', 'label': 'SKU Code', 'type': 'text'},
-            {'key': 'sku_name', 'label': 'SKU Name', 'type': 'text'},
-            {'key': 'retail_price', 'label': 'Retail Price', 'type': 'number'},
-            {'key': 'wholesale_price', 'label': 'Wholesale Price', 'type': 'number'},
-            {'key': 'low_stock_threshold', 'label': 'Low Stock Threshold', 'type': 'number'},
-            {'key': 'category', 'label': 'Category', 'type': 'text'},
-            {'key': 'subcategory', 'label': 'Subcategory', 'type': 'text'},
-            {'key': 'description', 'label': 'Description', 'type': 'textarea'},
-            {'key': 'location_name', 'label': 'Location', 'type': 'text'},
-            {'key': 'barcode', 'label': 'Barcode', 'type': 'text'},
-            {'key': 'is_perishable', 'label': 'Perishable', 'type': 'boolean'},
-            {'key': 'shelf_life_days', 'label': 'Shelf Life (Days)', 'type': 'number'},
-        ]
+        "skus": skus,
+        "attributes": [
+            {"key": "size_label", "label": "Size Label", "type": "text"},
+            {"key": "sku_code", "label": "SKU Code", "type": "text"},
+            {"key": "sku_name", "label": "SKU Name", "type": "text"},
+            {"key": "retail_price", "label": "Retail Price", "type": "number"},
+            {"key": "wholesale_price", "label": "Wholesale Price", "type": "number"},
+            {
+                "key": "low_stock_threshold",
+                "label": "Low Stock Threshold",
+                "type": "number",
+            },
+            {"key": "category", "label": "Category", "type": "text"},
+            {"key": "subcategory", "label": "Subcategory", "type": "text"},
+            {"key": "description", "label": "Description", "type": "textarea"},
+            {"key": "location_name", "label": "Location", "type": "text"},
+            {"key": "barcode", "label": "Barcode", "type": "text"},
+            {"key": "is_perishable", "label": "Perishable", "type": "boolean"},
+            {"key": "shelf_life_days", "label": "Shelf Life (Days)", "type": "number"},
+        ],
     }
 
-    return render_template('pages/products/merge_configure.html', **merge_config)
+    return render_template("pages/products/merge_configure.html", **merge_config)
+
 
 # --- Merge execute ---
 # Purpose: Execute SKU merge and consolidate inventory.
-@sku_bp.route('/merge/execute', methods=['POST'])
+@sku_bp.route("/merge/execute", methods=["POST"])
 @login_required
-@require_permission('products.manage_variants')
+@require_permission("products.manage_variants")
 def execute_merge():
     """Execute the SKU merge"""
     if not _merge_skus_enabled():
         flash("SKU merge is not enabled for your plan.", "warning")
-        return redirect(request.referrer or url_for('products.list_products'))
+        return redirect(request.referrer or url_for("products.list_products"))
     try:
-        sku_ids = request.form.getlist('sku_ids')
-        target_sku_id = request.form.get('target_sku_id')
+        sku_ids = request.form.getlist("sku_ids")
+        target_sku_id = request.form.get("target_sku_id")
 
         if not target_sku_id or target_sku_id not in sku_ids:
-            flash('Invalid target SKU selected', 'error')
-            return redirect(url_for('sku.select_skus_to_merge'))
+            flash("Invalid target SKU selected", "error")
+            return redirect(url_for("sku.select_skus_to_merge"))
 
         # Get all SKUs
         skus = ProductSKU.query.filter(
             ProductSKU.inventory_item_id.in_(sku_ids),
-            ProductSKU.organization_id == current_user.organization_id
+            ProductSKU.organization_id == current_user.organization_id,
         ).all()
 
-        target_sku = next((sku for sku in skus if str(sku.inventory_item_id) == target_sku_id), None)
-        source_skus = [sku for sku in skus if str(sku.inventory_item_id) != target_sku_id]
+        target_sku = next(
+            (sku for sku in skus if str(sku.inventory_item_id) == target_sku_id), None
+        )
+        source_skus = [
+            sku for sku in skus if str(sku.inventory_item_id) != target_sku_id
+        ]
 
         if not target_sku:
-            flash('Target SKU not found', 'error')
-            return redirect(url_for('sku.select_skus_to_merge'))
+            flash("Target SKU not found", "error")
+            return redirect(url_for("sku.select_skus_to_merge"))
 
         # Update target SKU attributes based on form selections
-        for attr in ['size_label', 'sku_code', 'sku_name', 'retail_price', 'wholesale_price',
-                     'low_stock_threshold', 'category', 'subcategory', 'description',
-                     'location_name', 'barcode', 'shelf_life_days']:
-            selected_sku_id = request.form.get(f'attr_{attr}')
+        for attr in [
+            "size_label",
+            "sku_code",
+            "sku_name",
+            "retail_price",
+            "wholesale_price",
+            "low_stock_threshold",
+            "category",
+            "subcategory",
+            "description",
+            "location_name",
+            "barcode",
+            "shelf_life_days",
+        ]:
+            selected_sku_id = request.form.get(f"attr_{attr}")
             if selected_sku_id:
-                source_sku = next((sku for sku in skus if str(sku.inventory_item_id) == selected_sku_id), None)
+                source_sku = next(
+                    (
+                        sku
+                        for sku in skus
+                        if str(sku.inventory_item_id) == selected_sku_id
+                    ),
+                    None,
+                )
                 if source_sku:
                     value = getattr(source_sku, attr)
                     if value is not None:
                         setattr(target_sku, attr, value)
 
         # Handle boolean attributes
-        is_perishable_sku_id = request.form.get('attr_is_perishable')
+        is_perishable_sku_id = request.form.get("attr_is_perishable")
         if is_perishable_sku_id:
-            source_sku = next((sku for sku in skus if str(sku.inventory_item_id) == is_perishable_sku_id), None)
+            source_sku = next(
+                (
+                    sku
+                    for sku in skus
+                    if str(sku.inventory_item_id) == is_perishable_sku_id
+                ),
+                None,
+            )
             if source_sku:
                 target_sku.is_perishable = source_sku.is_perishable
 
         # Merge inventory quantities (base units)
-        from app.services.quantity_base import from_base_quantity, sync_item_quantity_from_base
+        from app.services.quantity_base import (
+            from_base_quantity,
+            sync_item_quantity_from_base,
+        )
 
         total_quantity_base = sum(
             int(getattr(sku.inventory_item, "quantity_base", 0) or 0)
@@ -335,12 +415,12 @@ def execute_merge():
             # Update all history entries to point to target SKU
             UnifiedInventoryHistory.query.filter_by(
                 inventory_item_id=source_sku.inventory_item_id
-            ).update({'inventory_item_id': target_sku.inventory_item_id})
+            ).update({"inventory_item_id": target_sku.inventory_item_id})
 
             # Update reservations
             Reservation.query.filter_by(
                 product_item_id=source_sku.inventory_item_id
-            ).update({'product_item_id': target_sku.inventory_item_id})
+            ).update({"product_item_id": target_sku.inventory_item_id})
 
         # Create merge record in history
         merge_note = f"Merged SKUs: {', '.join(sku.sku_code for sku in source_skus)} into {target_sku.sku_code}"
@@ -348,13 +428,14 @@ def execute_merge():
         # Add adjustment record for the merge
         # Assuming process_inventory_adjustment is available and handles UnifiedInventoryHistory updates
         from ...services.inventory_adjustment import process_inventory_adjustment
+
         process_inventory_adjustment(
             item_id=target_sku.inventory_item_id,
             quantity=0,  # No quantity change, just record the merge
-            change_type='sku_merge',
+            change_type="sku_merge",
             unit=target_sku.unit,
             notes=merge_note,
-            created_by=current_user.id
+            created_by=current_user.id,
         )
 
         # Delete source SKUs and their inventory items
@@ -367,25 +448,30 @@ def execute_merge():
 
         db.session.commit()
 
-        flash(f'Successfully merged {len(source_skus)} SKUs into {target_sku.sku_code}', 'success')
-        return redirect(url_for('sku.view_sku', inventory_item_id=target_sku.inventory_item_id))
+        flash(
+            f"Successfully merged {len(source_skus)} SKUs into {target_sku.sku_code}",
+            "success",
+        )
+        return redirect(
+            url_for("sku.view_sku", inventory_item_id=target_sku.inventory_item_id)
+        )
 
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error merging SKUs: {str(e)}")
-        flash(f'Error merging SKUs: {str(e)}', 'error')
-        return redirect(url_for('sku.select_skus_to_merge'))
+        flash(f"Error merging SKUs: {str(e)}", "error")
+        return redirect(url_for("sku.select_skus_to_merge"))
+
 
 # --- Merge preview API ---
 # Purpose: Return a preview of SKU merge impact.
-@sku_bp.route('/api/sku/<int:sku_id>/merge_preview')
+@sku_bp.route("/api/sku/<int:sku_id>/merge_preview")
 @login_required
-@require_permission('products.manage_variants')
+@require_permission("products.manage_variants")
 def get_merge_preview(sku_id):
     """Get preview data for SKU merge"""
     sku = ProductSKU.query.filter_by(
-        inventory_item_id=sku_id,
-        organization_id=current_user.organization_id
+        inventory_item_id=sku_id, organization_id=current_user.organization_id
     ).first_or_404()
 
     # Get history count
@@ -395,14 +481,15 @@ def get_merge_preview(sku_id):
 
     # Get reservations count
     reservations_count = Reservation.query.filter_by(
-        product_item_id=sku_id,
-        status='active'
+        product_item_id=sku_id, status="active"
     ).count()
 
-    return jsonify({
-        'sku_code': sku.sku_code,
-        'quantity': sku.quantity,
-        'cost_per_unit': sku.cost_per_unit,
-        'history_count': history_count,
-        'reservations_count': reservations_count
-    })
+    return jsonify(
+        {
+            "sku_code": sku.sku_code,
+            "quantity": sku.quantity,
+            "cost_per_unit": sku.cost_per_unit,
+            "history_count": history_count,
+            "reservations_count": reservations_count,
+        }
+    )

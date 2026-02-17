@@ -11,4 +11,3 @@ Glossary:
 from .core import TierPresentationCore
 
 __all__ = ["TierPresentationCore"]
-

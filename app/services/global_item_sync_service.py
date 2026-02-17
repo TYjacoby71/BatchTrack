@@ -11,7 +11,7 @@ Glossary:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from app.extensions import db
 from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
@@ -45,7 +45,9 @@ class GlobalItemSyncService:
         current = getattr(obj, attr, None)
         should_overwrite = False
 
-        if allow_overwrite_if_empty and (current is None or current == "" or current == []):
+        if allow_overwrite_if_empty and (
+            current is None or current == "" or current == []
+        ):
             should_overwrite = True
         elif allow_overwrite_if_matches_old and current == old_value:
             should_overwrite = True
@@ -56,7 +58,9 @@ class GlobalItemSyncService:
         return False
 
     @classmethod
-    def sync_linked_inventory_items(cls, global_item: GlobalItem, *, before: Dict[str, Any] | None = None) -> int:
+    def sync_linked_inventory_items(
+        cls, global_item: GlobalItem, *, before: Dict[str, Any] | None = None
+    ) -> int:
         """Apply changes from a global item edit to linked inventory items.
 
         Args:
@@ -68,15 +72,12 @@ class GlobalItemSyncService:
         """
         before = before or {}
 
-        linked_items = (
-            InventoryItem.query.filter(
-                InventoryItem.global_item_id == global_item.id,
-                InventoryItem.is_archived.is_(False),
-                InventoryItem.organization_id.isnot(None),
-                InventoryItem.ownership == "global",
-            )
-            .all()
-        )
+        linked_items = InventoryItem.query.filter(
+            InventoryItem.global_item_id == global_item.id,
+            InventoryItem.is_archived.is_(False),
+            InventoryItem.organization_id.isnot(None),
+            InventoryItem.ownership == "global",
+        ).all()
 
         updated_count = 0
 
@@ -186,7 +187,11 @@ class GlobalItemSyncService:
                     # History is best-effort; don't break sync.
                     pass
 
-        logger.info("GlobalItemSyncService: synced %s linked inventory items for global_item_id=%s", updated_count, global_item.id)
+        logger.info(
+            "GlobalItemSyncService: synced %s linked inventory items for global_item_id=%s",
+            updated_count,
+            global_item.id,
+        )
         return updated_count
 
     @classmethod
@@ -203,7 +208,9 @@ class GlobalItemSyncService:
 
         # Preserve user's unit if they differ from global default.
         if inv.type != "container":
-            if global_item.default_unit and (not inv.unit or inv.unit == global_item.default_unit):
+            if global_item.default_unit and (
+                not inv.unit or inv.unit == global_item.default_unit
+            ):
                 inv.unit = global_item.default_unit
 
         if inv.type == "ingredient":
@@ -239,4 +246,3 @@ class GlobalItemSyncService:
                 "container_color",
             ]:
                 setattr(inv, field, getattr(global_item, field, None))
-

@@ -6,19 +6,18 @@ Production planning focuses on its unique value: cost analysis and container str
 """
 
 import logging
-from typing import List, Dict, Any
-from flask_login import current_user
+from typing import List
 
 from ...models import Recipe
 from ..stock_check import UniversalStockCheckService
 from .types import IngredientRequirement
-from ..unit_conversion.unit_conversion import ConversionEngine
-
 
 logger = logging.getLogger(__name__)
 
 
-def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id: int) -> List[IngredientRequirement]:
+def validate_ingredients_with_uscs(
+    recipe: Recipe, scale: float, organization_id: int
+) -> List[IngredientRequirement]:
     """
     Use USCS to validate ingredients and convert to production planning format.
 
@@ -30,39 +29,45 @@ def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id
         uscs = UniversalStockCheckService()
         stock_results = uscs.check_recipe_stock(recipe.id, scale)
 
-        if not stock_results.get('success'):
+        if not stock_results.get("success"):
             logger.error(f"USCS stock check failed: {stock_results.get('error')}")
             return []
 
         # Convert USCS results to IngredientRequirement objects for cost calculation
         ingredient_requirements = []
 
-        for stock_item in stock_results.get('stock_check', []):
+        for stock_item in stock_results.get("stock_check", []):
             # Find recipe ingredient for cost data
             recipe_ingredient = next(
-                (ri for ri in recipe.recipe_ingredients if ri.inventory_item_id == stock_item['item_id']),
-                None
+                (
+                    ri
+                    for ri in recipe.recipe_ingredients
+                    if ri.inventory_item_id == stock_item["item_id"]
+                ),
+                None,
             )
 
             if not recipe_ingredient:
                 continue
 
             # Convert USCS status to production planning status
-            status = _convert_uscs_status(stock_item.get('status', 'unknown'))
-            cost_per_unit = getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
-            scaled_quantity = stock_item['needed_quantity']
+            status = _convert_uscs_status(stock_item.get("status", "unknown"))
+            cost_per_unit = (
+                getattr(recipe_ingredient.inventory_item, "cost_per_unit", 0) or 0
+            )
+            scaled_quantity = stock_item["needed_quantity"]
 
             requirement = IngredientRequirement(
-                ingredient_id=stock_item['item_id'],
-                ingredient_name=stock_item['item_name'],
+                ingredient_id=stock_item["item_id"],
+                ingredient_name=stock_item["item_name"],
                 scale=scale,
-                unit=stock_item['needed_unit'],
+                unit=stock_item["needed_unit"],
                 total_cost=scaled_quantity * cost_per_unit,
                 status=status,
                 base_quantity=recipe_ingredient.quantity,
                 scaled_quantity=scaled_quantity,
-                available_quantity=stock_item['available_quantity'],
-                cost_per_unit=cost_per_unit
+                available_quantity=stock_item["available_quantity"],
+                cost_per_unit=cost_per_unit,
             )
 
             ingredient_requirements.append(requirement)
@@ -77,10 +82,10 @@ def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id
 def _convert_uscs_status(uscs_status: str) -> str:
     """Convert USCS status to production planning status"""
     status_map = {
-        'OK': 'available',
-        'LOW': 'low', 
-        'NEEDED': 'insufficient',
-        'OUT_OF_STOCK': 'unavailable',
-        'ERROR': 'unknown'
+        "OK": "available",
+        "LOW": "low",
+        "NEEDED": "insufficient",
+        "OUT_OF_STOCK": "unavailable",
+        "ERROR": "unknown",
     }
-    return status_map.get(uscs_status.upper(), 'unknown')
+    return status_map.get(uscs_status.upper(), "unknown")

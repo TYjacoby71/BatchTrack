@@ -31,8 +31,8 @@ def _resolve_active_database_url() -> str:
 
     precedence = (
         "SQLALCHEMY_TEST_DATABASE_URI",  # pytest / local overrides
-        "SQLALCHEMY_DATABASE_URI",       # explicit SQLAlchemy config
-        "DATABASE_URL",                  # canonical env var
+        "SQLALCHEMY_DATABASE_URI",  # explicit SQLAlchemy config
+        "DATABASE_URL",  # canonical env var
     )
 
     for key in precedence:

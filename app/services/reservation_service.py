@@ -1,15 +1,16 @@
-from flask import current_app
-from flask_login import current_user
-from ..models import db, InventoryItem, Reservation
-from sqlalchemy import and_, func
 import logging
+
+from flask_login import current_user
+from sqlalchemy import and_, func
 
 # Import necessary canonical functions
 # Use canonical inventory adjustment service
-from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_adjustment._fifo_ops import credit_specific_lot
 
+from ..models import InventoryItem, Reservation, db
+
 logger = logging.getLogger(__name__)
+
 
 class ReservationService:
     """Service class for reservation operations"""
@@ -25,7 +26,7 @@ class ReservationService:
                 reservation.source_fifo_id,
                 reservation.quantity,
                 notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
-                created_by=current_user.id if current_user.is_authenticated else None
+                created_by=current_user.id if current_user.is_authenticated else None,
             )
             return success
         except Exception as e:
@@ -41,18 +42,30 @@ class ReservationService:
         return True
 
     @staticmethod
-    def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):
+    def create_reservation(
+        inventory_item_id,
+        quantity,
+        order_id,
+        source_fifo_id,
+        unit_cost,
+        customer=None,
+        sale_price=None,
+        notes="",
+        source="manual",
+    ):
         """
         Create a new product reservation by deducting from specific FIFO lot
         This should only be called AFTER FIFO deduction has been calculated and executed
         """
 
         product_item = db.session.get(InventoryItem, inventory_item_id)
-        if not product_item or product_item.type != 'product':
+        if not product_item or product_item.type != "product":
             return None, "Item is not a product or not found"
 
         # Get or create reserved item
-        reserved_item = ReservationService.get_reserved_item_for_product(inventory_item_id)
+        reserved_item = ReservationService.get_reserved_item_for_product(
+            inventory_item_id
+        )
         if not reserved_item:
             return None, "Failed to get or create reserved item"
 
@@ -67,11 +80,13 @@ class ReservationService:
             order_id=order_id,
             customer=customer,
             source=source,
-            status='active',
+            status="active",
             notes=notes,
             source_fifo_id=source_fifo_id,  # Track which FIFO lot this came from
             created_by=current_user.id if current_user.is_authenticated else None,
-            organization_id=current_user.organization_id if current_user.is_authenticated else None
+            organization_id=(
+                current_user.organization_id if current_user.is_authenticated else None
+            ),
         )
         db.session.add(reservation)
 
@@ -90,8 +105,7 @@ class ReservationService:
 
         # Find active reservations for this order
         reservations = Reservation.query.filter_by(
-            order_id=order_id,
-            status='active'
+            order_id=order_id, status="active"
         ).all()
 
         if not reservations:
@@ -101,20 +115,33 @@ class ReservationService:
 
         for reservation in reservations:
             # Validate this is a product reservation
-            if not reservation.product_item or reservation.product_item.type != 'product':
+            if (
+                not reservation.product_item
+                or reservation.product_item.type != "product"
+            ):
                 continue
 
-            lot = db.session.get(InventoryLot, reservation.source_fifo_id) if reservation.source_fifo_id else None
+            lot = (
+                db.session.get(InventoryLot, reservation.source_fifo_id)
+                if reservation.source_fifo_id
+                else None
+            )
             if not lot:
-                logger.warning(f"Reservation {reservation.id} has no source lot; skipping credit")
+                logger.warning(
+                    f"Reservation {reservation.id} has no source lot; skipping credit"
+                )
                 continue
 
             success = ReservationService._release_reservation_inventory(reservation)
             if not success:
-                logger.warning(f"Failed to credit back lot {reservation.source_fifo_id} for reservation {reservation.id}")
+                logger.warning(
+                    f"Failed to credit back lot {reservation.source_fifo_id} for reservation {reservation.id}"
+                )
                 continue
 
-            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
+            print(
+                f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}"
+            )
 
             # Update reserved item quantity
             reservation.reserved_item.quantity -= reservation.quantity
@@ -138,7 +165,7 @@ class ReservationService:
         if not reservation:
             return False, "Reservation not found"
 
-        if reservation.status != 'active':
+        if reservation.status != "active":
             return False, "Reservation is not active"
 
         product_item = reservation.product_item
@@ -152,7 +179,7 @@ class ReservationService:
         reserved_item.quantity -= reservation.quantity
 
         # Update the reservation status
-        reservation.status = 'cancelled'
+        reservation.status = "cancelled"
 
         # Record the transaction in inventory history using canonical helper
         # Audit entries now handled by FIFO operations
@@ -178,7 +205,7 @@ class ReservationService:
         if not reservation:
             return False, "Reservation not found"
 
-        if reservation.status != 'active':
+        if reservation.status != "active":
             return False, "Reservation is not active"
 
         reserved_item = reservation.reserved_item
@@ -189,7 +216,7 @@ class ReservationService:
         reserved_item.quantity -= reservation.quantity
 
         # Update reservation status
-        reservation.status = 'fulfilled'
+        reservation.status = "fulfilled"
 
         # Record the transaction in inventory history using canonical helper
         # Audit entries now handled by FIFO operations
@@ -218,21 +245,21 @@ class ReservationService:
         reserved_name = f"{product_item.name} (Reserved)"
         reserved_item = InventoryItem.query.filter_by(
             name=reserved_name,
-            type='product-reserved',
-            organization_id=product_item.organization_id
+            type="product-reserved",
+            organization_id=product_item.organization_id,
         ).first()
 
         if not reserved_item:
             reserved_item = InventoryItem(
                 name=reserved_name,
-                type='product-reserved',
+                type="product-reserved",
                 unit=product_item.unit,
                 cost_per_unit=product_item.cost_per_unit,
                 quantity=0.0,
                 organization_id=product_item.organization_id,
                 category_id=product_item.category_id,
                 is_perishable=product_item.is_perishable,
-                shelf_life_days=product_item.shelf_life_days
+                shelf_life_days=product_item.shelf_life_days,
             )
             db.session.add(reserved_item)
             db.session.flush()
@@ -243,14 +270,14 @@ class ReservationService:
     def get_product_item_for_reserved(reserved_item_id):
         """Get the original product item from a reserved item"""
         reserved_item = db.session.get(InventoryItem, reserved_item_id)
-        if not reserved_item or reserved_item.type != 'product-reserved':
+        if not reserved_item or reserved_item.type != "product-reserved":
             return None
 
         original_name = reserved_item.name.replace(" (Reserved)", "")
         product_item = InventoryItem.query.filter_by(
             name=original_name,
-            type='product',
-            organization_id=reserved_item.organization_id
+            type="product",
+            organization_id=reserved_item.organization_id,
         ).first()
 
         return product_item
@@ -265,31 +292,32 @@ class ReservationService:
         available_qty = sku.inventory_item.available_quantity
 
         # Get reserved quantity from active reservations
-        reserved_qty = ReservationService.get_total_reserved_for_item(sku.inventory_item.id)
+        reserved_qty = ReservationService.get_total_reserved_for_item(
+            sku.inventory_item.id
+        )
 
         return available_qty + reserved_qty
 
     @staticmethod
     def get_total_reserved_for_item(item_id):
         """Get total reserved quantity for a product from active reservations"""
-        result = db.session.query(func.sum(Reservation.quantity)).filter(
-            and_(
-                Reservation.product_item_id == item_id,
-                Reservation.status == 'active'
+        result = (
+            db.session.query(func.sum(Reservation.quantity))
+            .filter(
+                and_(
+                    Reservation.product_item_id == item_id,
+                    Reservation.status == "active",
+                )
             )
-        ).scalar()
+            .scalar()
+        )
         return result or 0.0
 
     @staticmethod
     def get_reservation_summary_for_sku(sku):
         """Get reservation summary for display in SKU view"""
         if not sku.inventory_item:
-            return {
-                'available': 0.0,
-                'reserved': 0.0,
-                'total': 0.0,
-                'reservations': []
-            }
+            return {"available": 0.0, "reserved": 0.0, "total": 0.0, "reservations": []}
 
         available_qty = sku.inventory_item.available_quantity
 
@@ -297,7 +325,7 @@ class ReservationService:
         active_reservations = Reservation.query.filter(
             and_(
                 Reservation.product_item_id == sku.inventory_item.id,
-                Reservation.status == 'active'
+                Reservation.status == "active",
             )
         ).all()
 
@@ -309,23 +337,23 @@ class ReservationService:
             order_id = reservation.order_id
             if order_id not in order_reservations:
                 order_reservations[order_id] = {
-                    'order_id': order_id,
-                    'quantity': 0.0,
-                    'created_at': reservation.created_at,
-                    'expires_at': reservation.expires_at,
-                    'source': reservation.source,
-                    'sale_price': reservation.sale_price
+                    "order_id": order_id,
+                    "quantity": 0.0,
+                    "created_at": reservation.created_at,
+                    "expires_at": reservation.expires_at,
+                    "source": reservation.source,
+                    "sale_price": reservation.sale_price,
                 }
-            order_reservations[order_id]['quantity'] += reservation.quantity
+            order_reservations[order_id]["quantity"] += reservation.quantity
             total_reserved += reservation.quantity
 
         reservations = list(order_reservations.values())
 
         return {
-            'available': available_qty,
-            'reserved': total_reserved,
-            'total': available_qty + total_reserved,
-            'reservations': reservations
+            "available": available_qty,
+            "reserved": total_reserved,
+            "total": available_qty + total_reserved,
+            "reservations": reservations,
         }
 
     @staticmethod
@@ -335,18 +363,24 @@ class ReservationService:
 
         details = []
         for reservation in reservations:
-            details.append({
-                'id': reservation.id,
-                'product_name': reservation.product_item.name if reservation.product_item else 'Unknown',
-                'quantity': reservation.quantity,
-                'unit': reservation.unit,
-                'unit_cost': reservation.unit_cost,
-                'sale_price': reservation.sale_price,
-                'status': reservation.status,
-                'created_at': reservation.created_at,
-                'expires_at': reservation.expires_at,
-                'source': reservation.source,
-                'source_batch_id': reservation.source_batch_id
-            })
+            details.append(
+                {
+                    "id": reservation.id,
+                    "product_name": (
+                        reservation.product_item.name
+                        if reservation.product_item
+                        else "Unknown"
+                    ),
+                    "quantity": reservation.quantity,
+                    "unit": reservation.unit,
+                    "unit_cost": reservation.unit_cost,
+                    "sale_price": reservation.sale_price,
+                    "status": reservation.status,
+                    "created_at": reservation.created_at,
+                    "expires_at": reservation.expires_at,
+                    "source": reservation.source,
+                    "source_batch_id": reservation.source_batch_id,
+                }
+            )
 
         return details

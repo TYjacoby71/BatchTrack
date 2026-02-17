@@ -56,14 +56,14 @@ def build_recipe_submission(
     allowed_containers = collect_allowed_containers(form)
 
     portion_payload, portion_fields = parse_portioning_from_form(form)
-    category_id = safe_int(form.get('category_id'))
+    category_id = safe_int(form.get("category_id"))
 
-    fallback_yield = getattr(defaults, 'predicted_yield', None)
+    fallback_yield = getattr(defaults, "predicted_yield", None)
     if fallback_yield is None:
         fallback_yield = 0.0
-    yield_amount = coerce_float(form.get('predicted_yield'), fallback=fallback_yield)
-    fallback_unit = getattr(defaults, 'predicted_yield_unit', '') if defaults else ''
-    yield_unit = form.get('predicted_yield_unit') or fallback_unit or ""
+    yield_amount = coerce_float(form.get("predicted_yield"), fallback=fallback_yield)
+    fallback_unit = getattr(defaults, "predicted_yield_unit", "") if defaults else ""
+    yield_unit = form.get("predicted_yield_unit") or fallback_unit or ""
 
     marketplace_ok, marketplace_result = RecipeMarketplaceService.extract_submission(
         form, files, existing=existing
@@ -79,21 +79,21 @@ def build_recipe_submission(
     )
 
     kwargs: Dict[str, Any] = {
-        'name': form.get('name'),
-        'description': form.get('instructions'),
-        'instructions': form.get('instructions'),
-        'yield_amount': yield_amount,
-        'yield_unit': yield_unit,
-        'ingredients': ingredients,
-        'consumables': consumables,
-        'allowed_containers': allowed_containers,
-        'label_prefix': form.get('label_prefix'),
-        'category_id': category_id,
-        'portioning_data': portion_payload,
-        'is_portioned': portion_fields['is_portioned'],
-        'portion_name': portion_fields['portion_name'],
-        'portion_count': portion_fields['portion_count'],
-        'portion_unit_id': portion_fields['portion_unit_id'],
+        "name": form.get("name"),
+        "description": form.get("instructions"),
+        "instructions": form.get("instructions"),
+        "yield_amount": yield_amount,
+        "yield_unit": yield_unit,
+        "ingredients": ingredients,
+        "consumables": consumables,
+        "allowed_containers": allowed_containers,
+        "label_prefix": form.get("label_prefix"),
+        "category_id": category_id,
+        "portioning_data": portion_payload,
+        "is_portioned": portion_fields["is_portioned"],
+        "portion_name": portion_fields["portion_name"],
+        "portion_count": portion_fields["portion_count"],
+        "portion_unit_id": portion_fields["portion_unit_id"],
     }
     kwargs.update(marketplace_payload)
     kwargs.update(cover_payload)
@@ -105,7 +105,7 @@ def build_recipe_submission(
 # Purpose: Extract allowed container ids from form data.
 def collect_allowed_containers(form) -> list[int]:
     containers: list[int] = []
-    for raw in form.getlist('allowed_containers[]'):
+    for raw in form.getlist("allowed_containers[]"):
         value = safe_int(raw)
         if value:
             containers.append(value)
@@ -115,26 +115,26 @@ def collect_allowed_containers(form) -> list[int]:
 # --- Parse portioning ---
 # Purpose: Extract portioning metadata and validation errors.
 def parse_portioning_from_form(form) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
-    truthy = {'true', '1', 'yes', 'on'}
-    flag = str(form.get('is_portioned') or '').strip().lower() in truthy
+    truthy = {"true", "1", "yes", "on"}
+    flag = str(form.get("is_portioned") or "").strip().lower() in truthy
     default_fields = {
-        'is_portioned': False,
-        'portion_name': None,
-        'portion_count': None,
-        'portion_unit_id': None,
+        "is_portioned": False,
+        "portion_name": None,
+        "portion_count": None,
+        "portion_unit_id": None,
     }
     if not flag:
         return None, default_fields
 
-    portion_name = (form.get('portion_name') or '').strip() or None
-    portion_count = safe_int(form.get('portion_count'))
+    portion_name = (form.get("portion_name") or "").strip() or None
+    portion_count = safe_int(form.get("portion_count"))
     portion_unit_id = ensure_portion_unit(portion_name)
 
     payload = {
-        'is_portioned': True,
-        'portion_name': portion_name,
-        'portion_count': portion_count,
-        'portion_unit_id': portion_unit_id,
+        "is_portioned": True,
+        "portion_name": portion_name,
+        "portion_count": portion_count,
+        "portion_unit_id": portion_unit_id,
     }
     return payload, payload.copy()
 
@@ -146,23 +146,25 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
         return None
 
     try:
-        existing = Unit.query.filter(Unit.name == portion_name).order_by(
-            (Unit.organization_id == current_user.organization_id).desc()
-        ).first()
+        existing = (
+            Unit.query.filter(Unit.name == portion_name)
+            .order_by((Unit.organization_id == current_user.organization_id).desc())
+            .first()
+        )
     except Exception:
         existing = None
 
     if existing:
         return existing.id
 
-    if not getattr(current_user, 'is_authenticated', False):
+    if not getattr(current_user, "is_authenticated", False):
         return None
 
     try:
         unit = Unit(
             name=portion_name,
-            unit_type='count',
-            base_unit='count',
+            unit_type="count",
+            base_unit="count",
             conversion_factor=1.0,
             is_active=True,
             is_custom=True,
@@ -181,7 +183,7 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
 # --- Coerce float ---
 # Purpose: Safely coerce values to float with fallback.
 def coerce_float(value: Any, *, fallback: float = 0.0) -> float:
-    if value in (None, ''):
+    if value in (None, ""):
         return fallback
     try:
         return float(value)
@@ -193,18 +195,20 @@ def coerce_float(value: Any, *, fallback: float = 0.0) -> float:
 # Purpose: Parse ingredient rows from the recipe form.
 def extract_ingredients_from_form(form):
     ingredients = []
-    ingredient_ids = form.getlist('ingredient_ids[]')
-    global_item_ids = form.getlist('global_item_ids[]')
-    amounts = form.getlist('amounts[]')
-    units = form.getlist('units[]')
+    ingredient_ids = form.getlist("ingredient_ids[]")
+    global_item_ids = form.getlist("global_item_ids[]")
+    amounts = form.getlist("amounts[]")
+    units = form.getlist("units[]")
 
     max_len = max(len(ingredient_ids), len(global_item_ids), len(amounts), len(units))
-    ingredient_ids += [''] * (max_len - len(ingredient_ids))
-    global_item_ids += [''] * (max_len - len(global_item_ids))
-    amounts += [''] * (max_len - len(amounts))
-    units += [''] * (max_len - len(units))
+    ingredient_ids += [""] * (max_len - len(ingredient_ids))
+    global_item_ids += [""] * (max_len - len(global_item_ids))
+    amounts += [""] * (max_len - len(amounts))
+    units += [""] * (max_len - len(units))
 
-    for ing_id, gi_id, amt, unit in zip(ingredient_ids, global_item_ids, amounts, units):
+    for ing_id, gi_id, amt, unit in zip(
+        ingredient_ids, global_item_ids, amounts, units
+    ):
         if not amt or not unit:
             continue
 
@@ -247,7 +251,8 @@ def extract_ingredients_from_form(form):
                     try:
                         name_match = (
                             InventoryItem.query.filter(
-                                InventoryItem.organization_id == current_user.organization_id,
+                                InventoryItem.organization_id
+                                == current_user.organization_id,
                                 func.lower(InventoryItem.name)
                                 == func.lower(db.literal(gi.name)),
                                 InventoryItem.type == gi.item_type,
@@ -261,17 +266,17 @@ def extract_ingredients_from_form(form):
                     if name_match:
                         try:
                             name_match.global_item_id = gi.id
-                            name_match.ownership = 'global'
+                            name_match.ownership = "global"
                             db.session.flush()
                         except Exception:
                             db.session.rollback()
                         item_id = int(name_match.id)
                     else:
                         form_like = {
-                            'name': gi.name,
-                            'type': gi.item_type,
-                            'unit': gi.default_unit or '',
-                            'global_item_id': gi.id,
+                            "name": gi.name,
+                            "type": gi.item_type,
+                            "unit": gi.default_unit or "",
+                            "global_item_id": gi.id,
                         }
 
                         success, message, created_id = create_inventory_item(
@@ -293,9 +298,9 @@ def extract_ingredients_from_form(form):
         if item_id:
             ingredients.append(
                 {
-                    'item_id': item_id,
-                    'quantity': quantity,
-                    'unit': (unit or '').strip(),
+                    "item_id": item_id,
+                    "quantity": quantity,
+                    "unit": (unit or "").strip(),
                 }
             )
 
@@ -306,17 +311,17 @@ def extract_ingredients_from_form(form):
 # Purpose: Parse consumable rows from the recipe form.
 def extract_consumables_from_form(form):
     consumables = []
-    ids = form.getlist('consumable_ids[]')
-    amounts = form.getlist('consumable_amounts[]')
-    units = form.getlist('consumable_units[]')
+    ids = form.getlist("consumable_ids[]")
+    amounts = form.getlist("consumable_amounts[]")
+    units = form.getlist("consumable_units[]")
     for item_id, amt, unit in zip(ids, amounts, units):
         if item_id and amt and unit:
             try:
                 consumables.append(
                     {
-                        'item_id': int(item_id),
-                        'quantity': float(amt.strip()),
-                        'unit': unit.strip(),
+                        "item_id": int(item_id),
+                        "quantity": float(amt.strip()),
+                        "unit": unit.strip(),
                     }
                 )
             except (ValueError, TypeError) as exc:
@@ -328,16 +333,16 @@ def extract_consumables_from_form(form):
 # --- Get submission status ---
 # Purpose: Determine the desired recipe status from form input.
 def get_submission_status(form):
-    mode = (form.get('save_mode') or '').strip().lower()
-    return 'draft' if mode == 'draft' else 'published'
+    mode = (form.get("save_mode") or "").strip().lower()
+    return "draft" if mode == "draft" else "published"
 
 
 # --- Parse service error ---
 # Purpose: Normalize service exceptions into display messages.
 def parse_service_error(error):
     if isinstance(error, dict):
-        message = error.get('error') or error.get('message') or 'An error occurred'
-        missing_fields = error.get('missing_fields') or []
+        message = error.get("error") or error.get("message") or "An error occurred"
+        missing_fields = error.get("missing_fields") or []
         return message, missing_fields
     return str(error), []
 
@@ -345,8 +350,8 @@ def parse_service_error(error):
 # --- Build draft prompt ---
 # Purpose: Build user-facing messages for draft prompts.
 def build_draft_prompt(missing_fields, attempted_status, message):
-    if missing_fields and attempted_status != 'draft':
-        return {'missing_fields': missing_fields, 'message': message}
+    if missing_fields and attempted_status != "draft":
+        return {"missing_fields": missing_fields, "message": message}
     return None
 
 
@@ -393,7 +398,9 @@ def _marketplace_payload_from_existing(existing: Optional[Recipe]) -> Dict[str, 
         "product_store_url": existing.product_store_url,
         "marketplace_notes": existing.marketplace_notes,
         "public_description": existing.public_description,
-        "skin_opt_in": bool(existing.skin_opt_in) if existing.skin_opt_in is not None else True,
+        "skin_opt_in": (
+            bool(existing.skin_opt_in) if existing.skin_opt_in is not None else True
+        ),
     }
 
 

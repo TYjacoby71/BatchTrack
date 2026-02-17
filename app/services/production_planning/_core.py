@@ -9,17 +9,16 @@ Glossary:
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from flask_login import current_user
 
 from ...extensions import db
 from ...models import Recipe
 from ..statistics import StatisticsService as ModularStatisticsService
-from ..stock_check import UniversalStockCheckService
 from ._container_management import analyze_container_options
 from ._cost_calculation import calculate_comprehensive_costs
-from .types import ProductionRequest, ProductionPlan, IngredientRequirement, CostBreakdown
+from .types import ProductionPlan, ProductionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ def plan_production_comprehensive(
     scale: float = 1.0,
     preferred_container_id: Optional[int] = None,
     include_container_analysis: bool = True,
-    max_cost_per_unit: Optional[float] = None
+    max_cost_per_unit: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Main production planning orchestration.
@@ -43,7 +42,9 @@ def plan_production_comprehensive(
         request = ProductionRequest(
             recipe_id=recipe_id,
             scale=scale,
-            organization_id=current_user.organization_id if current_user.is_authenticated else None
+            organization_id=(
+                current_user.organization_id if current_user.is_authenticated else None
+            ),
         )
 
         # Execute planning
@@ -55,17 +56,19 @@ def plan_production_comprehensive(
     except Exception as e:
         logger.error(f"Error in production planning: {e}")
         return {
-            'success': False,
-            'feasible': False,
-            'error': f'Production planning failed: {str(e)}',
-            'stock_results': [],
-            'issues': [f'Production planning failed: {str(e)}']
+            "success": False,
+            "feasible": False,
+            "error": f"Production planning failed: {str(e)}",
+            "stock_results": [],
+            "issues": [f"Production planning failed: {str(e)}"],
         }
 
 
 # --- Execute planning workflow ---
 # Purpose: Execute the full planning workflow with validation.
-def execute_production_planning(request: ProductionRequest, include_containers: bool = True) -> ProductionPlan:
+def execute_production_planning(
+    request: ProductionRequest, include_containers: bool = True
+) -> ProductionPlan:
     """Execute the production planning workflow"""
     from ._stock_validation import validate_ingredients_with_uscs
 
@@ -78,7 +81,10 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
 
     # 2. Validate ingredients using stock validation service
     ingredient_requirements = validate_ingredients_with_uscs(
-        recipe, request.scale, request.organization_id or (current_user.organization_id if current_user.is_authenticated else None)
+        recipe,
+        request.scale,
+        request.organization_id
+        or (current_user.organization_id if current_user.is_authenticated else None),
     )
 
     if not ingredient_requirements:
@@ -86,22 +92,22 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
             request=request,
             feasible=False,
             ingredient_requirements=[],
-            projected_yield={'amount': 0, 'unit': 'count'},
-            issues=['Stock validation failed - no ingredients found']
+            projected_yield={"amount": 0, "unit": "count"},
+            issues=["Stock validation failed - no ingredients found"],
         )
 
     # 3. Analyze containers if requested
     container_strategy = None
     container_options = []
     if include_containers:
-        from .types import ContainerStrategy, ContainerOption
+        from .types import ContainerOption, ContainerStrategy
 
         raw_strategy, raw_container_options = analyze_container_options(
             recipe=recipe,
-            scale=request.scale, 
+            scale=request.scale,
             preferred_container_id=None,
             organization_id=current_user.organization_id,
-            api_format=False
+            api_format=False,
         )
 
         if raw_strategy:
@@ -109,40 +115,40 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
             container_strategy = ContainerStrategy(
                 selected_containers=[
                     ContainerOption(
-                        container_id=opt['container_id'],
-                        container_name=opt['container_name'],
-                        capacity=opt['capacity'],
-                        available_quantity=opt['available_quantity'],
-                        containers_needed=opt['containers_needed'],
-                        cost_each=opt.get('cost_each', 0.0)
-                    ) for opt in raw_strategy.get('container_selection', [])
+                        container_id=opt["container_id"],
+                        container_name=opt["container_name"],
+                        capacity=opt["capacity"],
+                        available_quantity=opt["available_quantity"],
+                        containers_needed=opt["containers_needed"],
+                        cost_each=opt.get("cost_each", 0.0),
+                    )
+                    for opt in raw_strategy.get("container_selection", [])
                 ],
-                total_capacity=raw_strategy.get('total_capacity', 0),
-                containment_percentage=raw_strategy.get('containment_percentage', 0),
-                warnings=raw_strategy.get('warnings', [])
+                total_capacity=raw_strategy.get("total_capacity", 0),
+                containment_percentage=raw_strategy.get("containment_percentage", 0),
+                warnings=raw_strategy.get("warnings", []),
             )
 
         # All available container options
         for opt in raw_container_options:
-            container_options.append(ContainerOption(
-                container_id=opt['container_id'],
-                container_name=opt['container_name'],
-                capacity=opt['capacity'],
-                available_quantity=opt['available_quantity'],
-                containers_needed=opt['containers_needed'],
-                cost_each=opt.get('cost_each', 0.0)
-            ))
+            container_options.append(
+                ContainerOption(
+                    container_id=opt["container_id"],
+                    container_name=opt["container_name"],
+                    capacity=opt["capacity"],
+                    available_quantity=opt["available_quantity"],
+                    containers_needed=opt["containers_needed"],
+                    cost_each=opt.get("cost_each", 0.0),
+                )
+            )
 
     # 4. Calculate costs
     cost_breakdown = calculate_comprehensive_costs(
-        ingredient_requirements,
-        container_strategy,
-        recipe,
-        request.scale
+        ingredient_requirements, container_strategy, recipe, request.scale
     )
 
     # 5. Determine feasibility
-    feasible = all(req.status in ['available', 'OK'] for req in ingredient_requirements)
+    feasible = all(req.status in ["available", "OK"] for req in ingredient_requirements)
     issues = []
     if not feasible:
         issues.append("Insufficient ingredients available")
@@ -156,13 +162,13 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         feasible=feasible,
         ingredient_requirements=ingredient_requirements,
         projected_yield={
-            'amount': (recipe.predicted_yield or 0) * request.scale,
-            'unit': recipe.predicted_yield_unit or 'count'
+            "amount": (recipe.predicted_yield or 0) * request.scale,
+            "unit": recipe.predicted_yield_unit or "count",
         },
         container_strategy=container_strategy,
         container_options=container_options,
         cost_breakdown=cost_breakdown,
-        issues=issues
+        issues=issues,
     )
 
     # 7. Record planned efficiency statistics
@@ -172,7 +178,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
                 recipe_id=request.recipe_id,
                 planned_efficiency=container_strategy.containment_percentage,
                 planned_yield=plan.projected_yield,
-                planned_costs=cost_breakdown.to_dict() if cost_breakdown else {}
+                planned_costs=cost_breakdown.to_dict() if cost_breakdown else {},
             )
         except Exception as e:
             logger.warning(f"Could not record planned efficiency statistics: {e}")

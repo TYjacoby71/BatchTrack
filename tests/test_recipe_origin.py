@@ -1,6 +1,6 @@
-import pytest
 from uuid import uuid4
 
+import pytest
 from flask_login import login_user, logout_user
 
 from app.extensions import db
@@ -119,7 +119,10 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     assert purchased_recipe.org_origin_type == "purchased"
     assert purchased_recipe.org_origin_recipe_id == purchased_recipe.id
     assert purchased_recipe.org_origin_source_org_id == seller_org_id
-    assert purchased_recipe.org_origin_source_recipe_id in {seller_root_recipe_id, seller_recipe_id}
+    assert purchased_recipe.org_origin_source_recipe_id in {
+        seller_root_recipe_id,
+        seller_recipe_id,
+    }
     assert purchased_recipe.root_recipe_id == seller_root_recipe_id
     assert purchased_recipe.is_sellable is False
 

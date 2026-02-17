@@ -11,15 +11,15 @@ from ...models import Recipe
 
 def _get_batchtrack_org_id() -> int:
     try:
-        return int(current_app.config.get('BATCHTRACK_ORG_ID', 1))
+        return int(current_app.config.get("BATCHTRACK_ORG_ID", 1))
     except Exception:
         return 1
 
 
 def _default_org_origin_type(org_id: Optional[int]) -> str:
     if org_id and org_id == _get_batchtrack_org_id():
-        return 'batchtrack_native'
-    return 'authored'
+        return "batchtrack_native"
+    return "authored"
 
 
 def _build_org_origin_context(
@@ -28,35 +28,47 @@ def _build_org_origin_context(
     clone_source: Optional[Recipe],
 ) -> Dict[str, Any]:
     context = {
-        'org_origin_type': _default_org_origin_type(target_org_id),
-        'org_origin_source_org_id': None,
-        'org_origin_source_recipe_id': None,
-        'org_origin_purchased': False,
-        'org_origin_recipe_id': None,
+        "org_origin_type": _default_org_origin_type(target_org_id),
+        "org_origin_source_org_id": None,
+        "org_origin_source_recipe_id": None,
+        "org_origin_purchased": False,
+        "org_origin_recipe_id": None,
     }
 
     if parent_recipe and parent_recipe.organization_id == target_org_id:
-        context['org_origin_recipe_id'] = parent_recipe.org_origin_recipe_id or parent_recipe.id
-        context['org_origin_type'] = parent_recipe.org_origin_type or context['org_origin_type']
-        context['org_origin_source_org_id'] = parent_recipe.org_origin_source_org_id
-        context['org_origin_source_recipe_id'] = parent_recipe.org_origin_source_recipe_id
-        context['org_origin_purchased'] = parent_recipe.org_origin_purchased or False
+        context["org_origin_recipe_id"] = (
+            parent_recipe.org_origin_recipe_id or parent_recipe.id
+        )
+        context["org_origin_type"] = (
+            parent_recipe.org_origin_type or context["org_origin_type"]
+        )
+        context["org_origin_source_org_id"] = parent_recipe.org_origin_source_org_id
+        context["org_origin_source_recipe_id"] = (
+            parent_recipe.org_origin_source_recipe_id
+        )
+        context["org_origin_purchased"] = parent_recipe.org_origin_purchased or False
         return context
 
     if clone_source and clone_source.organization_id == target_org_id:
-        context['org_origin_recipe_id'] = clone_source.org_origin_recipe_id or clone_source.id
-        context['org_origin_type'] = clone_source.org_origin_type or context['org_origin_type']
-        context['org_origin_source_org_id'] = clone_source.org_origin_source_org_id
-        context['org_origin_source_recipe_id'] = clone_source.org_origin_source_recipe_id
-        context['org_origin_purchased'] = clone_source.org_origin_purchased or False
+        context["org_origin_recipe_id"] = (
+            clone_source.org_origin_recipe_id or clone_source.id
+        )
+        context["org_origin_type"] = (
+            clone_source.org_origin_type or context["org_origin_type"]
+        )
+        context["org_origin_source_org_id"] = clone_source.org_origin_source_org_id
+        context["org_origin_source_recipe_id"] = (
+            clone_source.org_origin_source_recipe_id
+        )
+        context["org_origin_purchased"] = clone_source.org_origin_purchased or False
         return context
 
     source = parent_recipe or clone_source
     if source and source.organization_id and source.organization_id != target_org_id:
-        context['org_origin_type'] = 'purchased'
-        context['org_origin_purchased'] = True
-        context['org_origin_source_org_id'] = source.organization_id
-        context['org_origin_source_recipe_id'] = source.root_recipe_id or source.id
+        context["org_origin_type"] = "purchased"
+        context["org_origin_purchased"] = True
+        context["org_origin_source_org_id"] = source.organization_id
+        context["org_origin_source_recipe_id"] = source.root_recipe_id or source.id
 
     return context
 
@@ -73,7 +85,7 @@ def _resolve_is_sellable(
     if explicit_flag is not None:
         return bool(explicit_flag)
 
-    if origin_context.get('org_origin_purchased'):
+    if origin_context.get("org_origin_purchased"):
         return False
 
     if (
@@ -84,10 +96,10 @@ def _resolve_is_sellable(
     ):
         return False
 
-    if clone_source and getattr(clone_source, 'is_sellable', True) is False:
+    if clone_source and getattr(clone_source, "is_sellable", True) is False:
         return False
 
-    if parent_recipe and getattr(parent_recipe, 'is_sellable', True) is False:
+    if parent_recipe and getattr(parent_recipe, "is_sellable", True) is False:
         return False
 
     return True

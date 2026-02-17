@@ -1,17 +1,9 @@
 from __future__ import annotations
 
-from flask import (
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
+from flask import jsonify, render_template, request, url_for
+
 from app.models.feature_flag import FeatureFlag
-from app.services.developer.dashboard_service import (
-    DeveloperDashboardService,
-)
+from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.statistics import AnalyticsDataService
 
 from ..decorators import require_developer_permission
@@ -126,7 +118,10 @@ def update_system_settings():
     value = data.get("value")
 
     if not section or not key:
-        return jsonify({"success": False, "error": "Section and key are required."}), 400
+        return (
+            jsonify({"success": False, "error": "Section and key are required."}),
+            400,
+        )
 
     settings_data = read_json_file("settings.json", default={}) or {}
     section_settings = settings_data.get(section)

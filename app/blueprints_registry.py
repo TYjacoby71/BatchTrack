@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Iterable, List
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -19,37 +19,82 @@ class BlueprintSpec:
 CORE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.blueprints.auth", "auth_bp", "/auth", "Authentication"),
     BlueprintSpec("app.blueprints.admin", "admin_bp", "/admin", "Admin"),
-    BlueprintSpec("app.blueprints.developer", "developer_bp", "/developer", "Developer"),
-    BlueprintSpec("app.blueprints.inventory", "inventory_bp", "/inventory", "Inventory"),
+    BlueprintSpec(
+        "app.blueprints.developer", "developer_bp", "/developer", "Developer"
+    ),
+    BlueprintSpec(
+        "app.blueprints.inventory", "inventory_bp", "/inventory", "Inventory"
+    ),
     BlueprintSpec("app.blueprints.recipes", "recipes_bp", "/recipes", "Recipes"),
     BlueprintSpec("app.blueprints.batches", "batches_bp", "/batches", "Batches"),
-    BlueprintSpec("app.blueprints.organization.routes", "organization_bp", "/organization", "Organization"),
+    BlueprintSpec(
+        "app.blueprints.organization.routes",
+        "organization_bp",
+        "/organization",
+        "Organization",
+    ),
     BlueprintSpec("app.blueprints.billing", "billing_bp", "/billing", "Billing"),
-    BlueprintSpec("app.blueprints.onboarding.routes", "onboarding_bp", "/onboarding", "Onboarding"),
+    BlueprintSpec(
+        "app.blueprints.onboarding.routes", "onboarding_bp", "/onboarding", "Onboarding"
+    ),
     BlueprintSpec("app.blueprints.settings", "settings_bp", "/settings", "Settings"),
     BlueprintSpec("app.blueprints.timers", "timers_bp", "/timers", "Timers"),
-    BlueprintSpec("app.blueprints.expiration", "expiration_bp", "/expiration", "Expiration"),
-    BlueprintSpec("app.blueprints.conversion", "conversion_bp", "/conversion", "Conversion"),
-    BlueprintSpec("app.blueprints.production_planning", "production_planning_bp", "/production-planning", "Production Planning"),
+    BlueprintSpec(
+        "app.blueprints.expiration", "expiration_bp", "/expiration", "Expiration"
+    ),
+    BlueprintSpec(
+        "app.blueprints.conversion", "conversion_bp", "/conversion", "Conversion"
+    ),
+    BlueprintSpec(
+        "app.blueprints.production_planning",
+        "production_planning_bp",
+        "/production-planning",
+        "Production Planning",
+    ),
 )
 
 API_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
-    BlueprintSpec("app.blueprints.api.public", "public_api_bp", "/api/public", "Public API"),
+    BlueprintSpec(
+        "app.blueprints.api.public", "public_api_bp", "/api/public", "Public API"
+    ),
     BlueprintSpec("app.blueprints.api.routes", "api_bp", "/api", "Main API"),
     BlueprintSpec("app.blueprints.api.drawers", "drawers_bp", None, "Drawer API"),
 )
 
 ROUTE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.blueprints.core.routes", "core_bp", None, "Core Public Routes"),
-    BlueprintSpec("app.blueprints.dashboard.routes", "app_routes_bp", None, "App Routes"),
-    BlueprintSpec("app.blueprints.pricing.routes", "pricing_bp", None, "Pricing Routes"),
-    BlueprintSpec("app.blueprints.landing.routes", "landing_pages_bp", None, "Landing Pages"),
+    BlueprintSpec(
+        "app.blueprints.dashboard.routes", "app_routes_bp", None, "App Routes"
+    ),
+    BlueprintSpec(
+        "app.blueprints.pricing.routes", "pricing_bp", None, "Pricing Routes"
+    ),
+    BlueprintSpec(
+        "app.blueprints.landing.routes", "landing_pages_bp", None, "Landing Pages"
+    ),
     BlueprintSpec("app.blueprints.legal.routes", "legal_bp", "/legal", "Legal Routes"),
-    BlueprintSpec("app.blueprints.bulk_stock.routes", "bulk_stock_bp", "/bulk-stock", "Bulk Stock"),
+    BlueprintSpec(
+        "app.blueprints.bulk_stock.routes", "bulk_stock_bp", "/bulk-stock", "Bulk Stock"
+    ),
     BlueprintSpec("app.blueprints.faults.routes", "faults_bp", "/faults", "Fault Log"),
-    BlueprintSpec("app.blueprints.tag_manager.routes", "tag_manager_bp", "/tag-manager", "Tag Manager"),
-    BlueprintSpec("app.blueprints.global_library.routes", "global_library_bp", None, "Global Library"),
-    BlueprintSpec("app.blueprints.recipe_library.routes", "recipe_library_bp", None, "Recipe Library"),
+    BlueprintSpec(
+        "app.blueprints.tag_manager.routes",
+        "tag_manager_bp",
+        "/tag-manager",
+        "Tag Manager",
+    ),
+    BlueprintSpec(
+        "app.blueprints.global_library.routes",
+        "global_library_bp",
+        None,
+        "Global Library",
+    ),
+    BlueprintSpec(
+        "app.blueprints.recipe_library.routes",
+        "recipe_library_bp",
+        None,
+        "Recipe Library",
+    ),
     BlueprintSpec("app.blueprints.waitlist.routes", "waitlist_bp", None, "Waitlist"),
     BlueprintSpec("app.blueprints.help.routes", "help_bp", None, "Help & Instructions"),
     BlueprintSpec("app.blueprints.tools.routes", "tools_bp", "/tools", "Public Tools"),
@@ -59,7 +104,9 @@ EXTRA_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.blueprints.exports.routes", "exports_bp", "/exports", "Exports"),
 )
 
-BLUEPRINT_SPECS: tuple[BlueprintSpec, ...] = CORE_BLUEPRINTS + API_BLUEPRINTS + ROUTE_BLUEPRINTS + EXTRA_BLUEPRINTS
+BLUEPRINT_SPECS: tuple[BlueprintSpec, ...] = (
+    CORE_BLUEPRINTS + API_BLUEPRINTS + ROUTE_BLUEPRINTS + EXTRA_BLUEPRINTS
+)
 
 CSRF_EXEMPT_VIEWS: tuple[str, ...] = (
     "inventory.adjust_inventory",
@@ -87,7 +134,9 @@ def register_blueprints(app) -> None:
     _apply_csrf_exemptions(app)
 
 
-def _safe_register_blueprint(app, spec: BlueprintSpec, successes: List[str], failures: List[str]) -> bool:
+def _safe_register_blueprint(
+    app, spec: BlueprintSpec, successes: List[str], failures: List[str]
+) -> bool:
     try:
         module = import_module(spec.module)
         blueprint = getattr(module, spec.attribute)

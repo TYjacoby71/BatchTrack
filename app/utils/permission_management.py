@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -29,7 +28,9 @@ def update_organization_owner_permissions(*, auto_commit: bool = True) -> bool:
     try:
         role = _get_owner_role()
         if role is None:
-            logger.warning("Organization owner system role not found; cannot sync permissions.")
+            logger.warning(
+                "Organization owner system role not found; cannot sync permissions."
+            )
             return False
 
         active_permissions = Permission.query.filter_by(is_active=True).all()
@@ -65,14 +66,19 @@ def assign_organization_owner_role(user, *, auto_commit: bool = False) -> bool:
     try:
         role = _get_owner_role()
         if role is None:
-            logger.warning("Organization owner system role not found; cannot assign to user %s.", user)
+            logger.warning(
+                "Organization owner system role not found; cannot assign to user %s.",
+                user,
+            )
             return False
 
         user.assign_role(role)
         if auto_commit:
             db.session.commit()
 
-        logger.info("Assigned organization owner role to user %s.", getattr(user, "id", user))
+        logger.info(
+            "Assigned organization owner role to user %s.", getattr(user, "id", user)
+        )
         return True
 
     except SQLAlchemyError as exc:

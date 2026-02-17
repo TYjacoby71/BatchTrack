@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from typing import Iterable
 
@@ -11,7 +10,10 @@ DEV_FORMAT = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s"
 PROD_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 PII_PATTERNS = {
     "email": re.compile(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-.]+"),
-    "token": re.compile(r"(token|api[_-]?key|secret|password|passwd|authorization)\s*[:=]\s*([^\s,;]+)", re.IGNORECASE),
+    "token": re.compile(
+        r"(token|api[_-]?key|secret|password|passwd|authorization)\s*[:=]\s*([^\s,;]+)",
+        re.IGNORECASE,
+    ),
     "bearer": re.compile(r"Bearer\s+[A-Za-z0-9\-_.=:+/]+", re.IGNORECASE),
 }
 
@@ -40,7 +42,12 @@ def configure_logging(app: Flask) -> None:
         app_logger.removeHandler(handler)
 
     if level > logging.DEBUG:
-        for noisy in ("werkzeug", "flask_limiter", "sqlalchemy.engine", "app.blueprints_registry"):
+        for noisy in (
+            "werkzeug",
+            "flask_limiter",
+            "sqlalchemy.engine",
+            "app.blueprints_registry",
+        ):
             logging.getLogger(noisy).setLevel(logging.WARNING)
 
     is_production = app.config.get("ENV") == "production" and not app.debug
@@ -50,7 +57,9 @@ def configure_logging(app: Flask) -> None:
     _apply_formatter(app.logger.handlers, formatter, redact_pii)
 
 
-def _apply_formatter(handlers: Iterable[logging.Handler], formatter: logging.Formatter, redact_pii: bool) -> None:
+def _apply_formatter(
+    handlers: Iterable[logging.Handler], formatter: logging.Formatter, redact_pii: bool
+) -> None:
     for handler in handlers:
         try:
             handler.setFormatter(formatter)

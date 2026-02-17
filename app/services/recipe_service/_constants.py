@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-_ALLOWED_RECIPE_STATUSES = {'draft', 'published'}
+_ALLOWED_RECIPE_STATUSES = {"draft", "published"}
 _UNSET = object()
 _CENTS = Decimal("0.01")
 

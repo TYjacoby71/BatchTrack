@@ -12,7 +12,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..catalog import FEATURE_COMPARISON_SECTIONS, MARKETING_HIGHLIGHT_RULES, MAX_MARKETING_HIGHLIGHTS
+from ..catalog import (
+    FEATURE_COMPARISON_SECTIONS,
+    MARKETING_HIGHLIGHT_RULES,
+    MAX_MARKETING_HIGHLIGHTS,
+)
 
 
 # --- Get public pricing feature sections ---
@@ -40,4 +44,3 @@ def get_public_pricing_highlight_rules() -> tuple[dict[str, Any], ...]:
 def get_public_pricing_max_highlights() -> int:
     """Return per-card highlight cap for the public pricing profile."""
     return MAX_MARKETING_HIGHLIGHTS
-

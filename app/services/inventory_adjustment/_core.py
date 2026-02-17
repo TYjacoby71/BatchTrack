@@ -11,27 +11,28 @@ Glossary:
 import logging
 from typing import Any, Dict, Optional
 
-from app.models import db, InventoryItem, UnifiedInventoryHistory
-from app.services.unit_conversion import ConversionEngine
+from app.models import InventoryItem, UnifiedInventoryHistory, db
+from app.services.costing_engine import weighted_average_cost_for_item
+from app.services.event_emitter import EventEmitter
 from app.services.quantity_base import (
-    to_base_quantity,
     from_base_quantity,
     sync_item_quantity_from_base,
+    to_base_quantity,
 )
-from ._validation import validate_inventory_fifo_sync
-from app.services.costing_engine import weighted_average_cost_for_item
+from app.services.unit_conversion import ConversionEngine
 
 # Import operation modules directly
-from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
-from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
-from ._special_ops import handle_cost_override, handle_unit_conversion, handle_recount
-from app.services.event_emitter import EventEmitter
+from ._additive_ops import ADDITIVE_OPERATION_GROUPS, _universal_additive_handler
+from ._deductive_ops import DEDUCTIVE_OPERATION_GROUPS, _handle_deductive_operation
+from ._special_ops import handle_cost_override, handle_recount, handle_unit_conversion
+from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
 
 ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
-    ADDITIVE_OPERATIONS.update(group.get('operations', []))
+    ADDITIVE_OPERATIONS.update(group.get("operations", []))
+
 
 # --- Inventory adjustment ---
 # Purpose: Central entry point for inventory adjustments.
@@ -64,9 +65,13 @@ def process_inventory_adjustment(
     5. Validate FIFO sync
     6. Return consolidated result
     """
-    logger.info(f"CENTRAL DELEGATOR: item_id={item_id}, qty={quantity}, type={change_type}")
+    logger.info(
+        f"CENTRAL DELEGATOR: item_id={item_id}, qty={quantity}, type={change_type}"
+    )
 
-    def _response(success: bool, message: str, payload: Optional[Dict[str, Any]] = None):
+    def _response(
+        success: bool, message: str, payload: Optional[Dict[str, Any]] = None
+    ):
         if include_event_payload:
             return success, message, payload
         return success, message
@@ -93,7 +98,9 @@ def process_inventory_adjustment(
     )
 
     # Check if this is the first entry for this item
-    is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
+    is_initial_stock = (
+        UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
+    )
 
     # Route to initial_stock handler ONLY if it's the first entry and the quantity is positive (additive)
     # Otherwise, preserve the original change_type to avoid creating negative lots
@@ -102,7 +109,7 @@ def process_inventory_adjustment(
     except Exception:
         qty_float = 0.0
     if is_initial_stock and qty_float > 0 and change_type in ADDITIVE_OPERATIONS:
-        effective_change_type = 'initial_stock'
+        effective_change_type = "initial_stock"
     else:
         effective_change_type = change_type
 
@@ -118,17 +125,24 @@ def process_inventory_adjustment(
                     from_unit=unit,
                     to_unit=item.unit,
                     ingredient_id=item.id,
-                    density=item.density
+                    density=item.density,
                 )
-                if conv and conv.get('converted_value') is not None:
-                    normalized_quantity = conv['converted_value']
+                if conv and conv.get("converted_value") is not None:
+                    normalized_quantity = conv["converted_value"]
                     if amount_val:
                         conversion_factor = normalized_quantity / amount_val
-                    logger.info(f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}")
+                    logger.info(
+                        f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}"
+                    )
                 else:
                     db.session.rollback()
-                    logger.error(f"Unit conversion returned None for item {item.id}: {unit} -> {item.unit}")
-                    return _response(False, f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit}).")
+                    logger.error(
+                        f"Unit conversion returned None for item {item.id}: {unit} -> {item.unit}"
+                    )
+                    return _response(
+                        False,
+                        f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit}).",
+                    )
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")
@@ -143,15 +157,17 @@ def process_inventory_adjustment(
                         from_unit=unit,
                         to_unit=item.unit,
                         ingredient_id=item.id,
-                        density=item.density
+                        density=item.density,
                     )
-                    if conv_cost and conv_cost.get('converted_value') is not None:
-                        conversion_factor = conv_cost['converted_value']
+                    if conv_cost and conv_cost.get("converted_value") is not None:
+                        conversion_factor = conv_cost["converted_value"]
                 except Exception as e:
                     logger.error(f"Cost conversion failed for item {item.id}: {e}")
                     return _response(False, f"Cost conversion failed: {str(e)}")
             if not conversion_factor or conversion_factor <= 0:
-                return _response(False, f"Cannot convert cost from {unit} to {item.unit}.")
+                return _response(
+                    False, f"Cannot convert cost from {unit} to {item.unit}."
+                )
             try:
                 original_cost = float(cost_override)
                 cost_override = original_cost / conversion_factor
@@ -174,7 +190,7 @@ def process_inventory_adjustment(
             density=item.density,
         )
         target_quantity_base = None
-        if change_type == 'recount' and target_quantity is not None:
+        if change_type == "recount" and target_quantity is not None:
             target_quantity_base = to_base_quantity(
                 amount=target_quantity,
                 unit_name=item.unit or unit,
@@ -200,7 +216,7 @@ def process_inventory_adjustment(
             target_quantity=target_quantity,
             target_quantity_base=target_quantity_base,
             unit=item.unit or unit,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
 
         # Handle different return formats for backwards compatibility
@@ -219,7 +235,9 @@ def process_inventory_adjustment(
 
         if not success:
             db.session.rollback()
-            logger.error(f"DELEGATION FAILED: {change_type} operation failed for item {item.id}: {message}")
+            logger.error(
+                f"DELEGATION FAILED: {change_type} operation failed for item {item.id}: {message}"
+            )
             return _response(False, message)
 
         # CENTRAL QUANTITY CONTROL - Only this core function modifies item.quantity
@@ -246,9 +264,11 @@ def process_inventory_adjustment(
                 logger.info(
                     f"QUANTITY UPDATE: Item {item.id} quantity {original_quantity} - {abs(quantity_delta or 0)} = {item.quantity}"
                 )
-        elif change_type == 'recount' and target_quantity_base is not None:
+        elif change_type == "recount" and target_quantity_base is not None:
             # Special case for recount - set absolute quantity
-            logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
+            logger.info(
+                f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}"
+            )
             item.quantity_base = int(target_quantity_base)
             sync_item_quantity_from_base(item)
 
@@ -256,12 +276,16 @@ def process_inventory_adjustment(
         # skip validation until outer transaction commits to avoid transient mismatch.
         try:
             if not defer_commit:
-                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(
+                    item_id
+                )
             else:
                 is_valid, error_msg = True, None
 
             if not is_valid:
-                logger.error(f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}")
+                logger.error(
+                    f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}"
+                )
                 db.session.rollback()
                 return _response(False, f"FIFO validation failed: {error_msg}")
 
@@ -274,11 +298,11 @@ def process_inventory_adjustment(
         try:
             is_additive = False
             for group_name, group_cfg in ADDITIVE_OPERATION_GROUPS.items():
-                if effective_change_type in group_cfg['operations']:
+                if effective_change_type in group_cfg["operations"]:
                     is_additive = True
                     break
             # Preserve additive semantics for remapped "initial_stock" operations
-            if not is_additive and effective_change_type == 'initial_stock':
+            if not is_additive and effective_change_type == "initial_stock":
                 is_additive = True
             if is_additive:
                 new_wac = weighted_average_cost_for_item(item.id)
@@ -300,42 +324,52 @@ def process_inventory_adjustment(
                 density=item.density,
             )
         else:
-            event_quantity_delta = quantity_delta if quantity_delta is not None else None
+            event_quantity_delta = (
+                quantity_delta if quantity_delta is not None else None
+            )
 
         recount_delta = None
-        if change_type == 'recount' and target_quantity is not None:
+        if change_type == "recount" and target_quantity is not None:
             recount_delta = float(target_quantity) - float(original_quantity)
 
         event_properties = {
-            'change_type': change_type,
-            'quantity_delta': event_quantity_delta if event_quantity_delta is not None else recount_delta,
-            'unit': item.unit,
-            'notes': notes,
-            'cost_override': cost_override,
-            'original_quantity': original_quantity,
-            'new_quantity': float(item.quantity),
-            'item_name': item.name,
-            'item_type': item.type,
-            'batch_id': batch_id,
-            'is_initial_stock': is_initial_stock,
+            "change_type": change_type,
+            "quantity_delta": (
+                event_quantity_delta
+                if event_quantity_delta is not None
+                else recount_delta
+            ),
+            "unit": item.unit,
+            "notes": notes,
+            "cost_override": cost_override,
+            "original_quantity": original_quantity,
+            "new_quantity": float(item.quantity),
+            "item_name": item.name,
+            "item_type": item.type,
+            "batch_id": batch_id,
+            "is_initial_stock": is_initial_stock,
         }
         event_payload: Dict[str, Any] = {
-            'event_name': 'inventory_adjusted',
-            'properties': event_properties,
-            'organization_id': item.organization_id,
-            'user_id': created_by,
-            'entity_type': 'inventory_item',
-            'entity_id': item.id,
+            "event_name": "inventory_adjusted",
+            "properties": event_properties,
+            "organization_id": item.organization_id,
+            "user_id": created_by,
+            "entity_type": "inventory_item",
+            "entity_id": item.id,
         }
 
         # Commit database changes unless caller defers commit for an outer transaction
         try:
             if defer_commit:
-                logger.info(f"SUCCESS (DEFERRED): {change_type} prepared for item {item.id} (FIFO validated)")
+                logger.info(
+                    f"SUCCESS (DEFERRED): {change_type} prepared for item {item.id} (FIFO validated)"
+                )
                 return _response(True, message, event_payload)
             else:
                 db.session.commit()
-                logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
+                logger.info(
+                    f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)"
+                )
 
                 # Emit domain event (non-blocking best-effort; don't fail the operation on emitter errors)
                 try:
@@ -343,7 +377,9 @@ def process_inventory_adjustment(
                 except Exception:
                     pass
 
-                return _response(True, message, event_payload if include_event_payload else None)
+                return _response(
+                    True, message, event_payload if include_event_payload else None
+                )
 
         except Exception as e:
             logger.error(f"FAILED: Database commit failed for item {item_id}: {str(e)}")
@@ -352,11 +388,32 @@ def process_inventory_adjustment(
 
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Central delegation error for {change_type} on item {item.id}: {e}", exc_info=True)
+        logger.error(
+            f"Central delegation error for {change_type} on item {item.id}: {e}",
+            exc_info=True,
+        )
         return _response(False, "A critical internal error occurred.")
 
 
-def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, quantity_base, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, target_quantity_base, unit, batch_id):
+def _delegate_to_operation_module(
+    effective_change_type,
+    original_change_type,
+    item,
+    quantity,
+    quantity_base,
+    notes,
+    created_by,
+    cost_override,
+    custom_expiration_date,
+    custom_shelf_life_days,
+    customer,
+    sale_price,
+    order_id,
+    target_quantity,
+    target_quantity_base,
+    unit,
+    batch_id,
+):
     """
     DELEGATION LOGIC - Routes to appropriate operation module based on change type
     """
@@ -364,7 +421,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
 
     # Check if it's an additive operation
     for group_name, group_config in ADDITIVE_OPERATION_GROUPS.items():
-        if effective_change_type in group_config['operations']:
+        if effective_change_type in group_config["operations"]:
             logger.info(f"ROUTING: {effective_change_type} -> ADDITIVE ({group_name})")
             return _universal_additive_handler(
                 item=item,
@@ -377,12 +434,12 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 custom_expiration_date=custom_expiration_date,
                 custom_shelf_life_days=custom_shelf_life_days,
                 unit=unit,
-                batch_id=batch_id
+                batch_id=batch_id,
             )
 
     # Check if it's a deductive operation
     for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
-        if effective_change_type in group_config['operations']:
+        if effective_change_type in group_config["operations"]:
             logger.info(f"ROUTING: {effective_change_type} -> DEDUCTIVE ({group_name})")
             return _handle_deductive_operation(
                 item=item,
@@ -394,11 +451,11 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 customer=customer,
                 sale_price=sale_price,
                 order_id=order_id,
-                batch_id=batch_id
+                batch_id=batch_id,
             )
 
     # Check for special operations
-    if effective_change_type == 'recount':
+    if effective_change_type == "recount":
         logger.info(f"ROUTING: {effective_change_type} -> RECOUNT (special)")
         return handle_recount(
             item=item,
@@ -410,9 +467,9 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             target_quantity=target_quantity,
             target_quantity_base=target_quantity_base,
             unit=unit,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
-    elif effective_change_type == 'cost_override':
+    elif effective_change_type == "cost_override":
         logger.info(f"ROUTING: {effective_change_type} -> COST_OVERRIDE (special)")
         return handle_cost_override(
             item=item,
@@ -423,9 +480,9 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             created_by=created_by,
             cost_override=cost_override,
             unit=unit,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
-    elif effective_change_type == 'unit_conversion':
+    elif effective_change_type == "unit_conversion":
         logger.info(f"ROUTING: {effective_change_type} -> UNIT_CONVERSION (special)")
         return handle_unit_conversion(
             item=item,
@@ -435,24 +492,26 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             notes=notes,
             created_by=created_by,
             unit=unit,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
 
     # Handle initial_stock as special additive case
-    if effective_change_type == 'initial_stock':
-        logger.info(f"ROUTING: {effective_change_type} -> INITIAL_STOCK (additive special case)")
+    if effective_change_type == "initial_stock":
+        logger.info(
+            f"ROUTING: {effective_change_type} -> INITIAL_STOCK (additive special case)"
+        )
         return _universal_additive_handler(
             item=item,
             quantity=quantity,
             quantity_base=quantity_base,
-            change_type='restock',  # Treat as restock for processing
+            change_type="restock",  # Treat as restock for processing
             notes=notes or "Initial stock entry",
             created_by=created_by,
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days,
             unit=unit,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
 
     # Unknown operation type

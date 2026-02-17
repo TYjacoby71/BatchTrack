@@ -43,7 +43,9 @@ class SignupPlanCatalogService:
         available_tiers: dict[str, dict] = {}
         for tier_obj in db_tiers:
             raw_features = [p.name for p in getattr(tier_obj, "permissions", [])]
-            feature_highlights, feature_total = LifetimePricingService.summarize_features(raw_features, limit=9)
+            feature_highlights, feature_total = (
+                LifetimePricingService.summarize_features(raw_features, limit=9)
+            )
             allowed_addons = list(getattr(tier_obj, "allowed_addons", []) or [])
             included_addons = list(getattr(tier_obj, "included_addons", []) or [])
 
@@ -100,8 +102,12 @@ class SignupPlanCatalogService:
                 "max_monthly_batches": coerce_int(tier_obj.max_monthly_batches),
                 "max_batchbot_requests": coerce_int(tier_obj.max_batchbot_requests),
             }
-            retention_policy = str(getattr(tier_obj, "retention_policy", None) or "").strip().lower()
-            retention_label = str(getattr(tier_obj, "retention_label", None) or "").strip()
+            retention_policy = (
+                str(getattr(tier_obj, "retention_policy", None) or "").strip().lower()
+            )
+            retention_label = str(
+                getattr(tier_obj, "retention_label", None) or ""
+            ).strip()
             has_retention_entitlement = bool(
                 retention_policy == "subscribed" or "retention" in addon_function_set
             )
@@ -114,11 +120,15 @@ class SignupPlanCatalogService:
                 "retention_label": retention_label,
                 "has_retention_entitlement": has_retention_entitlement,
             }
-            all_presentation_features = cls._tier_presentation.build_single_tier_feature_list(
-                tier=presentation_tier
+            all_presentation_features = (
+                cls._tier_presentation.build_single_tier_feature_list(
+                    tier=presentation_tier
+                )
             )
             presentation_feature_limit = cls._SIGNUP_PRESENTATION_FEATURE_LIMIT
-            presentation_features = all_presentation_features[:presentation_feature_limit]
+            presentation_features = all_presentation_features[
+                :presentation_feature_limit
+            ]
             presentation_feature_total = len(all_presentation_features)
 
             monthly_pricing = None
@@ -128,28 +138,40 @@ class SignupPlanCatalogService:
                 except Exception:
                     monthly_pricing = None
 
-            yearly_lookup_key = LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+            yearly_lookup_key = (
+                LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+            )
             yearly_pricing = None
             if yearly_lookup_key:
                 try:
-                    yearly_pricing = BillingService.get_live_pricing_for_lookup_key(yearly_lookup_key)
+                    yearly_pricing = BillingService.get_live_pricing_for_lookup_key(
+                        yearly_lookup_key
+                    )
                 except Exception:
                     yearly_pricing = None
             if yearly_pricing and yearly_pricing.get("billing_cycle") != "yearly":
                 yearly_pricing = None
 
-            price_display = monthly_pricing["formatted_price"] if monthly_pricing else "Contact Sales"
+            price_display = (
+                monthly_pricing["formatted_price"]
+                if monthly_pricing
+                else "Contact Sales"
+            )
             available_tiers[str(tier_obj.id)] = {
                 "name": tier_obj.name,
                 "price_display": price_display,
                 "monthly_price_display": price_display,
-                "yearly_price_display": yearly_pricing["formatted_price"] if yearly_pricing else None,
+                "yearly_price_display": (
+                    yearly_pricing["formatted_price"] if yearly_pricing else None
+                ),
                 "yearly_lookup_key": yearly_lookup_key,
                 "features": feature_highlights,
                 "feature_total": feature_total,
                 "presentation_features": presentation_features or feature_highlights,
                 "presentation_feature_total": (
-                    presentation_feature_total if presentation_features else feature_total
+                    presentation_feature_total
+                    if presentation_features
+                    else feature_total
                 ),
                 "all_features": raw_features,
                 "user_limit": tier_obj.user_limit,

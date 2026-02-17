@@ -1,11 +1,12 @@
+import logging
 
 import requests
-import logging
 from flask import current_app
-from ..models import db, Organization, SubscriptionTier
-from ..utils.timezone_utils import TimezoneUtils
+
+from ..models import Organization, SubscriptionTier, db
 
 logger = logging.getLogger(__name__)
+
 
 class WhopService:
     """Service for handling Whop license validation and integration - STUBBED FOR FUTURE USE"""
@@ -13,7 +14,7 @@ class WhopService:
     @staticmethod
     def validate_license_key(license_key):
         """Validate a Whop license key and return user/product data"""
-        whop_secret = current_app.config.get('WHOP_SECRET_KEY')
+        whop_secret = current_app.config.get("WHOP_SECRET_KEY")
         if not whop_secret:
             logger.error("WHOP_SECRET_KEY not configured")
             return None
@@ -22,7 +23,7 @@ class WhopService:
             response = requests.get(
                 f"https://api.whop.com/v1/licenses/{license_key}",
                 headers={"Authorization": f"Bearer {whop_secret}"},
-                timeout=10
+                timeout=10,
             )
 
             if response.status_code != 200:
@@ -39,7 +40,7 @@ class WhopService:
                 "tier": WhopService._map_product_to_tier(data["product"]["name"]),
                 "email": data["user"]["email"],
                 "product_name": data["product"]["name"],
-                "user_id": data["user"]["id"]
+                "user_id": data["user"]["id"],
             }
 
         except Exception as e:
@@ -50,7 +51,7 @@ class WhopService:
     def _map_product_to_tier(product_name):
         """Map Whop product names to BatchTrack tier keys"""
         product_lower = product_name.lower()
-        
+
         if "lifetime" in product_lower:
             return "lifetime"
         elif "beta" in product_lower:
@@ -66,9 +67,11 @@ class WhopService:
     def sync_organization_from_whop(organization, license_data):
         """Sync organization tier and status from Whop license data"""
         tier_key = license_data["tier"]
-        
+
         # Map external product tiers to an internal DB tier by name
-        tier = SubscriptionTier.query.filter(SubscriptionTier.name.ilike(f"%{tier_key}%")).first()
+        tier = SubscriptionTier.query.filter(
+            SubscriptionTier.name.ilike(f"%{tier_key}%")
+        ).first()
 
         if tier:
             organization.subscription_tier_id = tier.id
@@ -76,10 +79,12 @@ class WhopService:
             organization.whop_product_tier = tier_key
             organization.whop_verified = True
             organization.is_active = True
-            
+
             db.session.commit()
-            logger.info(f"Synced organization {organization.id} with Whop tier {tier_key}")
-            
+            logger.info(
+                f"Synced organization {organization.id} with Whop tier {tier_key}"
+            )
+
         return tier
 
     @staticmethod
@@ -87,15 +92,17 @@ class WhopService:
         """Create a new organization from Whop license data"""
         organization = Organization(
             name=f"{license_data['email'].split('@')[0]} Organization",
-            contact_email=license_data['email'],
+            contact_email=license_data["email"],
             whop_license_key=license_key,
-            whop_product_tier=license_data['tier'],
+            whop_product_tier=license_data["tier"],
             whop_verified=True,
-            is_active=True
+            is_active=True,
         )
 
         # Assign subscription tier
-        tier = SubscriptionTier.query.filter(SubscriptionTier.name.ilike(f"%{license_data['tier']}%")) .first()
+        tier = SubscriptionTier.query.filter(
+            SubscriptionTier.name.ilike(f"%{license_data['tier']}%")
+        ).first()
         if tier:
             organization.subscription_tier_id = tier.id
 
@@ -146,4 +153,4 @@ class WhopService:
     def get_all_available_pricing():
         """Get Whop pricing - STUBBED"""
         logger.warning("Whop pricing is currently disabled")
-        return {'tiers': {}, 'available': False, 'provider': 'whop'}
+        return {"tiers": {}, "available": False, "provider": "whop"}

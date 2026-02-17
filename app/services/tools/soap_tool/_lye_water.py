@@ -9,8 +9,7 @@ Glossary:
 
 from __future__ import annotations
 
-from .types import SoapToolComputeRequest
-from .types import _clamp
+from .types import SoapToolComputeRequest, _clamp
 
 DEFAULT_WATER_PCT = 33.0
 DEFAULT_LYE_CONCENTRATION = 33.0
@@ -61,10 +60,20 @@ def compute_lye_water_values(
     if method not in {"percent", "concentration", "ratio"}:
         method = "percent"
 
-    water_pct_sanitized = float(water_pct) if float(water_pct) > 0 else DEFAULT_WATER_PCT
-    lye_conc_input = float(lye_concentration_input_pct) if float(lye_concentration_input_pct) > 0 else DEFAULT_LYE_CONCENTRATION
+    water_pct_sanitized = (
+        float(water_pct) if float(water_pct) > 0 else DEFAULT_WATER_PCT
+    )
+    lye_conc_input = (
+        float(lye_concentration_input_pct)
+        if float(lye_concentration_input_pct) > 0
+        else DEFAULT_LYE_CONCENTRATION
+    )
     lye_conc_input = _clamp(lye_conc_input, 20.0, 50.0)
-    ratio_input = float(water_ratio_input) if float(water_ratio_input) > 0 else DEFAULT_WATER_RATIO
+    ratio_input = (
+        float(water_ratio_input)
+        if float(water_ratio_input) > 0
+        else DEFAULT_WATER_RATIO
+    )
     ratio_input = _clamp(ratio_input, 1.0, 4.0)
 
     total_oils = sum(max(0.0, float(row.get("grams") or 0.0)) for row in oils)
@@ -76,7 +85,11 @@ def compute_lye_water_values(
         sap_koh = normalize_sap_koh(float(row.get("sap_koh") or 0.0))
         if grams <= 0 or sap_koh <= 0:
             continue
-        per_g = (sap_koh / 1000.0) if lye_type == "KOH" else ((sap_koh * NAOH_FACTOR_FROM_KOH_SAP) / 1000.0)
+        per_g = (
+            (sap_koh / 1000.0)
+            if lye_type == "KOH"
+            else ((sap_koh * NAOH_FACTOR_FROM_KOH_SAP) / 1000.0)
+        )
         lye_total += grams * per_g
         sap_weighted += sap_koh * grams
         sap_weight_g += grams
@@ -84,7 +97,11 @@ def compute_lye_water_values(
     sap_avg = (sap_weighted / sap_weight_g) if sap_weight_g > 0 else 0.0
     used_sap_fallback = lye_total <= 0 and total_oils > 0
     if used_sap_fallback:
-        fallback_per_g = DEFAULT_KOH_FALLBACK_PER_G if lye_type == "KOH" else DEFAULT_NAOH_FALLBACK_PER_G
+        fallback_per_g = (
+            DEFAULT_KOH_FALLBACK_PER_G
+            if lye_type == "KOH"
+            else DEFAULT_NAOH_FALLBACK_PER_G
+        )
         lye_total = total_oils * fallback_per_g
 
     lye_pure = lye_total * (1.0 - (superfat / 100.0))
@@ -93,11 +110,19 @@ def compute_lye_water_values(
     if method == "percent":
         water_g = total_oils * (water_pct_sanitized / 100.0)
     elif method == "concentration":
-        water_g = lye_adjusted * ((100.0 - lye_conc_input) / lye_conc_input) if (lye_adjusted > 0 and lye_conc_input > 0) else 0.0
+        water_g = (
+            lye_adjusted * ((100.0 - lye_conc_input) / lye_conc_input)
+            if (lye_adjusted > 0 and lye_conc_input > 0)
+            else 0.0
+        )
     else:
         water_g = lye_adjusted * ratio_input if lye_adjusted > 0 else 0.0
 
-    lye_concentration = (lye_adjusted / (lye_adjusted + water_g)) * 100.0 if (lye_adjusted + water_g) > 0 else 0.0
+    lye_concentration = (
+        (lye_adjusted / (lye_adjusted + water_g)) * 100.0
+        if (lye_adjusted + water_g) > 0
+        else 0.0
+    )
     water_lye_ratio = (water_g / lye_adjusted) if lye_adjusted > 0 else 0.0
 
     return {
@@ -149,4 +174,3 @@ __all__ = [
     "compute_lye_water_values",
     "normalize_sap_koh",
 ]
-

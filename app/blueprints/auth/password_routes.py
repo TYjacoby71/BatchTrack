@@ -15,11 +15,11 @@ from datetime import timedelta
 
 from flask import current_app, flash, redirect, render_template, request, url_for
 
-from . import auth_bp
 from ...extensions import db, limiter
 from ...models import User
 from ...services.email_service import EmailService
 from ...utils.timezone_utils import TimezoneUtils
+from . import auth_bp
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,9 @@ def reset_password(token):
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            logger.error("Password reset failed for user %s: %s", getattr(user, "id", None), exc)
+            logger.error(
+                "Password reset failed for user %s: %s", getattr(user, "id", None), exc
+            )
             flash("Unable to reset password right now. Please try again.", "error")
             return render_template("pages/auth/reset_password.html", token=token)
 

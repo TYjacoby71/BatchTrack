@@ -36,14 +36,18 @@ class InventorySearchService:
         local_items = InventorySearchService._search_local_inventory(
             normalized_query, normalized_type, organization_id, limit
         )
-        results: List[Dict] = [InventorySearchService._serialize_local(item) for item in local_items]
+        results: List[Dict] = [
+            InventorySearchService._serialize_local(item) for item in local_items
+        ]
 
         if include_global and len(results) < limit:
             remaining = limit - len(results)
             global_items = InventorySearchService._search_global_items(
                 normalized_query, normalized_type, remaining
             )
-            results.extend(InventorySearchService._serialize_global(item) for item in global_items)
+            results.extend(
+                InventorySearchService._serialize_global(item) for item in global_items
+            )
 
         return results
 
@@ -111,9 +115,7 @@ class InventorySearchService:
             if variation_obj:
                 physical_form_obj = getattr(variation_obj, "physical_form", None)
         payload["ingredient_id"] = getattr(ingredient_obj, "id", None)
-        payload["ingredient_name"] = (
-            getattr(ingredient_obj, "name", None) or item.name
-        )
+        payload["ingredient_name"] = getattr(ingredient_obj, "name", None) or item.name
         payload["variation_id"] = getattr(variation_obj, "id", None)
         payload["variation_name"] = getattr(variation_obj, "name", None)
         payload["physical_form_id"] = getattr(physical_form_obj, "id", None)

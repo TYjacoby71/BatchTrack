@@ -1,4 +1,7 @@
-from app.services.tools.soap_tool._catalog import normalize_bulk_sort_key, page_bulk_catalog
+from app.services.tools.soap_tool._catalog import (
+    normalize_bulk_sort_key,
+    page_bulk_catalog,
+)
 
 
 def _sample_records():

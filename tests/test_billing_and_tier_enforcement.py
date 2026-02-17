@@ -1,10 +1,11 @@
 import pytest
-from flask_login import login_user
-from app.models import db, User, Organization, SubscriptionTier, Role, Permission
+
+from app.models import Organization, Permission, Role, SubscriptionTier, User, db
 from app.services.billing_service import BillingService
 
 # FIX 1: Add the missing import for AppPermission
 from app.utils.permissions import AppPermission
+
 
 class TestBillingAndTierEnforcement:
     """Test the full security cascade: billing status -> tier -> role -> permission"""
@@ -23,35 +24,31 @@ class TestBillingAndTierEnforcement:
             db.session.add_all([perm_view, perm_create])
 
             # 2. Create a "Hobbyist" tier that can ONLY view products
-            hobbyist_tier = SubscriptionTier(
-                name='hobbyist'
-            )
+            hobbyist_tier = SubscriptionTier(name="hobbyist")
             hobbyist_tier.permissions = [perm_view]  # Only view, no create
             db.session.add(hobbyist_tier)
             db.session.flush()  # Get the ID
 
             # 3. Create an Organization subscribed to the Hobbyist tier
             org = Organization(
-                name='Test Hobby Org',
+                name="Test Hobby Org",
                 subscription_tier_id=hobbyist_tier.id,
-                billing_status='active'
+                billing_status="active",
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
 
             # 4. Create a Role that has MORE permissions than the tier allows
-            overpowered_role = Role(
-                name='Manager',
-                organization_id=org.id
-            )
-            overpowered_role.permissions = [perm_view, perm_create]  # More than tier allows
+            overpowered_role = Role(name="Manager", organization_id=org.id)
+            overpowered_role.permissions = [
+                perm_view,
+                perm_create,
+            ]  # More than tier allows
             db.session.add(overpowered_role)
 
             # 5. Create a User with that powerful role
             user = User(
-                email='test@hobby.org',
-                username='hobbytest',
-                organization_id=org.id
+                email="test@hobby.org", username="hobbytest", organization_id=org.id
             )
             db.session.add(user)
             db.session.commit()
@@ -70,11 +67,11 @@ class TestBillingAndTierEnforcement:
     @pytest.mark.parametrize(
         "billing_status, expected_status_code, expected_redirect_fragment",
         [
-            ('active', 200, None),
-            ('payment_failed', 302, '/billing/upgrade'),
-            ('past_due', 302, '/billing/upgrade'),
-            ('suspended', 302, '/auth/login'),
-            ('canceled', 302, '/auth/login'),
+            ("active", 200, None),
+            ("payment_failed", 302, "/billing/upgrade"),
+            ("past_due", 302, "/billing/upgrade"),
+            ("suspended", 302, "/auth/login"),
+            ("canceled", 302, "/auth/login"),
         ],
     )
     def test_billing_status_enforcement(
@@ -103,14 +100,19 @@ class TestBillingAndTierEnforcement:
             fresh_org.billing_status = billing_status
 
             # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
-            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
+            if (
+                not fresh_org.subscription_tier
+                or fresh_org.subscription_tier.is_billing_exempt
+            ):
                 # Find a non-exempt tier in the DB or create one for the test
-                non_exempt_tier = SubscriptionTier.query.filter_by(billing_provider='stripe').first()
+                non_exempt_tier = SubscriptionTier.query.filter_by(
+                    billing_provider="stripe"
+                ).first()
                 if not non_exempt_tier:
                     non_exempt_tier = SubscriptionTier(
-                        name="Paid Tier", 
-                        billing_provider='stripe',  # This sets is_billing_exempt=False automatically
-                        user_limit=10
+                        name="Paid Tier",
+                        billing_provider="stripe",  # This sets is_billing_exempt=False automatically
+                        user_limit=10,
                     )
                     db.session.add(non_exempt_tier)
                     db.session.flush()  # Get the ID
@@ -122,31 +124,35 @@ class TestBillingAndTierEnforcement:
 
             # Verify the billing status was actually set by querying fresh from DB
             verification_org = db.session.get(Organization, fresh_org.id)
-            assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
+            assert (
+                verification_org.billing_status == billing_status
+            ), f"Expected {billing_status}, got {verification_org.billing_status}"
 
             # Create a simple protected route to test against
-            @app.route('/_protected_dashboard')
+            @app.route("/_protected_dashboard")
             def _protected_dashboard():
                 return "Welcome to the dashboard", 200
 
             # ACT
             # Log the user in and try to access the protected route
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(fresh_user_id)
-                sess['_fresh'] = True
+                sess["_user_id"] = str(fresh_user_id)
+                sess["_fresh"] = True
 
-            response = client.get('/_protected_dashboard')
+            response = client.get("/_protected_dashboard")
 
             # ASSERT
             assert response.status_code == expected_status_code
 
             if expected_status_code == 302:
                 assert expected_redirect_fragment in response.location
-                if expected_redirect_fragment == '/auth/login':
+                if expected_redirect_fragment == "/auth/login":
                     with client.session_transaction() as sess:
-                        assert '_user_id' not in sess
+                        assert "_user_id" not in sess
 
-    def test_recoverable_billing_status_allows_upgrade_page_without_loop(self, app, client, test_user):
+    def test_recoverable_billing_status_allows_upgrade_page_without_loop(
+        self, app, client, test_user
+    ):
         """
         Regression test for redirect loops: /billing/upgrade must be reachable
         for recoverable billing states (e.g. past_due) without self-redirecting.
@@ -155,13 +161,18 @@ class TestBillingAndTierEnforcement:
             fresh_user = db.session.get(User, test_user.id)
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
 
-            fresh_org.billing_status = 'past_due'
-            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
-                paid_tier = SubscriptionTier.query.filter_by(billing_provider='stripe').first()
+            fresh_org.billing_status = "past_due"
+            if (
+                not fresh_org.subscription_tier
+                or fresh_org.subscription_tier.is_billing_exempt
+            ):
+                paid_tier = SubscriptionTier.query.filter_by(
+                    billing_provider="stripe"
+                ).first()
                 if not paid_tier:
                     paid_tier = SubscriptionTier(
-                        name='Paid Tier',
-                        billing_provider='stripe',
+                        name="Paid Tier",
+                        billing_provider="stripe",
                         user_limit=10,
                     )
                     db.session.add(paid_tier)
@@ -170,10 +181,10 @@ class TestBillingAndTierEnforcement:
             db.session.commit()
 
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(fresh_user.id)
-                sess['_fresh'] = True
+                sess["_user_id"] = str(fresh_user.id)
+                sess["_fresh"] = True
 
-            response = client.get('/billing/upgrade', follow_redirects=False)
+            response = client.get("/billing/upgrade", follow_redirects=False)
             assert response.status_code == 200
 
     def test_login_rejects_inactive_organization(self, app, client, test_user):
@@ -185,23 +196,23 @@ class TestBillingAndTierEnforcement:
             fresh_user = db.session.get(User, test_user.id)
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
 
-            fresh_user.set_password('password-123')
-            fresh_org.billing_status = 'canceled'
+            fresh_user.set_password("password-123")
+            fresh_org.billing_status = "canceled"
             db.session.commit()
 
             response = client.post(
-                '/auth/login',
+                "/auth/login",
                 data={
-                    'username': fresh_user.username,
-                    'password': 'password-123',
+                    "username": fresh_user.username,
+                    "password": "password-123",
                 },
                 follow_redirects=True,
             )
 
             assert response.status_code == 200
-            assert b'organization is currently inactive' in response.data.lower()
+            assert b"organization is currently inactive" in response.data.lower()
             with client.session_transaction() as sess:
-                assert '_user_id' not in sess
+                assert "_user_id" not in sess
 
     def test_developer_can_masquerade_regardless_of_billing(self, app, client):
         """
@@ -210,52 +221,50 @@ class TestBillingAndTierEnforcement:
         with app.app_context():
             # ARRANGE: Create a developer user (NO organization)
             developer = User(
-                email='dev@batchtrack.com',
-                username='developer',
-                user_type='developer',
-                organization_id=None  # Developers have no organization
+                email="dev@batchtrack.com",
+                username="developer",
+                user_type="developer",
+                organization_id=None,  # Developers have no organization
             )
             db.session.add(developer)
             db.session.flush()
             developer_id = developer.id
 
             # Create a customer org with bad billing
-            customer_tier = SubscriptionTier(
-                name='Pro'
-            )
+            customer_tier = SubscriptionTier(name="Pro")
             db.session.add(customer_tier)
             db.session.flush()  # Get the ID
 
             customer_org = Organization(
-                name='Customer Org',
+                name="Customer Org",
                 subscription_tier_id=customer_tier.id,
-                billing_status='past_due'  # Bad billing
+                billing_status="past_due",  # Bad billing
             )
             db.session.add(customer_org)
             db.session.flush()  # Get the ID
             customer_org_id = customer_org.id
 
             customer = User(
-                email='customer@example.com',
-                username='customer',
-                organization=customer_org
+                email="customer@example.com",
+                username="customer",
+                organization=customer_org,
             )
             db.session.add(customer)
             db.session.commit()
 
             # Create protected route
-            @app.route('/_masquerade_test')
+            @app.route("/_masquerade_test")
             def _masquerade_test():
                 return "Developer access granted", 200
 
             # ACT: Developer accesses customer route
             with client:
                 with client.session_transaction() as sess:
-                    sess['_user_id'] = str(developer_id)
-                    sess['_fresh'] = True
-                    sess['masquerade_org_id'] = customer_org_id  # Masquerading
+                    sess["_user_id"] = str(developer_id)
+                    sess["_fresh"] = True
+                    sess["masquerade_org_id"] = customer_org_id  # Masquerading
 
-                response = client.get('/_masquerade_test')
+                response = client.get("/_masquerade_test")
 
                 # ASSERT: Developer should have access despite customer's bad billing
                 assert response.status_code == 200
@@ -274,35 +283,28 @@ class TestBillingAndTierEnforcement:
             db.session.add_all([perm_batch_view, perm_batch_create, perm_admin])
 
             # 2. Create a "Pro" tier with batch permissions but no admin
-            pro_tier = SubscriptionTier(
-                name='Pro'
-            )
+            pro_tier = SubscriptionTier(name="Pro")
             pro_tier.permissions = [perm_batch_view, perm_batch_create]  # No admin
             db.session.add(pro_tier)
             db.session.flush()  # Get the ID
 
             # 3. Create organization with active billing
             org = Organization(
-                name='Pro Company',
+                name="Pro Company",
                 subscription_tier_id=pro_tier.id,
-                billing_status='active'
+                billing_status="active",
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
 
             # 4. Create a manager role (subset of tier permissions)
-            manager_role = Role(
-                name='Manager',
-                organization_id=org.id
-            )
+            manager_role = Role(name="Manager", organization_id=org.id)
             manager_role.permissions = [perm_batch_view]  # Only view, not create
             db.session.add(manager_role)
 
             # 5. Create user with manager role
             user = User(
-                email='manager@procompany.com',
-                username='manager',
-                organization=org
+                email="manager@procompany.com", username="manager", organization=org
             )
             user.roles = [manager_role]
             db.session.add(user)
@@ -320,21 +322,21 @@ class TestBillingAndTierEnforcement:
             assert user.has_permission(AppPermission.ADMIN) is False
 
             # 4. Now test billing enforcement - suspend the org
-            org.billing_status = 'suspended'
+            org.billing_status = "suspended"
             db.session.commit()
 
             # Even basic permissions should be blocked now by middleware
             # (This would be caught by the middleware before permission check)
-            assert org.billing_status != 'active'  # Confirms billing is bad
+            assert org.billing_status != "active"  # Confirms billing is bad
 
     def test_create_checkout_session_preserves_urls(self, app, monkeypatch):
         """Regression test: ensure upgrade flow forwards success/cancel URLs correctly."""
         with app.app_context():
             tier = SubscriptionTier(
-                name='Solo',
-                billing_provider='stripe',
-                stripe_lookup_key='price_solo',
-                is_customer_facing=True
+                name="Solo",
+                billing_provider="stripe",
+                stripe_lookup_key="price_solo",
+                is_customer_facing=True,
             )
             db.session.add(tier)
             db.session.commit()
@@ -354,44 +356,44 @@ class TestBillingAndTierEnforcement:
                 allow_promo,
                 existing_customer_id,
             ):
-                captured['tier'] = tier_obj
-                captured['customer_email'] = customer_email
-                captured['success_url'] = success_url
-                captured['cancel_url'] = cancel_url
-                captured['metadata'] = metadata
-                captured['existing_customer_id'] = existing_customer_id
-                captured['client_reference_id'] = client_reference_id
-                captured['phone_required'] = phone_required
-                captured['allow_promo'] = allow_promo
+                captured["tier"] = tier_obj
+                captured["customer_email"] = customer_email
+                captured["success_url"] = success_url
+                captured["cancel_url"] = cancel_url
+                captured["metadata"] = metadata
+                captured["existing_customer_id"] = existing_customer_id
+                captured["client_reference_id"] = client_reference_id
+                captured["phone_required"] = phone_required
+                captured["allow_promo"] = allow_promo
                 return sentinel
 
             monkeypatch.setattr(
                 BillingService,
-                'create_checkout_session_for_tier',
+                "create_checkout_session_for_tier",
                 fake_create_checkout_session_for_tier,
             )
 
-            metadata = {'tier': 'solo', 'billing_cycle': 'month'}
-            success_url = 'https://example.com/success'
-            cancel_url = 'https://example.com/cancel'
+            metadata = {"tier": "solo", "billing_cycle": "month"}
+            success_url = "https://example.com/success"
+            cancel_url = "https://example.com/cancel"
 
             result = BillingService.create_checkout_session(
                 str(tier.id),
-                'owner@example.com',
-                'Owner Name',
+                "owner@example.com",
+                "Owner Name",
                 success_url,
                 cancel_url,
                 metadata=metadata,
-                existing_customer_id='cus_123',
+                existing_customer_id="cus_123",
             )
 
             assert result is sentinel
-            assert captured['tier'].id == tier.id
-            assert captured['customer_email'] == 'owner@example.com'
-            assert captured['success_url'] == success_url
-            assert captured['cancel_url'] == cancel_url
-            assert captured['metadata'] == metadata
-            assert captured['existing_customer_id'] == 'cus_123'
-            assert captured['client_reference_id'] is None
-            assert captured['phone_required'] is True
-            assert captured['allow_promo'] is True
+            assert captured["tier"].id == tier.id
+            assert captured["customer_email"] == "owner@example.com"
+            assert captured["success_url"] == success_url
+            assert captured["cancel_url"] == cancel_url
+            assert captured["metadata"] == metadata
+            assert captured["existing_customer_id"] == "cus_123"
+            assert captured["client_reference_id"] is None
+            assert captured["phone_required"] is True
+            assert captured["allow_promo"] is True

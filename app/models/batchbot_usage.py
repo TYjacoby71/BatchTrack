@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -8,7 +6,9 @@ class BatchBotUsage(db.Model):
     __tablename__ = "batchbot_usage"
 
     id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=False, index=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False, index=True
+    )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     window_start = db.Column(db.Date, nullable=False, index=True)
     window_end = db.Column(db.Date, nullable=False)
@@ -17,10 +17,17 @@ class BatchBotUsage(db.Model):
     details = db.Column(db.JSON, nullable=True)
 
     created_at = db.Column(db.DateTime, nullable=False, default=TimezoneUtils.utc_now)
-    updated_at = db.Column(db.DateTime, nullable=False, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=TimezoneUtils.utc_now,
+        onupdate=TimezoneUtils.utc_now,
+    )
 
     __table_args__ = (
-        db.UniqueConstraint("organization_id", "window_start", name="uq_batchbot_usage_org_window"),
+        db.UniqueConstraint(
+            "organization_id", "window_start", name="uq_batchbot_usage_org_window"
+        ),
     )
 
     def increment(self, *, delta: int = 1, metadata: dict | None = None) -> None:

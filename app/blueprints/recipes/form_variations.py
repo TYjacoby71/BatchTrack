@@ -45,10 +45,10 @@ def create_variation_template(parent: Recipe) -> Recipe:
     template.parent_master = parent
 
     template.allowed_containers = list(parent.allowed_containers or [])
-    if getattr(parent, 'org_origin_purchased', False):
+    if getattr(parent, "org_origin_purchased", False):
         template.is_sellable = True
     else:
-        template.is_sellable = getattr(parent, 'is_sellable', True)
+        template.is_sellable = getattr(parent, "is_sellable", True)
 
     if parent.portioning_data:
         template.portioning_data = (
@@ -69,7 +69,7 @@ def create_variation_template(parent: Recipe) -> Recipe:
         )
     # product_group_id has been removed from the system
     template.skin_opt_in = parent.skin_opt_in
-    template.sharing_scope = 'private'
+    template.sharing_scope = "private"
     template.is_public = False
     template.is_for_sale = False
 
