@@ -3,37 +3,7 @@
     <div class="row g-2 soap-stage-grid">
       <div class="col-12">
         <div id="fragranceRows"></div>
-        <template id="fragranceRowTemplate">
-          <div class="row g-2 align-items-end soap-stage-grid fragrance-row mb-1">
-            <div class="col-lg-6 col-md-6 soap-field-stack fragrance-name-col">
-              <label class="form-label">Fragrance/EO</label>
-              <div class="position-relative">
-                <input type="text" class="form-control fragrance-typeahead" placeholder="Select fragrance or EO">
-                <input type="hidden" class="fragrance-gi-id">
-                <input type="hidden" class="fragrance-default-unit">
-                <input type="hidden" class="fragrance-category">
-                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-3 soap-field-stack fragrance-percent-col">
-              <label class="form-label">Percent</label>
-              <div class="soap-input-suffix" data-suffix="%">
-                <input type="number" class="form-control fragrance-percent" step="0.1" placeholder="Safe default: 3">
-              </div>
-            </div>
-            <div class="col-lg-2 col-md-2 soap-field-stack fragrance-weight-col">
-              <label class="form-label">Weight</label>
-              <div class="soap-input-suffix unit-suffix" data-suffix="g">
-                <input type="number" class="form-control fragrance-grams" step="0.1">
-              </div>
-            </div>
-            <div class="col-lg-1 col-md-1 d-flex align-items-end justify-content-center fragrance-remove-col">
-              <button class="btn btn-outline-danger soap-icon-btn remove-fragrance" type="button" aria-label="Remove fragrance" title="Remove fragrance">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-        </template>
+        {% include 'tools/soaps/stages/partials/_fragrance_row_template.html' %}
       </div>
     </div>
     <div class="d-flex flex-wrap gap-1 align-items-center mt-2">

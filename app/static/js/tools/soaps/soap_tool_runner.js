@@ -8,6 +8,12 @@
   const runnerService = SoapTool.runnerService;
   const runnerRender = SoapTool.runnerRender;
 
+  async function buildSoapRecipePayload(calc){
+    const requestPayload = SoapTool.recipePayload.buildSoapRecipePayloadRequest(calc);
+    if (!requestPayload) return null;
+    return runnerService.buildRecipePayload(requestPayload);
+  }
+
   async function calculateAll(options = {}){
     const settings = {
       consumeQuota: false,
@@ -101,7 +107,7 @@
     setWaterMethod: (...args) => runnerInputs.setWaterMethod(...args),
     updateLiveCalculationPreview: (...args) => runnerInputs.updateLiveCalculationPreview(...args),
     calculateAll,
-    buildSoapRecipePayload: (...args) => SoapTool.recipePayload.buildSoapRecipePayload(...args),
+    buildSoapRecipePayload,
     buildLineRow: (...args) => SoapTool.recipePayload.buildLineRow(...args),
     addStubLine: (...args) => SoapTool.recipePayload.addStubLine(...args),
     maybeShowSignupModal: (...args) => runnerQuota.maybeShowSignupModal(...args),

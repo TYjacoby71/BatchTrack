@@ -14,6 +14,42 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
+  - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
+  - Hardened variation naming and promotion naming behavior for recipe-group consistency.
+  - Added documentation schema/dictionary updates required for Documentation Guard compliance.
+- **[2026-02-17: Tier Presentation Documentation Guard Compliance](2026-02-17-tier-presentation-documentation-guard-compliance.md)**
+  - Added required function/class header schema blocks across the new tier presentation package and related pricing/signup services.
+  - Added missing module synopsis/glossary coverage for new package modules.
+  - Added APP_DICTIONARY coverage for `tier_presentation` paths and signup plan catalog service.
+- **[2026-02-16: Pricing Feature Catalog-Driven Comparison Table](2026-02-16-pricing-feature-catalog-driven-comparison-table.md)**
+  - Replaced raw permission-style pricing rows with grouped customer-facing feature and limit sections.
+  - Added tier metadata plumbing for limits, add-ons, and retention policy rendering.
+  - Updated pricing page comparison UI to support boolean and text cells.
+- **[2026-02-16: Tier Feature Catalog and Entitlement Mapping Rules](2026-02-16-tier-feature-catalog-and-mapping-rules.md)**
+  - Added a customer-facing feature taxonomy mapped to permissions, add-ons, flags, and limits.
+  - Documented which tier limits are currently hard-enforced versus metadata-only.
+  - Added tier-construction dependency rules for multi-user, BatchBot, marketplace, retention, and bulk operations.
+- **[2026-02-16: Recipe Variation Promotion Name and Group Visibility Fixes](2026-02-16-recipe-variation-promotion-name-and-group-visibility-fixes.md)**
+  - Restored canonical master/variation names when promoting test versions to current.
+  - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.
+  - Added regression tests for promotion naming and post-promotion variation display.
+- **[2026-02-14: Soap Backend Policy Injection + Recipe Payload API](2026-02-14-soap-backend-policy-and-recipe-payload-api.md)**
+  - Moved soap policy/constants ownership to backend-injected config consumed by frontend runtime modules.
+  - Added `/tools/api/soap/recipe-payload` and `/tools/api/soap/quality-nudge` so payload composition and quality nudging are backend authoritative.
+  - Preserved existing soap display while replacing JS-built advisory shells with template-driven DOM rendering.
+- **[2026-02-14: Soap Print Fill Confirmation Modal](2026-02-14-soap-print-fill-confirmation-modal.md)**
+  - Added a print-time mold-fill confirmation modal to the Soap Formulator print finalization flow.
+  - Added optional normalize-and-print scaling to fit a user-selected mold-fill percentage.
+  - Kept reactive stage editing unchanged while moving mold-fit confirmation to print time.
+- **[2026-02-14: Soap Guidance Dock Consolidation (Stage + Quality Hint Unification)](2026-02-14-soap-guidance-dock-consolidation.md)**
+  - Consolidated scattered soap stage/quality hints into one bottom guidance dock with active-hint summary.
+  - Added upward-expanding overlay guidance panel with caret toggle while keeping action controls in one place.
+  - Rerouted dynamic hint/warning/tip writers to a centralized guidance manager and removed in-card hint duplication.
+- **[2026-02-14: Soap Events Modularization](2026-02-14-soap-events-modularization.md)**
+  - Split soap event orchestration into focused modules for rows, forms, exports, mobile drawer behavior, and initialization.
+  - Replaced the previous large events file with a thin orchestrator layer.
+  - Updated hashed soap bundle output and manifest mapping to ship the refactor.
 - **[2026-02-13: Timer Datetime Rendering Fixes](2026-02-13-timer-datetime-rendering-fixes.md)**
   - Fixed timezone-mixed timer math on batch in-progress rendering paths.
   - Hardened timer management timestamp parsing to prevent `NaN` countdown output.

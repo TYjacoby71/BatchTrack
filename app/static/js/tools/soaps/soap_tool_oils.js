@@ -4,9 +4,44 @@
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { round, toNumber, clamp, buildSoapcalcSearchBuilder } = SoapTool.helpers;
   const { toGrams, fromGrams } = SoapTool.units;
-  const { OIL_CATEGORY_SET, OIL_TIP_RULES } = SoapTool.constants;
+  const { OIL_CATEGORY_SET } = SoapTool.constants;
   const { computeQualities } = SoapTool.calc;
   const state = SoapTool.state;
+  const oilEntryHints = new Map();
+
+  function ensureRowHintKey(row){
+    if (!row) return '';
+    if (!row.dataset.hintKey) {
+      state.nextOilHintId = (state.nextOilHintId || 0) + 1;
+      row.dataset.hintKey = `oil-row-${state.nextOilHintId}`;
+    }
+    return row.dataset.hintKey;
+  }
+
+  function pruneOilEntryHints(){
+    const activeKeys = new Set(
+      Array.from(document.querySelectorAll('#oilRows .oil-row')).map(row => ensureRowHintKey(row))
+    );
+    Array.from(oilEntryHints.keys()).forEach(key => {
+      const rowKey = key.split(':')[0];
+      if (!activeKeys.has(rowKey)) {
+        oilEntryHints.delete(key);
+      }
+    });
+  }
+
+  function syncOilEntryHintGuidance(){
+    const messages = Array.from(new Set(Array.from(oilEntryHints.values())));
+    if (!messages.length) {
+      SoapTool.guidance?.clearSection('oil-entry-limits');
+      return;
+    }
+    SoapTool.guidance?.setSection('oil-entry-limits', {
+      title: 'Stage 2 limits',
+      tone: 'warning',
+      items: messages,
+    });
+  }
 
   function attachOilTypeahead(row){
     const input = row.querySelector('.oil-typeahead');
@@ -133,15 +168,14 @@
 
   function setOilHint(row, field, message){
     if (!row) return;
-    const hint = row.querySelector(`[data-role="oil-${field}-hint"]`);
-    if (!hint) return;
+    const rowKey = ensureRowHintKey(row);
+    const key = `${rowKey}:${field}`;
     if (message) {
-      hint.textContent = message;
-      hint.classList.add('is-visible');
+      oilEntryHints.set(key, message);
     } else {
-      hint.textContent = '';
-      hint.classList.remove('is-visible');
+      oilEntryHints.delete(key);
     }
+    syncOilEntryHintGuidance();
   }
 
   function bounceInput(input){
@@ -270,8 +304,6 @@
   }
 
   function updateOilLimitWarning({ totalWeight, totalPct, target, capped }){
-    const warning = document.getElementById('oilLimitWarning');
-    if (!warning) return;
     const messages = [];
     if (capped) {
       messages.push('Oil total hit the mold cap and was adjusted.');
@@ -284,18 +316,22 @@
       messages.push(`Oil percentages are over 100% by ${round(totalPct - 100, 2)}%.`);
     }
     if (messages.length) {
-      warning.classList.remove('d-none');
-      warning.innerHTML = `${messages.join(' ')} Adjust oils or mold % to continue.`;
-    } else {
-      warning.classList.add('d-none');
-      warning.textContent = '';
+      SoapTool.guidance?.setSection('oil-cap-warning', {
+        title: 'Oil cap warnings',
+        tone: 'warning',
+        items: [`${messages.join(' ')} Adjust oils or mold % to continue.`],
+      });
+      return;
     }
+    SoapTool.guidance?.clearSection('oil-cap-warning');
   }
 
   function updateOilTotals(options = {}){
     if (!options.skipEnforce) {
       state.wasCapped = false;
     }
+    pruneOilEntryHints();
+    syncOilEntryHintGuidance();
     const rows = Array.from(document.querySelectorAll('#oilRows .oil-row'));
     const mold = SoapTool.mold.getMoldSettings();
     let target = getOilTargetGrams();
@@ -532,56 +568,29 @@
   }
 
   function updateOilTips(){
-    const tipBox = document.getElementById('oilBlendTips');
-    if (!tipBox) return;
-    const oils = collectOilData().filter(oil => oil.grams > 0 || oil.percent > 0);
-    if (!oils.length) {
-      tipBox.classList.add('d-none');
-      tipBox.textContent = '';
+    const calc = state.lastCalc;
+    const totalOils = state.totalOilsGrams || 0;
+    const calcTotal = toNumber(calc?.totalOils);
+    if (!calc || calcTotal <= 0 || totalOils <= 0 || Math.abs(calcTotal - totalOils) > 0.01) {
+      SoapTool.guidance?.clearSection('oil-blend-tips');
       return;
     }
-    const tips = new Set();
-    oils.forEach(oil => {
-      const name = (oil.name || '').toLowerCase();
-      if (name) {
-        OIL_TIP_RULES.forEach(rule => {
-          if (rule.match.test(name)) tips.add(rule.tip);
-        });
-      }
-      if (oil.fattyProfile && typeof oil.fattyProfile === 'object') {
-        const lauric = toNumber(oil.fattyProfile.lauric);
-        const myristic = toNumber(oil.fattyProfile.myristic);
-        const palmitic = toNumber(oil.fattyProfile.palmitic);
-        const stearic = toNumber(oil.fattyProfile.stearic);
-        const ricinoleic = toNumber(oil.fattyProfile.ricinoleic);
-        const oleic = toNumber(oil.fattyProfile.oleic);
-        const linoleic = toNumber(oil.fattyProfile.linoleic);
-        const linolenic = toNumber(oil.fattyProfile.linolenic);
-        if (lauric + myristic >= 30) {
-          tips.add(`${oil.name || 'This oil'} is high in lauric/myristic; expect faster trace and stronger cleansing.`);
-        }
-        if (palmitic + stearic >= 40) {
-          tips.add(`${oil.name || 'This oil'} is high in palmitic/stearic; expect a harder bar and quicker set-up.`);
-        }
-        if (oleic >= 60) {
-          tips.add(`${oil.name || 'This oil'} is high oleic; trace may be slow and bars may start softer.`);
-        }
-        if (linoleic + linolenic >= 20) {
-          tips.add(`${oil.name || 'This oil'} is high in PUFAs; keep the % lower to reduce DOS risk.`);
-        }
-        if (ricinoleic >= 60) {
-          tips.add(`${oil.name || 'This oil'} boosts lather but can feel tacky; keep under 10-15%.`);
-        }
-      }
-    });
-    const tipList = Array.from(tips).slice(0, 6);
+    renderOilTips(calc?.qualityReport?.blend_tips || []);
+  }
+
+  function renderOilTips(tips){
+    const tipList = Array.isArray(tips)
+      ? tips.filter(item => typeof item === 'string' && item.trim()).slice(0, 6)
+      : [];
     if (!tipList.length) {
-      tipBox.classList.add('d-none');
-      tipBox.textContent = '';
+      SoapTool.guidance?.clearSection('oil-blend-tips');
       return;
     }
-    tipBox.classList.remove('d-none');
-    tipBox.innerHTML = `<strong>Blend behavior tips:</strong><ul class="mb-0">${tipList.map(tip => `<li>${tip}</li>`).join('')}</ul>`;
+    SoapTool.guidance?.setSection('oil-blend-tips', {
+      title: 'Blend behavior tips',
+      tone: 'info',
+      items: tipList,
+    });
   }
 
   function getTotalOilsGrams(){
@@ -629,6 +638,7 @@
     setSelectedOilProfileFromRow,
     clearSelectedOilProfile,
     updateOilTips,
+    renderOilTips,
     getTotalOilsGrams,
     serializeOilRow,
     validateOilEntry,

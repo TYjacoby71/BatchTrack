@@ -3,7 +3,12 @@
 
   const SoapTool = window.SoapTool = window.SoapTool || {};
   const { formatTime, getStorage } = SoapTool.helpers;
+  const { DEFAULT_INPUTS } = SoapTool.constants;
   const STATE_STORAGE_KEY = 'soap_tool_state_v2';
+
+  function getDefaults(){
+    return DEFAULT_INPUTS || {};
+  }
 
   function serializeLines(wrapperId, kind){
     const out = [];
@@ -106,38 +111,39 @@
   function saveState(){
     const storage = getStorage();
     if (!storage) return;
+    const defaults = getDefaults();
     const payload = {
       version: 2,
       unit: SoapTool.state.currentUnit,
       oil_total_target: document.getElementById('oilTotalTarget').value || '',
       oils: serializeOils(),
       lye_form: {
-        superfat: document.getElementById('lyeSuperfat')?.value || '5',
-        lye_type: document.querySelector('input[name="lye_type"]:checked')?.value || 'NaOH',
-        lye_purity: document.getElementById('lyePurity')?.value || '100',
-        water_method: document.getElementById('waterMethod')?.value || 'percent',
+        superfat: document.getElementById('lyeSuperfat')?.value || String(defaults.superfatPct ?? 5),
+        lye_type: document.querySelector('input[name="lye_type"]:checked')?.value || (defaults.lyeType || 'NaOH'),
+        lye_purity: document.getElementById('lyePurity')?.value || String(defaults.lyePurityPct ?? 100),
+        water_method: document.getElementById('waterMethod')?.value || (defaults.waterMethod || 'percent'),
         water_pct: document.getElementById('waterPct')?.value || '',
         lye_concentration: document.getElementById('lyeConcentration')?.value || '',
         water_ratio: document.getElementById('waterRatio')?.value || '',
       },
       additives: {
         fragrances: serializeFragrances(),
-        lactate_pct: document.getElementById('additiveLactatePct').value || '1',
+        lactate_pct: document.getElementById('additiveLactatePct').value || String(defaults.additiveLactatePct ?? 1),
         lactate_name: document.getElementById('additiveLactateName')?.value || '',
         lactate_gi: document.getElementById('additiveLactateGi')?.value || '',
         lactate_unit: document.getElementById('additiveLactateUnit')?.value || '',
         lactate_category: document.getElementById('additiveLactateCategory')?.value || '',
-        sugar_pct: document.getElementById('additiveSugarPct').value || '1',
+        sugar_pct: document.getElementById('additiveSugarPct').value || String(defaults.additiveSugarPct ?? 1),
         sugar_name: document.getElementById('additiveSugarName')?.value || '',
         sugar_gi: document.getElementById('additiveSugarGi')?.value || '',
         sugar_unit: document.getElementById('additiveSugarUnit')?.value || '',
         sugar_category: document.getElementById('additiveSugarCategory')?.value || '',
-        salt_pct: document.getElementById('additiveSaltPct').value || '0.5',
+        salt_pct: document.getElementById('additiveSaltPct').value || String(defaults.additiveSaltPct ?? 0.5),
         salt_name: document.getElementById('additiveSaltName')?.value || '',
         salt_gi: document.getElementById('additiveSaltGi')?.value || '',
         salt_unit: document.getElementById('additiveSaltUnit')?.value || '',
         salt_category: document.getElementById('additiveSaltCategory')?.value || '',
-        citric_pct: document.getElementById('additiveCitricPct').value || '0',
+        citric_pct: document.getElementById('additiveCitricPct').value || String(defaults.additiveCitricPct ?? 0),
         citric_name: document.getElementById('additiveCitricName')?.value || '',
         citric_gi: document.getElementById('additiveCitricGi')?.value || '',
         citric_unit: document.getElementById('additiveCitricUnit')?.value || '',
@@ -145,13 +151,13 @@
       },
       mold: {
         water_weight: document.getElementById('moldWaterWeight').value || '',
-        oil_pct: document.getElementById('moldOilPct').value || '65',
-        shape: document.getElementById('moldShape')?.value || 'loaf',
+        oil_pct: document.getElementById('moldOilPct').value || String(defaults.moldOilPct ?? 65),
+        shape: document.getElementById('moldShape')?.value || (defaults.moldShape || 'loaf'),
         cylinder_correction: !!document.getElementById('moldCylinderCorrection')?.checked,
-        cylinder_factor: document.getElementById('moldCylinderFactor')?.value || '0.85',
+        cylinder_factor: document.getElementById('moldCylinderFactor')?.value || String(defaults.moldCylinderFactor ?? 0.85),
       },
       quality: {
-        preset: document.getElementById('qualityPreset')?.value || 'balanced',
+        preset: document.getElementById('qualityPreset')?.value || (defaults.qualityPreset || 'balanced'),
         focus: Array.from(document.querySelectorAll('.quality-focus:checked')).map(el => el.id),
       },
       lines: {
@@ -175,6 +181,7 @@
   function restoreState(){
     const storage = getStorage();
     if (!storage) return;
+    const defaults = getDefaults();
     const raw = storage.getItem(STATE_STORAGE_KEY);
     if (!raw) return;
     let data = null;
@@ -218,13 +225,13 @@
 
     if (data.lye_form) {
       const superfat = document.getElementById('lyeSuperfat');
-      if (superfat) superfat.value = data.lye_form.superfat || '5';
-      const lyeType = document.querySelector(`input[name="lye_type"][value="${data.lye_form.lye_type || 'NaOH'}"]`);
+      if (superfat) superfat.value = data.lye_form.superfat || String(defaults.superfatPct ?? 5);
+      const lyeType = document.querySelector(`input[name="lye_type"][value="${data.lye_form.lye_type || defaults.lyeType || 'NaOH'}"]`);
       if (lyeType) lyeType.checked = true;
       const purity = document.getElementById('lyePurity');
-      if (purity) purity.value = data.lye_form.lye_purity || '100';
+      if (purity) purity.value = data.lye_form.lye_purity || String(defaults.lyePurityPct ?? 100);
       const waterMethod = document.getElementById('waterMethod');
-      if (waterMethod) waterMethod.value = data.lye_form.water_method || 'percent';
+      if (waterMethod) waterMethod.value = data.lye_form.water_method || defaults.waterMethod || 'percent';
       const waterPct = document.getElementById('waterPct');
       if (waterPct) waterPct.value = data.lye_form.water_pct || '';
       const lyeConcentration = document.getElementById('lyeConcentration');
@@ -257,12 +264,12 @@
         } else if (data.additives.fragrance_pct || data.additives.fragrance_name || data.additives.fragrance_gi) {
           const row = SoapTool.fragrances.buildFragranceRow();
           row.querySelector('.fragrance-typeahead').value = data.additives.fragrance_name || '';
-          row.querySelector('.fragrance-percent').value = data.additives.fragrance_pct || '3';
+          row.querySelector('.fragrance-percent').value = data.additives.fragrance_pct || String(defaults.fragrancePct ?? 3);
           row.querySelector('.fragrance-gi-id').value = data.additives.fragrance_gi || '';
           fragranceRows.appendChild(row);
         }
       }
-      document.getElementById('additiveLactatePct').value = data.additives.lactate_pct || '1';
+      document.getElementById('additiveLactatePct').value = data.additives.lactate_pct || String(defaults.additiveLactatePct ?? 1);
       const lactateName = document.getElementById('additiveLactateName');
       if (lactateName) lactateName.value = data.additives.lactate_name || '';
       const lactateGi = document.getElementById('additiveLactateGi');
@@ -271,7 +278,7 @@
       if (lactateUnit) lactateUnit.value = data.additives.lactate_unit || '';
       const lactateCategory = document.getElementById('additiveLactateCategory');
       if (lactateCategory) lactateCategory.value = data.additives.lactate_category || '';
-      document.getElementById('additiveSugarPct').value = data.additives.sugar_pct || '1';
+      document.getElementById('additiveSugarPct').value = data.additives.sugar_pct || String(defaults.additiveSugarPct ?? 1);
       const sugarName = document.getElementById('additiveSugarName');
       if (sugarName) sugarName.value = data.additives.sugar_name || '';
       const sugarGi = document.getElementById('additiveSugarGi');
@@ -280,7 +287,7 @@
       if (sugarUnit) sugarUnit.value = data.additives.sugar_unit || '';
       const sugarCategory = document.getElementById('additiveSugarCategory');
       if (sugarCategory) sugarCategory.value = data.additives.sugar_category || '';
-      document.getElementById('additiveSaltPct').value = data.additives.salt_pct || '0.5';
+      document.getElementById('additiveSaltPct').value = data.additives.salt_pct || String(defaults.additiveSaltPct ?? 0.5);
       const saltName = document.getElementById('additiveSaltName');
       if (saltName) saltName.value = data.additives.salt_name || '';
       const saltGi = document.getElementById('additiveSaltGi');
@@ -289,7 +296,7 @@
       if (saltUnit) saltUnit.value = data.additives.salt_unit || '';
       const saltCategory = document.getElementById('additiveSaltCategory');
       if (saltCategory) saltCategory.value = data.additives.salt_category || '';
-      document.getElementById('additiveCitricPct').value = data.additives.citric_pct || '0';
+      document.getElementById('additiveCitricPct').value = data.additives.citric_pct || String(defaults.additiveCitricPct ?? 0);
       const citricName = document.getElementById('additiveCitricName');
       if (citricName) citricName.value = data.additives.citric_name || '';
       const citricGi = document.getElementById('additiveCitricGi');
@@ -302,13 +309,13 @@
 
     if (data.mold) {
       document.getElementById('moldWaterWeight').value = data.mold.water_weight || '';
-      document.getElementById('moldOilPct').value = data.mold.oil_pct || '65';
+      document.getElementById('moldOilPct').value = data.mold.oil_pct || String(defaults.moldOilPct ?? 65);
       const moldShape = document.getElementById('moldShape');
-      if (moldShape) moldShape.value = data.mold.shape || 'loaf';
+      if (moldShape) moldShape.value = data.mold.shape || defaults.moldShape || 'loaf';
       const cylCorrection = document.getElementById('moldCylinderCorrection');
       if (cylCorrection) cylCorrection.checked = !!data.mold.cylinder_correction;
       const cylFactor = document.getElementById('moldCylinderFactor');
-      if (cylFactor) cylFactor.value = data.mold.cylinder_factor || '0.85';
+      if (cylFactor) cylFactor.value = data.mold.cylinder_factor || String(defaults.moldCylinderFactor ?? 0.85);
       const targetInput = document.getElementById('oilTotalTarget');
       if (SoapTool.mold?.syncMoldPctFromTarget && SoapTool.mold?.syncTargetFromMold) {
         const restoredTarget = SoapTool.units.toGrams(targetInput?.value);
@@ -322,9 +329,9 @@
     if (data.quality) {
       const preset = document.getElementById('qualityPreset');
       if (preset) {
-        const desired = data.quality.preset || 'balanced';
+        const desired = data.quality.preset || defaults.qualityPreset || 'balanced';
         const option = Array.from(preset.options).find(opt => opt.value === desired);
-        preset.value = option ? desired : 'balanced';
+        preset.value = option ? desired : (defaults.qualityPreset || 'balanced');
       }
       document.querySelectorAll('.quality-focus').forEach(el => {
         el.checked = Array.isArray(data.quality.focus) && data.quality.focus.includes(el.id);

@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 # --- Derive variation name ---
 # Purpose: Derive a variation display name.
+# Inputs: Candidate recipe name and optional parent recipe name.
+# Outputs: Derived variation name or None when unavailable.
 def _derive_variation_name(name: str | None, parent_name: str | None) -> str | None:
     if not name:
         return None
@@ -59,6 +61,8 @@ def _derive_variation_name(name: str | None, parent_name: str | None) -> str | N
 
 # --- Next version number ---
 # Purpose: Compute next version number for a branch.
+# Inputs: Recipe-group id plus branch scope flags.
+# Outputs: Next integer version number for the branch.
 def _next_version_number(
     recipe_group_id: int | None,
     *,
@@ -73,13 +77,16 @@ def _next_version_number(
         Recipe.test_sequence.is_(None),
     )
     if not is_master:
-        query = query.filter(Recipe.variation_name == variation_name)
+        normalized_variation_name = (variation_name or "").strip().lower()
+        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
     max_ver = query.with_entities(sa.func.max(Recipe.version_number)).scalar()
     return int(max_ver or 0) + 1
 
 
 # --- Next test sequence ---
 # Purpose: Compute next test sequence for a branch.
+# Inputs: Recipe-group id plus branch scope flags.
+# Outputs: Next integer test sequence for the branch.
 def _next_test_sequence(
     recipe_group_id: int | None,
     *,
@@ -94,13 +101,16 @@ def _next_test_sequence(
         Recipe.test_sequence.isnot(None),
     )
     if not is_master:
-        query = query.filter(Recipe.variation_name == variation_name)
+        normalized_variation_name = (variation_name or "").strip().lower()
+        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
     max_test = query.with_entities(sa.func.max(Recipe.test_sequence)).scalar()
     return int(max_test or 0) + 1
 
 
 # --- Ensure recipe group ---
 # Purpose: Ensure recipe group exists for a recipe.
+# Inputs: Organization id, group name, and optional group prefix.
+# Outputs: Persisted RecipeGroup model for lineage grouping.
 def _ensure_recipe_group(
     *,
     recipe_org_id: int,
@@ -120,6 +130,8 @@ def _ensure_recipe_group(
 
 # --- Create recipe ---
 # Purpose: Create a recipe with group/version metadata.
+# Inputs: Recipe payload fields, lineage metadata, and publish flags.
+# Outputs: Tuple of success flag with Recipe model or error payload.
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
@@ -152,7 +164,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  test_sequence: int | None = None,
                  is_test: bool | None = None,
                  is_master_override: bool | None = None,
-                 version_number_override: int | None = None) -> Tuple[bool, Any]:
+                 version_number_override: int | None = None,
+                 allow_duplicate_name_override: bool = False) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -181,6 +194,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         recipe_org_id = current_org_id if current_org_id else (1)
 
         allow_duplicate_name = bool(
+            allow_duplicate_name_override
+            or
             is_test_flag
             or parent_recipe_id
             or parent_master_id
@@ -273,16 +288,32 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         resolved_variation_name = None
         resolved_variation_prefix = None
         if not is_master:
-            resolved_variation_name = variation_name or _derive_variation_name(
+            resolved_variation_name = (variation_name or _derive_variation_name(
                 name, parent_recipe.name if parent_recipe else None
-            )
+            ) or "").strip()
+            if not resolved_variation_name:
+                return False, {
+                    "valid": False,
+                    "error": "Variation name is required.",
+                    "missing_fields": [],
+                }
+
             existing_variation = None
             if recipe_group and resolved_variation_name:
-                existing_variation = Recipe.query.filter(
+                existing_variation_query = Recipe.query.filter(
                     Recipe.recipe_group_id == recipe_group.id,
                     Recipe.is_master.is_(False),
-                    Recipe.variation_name == resolved_variation_name,
-                ).order_by(Recipe.version_number.desc()).first()
+                    Recipe.test_sequence.is_(None),
+                    sa.func.lower(Recipe.variation_name) == resolved_variation_name.lower(),
+                )
+                existing_variation = existing_variation_query.order_by(Recipe.version_number.desc()).first()
+                creating_new_variation_branch = bool(parent_recipe and parent_recipe.is_master and not is_test_flag)
+                if existing_variation and creating_new_variation_branch:
+                    return False, {
+                        "valid": False,
+                        "error": "Variation name already exists in this recipe group.",
+                        "missing_fields": [],
+                    }
             if existing_variation and existing_variation.variation_prefix:
                 resolved_variation_prefix = existing_variation.variation_prefix
             else:
@@ -488,6 +519,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
 # --- Update recipe ---
 # Purpose: Update a recipe with lock/version safeguards and audit notes.
+# Inputs: Target recipe id and partial update payload fields.
+# Outputs: Tuple of success flag with updated Recipe model or error.
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
@@ -837,6 +870,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
 # --- Delete recipe ---
 # Purpose: Delete a recipe and related rows.
+# Inputs: Target recipe id.
+# Outputs: Tuple of success flag and status message.
 def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
     """
     Delete a recipe and its ingredients.
@@ -895,6 +930,8 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
 
 # --- Fetch recipe details ---
 # Purpose: Fetch a recipe with access checks.
+# Inputs: Recipe id and optional cross-org import flag.
+# Outputs: Recipe model when accessible, otherwise None or error.
 def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Optional[Recipe]:
     """
     Get detailed recipe information with all relationships loaded.
@@ -953,6 +990,8 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
 
 # --- Duplicate recipe ---
 # Purpose: Duplicate a recipe for legacy clone flow.
+# Inputs: Source recipe id and optional cross-org target context.
+# Outputs: Tuple of success flag with cloned Recipe model or error.
 def duplicate_recipe(
     recipe_id: int,
     *,

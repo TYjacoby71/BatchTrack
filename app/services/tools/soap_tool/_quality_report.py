@@ -10,18 +10,10 @@ Glossary:
 
 from __future__ import annotations
 
+from ._advisory import build_oil_blend_tips
 from ._fatty_acids import compute_fatty_acids, compute_iodine, compute_qualities, compute_sat_unsat
+from ._policy import IODINE_RANGE, INS_RANGE, QUALITY_RANGES
 from .types import SoapToolOilInput, _to_float
-
-QUALITY_RANGES = {
-    "hardness": (29.0, 54.0),
-    "cleansing": (12.0, 22.0),
-    "conditioning": (44.0, 69.0),
-    "bubbly": (14.0, 46.0),
-    "creamy": (16.0, 48.0),
-}
-IODINE_RANGE = (41.0, 70.0)
-INS_RANGE = (136.0, 170.0)
 
 
 # --- Quality warnings builder ---
@@ -143,6 +135,7 @@ def build_quality_report(
         lye_concentration=lye_concentration,
         additives=additives,
     )
+    blend_tips = build_oil_blend_tips(oils)
 
     return {
         "qualities": qualities,
@@ -154,6 +147,7 @@ def build_quality_report(
         "sat_unsat": sat_unsat,
         "warnings": warnings,
         "visual_guidance": visual_guidance,
+        "blend_tips": blend_tips,
     }
 
 

@@ -332,3 +332,13 @@ function showFifoError(message) {
         </div>
     `;
 }
+
+// Keep modal handlers available for inline template attributes.
+// The bundler wraps files, so these must be explicitly attached to window.
+if (typeof window !== 'undefined') {
+    Object.assign(window, {
+        openFifoModal,
+        openBatchInventorySummary,
+        toggleLotsRow,
+    });
+}

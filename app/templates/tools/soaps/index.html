@@ -22,6 +22,7 @@
     window.RECIPE_CATEGORY_NAME = 'Soaps';
     window.SOAP_CALC_LIMIT = {{ calc_limit|tojson if calc_limit is defined else 'null' }};
     window.SOAP_CALC_TIER = {{ calc_tier|tojson if calc_tier is defined else '"guest"' }};
+    window.soapToolPolicy = {{ soap_policy|tojson if soap_policy is defined else '{}' }};
     window.soapToolConfig = {
       unitOptionsHtml: `{% for unit in global_units %}<option value="{{ unit.name }}">{{ unit.name }}</option>{% endfor %}`,
       useCsvPrimary: {{ is_feature_enabled('TOOLS_SOAP_CSV_PRIMARY')|tojson }}
@@ -49,6 +50,7 @@
 
   {% include 'tools/soaps/_modals.html' %}
   {% include 'tools/soaps/_toasts.html' %}
+  {% include 'tools/soaps/_client_templates.html' %}
 
 </div>
 

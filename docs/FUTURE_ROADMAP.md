@@ -287,6 +287,7 @@ Before implementing future features, address these technical foundations:
 - Code documentation and API specifications
 - Performance monitoring and optimization
 - Security audit and penetration testing
+- Test governance program: stale-test review cadence, duplicate-intent pruning, and reduced auth-bypass patterns in integration coverage
 
 ### **Infrastructure**
 - Database optimization and indexing

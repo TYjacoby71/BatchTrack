@@ -172,12 +172,109 @@ soapToolPage {
 #soapToolPage #soapAlertStack {
   margin-bottom: var(--space-2);
 }
-#soapToolPage #soapQualityCard,
-#soapToolPage #soapResultsActionsCard {
+#soapToolPage #soapQualityCard {
   margin-bottom: var(--space-2);
 }
-#soapToolPage #soapResultsActionsCard {
+#soapToolPage .soap-guidance-dock {
   margin-top: var(--space-2);
+  position: relative;
+  z-index: 1050;
+  --soap-guidance-overlay-height: 68vh;
+}
+#soapToolPage .soap-guidance-card {
+  overflow: visible;
+}
+#soapToolPage .soap-guidance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+}
+#soapToolPage .soap-guidance-header-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+#soapToolPage .soap-guidance-header-meta > .d-flex {
+  flex: 0 0 auto;
+}
+#soapToolPage .soap-guidance-header-meta > .text-truncate {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+#soapToolPage .soap-guidance-toggle {
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#soapToolPage .soap-guidance-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - 1px);
+  max-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-top-left-radius: var(--radius-3);
+  border-top-right-radius: var(--radius-3);
+  box-shadow: var(--shadow-3);
+  transition: max-height 0.25s ease;
+  z-index: 1060;
+}
+#soapToolPage #soapGuidanceDock.is-expanded .soap-guidance-overlay {
+  max-height: min(80vh, var(--soap-guidance-overlay-height));
+  pointer-events: auto;
+}
+#soapToolPage .soap-guidance-body {
+  max-height: min(80vh, var(--soap-guidance-overlay-height));
+  overflow: auto;
+}
+#soapToolPage .soap-guidance-sections {
+  display: grid;
+  gap: var(--space-2);
+}
+#soapToolPage .soap-guidance-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  padding: 0.5rem 0.625rem;
+}
+#soapToolPage .soap-guidance-section.is-warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+}
+#soapToolPage .soap-guidance-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+#soapToolPage .soap-guidance-list {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.82rem;
+}
+#soapToolPage .soap-guidance-list li + li {
+  margin-top: 0.2rem;
+}
+@media (max-width: 767px) {
+  #soapToolPage .soap-guidance-header-meta > .text-truncate {
+    display: none;
+  }
+  #soapToolPage #soapGuidanceDock.is-expanded .soap-guidance-overlay,
+  #soapToolPage .soap-guidance-body {
+    max-height: 72vh;
+  }
 }
 #soapToolPage #resultsCard {
   margin-top: var(--space-2);
