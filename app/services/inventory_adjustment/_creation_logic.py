@@ -44,6 +44,17 @@ def _parse_bool_flag(raw_value):
     return None
 
 
+def _org_tier_allows_quantity_tracking(organization: Organization | None) -> bool:
+    # Preserve legacy behavior when no tier has been assigned.
+    if not organization or not getattr(organization, "subscription_tier_id", None):
+        return True
+    return has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=organization,
+        default_if_missing_catalog=True,
+    )
+
+
 # --- Resolve unit cost ---
 # Purpose: Normalize form inputs into per-unit cost.
 def _resolve_cost_per_unit(form_data, initial_quantity):
@@ -238,11 +249,7 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
 
         requested_is_tracked = _parse_bool_flag(form_data.get("is_tracked"))
         organization = db.session.get(Organization, organization_id) if organization_id else None
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=organization,
-            default_if_missing_catalog=True,
-        )
+        org_tracks_quantities = _org_tier_allows_quantity_tracking(organization)
         if requested_is_tracked is None:
             effective_is_tracked = bool(org_tracks_quantities)
         else:

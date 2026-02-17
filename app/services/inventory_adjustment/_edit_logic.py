@@ -44,6 +44,17 @@ def _parse_bool_flag(raw_value):
     return None
 
 
+def _org_tier_allows_quantity_tracking(organization: Organization | None) -> bool:
+    # Preserve legacy behavior when no tier has been assigned.
+    if not organization or not getattr(organization, "subscription_tier_id", None):
+        return True
+    return has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=organization,
+        default_if_missing_catalog=True,
+    )
+
+
 # --- Inventory edit ---
 # Purpose: Update inventory metadata and handle unit changes.
 def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
@@ -273,17 +284,14 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             except (ValueError, TypeError):
                 return False, "Invalid low stock threshold"
 
-        if 'is_tracked' in form_data:
+        organization = db.session.get(Organization, item.organization_id) if item.organization_id else None
+        org_tracks_quantities = _org_tier_allows_quantity_tracking(organization)
+        if not org_tracks_quantities:
+            item.is_tracked = False
+        elif 'is_tracked' in form_data:
             requested_is_tracked = _parse_bool_flag(form_data.get('is_tracked'))
             if requested_is_tracked is not None:
-                organization = db.session.get(Organization, item.organization_id) if item.organization_id else None
-                org_tracks_quantities = has_tier_permission(
-                    "batches.track_inventory_outputs",
-                    organization=organization,
-                    default_if_missing_catalog=True,
-                )
-                # Tier policy can force untracked mode for all items.
-                item.is_tracked = bool(requested_is_tracked and org_tracks_quantities)
+                item.is_tracked = bool(requested_is_tracked)
 
         # Unit already handled above if present
 

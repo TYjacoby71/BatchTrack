@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, current_app
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User, GlobalItem
-from app.utils.permissions import permission_required, role_required
+from app.utils.permissions import permission_required, role_required, has_tier_permission
 from app.utils.api_responses import api_error, api_success
 from app.extensions import cache, limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
@@ -43,6 +43,19 @@ logger = logging.getLogger(__name__)
 
 def _bulk_inventory_updates_enabled() -> bool:
     return is_feature_enabled("FEATURE_BULK_INVENTORY_UPDATES")
+
+
+def _org_tracks_inventory_quantities() -> bool:
+    """Whether current org tier allows tracked quantity mode."""
+    org = getattr(current_user, "organization", None)
+    # Preserve legacy behavior for orgs without an assigned tier.
+    if not org or not getattr(org, "subscription_tier_id", None):
+        return True
+    return has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=org,
+        default_if_missing_catalog=True,
+    )
 
 
 def _expired_quantity_map(item_ids):
@@ -435,6 +448,7 @@ def list_inventory():
 
     units = Unit.scoped().filter(Unit.is_active == True).all()
     categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
         cached_payload = None
@@ -454,6 +468,7 @@ def list_inventory():
                 units=units,
                 show_archived=show_archived,
                 show_zero_qty=show_zero_qty,
+                org_tracks_inventory_quantities=org_tracks_inventory_quantities,
                 get_global_unit_list=get_global_unit_list,
                 breadcrumb_items=[{'label': 'Inventory'}],
             )
@@ -468,7 +483,7 @@ def list_inventory():
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     if not show_zero_qty:
-        query = query.filter(InventoryItem.quantity > 0)
+        query = query.filter(or_(InventoryItem.quantity > 0, InventoryItem.is_tracked.is_(False)))
     if raw_search:
         like_pattern = f"%{raw_search}%"
         query = query.filter(InventoryItem.name.ilike(like_pattern))
@@ -509,6 +524,7 @@ def list_inventory():
         units=units,
         show_archived=show_archived,
         show_zero_qty=show_zero_qty,
+        org_tracks_inventory_quantities=org_tracks_inventory_quantities,
         get_global_unit_list=get_global_unit_list,
         breadcrumb_items=[{'label': 'Inventory'}],
     )
@@ -654,6 +670,7 @@ def view_inventory(id):
                          now=datetime.now(timezone.utc),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
+                         org_tracks_inventory_quantities=_org_tracks_inventory_quantities(),
                          TimezoneUtils=TimezoneUtils,
                          breadcrumb_items=[
                              {'label': 'Inventory', 'url': url_for('inventory.list_inventory')},

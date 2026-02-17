@@ -17,7 +17,7 @@
       </div>
       {% endif %}
 
-      {% if item.quantity > 0 or history|length > 0 %}
+      {% if not item.is_tracked or item.quantity > 0 or history|length > 0 %}
         {% include "inventory/components/item_summary_card.html" %}
 
         <!-- Expired Inventory Section -->
@@ -105,7 +105,7 @@
 {% include "inventory/components/modals.html" %}
 
 <!-- Initial Inventory Modal for Empty FIFO -->
-{% if item.quantity == 0 and history|length == 0 %}
+{% if item.is_tracked and item.quantity == 0 and history|length == 0 %}
 <div class="modal fade" id="initialInventoryModal" tabindex="-1" aria-labelledby="initialInventoryModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -279,6 +279,7 @@ function getCSRFToken() {
 
 // JavaScript for Edit Details Modal
 document.addEventListener('DOMContentLoaded', function() {
+    const forceInfiniteByTier = {{ 'true' if not org_tracks_inventory_quantities else 'false' }};
     const editDetailsModal = document.getElementById('editDetailsModal');
     if (editDetailsModal) {
         editDetailsModal.addEventListener('show.bs.modal', function(event) {
@@ -302,6 +303,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (unitEl) unitEl.value = item.unit;
                     const costEl = document.getElementById('modal_cost_per_unit');
                     if (costEl) costEl.value = item.cost_per_unit;
+                    const trackedEl = document.getElementById('modal_is_tracked');
+                    if (trackedEl) {
+                        trackedEl.checked = forceInfiniteByTier ? false : !!item.is_tracked;
+                        trackedEl.disabled = !!forceInfiniteByTier;
+                    }
                     const formEl = document.getElementById('editModalForm');
                     if (formEl) formEl.setAttribute('action', `/inventory/edit/${itemId}`);
 

@@ -22,6 +22,18 @@ from .base_handler import BaseInventoryHandler
 logger = logging.getLogger(__name__)
 
 
+def _org_tier_allows_quantity_tracking(ingredient: InventoryItem) -> bool:
+    org = getattr(ingredient, "organization", None)
+    # Preserve legacy behavior when no tier has been assigned.
+    if not org or not getattr(org, "subscription_tier_id", None):
+        return True
+    return has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=org,
+        default_if_missing_catalog=True,
+    )
+
+
 # --- Ingredient stock handler ---
 # Purpose: Check ingredient availability using FIFO lots.
 class IngredientHandler(BaseInventoryHandler):
@@ -47,11 +59,7 @@ class IngredientHandler(BaseInventoryHandler):
             return self._create_not_found_result(request)
 
         # Effective tracking mode combines item-level tracking with org-tier capability.
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=getattr(ingredient, "organization", None),
-            default_if_missing_catalog=True,
-        )
+        org_tracks_quantities = _org_tier_allows_quantity_tracking(ingredient)
         effective_tracking_enabled = bool(getattr(ingredient, "is_tracked", True)) and org_tracks_quantities
 
         stock_unit = ingredient.unit
