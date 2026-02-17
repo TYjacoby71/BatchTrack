@@ -201,7 +201,7 @@ Made a code change?
 - [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
 - [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
 - [ ] 5) **Validation** — local tests run, tests updated, and docs guard passes (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
-- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers, terms/locations, and one-entry rule.
+- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers (entire touched file coverage), terms/locations, and one-entry rule.
 - [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
 
 ### AI Shortcut Phrase
@@ -219,7 +219,7 @@ The following rules are enforced by `scripts/validate_pr_documentation.py` in lo
 
 2. **Python schema requirement (`app/` and `scripts/`)**
    - Module docstring must include both **Synopsis** and **Glossary**.
-   - Every touched top-level class/function must include a nearby functional header:
+   - For each changed Python file, every top-level class/function in that file (not only edited units) must include a nearby functional header:
      - `# --- <UNIT NAME> ---`
      - `# Purpose: ...`
      - `# Inputs: ...`

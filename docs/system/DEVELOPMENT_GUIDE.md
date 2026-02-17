@@ -1,357 +1,79 @@
 # Development Guide
 
-**How to safely extend BatchTrack while maintaining system integrity**
+## Synopsis
+This guide captures the current engineering workflow and guardrails for changing BatchTrack safely. It focuses on service boundaries, multi-tenant scoping, permission/billing enforcement, and required documentation discipline.
 
-## Core Development Principles
+## Glossary
+- **Service authority**: The layer that owns domain behavior (routes orchestrate; services decide).
+- **Tenant scoping**: Enforcing organization isolation through `organization_id` and permission context.
+- **Docs guard**: `scripts/validate_pr_documentation.py` checks PR documentation/schema requirements.
 
-### 1. Service Authority (NEVER BYPASS)
-- **FIFO Service**: All inventory deductions must go through `FIFOService`
-- **Inventory Adjustment Service**: All stock changes via `InventoryAdjustmentService`
-- **Unit Conversion Service**: All conversions through `UnitConversionService`
-- **Stock Check Service**: All availability checks via `StockCheckService`
+## Core Engineering Rules
 
-### 2. Organization Scoping (ALWAYS ENFORCE)
-- Every scoped model must filter by `organization_id`
-- Developers use `session['dev_selected_org_id']` when in customer support mode
-- Never expose cross-organization data
+### 1) Keep route handlers thin
+- Route files should validate input and call services.
+- Domain logic belongs in service modules, not route bodies.
 
-### 3. Permission Checking (NO HARDCODING)
-- Use `has_permission(permission_name)` for all access control
-- Check subscription tier limits before feature access
-- Implement template-level permission hiding
+### 2) Respect tenant boundaries
+- Scope tenant data by organization context.
+- Never return cross-organization records to customer users.
+- Developer access paths must be explicit and audited (masquerade/dev routes).
 
-### Developer Feature Flags
+### 3) Enforce permissions + billing policy
+- Use permission utilities/decorators (`require_permission`, `has_permission`).
+- Do not hardcode role-name checks as authorization logic.
+- Billing access gates are centralized through middleware and `BillingAccessPolicyService`.
 
-- Use application config to guard dev-only or experimental features.
-- Example: set `FEATURE_INVENTORY_ANALYTICS=true` in environment to enable the developer analytics page.
+### 4) Keep datetime handling consistent
+- Use UTC-aware storage and comparisons.
+- Use timezone helpers/filters for display conversion.
+- See `TIMEZONE_SYSTEM.md` and `STORAGE_VS_DISPLAY.md`.
 
-## Adding New Features
+## Implementation Workflow
 
-### 1. Planning Phase
-```markdown
-## Feature: [Feature Name]
-- **Service Authority**: Which service owns this feature?
-- **Data Scoping**: What organization_id filtering is needed?
-- **Permissions**: What new permissions are required?
-- **Subscription Tiers**: Which tiers can access this?
-- **Database Changes**: New models or fields needed?
-```
+1. **Plan the change**
+   - Identify owning service/module.
+   - Identify permission/billing implications.
+   - Identify data-scoping and migration impact.
 
-### 2. Database Changes
-```python
-# Always include organization scoping
-class NewModel(ScopedModelMixin, db.Model):
-    __tablename__ = 'new_model'
+2. **Implement in the correct layer**
+   - Models: schema/state representation.
+   - Services: business rules and orchestration.
+   - Routes/blueprints: transport + authorization + response shape.
+   - Templates/static: presentation only.
 
-    id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, 
-                               db.ForeignKey('organization.id'), 
-                               nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, default=True)
-```
+3. **Validate behavior**
+   - Add/update tests where behavior changes.
+   - Verify tenant isolation and permission outcomes.
+   - Verify edge cases for batch/inventory/state transitions.
 
-### 3. Service Integration
-```python
-# Create or extend appropriate service
-class NewFeatureService:
-    @staticmethod
-    def process_action(organization_id, data):
-        # Always validate organization access
-        if not current_user.can_access_organization(organization_id):
-            raise PermissionError("Access denied")
+4. **Complete required documentation**
+   - Update relevant `docs/system/*.md` files for current-state behavior changes.
+   - Add dated changelog entry in `docs/changelog/` for app behavior changes.
+   - Keep `docs/changelog/CHANGELOG_INDEX.md` linked.
+   - Update APP_DICTIONARY coverage for touched app paths when applicable.
 
-        # Use existing services for related operations
-        if needs_inventory_change:
-            return InventoryAdjustmentService.adjust_stock(...)
-```
+5. **Run validation tooling**
+   - `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`
+   - Run relevant tests.
+   - For permission/add-on/tier updates, verify update scripts:
+     - `flask update-permissions`
+     - `flask update-addons`
+     - `flask update-subscription-tiers`
 
-### 4. Route Implementation
-```python
-@blueprint.route('/new-feature', methods=['POST'])
-@login_required
-def new_feature():
-    # Always validate and scope data
-    org_id = get_current_organization_id()
+## Common Anti-Patterns (Avoid)
+- Directly mutating inventory/batch state in routes without service orchestration.
+- Querying/scoping without organization context in customer-facing code.
+- Authorization by UI visibility alone (must enforce server-side).
+- Introducing parallel policy logic when a canonical service already exists.
 
-    # Use service for business logic
-    result = NewFeatureService.process_action(org_id, request.json)
-
-    return jsonify(result)
-```
-
-## Code Organization
-
-### Directory Structure
-```
-app/
-├── blueprints/           # Route handlers by feature
-│   ├── feature_name/
-│   │   ├── __init__.py
-│   │   ├── routes.py     # HTTP endpoints
-│   │   └── services.py   # Business logic
-├── models/               # Database models
-├── services/             # Core business services
-├── utils/                # Helper functions
-└── templates/            # Frontend templates
-    └── feature_name/     # Feature-specific templates
-```
-
-### Service Layer Architecture
-```python
-# Core services (DO NOT MODIFY without team approval)
-- FIFOService
-- InventoryAdjustmentService  
-- UnitConversionService
-- StockCheckService
-
-# Feature services (Safe to extend)
-- ProductService
-- BatchService
-- ReportService
-- AlertService
-```
-
-## API Development
-
-### Endpoint Patterns
-```python
-# Organization-scoped endpoints
-@api.route('/api/feature/<int:item_id>')
-def get_item(item_id):
-    org_id = get_current_organization_id()
-    item = Item.query.filter_by(
-        id=item_id, 
-        organization_id=org_id
-    ).first_or_404()
-    return jsonify(item.to_dict())
-
-# Developer support endpoints
-@api.route('/api/admin/organizations/<int:org_id>/feature')
-@require_developer_access
-def admin_feature(org_id):
-    # Developer can access any organization
-    items = Item.query.filter_by(organization_id=org_id).all()
-    return jsonify([item.to_dict() for item in items])
-```
-
-### Response Formats
-```python
-# Success responses
-{
-    "success": true,
-    "data": { ... },
-    "message": "Optional success message"
-}
-
-# Error responses
-{
-    "success": false,
-    "error": "Error description",
-    "details": { ... }  # Optional additional context
-}
-```
-
-## Frontend Development
-
-### JavaScript Patterns
-```javascript
-// Organization-aware API calls
-async function apiCall(endpoint, data = {}) {
-    const response = await fetch(`/api${endpoint}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-        throw new Error(`API call failed: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-// Permission-aware UI updates
-function updateUI() {
-    if (hasPermission('manage_inventory')) {
-        document.getElementById('edit-button').style.display = 'block';
-    }
-}
-```
-
-### Template Patterns
-```html
-<!-- Permission-based feature hiding -->
-{% if has_permission('manage_users') %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
-        Invite User
-    </button>
-{% endif %}
-
-<!-- Subscription tier features -->
-{% if has_subscription_feature('advanced_alerts') %}
-    <div class="advanced-alerts-section">
-        <!-- Enterprise features here -->
-    </div>
-{% endif %}
-```
-
-## Testing Guidelines
-
-### Unit Tests
-```python
-def test_service_respects_organization_scoping():
-    # Create test organizations
-    org1 = create_test_organization()
-    org2 = create_test_organization()
-
-    # Create data in each org
-    item1 = create_test_item(organization_id=org1.id)
-    item2 = create_test_item(organization_id=org2.id)
-
-    # Service should only return org1's data
-    result = ServiceClass.get_items(org1.id)
-    assert item1.id in [r.id for r in result]
-    assert item2.id not in [r.id for r in result]
-```
-
-### Integration Tests
-```python
-def test_permission_enforcement():
-    user = create_test_user(permissions=['view_batches'])
-
-    with app.test_client() as client:
-        login_user(client, user)
-
-        # Should succeed - user has permission
-        response = client.get('/batches')
-        assert response.status_code == 200
-
-        # Should fail - user lacks permission
-        response = client.post('/batches/new')
-        assert response.status_code == 403
-```
-
-## Common Pitfalls
-
-### ❌ DON'T: Bypass Services
-```python
-# WRONG: Direct database manipulation
-inventory_item.quantity -= used_quantity
-db.session.commit()
-```
-
-### ✅ DO: Use Services
-```python
-# CORRECT: Use FIFO service
-FIFOService.deduct_inventory(
-    ingredient_id=ingredient.id,
-    quantity=used_quantity,
-    organization_id=org_id
-)
-```
-
-### ❌ DON'T: Ignore Organization Scoping
-```python
-# WRONG: Cross-organization data leak
-items = Item.query.all()
-```
-
-### ✅ DO: Always Scope by Organization
-```python
-# CORRECT: Organization-scoped queries
-items = Item.query.filter_by(organization_id=org_id).all()
-```
-
-### ❌ DON'T: Hardcode Permissions
-```python
-# WRONG: Hardcoded role check
-if current_user.role == 'admin':
-    return render_template('admin_panel.html')
-```
-
-### ✅ DO: Use Permission System
-```python
-# CORRECT: Permission-based access
-if has_permission('admin_access'):
-    return render_template('admin_panel.html')
-```
-
-## Code Review Checklist
-
-### Before Submitting
-- [ ] All database queries scoped by `organization_id`
-- [ ] New permissions added to permission seeder
-- [ ] Services used for all business logic
-- [ ] Frontend respects permission system
-- [ ] Tests cover organization isolation
-- [ ] Documentation updated if needed
-
-### During Review
-- [ ] No service bypassing
-- [ ] Proper error handling
-- [ ] Security considerations addressed
-- [ ] Performance implications considered
-- [ ] Code follows established patterns
-
-## Emergency Procedures
-
-### Production Issues
-1. **Identify Impact**: Which organizations/users affected?
-2. **Immediate Response**: Can issue be resolved with existing admin tools?
-3. **Hotfix Process**: Minimal change to resolve critical issues
-4. **Post-Incident**: Update documentation and add preventive measures
-
-### Data Recovery
-1. **Backup Access**: Daily backups available in `/backups/`
-2. **Point-in-Time Recovery**: Database supports transaction log recovery
-3. **Organization Isolation**: Issues typically isolated to single organization
-4. **Audit Trail**: All changes logged for investigation
-
-## Getting Help
-
-### Documentation First
-1. Check `/docs` folder for existing guidance
-2. Review related service documentation
-3. Look for similar implementations in codebase
-
-### Code Review
-1. Tag senior developers for complex changes
-2. Include detailed description of changes
-3. Explain business logic and edge cases
-4. Highlight any service integrations
-
-### Best Practices
-- Start with small, isolated changes
-- Test thoroughly in development environment
-- Follow established patterns and conventions
-- Document any new patterns or approaches
-
-## Permission System
-
-Use the permission decorator to protect routes:
-
-```python
-from app.utils.permissions import has_permission
-
-@app.route('/admin/users')
-@login_required
-def manage_users():
-    if not has_permission(current_user, 'manage_users'):
-        abort(403)
-    return render_template('admin/users.html')
-```
-
-Or use the new decorator (available in recent versions):
-
-```python
-from app.utils.permissions import require_permission_decorator
-
-@app.route('/admin/users')
-@login_required
-@require_permission_decorator('manage_users')
-def manage_users():
-    return render_template('admin/users.html')
+## Relevance Check (2026-02-17)
+Validated against:
+- `app/middleware.py`
+- `app/route_access.py`
+- `app/utils/permissions.py`
+- `app/services/inventory_adjustment/`
+- `app/services/batch_service/`
+- `app/scripts/commands/maintenance.py`
+- `.github/PULL_REQUEST_TEMPLATE.md`
+- `scripts/validate_pr_documentation.py`
