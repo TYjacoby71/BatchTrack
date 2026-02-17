@@ -246,6 +246,12 @@ def view_batch_record(batch_identifier):
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=TimezoneUtils.utc_now(),
+            breadcrumb_items=[
+                {'label': 'Batches', 'url': url_for('batches.list_batches')},
+                {'label': batch.label_code or f'Batch {batch.id}'},
+            ],
+            breadcrumb_back_url=url_for('batches.list_batches'),
+            breadcrumb_back_label='Back to batches',
             **nav_data,
             **context_data)
 
@@ -346,6 +352,12 @@ def view_batch_in_progress(batch_identifier):
             now=TimezoneUtils.utc_now(),
             has_active_timers=has_active_timers,
             timedelta=timedelta,
+            breadcrumb_items=[
+                {'label': 'Batches', 'url': url_for('batches.list_batches')},
+                {'label': batch.label_code or f'Batch {batch.id}'},
+            ],
+            breadcrumb_back_url=url_for('batches.list_batches'),
+            breadcrumb_back_label='Back to batches',
             **nav_data,
             **context_data)
 

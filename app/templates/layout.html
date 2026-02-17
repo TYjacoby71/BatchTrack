@@ -534,17 +534,25 @@ Glossary:
     <main class="container-xl mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb">
-                    {% for crumb in breadcrumb_items %}
-                        {% if crumb.url %}
-                        <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>
-                        {% else %}
-                        <li class="breadcrumb-item active">{{ crumb.label }}</li>
-                        {% endif %}
-                    {% endfor %}
-                </ol>
-            </nav>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <nav aria-label="breadcrumb" class="mb-0">
+                    <ol class="breadcrumb mb-0">
+                        {% for crumb in breadcrumb_items %}
+                            {% if crumb.url %}
+                            <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>
+                            {% else %}
+                            <li class="breadcrumb-item active">{{ crumb.label }}</li>
+                            {% endif %}
+                        {% endfor %}
+                    </ol>
+                </nav>
+                {% if breadcrumb_back_url is defined and breadcrumb_back_url %}
+                <a href="{{ breadcrumb_back_url }}"
+                   class="{{ breadcrumb_back_class if breadcrumb_back_class is defined and breadcrumb_back_class else 'btn btn-outline-secondary btn-sm' }}">
+                    <i class="fas fa-arrow-left me-1"></i>{{ breadcrumb_back_label if breadcrumb_back_label is defined and breadcrumb_back_label else 'Back' }}
+                </a>
+                {% endif %}
+            </div>
             {% endif %}
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}

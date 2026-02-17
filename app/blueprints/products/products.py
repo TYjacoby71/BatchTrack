@@ -535,7 +535,9 @@ def view_product(product_id):
                          auto_create_bulk_sku_on_variant=auto_create_bulk_sku_on_variant,
                          inventory_groups={},
                          product_categories=product_categories,
-                         breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}])
+                         breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}],
+                         breadcrumb_back_url=url_for('products.list_products'),
+                         breadcrumb_back_label='Back to products')
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')

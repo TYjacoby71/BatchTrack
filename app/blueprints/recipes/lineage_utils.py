@@ -14,12 +14,33 @@ from typing import Dict, List, Optional, Tuple
 from app.models import Recipe
 
 
+# --- Display node label ---
+# Purpose: Build a compact lineage label with version details.
+def _lineage_display_name(node_recipe: Recipe) -> str:
+    if getattr(node_recipe, "test_sequence", None) is not None:
+        return node_recipe.name or "Untitled Recipe"
+
+    base_name = node_recipe.name or "Untitled Recipe"
+    if not getattr(node_recipe, "is_master", False):
+        base_name = (
+            getattr(node_recipe, "variation_name", None)
+            or node_recipe.name
+            or "Variation"
+        )
+    version_number = int(getattr(node_recipe, "version_number", 0) or 0)
+    if version_number > 0:
+        return f"{base_name} v{version_number}"
+    return base_name
+
+
 # --- Serialize lineage tree ---
 # Purpose: Build a lineage tree payload for UI rendering.
 def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
     node_payload = {
         'id': node_recipe.id,
         'name': node_recipe.name,
+        'display_name': _lineage_display_name(node_recipe),
+        'version_number': int(getattr(node_recipe, "version_number", 0) or 0),
         'organization_name': node_recipe.organization.name if node_recipe.organization else None,
         'organization_id': node_recipe.organization_id,
         'origin_type': node_recipe.org_origin_type,
@@ -49,10 +70,19 @@ def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional
     path: List[int] = []
     seen: set[int] = set()
     current_id = target_id
+    parent_lookup: Dict[int, int] = {}
+    for parent_id, payload in nodes.items():
+        for child in payload.get('children', []):
+            child_id = child.get('id')
+            if child_id:
+                parent_lookup[int(child_id)] = int(parent_id)
 
     while current_id and current_id not in seen:
         path.append(current_id)
         seen.add(current_id)
+        if current_id in parent_lookup and parent_lookup[current_id] not in seen:
+            current_id = parent_lookup[current_id]
+            continue
         recipe = nodes.get(current_id, {}).get('recipe')
         if not recipe:
             break
@@ -124,13 +154,15 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
 
     variation_map: Dict[str, dict] = {}
     for version in variations:
-        variation_name = (
+        raw_variation_name = (
             getattr(version, "variation_name", None)
             or getattr(version, "name", None)
             or "Variation"
         )
+        variation_name = raw_variation_name.strip() or "Variation"
+        variation_key = variation_name.lower()
         branch = variation_map.setdefault(
-            variation_name,
+            variation_key,
             {"name": variation_name, "versions": []},
         )
         branch["versions"].append(

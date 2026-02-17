@@ -99,6 +99,25 @@ def _hydrate_variation_draft(draft, parent_recipe):
         )
 
 
+# --- Variation name exists ---
+# Purpose: Enforce case-insensitive uniqueness for variation names per recipe group.
+def _variation_name_exists(recipe_group_id: int | None, variation_name: str | None) -> bool:
+    if not recipe_group_id or not variation_name:
+        return False
+    normalized_name = variation_name.strip().lower()
+    if not normalized_name:
+        return False
+    return (
+        Recipe.query.filter(
+            Recipe.recipe_group_id == recipe_group_id,
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+            func.lower(Recipe.variation_name) == normalized_name,
+        ).first()
+        is not None
+    )
+
+
 # --- Ensure test changes ---
 # Purpose: Require tests to change ingredients, yield, or instructions.
 def _ensure_test_has_changes(base_recipe, payload):
@@ -368,6 +387,27 @@ def create_variation(recipe_id):
             if not payload.get('label_prefix') and parent.label_prefix:
                 payload['label_prefix'] = ""
 
+            requested_variation_name = (
+                payload.get('name')
+                or payload.get('variation_name')
+                or request.form.get('variation_name')
+                or ''
+            ).strip()
+            if _variation_name_exists(parent.recipe_group_id, requested_variation_name):
+                flash('Variation name already exists in this recipe group. Use a unique name.', 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                variation_draft = recipe_from_form(request.form, base_recipe=parent)
+                variation_draft.parent_recipe_id = parent.id
+                _hydrate_variation_draft(variation_draft, parent)
+                return render_recipe_form(
+                    recipe=variation_draft,
+                    is_variation=True,
+                    parent_recipe=parent,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
             try:
                 _ensure_variation_has_changes(parent, payload.get('ingredients') or [])
             except ValidationError as exc:
@@ -419,6 +459,9 @@ def create_variation(recipe_id):
         new_variation = create_variation_template(parent)
         requested_name = (request.args.get('variation_name') or '').strip()
         if requested_name:
+            if _variation_name_exists(parent.recipe_group_id, requested_name):
+                flash('Variation name already exists in this recipe group. Use a unique name.', 'error')
+                return redirect(url_for('recipes.view_recipe', recipe_id=parent.id))
             new_variation.name = requested_name
             new_variation.variation_name = requested_name
             new_variation.variation_prefix = generate_variation_prefix(
@@ -653,7 +696,7 @@ def edit_recipe(recipe_id):
 @require_permission('recipes.create')
 def clone_recipe(recipe_id):
     try:
-        flash("Cloning recipes has been retired. Use Create New Version instead.", "warning")
+        flash("Cloning recipes has been retired. Use New Test or New Variation instead.", "warning")
 
     except Exception as exc:
         db.session.rollback()

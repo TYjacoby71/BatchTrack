@@ -73,7 +73,8 @@ def _next_version_number(
         Recipe.test_sequence.is_(None),
     )
     if not is_master:
-        query = query.filter(Recipe.variation_name == variation_name)
+        normalized_variation_name = (variation_name or "").strip().lower()
+        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
     max_ver = query.with_entities(sa.func.max(Recipe.version_number)).scalar()
     return int(max_ver or 0) + 1
 
@@ -94,7 +95,8 @@ def _next_test_sequence(
         Recipe.test_sequence.isnot(None),
     )
     if not is_master:
-        query = query.filter(Recipe.variation_name == variation_name)
+        normalized_variation_name = (variation_name or "").strip().lower()
+        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
     max_test = query.with_entities(sa.func.max(Recipe.test_sequence)).scalar()
     return int(max_test or 0) + 1
 
@@ -152,7 +154,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  test_sequence: int | None = None,
                  is_test: bool | None = None,
                  is_master_override: bool | None = None,
-                 version_number_override: int | None = None) -> Tuple[bool, Any]:
+                 version_number_override: int | None = None,
+                 allow_duplicate_name_override: bool = False) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -181,6 +184,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         recipe_org_id = current_org_id if current_org_id else (1)
 
         allow_duplicate_name = bool(
+            allow_duplicate_name_override
+            or
             is_test_flag
             or parent_recipe_id
             or parent_master_id
@@ -273,16 +278,32 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         resolved_variation_name = None
         resolved_variation_prefix = None
         if not is_master:
-            resolved_variation_name = variation_name or _derive_variation_name(
+            resolved_variation_name = (variation_name or _derive_variation_name(
                 name, parent_recipe.name if parent_recipe else None
-            )
+            ) or "").strip()
+            if not resolved_variation_name:
+                return False, {
+                    "valid": False,
+                    "error": "Variation name is required.",
+                    "missing_fields": [],
+                }
+
             existing_variation = None
             if recipe_group and resolved_variation_name:
-                existing_variation = Recipe.query.filter(
+                existing_variation_query = Recipe.query.filter(
                     Recipe.recipe_group_id == recipe_group.id,
                     Recipe.is_master.is_(False),
-                    Recipe.variation_name == resolved_variation_name,
-                ).order_by(Recipe.version_number.desc()).first()
+                    Recipe.test_sequence.is_(None),
+                    sa.func.lower(Recipe.variation_name) == resolved_variation_name.lower(),
+                )
+                existing_variation = existing_variation_query.order_by(Recipe.version_number.desc()).first()
+                creating_new_variation_branch = bool(parent_recipe and parent_recipe.is_master and not is_test_flag)
+                if existing_variation and creating_new_variation_branch:
+                    return False, {
+                        "valid": False,
+                        "error": "Variation name already exists in this recipe group.",
+                        "missing_fields": [],
+                    }
             if existing_variation and existing_variation.variation_prefix:
                 resolved_variation_prefix = existing_variation.variation_prefix
             else:

@@ -7,6 +7,8 @@
     {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
     {'label': 'Lineage', 'url': None}
 ] %}
+{% set breadcrumb_back_url = url_for('recipes.view_recipe', recipe_id=recipe.id) %}
+{% set breadcrumb_back_label = 'Back to recipe' %}
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 
 {# --- draw_node macro ---
@@ -14,31 +16,19 @@
 {% macro draw_node(node, lineage_path) -%}
 <div class="d-flex flex-wrap align-items-center gap-2">
     <span class="fw-semibold {% if node.id in lineage_path %}text-primary{% endif %}">
-        {{ node.name }}
+        {{ node.display_name }}
+        {% if node.is_master %}
+            <span class="badge bg-dark">Master</span>
+        {% endif %}
         {% if node.is_current %}
             <span class="badge bg-primary">Current</span>
         {% endif %}
-        {% if node.test_sequence %}
-            <span class="badge bg-info text-dark">Test {{ node.test_sequence }}</span>
-        {% endif %}
     </span>
-    {% if node.organization_name %}
-        <span class="badge bg-light text-dark border">
-            <i class="fas fa-building me-1"></i>{{ node.organization_name }}
-        </span>
-    {% endif %}
-    <span class="badge bg-secondary text-uppercase">{{ node.status }}</span>
-    {% if node.origin_type == 'batchtrack_native' %}
-        <span class="badge bg-dark">BatchTrack Origin</span>
-    {% elif node.origin_purchased %}
-        <span class="badge bg-warning text-dark">Purchased Origin</span>
-    {% endif %}
 </div>
 {% if node.children %}
     <ul class="list-unstyled ms-4 border-start ps-3 mt-2 mb-0">
         {% for child in node.children %}
         <li class="mb-2">
-            <span class="badge bg-light text-dark border text-uppercase">{{ child.edge_type }}</span>
             {{ draw_node(child.node, lineage_path) }}
         </li>
         {% endfor %}
@@ -59,10 +49,7 @@
                         <p class="text-muted mb-0">Trace how <strong>{{ recipe.name }}</strong> relates to its origin, clones, and variations.</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to recipe
-                        </a>
-                        {% if can_create_variations %}
+                        {% if can_create_variations and recipe.is_master and recipe.test_sequence is none %}
                         <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
                             <i class="fas fa-code-branch"></i> New variation
                         </a>
@@ -130,7 +117,6 @@
                                         <li class="mb-2">
                                             <div class="fw-semibold">
                                                 {{ branch.name }} v{{ version.version_number }}{% if version.is_current %} · Current{% endif %}
-                                                <small class="text-muted ms-2">(Base M{{ version.parent_master.version_number if version.parent_master else '—' }})</small>
                                             </div>
                                             {% if entry.tests %}
                                                 <ul class="list-unstyled ms-4 mt-2">
@@ -250,7 +236,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-history me-2 text-secondary"></i>Lineage Events</h5>
-                    <span class="badge bg-light text-dark border">{{ lineage_events|length }} events</span>
+                    <span class="badge bg-light text-dark border">{{ lineage_events_pagination.total if lineage_events_pagination else 0 }} events</span>
                 </div>
                 <div class="card-body">
                     {% if lineage_events %}
@@ -273,6 +259,35 @@
                             </li>
                             {% endfor %}
                         </ul>
+                        {% if lineage_events_pagination and lineage_events_pagination.pages > 1 %}
+                        <nav aria-label="Lineage events pagination" class="mt-3">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                {% if lineage_events_pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id, events_page=lineage_events_pagination.prev_num) }}">&laquo;</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                                {% endif %}
+                                {% for page_num in lineage_events_pagination.iter_pages() %}
+                                    {% if page_num %}
+                                    <li class="page-item {% if page_num == lineage_events_pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id, events_page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if lineage_events_pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id, events_page=lineage_events_pagination.next_num) }}">&raquo;</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
                     {% else %}
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-info-circle mb-2"></i>

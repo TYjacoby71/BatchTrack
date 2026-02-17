@@ -69,7 +69,9 @@ def view_sku(inventory_item_id):
                             {'label': sku.product_name + ' Overview', 'url': url_for('products.view_product', product_id=sku.product_id)},
                             {'label': sku.variant_name + ' Sizes', 'url': url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name)},
                             {'label': sku.size_label + ' SKU'}
-                         ])
+                         ],
+                         breadcrumb_back_url=url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name),
+                         breadcrumb_back_label='Back to sizes')
 
 # --- SKU edit ---
 # Purpose: Update SKU attributes from form data.

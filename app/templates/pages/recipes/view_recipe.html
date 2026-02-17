@@ -21,6 +21,8 @@
     {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
     {'label': display_recipe_name, 'url': None}
 ] %}
+{% set breadcrumb_back_url = url_for('recipes.list_recipes') %}
+{% set breadcrumb_back_label = 'Back to recipes' %}
 {% set display_label_prefix = label_prefix_display if label_prefix_display else (recipe.label_prefix or 'BTH') %}
 
 {# --- Content block ---
@@ -123,40 +125,39 @@
 {% endif %}
 
 {% if can_create_variations %}
-<!-- New Version Modal -->
-<div class="modal fade" id="newVersionModal" tabindex="-1">
+{% if recipe.is_master and not is_test %}
+<!-- New Variation Modal -->
+<div class="modal fade" id="newVariationModal" tabindex="-1" aria-labelledby="newVariationModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Create New Version</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted mb-3">Select what you want to create from this lineage branch.</p>
-        <div class="d-grid gap-2">
-          <a class="btn btn-outline-primary" href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}">
-            <i class="fas fa-flask"></i>
-            {% if recipe.is_master %}Create Test of Master{% else %}Create Test of Variation{% endif %}
-          </a>
-          {% if recipe.is_master %}
-          <div class="border rounded p-3">
-            <label class="form-label small text-muted">New Variation Name</label>
-            <form method="get" action="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="d-flex gap-2">
-              <input type="text" name="variation_name" class="form-control" placeholder="e.g., Lavender" required>
-              <button type="submit" class="btn btn-success">
-                <i class="fas fa-code-branch"></i> Create Variation
-              </button>
-            </form>
-          </div>
-          {% endif %}
+      <form method="get" action="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="newVariationModalLabel"><i class="fas fa-code-branch text-success me-1"></i>Create New Variation</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
+        <div class="modal-body">
+          <label for="newVariationNameInput" class="form-label">Variation Name</label>
+          <input
+            id="newVariationNameInput"
+            type="text"
+            name="variation_name"
+            class="form-control"
+            placeholder="e.g., Lavender"
+            maxlength="128"
+            required>
+          <div class="form-text">Variation names are unique within the recipe group (case-insensitive).</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-code-branch"></i> Continue
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Promote Variation Modal -->
 <div class="modal fade" id="promoteVariationModal" tabindex="-1">
@@ -419,13 +420,19 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
-    {% if can_create_variations and (master_branches or variation_branches) %}
+    {% if lineage_enabled or (can_create_variations and (master_branches or variation_branches)) %}
     {% set current_variation_name = recipe.variation_name or recipe.name %}
     <div class="card mb-4">
       <div class="card-header">
         <h5 class="card-title mb-0"><i class="fas fa-sitemap"></i> Lineage Selector</h5>
       </div>
       <div class="card-body">
+        {% if lineage_enabled %}
+        <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark mb-3">
+          <i class="fas fa-project-diagram"></i> Lineage Tree
+        </a>
+        {% endif %}
+        {% if can_create_variations and (master_branches or variation_branches) %}
         <label class="form-label small text-muted">Browse lineage</label>
         <select id="lineageBranchSelect" class="form-select mb-2">
           <option value="master" {% if recipe.is_master %}selected{% endif %}>Master</option>
@@ -479,8 +486,14 @@
         <p class="text-muted small mb-0">
           Select a version to view its lineage-specific ingredients, yield, and batches.
         </p>
+        {% else %}
+        <p class="text-muted small mb-0">
+          Open the lineage tree to view branch history and promotions.
+        </p>
+        {% endif %}
       </div>
     </div>
+    {% if can_create_variations and (master_branches or variation_branches) %}
     <script>
       (function() {
         const branchSelect = document.getElementById('lineageBranchSelect');
@@ -543,6 +556,16 @@
       })();
     </script>
     {% endif %}
+    {% endif %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof bootstrap === 'undefined') return;
+        const tooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggers.forEach((trigger) => {
+          new bootstrap.Tooltip(trigger);
+        });
+      });
+    </script>
 
     <!-- Actions Card -->
     <div class="card mb-4">
@@ -555,9 +578,6 @@
         {% set edit_disabled = (not is_editable) and (not force_edit_allowed) %}
         {% set version_disabled = is_archived %}
         <div class="d-grid gap-2">
-          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back to List
-          </a>
           <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
              class="btn btn-success{% if plan_disabled %} disabled{% endif %}"
              {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="{{ plan_title }}"{% endif %}>
@@ -582,12 +602,40 @@
           </a>
           {% endif %}
           {% if can_create_variations %}
-          <button type="button"
-                  class="btn btn-outline-primary{% if version_disabled %} disabled{% endif %}"
-                  {% if not version_disabled %}data-bs-toggle="modal" data-bs-target="#newVersionModal"{% endif %}
-                  {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot create new versions"{% endif %}>
-            <i class="fas fa-plus-circle"></i> Create New Version
-          </button>
+          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test different versions of this recipe branch.' %}
+          <div class="d-flex gap-2 align-items-stretch">
+            <a href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}"
+               class="btn btn-outline-primary flex-grow-1{% if version_disabled %} disabled{% endif %}"
+               {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot create tests"{% endif %}>
+              <i class="fas fa-flask"></i> New Test
+            </a>
+            <button type="button"
+                    class="btn btn-outline-secondary px-3"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="left"
+                    title="{{ test_tooltip }}"
+                    aria-label="About New Test">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          {% if recipe.is_master and not is_test %}
+          <div class="d-flex gap-2 align-items-stretch">
+            <button type="button"
+                    class="btn btn-outline-success flex-grow-1{% if version_disabled %} disabled{% endif %}"
+                    {% if not version_disabled %}data-bs-toggle="modal" data-bs-target="#newVariationModal"{% endif %}
+                    {% if version_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Archived recipes cannot create variations"{% endif %}>
+              <i class="fas fa-code-branch"></i> New Variation
+            </button>
+            <button type="button"
+                    class="btn btn-outline-secondary px-3"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="left"
+                    title='"New Variation" lets you create alternate versions of your master recipe (example: Lavender).'
+                    aria-label="About New Variation">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+          {% endif %}
           {% if is_test %}
             <form method="post" action="{{ url_for('recipes.publish_test_version', recipe_id=recipe.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -620,11 +668,6 @@
             {% endif %}
           {% endif %}
           {% endif %}
-          {% if lineage_enabled %}
-          <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark">
-            <i class="fas fa-project-diagram"></i> View Lineage
-          </a>
-          {% endif %}
           {% if not is_archived %}
             {% if has_listing %}
               <form method="post" action="{{ url_for('recipes.unlist_recipe_route', recipe_id=recipe.id, next=request.path) }}">
@@ -650,62 +693,6 @@
             </form>
           {% endif %}
         </div>
-      </div>
-    </div>
-
-    <!-- Origin Details -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin</h5>
-      </div>
-      <div class="card-body">
-        {% set is_marketplace_origin = recipe.org_origin_source_org or recipe.org_origin_source_recipe or recipe.org_origin_type == 'purchased' %}
-        {% set origin_label = 'Authored' %}
-        {% if recipe.org_origin_type == 'batchtrack_native' %}
-          {% set origin_label = 'BatchTrack Native' %}
-        {% elif is_marketplace_origin %}
-          {% if recipe.org_origin_purchased %}
-            {% set origin_label = 'Marketplace (Purchased)' %}
-          {% else %}
-            {% set origin_label = 'Marketplace (Free)' %}
-          {% endif %}
-        {% endif %}
-        <dl class="row mb-0">
-          <dt class="col-5">Origin</dt>
-          <dd class="col-7">
-            <span class="badge bg-light text-dark border">{{ origin_label }}</span>
-          </dd>
-          <dt class="col-5">Origin Recipe</dt>
-          <dd class="col-7">
-            <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_root_recipe.id) }}" class="text-decoration-none">
-              {{ origin_root_recipe.name }}
-            </a>
-          </dd>
-          <dt class="col-5">Root Recipe</dt>
-          <dd class="col-7">
-            {% if origin_parent_recipe %}
-              <a href="{{ url_for('recipes.view_recipe', recipe_id=origin_parent_recipe.id) }}" class="text-decoration-none">
-                {{ origin_parent_recipe.name }}
-              </a>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </dd>
-          {% if is_marketplace_origin and recipe.org_origin_source_org %}
-          <dt class="col-5">Author</dt>
-          <dd class="col-7">
-            {% if recipe.org_origin_source_recipe %}
-              <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.org_origin_source_recipe.id, slug=slugify(recipe.org_origin_source_recipe.name)) }}" class="text-decoration-none">
-                {{ recipe.org_origin_source_org.name }}
-              </a>
-            {% else %}
-              <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.org_origin_source_org.id) }}" class="text-decoration-none">
-                {{ recipe.org_origin_source_org.name }}
-              </a>
-            {% endif %}
-          </dd>
-          {% endif %}
-        </dl>
       </div>
     </div>
 
