@@ -45,7 +45,7 @@ Use this exact instruction when delegating PR prep:
 - [ ] Added/updated dated changelog entry when app behavior changed (`docs/changelog/YYYY-MM-DD-*.md`)
 - [ ] Confirmed changelog index contains links to changed dated entries (`docs/changelog/CHANGELOG_INDEX.md`)
 - [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for Synopsis + Glossary coverage on every touched file
-- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for top-level Functional Unit headers (Purpose/Inputs/Outputs)
+- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for top-level Functional Unit headers (Purpose/Inputs/Outputs) across the entire touched file (not only modified units)
 - [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for added/moved/updated app terms and locations
 - [ ] Verified APP_DICTIONARY one-entry rule (single canonical term entry, no duplicates)
 

@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Documentation Guard Whole-File Coverage Clarification](2026-02-17-doc-guard-whole-file-coverage-clarification.md)**
+  - Clarified checklist and APP_DICTIONARY wording to require functional-header coverage across the entire touched Python file.
+  - Updated documentation-structure enforcement text to match whole-file validation behavior.
+  - Updated guard messaging to explicitly state file-wide validation scope.
 - **[2026-02-17: Stale System Docs Synopsis/Glossary Refresh](2026-02-17-stale-system-docs-synopsis-glossary-refresh.md)**
   - Refreshed the four stalest system docs to current schema with required Synopsis/Glossary sections.
   - Replaced stale implementation references (commands/paths/behavior notes) with active code locations.
