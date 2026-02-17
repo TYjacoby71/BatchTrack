@@ -10,6 +10,7 @@ Glossary:
 
 import logging
 from app.models import db
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from ._fifo_ops import deduct_fifo_inventory
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ DEDUCTION_DESCRIPTIONS = {
 
 # --- Operation group lookup ---
 # Purpose: Resolve the deductive operation group for a change type.
+# Inputs: Inventory change_type string.
+# Outputs: Tuple of (group_name, group_config) or (None, None).
 def _get_operation_group(change_type):
     """Determine which operation group a change_type belongs to"""
     for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
@@ -63,6 +66,8 @@ def _get_operation_group(change_type):
 
 # --- Deductive handler ---
 # Purpose: Process deductive operations and return quantity deltas.
+# Inputs: Inventory item context, normalized quantity data, and operation metadata.
+# Outputs: Tuple of (success, message, quantity_delta, quantity_delta_base).
 def _handle_deductive_operation(item, quantity, quantity_base, change_type, notes, created_by, customer=None, sale_price=None, order_id=None, batch_id=None):
     """
     Universal handler for all deductive operations.
@@ -95,6 +100,11 @@ def _handle_deductive_operation(item, quantity, quantity_base, change_type, note
         qty_abs = abs(float(quantity))
         qty_abs_base = abs(int(quantity_base))
 
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+
         # Use FIFO deduction logic (valuation handled inside based on org/batch method)
         success, message = deduct_fifo_inventory(
             item_id=item.id,
@@ -110,13 +120,19 @@ def _handle_deductive_operation(item, quantity, quantity_base, change_type, note
             logger.error(f"DEDUCTIVE: FIFO deduction failed for {change_type}: {message}")
             return False, message, 0
 
-        # Return the actual quantity delta (negative for deductions)
-        quantity_delta = -qty_abs
-        quantity_delta_base = -qty_abs_base
+        # Infinite items record usage history but keep on-hand quantities unchanged.
+        if effective_tracking_enabled:
+            quantity_delta = -qty_abs
+            quantity_delta_base = -qty_abs_base
+        else:
+            quantity_delta = 0.0
+            quantity_delta_base = 0
 
         # Get description from mapping or use generic one
         description = DEDUCTION_DESCRIPTIONS.get(change_type, f'Used {quantity} from inventory')
         success_message = description.format(quantity)
+        if not effective_tracking_enabled:
+            success_message = f"{success_message} (infinite item: quantity unchanged)"
 
         logger.info(f"DEDUCTIVE SUCCESS: {change_type} will decrease item {item.id} by {abs(quantity_delta)}")
         return True, success_message, quantity_delta, quantity_delta_base
@@ -127,6 +143,8 @@ def _handle_deductive_operation(item, quantity, quantity_base, change_type, note
 
 # --- Deductive operation info ---
 # Purpose: Return metadata for a deductive operation.
+# Inputs: Inventory change_type string.
+# Outputs: Metadata dictionary for known operations, otherwise None.
 def get_deductive_operation_info(change_type):
     """Get information about a deductive operation"""
     group_name, group_config = _get_operation_group(change_type)

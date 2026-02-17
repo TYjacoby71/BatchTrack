@@ -12,7 +12,11 @@ import logging
 from app.models import db
 from app.services.quantity_base import from_base_quantity, to_base_quantity, sync_lot_quantities_from_base
 from app.utils.inventory_event_code_generator import generate_inventory_event_code
-from ._fifo_ops import create_new_fifo_lot, deduct_fifo_inventory # Kept for local use within this file and added deduct_fifo_inventory
+from ._fifo_ops import (
+    INFINITE_ANCHOR_SOURCE_TYPE,
+    create_new_fifo_lot,
+    deduct_fifo_inventory,
+)  # Kept for local use within this file and added deduct_fifo_inventory
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -148,6 +152,7 @@ def handle_recount(item, quantity, quantity_base=None, change_type=None, notes=N
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.organization_id == item.organization_id,
+                InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
                 InventoryLot.remaining_quantity_base > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()

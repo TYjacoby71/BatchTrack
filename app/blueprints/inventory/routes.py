@@ -19,13 +19,15 @@ from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
 from app.extensions import cache, limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
+from app.services.inventory_adjustment._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 from app.services.inventory_alerts import InventoryAlertService
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
 import logging
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.inventory_event_code_generator import int_to_base36
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, case
 from sqlalchemy.orm import joinedload, selectinload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
@@ -41,10 +43,29 @@ from app.utils.settings import is_feature_enabled
 logger = logging.getLogger(__name__)
 
 
+# --- Bulk-updates feature flag ---
+# Purpose: Determine whether bulk inventory updates are enabled in this environment.
+# Inputs: None.
+# Outputs: Boolean indicating if bulk-inventory UI/API surfaces should be available.
 def _bulk_inventory_updates_enabled() -> bool:
     return is_feature_enabled("FEATURE_BULK_INVENTORY_UPDATES")
 
 
+# --- Inventory quantity-tracking entitlement ---
+# Purpose: Resolve whether current organization tier allows tracked quantities.
+# Inputs: Current authenticated user context.
+# Outputs: Boolean indicating whether quantity tracking mode is allowed.
+def _org_tracks_inventory_quantities() -> bool:
+    """Whether current org tier allows tracked quantity mode."""
+    return org_allows_inventory_quantity_tracking(
+        organization=getattr(current_user, "organization", None),
+    )
+
+
+# --- Expired quantity map ---
+# Purpose: Compute expired remaining quantities by inventory item id.
+# Inputs: Iterable of inventory item ids.
+# Outputs: Dictionary mapping item_id -> expired remaining quantity (base units).
 def _expired_quantity_map(item_ids):
     if not item_ids:
         return {}
@@ -66,12 +87,17 @@ def _expired_quantity_map(item_ids):
     return {row[0]: int(row[1] or 0) for row in rows}
 
 
+# --- Serialize inventory list payload ---
+# Purpose: Build template/cache-safe inventory item payloads with computed fields.
+# Inputs: InventoryItem ORM rows for one list query.
+# Outputs: Tuple of (serialized item dictionaries, total inventory value float).
 def _serialize_inventory_items(items):
     from ...blueprints.expiration.services import ExpirationService
     from app.services.quantity_base import from_base_quantity
 
     serialized = []
     total_value = 0.0
+    org_tracks_quantities = _org_tracks_inventory_quantities()
     perishable_ids = [item.id for item in items if item.is_perishable]
     expired_map = _expired_quantity_map(perishable_ids)
 
@@ -105,6 +131,7 @@ def _serialize_inventory_items(items):
                 "cost_per_unit": float(item.cost_per_unit or 0.0),
                 "freshness_percent": freshness,
                 "is_perishable": bool(item.is_perishable),
+                "is_tracked": bool(getattr(item, "is_tracked", True)) and org_tracks_quantities,
                 "is_archived": bool(item.is_archived),
                 "low_stock_threshold": float(item.low_stock_threshold or 0.0),
                 "global_item_id": item.global_item_id,
@@ -124,6 +151,10 @@ def _serialize_inventory_items(items):
     return serialized, total_value
 
 
+# --- Hydrate serialized inventory items ---
+# Purpose: Reconstruct lightweight template objects from cached serialized payloads.
+# Inputs: List of serialized inventory item dictionaries.
+# Outputs: List of SimpleNamespace objects mirroring inventory attributes.
 def _hydrate_inventory_items(serialized_items):
     hydrated = []
     for entry in serialized_items:
@@ -153,6 +184,10 @@ def _hydrate_inventory_items(serialized_items):
         hydrated.append(item)
     return hydrated
 
+# --- Inventory edit authorization helper ---
+# Purpose: Decide whether current user may mutate a specific inventory item.
+# Inputs: InventoryItem object to evaluate against current user scope.
+# Outputs: Boolean authorization decision.
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
     if not current_user.is_authenticated:
@@ -166,6 +201,8 @@ def can_edit_inventory_item(item):
 # =========================================================
 # --- Inventory search ---
 # Purpose: Search inventory items for typeahead results.
+# Inputs: Query-string search text plus optional type/change_type filters.
+# Outputs: JSON payload with suggestion records or error details.
 @inventory_bp.route('/api/search')
 @login_required
 @limiter.limit("2000/minute")
@@ -199,6 +236,8 @@ def api_search_inventory():
 
 # --- Inventory detail ---
 # Purpose: Return inventory item details for the edit modal.
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON item detail payload for edit modal population.
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 @permission_required('inventory.view')
@@ -225,6 +264,7 @@ def api_get_inventory_item(item_id):
             'category_id': getattr(item, 'category_id', None),
             'density': item.density,
             'is_perishable': bool(item.is_perishable),
+            'is_tracked': bool(getattr(item, 'is_tracked', True)),
             'shelf_life_days': item.shelf_life_days,
             'capacity': getattr(item, 'capacity', None),
             'capacity_unit': getattr(item, 'capacity_unit', None),
@@ -241,6 +281,8 @@ def api_get_inventory_item(item_id):
 
 # --- Global link toggle ---
 # Purpose: Link/unlink a local item to a global item.
+# Inputs: Item id route parameter and action payload (unlink/relink/resync).
+# Outputs: JSON success/error payload with updated ownership metadata.
 @inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -342,6 +384,8 @@ def api_toggle_global_link(item_id: int):
 
 # --- Quick create ---
 # Purpose: Create a new inventory item from a minimal payload.
+# Inputs: JSON payload with minimal inventory creation fields.
+# Outputs: JSON payload containing created item summary or validation error.
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -387,6 +431,7 @@ def api_quick_create_inventory():
                 'name': item.name,
                 'unit': item.unit,
                 'type': item.type,
+                'is_tracked': bool(getattr(item, 'is_tracked', True)),
                 'global_item_id': getattr(item, 'global_item_id', None),
             }
         })
@@ -400,6 +445,8 @@ def api_quick_create_inventory():
 # =========================================================
 # --- Inventory list ---
 # Purpose: Render the inventory list page.
+# Inputs: Query parameters for type/search/category/archive/zero filters.
+# Outputs: Rendered inventory list template with scoped inventory context.
 @inventory_bp.route('/')
 @login_required
 @permission_required('inventory.view')
@@ -432,6 +479,7 @@ def list_inventory():
 
     units = Unit.scoped().filter(Unit.is_active == True).all()
     categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
         cached_payload = None
@@ -451,6 +499,7 @@ def list_inventory():
                 units=units,
                 show_archived=show_archived,
                 show_zero_qty=show_zero_qty,
+                org_tracks_inventory_quantities=org_tracks_inventory_quantities,
                 get_global_unit_list=get_global_unit_list,
                 breadcrumb_items=[{'label': 'Inventory'}],
             )
@@ -465,7 +514,7 @@ def list_inventory():
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     if not show_zero_qty:
-        query = query.filter(InventoryItem.quantity > 0)
+        query = query.filter(or_(InventoryItem.quantity > 0, InventoryItem.is_tracked.is_(False)))
     if raw_search:
         like_pattern = f"%{raw_search}%"
         query = query.filter(InventoryItem.name.ilike(like_pattern))
@@ -506,12 +555,15 @@ def list_inventory():
         units=units,
         show_archived=show_archived,
         show_zero_qty=show_zero_qty,
+        org_tracks_inventory_quantities=org_tracks_inventory_quantities,
         get_global_unit_list=get_global_unit_list,
         breadcrumb_items=[{'label': 'Inventory'}],
     )
 
 # --- Inventory column visibility ---
 # Purpose: Persist column visibility preferences.
+# Inputs: Form list containing selected column identifiers.
+# Outputs: Redirect response back to inventory list.
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 @permission_required('inventory.view')
@@ -522,6 +574,8 @@ def set_column_visibility():
 
 # --- Inventory detail view ---
 # Purpose: Render the inventory item detail page.
+# Inputs: Inventory item id route parameter and optional pagination/filter query values.
+# Outputs: Rendered inventory detail template with history, lots, and freshness context.
 @inventory_bp.route('/view/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -602,12 +656,26 @@ def view_inventory(id):
 
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    # When FIFO toggle is ON, show ALL lots (including depleted ones)
-    # When FIFO toggle is OFF, show only active lots
+    # When FIFO toggle is ON, show ALL lots (including depleted ones).
+    # When FIFO toggle is OFF, show only active lots.
+    # In tracked mode, hide infinite-anchor rows from the default lot table.
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+    if item.is_tracked:
+        lots_query = lots_query.filter(InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE)
     if not fifo_filter:  # fifo_filter=False means show only active lots
-        lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
-    lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
+        if item.is_tracked:
+            lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
+        else:
+            lots_query = lots_query.filter(
+                or_(
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
+                )
+            )
+    lots = lots_query.order_by(
+        case((InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE, 1), else_=0),
+        InventoryLot.created_at.asc(),
+    ).all()
 
     from datetime import datetime
 
@@ -651,6 +719,7 @@ def view_inventory(id):
                          now=datetime.now(timezone.utc),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
+                         org_tracks_inventory_quantities=_org_tracks_inventory_quantities(),
                          TimezoneUtils=TimezoneUtils,
                          breadcrumb_items=[
                              {'label': 'Inventory', 'url': url_for('inventory.list_inventory')},
@@ -659,6 +728,8 @@ def view_inventory(id):
 
 # --- Inventory add ---
 # Purpose: Create a new inventory item from form data.
+# Inputs: Inventory create form fields from POST payload.
+# Outputs: Redirect response to created item detail or inventory list with flash.
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -691,6 +762,8 @@ def add_inventory():
 
 # --- Inventory adjust ---
 # Purpose: Apply inventory adjustments via central service.
+# Inputs: Item id route parameter and adjustment form payload.
+# Outputs: JSON or redirect response describing adjustment success/failure.
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')
@@ -733,6 +806,15 @@ def adjust_inventory(item_id):
                 status_code=403,
                 flash_category="error",
                 redirect_url=url_for('.list_inventory'),
+            )
+
+        if not org_allows_inventory_quantity_tracking(organization=getattr(item, "organization", None)):
+            return respond(
+                False,
+                "Inventory quantity adjustments are locked on your current tier. Upgrade to enable this feature.",
+                status_code=403,
+                flash_category="warning",
+                redirect_url=url_for('.view_inventory', id=item_id),
             )
 
         # Extract and validate form data
@@ -806,6 +888,8 @@ def adjust_inventory(item_id):
 
 # --- Inventory edit ---
 # Purpose: Update inventory item metadata.
+# Inputs: Inventory item id route parameter and edit form payload.
+# Outputs: Redirect response back to inventory detail with status flash.
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -840,31 +924,43 @@ def edit_inventory(id):
             # Fail closed with informative error if validation cannot complete
             logger.warning(f"Global item type validation skipped due to error: {_e}")
 
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+
         # Check if this is a quantity recount
         new_quantity = form_data.get('quantity')
-        recount_performed = False
 
         if new_quantity is not None and new_quantity != '':
             try:
                 target_quantity = float(new_quantity)
-                logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
-
-                # Use central inventory adjustment service for recount
-                success, message = process_inventory_adjustment(
-                    item_id=item.id,
-                    quantity=target_quantity,
-                    change_type='recount',
-                    notes=f'Inventory recount via edit form - target: {target_quantity}',
-                    created_by=current_user.id,
-                    target_quantity=target_quantity
-                )
-
-                if not success:
-                    flash(f'Recount failed: {message}', 'error')
+                current_quantity = float(item.quantity or 0.0)
+                quantity_changed = abs(target_quantity - current_quantity) > 1e-9
+                if quantity_changed and not org_tracks_quantities:
+                    flash(
+                        'Quantity recount is locked on your current tier. Upgrade to enable this feature.',
+                        'warning'
+                    )
                     return redirect(url_for('inventory.view_inventory', id=id))
 
-                logger.info(f"RECOUNT SUCCESS: {message}")
-                recount_performed = True
+                if quantity_changed:
+                    logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
+
+                    # Use central inventory adjustment service for recount
+                    success, message = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=target_quantity,
+                        change_type='recount',
+                        notes=f'Inventory recount via edit form - target: {target_quantity}',
+                        created_by=current_user.id,
+                        target_quantity=target_quantity
+                    )
+
+                    if not success:
+                        flash(f'Recount failed: {message}', 'error')
+                        return redirect(url_for('inventory.view_inventory', id=id))
+
+                    logger.info(f"RECOUNT SUCCESS: {message}")
 
             except (ValueError, TypeError):
                 flash("Invalid quantity provided for recount.", "error")
@@ -872,8 +968,8 @@ def edit_inventory(id):
 
         # Handle other field updates
         update_form_data = form_data.copy()
-        if recount_performed:
-            update_form_data.pop('quantity', None)
+        # Quantity edits must only flow through recount path above.
+        update_form_data.pop('quantity', None)
 
         # Enforce immutability for globally-managed identity fields
         is_global_locked = (
@@ -942,7 +1038,7 @@ def edit_inventory(id):
             update_form_data.pop('item_density', None)
             update_form_data.pop('category_id', None)
             update_form_data.pop('unit', None)
-        success, message = update_inventory_item(id, update_form_data)
+        success, message = update_inventory_item(id, update_form_data, updated_by=current_user.id)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
 
@@ -953,6 +1049,8 @@ def edit_inventory(id):
 
 # --- Inventory archive ---
 # Purpose: Archive an inventory item.
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with archive status flash.
 @inventory_bp.route('/archive/<int:id>')
 @login_required
 @permission_required('inventory.delete')
@@ -969,6 +1067,8 @@ def archive_inventory(id):
 
 # --- Inventory restore ---
 # Purpose: Restore an archived inventory item.
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with restore status flash.
 @inventory_bp.route('/restore/<int:id>')
 @login_required
 @permission_required('inventory.edit')
@@ -985,6 +1085,8 @@ def restore_inventory(id):
 
 # --- Inventory debug ---
 # Purpose: Render debug information for inventory and FIFO sync.
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON payload with inventory/FIFO diagnostics.
 @inventory_bp.route('/debug/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -1022,6 +1124,8 @@ def debug_inventory(id):
 
 # --- Bulk update view ---
 # Purpose: Render the bulk inventory update page.
+# Inputs: Current user organization context and feature flag state.
+# Outputs: Rendered bulk-update template or redirect when feature is disabled.
 @inventory_bp.route('/bulk-updates')
 @login_required
 @permission_required('inventory.edit')
@@ -1068,6 +1172,8 @@ def bulk_inventory_updates():
 
 # --- Bulk adjustments API ---
 # Purpose: Apply bulk inventory adjustments.
+# Inputs: JSON payload of bulk adjustment lines.
+# Outputs: JSON success/error payload from bulk inventory service.
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')

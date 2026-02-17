@@ -10,7 +10,7 @@ Glossary:
 
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from ...utils.permissions import require_permission
+from ...utils.permissions import require_permission, has_permission, has_tier_permission
 from ...models import db, Batch, Recipe, InventoryItem, BatchTimer, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer
 from datetime import datetime, timedelta
 from ...utils import get_setting
@@ -36,6 +36,10 @@ logger = logging.getLogger(__name__)
 BLOCKING_STOCK_STATUSES = {'NEEDED', 'OUT_OF_STOCK', 'ERROR', 'DENSITY_MISSING'}
 
 
+# --- Extract blocking stock issues ---
+# Purpose: Convert stock-check rows into normalized blocking issue payloads.
+# Inputs: Stock-check item list from USCS result payload.
+# Outputs: List of normalized issue dictionaries for override/start checks.
 def _extract_stock_issues(stock_items):
     issues = []
     for item in stock_items or []:
@@ -63,6 +67,10 @@ def _extract_stock_issues(stock_items):
     return issues
 
 
+# --- Format quantity for notes ---
+# Purpose: Format numeric quantity values for readable forced-start notes.
+# Inputs: Any quantity-like value from stock issue records.
+# Outputs: Compact string representation safe for UI note assembly.
 def _format_quantity(amount):
     try:
         value = float(amount or 0)
@@ -71,6 +79,10 @@ def _format_quantity(amount):
         return str(amount or 0)
 
 
+# --- Build forced-start note ---
+# Purpose: Build an audit note describing skipped inventory requirements.
+# Inputs: Normalized stock issue list from override processing.
+# Outputs: String note for plan snapshot metadata, or None when empty.
 def _build_forced_start_note(stock_issues):
     if not stock_issues:
         return None
@@ -90,6 +102,8 @@ def _build_forced_start_note(stock_issues):
 # =========================================================
 # --- Batch remaining details ---
 # Purpose: Return remaining inventory details for a batch.
+# Inputs: batch_id route parameter from API request.
+# Outputs: JSON payload with remaining inventory details or error.
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
 @require_permission('batches.view')
@@ -106,6 +120,8 @@ def get_batch_remaining_details(batch_id):
 
 # --- Batch inventory summary ---
 # Purpose: Return FIFO inventory summary for a batch.
+# Inputs: batch_id route parameter from API request.
+# Outputs: JSON response from FIFO summary endpoint wrapper.
 @batches_bp.route('/api/batch-inventory-summary/<int:batch_id>')
 @login_required
 @require_permission('batches.view')
@@ -128,6 +144,8 @@ def get_batch_inventory_summary(batch_id):
 # =========================================================
 # --- Column visibility ---
 # Purpose: Persist batch list column preferences.
+# Inputs: Form list of selected column keys.
+# Outputs: Redirect to batch list with persisted session preferences.
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
 @require_permission('batches.view')
@@ -143,6 +161,8 @@ def set_column_visibility():
 # =========================================================
 # --- Batch list ---
 # Purpose: List batches for the organization.
+# Inputs: Query parameters for filters, sorting, and pagination.
+# Outputs: Rendered batch list page with scoped batch data context.
 @batches_bp.route('/')
 @login_required
 @require_permission('batches.view')
@@ -210,6 +230,8 @@ def list_batches():
 
 # --- Batch record ---
 # Purpose: View a completed batch record.
+# Inputs: Batch identifier path parameter (id or label forms).
+# Outputs: Rendered batch record view or redirect when unavailable.
 @batches_bp.route('/<batch_identifier>')
 @login_required
 @require_permission('batches.view')
@@ -256,6 +278,8 @@ def view_batch_record(batch_identifier):
 
 # --- Update notes ---
 # Purpose: Update notes on an existing batch.
+# Inputs: batch_id path parameter and notes/tags payload.
+# Outputs: JSON/redirect response for update success or failure.
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
 @require_permission('batches.edit')
@@ -298,6 +322,8 @@ def update_batch_notes(batch_id):
 
 # --- In-progress batch ---
 # Purpose: View an in-progress batch.
+# Inputs: Batch identifier path parameter for active batch lookup.
+# Outputs: Rendered in-progress batch page or redirect on invalid state.
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
 @require_permission('batches.view')
@@ -339,12 +365,17 @@ def view_batch_in_progress(batch_identifier):
 
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=False,
+        )
 
         return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
             now=TimezoneUtils.utc_now(),
             has_active_timers=has_active_timers,
+            org_tracks_batch_outputs=org_tracks_batch_outputs,
             timedelta=timedelta,
             **nav_data,
             **context_data)
@@ -359,6 +390,8 @@ def view_batch_in_progress(batch_identifier):
 # =========================================================
 # --- Available ingredients ---
 # Purpose: Return available ingredients for batch start.
+# Inputs: recipe_id path parameter and optional scale query parameter.
+# Outputs: JSON payload containing available ingredients or error.
 @batches_bp.route('/api/available-ingredients/<int:recipe_id>')
 @login_required
 @require_permission('batches.create')
@@ -379,6 +412,8 @@ def get_available_ingredients_for_batch(recipe_id):
 
 # --- Start batch (API) ---
 # Purpose: Build plan snapshot and start a batch.
+# Inputs: JSON payload with recipe, scale, containers, notes, and override flags.
+# Outputs: JSON response with started batch id or validation/error details.
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
 @limiter.limit("100/minute")
@@ -392,7 +427,24 @@ def api_start_batch():
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
         scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
+        requested_batch_type = data.get('batch_type', 'ingredient')
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=False,
+        )
+        batch_type = requested_batch_type
+        if not org_tracks_batch_outputs:
+            logger.info(
+                "🔒 START BATCH: Org %s tier disables tracked outputs; forcing untracked batch_type",
+                getattr(current_user, 'organization_id', None),
+            )
+            batch_type = 'untracked'
+        elif batch_type == 'product' and not has_permission(current_user, 'products.create'):
+            logger.info(
+                "🔒 START BATCH: User %s lacks products.create; forcing ingredient batch_type",
+                getattr(current_user, 'id', None),
+            )
+            batch_type = 'ingredient'
         notes = data.get('notes', '')
         containers_data = data.get('containers', []) or []
         force_start = bool(data.get('force_start'))
@@ -401,8 +453,9 @@ def api_start_batch():
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 
-        # Server-side stock validation to prevent bypassing the UI gate
         stock_issues = []
+        # Server-side stock validation to prevent bypassing the UI gate.
+        # Infinite/untracked items are handled inside USCS and reported as available.
         try:
             uscs = UniversalStockCheckService()
             stock_result = uscs.check_recipe_stock(recipe_id, scale)

@@ -27,6 +27,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 ),
             },
             {
+                "label": "Inventory quantity tracking from deductions",
+                "kind": "boolean",
+                "permissions_any": ("inventory.track_quantities",),
+            },
+            {
                 "label": "FIFO lot tracking and traceability",
                 "kind": "boolean",
                 "permissions_any": ("inventory.view",),
@@ -45,6 +50,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 "label": "Batch production workflow",
                 "kind": "boolean",
                 "permissions_any": ("batches.create", "batches.finish"),
+            },
+            {
+                "label": "Batch output posting to inventory",
+                "kind": "boolean",
+                "permissions_any": ("batches.track_inventory_outputs",),
             },
             {
                 "label": "Product catalog and SKU workflows",
@@ -200,7 +210,7 @@ MAX_MARKETING_HIGHLIGHTS = 8
 MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
     {
         "label": "Inventory tracking with FIFO lot history",
-        "permissions_any": ("inventory.view", "inventory.adjust"),
+        "permissions_any": ("inventory.view", "inventory.adjust", "inventory.track_quantities"),
     },
     {
         "label": "Recipe management, scaling, and production planning",
@@ -209,6 +219,10 @@ MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
     {
         "label": "Batch production workflow",
         "permissions_any": ("batches.create", "batches.finish"),
+    },
+    {
+        "label": "Batch output posting to inventory",
+        "permissions_any": ("batches.track_inventory_outputs",),
     },
     {
         "label": "Product catalog with SKU and variant support",

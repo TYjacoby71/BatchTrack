@@ -18,7 +18,9 @@ class PlanProductionApp {
         this.baseYield = Number(data.yield_amount || 0);
         this.unit = data.yield_unit || 'units';
         this.scale = this._readScale();
-        this.batchType = '';
+        this.tracksBatchOutputs = (data.tracks_batch_outputs === true || data.tracks_batch_outputs === 'true');
+        this.requiresStockCheck = true;
+        this.batchType = data.default_batch_type || '';
         this.requiresContainers = false;
         this.stockChecked = false;
         this.stockCheckPassed = false;
@@ -149,6 +151,9 @@ class PlanProductionApp {
 
         const batchTypeSelect = document.getElementById('batchType');
         if (batchTypeSelect) {
+            if (!this.batchType) {
+                this.batchType = batchTypeSelect.value || '';
+            }
             batchTypeSelect.addEventListener('change', (e) => {
                 this.batchType = e.target.value;
                 console.log('Batch type selected:', this.batchType);

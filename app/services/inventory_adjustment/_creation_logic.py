@@ -13,17 +13,45 @@ from datetime import timezone  # Import timezone for timezone-aware datetime obj
 
 from sqlalchemy import func
 
-from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.models import (
+    db,
+    InventoryItem,
+    IngredientCategory,
+    Unit,
+    UnifiedInventoryHistory,
+    GlobalItem,
+    Organization,
+)
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
-from ._fifo_ops import create_new_fifo_lot
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
+from ._fifo_ops import create_new_fifo_lot, get_or_create_infinite_anchor_lot
 from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base
 
 logger = logging.getLogger(__name__)
 
 
+# --- Parse boolean flag ---
+# Purpose: Normalize form checkbox-like values into boolean/None.
+# Inputs: Raw value from form payload.
+# Outputs: True/False for recognized flags, otherwise None.
+def _parse_bool_flag(raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, bool):
+        return raw_value
+    text = str(raw_value).strip().lower()
+    if text in {"1", "true", "on", "yes"}:
+        return True
+    if text in {"0", "false", "off", "no"}:
+        return False
+    return None
+
+
 # --- Resolve unit cost ---
 # Purpose: Normalize form inputs into per-unit cost.
+# Inputs: Form payload mapping and parsed initial quantity value.
+# Outputs: Tuple of (cost_per_unit: float, error_message: str|None).
 def _resolve_cost_per_unit(form_data, initial_quantity):
     """Convert form inputs into a per-unit cost."""
     try:
@@ -54,6 +82,10 @@ def _resolve_cost_per_unit(form_data, initial_quantity):
     return raw_cost_value, None
 
 
+# --- Normalize container field ---
+# Purpose: Canonicalize optional container attribute strings for matching.
+# Inputs: Raw container attribute value.
+# Outputs: Lowercased string value or None when empty.
 def _normalize_container_field(value):
     if value is None:
         return None
@@ -61,6 +93,10 @@ def _normalize_container_field(value):
     return text.lower() if text else None
 
 
+# --- Apply normalized string filter ---
+# Purpose: Apply null-safe case-insensitive filtering for container attributes.
+# Inputs: SQLAlchemy query, model column, and raw value to match.
+# Outputs: Updated SQLAlchemy query with normalized attribute predicate.
 def _apply_string_match(query, column, value):
     normalized = _normalize_container_field(value)
     if normalized is None:
@@ -70,6 +106,8 @@ def _apply_string_match(query, column, value):
 
 # --- Find matching container ---
 # Purpose: Identify an existing container with matching attributes.
+# Inputs: Candidate InventoryItem used for same-shape lookup.
+# Outputs: Matching InventoryItem or None when no match is found.
 def _find_matching_container(candidate: InventoryItem | None):
     """Return an existing container with matching attributes (same org)."""
     if not candidate or candidate.type != 'container':
@@ -95,6 +133,8 @@ def _find_matching_container(candidate: InventoryItem | None):
 
 # --- Create inventory item ---
 # Purpose: Create inventory item with initial metadata.
+# Inputs: Form payload, organization id, creator id, and commit mode flag.
+# Outputs: Tuple of (success, message, created_item_id).
 def create_inventory_item(form_data, organization_id, created_by, auto_commit: bool = True):
     """
     Create a new inventory item from form data.
@@ -194,7 +234,22 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         except (ValueError, TypeError):
             pass
 
+        organization = db.session.get(Organization, organization_id) if organization_id else None
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
+        if not org_tracks_quantities:
+            # Quantity-based stock entry is tier-locked; create item in infinite mode.
+            initial_quantity = 0.0
+
         cost_per_unit, cost_error = _resolve_cost_per_unit(form_data, initial_quantity)
+        if cost_error and not org_tracks_quantities:
+            # In forced-infinite mode there is no opening quantity, so treat a submitted
+            # "total" cost value as per-unit instead of failing creation.
+            try:
+                raw_cost_value = form_data.get('cost_per_unit')
+                cost_per_unit = float(raw_cost_value) if raw_cost_value not in (None, '', 'null') else 0.0
+                cost_error = None
+            except (ValueError, TypeError):
+                pass
         if cost_error:
             return False, cost_error, None
 
@@ -214,6 +269,15 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         if shelf_life_days and not is_perishable:
             is_perishable = True
 
+        requested_is_tracked = _parse_bool_flag(form_data.get("is_tracked"))
+        if requested_is_tracked is None:
+            effective_is_tracked = bool(org_tracks_quantities)
+        else:
+            # Tier-level policy can only further restrict tracking, never expand it.
+            effective_is_tracked = bool(requested_is_tracked and org_tracks_quantities)
+        if not effective_is_tracked:
+            initial_quantity = 0.0
+
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment
         new_item = InventoryItem(
@@ -222,6 +286,7 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
             quantity=0.0,  # Start with 0, will be set by initial stock adjustment
             unit=final_unit,
             cost_per_unit=cost_per_unit,
+            is_tracked=effective_is_tracked,
             is_perishable=is_perishable,
             shelf_life_days=shelf_life_days,
             organization_id=organization_id,
@@ -376,6 +441,15 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
 
         logger.info(f"CREATED: New inventory item {new_item.id} - {new_item.name}")
 
+        if not new_item.is_tracked:
+            anchor_ok, anchor_message, _anchor_lot = get_or_create_infinite_anchor_lot(
+                item_id=new_item.id,
+                created_by=created_by,
+            )
+            if not anchor_ok:
+                db.session.rollback()
+                return False, f"Item created but infinite anchor setup failed: {anchor_message}", None
+
         # Handle initial stock if quantity > 0
         if initial_quantity > 0:
             # Extract custom expiration date for initial stock (date only, no custom shelf life)
@@ -434,6 +508,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
 
 # --- Initial stock ---
 # Purpose: Handle initial stock entries for new items.
+# Inputs: Item context, initial quantity/change metadata, and optional expiration fields.
+# Outputs: Tuple of (success, message, quantity_delta, quantity_delta_base).
 def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.

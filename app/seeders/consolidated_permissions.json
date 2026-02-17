@@ -29,6 +29,11 @@
           "description": "Manually adjust inventory quantities, add stock, or record waste/loss"
         },
         {
+          "name": "inventory.track_quantities",
+          "display_name": "Track Inventory Quantities",
+          "description": "Enable on-hand quantity depletion for inventory deductions and FIFO-backed stock checks"
+        },
+        {
           "name": "inventory.reserve",
           "display_name": "Reserve Inventory",
           "description": "Create inventory reservations for planned production or sales"
@@ -122,6 +127,11 @@
           "name": "batches.finish",
           "display_name": "Finish Batches",
           "description": "Complete production batches and add finished goods to inventory"
+        },
+        {
+          "name": "batches.track_inventory_outputs",
+          "display_name": "Track Batch Outputs In Inventory",
+          "description": "Allow product or intermediate output flows that create finished inventory from batches"
         },
         {
           "name": "batches.cancel",

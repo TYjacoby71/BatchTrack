@@ -252,6 +252,25 @@
       </div>
       <small class="form-text text-muted" id="addIngredientCostHelp">Enter total cost (will be divided by quantity)</small>
     </div>
+    <div class="col-md-2">
+      <label class="form-label d-block">Quantity Tracking</label>
+      <div class="form-check form-switch mt-2">
+        <input type="checkbox"
+               class="form-check-input"
+               name="is_tracked"
+               value="1"
+               id="addIngredientIsTracked"
+               {% if not org_forces_infinite_items %}checked{% endif %}
+               {% if org_forces_infinite_items %}disabled{% endif %}>
+        <input type="hidden" name="is_tracked" value="0">
+        <label class="form-check-label" for="addIngredientIsTracked">
+          Infinite when off
+        </label>
+      </div>
+      {% if org_forces_infinite_items %}
+      <small class="text-muted">Forced infinite by your current tier.</small>
+      {% endif %}
+    </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-success" id="saveIngredientBtn">
         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -294,9 +313,15 @@
             </td>
             <td class="col-unit">{{ item.unit }}</td>
             <td class="col-quantity">
+              {% if not item.is_tracked %}
+              <span class="badge bg-info text-dark">
+                Infinite
+              </span>
+              {% else %}
               <span class="badge bg-{{ 'danger' if item.temp_available_quantity == 0 else 'warning' if item.low_stock_threshold and item.temp_available_quantity <= item.low_stock_threshold else 'success' }}">
                 {{ "%.2f"|format(item.temp_available_quantity) }} {{ item.unit or 'count' }}
               </span>
+              {% endif %}
             </td>
             <td class="col-expired">
               {% if item.temp_expired_quantity > 0 %}

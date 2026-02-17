@@ -42,6 +42,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **InventoryItem.quantity_base** → Integer base quantity for inventory (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **InventoryLot** → FIFO lot model for inventory tracking (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **InventoryLot.remaining_quantity_base** → Integer remaining quantity per lot (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **InventoryLot.source_type = infinite_anchor** → Special per-item anchor lot used to attach infinite-mode deduction/credit history without participating in finite FIFO quantity depletion (see `app/services/inventory_adjustment/_fifo_ops.py`)
 - **UnifiedInventoryHistory** → Inventory event log for adjustments (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **UnifiedInventoryHistory.quantity_change_base** → Integer change recorded per event (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **InventoryItem** → Stocked ingredient, container, or product (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
@@ -67,6 +68,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
 - **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
+- **/batches/api/start-batch** → Canonical API endpoint that performs server-side stock validation, supports force-start override notes, and starts batches from a Plan Snapshot (see `app/blueprints/batches/routes.py`)
+- **/batches/start/start_batch** → Start-batch compatibility endpoint that builds a plan snapshot and delegates creation to `BatchOperationsService` (see `app/blueprints/batches/start_batch.py`)
+- **/batches/finish-batch/<batch_id>/complete and /batches/finish-batch/<batch_id>/fail** → Batch completion/failure routes that delegate to service-authoritative completion logic and canonical inventory adjustment posting (see `app/blueprints/batches/finish_batch.py`)
+- **Production Planning Routes** → Planning, container strategy, and stock-check endpoints used by plan-production UI flows (see `app/blueprints/production_planning/routes.py`)
 - **Lineage Tree Serialization Helpers** → Utilities that format lineage node labels, nested tree payloads, and root-to-node paths for lineage UI rendering (see `app/blueprints/recipes/lineage_utils.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
@@ -161,10 +166,12 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **InventoryAdjustmentCore** → Central adjustment delegator (see `app/services/inventory_adjustment/_core.py`)
 - **InventoryAdjustmentAdditive** → Additive adjustment handlers (see `app/services/inventory_adjustment/_additive_ops.py`)
 - **InventoryAdjustmentDeductive** → Deductive adjustment handlers (see `app/services/inventory_adjustment/_deductive_ops.py`)
+- **InventoryAdjustmentFifoOps** → FIFO lot operations for lot creation, deduction, cost estimation, and single-item infinite-anchor lot ownership/routing (see `app/services/inventory_adjustment/_fifo_ops.py`)
 - **InventoryAdjustmentEdit** → Inventory metadata edits + unit changes (see `app/services/inventory_adjustment/_edit_logic.py`)
 - **InventoryAdjustmentSpecial** → Recount/cost override/convert handlers (see `app/services/inventory_adjustment/_special_ops.py`)
 - **InventoryAdjustmentValidation** → FIFO sync validation (see `app/services/inventory_adjustment/_validation.py`)
 - **InventoryCreationLogic** → Inventory item creation + initial stock (see `app/services/inventory_adjustment/_creation_logic.py`)
+- **InventoryTrackingPolicy** → Canonical org-tier entitlement helper that resolves whether inventory deductions should mutate on-hand quantities based strictly on `inventory.track_quantities` (see `app/services/inventory_tracking_policy.py`)
 - **ExpirationService** → Expiration calculations and queries (see `app/blueprints/expiration/services.py`)
 - **IngredientHandler** → Stock check handler for ingredients (see `app/services/stock_check/handlers/ingredient_handler.py`)
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
@@ -205,6 +212,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Integrations Checklist UI** → Environment readiness dashboard (see `app/templates/developer/integrations.html`)
 - **Account Email Security Callout** → Integrations-page summary of configured vs effective auth-email mode and provider fallback state (see `app/templates/developer/integrations.html`)
 - **Inventory Filter Persistence (Scoped)** → Per-user/org inventory filters and column preferences (see `app/templates/inventory_list.html`)
+- **Inventory Infinite Tier UX Lock** → Inventory list create/update interactions that hide quantity inputs and bounce quantity-update actions to upgrade when org tier lacks quantity-tracking entitlement (see `app/templates/inventory_list.html`)
+- **Inventory Detail Quantity Lock UX** → Inventory detail page lock behavior that greys quantity-adjustment controls, blocks recount edits, and prompts upgrade while preserving metadata edits and infinite toggle confirmation (see `app/templates/pages/inventory/view.html` and `app/static/js/inventory/inventory_view.js`)
+- **Inventory Lots Table (Infinite Anchor Row)** → Lot-history table rendering that highlights the special `infinite_anchor` lot with infinite badges and explanatory source text while keeping finite lots unchanged (see `app/templates/inventory/components/lots_table.html`)
 - **Bulk Inventory Drafts (Scoped)** → Per-user/org bulk update drafts stored in the browser (see `app/templates/inventory/bulk_updates.html`)
 - **Drawer Cadence Throttle (Scoped)** → Per-user/org cadence window for drawer checks (see `app/static/js/drawers/drawer_cadence.js`)
 - **Global Link Drawer** → Link local items to global catalog (see `app/blueprints/api/drawers/drawer_actions/global_link.py`)
@@ -236,8 +246,11 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
 - **Soap Static Asset Manifest Outputs** → Hashed soap bundle map and generated runtime bundles emitted by the scoped asset build pipeline for production cache-busting (see `app/static/dist/manifest.json`, `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FCLB3YPR.js`, and `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-WSLX7LVI.js`)
 - **flask update-permissions** → Sync permission catalog
+- **Consolidated Permission Catalog JSON** → Source-of-truth organization/developer permission definitions for permission syncing and audits (see `app/seeders/consolidated_permissions.json`)
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
+- **Subscription Tier Seed JSON** → Source-of-truth tier permission/limit metadata consumed by tier update workflows (see `app/seeders/subscription_tiers.json`)
+- **SubscriptionSeeder** → Legacy/maintenance tier seeding routines used by CLI update commands (`create_*_tier`, `seed_subscription_tiers`, migrations) (see `app/seeders/subscription_seeder.py`)
 - **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
 - **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
 - **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)

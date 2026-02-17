@@ -103,11 +103,13 @@
                         {{ timers|selectattr('status', 'equalto', 'active')|list|length if timers else 0 }}
                     </span>
                 </button>
+                {% if current_user.is_authenticated and has_permission(current_user, 'batches.edit') %}
                 <button type="button" @click="toggleExtraItems()" 
                         class="btn btn-outline-secondary btn-sm"
                         :class="{ 'btn-secondary text-white': showExtraItems }">
                     <i class="fas fa-plus-circle"></i> Extra Items
                 </button>
+                {% endif %}
             </div>
         </div>
 
@@ -122,6 +124,7 @@
         </div>
 
         <!-- Extra Items Section -->
+        {% if current_user.is_authenticated and has_permission(current_user, 'batches.edit') %}
         <div x-show="showExtraItems" x-transition.duration.300ms class="card mb-3">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Extra Items Management</h5>
@@ -144,6 +147,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- No extra container section needed - using existing extra items system -->

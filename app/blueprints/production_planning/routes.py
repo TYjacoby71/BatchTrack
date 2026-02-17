@@ -14,7 +14,7 @@ from . import production_planning_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
 from app.utils.recipe_display import format_recipe_lineage_name
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_tier_permission
 
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 # =========================================================
 # --- Plan production ---
 # Purpose: Render and submit the production planning flow.
+# Inputs: recipe_id path parameter and optional planning payload (POST).
+# Outputs: Rendered planning page (GET) or JSON planning result (POST).
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -74,15 +76,21 @@ def plan_production_route(recipe_id):
 
     # GET request - show planning form
     display_name = format_recipe_lineage_name(recipe)
+    org_tracks_batch_outputs = has_tier_permission(
+        'batches.track_inventory_outputs',
+        default_if_missing_catalog=False,
+    )
     return render_template('pages/production_planning/plan_production.html', recipe=recipe, breadcrumb_items=[
         {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
         {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
         {'label': display_name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
         {'label': 'Plan Production'}
-    ])
+    ], org_tracks_batch_outputs=org_tracks_batch_outputs)
 
 # --- Auto-fill containers ---
 # Purpose: Suggest container options for a plan request.
+# Inputs: recipe_id path parameter and JSON scale/density/fill inputs.
+# Outputs: JSON container strategy payload or structured error response.
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -133,6 +141,10 @@ def auto_fill_containers(recipe_id):
             'error': str(e)
         }), 500
 
+# --- Debug recipe containers ---
+# Purpose: Inspect allowed containers and available org container inventory.
+# Inputs: recipe_id path parameter for recipe and org-scoped container lookup.
+# Outputs: JSON diagnostics payload for recipe-container configuration.
 @production_planning_bp.route('/recipe/<int:recipe_id>/debug/containers')
 @login_required
 @require_permission('recipes.plan_production')
@@ -176,6 +188,10 @@ def debug_recipe_containers(recipe_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# --- Plan container allocation ---
+# Purpose: Return container analysis output for explicit yield/scale inputs.
+# Inputs: recipe_id path parameter and JSON payload with yield/container prefs.
+# Outputs: JSON container planning result or drawer/error payload.
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan/container', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -218,6 +234,10 @@ def plan_container_route(recipe_id):
         logger.error(f"Error in container planning API: {e}")
         return jsonify({"error": str(e)}), 500
 
+# --- Check recipe stock ---
+# Purpose: Run stock-check service and normalize payload for planning UI.
+# Inputs: JSON payload with recipe_id and optional scale.
+# Outputs: JSON stock status payload including normalized item statuses.
 @production_planning_bp.route('/stock/check', methods=['POST'])
 @login_required
 @require_permission('inventory.view')

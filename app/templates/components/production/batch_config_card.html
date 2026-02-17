@@ -35,6 +35,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
+                    {% if org_tracks_batch_outputs %}
                     <select id="batchType" 
                             class="form-select" 
                             required>
@@ -42,6 +43,15 @@
                         <option value="ingredient">Intermediate Ingredient</option>
                         <option value="product">Final Product</option>
                     </select>
+                    {% else %}
+                    <input type="hidden" id="batchType" value="untracked">
+                    <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;">
+                        Untracked Output (No Inventory Posting)
+                    </div>
+                    <div class="form-text">
+                        This tier records production details only. Upgrade to enable product/intermediate output tracking.
+                    </div>
+                    {% endif %}
                     <div class="invalid-feedback" id="batchTypeError" style="display: none;">
                         Please select a batch type
                     </div>

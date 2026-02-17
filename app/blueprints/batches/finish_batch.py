@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission, has_tier_permission
 from ...models import db, Batch, Product, ProductVariant, InventoryItem
 from ...models.inventory_lot import InventoryLot
 from ...models.product import ProductSKU
@@ -23,6 +23,10 @@ finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)
 
 
+# --- Parse adjustment result tuple ---
+# Purpose: Normalize canonical inventory-adjustment return payloads.
+# Inputs: Raw return value from process_inventory_adjustment.
+# Outputs: (success: bool, message: str) or TypeError on invalid shape.
 def _parse_adjustment_result(result):
     """Strictly parse canonical adjustment return shape (success, message)."""
     if not isinstance(result, tuple) or len(result) < 2:
@@ -39,6 +43,8 @@ def _parse_adjustment_result(result):
 # =========================================================
 # --- Complete batch ---
 # Purpose: Complete a batch and create final outputs.
+# Inputs: batch_id route parameter and completion form payload.
+# Outputs: Redirect response with success/error flash messaging.
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 @require_permission('batches.finish')
@@ -69,6 +75,8 @@ def complete_batch(batch_id):
 
 # --- Fail batch ---
 # Purpose: Mark a batch as failed via service.
+# Inputs: batch_id route parameter and optional reason payload.
+# Outputs: JSON or redirect response reflecting fail outcome.
 @finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
 @login_required
 @require_permission('batches.finish')
@@ -103,6 +111,10 @@ def fail_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
 
+# --- Complete batch internal workflow ---
+# Purpose: Execute canonical completion workflow and output posting.
+# Inputs: batch identifier and request form mapping from service layer.
+# Outputs: (success: bool, message: str) completion result tuple.
 def _complete_batch_internal(batch_id, form_data):
     """Internal batch completion logic - called by service"""
     try:
@@ -116,8 +128,27 @@ def _complete_batch_internal(batch_id, form_data):
         if not batch:
             return False, 'Batch not found or already completed'
 
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=False,
+        )
+        requested_output_type = (form_data.get('output_type') or '').strip()
+        output_type = requested_output_type or (batch.batch_type or 'ingredient')
+        can_create_product_output = has_permission(current_user, 'products.create')
+
+        if not org_tracks_batch_outputs or batch.batch_type == 'untracked':
+            output_type = 'untracked'
+
+        # Enforce plan-based product lock server-side regardless of client payload.
+        if output_type == 'product' and not can_create_product_output:
+            logger.info(
+                "🔒 BATCH COMPLETION: User %s lacks products.create; forcing ingredient output for batch %s",
+                getattr(current_user, 'id', None),
+                batch_id,
+            )
+            output_type = 'ingredient'
+
         # Pre-validate FIFO sync for any product SKUs that will be created
-        output_type = form_data.get('output_type')
         if output_type == 'product':
             product_id = form_data.get('product_id')
             variant_id = form_data.get('variant_id')
@@ -144,7 +175,6 @@ def _complete_batch_internal(batch_id, form_data):
                         return False, f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}'
 
         # Get form data
-        output_type = form_data.get('output_type')
         final_quantity = float(form_data.get('final_quantity', 0))
         output_unit = form_data.get('output_unit')
         final_portions = None
@@ -176,9 +206,17 @@ def _complete_batch_internal(batch_id, form_data):
         batch.shelf_life_days = shelf_life_days
         batch.expiration_date = expiration_date
 
+        output_metrics = None
+
         # Route based on batch_type (primary) and output_type (secondary)
         # batch_type determines the intended output, output_type is user selection
-        if batch.batch_type == 'ingredient' or output_type == 'ingredient':
+        if output_type == 'untracked':
+            logger.info(
+                "🔒 BATCH COMPLETION: Recording untracked batch output for %s with inventory posting disabled",
+                batch.label_code,
+            )
+            batch.batch_type = 'untracked'
+        elif batch.batch_type == 'ingredient' or output_type == 'ingredient':
             # Handle intermediate ingredient creation
             logger.info(f"🔧 BATCH COMPLETION: Creating intermediate ingredient for batch_type='{batch.batch_type}', output_type='{output_type}'")
             _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)
@@ -225,6 +263,10 @@ def _complete_batch_internal(batch_id, form_data):
         return False, f'Error completing batch: {str(e)}'
 
 
+# --- Create intermediate ingredient output ---
+# Purpose: Create/update intermediate inventory output for completed batches.
+# Inputs: Batch model, final quantity/unit, and optional expiration datetime.
+# Outputs: None on success; raises on canonical adjustment failure.
 def _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date):
     """Create intermediate ingredient from batch completion"""
     try:
@@ -277,6 +319,10 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
         raise
 
 
+# --- Create product output artifacts ---
+# Purpose: Create container/bulk/portion SKUs and post finished inventory.
+# Inputs: Batch context, selected product/variant IDs, output details, and form data.
+# Outputs: Metrics dict including created lots and container volume totals.
 def _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data, final_portions: int | None = None):
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
@@ -453,6 +499,10 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         raise
 
 
+# --- Derive portion size label ---
+# Purpose: Build a stable per-portion size label from yield and portion count.
+# Inputs: Batch context, final bulk quantity/unit, and final portions count.
+# Outputs: Human-readable size label string (falls back to "Portion").
 def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, final_portions):
     """Derive size label like '4 oz Bar' from bulk and portion count with simple division.
 
@@ -468,6 +518,10 @@ def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, fina
     except Exception:
         return 'Portion'
 
+# --- Process container allocations ---
+# Purpose: Translate container form allocations into SKU/lot creation work.
+# Inputs: Batch/product/variant context, submitted form data, expiration, unit cost.
+# Outputs: Tuple of created container sku metadata and created inventory lots.
 def _process_container_allocations(batch, product, variant, form_data, expiration_date, ingredient_unit_cost):
     """Process container allocations and create SKUs"""
     container_skus = []
@@ -553,6 +607,10 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
     return container_skus, created_lots
 
 
+# --- Create container SKU ---
+# Purpose: Get/create container SKU and credit finished container inventory.
+# Inputs: Product/variant context, container item, quantity, batch metadata, costs.
+# Outputs: Tuple of ProductSKU and latest InventoryLot for this batch posting.
 def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date, ingredient_unit_cost, adjusted_container_cost):
     """Create or get existing container SKU using ProductService"""
     try:
@@ -660,6 +718,10 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         raise
 
 
+# --- Create bulk SKU ---
+# Purpose: Get/create bulk SKU and credit remaining finished quantity.
+# Inputs: Product/variant context, bulk quantity/unit, expiration, batch, unit cost.
+# Outputs: Tuple of bulk ProductSKU and latest InventoryLot for this batch posting.
 def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, ingredient_unit_cost):
     """Create or update bulk SKU for remaining quantity using ProductService"""
     try:

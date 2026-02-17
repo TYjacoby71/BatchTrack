@@ -14,6 +14,18 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Inventory Quantity Locking and Infinite Toggle Lot Drain](2026-02-17-inventory-quantity-locking-and-infinite-toggle-drain.md)**
+  - Locked quantity adjustment/recount surfaces behind `inventory.track_quantities` with upgrade bounce behavior.
+  - Forced create flows in quantity-locked tiers to open in infinite mode without opening quantity input.
+  - Added tracked -> infinite lot drain behavior plus FIFO-owned single-item `infinite_anchor` lot routing for infinite-mode traceability.
+- **[2026-02-17: Split Inventory Quantity Tracking from Batch Output Permission](2026-02-17-split-inventory-quantity-tracking-from-batch-output-permission.md)**
+  - Added new `inventory.track_quantities` entitlement to separate deduction quantity behavior from batch output posting.
+  - Refactored inventory/stock-check quantity-tracking policy checks to use inventory-scoped entitlement logic.
+  - Updated pricing feature catalog rows to present quantity tracking and batch output posting as distinct capabilities.
+- **[2026-02-17: Infinite Inventory Guardrail + Route Documentation Compliance](2026-02-17-infinite-inventory-guardrail-route-doc-compliance.md)**
+  - Added required functional-unit header metadata on touched batch and production-planning route modules.
+  - Added missing APP_DICTIONARY coverage entries for touched route files.
+  - Restored latest-commit Documentation Guard compliance for changelog + dictionary checks.
 - **[2026-02-17: Stale System Docs Wave 2 Refresh (Next 10)](2026-02-17-stale-system-docs-wave-2-refresh.md)**
   - Refreshed the next 10 stalest system docs to current schema (`Synopsis` + `Glossary`) and current implementation behavior.
   - Replaced stale routes/service references across exports, free-tier, public-tools, plan-snapshot, and tracking docs.

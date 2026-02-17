@@ -19,10 +19,12 @@ export class ValidationManager {
         }
 
         // Enforce stock check execution
-        if (!this.main.stockChecked) {
-            issues.push('Run stock check');
-        } else if (!this.main.stockCheckPassed) {
-            warnings.push('Stock shortages detected - confirmation required');
+        if (this.main.requiresStockCheck) {
+            if (!this.main.stockChecked) {
+                issues.push('Run stock check');
+            } else if (!this.main.stockCheckPassed) {
+                warnings.push('Stock shortages detected - confirmation required');
+            }
         }
 
         // Check container requirements if enabled

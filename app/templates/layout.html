@@ -193,6 +193,13 @@ Glossary:
             {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
             {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
             {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
+            {% set customer_can_view_inventory = current_user.is_authenticated and has_permission(current_user, 'inventory.view') %}
+            {% set customer_can_view_recipes = current_user.is_authenticated and has_permission(current_user, 'recipes.view') %}
+            {% set customer_can_view_batches = current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
+            {% set customer_can_view_products = current_user.is_authenticated and has_permission(current_user, 'products.view') %}
+            {% set tier_can_view_products = current_user.is_authenticated and has_tier_permission('products.view') %}
+            {% set tier_can_adjust_inventory = current_user.is_authenticated and has_tier_permission('inventory.adjust') %}
+            {% set recipes_ingredients_tier_nav = current_user.is_authenticated and current_user.user_type != 'developer' and has_tier_permission('recipes.view') and has_tier_permission('batches.finish') and not tier_can_view_products %}
             {% set has_nav_center = (navbar_center_title is defined and navbar_center_title) and not public_shell_mode %}
             {% if has_nav_center %}
             <div class="position-absolute top-50 start-50 translate-middle text-center">
@@ -435,24 +442,67 @@ Glossary:
                     <i class="fas fa-bars"></i> Menu
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
+                    {% if not recipes_ingredients_tier_nav %}
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
                     <li><hr class="dropdown-divider"></li>
+                    {% endif %}
                     <!-- Core Features -->
                     <li><h6 class="dropdown-header">Core Features</h6></li>
-                    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.view') %}
+                    {% if customer_can_view_inventory and (not recipes_ingredients_tier_nav or tier_can_adjust_inventory) %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    {% elif recipes_ingredients_tier_nav %}
+                    <li>
+                        <button type="button"
+                                class="dropdown-item d-flex justify-content-between align-items-center feature-locked-trigger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#featureUpgradeModal"
+                                data-feature-name="Inventory"
+                                data-feature-description="Inventory management is available on upgraded plans.">
+                            Inventory
+                            <span class="badge bg-warning text-dark"><i class="fas fa-lock me-1"></i>Upgrade</span>
+                        </button>
+                    </li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'recipes.view') %}
+                    {% if customer_can_view_recipes %}
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
+                    {% if customer_can_view_batches %}
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
+                    {% if customer_can_view_products %}
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
+                    {% elif recipes_ingredients_tier_nav %}
+                    <li>
+                        <button type="button"
+                                class="dropdown-item d-flex justify-content-between align-items-center feature-locked-trigger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#featureUpgradeModal"
+                                data-feature-name="Products"
+                                data-feature-description="Product catalog and SKU outputs are available on upgraded plans.">
+                            Products
+                            <span class="badge bg-warning text-dark"><i class="fas fa-lock me-1"></i>Upgrade</span>
+                        </button>
+                    </li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
+                    {% if recipes_ingredients_tier_nav %}
+                    <!-- Free Tools -->
+                    <li><h6 class="dropdown-header">Free Tools</h6></li>
+                    <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                            🧮 Converter
+                        </a>
+                    </li>
+                    <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <!-- Settings -->
+                    <li><h6 class="dropdown-header">Settings</h6></li>
+                    {% if current_user.is_authenticated %}
+                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+                    {% endif %}
+                    {% else %}
                     <!-- Production Tools -->
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
@@ -466,13 +516,13 @@ Glossary:
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
-                    {% if current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
+                    {% if customer_can_view_batches %}
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     {% endif %}
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'products.view') and bulk_stock_check_enabled %}
+                    {% if customer_can_view_products and bulk_stock_check_enabled %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'inventory.edit') and bulk_inventory_updates_enabled %}
@@ -499,6 +549,7 @@ Glossary:
                     {% endif %}
                     {% if current_user.is_authenticated %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+                    {% endif %}
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
@@ -584,6 +635,25 @@ Glossary:
         </div>
     </main>
     {% include 'components/shared/unit_converter_modal.html' %}
+    <div class="modal fade" id="featureUpgradeModal" tabindex="-1" aria-labelledby="featureUpgradeModalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="featureUpgradeModalTitle">Upgrade required</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="featureUpgradeModalBody" class="mb-0">
+                        This feature is locked on your current plan.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">View upgrade options</a>
+                </div>
+            </div>
+        </div>
+    </div>
     {% if customer_feedback_bubble_enabled %}
     {{ render_feedback_note_widget(
       modal_id='globalFeedbackNoteModal',
@@ -642,6 +712,30 @@ Glossary:
     {% endif %}
 {% block scripts %}{% endblock %}
     <script src="{{ static_asset('js/expiration_alerts.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const upgradeModal = document.getElementById('featureUpgradeModal');
+            if (!upgradeModal) {
+                return;
+            }
+
+            upgradeModal.addEventListener('show.bs.modal', function (event) {
+                const trigger = event.relatedTarget;
+                const featureName = trigger ? trigger.getAttribute('data-feature-name') : null;
+                const featureDescription = trigger ? trigger.getAttribute('data-feature-description') : null;
+
+                const modalTitle = document.getElementById('featureUpgradeModalTitle');
+                const modalBody = document.getElementById('featureUpgradeModalBody');
+
+                if (modalTitle) {
+                    modalTitle.textContent = (featureName || 'Feature') + ' requires an upgrade';
+                }
+                if (modalBody) {
+                    modalBody.textContent = featureDescription || 'This feature is locked on your current plan.';
+                }
+            });
+        });
+    </script>
 
     <!-- Simple browser clock script -->
     <script>

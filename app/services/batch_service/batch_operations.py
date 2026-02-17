@@ -42,7 +42,9 @@ class BatchOperationsService(BaseService):
             snap_recipe_id = int(plan_snapshot.get('recipe_id') or plan_snapshot.get('target_version_id'))
             snap_target_version_id = int(plan_snapshot.get('target_version_id') or snap_recipe_id)
             snap_scale = float(plan_snapshot.get('scale', 1.0))
-            snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
+            snap_batch_type = (plan_snapshot.get('batch_type') or 'ingredient').strip().lower()
+            if snap_batch_type not in {'ingredient', 'product', 'untracked'}:
+                snap_batch_type = 'ingredient'
             snap_notes = plan_snapshot.get('notes', '')
             forced_summary = plan_snapshot.get('forced_start_summary')
             if forced_summary:
@@ -163,7 +165,9 @@ class BatchOperationsService(BaseService):
                 except Exception:
                     pass
 
-            # Handle containers if required
+            all_errors = []
+            # Always run normal stock/deduction workflow.
+            # Untracked/infinite items are no-op handled inside inventory adjustment.
             container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()

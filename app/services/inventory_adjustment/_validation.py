@@ -10,6 +10,8 @@ Glossary:
 
 import logging
 from app.models import db, InventoryItem
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
+from ._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 from app.services.quantity_base import from_base_quantity
 from sqlalchemy import and_
 
@@ -18,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 # --- FIFO sync validation ---
 # Purpose: Validate inventory quantity against FIFO totals.
+# Inputs: Inventory item id and optional item-type context.
+# Outputs: Tuple (is_valid, error_message, inventory_qty, fifo_total).
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validate that inventory quantity matches FIFO totals using proper InventoryLot model.
@@ -29,11 +33,25 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     if not item:
         return False, "Item not found", 0, 0
 
+    org_tracks_quantities = org_allows_inventory_quantity_tracking(
+        organization=getattr(item, "organization", None)
+    )
+    effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+    if not effective_tracking_enabled:
+        inventory_qty = from_base_quantity(
+            base_amount=int(getattr(item, "quantity_base", 0) or 0),
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        return True, None, inventory_qty, inventory_qty
+
     # Get all active lots for this item with proper organization scoping
     active_lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
             InventoryLot.remaining_quantity_base > 0
         )
     ).all()

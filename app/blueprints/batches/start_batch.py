@@ -12,7 +12,7 @@ from flask import Blueprint, request, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission, has_tier_permission
 from app.extensions import db
 from app.models import Recipe
 from app.services.production_planning.service import PlanProductionService
@@ -24,6 +24,8 @@ start_batch_bp = Blueprint('start_batch', __name__)
 # =========================================================
 # --- Start batch ---
 # Purpose: Build a plan snapshot and create a new batch.
+# Inputs: JSON payload with recipe, scale, batch type, notes, and containers.
+# Outputs: JSON response containing started batch id or error details.
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
 @require_permission('batches.create')
@@ -34,7 +36,24 @@ def start_batch():
         data = request.get_json()
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
+        requested_batch_type = data.get('batch_type', 'ingredient')
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=False,
+        )
+        batch_type = requested_batch_type
+        if not org_tracks_batch_outputs:
+            current_app.logger.info(
+                "🔒 START_BATCH endpoint: Org %s tier disables tracked outputs; forcing untracked batch_type",
+                getattr(current_user, 'organization_id', None),
+            )
+            batch_type = 'untracked'
+        elif batch_type == 'product' and not has_permission(current_user, 'products.create'):
+            current_app.logger.info(
+                "🔒 START_BATCH endpoint: User %s lacks products.create; forcing ingredient batch_type",
+                getattr(current_user, 'id', None),
+            )
+            batch_type = 'ingredient'
         notes = data.get('notes', '')
         containers_data = data.get('containers', [])
         requires_containers = data.get('requires_containers', False)

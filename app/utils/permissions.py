@@ -400,6 +400,29 @@ def has_permission(user, permission_name: str) -> bool:
     # Use the authorization hierarchy for permission checking
     return AuthorizationHierarchy.check_user_authorization(user, permission_name)
 
+
+def has_tier_permission(permission_name: str, *, organization=None, default_if_missing_catalog: bool = False) -> bool:
+    """Check whether the effective organization tier includes a permission.
+
+    This bypasses user-role checks and is useful for org-wide feature behavior
+    that must not vary by individual role assignments.
+    """
+    if not permission_name:
+        return False
+
+    try:
+        if default_if_missing_catalog and not permission_exists_in_catalog(permission_name):
+            return True
+
+        org = organization or get_effective_organization()
+        if not org:
+            return False
+
+        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(org)
+        return permission_name in tier_permissions
+    except Exception:
+        return False
+
 def get_user_permissions(user=None):
     """Get all permissions for the current user using authorization hierarchy"""
     if not user:

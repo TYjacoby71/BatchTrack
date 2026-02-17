@@ -19,7 +19,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# --- Safe DB operation wrapper ---
 # Purpose: Run a DB operation with rollback safety.
+# Inputs: Operation name string and callable that performs DB work.
+# Outputs: Tuple of (result, error_message) where one side is None.
 def safe_db_operation(operation_name, operation_func):
     """Safely execute a database operation with error handling"""
     try:
@@ -31,7 +34,10 @@ def safe_db_operation(operation_name, operation_func):
         logger.warning(f"⚠️ {operation_name} failed: {e}")
         return None, str(e)
 
+# --- Create exempt system tier ---
 # Purpose: Create the exempt system tier.
+# Inputs: None.
+# Outputs: Exempt tier object or None when creation fails.
 def create_exempt_tier():
     """Create the only hardcoded tier - exempt tier for system use"""
     def _create():
@@ -78,7 +84,10 @@ def create_exempt_tier():
     tier, error = safe_db_operation("Exempt tier creation", _create)
     return tier
 
+# --- Create free tier ---
 # Purpose: Create the free tier.
+# Inputs: None.
+# Outputs: Free tier object or None when creation fails.
 def create_free_tier():
     """Create the free tier"""
     def _create():
@@ -124,7 +133,10 @@ def create_free_tier():
     tier, error = safe_db_operation("Free tier creation", _create)
     return tier
 
+# --- Create solo tier ---
 # Purpose: Create the solo tier.
+# Inputs: None.
+# Outputs: Solo tier object or None when creation fails.
 def create_solo_tier():
     """Create the solo tier"""
     def _create():
@@ -158,10 +170,11 @@ def create_solo_tier():
             solo_permissions = Permission.query.filter(Permission.name.in_([
                 'dashboard.view',
                 'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 
-                'inventory.delete', 'inventory.view_costs',
+                'inventory.delete', 'inventory.view_costs', 'inventory.track_quantities',
                 'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete', 
                 'recipes.scale', 'recipes.plan_production',
                 'batches.view', 'batches.create', 'batches.edit', 'batches.finish',
+                'batches.track_inventory_outputs',
                 'batches.cancel', 'batches.view_costs',
                 'products.view', 'products.create', 'products.edit', 'products.delete',
                 'products.manage_variants', 'products.sales_tracking',
@@ -182,7 +195,10 @@ def create_solo_tier():
     tier, error = safe_db_operation("Solo tier creation", _create)
     return tier
 
+# --- Create team tier ---
 # Purpose: Create the team tier.
+# Inputs: None.
+# Outputs: Team tier object or None when creation fails.
 def create_team_tier():
     """Create the team tier"""
     def _create():
@@ -227,7 +243,10 @@ def create_team_tier():
     tier, error = safe_db_operation("Team tier creation", _create)
     return tier
 
+# --- Create enterprise tier ---
 # Purpose: Create the enterprise tier.
+# Inputs: None.
+# Outputs: Enterprise tier object or None when creation fails.
 def create_enterprise_tier():
     """Create the enterprise tier"""
     def _create():
@@ -273,7 +292,10 @@ def create_enterprise_tier():
     tier, error = safe_db_operation("Enterprise tier creation", _create)
     return tier
 
+# --- Seed default subscription tiers ---
 # Purpose: Seed all default subscription tiers.
+# Inputs: Flask application context with database access.
+# Outputs: None (prints progress and commits tier changes).
 def seed_subscription_tiers():
     """Create all subscription tiers with proper schema"""
     if not current_app:
@@ -305,7 +327,10 @@ def seed_subscription_tiers():
         print(f"⚠️ Subscription tiers failed: {e}")
         db.session.rollback()
 
+# --- Migrate existing organization tier ids ---
 # Purpose: Normalize existing org tier metadata.
+# Inputs: Flask application context with database access.
+# Outputs: None (prints migration results and applies assignments).
 def migrate_existing_organizations():
     """Migrate existing organizations to use tier IDs"""
     if not current_app:
@@ -335,7 +360,10 @@ def migrate_existing_organizations():
     else:
         print(f"⚠️ Organization migration had issues: {error}")
 
+# --- Seed subscriptions entry point ---
 # Purpose: Entry point to seed tiers and migrate orgs.
+# Inputs: Flask application context with database access.
+# Outputs: None (runs tier seeding and org migration routines).
 def seed_subscriptions():
     """Seed all subscription tiers and migrate organizations"""
     if not current_app:

@@ -1,5 +1,7 @@
 {% extends 'layout.html' %}
 {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or is_developer() %}
+{% set org_tracks_inventory_quantities = org_tracks_inventory_quantities if org_tracks_inventory_quantities is defined else true %}
+{% set org_forces_infinite_items = not org_tracks_inventory_quantities %}
 {% block content %}
 <h2>Inventory Management</h2>
 
@@ -42,7 +44,79 @@ function storageRemove(baseKey) {
   localStorage.removeItem(scopedStorageKey(baseKey));
 }
 
+const orgTracksInventoryQuantities = {{ 'true' if org_tracks_inventory_quantities else 'false' }};
+const orgForcesInfiniteItems = !orgTracksInventoryQuantities;
+
+function openInventoryTrackingUpgradeModal() {
+  const upgradeModal = document.getElementById('featureUpgradeModal');
+  if (!upgradeModal || typeof bootstrap === 'undefined') {
+    window.location.href = "{{ url_for('billing.upgrade') }}";
+    return;
+  }
+  const modalTitle = document.getElementById('featureUpgradeModalTitle');
+  const modalBody = document.getElementById('featureUpgradeModalBody');
+  if (modalTitle) {
+    modalTitle.textContent = 'Inventory quantity tracking requires an upgrade';
+  }
+  if (modalBody) {
+    modalBody.textContent = 'Your current plan runs inventory items in Infinite mode. Upgrade to edit stock quantities and recount lots.';
+  }
+  bootstrap.Modal.getOrCreateInstance(upgradeModal).show();
+}
+
+function maybeBlockInventoryQuantityUi() {
+  if (!orgForcesInfiniteItems) {
+    return false;
+  }
+  openInventoryTrackingUpgradeModal();
+  return true;
+}
+
+function applyForcedInfiniteCreateFormState() {
+  if (!orgForcesInfiniteItems) {
+    return;
+  }
+
+  const addFormIds = ['addIngredientForm', 'addContainerForm', 'addPackagingForm', 'addConsumableForm'];
+  addFormIds.forEach((formId) => {
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const quantityInput = form.querySelector('input[name="quantity"]');
+    if (quantityInput) {
+      quantityInput.required = false;
+      quantityInput.value = '0';
+      quantityInput.type = 'hidden';
+      const quantityWrapper = quantityInput.closest('.col, .col-md-2, .col-md-3, .col-lg-3, .form-group');
+      if (quantityWrapper) {
+        quantityWrapper.style.display = 'none';
+      }
+    }
+
+    const trackedToggle = form.querySelector('input[type="checkbox"][name="is_tracked"]');
+    if (trackedToggle) {
+      trackedToggle.checked = false;
+      trackedToggle.disabled = true;
+    }
+  });
+
+  const costTypeIds = [
+    'addIngredientCostType',
+    'addContainerCostType',
+    'addPackagingCostType',
+    'addConsumableCostType',
+  ];
+  costTypeIds.forEach((costTypeId) => {
+    const costTypeEl = document.getElementById(costTypeId);
+    if (!costTypeEl) return;
+    costTypeEl.value = 'per_unit';
+    costTypeEl.dispatchEvent(new Event('change'));
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  applyForcedInfiniteCreateFormState();
+
   // Initialize pagination for both tables
   initTablePagination('ingredients');
   initTablePagination('containers');
@@ -289,11 +363,13 @@ function toggleIngredientForm() {
 }
 
 function toggleUpdateForm() {
+  if (maybeBlockInventoryQuantityUi()) return;
   const form = document.getElementById('updateInventoryForm');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 function toggleContainerUpdateForm() {
+  if (maybeBlockInventoryQuantityUi()) return;
   const form = document.getElementById('updateContainerForm');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
@@ -941,13 +1017,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // Packaging toggles
 function togglePackagingFilter(){ toggleFilterSection('packagingFilterSection'); }
 function togglePackagingForm(){ const f = document.getElementById('addPackagingForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
-function togglePackagingUpdateForm(){ const f = document.getElementById('updatePackagingForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+function togglePackagingUpdateForm(){ if (maybeBlockInventoryQuantityUi()) return; const f = document.getElementById('updatePackagingForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function updateAddPackagingCostHelp(){ const t = document.getElementById('addPackagingCostType').value; const h = document.getElementById('addPackagingCostHelp'); const qEl = document.querySelector('#addPackagingForm input[name="quantity"]'); const q = parseFloat(qEl?.value)||1; h.textContent = t==='per_unit' ? 'Enter cost per unit' : `Enter total cost (will be divided by ${q} units)`; }
 
 // Consumables toggles
 function toggleConsumablesFilter(){ toggleFilterSection('consumablesFilterSection'); }
 function toggleConsumableForm(){ const f = document.getElementById('addConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
-function toggleConsumableUpdateForm(){ const f = document.getElementById('updateConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+function toggleConsumableUpdateForm(){ if (maybeBlockInventoryQuantityUi()) return; const f = document.getElementById('updateConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function updateAddConsumableCostHelp(){ const t = document.getElementById('addConsumableCostType').value; const h = document.getElementById('addConsumableCostHelp'); const qEl = document.querySelector('#addConsumableForm input[name="quantity"]'); const q = parseFloat(qEl?.value)||1; h.textContent = t==='per_unit' ? 'Enter cost per unit' : `Enter total cost (will be divided by ${q} units)`; }
 
 // Update help text when quantity changes (packaging/consumables)
