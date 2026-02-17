@@ -21,6 +21,7 @@
   - support duplicate-name override only for approved promotion paths.
 - Added breadcrumb back-button fallback behavior in shared layout based on breadcrumb URL ancestry so detail pages can render consistent return affordances without route-by-route wiring.
 - Added/updated APP_DICTIONARY entries for the touched lineage/core/alerts surfaces.
+- Added branch-level documentation guard alignment updates so push-range and PR-range validations both pass CI schema enforcement.
 
 ## Files Modified
 - `app/blueprints/recipes/lineage_utils.py`
