@@ -10,15 +10,17 @@ Glossary:
 
 import logging
 from app.models import db, InventoryItem
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.quantity_base import from_base_quantity
 from sqlalchemy import and_
-from app.utils.permissions import has_tier_permission
 
 logger = logging.getLogger(__name__)
 
 
 # --- FIFO sync validation ---
 # Purpose: Validate inventory quantity against FIFO totals.
+# Inputs: Inventory item id and optional item-type context.
+# Outputs: Tuple (is_valid, error_message, inventory_qty, fifo_total).
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validate that inventory quantity matches FIFO totals using proper InventoryLot model.
@@ -30,10 +32,8 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     if not item:
         return False, "Item not found", 0, 0
 
-    org_tracks_quantities = has_tier_permission(
-        "batches.track_inventory_outputs",
-        organization=getattr(item, "organization", None),
-        default_if_missing_catalog=False,
+    org_tracks_quantities = org_allows_inventory_quantity_tracking(
+        organization=getattr(item, "organization", None)
     )
     effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
     if not effective_tracking_enabled:

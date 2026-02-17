@@ -24,13 +24,17 @@ from app.models import (
 )
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from ._fifo_ops import create_new_fifo_lot
 from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base
-from app.utils.permissions import has_tier_permission
 
 logger = logging.getLogger(__name__)
 
 
+# --- Parse boolean flag ---
+# Purpose: Normalize form checkbox-like values into boolean/None.
+# Inputs: Raw value from form payload.
+# Outputs: True/False for recognized flags, otherwise None.
 def _parse_bool_flag(raw_value):
     if raw_value is None:
         return None
@@ -46,6 +50,8 @@ def _parse_bool_flag(raw_value):
 
 # --- Resolve unit cost ---
 # Purpose: Normalize form inputs into per-unit cost.
+# Inputs: Form payload mapping and parsed initial quantity value.
+# Outputs: Tuple of (cost_per_unit: float, error_message: str|None).
 def _resolve_cost_per_unit(form_data, initial_quantity):
     """Convert form inputs into a per-unit cost."""
     try:
@@ -76,6 +82,10 @@ def _resolve_cost_per_unit(form_data, initial_quantity):
     return raw_cost_value, None
 
 
+# --- Normalize container field ---
+# Purpose: Canonicalize optional container attribute strings for matching.
+# Inputs: Raw container attribute value.
+# Outputs: Lowercased string value or None when empty.
 def _normalize_container_field(value):
     if value is None:
         return None
@@ -83,6 +93,10 @@ def _normalize_container_field(value):
     return text.lower() if text else None
 
 
+# --- Apply normalized string filter ---
+# Purpose: Apply null-safe case-insensitive filtering for container attributes.
+# Inputs: SQLAlchemy query, model column, and raw value to match.
+# Outputs: Updated SQLAlchemy query with normalized attribute predicate.
 def _apply_string_match(query, column, value):
     normalized = _normalize_container_field(value)
     if normalized is None:
@@ -92,6 +106,8 @@ def _apply_string_match(query, column, value):
 
 # --- Find matching container ---
 # Purpose: Identify an existing container with matching attributes.
+# Inputs: Candidate InventoryItem used for same-shape lookup.
+# Outputs: Matching InventoryItem or None when no match is found.
 def _find_matching_container(candidate: InventoryItem | None):
     """Return an existing container with matching attributes (same org)."""
     if not candidate or candidate.type != 'container':
@@ -117,6 +133,8 @@ def _find_matching_container(candidate: InventoryItem | None):
 
 # --- Create inventory item ---
 # Purpose: Create inventory item with initial metadata.
+# Inputs: Form payload, organization id, creator id, and commit mode flag.
+# Outputs: Tuple of (success, message, created_item_id).
 def create_inventory_item(form_data, organization_id, created_by, auto_commit: bool = True):
     """
     Create a new inventory item from form data.
@@ -238,11 +256,7 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
 
         requested_is_tracked = _parse_bool_flag(form_data.get("is_tracked"))
         organization = db.session.get(Organization, organization_id) if organization_id else None
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=organization,
-            default_if_missing_catalog=False,
-        )
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
         if requested_is_tracked is None:
             effective_is_tracked = bool(org_tracks_quantities)
         else:
@@ -470,6 +484,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
 
 # --- Initial stock ---
 # Purpose: Handle initial stock entries for new items.
+# Inputs: Item context, initial quantity/change metadata, and optional expiration fields.
+# Outputs: Tuple of (success, message, quantity_delta, quantity_delta_base).
 def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.

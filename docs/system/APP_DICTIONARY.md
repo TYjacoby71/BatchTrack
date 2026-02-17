@@ -165,10 +165,12 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **InventoryAdjustmentCore** → Central adjustment delegator (see `app/services/inventory_adjustment/_core.py`)
 - **InventoryAdjustmentAdditive** → Additive adjustment handlers (see `app/services/inventory_adjustment/_additive_ops.py`)
 - **InventoryAdjustmentDeductive** → Deductive adjustment handlers (see `app/services/inventory_adjustment/_deductive_ops.py`)
+- **InventoryAdjustmentFifoOps** → FIFO lot operations for lot creation, deduction, and cost estimation (see `app/services/inventory_adjustment/_fifo_ops.py`)
 - **InventoryAdjustmentEdit** → Inventory metadata edits + unit changes (see `app/services/inventory_adjustment/_edit_logic.py`)
 - **InventoryAdjustmentSpecial** → Recount/cost override/convert handlers (see `app/services/inventory_adjustment/_special_ops.py`)
 - **InventoryAdjustmentValidation** → FIFO sync validation (see `app/services/inventory_adjustment/_validation.py`)
 - **InventoryCreationLogic** → Inventory item creation + initial stock (see `app/services/inventory_adjustment/_creation_logic.py`)
+- **InventoryTrackingPolicy** → Canonical org-tier entitlement helper that resolves whether inventory deductions should mutate on-hand quantities (`inventory.track_quantities` with legacy fallback) (see `app/services/inventory_tracking_policy.py`)
 - **ExpirationService** → Expiration calculations and queries (see `app/blueprints/expiration/services.py`)
 - **IngredientHandler** → Stock check handler for ingredients (see `app/services/stock_check/handlers/ingredient_handler.py`)
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
@@ -240,8 +242,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/routes/landing_routes.py`)
 - **Soap Static Asset Manifest Outputs** → Hashed soap bundle map and generated runtime bundles emitted by the scoped asset build pipeline for production cache-busting (see `app/static/dist/manifest.json`, `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FCLB3YPR.js`, and `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-WSLX7LVI.js`)
 - **flask update-permissions** → Sync permission catalog
+- **Consolidated Permission Catalog JSON** → Source-of-truth organization/developer permission definitions for permission syncing and audits (see `app/seeders/consolidated_permissions.json`)
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
+- **Subscription Tier Seed JSON** → Source-of-truth tier permission/limit metadata consumed by tier update workflows (see `app/seeders/subscription_tiers.json`)
 - **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
 - **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
 - **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)

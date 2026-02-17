@@ -29,6 +29,11 @@
           "description": "Manually adjust inventory quantities, add stock, or record waste/loss"
         },
         {
+          "name": "inventory.track_quantities",
+          "display_name": "Track Inventory Quantities",
+          "description": "Enable on-hand quantity depletion for inventory deductions and FIFO-backed stock checks"
+        },
+        {
           "name": "inventory.reserve",
           "display_name": "Reserve Inventory",
           "description": "Create inventory reservations for planned production or sales"

@@ -18,9 +18,9 @@ from app.services.quantity_base import (
     sync_item_quantity_from_base,
     sync_lot_quantities_from_base,
 )
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.inventory_event_code_generator import generate_inventory_event_code
-from app.utils.permissions import has_tier_permission
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 # --- Fetch FIFO lots ---
 # Purpose: Fetch FIFO lots for an item.
+# Inputs: Inventory item id plus active-only/order query options.
+# Outputs: List of InventoryLot records scoped to the item organization.
 def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     """
     Retrieve lots for an inventory item using the proper InventoryLot model.
@@ -74,6 +76,8 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
 
 # --- Create FIFO lot ---
 # Purpose: Create a new FIFO lot and history entry.
+# Inputs: Item/quantity/change metadata and optional expiration/cost overrides.
+# Outputs: Tuple of (success, message, lot_id|None).
 def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, quantity_base=None, **kwargs):
     """
     Create a new FIFO lot with complete tracking and audit trail.
@@ -213,6 +217,8 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
 
 # --- Deduct FIFO inventory ---
 # Purpose: Deduct inventory using FIFO ordering.
+# Inputs: Item id, quantity to deduct, and operation metadata.
+# Outputs: Tuple of (success, message) after lot deduction or infinite usage logging.
 def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=None, change_type=None, notes=None, created_by=None, batch_id=None):
     """
     CONSOLIDATED: Single function to handle FIFO deduction using proper InventoryLot model.
@@ -262,10 +268,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         except Exception:
             valuation_method = 'fifo'
 
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=getattr(item, "organization", None),
-            default_if_missing_catalog=False,
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
         )
         effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
 
@@ -410,6 +414,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
 
 # --- Total available inventory ---
 # Purpose: Calculate total available inventory across lots.
+# Inputs: Inventory item id.
+# Outputs: Float available quantity derived from active FIFO lots.
 def calculate_total_available_inventory(item_id):
     """
     Calculate total available inventory from all active lots for an item.
@@ -447,6 +453,8 @@ def calculate_total_available_inventory(item_id):
 
 # --- Estimate FIFO unit cost ---
 # Purpose: Estimate unit cost for FIFO deduction.
+# Inputs: Item id, proposed deduction quantity, and optional change type.
+# Outputs: Estimated weighted unit cost for the prospective issue.
 def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, change_type: str | None = None) -> float:
     """
     Estimate the weighted average unit cost for a prospective FIFO deduction without mutating state.
@@ -499,6 +507,8 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
 
 # --- Credit specific lot ---
 # Purpose: Credit inventory back to a specific lot.
+# Inputs: Lot id, quantity to credit, and optional audit metadata.
+# Outputs: Tuple of (success, message) describing credit outcome.
 def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     """
     Credit inventory back to a specific FIFO lot.

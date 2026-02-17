@@ -15,11 +15,12 @@ from types import SimpleNamespace
 from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, current_app
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User, GlobalItem
-from app.utils.permissions import permission_required, role_required, has_tier_permission
+from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
 from app.extensions import cache, limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
 import logging
@@ -41,19 +42,29 @@ from app.utils.settings import is_feature_enabled
 logger = logging.getLogger(__name__)
 
 
+# --- Bulk-updates feature flag ---
+# Purpose: Determine whether bulk inventory updates are enabled in this environment.
+# Inputs: None.
+# Outputs: Boolean indicating if bulk-inventory UI/API surfaces should be available.
 def _bulk_inventory_updates_enabled() -> bool:
     return is_feature_enabled("FEATURE_BULK_INVENTORY_UPDATES")
 
 
+# --- Inventory quantity-tracking entitlement ---
+# Purpose: Resolve whether current organization tier allows tracked quantities.
+# Inputs: Current authenticated user context.
+# Outputs: Boolean indicating whether quantity tracking mode is allowed.
 def _org_tracks_inventory_quantities() -> bool:
     """Whether current org tier allows tracked quantity mode."""
-    return has_tier_permission(
-        "batches.track_inventory_outputs",
+    return org_allows_inventory_quantity_tracking(
         organization=getattr(current_user, "organization", None),
-        default_if_missing_catalog=False,
     )
 
 
+# --- Expired quantity map ---
+# Purpose: Compute expired remaining quantities by inventory item id.
+# Inputs: Iterable of inventory item ids.
+# Outputs: Dictionary mapping item_id -> expired remaining quantity (base units).
 def _expired_quantity_map(item_ids):
     if not item_ids:
         return {}
@@ -75,6 +86,10 @@ def _expired_quantity_map(item_ids):
     return {row[0]: int(row[1] or 0) for row in rows}
 
 
+# --- Serialize inventory list payload ---
+# Purpose: Build template/cache-safe inventory item payloads with computed fields.
+# Inputs: InventoryItem ORM rows for one list query.
+# Outputs: Tuple of (serialized item dictionaries, total inventory value float).
 def _serialize_inventory_items(items):
     from ...blueprints.expiration.services import ExpirationService
     from app.services.quantity_base import from_base_quantity
@@ -134,6 +149,10 @@ def _serialize_inventory_items(items):
     return serialized, total_value
 
 
+# --- Hydrate serialized inventory items ---
+# Purpose: Reconstruct lightweight template objects from cached serialized payloads.
+# Inputs: List of serialized inventory item dictionaries.
+# Outputs: List of SimpleNamespace objects mirroring inventory attributes.
 def _hydrate_inventory_items(serialized_items):
     hydrated = []
     for entry in serialized_items:
@@ -163,6 +182,10 @@ def _hydrate_inventory_items(serialized_items):
         hydrated.append(item)
     return hydrated
 
+# --- Inventory edit authorization helper ---
+# Purpose: Decide whether current user may mutate a specific inventory item.
+# Inputs: InventoryItem object to evaluate against current user scope.
+# Outputs: Boolean authorization decision.
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
     if not current_user.is_authenticated:
@@ -176,6 +199,8 @@ def can_edit_inventory_item(item):
 # =========================================================
 # --- Inventory search ---
 # Purpose: Search inventory items for typeahead results.
+# Inputs: Query-string search text plus optional type/change_type filters.
+# Outputs: JSON payload with suggestion records or error details.
 @inventory_bp.route('/api/search')
 @login_required
 @limiter.limit("2000/minute")
@@ -209,6 +234,8 @@ def api_search_inventory():
 
 # --- Inventory detail ---
 # Purpose: Return inventory item details for the edit modal.
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON item detail payload for edit modal population.
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 @permission_required('inventory.view')
@@ -252,6 +279,8 @@ def api_get_inventory_item(item_id):
 
 # --- Global link toggle ---
 # Purpose: Link/unlink a local item to a global item.
+# Inputs: Item id route parameter and action payload (unlink/relink/resync).
+# Outputs: JSON success/error payload with updated ownership metadata.
 @inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -353,6 +382,8 @@ def api_toggle_global_link(item_id: int):
 
 # --- Quick create ---
 # Purpose: Create a new inventory item from a minimal payload.
+# Inputs: JSON payload with minimal inventory creation fields.
+# Outputs: JSON payload containing created item summary or validation error.
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -412,6 +443,8 @@ def api_quick_create_inventory():
 # =========================================================
 # --- Inventory list ---
 # Purpose: Render the inventory list page.
+# Inputs: Query parameters for type/search/category/archive/zero filters.
+# Outputs: Rendered inventory list template with scoped inventory context.
 @inventory_bp.route('/')
 @login_required
 @permission_required('inventory.view')
@@ -527,6 +560,8 @@ def list_inventory():
 
 # --- Inventory column visibility ---
 # Purpose: Persist column visibility preferences.
+# Inputs: Form list containing selected column identifiers.
+# Outputs: Redirect response back to inventory list.
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 @permission_required('inventory.view')
@@ -537,6 +572,8 @@ def set_column_visibility():
 
 # --- Inventory detail view ---
 # Purpose: Render the inventory item detail page.
+# Inputs: Inventory item id route parameter and optional pagination/filter query values.
+# Outputs: Rendered inventory detail template with history, lots, and freshness context.
 @inventory_bp.route('/view/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -675,6 +712,8 @@ def view_inventory(id):
 
 # --- Inventory add ---
 # Purpose: Create a new inventory item from form data.
+# Inputs: Inventory create form fields from POST payload.
+# Outputs: Redirect response to created item detail or inventory list with flash.
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -707,6 +746,8 @@ def add_inventory():
 
 # --- Inventory adjust ---
 # Purpose: Apply inventory adjustments via central service.
+# Inputs: Item id route parameter and adjustment form payload.
+# Outputs: JSON or redirect response describing adjustment success/failure.
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')
@@ -822,6 +863,8 @@ def adjust_inventory(item_id):
 
 # --- Inventory edit ---
 # Purpose: Update inventory item metadata.
+# Inputs: Inventory item id route parameter and edit form payload.
+# Outputs: Redirect response back to inventory detail with status flash.
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 @permission_required('inventory.edit')
@@ -969,6 +1012,8 @@ def edit_inventory(id):
 
 # --- Inventory archive ---
 # Purpose: Archive an inventory item.
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with archive status flash.
 @inventory_bp.route('/archive/<int:id>')
 @login_required
 @permission_required('inventory.delete')
@@ -985,6 +1030,8 @@ def archive_inventory(id):
 
 # --- Inventory restore ---
 # Purpose: Restore an archived inventory item.
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with restore status flash.
 @inventory_bp.route('/restore/<int:id>')
 @login_required
 @permission_required('inventory.edit')
@@ -1001,6 +1048,8 @@ def restore_inventory(id):
 
 # --- Inventory debug ---
 # Purpose: Render debug information for inventory and FIFO sync.
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON payload with inventory/FIFO diagnostics.
 @inventory_bp.route('/debug/<int:id>')
 @login_required
 @permission_required('inventory.view')
@@ -1038,6 +1087,8 @@ def debug_inventory(id):
 
 # --- Bulk update view ---
 # Purpose: Render the bulk inventory update page.
+# Inputs: Current user organization context and feature flag state.
+# Outputs: Rendered bulk-update template or redirect when feature is disabled.
 @inventory_bp.route('/bulk-updates')
 @login_required
 @permission_required('inventory.edit')
@@ -1084,6 +1135,8 @@ def bulk_inventory_updates():
 
 # --- Bulk adjustments API ---
 # Purpose: Apply bulk inventory adjustments.
+# Inputs: JSON payload of bulk adjustment lines.
+# Outputs: JSON success/error payload from bulk inventory service.
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
 @login_required
 @permission_required('inventory.adjust')

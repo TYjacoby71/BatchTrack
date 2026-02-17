@@ -19,8 +19,8 @@ from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.unit_conversion import ConversionEngine
-from app.utils.permissions import has_tier_permission
 from app.services.quantity_base import (
     to_base_quantity,
     from_base_quantity,
@@ -31,6 +31,10 @@ from app.services.quantity_base import (
 logger = logging.getLogger(__name__)
 
 
+# --- Parse boolean flag ---
+# Purpose: Normalize checkbox-like form values into boolean/None.
+# Inputs: Raw value from form payload.
+# Outputs: True/False for recognized values, else None.
 def _parse_bool_flag(raw_value):
     if raw_value is None:
         return None
@@ -46,6 +50,8 @@ def _parse_bool_flag(raw_value):
 
 # --- Inventory edit ---
 # Purpose: Update inventory metadata and handle unit changes.
+# Inputs: Inventory item id and submitted form field dictionary.
+# Outputs: Tuple of (success: bool, message: str).
 def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
     """
     Update inventory item details.
@@ -274,11 +280,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 return False, "Invalid low stock threshold"
 
         organization = db.session.get(Organization, item.organization_id) if item.organization_id else None
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=organization,
-            default_if_missing_catalog=False,
-        )
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
         if not org_tracks_quantities:
             item.is_tracked = False
         elif 'is_tracked' in form_data:

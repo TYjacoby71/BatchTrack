@@ -14,8 +14,8 @@ from datetime import datetime, timezone
 
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.utils.permissions import has_tier_permission
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 # --- Ingredient stock handler ---
 # Purpose: Check ingredient availability using FIFO lots.
+# Inputs: Stock-check request payload and organization scope id.
+# Outputs: StockCheckResult with conversion details and availability status.
 class IngredientHandler(BaseInventoryHandler):
     """Handler for ingredient stock checking with FIFO support"""
 
@@ -47,10 +49,8 @@ class IngredientHandler(BaseInventoryHandler):
             return self._create_not_found_result(request)
 
         # Effective tracking mode combines item-level tracking with org-tier capability.
-        org_tracks_quantities = has_tier_permission(
-            "batches.track_inventory_outputs",
-            organization=getattr(ingredient, "organization", None),
-            default_if_missing_catalog=False,
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(ingredient, "organization", None)
         )
         effective_tracking_enabled = bool(getattr(ingredient, "is_tracked", True)) and org_tracks_quantities
 
