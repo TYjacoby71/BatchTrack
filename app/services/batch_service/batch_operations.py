@@ -933,15 +933,32 @@ class BatchOperationsService(BaseService):
 
             uscs = UniversalStockCheckService()
 
+            def _get_scoped_item(raw_item_id, expected_type):
+                """Resolve an inventory item scoped to the active batch organization."""
+                try:
+                    item_id = int(raw_item_id)
+                except (TypeError, ValueError):
+                    return None
+                return (
+                    InventoryItem.query.filter_by(
+                        id=item_id,
+                        organization_id=batch.organization_id,
+                        type=expected_type,
+                        is_active=True,
+                        is_archived=False,
+                    )
+                    .first()
+                )
+
             # Process extra containers
             for container in extra_containers:
-                container_item = db.session.get(InventoryItem, container["item_id"])
+                container_item = _get_scoped_item(container.get("item_id"), "container")
                 if not container_item:
                     errors.append({"item": "Unknown", "message": "Container not found"})
                     continue
 
                 needed_amount = float(container["quantity"])
-                reason = container.get("reason", "batch")
+                reason = container.get("reason", "extra_yield")
 
                 # Validate reason
                 valid_reasons = ["extra_yield", "damaged"]
@@ -1032,8 +1049,9 @@ class BatchOperationsService(BaseService):
 
             # Process extra ingredients
             for item in extra_ingredients:
-                inventory_item = db.session.get(InventoryItem, item["item_id"])
+                inventory_item = _get_scoped_item(item.get("item_id"), "ingredient")
                 if not inventory_item:
+                    errors.append({"item": "Unknown", "message": "Ingredient not found"})
                     continue
 
                 try:
@@ -1121,7 +1139,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra consumables
             for cons in extra_consumables:
-                consumable_item = db.session.get(InventoryItem, cons["item_id"])
+                consumable_item = _get_scoped_item(cons.get("item_id"), "consumable")
                 if not consumable_item:
                     errors.append(
                         {"item": "Unknown", "message": "Consumable not found"}

@@ -213,13 +213,29 @@ class BatchManagementService(BaseService):
             # Build cost summary
             cost_summary = cls.get_batch_cost_summary(batch)
 
-            # Get inventory items
+            # Get inventory items (strictly scoped to the batch's organization)
+            scoped_org_id = batch.organization_id or getattr(
+                current_user, "organization_id", None
+            )
+            inventory_base_query = InventoryItem.query.filter(False)
+            if scoped_org_id:
+                inventory_base_query = InventoryItem.query.filter_by(
+                    organization_id=scoped_org_id,
+                    is_active=True,
+                    is_archived=False,
+                )
+
             all_ingredients = (
-                InventoryItem.query.filter_by(type="ingredient")
+                inventory_base_query.filter(InventoryItem.type == "ingredient")
                 .order_by(InventoryItem.name)
                 .all()
             )
-            inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
+            all_consumables = (
+                inventory_base_query.filter(InventoryItem.type == "consumable")
+                .order_by(InventoryItem.name)
+                .all()
+            )
+            inventory_items = inventory_base_query.order_by(InventoryItem.name).all()
 
             # Get products for finish batch modal
             products = Product.query.filter_by(
@@ -251,6 +267,7 @@ class BatchManagementService(BaseService):
                 "cost_summary": cost_summary,
                 "freshness_summary": freshness_summary,
                 "all_ingredients": all_ingredients,
+                "all_consumables": all_consumables,
                 "inventory_items": inventory_items,
                 "products": products,
                 "container_breakdown": container_breakdown,
