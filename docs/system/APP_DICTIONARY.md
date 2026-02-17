@@ -67,6 +67,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
 - **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
+- **Lineage Tree Serialization Helpers** → Utilities that format lineage node labels, nested tree payloads, and root-to-node paths for lineage UI rendering (see `app/blueprints/recipes/lineage_utils.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout
 - **/billing/upgrade** → Recoverable billing remediation page for `payment_failed`/`past_due` organizations (see `app/blueprints/billing/routes.py` and `app/services/billing_access_policy_service.py`)
@@ -136,6 +137,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)
 - **RecipeVersioning.promote_test_to_current** → Promote a test and log lineage event (see `app/services/recipe_service/_versioning.py`)
+- **RecipeCoreService** → Core create/update/delete/detail/duplicate recipe operations including group/version assignment and naming guardrails (see `app/services/recipe_service/_core.py`)
 - **RecipeFormParsing** → Form submission parsing and validation (see `app/blueprints/recipes/form_parsing.py`)
 - **RecipeFormPrefill** → Prefill helpers for recipe forms (see `app/blueprints/recipes/form_prefill.py`)
 - **RecipeFormTemplates** → Cached form payloads + rendering helpers (see `app/blueprints/recipes/form_templates.py`)
@@ -220,6 +222,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Product Dashboard** → Product list with portfolio summary and filters (see `app/templates/pages/products/list_products.html`)
 - **Product Overview** → Product detail view with variant summaries and actions (see `app/templates/pages/products/view_product.html`)
 - **Variant Sizes View** → Size-level inventory and SKU actions for a variant (see `app/templates/pages/products/view_variation.html`)
+- **Product Stock Alerts Page** → Product inventory alert surface that lists out-of-stock and low-stock SKUs with breadcrumb-driven return navigation (see `app/templates/pages/products/alerts.html`)
 
 ---
 

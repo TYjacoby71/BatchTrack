@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
+  - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
+  - Hardened variation naming and promotion naming behavior for recipe-group consistency.
+  - Added documentation schema/dictionary updates required for Documentation Guard compliance.
 - **[2026-02-17: Tier Presentation Documentation Guard Compliance](2026-02-17-tier-presentation-documentation-guard-compliance.md)**
   - Added required function/class header schema blocks across the new tier presentation package and related pricing/signup services.
   - Added missing module synopsis/glossary coverage for new package modules.

@@ -156,7 +156,8 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
         Recipe.test_sequence.is_(None),
     )
     if not recipe.is_master:
-        base_query = base_query.filter(Recipe.variation_name == recipe.variation_name)
+        normalized_variation_name = (recipe.variation_name or "").strip().lower()
+        base_query = base_query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
     max_version = base_query.with_entities(sa.func.max(Recipe.version_number)).scalar() or 0
 
     recipe.version_number = int(max_version) + 1
@@ -187,7 +188,8 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
         if recipe.is_master:
             recipe.parent_recipe_id = None
         else:
-            recipe.parent_recipe_id = parent_recipe.parent_recipe_id or parent_recipe.id
+            # Keep variation versions chained under the previous variation version.
+            recipe.parent_recipe_id = parent_recipe.id
     recipe.status = "published"
     recipe.sharing_scope = "private"
     recipe.is_public = False
@@ -294,6 +296,7 @@ def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
         status="published",
         recipe_group_id=recipe.recipe_group_id,
         version_number_override=next_version,
+        allow_duplicate_name_override=True,
         sharing_scope="private",
         is_public=False,
         is_for_sale=False,
