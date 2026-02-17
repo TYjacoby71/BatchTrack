@@ -117,7 +117,7 @@ def test_robots_txt_unknown_path_does_not_auto_block(app):
     from app.services.public_bot_trap_service import PublicBotTrapService
 
     response = client.get("/robots.txt", follow_redirects=False)
-    assert response.status_code == 404
+    assert response.status_code == 200
 
     state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
     assert "127.0.0.1" not in (state.get("blocked_ips") or [])

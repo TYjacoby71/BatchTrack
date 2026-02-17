@@ -555,7 +555,7 @@ def logout():
 
     SessionService.clear_session_state()
     logout_user()
-    return redirect(url_for("homepage"))
+    return redirect(url_for("core.homepage"))
 
 
 @auth_bp.route("/dev-login")

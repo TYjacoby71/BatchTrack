@@ -1,6 +1,5 @@
+"""Faults blueprint package."""
 
-from flask import Blueprint
+from .routes import faults_bp
 
-faults_bp = Blueprint('faults', __name__, template_folder='templates')
-
-# Routes will be imported when needed
+__all__ = ["faults_bp"]
