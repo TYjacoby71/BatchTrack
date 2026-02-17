@@ -36,6 +36,8 @@ for group in ADDITIVE_OPERATION_GROUPS.values():
 
 # --- Inventory adjustment ---
 # Purpose: Central entry point for inventory adjustments.
+# Inputs: Item/change metadata, optional costing/context fields, and commit mode flags.
+# Outputs: Tuple of (success, message[, event_payload]) describing adjustment result.
 def process_inventory_adjustment(
     item_id,
     change_type,
@@ -272,6 +274,15 @@ def process_inventory_adjustment(
             item.quantity_base = int(target_quantity_base)
             sync_item_quantity_from_base(item)
 
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        if not effective_tracking_enabled:
+            # Infinite mode must always present as non-depleting stock.
+            item.quantity_base = 0
+            sync_item_quantity_from_base(item)
+
         # Validate FIFO sync before commit. During a multi-step batch start (defer_commit=True),
         # skip validation until outer transaction commits to avoid transient mismatch.
         try:
@@ -394,7 +405,10 @@ def process_inventory_adjustment(
         )
         return _response(False, "A critical internal error occurred.")
 
-
+# --- Operation module delegator ---
+# Purpose: Route normalized adjustments to additive, deductive, or special handlers.
+# Inputs: Normalized operation context and all adjustment arguments required by downstream handlers.
+# Outputs: Handler tuple response in legacy-compatible formats (2/3/4 items).
 def _delegate_to_operation_module(
     effective_change_type,
     original_change_type,

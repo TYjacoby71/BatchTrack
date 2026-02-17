@@ -439,6 +439,11 @@ def update_inventory_item(
                 item, updated_by=updated_by
             )
 
+        if not bool(item.is_tracked):
+            # Infinite mode should never retain stale finite quantity values.
+            item.quantity_base = 0
+            sync_item_quantity_from_base(item)
+
         # Unit already handled above if present
 
         if "is_perishable" in form_data:
