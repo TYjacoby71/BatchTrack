@@ -14,7 +14,7 @@ from . import production_planning_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
 from app.utils.recipe_display import format_recipe_lineage_name
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_tier_permission
 
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
@@ -74,12 +74,16 @@ def plan_production_route(recipe_id):
 
     # GET request - show planning form
     display_name = format_recipe_lineage_name(recipe)
+    org_tracks_batch_outputs = has_tier_permission(
+        'batches.track_inventory_outputs',
+        default_if_missing_catalog=True,
+    )
     return render_template('pages/production_planning/plan_production.html', recipe=recipe, breadcrumb_items=[
         {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
         {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
         {'label': display_name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
         {'label': 'Plan Production'}
-    ])
+    ], org_tracks_batch_outputs=org_tracks_batch_outputs)
 
 # --- Auto-fill containers ---
 # Purpose: Suggest container options for a plan request.

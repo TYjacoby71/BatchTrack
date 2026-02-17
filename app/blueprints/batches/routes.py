@@ -10,7 +10,7 @@ Glossary:
 
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from ...utils.permissions import require_permission, has_permission
+from ...utils.permissions import require_permission, has_permission, has_tier_permission
 from ...models import db, Batch, Recipe, InventoryItem, BatchTimer, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer
 from datetime import datetime, timedelta
 from ...utils import get_setting
@@ -339,12 +339,17 @@ def view_batch_in_progress(batch_identifier):
 
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=True,
+        )
 
         return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
             now=TimezoneUtils.utc_now(),
             has_active_timers=has_active_timers,
+            org_tracks_batch_outputs=org_tracks_batch_outputs,
             timedelta=timedelta,
             **nav_data,
             **context_data)
@@ -393,8 +398,18 @@ def api_start_batch():
 
         scale = float(data.get('scale', 1.0))
         requested_batch_type = data.get('batch_type', 'ingredient')
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=True,
+        )
         batch_type = requested_batch_type
-        if batch_type == 'product' and not has_permission(current_user, 'products.create'):
+        if not org_tracks_batch_outputs:
+            logger.info(
+                "🔒 START BATCH: Org %s tier disables tracked outputs; forcing untracked batch_type",
+                getattr(current_user, 'organization_id', None),
+            )
+            batch_type = 'untracked'
+        elif batch_type == 'product' and not has_permission(current_user, 'products.create'):
             logger.info(
                 "🔒 START BATCH: User %s lacks products.create; forcing ingredient batch_type",
                 getattr(current_user, 'id', None),
@@ -408,18 +423,19 @@ def api_start_batch():
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 
-        # Server-side stock validation to prevent bypassing the UI gate
         stock_issues = []
-        try:
-            uscs = UniversalStockCheckService()
-            stock_result = uscs.check_recipe_stock(recipe_id, scale)
-            if not stock_result.get('success'):
-                error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
-                return jsonify({'success': False, 'message': error_msg}), 400
-            stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
-        except Exception as e:
-            logger.error(f"Error during stock validation: {e}")
-            return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
+        if batch_type != 'untracked':
+            # Server-side stock validation to prevent bypassing the UI gate
+            try:
+                uscs = UniversalStockCheckService()
+                stock_result = uscs.check_recipe_stock(recipe_id, scale)
+                if not stock_result.get('success'):
+                    error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
+            except Exception as e:
+                logger.error(f"Error during stock validation: {e}")
+                return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
 
         skip_ingredient_ids = [
             issue['item_id']

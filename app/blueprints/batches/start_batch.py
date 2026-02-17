@@ -12,7 +12,7 @@ from flask import Blueprint, request, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
-from app.utils.permissions import require_permission, has_permission
+from app.utils.permissions import require_permission, has_permission, has_tier_permission
 from app.extensions import db
 from app.models import Recipe
 from app.services.production_planning.service import PlanProductionService
@@ -35,8 +35,18 @@ def start_batch():
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
         requested_batch_type = data.get('batch_type', 'ingredient')
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=True,
+        )
         batch_type = requested_batch_type
-        if batch_type == 'product' and not has_permission(current_user, 'products.create'):
+        if not org_tracks_batch_outputs:
+            current_app.logger.info(
+                "🔒 START_BATCH endpoint: Org %s tier disables tracked outputs; forcing untracked batch_type",
+                getattr(current_user, 'organization_id', None),
+            )
+            batch_type = 'untracked'
+        elif batch_type == 'product' and not has_permission(current_user, 'products.create'):
             current_app.logger.info(
                 "🔒 START_BATCH endpoint: User %s lacks products.create; forcing ingredient batch_type",
                 getattr(current_user, 'id', None),

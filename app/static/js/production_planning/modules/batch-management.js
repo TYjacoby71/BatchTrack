@@ -25,13 +25,13 @@ export class BatchManager {
     async startBatch(forceOverride = false) {
         if (!this.main.recipe) return;
 
-        if (!this.main.stockChecked) {
+        if (this.main.requiresStockCheck && !this.main.stockChecked) {
             this.showErrorMessage('Please run a stock check before starting a batch.');
             return;
         }
 
         const shouldForce = forceOverride || this.main.stockOverrideAcknowledged;
-        if (!shouldForce && !this.main.stockCheckPassed) {
+        if (this.main.requiresStockCheck && !shouldForce && !this.main.stockCheckPassed) {
             this.showInsufficientModal();
             return;
         }
@@ -41,7 +41,7 @@ export class BatchManager {
             const payload = {
                 recipe_id: this.main.recipe.id,
                 scale: this.main.scale,
-                batch_type: this.main.batchType || 'ingredient',
+                batch_type: this.main.batchType || (this.main.tracksBatchOutputs ? 'ingredient' : 'untracked'),
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
                 containers: this.getSelectedContainers(),

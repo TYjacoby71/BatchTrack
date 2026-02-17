@@ -13,6 +13,7 @@ from ..utils.timezone_utils import TimezoneUtils
 from .duration_utils import humanize_duration_days
 from .permissions import (
     has_permission as perm_has_permission,
+    has_tier_permission as perm_has_tier_permission,
     has_role as perm_has_role,
     has_subscription_feature,
     is_developer,
@@ -235,14 +236,8 @@ def _current_user_organization():
 
 
 def _has_tier_permission_global(permission_name: str) -> bool:
-    organization = _current_user_organization()
-    if organization is None:
-        return False
     try:
-        from app.utils.permissions import AuthorizationHierarchy
-
-        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
-        return permission_name in tier_permissions
+        return perm_has_tier_permission(permission_name)
     except Exception:
         return False
 

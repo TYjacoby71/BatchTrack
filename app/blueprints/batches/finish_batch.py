@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.utils.permissions import require_permission, has_permission
+from app.utils.permissions import require_permission, has_permission, has_tier_permission
 from ...models import db, Batch, Product, ProductVariant, InventoryItem
 from ...models.inventory_lot import InventoryLot
 from ...models.product import ProductSKU
@@ -116,9 +116,16 @@ def _complete_batch_internal(batch_id, form_data):
         if not batch:
             return False, 'Batch not found or already completed'
 
+        org_tracks_batch_outputs = has_tier_permission(
+            'batches.track_inventory_outputs',
+            default_if_missing_catalog=True,
+        )
         requested_output_type = (form_data.get('output_type') or '').strip()
         output_type = requested_output_type or (batch.batch_type or 'ingredient')
         can_create_product_output = has_permission(current_user, 'products.create')
+
+        if not org_tracks_batch_outputs or batch.batch_type == 'untracked':
+            output_type = 'untracked'
 
         # Enforce plan-based product lock server-side regardless of client payload.
         if output_type == 'product' and not can_create_product_output:
@@ -187,9 +194,17 @@ def _complete_batch_internal(batch_id, form_data):
         batch.shelf_life_days = shelf_life_days
         batch.expiration_date = expiration_date
 
+        output_metrics = None
+
         # Route based on batch_type (primary) and output_type (secondary)
         # batch_type determines the intended output, output_type is user selection
-        if batch.batch_type == 'ingredient' or output_type == 'ingredient':
+        if output_type == 'untracked':
+            logger.info(
+                "🔒 BATCH COMPLETION: Recording untracked batch output for %s with inventory posting disabled",
+                batch.label_code,
+            )
+            batch.batch_type = 'untracked'
+        elif batch.batch_type == 'ingredient' or output_type == 'ingredient':
             # Handle intermediate ingredient creation
             logger.info(f"🔧 BATCH COMPLETION: Creating intermediate ingredient for batch_type='{batch.batch_type}', output_type='{output_type}'")
             _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)

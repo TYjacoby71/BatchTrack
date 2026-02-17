@@ -31,28 +31,39 @@
             {% include 'components/production/container_management_card.html' %}
 
             <!-- Stock Check Card -->
-                    <div class="card mb-4" id="stockCheckCard">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-clipboard-check"></i> Stock Availability Check
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Check if you have enough ingredients in stock for this recipe at the current scale.</p>
+            {% if org_tracks_batch_outputs %}
+            <div class="card mb-4" id="stockCheckCard">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> Stock Availability Check
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Check if you have enough ingredients in stock for this recipe at the current scale.</p>
 
-                            <button type="button" class="btn btn-primary" id="stockCheckBtn">
-                                <i class="fas fa-search"></i> Check Stock Availability
-                            </button>
+                    <button type="button" class="btn btn-primary" id="stockCheckBtn">
+                        <i class="fas fa-search"></i> Check Stock Availability
+                    </button>
 
-                            <div id="stockCheckResults" class="mt-3">
-                                <!-- Results will be populated here -->
-                            </div>
-
-                            <div id="stockCheckStatus" class="mt-3">
-                                <!-- Status will be shown here -->
-                            </div>
-                        </div>
+                    <div id="stockCheckResults" class="mt-3">
+                        <!-- Results will be populated here -->
                     </div>
+
+                    <div id="stockCheckStatus" class="mt-3">
+                        <!-- Status will be shown here -->
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card mb-4 border-warning">
+                <div class="card-body">
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-lock me-1"></i>
+                        This tier runs in untracked mode. Stock validation and inventory posting are disabled for batch output.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}
@@ -119,6 +130,8 @@ window.recipeData = {
     name: "{{ display_recipe_name }}",
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
+    tracks_batch_outputs: {{ 'true' if org_tracks_batch_outputs else 'false' }},
+    default_batch_type: "{{ 'ingredient' if org_tracks_batch_outputs else 'untracked' }}",
     is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
     portioning: {
         is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},

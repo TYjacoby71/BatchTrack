@@ -124,6 +124,11 @@
           "description": "Complete production batches and add finished goods to inventory"
         },
         {
+          "name": "batches.track_inventory_outputs",
+          "display_name": "Track Batch Outputs In Inventory",
+          "description": "Allow product or intermediate output flows that create finished inventory from batches"
+        },
+        {
           "name": "batches.cancel",
           "display_name": "Cancel Batches",
           "description": "Cancel in-progress batches and handle ingredient returns"

@@ -239,3 +239,59 @@ def test_complete_batch_forces_ingredient_output_when_product_creation_locked(ap
 
         sku_count = ProductSKU.query.filter_by(organization_id=user.organization_id).count()
         assert sku_count == 0
+
+
+@pytest.mark.usefixtures('app_context')
+def test_complete_batch_untracked_mode_skips_output_inventory_posting(app, monkeypatch):
+    """When org tier disables output tracking, completion records details only."""
+    with app.test_request_context('/'):
+        user = User.query.first()
+        login_user(user)
+
+        recipe = _setup_recipe_for_user(user, 'Untracked Output Recipe', 'UNTRK')
+        batch = Batch(
+            recipe_id=recipe.id,
+            label_code='UNTRK-001',
+            batch_type='product',
+            status='in_progress',
+            organization_id=user.organization_id,
+            created_by=user.id
+        )
+        db.session.add(batch)
+        db.session.commit()
+
+        from app.blueprints.batches import finish_batch as finish_batch_module
+
+        def _tier_gate(permission_name, **kwargs):
+            if permission_name == 'batches.track_inventory_outputs':
+                return False
+            return True
+
+        monkeypatch.setattr(finish_batch_module, 'has_tier_permission', _tier_gate)
+        monkeypatch.setattr(
+            finish_batch_module,
+            '_create_intermediate_ingredient',
+            lambda *args, **kwargs: pytest.fail('Intermediate output should not be created in untracked mode'),
+        )
+        monkeypatch.setattr(
+            finish_batch_module,
+            '_create_product_output',
+            lambda *args, **kwargs: pytest.fail('Product output should not be created in untracked mode'),
+        )
+
+        success, message = BatchOperationsService.complete_batch(batch.id, {
+            'output_type': 'product',
+            'final_quantity': '9',
+            'output_unit': 'oz'
+        })
+
+        db.session.refresh(batch)
+        assert success is True, f"Complete batch failed unexpectedly: {message}"
+        assert batch.status == 'completed'
+        assert batch.batch_type == 'untracked'
+
+        intermediate_item = InventoryItem.query.filter_by(
+            name=f"{recipe.name} (Intermediate)",
+            organization_id=user.organization_id
+        ).first()
+        assert intermediate_item is None

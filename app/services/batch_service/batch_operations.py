@@ -42,7 +42,9 @@ class BatchOperationsService(BaseService):
             snap_recipe_id = int(plan_snapshot.get('recipe_id') or plan_snapshot.get('target_version_id'))
             snap_target_version_id = int(plan_snapshot.get('target_version_id') or snap_recipe_id)
             snap_scale = float(plan_snapshot.get('scale', 1.0))
-            snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
+            snap_batch_type = (plan_snapshot.get('batch_type') or 'ingredient').strip().lower()
+            if snap_batch_type not in {'ingredient', 'product', 'untracked'}:
+                snap_batch_type = 'ingredient'
             snap_notes = plan_snapshot.get('notes', '')
             forced_summary = plan_snapshot.get('forced_start_summary')
             if forced_summary:
@@ -163,32 +165,39 @@ class BatchOperationsService(BaseService):
                 except Exception:
                     pass
 
-            # Handle containers if required
-            container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+            all_errors = []
+            if snap_batch_type != 'untracked':
+                # Handle containers if required
+                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
-            skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
-            skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
+                skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+                skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
 
-            # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(
-                batch,
-                recipe,
-                snap_scale,
-                skip_ingredient_ids=skip_ingredient_ids,
-                defer_commit=True
-            )
+                # Process ingredient deductions
+                ingredient_errors = cls._process_batch_ingredients(
+                    batch,
+                    recipe,
+                    snap_scale,
+                    skip_ingredient_ids=skip_ingredient_ids,
+                    defer_commit=True
+                )
 
-            # Process consumable deductions
-            consumable_errors = cls._process_batch_consumables(
-                batch,
-                recipe,
-                snap_scale,
-                skip_consumable_ids=skip_consumable_ids,
-                defer_commit=True
-            )
+                # Process consumable deductions
+                consumable_errors = cls._process_batch_consumables(
+                    batch,
+                    recipe,
+                    snap_scale,
+                    skip_consumable_ids=skip_consumable_ids,
+                    defer_commit=True
+                )
 
-            # Combine all errors
-            all_errors = container_errors + ingredient_errors + consumable_errors
+                # Combine all errors
+                all_errors = container_errors + ingredient_errors + consumable_errors
+            else:
+                logger.info(
+                    "🔒 START BATCH: Creating untracked batch %s with inventory deductions disabled",
+                    label_code,
+                )
 
             if all_errors:
                 # Any deduction failure should abort the entire start
@@ -741,6 +750,13 @@ class BatchOperationsService(BaseService):
             # Enforce organization ownership for security
             if batch.organization_id != current_user.organization_id:
                 return False, "Permission denied", []
+
+            from app.utils.permissions import has_tier_permission
+            if batch.batch_type == 'untracked' or not has_tier_permission(
+                'batches.track_inventory_outputs',
+                default_if_missing_catalog=True,
+            ):
+                return False, "Extra inventory adjustments are disabled for untracked batches.", []
 
             extra_ingredients = extra_ingredients or []
             extra_containers = extra_containers or []
