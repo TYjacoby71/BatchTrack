@@ -130,6 +130,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
+- **SignupPlanCatalogService** → Builds signup-facing tier payloads with pricing displays, limits, entitlement sets, and single-tier presentation lists consumed by signup UI state (see `app/services/signup_plan_catalog_service.py`).
+- **TierPresentation Package** → Declarative tier-display engine that owns feature catalogs, evaluators, formatters, helper normalization, profile selectors, and orchestration for both comparison tables and single-tier summaries (see `app/services/tier_presentation/__init__.py`, `app/services/tier_presentation/catalog.py`, `app/services/tier_presentation/core.py`, `app/services/tier_presentation/evaluators.py`, `app/services/tier_presentation/formatters.py`, `app/services/tier_presentation/helpers.py`, `app/services/tier_presentation/profiles/__init__.py`, and `app/services/tier_presentation/profiles/public_pricing.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)
 - **LineageService.generate_lineage_id** → Lineage identifier with variation index + version (see `app/services/lineage_service.py`)
 - **LineageService.format_label_prefix** → Version-aware label prefix display helper (see `app/services/lineage_service.py`)

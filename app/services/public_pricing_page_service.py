@@ -1,12 +1,12 @@
 """Public pricing page context builder.
 
 Synopsis:
-Builds view-ready data for the public `/pricing` page so route handlers stay
-focused on request/response concerns instead of pricing transformation logic.
+Builds view-ready data for the public `/pricing` page while delegating feature
+presentation rules to `tier_presentation`.
 
 Glossary:
 - Tier card: Display payload for one of Hobbyist/Enthusiast/Fanatic columns.
-- Comparison row: A feature label with boolean availability by tier.
+- Comparison row: A feature label with availability/limit value by tier.
 """
 
 from __future__ import annotations
@@ -17,22 +17,19 @@ from flask import url_for
 
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_checkout_service import SignupCheckoutService
+from .tier_presentation import TierPresentationCore
+from .tier_presentation.helpers import coerce_int, normalize_feature_label, normalize_token_set
 
 
+# --- Public pricing page service ---
+# Purpose: Build pricing-page tier cards and comparison-table payloads for templates.
+# Inputs: Signup checkout request context and tier/lifetime catalog payloads.
+# Outputs: Render-ready dictionary with pricing tiers, grouped comparison sections, and capacity flags.
 class PublicPricingPageService:
     """Compose public pricing page data from signup catalog services."""
 
     _ORDERED_TIER_KEYS: tuple[str, ...] = ("hobbyist", "enthusiast", "fanatic")
-    _FALLBACK_COMPARISON_LABELS: tuple[str, ...] = (
-        "Inventory Tracking",
-        "Recipe Management",
-        "Batch Production Workflow",
-        "Real-time Stock Alerts",
-        "FIFO Lot Tracking",
-        "Organization Collaboration",
-        "Advanced Analytics",
-        "Priority Support",
-    )
+    _tier_presentation = TierPresentationCore()
 
     @classmethod
     def build_context(cls, *, request) -> dict[str, Any]:
@@ -53,13 +50,12 @@ class PublicPricingPageService:
             )
             pricing_tiers.append(tier_payload)
 
-        comparison_labels = cls._build_comparison_labels(pricing_tiers)
-        comparison_rows = cls._build_comparison_rows(comparison_labels, pricing_tiers)
+        comparison_sections = cls._tier_presentation.build_comparison_sections(pricing_tiers)
         lifetime_has_capacity = any(tier.get("lifetime_has_remaining") for tier in pricing_tiers)
 
         return {
             "pricing_tiers": pricing_tiers,
-            "comparison_rows": comparison_rows,
+            "comparison_sections": comparison_sections,
             "lifetime_has_capacity": lifetime_has_capacity,
         }
 
@@ -84,28 +80,43 @@ class PublicPricingPageService:
                     break
 
         raw_feature_names = (tier_data or {}).get("all_features") or []
+        permission_set = normalize_token_set(raw_feature_names)
+        addon_key_set = normalize_token_set((tier_data or {}).get("all_addon_keys"))
+        addon_function_set = normalize_token_set((tier_data or {}).get("all_addon_function_keys"))
+        addon_permission_set = normalize_token_set((tier_data or {}).get("addon_permission_names"))
+
         all_feature_labels: list[str] = []
         all_feature_set: set[str] = set()
         for raw_feature_name in raw_feature_names:
             feature_label = LifetimePricingService.format_feature_label(raw_feature_name)
-            normalized_feature = cls._normalize_feature_label(feature_label)
+            normalized_feature = normalize_feature_label(feature_label)
             if not normalized_feature or normalized_feature in all_feature_set:
                 continue
             all_feature_set.add(normalized_feature)
             all_feature_labels.append(feature_label)
 
-        highlight_features: list[str] = []
-        highlight_seen: set[str] = set()
-        for feature in (tier_data or {}).get("features", []):
-            feature_label = cls._display_feature_label(feature)
-            normalized_feature = cls._normalize_feature_label(feature_label)
-            if not normalized_feature or normalized_feature in highlight_seen:
-                continue
-            highlight_seen.add(normalized_feature)
-            highlight_features.append(feature_label)
+        limit_map = {
+            "user_limit": coerce_int((tier_data or {}).get("user_limit")),
+            "max_recipes": coerce_int((tier_data or {}).get("max_recipes")),
+            "max_batches": coerce_int((tier_data or {}).get("max_batches")),
+            "max_products": coerce_int((tier_data or {}).get("max_products")),
+            "max_monthly_batches": coerce_int((tier_data or {}).get("max_monthly_batches")),
+            "max_batchbot_requests": coerce_int((tier_data or {}).get("max_batchbot_requests")),
+        }
+        retention_policy = str((tier_data or {}).get("retention_policy") or "").strip().lower()
+        retention_label = str((tier_data or {}).get("retention_label") or "").strip()
+        has_retention_entitlement = bool(
+            retention_policy == "subscribed" or "retention" in addon_function_set
+        )
 
-        if not highlight_features:
-            highlight_features = all_feature_labels[:6]
+        highlight_features = cls._tier_presentation.resolve_tier_highlights(
+            tier_data=tier_data,
+            all_feature_labels=all_feature_labels,
+            permission_set=permission_set,
+            addon_key_set=addon_key_set,
+            limit_map=limit_map,
+            has_retention_entitlement=has_retention_entitlement,
+        )
 
         has_yearly_price = bool((tier_data or {}).get("yearly_price_display"))
         has_lifetime_remaining = bool(offer.get("has_remaining") and tier_id)
@@ -155,6 +166,14 @@ class PublicPricingPageService:
             "feature_highlights": highlight_features,
             "all_feature_labels": all_feature_labels,
             "all_feature_set": all_feature_set,
+            "permission_set": permission_set,
+            "addon_key_set": addon_key_set,
+            "addon_function_set": addon_function_set,
+            "addon_permission_set": addon_permission_set,
+            "limits": limit_map,
+            "retention_policy": retention_policy,
+            "retention_label": retention_label,
+            "has_retention_entitlement": has_retention_entitlement,
             "feature_total": int((tier_data or {}).get("feature_total") or len(all_feature_labels)),
             "lifetime_offer": offer,
             "lifetime_has_remaining": has_lifetime_remaining,
@@ -162,56 +181,3 @@ class PublicPricingPageService:
             "signup_yearly_url": yearly_url,
             "signup_lifetime_url": lifetime_url,
         }
-
-    @classmethod
-    def _build_comparison_labels(cls, pricing_tiers: list[dict[str, Any]]) -> list[str]:
-        """Return ordered unique feature labels for comparison table rows."""
-        comparison_labels: list[str] = []
-        comparison_seen: set[str] = set()
-
-        for tier in pricing_tiers:
-            for feature_label in tier.get("feature_highlights", []):
-                normalized_label = cls._normalize_feature_label(feature_label)
-                if not normalized_label or normalized_label in comparison_seen:
-                    continue
-                comparison_seen.add(normalized_label)
-                comparison_labels.append(cls._display_feature_label(feature_label))
-
-            for feature_label in tier.get("all_feature_labels", []):
-                normalized_label = cls._normalize_feature_label(feature_label)
-                if not normalized_label or normalized_label in comparison_seen:
-                    continue
-                comparison_seen.add(normalized_label)
-                comparison_labels.append(cls._display_feature_label(feature_label))
-
-        return comparison_labels or list(cls._FALLBACK_COMPARISON_LABELS)
-
-    @classmethod
-    def _build_comparison_rows(
-        cls,
-        comparison_labels: list[str],
-        pricing_tiers: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Return feature availability rows for the pricing comparison table."""
-        comparison_rows: list[dict[str, Any]] = []
-        for feature_label in comparison_labels[:18]:
-            normalized_label = cls._normalize_feature_label(feature_label)
-            row: dict[str, Any] = {"label": feature_label}
-            for tier in pricing_tiers:
-                row[tier["key"]] = normalized_label in tier.get("all_feature_set", set())
-            comparison_rows.append(row)
-        return comparison_rows
-
-    @staticmethod
-    def _normalize_feature_label(value: str | None) -> str:
-        """Normalize feature labels for consistent set membership checks."""
-        cleaned = " ".join(str(value or "").replace(".", " ").replace("_", " ").split())
-        return cleaned.strip().lower()
-
-    @classmethod
-    def _display_feature_label(cls, value: str | None) -> str:
-        """Convert feature labels into title-cased display copy."""
-        normalized = cls._normalize_feature_label(value)
-        if not normalized:
-            return ""
-        return " ".join(token.capitalize() for token in normalized.split())
