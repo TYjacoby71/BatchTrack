@@ -9,7 +9,7 @@ Glossary:
 """
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, url_for
+from flask import flash, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload, selectinload
@@ -28,6 +28,8 @@ from ..lineage_utils import build_lineage_path, build_version_branches, serializ
 # =========================================================
 # --- Recipe lineage ---
 # Purpose: Render the lineage tree for a recipe.
+# Inputs: Recipe identifier from route path.
+# Outputs: Rendered lineage page response or redirect on error.
 @recipes_bp.route('/<int:recipe_id>/lineage')
 @login_required
 @require_permission('recipes.view')
@@ -54,10 +56,43 @@ def recipe_lineage(recipe_id):
     )
 
     nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    master_parent_overrides: dict[int, int] = {}
+    variation_parent_overrides: dict[int, int] = {}
+
+    # Display lineage as version chains so variation versions step down correctly.
+    master_versions = sorted(
+        [
+            rel for rel in relatives
+            if rel.is_master and rel.test_sequence is None
+        ],
+        key=lambda row: (int(getattr(row, "version_number", 0) or 0), int(row.id)),
+    )
+    for previous, current in zip(master_versions, master_versions[1:]):
+        master_parent_overrides[current.id] = previous.id
+
+    variation_versions_by_name: dict[str, list[Recipe]] = {}
+    for rel in relatives:
+        if rel.is_master or rel.test_sequence is not None:
+            continue
+        variation_key = (rel.variation_name or rel.name or "").strip().lower()
+        if not variation_key:
+            continue
+        variation_versions_by_name.setdefault(variation_key, []).append(rel)
+    for versions in variation_versions_by_name.values():
+        versions.sort(key=lambda row: (int(getattr(row, "version_number", 0) or 0), int(row.id)))
+        for previous, current in zip(versions, versions[1:]):
+            variation_parent_overrides[current.id] = previous.id
+
     for rel in relatives:
         parent_id = None
         edge_type = None
-        if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
+        if rel.test_sequence is None and rel.is_master and rel.id in master_parent_overrides:
+            parent_id = master_parent_overrides[rel.id]
+            edge_type = 'master'
+        elif rel.test_sequence is None and not rel.is_master and rel.id in variation_parent_overrides:
+            parent_id = variation_parent_overrides[rel.id]
+            edge_type = 'variation'
+        elif rel.parent_recipe_id and rel.parent_recipe_id in nodes:
             parent_id = rel.parent_recipe_id
             edge_type = 'test' if rel.test_sequence else 'variation'
         elif rel.cloned_from_id and rel.cloned_from_id in nodes:
@@ -101,14 +136,18 @@ def recipe_lineage(recipe_id):
             .order_by(Recipe.version_number.desc())
             .first()
         )
-    events = (
+    events_page = request.args.get("events_page", 1, type=int) or 1
+    if events_page < 1:
+        events_page = 1
+    events_pagination = (
         RecipeLineage.query.options(
             selectinload(RecipeLineage.source_recipe)
         )
         .filter_by(recipe_id=recipe.id)
-        .order_by(RecipeLineage.created_at.asc())
-        .all()
+        .order_by(RecipeLineage.created_at.desc())
+        .paginate(page=events_page, per_page=10, error_out=False)
     )
+    events = events_pagination.items
 
     origin_source_org = None
     if recipe.org_origin_purchased and recipe.org_origin_source_org:
@@ -132,6 +171,7 @@ def recipe_lineage(recipe_id):
         lineage_tree=lineage_tree,
         lineage_path=lineage_path,
         lineage_events=events,
+        lineage_events_pagination=events_pagination,
         show_origin_marketplace=show_origin_marketplace,
         master_branches=master_branches,
         variation_branches=variation_branches,

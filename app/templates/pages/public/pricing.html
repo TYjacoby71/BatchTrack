@@ -200,6 +200,15 @@
     background: var(--theme-ext-color-333b2a35fa);
   }
 
+  .comparison-section-row th {
+    background: var(--theme-ext-color-8f053ca9f2);
+    color: var(--theme-ext-color-25aa5ed6a9);
+    font-size: var(--theme-ext-size-910b7a07ff);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-top: 1px solid rgba(189, 201, 232, 0.85);
+  }
+
   .comparison-table td,
   .comparison-table th {
     border-color: var(--theme-ext-color-671e1e4fe1);
@@ -225,6 +234,13 @@
   .comparison-icon-no {
     background: var(--theme-ext-color-20ab271541);
     color: var(--theme-ext-color-ac99c35532);
+  }
+
+  .comparison-cell-text {
+    color: var(--theme-ext-color-b6d5805367);
+    font-size: var(--theme-ext-size-e87070bfde);
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .pricing-bottom-cta {
@@ -361,8 +377,8 @@
   <section id="plan-comparison" class="mb-4 mb-lg-5">
     <div class="section-heading">
       <div>
-        <h2>Feature comparison</h2>
-        <p>Column-style checklist across Hobbyist, Enthusiast, and Fanatic.</p>
+        <h2>Feature and limits comparison</h2>
+        <p>Customer-facing capability map across Hobbyist, Enthusiast, and Fanatic.</p>
       </div>
     </div>
     <div class="comparison-shell table-responsive">
@@ -376,19 +392,29 @@
           </tr>
         </thead>
         <tbody>
-          {% for row in comparison_rows %}
+          {% for section in comparison_sections %}
+          <tr class="comparison-section-row">
+            <th colspan="{{ 1 + (pricing_tiers|length) }}">{{ section.title }}</th>
+          </tr>
+          {% for row in section.rows %}
           <tr>
             <th scope="row">{{ row.label }}</th>
             {% for tier in pricing_tiers %}
+            {% set cell = row.cells[tier.key] %}
             <td class="text-center">
-              {% if row[tier.key] %}
-              <span class="comparison-icon-yes"><i class="fas fa-check"></i></span>
+              {% if cell.type == "boolean" %}
+              {% if cell.value %}
+              <span class="comparison-icon-yes" title="{{ cell.display }}"><i class="fas fa-check"></i></span>
               {% else %}
-              <span class="comparison-icon-no"><i class="fas fa-minus"></i></span>
+              <span class="comparison-icon-no" title="{{ cell.display }}"><i class="fas fa-minus"></i></span>
+              {% endif %}
+              {% else %}
+              <span class="comparison-cell-text">{{ cell.display }}</span>
               {% endif %}
             </td>
             {% endfor %}
           </tr>
+          {% endfor %}
           {% endfor %}
         </tbody>
       </table>
