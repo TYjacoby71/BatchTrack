@@ -17,13 +17,13 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
 
     user_id = db.session.merge(test_user).id
 
-    track_outputs_perm = Permission.query.filter_by(name='batches.track_inventory_outputs').first()
-    if not track_outputs_perm:
-        track_outputs_perm = Permission(
-            name='batches.track_inventory_outputs',
-            description='Allow tracked batch outputs'
+    track_quantity_perm = Permission.query.filter_by(name='inventory.track_quantities').first()
+    if not track_quantity_perm:
+        track_quantity_perm = Permission(
+            name='inventory.track_quantities',
+            description='Allow tracked inventory quantity deductions'
         )
-        db_session.add(track_outputs_perm)
+        db_session.add(track_quantity_perm)
         db_session.flush()
 
     tier = SubscriptionTier(
@@ -33,7 +33,7 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     )
     db_session.add(tier)
     db_session.flush()
-    tier.permissions.append(track_outputs_perm)
+    tier.permissions.append(track_quantity_perm)
     test_org.subscription_tier_id = tier.id
     db_session.flush()
 

@@ -2,6 +2,7 @@
 - Split inventory quantity-tracking entitlement from batch output tracking so deduction behavior is controlled by an inventory-scoped permission.
 - Added a new permission key, `inventory.track_quantities`, and assigned it to paid tiers in the tier seed JSON.
 - Updated pricing/catalog presentation rows to show quantity tracking and batch output posting as separate capabilities.
+- Removed legacy fallback behavior so quantity tracking now depends strictly on `inventory.track_quantities`.
 
 ## Problems Solved
 - Inventory deduction quantity behavior was coupled to `batches.track_inventory_outputs`, which mixes two distinct concerns.
@@ -15,7 +16,7 @@
 - Added `inventory.track_quantities` to Solo/Team/Enterprise in `app/seeders/subscription_tiers.json`.
 - Added new `app/services/inventory_tracking_policy.py` with canonical helper:
   - `org_allows_inventory_quantity_tracking(...)`
-  - checks `inventory.track_quantities` first, with legacy fallback to `batches.track_inventory_outputs`.
+  - checks only `inventory.track_quantities` (no legacy batch-permission fallback).
 - Switched inventory quantity-tracking checks to the inventory policy helper in:
   - `app/services/inventory_adjustment/_creation_logic.py`
   - `app/services/inventory_adjustment/_edit_logic.py`
@@ -27,6 +28,8 @@
 - Split tier presentation rows in `app/services/tier_presentation/catalog.py`:
   - inventory quantity tracking from deductions
   - batch output posting to inventory
+- Updated `app/seeders/subscription_seeder.py` so maintenance tier seed commands also include
+  `inventory.track_quantities` on Solo tier definitions.
 
 ## Files Modified
 - `app/services/inventory_tracking_policy.py`

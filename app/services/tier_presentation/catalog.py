@@ -29,10 +29,7 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
             {
                 "label": "Inventory quantity tracking from deductions",
                 "kind": "boolean",
-                "permissions_any": (
-                    "inventory.track_quantities",
-                    "batches.track_inventory_outputs",
-                ),
+                "permissions_any": ("inventory.track_quantities",),
             },
             {
                 "label": "FIFO lot tracking and traceability",
@@ -213,12 +210,7 @@ MAX_MARKETING_HIGHLIGHTS = 8
 MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
     {
         "label": "Inventory tracking with FIFO lot history",
-        "permissions_any": (
-            "inventory.view",
-            "inventory.adjust",
-            "inventory.track_quantities",
-            "batches.track_inventory_outputs",
-        ),
+        "permissions_any": ("inventory.view", "inventory.adjust", "inventory.track_quantities"),
     },
     {
         "label": "Recipe management, scaling, and production planning",

@@ -246,6 +246,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **flask update-addons** → Seed add-ons + backfill entitlements
 - **flask update-subscription-tiers** → Sync tier limits
 - **Subscription Tier Seed JSON** → Source-of-truth tier permission/limit metadata consumed by tier update workflows (see `app/seeders/subscription_tiers.json`)
+- **SubscriptionSeeder** → Legacy/maintenance tier seeding routines used by CLI update commands (`create_*_tier`, `seed_subscription_tiers`, migrations) (see `app/seeders/subscription_seeder.py`)
 - **Config Schema** → Canonical env key definitions (see `app/config_schema.py`)
 - **Config Schema Parts** → Domain-specific schema modules (see `app/config_schema_parts/*.py`)
 - **Env Example Generator** → Generates env templates (see `scripts/generate_env_example.py`)

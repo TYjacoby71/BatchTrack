@@ -16,13 +16,13 @@ def test_batch_deduction_does_not_create_initial_stock(app):
         db.session.add(org)
         db.session.flush()
 
-        track_outputs_perm = Permission.query.filter_by(name='batches.track_inventory_outputs').first()
-        if not track_outputs_perm:
-            track_outputs_perm = Permission(
-                name='batches.track_inventory_outputs',
-                description='Allow tracked batch outputs'
+        track_quantity_perm = Permission.query.filter_by(name='inventory.track_quantities').first()
+        if not track_quantity_perm:
+            track_quantity_perm = Permission(
+                name='inventory.track_quantities',
+                description='Allow tracked inventory quantity deductions'
             )
-            db.session.add(track_outputs_perm)
+            db.session.add(track_quantity_perm)
             db.session.flush()
 
         tier = SubscriptionTier(
@@ -32,7 +32,7 @@ def test_batch_deduction_does_not_create_initial_stock(app):
         )
         db.session.add(tier)
         db.session.flush()
-        tier.permissions.append(track_outputs_perm)
+        tier.permissions.append(track_quantity_perm)
         org.subscription_tier_id = tier.id
 
         user = User(

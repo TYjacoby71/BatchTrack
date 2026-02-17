@@ -20,17 +20,8 @@ from app.utils.permissions import has_tier_permission
 # Outputs: True when quantity tracking is enabled for the effective organization tier.
 def org_allows_inventory_quantity_tracking(*, organization=None) -> bool:
     """Return True when the org tier allows tracked quantity deductions."""
-    if has_tier_permission(
-        "inventory.track_quantities",
-        organization=organization,
-        default_if_missing_catalog=False,
-    ):
-        return True
-
-    # Backward-compatibility bridge for existing tiers until all environments
-    # add inventory.track_quantities explicitly.
     return has_tier_permission(
-        "batches.track_inventory_outputs",
+        "inventory.track_quantities",
         organization=organization,
         default_if_missing_catalog=False,
     )
