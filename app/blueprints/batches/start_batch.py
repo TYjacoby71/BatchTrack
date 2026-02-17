@@ -24,6 +24,8 @@ start_batch_bp = Blueprint('start_batch', __name__)
 # =========================================================
 # --- Start batch ---
 # Purpose: Build a plan snapshot and create a new batch.
+# Inputs: JSON payload with recipe, scale, batch type, notes, and containers.
+# Outputs: JSON response containing started batch id or error details.
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
 @require_permission('batches.create')

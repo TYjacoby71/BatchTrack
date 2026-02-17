@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Infinite Inventory Guardrail + Route Documentation Compliance](2026-02-17-infinite-inventory-guardrail-route-doc-compliance.md)**
+  - Added required functional-unit header metadata on touched batch and production-planning route modules.
+  - Added missing APP_DICTIONARY coverage entries for touched route files.
+  - Restored latest-commit Documentation Guard compliance for changelog + dictionary checks.
 - **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
   - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
   - Hardened variation naming and promotion naming behavior for recipe-group consistency.

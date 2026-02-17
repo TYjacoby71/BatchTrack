@@ -67,6 +67,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/recipes/<recipe_id>/lineage** → Lineage tree and history view (see `app/blueprints/recipes/views/lineage_routes.py`)
 - **/recipes/<recipe_id>/variation** → Create a variation from a master (see `app/blueprints/recipes/views/create_routes.py`)
 - **/recipes/<recipe_id>/test** → Create a test version for a master/variation (see `app/blueprints/recipes/views/create_routes.py`)
+- **/batches/api/start-batch** → Canonical API endpoint that performs server-side stock validation, supports force-start override notes, and starts batches from a Plan Snapshot (see `app/blueprints/batches/routes.py`)
+- **/batches/start/start_batch** → Start-batch compatibility endpoint that builds a plan snapshot and delegates creation to `BatchOperationsService` (see `app/blueprints/batches/start_batch.py`)
+- **/batches/finish-batch/<batch_id>/complete and /batches/finish-batch/<batch_id>/fail** → Batch completion/failure routes that delegate to service-authoritative completion logic and canonical inventory adjustment posting (see `app/blueprints/batches/finish_batch.py`)
+- **Production Planning Routes** → Planning, container strategy, and stock-check endpoints used by plan-production UI flows (see `app/blueprints/production_planning/routes.py`)
 - **Lineage Tree Serialization Helpers** → Utilities that format lineage node labels, nested tree payloads, and root-to-node paths for lineage UI rendering (see `app/blueprints/recipes/lineage_utils.py`)
 - **/developer/addons/** → Add-on catalog management
 - **/billing/addons/start/<addon_key>** → Add-on checkout

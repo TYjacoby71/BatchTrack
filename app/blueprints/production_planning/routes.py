@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 # =========================================================
 # --- Plan production ---
 # Purpose: Render and submit the production planning flow.
+# Inputs: recipe_id path parameter and optional planning payload (POST).
+# Outputs: Rendered planning page (GET) or JSON planning result (POST).
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -87,6 +89,8 @@ def plan_production_route(recipe_id):
 
 # --- Auto-fill containers ---
 # Purpose: Suggest container options for a plan request.
+# Inputs: recipe_id path parameter and JSON scale/density/fill inputs.
+# Outputs: JSON container strategy payload or structured error response.
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -137,6 +141,10 @@ def auto_fill_containers(recipe_id):
             'error': str(e)
         }), 500
 
+# --- Debug recipe containers ---
+# Purpose: Inspect allowed containers and available org container inventory.
+# Inputs: recipe_id path parameter for recipe and org-scoped container lookup.
+# Outputs: JSON diagnostics payload for recipe-container configuration.
 @production_planning_bp.route('/recipe/<int:recipe_id>/debug/containers')
 @login_required
 @require_permission('recipes.plan_production')
@@ -180,6 +188,10 @@ def debug_recipe_containers(recipe_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# --- Plan container allocation ---
+# Purpose: Return container analysis output for explicit yield/scale inputs.
+# Inputs: recipe_id path parameter and JSON payload with yield/container prefs.
+# Outputs: JSON container planning result or drawer/error payload.
 @production_planning_bp.route('/recipe/<int:recipe_id>/plan/container', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -222,6 +234,10 @@ def plan_container_route(recipe_id):
         logger.error(f"Error in container planning API: {e}")
         return jsonify({"error": str(e)}), 500
 
+# --- Check recipe stock ---
+# Purpose: Run stock-check service and normalize payload for planning UI.
+# Inputs: JSON payload with recipe_id and optional scale.
+# Outputs: JSON stock status payload including normalized item statuses.
 @production_planning_bp.route('/stock/check', methods=['POST'])
 @login_required
 @require_permission('inventory.view')
