@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission
 from ...models import db, Batch, Product, ProductVariant, InventoryItem
 from ...models.inventory_lot import InventoryLot
 from ...models.product import ProductSKU
@@ -116,8 +116,20 @@ def _complete_batch_internal(batch_id, form_data):
         if not batch:
             return False, 'Batch not found or already completed'
 
+        requested_output_type = (form_data.get('output_type') or '').strip()
+        output_type = requested_output_type or (batch.batch_type or 'ingredient')
+        can_create_product_output = has_permission(current_user, 'products.create')
+
+        # Enforce plan-based product lock server-side regardless of client payload.
+        if output_type == 'product' and not can_create_product_output:
+            logger.info(
+                "🔒 BATCH COMPLETION: User %s lacks products.create; forcing ingredient output for batch %s",
+                getattr(current_user, 'id', None),
+                batch_id,
+            )
+            output_type = 'ingredient'
+
         # Pre-validate FIFO sync for any product SKUs that will be created
-        output_type = form_data.get('output_type')
         if output_type == 'product':
             product_id = form_data.get('product_id')
             variant_id = form_data.get('variant_id')
@@ -144,7 +156,6 @@ def _complete_batch_internal(batch_id, form_data):
                         return False, f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}'
 
         # Get form data
-        output_type = form_data.get('output_type')
         final_quantity = float(form_data.get('final_quantity', 0))
         output_unit = form_data.get('output_unit')
         final_portions = None

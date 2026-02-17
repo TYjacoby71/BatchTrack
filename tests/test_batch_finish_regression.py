@@ -2,7 +2,7 @@ import pytest
 from flask_login import login_user
 
 from app.extensions import db
-from app.models import Batch, Product, ProductCategory, ProductVariant, ProductSKU, Recipe
+from app.models import Batch, Product, ProductCategory, ProductVariant, ProductSKU, Recipe, InventoryItem
 from app.models.models import User
 from app.services.batch_service.batch_operations import BatchOperationsService
 from app.services.product_service import ProductService
@@ -191,3 +191,51 @@ def test_complete_batch_creates_separate_bulk_sku_for_incompatible_unit(app):
         units = {sku.unit for sku in refreshed_bulk_skus}
         assert 'oz' in units
         assert 'floz' in units
+
+
+@pytest.mark.usefixtures('app_context')
+def test_complete_batch_forces_ingredient_output_when_product_creation_locked(app, monkeypatch):
+    """Product output payloads should complete as ingredients when products.create is unavailable."""
+    with app.test_request_context('/'):
+        user = User.query.first()
+        login_user(user)
+
+        recipe = _setup_recipe_for_user(user, 'Permission Locked Product Batch', 'LOCKED')
+        batch = Batch(
+            recipe_id=recipe.id,
+            label_code='LOCKED-001',
+            batch_type='product',
+            status='in_progress',
+            organization_id=user.organization_id,
+            created_by=user.id
+        )
+        db.session.add(batch)
+        db.session.commit()
+
+        from app.blueprints.batches import finish_batch as finish_batch_module
+
+        def _permission_gate(_user, permission_name):
+            if permission_name == 'products.create':
+                return False
+            return True
+
+        monkeypatch.setattr(finish_batch_module, 'has_permission', _permission_gate)
+
+        success, message = BatchOperationsService.complete_batch(batch.id, {
+            'output_type': 'product',
+            'final_quantity': '6',
+            'output_unit': 'oz'
+        })
+
+        db.session.refresh(batch)
+        assert success is True, f"Complete batch failed unexpectedly: {message}"
+        assert batch.status == 'completed'
+
+        intermediate_item = InventoryItem.query.filter_by(
+            name=f"{recipe.name} (Intermediate)",
+            organization_id=user.organization_id
+        ).first()
+        assert intermediate_item is not None
+
+        sku_count = ProductSKU.query.filter_by(organization_id=user.organization_id).count()
+        assert sku_count == 0

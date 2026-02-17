@@ -12,7 +12,7 @@ from flask import Blueprint, request, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission
 from app.extensions import db
 from app.models import Recipe
 from app.services.production_planning.service import PlanProductionService
@@ -34,7 +34,14 @@ def start_batch():
         data = request.get_json()
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
+        requested_batch_type = data.get('batch_type', 'ingredient')
+        batch_type = requested_batch_type
+        if batch_type == 'product' and not has_permission(current_user, 'products.create'):
+            current_app.logger.info(
+                "🔒 START_BATCH endpoint: User %s lacks products.create; forcing ingredient batch_type",
+                getattr(current_user, 'id', None),
+            )
+            batch_type = 'ingredient'
         notes = data.get('notes', '')
         containers_data = data.get('containers', [])
         requires_containers = data.get('requires_containers', False)

@@ -10,7 +10,7 @@ Glossary:
 
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from ...utils.permissions import require_permission
+from ...utils.permissions import require_permission, has_permission
 from ...models import db, Batch, Recipe, InventoryItem, BatchTimer, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer
 from datetime import datetime, timedelta
 from ...utils import get_setting
@@ -392,7 +392,14 @@ def api_start_batch():
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
         scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
+        requested_batch_type = data.get('batch_type', 'ingredient')
+        batch_type = requested_batch_type
+        if batch_type == 'product' and not has_permission(current_user, 'products.create'):
+            logger.info(
+                "🔒 START BATCH: User %s lacks products.create; forcing ingredient batch_type",
+                getattr(current_user, 'id', None),
+            )
+            batch_type = 'ingredient'
         notes = data.get('notes', '')
         containers_data = data.get('containers', []) or []
         force_start = bool(data.get('force_start'))
