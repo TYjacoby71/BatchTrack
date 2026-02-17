@@ -16,6 +16,8 @@ from app.models import Recipe
 
 # --- Display node label ---
 # Purpose: Build a compact lineage label with version details.
+# Inputs: Lineage node Recipe model.
+# Outputs: Display-ready node label string.
 def _lineage_display_name(node_recipe: Recipe) -> str:
     if getattr(node_recipe, "test_sequence", None) is not None:
         return node_recipe.name or "Untitled Recipe"
@@ -35,6 +37,8 @@ def _lineage_display_name(node_recipe: Recipe) -> str:
 
 # --- Serialize lineage tree ---
 # Purpose: Build a lineage tree payload for UI rendering.
+# Inputs: Node recipe and pre-built lineage adjacency map.
+# Outputs: Nested dictionary payload consumed by lineage UI.
 def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
     node_payload = {
         'id': node_recipe.id,
@@ -66,6 +70,8 @@ def serialize_lineage_tree(node_recipe: Recipe, nodes: Dict[int, dict]) -> dict:
 
 # --- Build lineage path ---
 # Purpose: Build a path list from root to selected node.
+# Inputs: Target recipe id, lineage node map, and optional root id.
+# Outputs: Ordered list of recipe ids from root to target.
 def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional[int]) -> List[int]:
     path: List[int] = []
     seen: set[int] = set()
@@ -107,6 +113,8 @@ def build_lineage_path(target_id: int, nodes: Dict[int, dict], root_id: Optional
 
 # --- Build version branches ---
 # Purpose: Group masters/variations with their tests for UI.
+# Inputs: Recipe collection for one lineage group.
+# Outputs: Tuple of master branch data and variation branch data.
 def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict]]:
     masters = [
         r for r in recipes

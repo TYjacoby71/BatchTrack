@@ -655,9 +655,7 @@ def view_inventory(id):
                          breadcrumb_items=[
                              {'label': 'Inventory', 'url': url_for('inventory.list_inventory')},
                              {'label': item.name}
-                         ],
-                         breadcrumb_back_url=url_for('inventory.list_inventory'),
-                         breadcrumb_back_label='Back to inventory')
+                         ])
 
 # --- Inventory add ---
 # Purpose: Create a new inventory item from form data.

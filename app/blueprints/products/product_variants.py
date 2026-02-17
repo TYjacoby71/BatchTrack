@@ -246,9 +246,7 @@ def view_variant(product_id, variant_name):
                              {'label': 'Product Dashboard', 'url': url_for('products.list_products')},
                              {'label': product.name + ' Overview', 'url': url_for('products.view_product', product_id=product.id)},
                              {'label': variant.name + ' Sizes'}
-                         ],
-                         breadcrumb_back_url=url_for('products.view_product', product_id=product.id),
-                         breadcrumb_back_label='Back to product')
+                         ])
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/skus', methods=['POST'])
 @login_required

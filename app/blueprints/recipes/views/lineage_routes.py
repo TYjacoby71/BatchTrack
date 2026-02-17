@@ -28,6 +28,8 @@ from ..lineage_utils import build_lineage_path, build_version_branches, serializ
 # =========================================================
 # --- Recipe lineage ---
 # Purpose: Render the lineage tree for a recipe.
+# Inputs: Recipe identifier from route path.
+# Outputs: Rendered lineage page response or redirect on error.
 @recipes_bp.route('/<int:recipe_id>/lineage')
 @login_required
 @require_permission('recipes.view')

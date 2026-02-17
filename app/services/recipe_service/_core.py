@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 # --- Derive variation name ---
 # Purpose: Derive a variation display name.
+# Inputs: Candidate recipe name and optional parent recipe name.
+# Outputs: Derived variation name or None when unavailable.
 def _derive_variation_name(name: str | None, parent_name: str | None) -> str | None:
     if not name:
         return None
@@ -59,6 +61,8 @@ def _derive_variation_name(name: str | None, parent_name: str | None) -> str | N
 
 # --- Next version number ---
 # Purpose: Compute next version number for a branch.
+# Inputs: Recipe-group id plus branch scope flags.
+# Outputs: Next integer version number for the branch.
 def _next_version_number(
     recipe_group_id: int | None,
     *,
@@ -81,6 +85,8 @@ def _next_version_number(
 
 # --- Next test sequence ---
 # Purpose: Compute next test sequence for a branch.
+# Inputs: Recipe-group id plus branch scope flags.
+# Outputs: Next integer test sequence for the branch.
 def _next_test_sequence(
     recipe_group_id: int | None,
     *,
@@ -103,6 +109,8 @@ def _next_test_sequence(
 
 # --- Ensure recipe group ---
 # Purpose: Ensure recipe group exists for a recipe.
+# Inputs: Organization id, group name, and optional group prefix.
+# Outputs: Persisted RecipeGroup model for lineage grouping.
 def _ensure_recipe_group(
     *,
     recipe_org_id: int,
@@ -122,6 +130,8 @@ def _ensure_recipe_group(
 
 # --- Create recipe ---
 # Purpose: Create a recipe with group/version metadata.
+# Inputs: Recipe payload fields, lineage metadata, and publish flags.
+# Outputs: Tuple of success flag with Recipe model or error payload.
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
@@ -509,6 +519,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
 # --- Update recipe ---
 # Purpose: Update a recipe with lock/version safeguards and audit notes.
+# Inputs: Target recipe id and partial update payload fields.
+# Outputs: Tuple of success flag with updated Recipe model or error.
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
@@ -858,6 +870,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
 # --- Delete recipe ---
 # Purpose: Delete a recipe and related rows.
+# Inputs: Target recipe id.
+# Outputs: Tuple of success flag and status message.
 def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
     """
     Delete a recipe and its ingredients.
@@ -916,6 +930,8 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
 
 # --- Fetch recipe details ---
 # Purpose: Fetch a recipe with access checks.
+# Inputs: Recipe id and optional cross-org import flag.
+# Outputs: Recipe model when accessible, otherwise None or error.
 def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Optional[Recipe]:
     """
     Get detailed recipe information with all relationships loaded.
@@ -974,6 +990,8 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
 
 # --- Duplicate recipe ---
 # Purpose: Duplicate a recipe for legacy clone flow.
+# Inputs: Source recipe id and optional cross-org target context.
+# Outputs: Tuple of success flag with cloned Recipe model or error.
 def duplicate_recipe(
     recipe_id: int,
     *,

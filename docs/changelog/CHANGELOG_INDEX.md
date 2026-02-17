@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
+  - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
+  - Hardened variation naming and promotion naming behavior for recipe-group consistency.
+  - Added documentation schema/dictionary updates required for Documentation Guard compliance.
 - **[2026-02-16: Recipe Variation Promotion Name and Group Visibility Fixes](2026-02-16-recipe-variation-promotion-name-and-group-visibility-fixes.md)**
   - Restored canonical master/variation names when promoting test versions to current.
   - Switched recipe list variation rendering to recipe-group lineage scope so master migrations keep variation visibility.

@@ -10,9 +10,4 @@ product_alerts_bp = Blueprint('product_alerts', __name__, url_prefix='/product-a
 @login_required
 @require_permission('alerts.view')
 def product_alerts():
-    return render_template(
-        'pages/products/alerts.html',
-        breadcrumb_items=[{'label': 'Products', 'url': url_for('products.list_products')}, {'label': 'Alerts'}],
-        breadcrumb_back_url=url_for('products.list_products'),
-        breadcrumb_back_label='Back to products',
-    )
+    return render_template('pages/products/alerts.html', breadcrumb_items=[{'label': 'Products', 'url': url_for('products.list_products')}, {'label': 'Alerts'}])
