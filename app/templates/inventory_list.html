@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Restore saved filter states
   restoreFilterStates();
+  bindLiveInventoryFilters();
 
   // Add form submission handlers for better UX
   const ingredientForm = document.getElementById('addIngredientForm');
@@ -190,6 +191,107 @@ document.addEventListener('DOMContentLoaded', function() {
   } catch (e) { console.warn('Container suggestions init failed', e); }
 });
 
+function debounce(callback, waitMs) {
+  let timeoutId = null;
+  return function(...args) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => callback.apply(this, args), waitMs);
+  };
+}
+
+function syncFilterClearButtons() {
+  document.querySelectorAll('[data-clear-filter-target]').forEach(button => {
+    const inputId = button.getAttribute('data-clear-filter-target');
+    const input = inputId ? document.getElementById(inputId) : null;
+    if (!input) return;
+    button.classList.toggle('d-none', !input.value.trim());
+  });
+}
+
+function bindLiveInventoryFilters() {
+  const configs = [
+    {
+      apply: applyIngredientsFilters,
+      textInputs: ['ingredientsNameFilter', 'ingredientDefinitionFilter'],
+      changeInputs: ['ingredientsSortFilter', 'ingredientsShowArchived']
+    },
+    {
+      apply: applyContainersFilters,
+      textInputs: ['containersNameFilter'],
+      changeInputs: ['containersSortFilter', 'containersShowArchived']
+    },
+    {
+      apply: applyPackagingFilters,
+      textInputs: ['packagingNameFilter'],
+      changeInputs: ['packagingSortFilter', 'packagingShowArchived']
+    },
+    {
+      apply: applyConsumablesFilters,
+      textInputs: ['consumablesNameFilter'],
+      changeInputs: ['consumablesSortFilter', 'consumablesShowArchived']
+    }
+  ];
+
+  configs.forEach(({ apply, textInputs, changeInputs }) => {
+    const debouncedApply = debounce(apply, 200);
+
+    textInputs.forEach(inputId => {
+      const input = document.getElementById(inputId);
+      if (!input || input.dataset.liveFilterBound === 'true') return;
+
+      input.dataset.liveFilterBound = 'true';
+      input.addEventListener('input', function() {
+        if (this.id === 'ingredientDefinitionFilter') {
+          const definitionHidden = document.getElementById('ingredientDefinitionFilterId');
+          if (definitionHidden) {
+            const selectedLabel = (this.dataset.selectedDefinitionText || '').trim().toLowerCase();
+            const currentLabel = this.value.trim().toLowerCase();
+            if (!currentLabel || currentLabel !== selectedLabel) {
+              definitionHidden.value = '';
+            }
+          }
+        }
+        syncFilterClearButtons();
+        debouncedApply();
+      });
+      input.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          apply();
+        }
+      });
+    });
+
+    changeInputs.forEach(inputId => {
+      const input = document.getElementById(inputId);
+      if (!input || input.dataset.liveFilterBound === 'true') return;
+      input.dataset.liveFilterBound = 'true';
+      input.addEventListener('change', apply);
+    });
+  });
+
+  document.querySelectorAll('[data-clear-filter-target]').forEach(button => {
+    if (button.dataset.clearFilterBound === 'true') return;
+    button.dataset.clearFilterBound = 'true';
+    button.addEventListener('click', function() {
+      const inputId = this.getAttribute('data-clear-filter-target');
+      const input = inputId ? document.getElementById(inputId) : null;
+      if (!input) return;
+      input.value = '';
+      if (input.id === 'ingredientDefinitionFilter') {
+        const definitionHidden = document.getElementById('ingredientDefinitionFilterId');
+        if (definitionHidden) definitionHidden.value = '';
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+  });
+
+  syncFilterClearButtons();
+}
+
 function initTablePagination(tableType) {
   const tableId = tableType + 'Table';
   const tableBodyId = tableType + 'TableBody';
@@ -199,10 +301,25 @@ function initTablePagination(tableType) {
 
   let currentPage = 1;
   let itemsPerPage = 20;
-  let allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+  const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
   let filteredRows = [...allRows];
+  const pagination = document.getElementById(paginationId);
+  const info = document.getElementById(infoId);
+  const perPageSelect = document.getElementById(perPageId);
+
+  function getTotalPages() {
+    return Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+  }
 
   function updateTable() {
+    const totalPages = getTotalPages();
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+    if (currentPage < 1) {
+      currentPage = 1;
+    }
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const visibleRows = filteredRows.slice(startIndex, endIndex);
@@ -218,11 +335,11 @@ function initTablePagination(tableType) {
   }
 
   function updatePagination() {
-    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-    const pagination = document.getElementById(paginationId);
+    if (!pagination) return;
+    const totalPages = getTotalPages();
     pagination.innerHTML = '';
 
-    if (totalPages <= 1) return;
+    if (filteredRows.length === 0 || totalPages <= 1) return;
 
     // Previous button
     const prevLi = document.createElement('li');
@@ -244,37 +361,48 @@ function initTablePagination(tableType) {
     nextLi.innerHTML = '<a class="page-link" href="#" data-page="next">&raquo;</a>';
     pagination.appendChild(nextLi);
 
-    // Add click handlers
+  }
+
+  function updateInfo() {
+    if (!info) return;
+    if (filteredRows.length === 0) {
+      info.textContent = 'No matching items';
+      return;
+    }
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredRows.length);
+    info.textContent = `Showing ${startIndex}-${endIndex} of ${filteredRows.length} items`;
+  }
+
+  if (pagination) {
     pagination.addEventListener('click', function(e) {
+      const pageLink = e.target.closest('[data-page]');
+      if (!pageLink) return;
       e.preventDefault();
-      const page = e.target.dataset.page;
+      const page = pageLink.dataset.page;
+      const totalPages = getTotalPages();
       if (page === 'prev' && currentPage > 1) {
         currentPage--;
       } else if (page === 'next' && currentPage < totalPages) {
         currentPage++;
       } else if (page && !isNaN(page)) {
-        currentPage = parseInt(page);
+        currentPage = parseInt(page, 10);
       }
       updateTable();
     });
   }
 
-  function updateInfo() {
-    const startIndex = (currentPage - 1) * itemsPerPage + 1;
-    const endIndex = Math.min(currentPage * itemsPerPage, filteredRows.length);
-    const info = document.getElementById(infoId);
-    info.textContent = `Showing ${startIndex}-${endIndex} of ${filteredRows.length} items`;
+  // Only handle per page changes - filters are handled by apply functions
+  if (perPageSelect) {
+    perPageSelect.addEventListener('change', function() {
+      itemsPerPage = parseInt(this.value, 10) || 20;
+      currentPage = 1;
+      updateTable();
+    });
   }
 
-  // Only handle per page changes - filters are handled by apply functions
-  document.getElementById(perPageId).addEventListener('change', function() {
-    itemsPerPage = parseInt(this.value);
-    currentPage = 1;
-    updateTable();
-  });
-
   // Column visibility toggle with localStorage
-  const columnCheckboxes = document.querySelectorAll(`#${tableId} [data-column]`);
+  const columnCheckboxes = document.querySelectorAll(`#${tableType}FilterSection [data-column]`);
 
   // Load saved column preferences
   const savedColumns = JSON.parse(storageGet(`${tableType}_columns`) || '{}');
@@ -384,6 +512,19 @@ function toggleActionMenu(button) {
   menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
+function compareFilterValues(aVal, bVal, direction) {
+  const sortDirection = direction === 'desc' ? -1 : 1;
+  if (typeof aVal === 'string' || typeof bVal === 'string') {
+    return String(aVal || '').localeCompare(String(bVal || '')) * sortDirection;
+  }
+  const aNum = Number(aVal) || 0;
+  const bNum = Number(bVal) || 0;
+  if (aNum === bNum) {
+    return 0;
+  }
+  return (aNum > bNum ? 1 : -1) * sortDirection;
+}
+
 // Apply filter functions
 function applyIngredientsFilters() {
     const nameFilter = document.getElementById('ingredientsNameFilter');
@@ -456,11 +597,7 @@ function applyIngredientsFilters() {
             bVal = parseFloat(b.dataset.cost) || 0;
         }
 
-        if (direction === 'asc') {
-            return aVal > bVal ? 1 : -1;
-        } else {
-            return aVal < bVal ? 1 : -1;
-        }
+        return compareFilterValues(aVal, bVal, direction);
     });
 
     // Reset to page 1 when filters change
@@ -525,11 +662,7 @@ function applyContainersFilters() {
             bVal = b.dataset.material || '';
         }
 
-        if (direction === 'asc') {
-            return aVal > bVal ? 1 : -1;
-        } else {
-            return aVal < bVal ? 1 : -1;
-        }
+        return compareFilterValues(aVal, bVal, direction);
     });
 
     // Reset to page 1 when filters change
@@ -591,11 +724,7 @@ function applyPackagingFilters() {
             bVal = parseFloat(b.dataset.cost) || 0;
         }
 
-        if (direction === 'asc') {
-            return aVal > bVal ? 1 : -1;
-        } else {
-            return aVal < bVal ? 1 : -1;
-        }
+        return compareFilterValues(aVal, bVal, direction);
     });
 
     // Reset to page 1 when filters change
@@ -657,11 +786,7 @@ function applyConsumablesFilters() {
             bVal = parseFloat(b.dataset.cost) || 0;
         }
 
-        if (direction === 'asc') {
-            return aVal > bVal ? 1 : -1;
-        } else {
-            return aVal < bVal ? 1 : -1;
-        }
+        return compareFilterValues(aVal, bVal, direction);
     });
 
     // Reset to page 1 when filters change
@@ -692,6 +817,7 @@ function resetIngredientsFilters() {
     storageRemove('ingredients_definition_filter_name');
     storageRemove('ingredients_definition_filter_id');
 
+    syncFilterClearButtons();
     applyIngredientsFilters();
 }
 
@@ -704,6 +830,7 @@ function resetContainersFilters() {
     storageRemove('containers_sort_filter');
     storageRemove('containers_archived_filter');
 
+    syncFilterClearButtons();
     applyContainersFilters();
 }
 
@@ -716,6 +843,7 @@ function resetPackagingFilters() {
     storageRemove('packaging_sort_filter');
     storageRemove('packaging_archived_filter');
 
+    syncFilterClearButtons();
     applyPackagingFilters();
 }
 
@@ -728,6 +856,7 @@ function resetConsumablesFilters() {
     storageRemove('consumables_sort_filter');
     storageRemove('consumables_archived_filter');
 
+    syncFilterClearButtons();
     applyConsumablesFilters();
 }
 
@@ -970,11 +1099,14 @@ document.addEventListener('DOMContentLoaded', function() {
       includeInventory: false,
       includeGlobal: false,
       onSelection: function(){
+        inputEl.dataset.selectedDefinitionText = (inputEl.value || '').trim().toLowerCase();
         applyIngredientsFilters();
       }
     });
     inputEl.addEventListener('input', function(){
-      if (!this.value.trim()) {
+      const currentValue = this.value.trim().toLowerCase();
+      const selectedValue = (this.dataset.selectedDefinitionText || '').trim().toLowerCase();
+      if (!currentValue || currentValue !== selectedValue) {
         hiddenEl.value = '';
       }
     });
@@ -1082,13 +1214,15 @@ function restoreFilterStates() {
     if (consumablesSort) document.getElementById('consumablesSortFilter').value = consumablesSort;
     if (consumablesArchived !== null) document.getElementById('consumablesShowArchived').checked = consumablesArchived === 'true';
 
-    // Apply the restored filters
+    syncFilterClearButtons();
+
+    // Always apply baseline filters so default controls are reflected immediately.
     setTimeout(() => {
-        if (ingredientsName || ingredientsSort || ingredientsArchived || ingredientsDefinitionName || ingredientsDefinitionId) applyIngredientsFilters();
-        if (containersName || containersSort || containersArchived) applyContainersFilters();
-        if (packagingName || packagingSort || packagingArchived) applyPackagingFilters();
-        if (consumablesName || consumablesSort || consumablesArchived) applyConsumablesFilters();
-    }, 100);
+        applyIngredientsFilters();
+        applyContainersFilters();
+        applyPackagingFilters();
+        applyConsumablesFilters();
+    }, 0);
 }
 
 // Close the dropdown menu if the user clicks outside of it
@@ -1104,6 +1238,38 @@ window.onclick = function(event) {
   }
 }
 </script>
+<style>
+  .inventory-filter-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-3);
+    background: linear-gradient(180deg, var(--color-surface), var(--color-table-header-bg));
+    box-shadow: var(--shadow-1);
+    padding: 1rem;
+  }
+
+  .inventory-filter-input-group .input-group-text {
+    background-color: var(--color-surface);
+    color: var(--color-muted);
+    border-color: var(--color-border);
+  }
+
+  .inventory-filter-input-group .inventory-live-filter {
+    border-left: 0;
+  }
+
+  .inventory-filter-input-group .inventory-live-filter:focus {
+    box-shadow: none;
+  }
+
+  .inventory-filter-input-group:focus-within {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.18);
+    border-radius: var(--radius-2);
+  }
+
+  .inventory-filter-input-group .inventory-filter-clear-btn {
+    border-color: var(--color-border);
+  }
+</style>
 <script src="{{ static_asset('js/components/suggestions.js') }}"></script>
 <script type="module">
   import { configureGlobalItemStats } from "{{ static_asset('js/global_item_stats.js') }}";
