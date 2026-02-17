@@ -14,7 +14,7 @@ from sqlalchemy import and_
 import logging
 import json
 
-from app.models import db, InventoryItem, IngredientCategory, Organization
+from app.models import db, InventoryItem, IngredientCategory, Organization, UnifiedInventoryHistory
 from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.container_name_builder import build_container_name
@@ -48,11 +48,67 @@ def _parse_bool_flag(raw_value):
     return None
 
 
+# --- Drain lots for infinite mode ---
+# Purpose: Zero all remaining lot quantities when an item is toggled to infinite mode.
+# Inputs: Inventory item model and optional user id for audit attribution.
+# Outputs: Integer base-quantity total that was drained from active lots.
+def _drain_lots_for_infinite_mode(item: InventoryItem, *, updated_by: int | None = None) -> int:
+    active_lots = (
+        InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item.id,
+                InventoryLot.organization_id == item.organization_id,
+                InventoryLot.remaining_quantity_base > 0,
+            )
+        )
+        .order_by(InventoryLot.received_date.asc())
+        .all()
+    )
+
+    drained_total_base = 0
+    for lot in active_lots:
+        drained_base = int(lot.remaining_quantity_base or 0)
+        if drained_base <= 0:
+            continue
+        drained_total_base += drained_base
+        lot.remaining_quantity_base = 0
+        sync_lot_quantities_from_base(lot, item)
+
+    # Keep item-level quantity synchronized with lot balances.
+    item.quantity_base = 0
+    sync_item_quantity_from_base(item)
+
+    if drained_total_base > 0:
+        drained_total = from_base_quantity(
+            base_amount=drained_total_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        db.session.add(
+            UnifiedInventoryHistory(
+                inventory_item_id=item.id,
+                change_type="toggle_infinite_drain",
+                quantity_change=-float(drained_total),
+                quantity_change_base=-int(drained_total_base),
+                unit=item.unit or "count",
+                unit_cost=float(item.cost_per_unit or 0.0),
+                notes="Toggled to infinite mode: drained all lots with remaining quantity to 0.",
+                created_by=updated_by,
+                organization_id=item.organization_id,
+                remaining_quantity=float(item.quantity or 0.0),
+                remaining_quantity_base=int(item.quantity_base or 0),
+            )
+        )
+
+    return drained_total_base
+
+
 # --- Inventory edit ---
 # Purpose: Update inventory metadata and handle unit changes.
 # Inputs: Inventory item id and submitted form field dictionary.
 # Outputs: Tuple of (success: bool, message: str).
-def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
+def update_inventory_item(item_id: int, form_data: dict, *, updated_by: int | None = None) -> tuple[bool, str]:
     """
     Update inventory item details.
     Handles name, cost, category, and other metadata changes.
@@ -280,6 +336,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 return False, "Invalid low stock threshold"
 
         organization = db.session.get(Organization, item.organization_id) if item.organization_id else None
+        was_tracked = bool(getattr(item, "is_tracked", True))
         org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
         if not org_tracks_quantities:
             item.is_tracked = False
@@ -287,6 +344,17 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             requested_is_tracked = _parse_bool_flag(form_data.get('is_tracked'))
             if requested_is_tracked is not None:
                 item.is_tracked = bool(requested_is_tracked)
+        switched_to_infinite = was_tracked and (not bool(item.is_tracked))
+        drained_total_base = 0
+        if switched_to_infinite:
+            # Explicit user-driven toggles require confirmation before draining lots.
+            confirmed_drain = _parse_bool_flag(form_data.get('confirm_infinite_drain')) is True
+            if org_tracks_quantities and not confirmed_drain:
+                return False, (
+                    "You are about to toggle to Infinite mode. This will mark all of your "
+                    "existing lots with remaining quantity as 0. Confirm to continue."
+                )
+            drained_total_base = _drain_lots_for_infinite_mode(item, updated_by=updated_by)
 
         # Unit already handled above if present
 
@@ -367,7 +435,18 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             # Global-library attributes (soap/brewing/certs/INCI/CAS/etc) are not stored on InventoryItem.
 
         db.session.commit()
-        return True, f"Updated {item.name} successfully"
+        success_message = f"Updated {item.name} successfully"
+        if drained_total_base > 0:
+            drained_total = from_base_quantity(
+                base_amount=drained_total_base,
+                unit_name=item.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+            success_message += f" Infinite mode enabled; drained {drained_total:.2f} {item.unit} across active lots."
+        elif switched_to_infinite:
+            success_message += " Infinite mode enabled."
+        return True, success_message
 
     except Exception as e:
         db.session.rollback()

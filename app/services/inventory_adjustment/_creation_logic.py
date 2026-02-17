@@ -234,7 +234,22 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         except (ValueError, TypeError):
             pass
 
+        organization = db.session.get(Organization, organization_id) if organization_id else None
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
+        if not org_tracks_quantities:
+            # Quantity-based stock entry is tier-locked; create item in infinite mode.
+            initial_quantity = 0.0
+
         cost_per_unit, cost_error = _resolve_cost_per_unit(form_data, initial_quantity)
+        if cost_error and not org_tracks_quantities:
+            # In forced-infinite mode there is no opening quantity, so treat a submitted
+            # "total" cost value as per-unit instead of failing creation.
+            try:
+                raw_cost_value = form_data.get('cost_per_unit')
+                cost_per_unit = float(raw_cost_value) if raw_cost_value not in (None, '', 'null') else 0.0
+                cost_error = None
+            except (ValueError, TypeError):
+                pass
         if cost_error:
             return False, cost_error, None
 
@@ -255,8 +270,6 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
             is_perishable = True
 
         requested_is_tracked = _parse_bool_flag(form_data.get("is_tracked"))
-        organization = db.session.get(Organization, organization_id) if organization_id else None
-        org_tracks_quantities = org_allows_inventory_quantity_tracking(organization=organization)
         if requested_is_tracked is None:
             effective_is_tracked = bool(org_tracks_quantities)
         else:

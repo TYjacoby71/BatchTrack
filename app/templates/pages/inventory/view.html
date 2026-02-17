@@ -298,7 +298,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const nameEl = document.querySelector('#editDetailsModal input[name="name"]');
                     if (nameEl) nameEl.value = item.name;
                     const qtyEl = document.querySelector('#editDetailsModal input[name="quantity"]');
-                    if (qtyEl) qtyEl.value = item.quantity;
+                    if (qtyEl) {
+                        qtyEl.value = item.quantity;
+                        qtyEl.dataset.initialQuantity = String(item.quantity ?? 0);
+                    }
                     const unitEl = document.getElementById('unitSelect');
                     if (unitEl) unitEl.value = item.unit;
                     const costEl = document.getElementById('modal_cost_per_unit');
@@ -307,6 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (trackedEl) {
                         trackedEl.checked = forceInfiniteByTier ? false : !!item.is_tracked;
                         trackedEl.disabled = !!forceInfiniteByTier;
+                        trackedEl.dataset.initialTracked = (!!item.is_tracked).toString();
                     }
                     const formEl = document.getElementById('editModalForm');
                     if (formEl) formEl.setAttribute('action', `/inventory/edit/${itemId}`);

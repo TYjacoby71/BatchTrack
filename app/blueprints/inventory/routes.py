@@ -96,6 +96,7 @@ def _serialize_inventory_items(items):
 
     serialized = []
     total_value = 0.0
+    org_tracks_quantities = _org_tracks_inventory_quantities()
     perishable_ids = [item.id for item in items if item.is_perishable]
     expired_map = _expired_quantity_map(perishable_ids)
 
@@ -129,7 +130,7 @@ def _serialize_inventory_items(items):
                 "cost_per_unit": float(item.cost_per_unit or 0.0),
                 "freshness_percent": freshness,
                 "is_perishable": bool(item.is_perishable),
-                "is_tracked": bool(getattr(item, "is_tracked", True)),
+                "is_tracked": bool(getattr(item, "is_tracked", True)) and org_tracks_quantities,
                 "is_archived": bool(item.is_archived),
                 "low_stock_threshold": float(item.low_stock_threshold or 0.0),
                 "global_item_id": item.global_item_id,
@@ -792,6 +793,15 @@ def adjust_inventory(item_id):
                 redirect_url=url_for('.list_inventory'),
             )
 
+        if not org_allows_inventory_quantity_tracking(organization=getattr(item, "organization", None)):
+            return respond(
+                False,
+                "Inventory quantity adjustments are locked on your current tier. Upgrade to enable this feature.",
+                status_code=403,
+                flash_category="warning",
+                redirect_url=url_for('.view_inventory', id=item_id),
+            )
+
         # Extract and validate form data
         form_data = request.form
         logger.info(f"ADJUST INVENTORY - Item: {item.name} (ID: {item_id})")
@@ -899,31 +909,43 @@ def edit_inventory(id):
             # Fail closed with informative error if validation cannot complete
             logger.warning(f"Global item type validation skipped due to error: {_e}")
 
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+
         # Check if this is a quantity recount
         new_quantity = form_data.get('quantity')
-        recount_performed = False
 
         if new_quantity is not None and new_quantity != '':
             try:
                 target_quantity = float(new_quantity)
-                logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
-
-                # Use central inventory adjustment service for recount
-                success, message = process_inventory_adjustment(
-                    item_id=item.id,
-                    quantity=target_quantity,
-                    change_type='recount',
-                    notes=f'Inventory recount via edit form - target: {target_quantity}',
-                    created_by=current_user.id,
-                    target_quantity=target_quantity
-                )
-
-                if not success:
-                    flash(f'Recount failed: {message}', 'error')
+                current_quantity = float(item.quantity or 0.0)
+                quantity_changed = abs(target_quantity - current_quantity) > 1e-9
+                if quantity_changed and not org_tracks_quantities:
+                    flash(
+                        'Quantity recount is locked on your current tier. Upgrade to enable this feature.',
+                        'warning'
+                    )
                     return redirect(url_for('inventory.view_inventory', id=id))
 
-                logger.info(f"RECOUNT SUCCESS: {message}")
-                recount_performed = True
+                if quantity_changed:
+                    logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
+
+                    # Use central inventory adjustment service for recount
+                    success, message = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=target_quantity,
+                        change_type='recount',
+                        notes=f'Inventory recount via edit form - target: {target_quantity}',
+                        created_by=current_user.id,
+                        target_quantity=target_quantity
+                    )
+
+                    if not success:
+                        flash(f'Recount failed: {message}', 'error')
+                        return redirect(url_for('inventory.view_inventory', id=id))
+
+                    logger.info(f"RECOUNT SUCCESS: {message}")
 
             except (ValueError, TypeError):
                 flash("Invalid quantity provided for recount.", "error")
@@ -931,8 +953,8 @@ def edit_inventory(id):
 
         # Handle other field updates
         update_form_data = form_data.copy()
-        if recount_performed:
-            update_form_data.pop('quantity', None)
+        # Quantity edits must only flow through recount path above.
+        update_form_data.pop('quantity', None)
 
         # Enforce immutability for globally-managed identity fields
         is_global_locked = (
@@ -1001,7 +1023,7 @@ def edit_inventory(id):
             update_form_data.pop('item_density', None)
             update_form_data.pop('category_id', None)
             update_form_data.pop('unit', None)
-        success, message = update_inventory_item(id, update_form_data)
+        success, message = update_inventory_item(id, update_form_data, updated_by=current_user.id)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
 
