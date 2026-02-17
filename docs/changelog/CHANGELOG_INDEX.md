@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Tier Presentation Documentation Guard Compliance](2026-02-17-tier-presentation-documentation-guard-compliance.md)**
+  - Added required function/class header schema blocks across the new tier presentation package and related pricing/signup services.
+  - Added missing module synopsis/glossary coverage for new package modules.
+  - Added APP_DICTIONARY coverage for `tier_presentation` paths and signup plan catalog service.
 - **[2026-02-16: Pricing Feature Catalog-Driven Comparison Table](2026-02-16-pricing-feature-catalog-driven-comparison-table.md)**
   - Replaced raw permission-style pricing rows with grouped customer-facing feature and limit sections.
   - Added tier metadata plumbing for limits, add-ons, and retention policy rendering.
