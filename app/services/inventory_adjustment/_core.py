@@ -36,6 +36,8 @@ for group in ADDITIVE_OPERATION_GROUPS.values():
 
 # --- Inventory adjustment ---
 # Purpose: Central entry point for inventory adjustments.
+# Inputs: Item/change metadata, optional costing/context fields, and commit mode flags.
+# Outputs: Tuple of (success, message[, event_payload]) describing adjustment result.
 def process_inventory_adjustment(
     item_id,
     change_type,
@@ -365,7 +367,10 @@ def process_inventory_adjustment(
         logger.error(f"Central delegation error for {change_type} on item {item.id}: {e}", exc_info=True)
         return _response(False, "A critical internal error occurred.")
 
-
+# --- Operation module delegator ---
+# Purpose: Route normalized adjustments to additive, deductive, or special handlers.
+# Inputs: Normalized operation context and all adjustment arguments required by downstream handlers.
+# Outputs: Handler tuple response in legacy-compatible formats (2/3/4 items).
 def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, quantity_base, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, target_quantity_base, unit, batch_id):
     """
     DELEGATION LOGIC - Routes to appropriate operation module based on change type
