@@ -25,7 +25,7 @@ from app.models import (
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
-from ._fifo_ops import create_new_fifo_lot
+from ._fifo_ops import create_new_fifo_lot, get_or_create_infinite_anchor_lot
 from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base
 
 logger = logging.getLogger(__name__)
@@ -275,6 +275,8 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         else:
             # Tier-level policy can only further restrict tracking, never expand it.
             effective_is_tracked = bool(requested_is_tracked and org_tracks_quantities)
+        if not effective_is_tracked:
+            initial_quantity = 0.0
 
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment
@@ -438,6 +440,15 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         db.session.flush()  # Get the ID without committing
 
         logger.info(f"CREATED: New inventory item {new_item.id} - {new_item.name}")
+
+        if not new_item.is_tracked:
+            anchor_ok, anchor_message, _anchor_lot = get_or_create_infinite_anchor_lot(
+                item_id=new_item.id,
+                created_by=created_by,
+            )
+            if not anchor_ok:
+                db.session.rollback()
+                return False, f"Item created but infinite anchor setup failed: {anchor_message}", None
 
         # Handle initial stock if quantity > 0
         if initial_quantity > 0:

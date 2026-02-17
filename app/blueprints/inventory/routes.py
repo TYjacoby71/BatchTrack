@@ -19,6 +19,7 @@ from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
 from app.extensions import cache, limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
+from app.services.inventory_adjustment._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from app.services.reservation_service import ReservationService
@@ -26,7 +27,7 @@ from app.utils.timezone_utils import TimezoneUtils
 import logging
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.inventory_event_code_generator import int_to_base36
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, case
 from sqlalchemy.orm import joinedload, selectinload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
@@ -655,12 +656,26 @@ def view_inventory(id):
 
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    # When FIFO toggle is ON, show ALL lots (including depleted ones)
-    # When FIFO toggle is OFF, show only active lots
+    # When FIFO toggle is ON, show ALL lots (including depleted ones).
+    # When FIFO toggle is OFF, show only active lots.
+    # In tracked mode, hide infinite-anchor rows from the default lot table.
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+    if item.is_tracked:
+        lots_query = lots_query.filter(InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE)
     if not fifo_filter:  # fifo_filter=False means show only active lots
-        lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
-    lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
+        if item.is_tracked:
+            lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
+        else:
+            lots_query = lots_query.filter(
+                or_(
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
+                )
+            )
+    lots = lots_query.order_by(
+        case((InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE, 1), else_=0),
+        InventoryLot.created_at.asc(),
+    ).all()
 
     from datetime import datetime
 

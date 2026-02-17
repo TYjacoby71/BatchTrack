@@ -27,6 +27,7 @@ from app.services.quantity_base import (
     sync_item_quantity_from_base,
     sync_lot_quantities_from_base,
 )
+from ._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE, get_or_create_infinite_anchor_lot
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def _drain_lots_for_infinite_mode(item: InventoryItem, *, updated_by: int | None
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.organization_id == item.organization_id,
+                InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
                 InventoryLot.remaining_quantity_base > 0,
             )
         )
@@ -346,6 +348,14 @@ def update_inventory_item(item_id: int, form_data: dict, *, updated_by: int | No
                 item.is_tracked = bool(requested_is_tracked)
         switched_to_infinite = was_tracked and (not bool(item.is_tracked))
         drained_total_base = 0
+        if not bool(item.is_tracked):
+            anchor_ok, anchor_message, _anchor_lot = get_or_create_infinite_anchor_lot(
+                item_id=item.id,
+                created_by=updated_by,
+            )
+            if not anchor_ok:
+                return False, anchor_message or "Failed to initialize infinite anchor lot."
+
         if switched_to_infinite:
             # Explicit user-driven toggles require confirmation before draining lots.
             confirmed_drain = _parse_bool_flag(form_data.get('confirm_infinite_drain')) is True

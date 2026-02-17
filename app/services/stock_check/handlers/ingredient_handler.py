@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
 from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
+from app.services.inventory_adjustment._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
@@ -141,6 +142,7 @@ class IngredientHandler(BaseInventoryHandler):
         # Get available FIFO lots (we will exclude expired below when perishable)
         available_lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == ingredient.id,
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
             InventoryLot.remaining_quantity_base > 0
         )
 

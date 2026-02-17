@@ -21,13 +21,26 @@
         </thead>
         <tbody>
           {% for lot in lots %}
-          <tr>
+          {% set is_infinite_anchor = lot.source_type == 'infinite_anchor' %}
+          <tr{% if is_infinite_anchor %} class="table-info"{% endif %}>
             <td>{{ TimezoneUtils.format_for_user(lot.created_at, '%Y-%m-%d %H:%M') }}</td>
             <td class="text-center">
                             <small class="text-muted">{{ lot.display_code }}</small>
                         </td>
-            <td>{{ '%.2f'|format(lot.remaining_quantity) }}</td>
-            <td>{{ '%.2f'|format(lot.original_quantity) }}</td>
+            <td>
+              {% if is_infinite_anchor %}
+                <span class="badge bg-info text-dark">Infinite</span>
+              {% else %}
+                {{ '%.2f'|format(lot.remaining_quantity) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if is_infinite_anchor %}
+                <span class="badge bg-info text-dark">Infinite</span>
+              {% else %}
+                {{ '%.2f'|format(lot.original_quantity) }}
+              {% endif %}
+            </td>
             <td>{{ lot.unit }}</td>
             <td>${{ '%.2f'|format(lot.unit_cost or 0) }}</td>
             <td>
@@ -35,8 +48,14 @@
                 {{ TimezoneUtils.format_for_user(lot.expiration_date, '%Y-%m-%d') }}
               {% else %}-{% endif %}
             </td>
-            <td>{{ lot.source_type|replace('_',' ')|title }}</td>
-            <td>{{ lot.source_notes or '-' }}</td>
+            <td>
+              {% if is_infinite_anchor %}
+                Infinite Anchor
+              {% else %}
+                {{ lot.source_type|replace('_',' ')|title }}
+              {% endif %}
+            </td>
+            <td>{{ lot.source_notes or ('System anchor lot used when item tracking is set to Infinite.' if is_infinite_anchor else '-') }}</td>
           </tr>
           {% endfor %}
         </tbody>

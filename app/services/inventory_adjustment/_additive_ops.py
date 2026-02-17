@@ -10,8 +10,14 @@ Glossary:
 
 import logging
 from app.models import db, UnifiedInventoryHistory
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
+from app.utils.inventory_event_code_generator import generate_inventory_event_code
 from app.services.quantity_base import from_base_quantity, sync_lot_quantities_from_base
-from ._fifo_ops import create_new_fifo_lot
+from ._fifo_ops import (
+    INFINITE_ANCHOR_SOURCE_TYPE,
+    create_new_fifo_lot,
+    get_or_create_infinite_anchor_lot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +76,50 @@ def _universal_additive_handler(item, quantity, quantity_base, change_type, note
             return False, f"Invalid quantity: {quantity}", 0
         quantity_delta = float(quantity)
         quantity_delta_base = int(quantity_base)
+
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        if not effective_tracking_enabled:
+            anchor_ok, anchor_message, anchor_lot = get_or_create_infinite_anchor_lot(
+                item_id=item.id,
+                created_by=created_by,
+            )
+            if not anchor_ok or not anchor_lot:
+                return False, anchor_message or "Infinite anchor lot unavailable", 0
+            event_code = generate_inventory_event_code(change_type, item_id=item.id, code_type="event")
+            db.session.add(
+                UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=quantity_delta,
+                    quantity_change_base=quantity_delta_base,
+                    unit=unit,
+                    unit_cost=float(final_cost or 0.0),
+                    notes=(
+                        f"Infinite item credit recorded via anchor lot {anchor_lot.display_code} "
+                        f"(on-hand quantity unchanged)"
+                        + (f" | {notes}" if notes else "")
+                    ),
+                    created_by=created_by,
+                    organization_id=item.organization_id,
+                    affected_lot_id=anchor_lot.id,
+                    batch_id=batch_id,
+                    fifo_code=event_code,
+                    valuation_method='average',
+                )
+            )
+            action_messages = {
+                'restock': f"Restocked {quantity} {unit}",
+                'manual_addition': f"Manual addition of {quantity} {unit}",
+                'finished_batch': f"Finished batch added {quantity} {unit}",
+                'returned': f"Returned {quantity} {unit} to inventory",
+                'refunded': f"Refunded {quantity} {unit} added to inventory",
+                'release_reservation': f"Released reservation, credited {quantity} {unit}"
+            }
+            success_message = action_messages.get(change_type, f"{change_type.replace('_', ' ').title()} added {quantity} {unit}")
+            return True, f"{success_message} (infinite item: quantity unchanged)", 0.0, 0
 
         if group_name == 'lot_creation':
             # Operations that create new lots (restock, manual_addition, finished_batch)
@@ -191,6 +241,7 @@ def _handle_lot_crediting_operation(item, quantity, quantity_base, change_type, 
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.organization_id == item.organization_id,
+                InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
                 InventoryLot.remaining_quantity_base < InventoryLot.original_quantity_base  # Lots that have been consumed from
             )
         ).order_by(InventoryLot.received_date.asc()).all()

@@ -11,6 +11,7 @@ Glossary:
 import logging
 from app.models import db, InventoryItem
 from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
+from ._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 from app.services.quantity_base import from_base_quantity
 from sqlalchemy import and_
 
@@ -50,6 +51,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
             InventoryLot.remaining_quantity_base > 0
         )
     ).all()

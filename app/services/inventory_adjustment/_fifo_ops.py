@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
+from app.models.inventory_lot import InventoryLot
 from app.services.quantity_base import (
     to_base_quantity,
     from_base_quantity,
@@ -25,12 +26,81 @@ from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
+INFINITE_ANCHOR_SOURCE_TYPE = "infinite_anchor"
+
+
+# --- Infinite anchor classification ---
+# Purpose: Identify whether a lot is the special infinite anchor lot.
+# Inputs: InventoryLot model instance.
+# Outputs: Boolean indicating infinite-anchor source type.
+def is_infinite_anchor_lot(lot: InventoryLot | None) -> bool:
+    return bool(lot and getattr(lot, "source_type", None) == INFINITE_ANCHOR_SOURCE_TYPE)
+
+
+# --- Infinite anchor lookup ---
+# Purpose: Fetch the single infinite anchor lot for an item when present.
+# Inputs: Inventory item id and optional organization id for tighter scoping.
+# Outputs: InventoryLot instance or None.
+def get_infinite_anchor_lot(item_id: int, organization_id: int | None = None) -> InventoryLot | None:
+    query = InventoryLot.query.filter(
+        InventoryLot.inventory_item_id == item_id,
+        InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
+    )
+    if organization_id is not None:
+        query = query.filter(InventoryLot.organization_id == organization_id)
+    return query.order_by(InventoryLot.created_at.asc()).first()
+
+
+# --- Ensure infinite anchor ---
+# Purpose: Create (once) and return the infinite anchor lot for an item.
+# Inputs: Inventory item id and optional actor id for audit attribution.
+# Outputs: Tuple of (success, message, InventoryLot|None).
+def get_or_create_infinite_anchor_lot(item_id: int, created_by: int | None = None):
+    item = db.session.get(InventoryItem, item_id)
+    if not item:
+        return False, "Inventory item not found", None
+
+    existing_lot = get_infinite_anchor_lot(item_id=item.id, organization_id=item.organization_id)
+    if existing_lot:
+        if int(existing_lot.remaining_quantity_base or 0) != 0:
+            existing_lot.remaining_quantity_base = 0
+            sync_lot_quantities_from_base(existing_lot, item)
+        return True, "Infinite anchor lot already exists", existing_lot
+
+    anchor_unit = item.unit or "count"
+    anchor_quantity = 1.0
+    anchor_quantity_base = to_base_quantity(
+        amount=anchor_quantity,
+        unit_name=anchor_unit,
+        ingredient_id=item.id,
+        density=item.density,
+    )
+    success, message, lot_id = create_new_fifo_lot(
+        item_id=item.id,
+        quantity=anchor_quantity,
+        quantity_base=anchor_quantity_base,
+        change_type=INFINITE_ANCHOR_SOURCE_TYPE,
+        unit=anchor_unit,
+        notes="System anchor lot for infinite-mode inventory tracking.",
+        cost_per_unit=float(item.cost_per_unit or 0.0),
+        created_by=created_by,
+    )
+    if not success or not lot_id:
+        return False, f"Failed to create infinite anchor lot: {message}", None
+
+    created_lot = db.session.get(InventoryLot, lot_id)
+    if not created_lot:
+        return False, "Failed to load created infinite anchor lot", None
+    created_lot.remaining_quantity_base = 0
+    sync_lot_quantities_from_base(created_lot, item)
+    return True, "Created infinite anchor lot", created_lot
+
 
 # --- Fetch FIFO lots ---
 # Purpose: Fetch FIFO lots for an item.
 # Inputs: Inventory item id plus active-only/order query options.
 # Outputs: List of InventoryLot records scoped to the item organization.
-def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
+def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc', include_infinite: bool = False):
     """
     Retrieve lots for an inventory item using the proper InventoryLot model.
     This replaces any legacy history-based lot queries.
@@ -40,9 +110,6 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
         active_only: If True, only return lots with remaining_quantity > 0
         order: 'asc' for FIFO order (oldest first), 'desc' for newest first
     """
-    from app.models.inventory_lot import InventoryLot
-    from app.models import InventoryItem
-
     # Get the item for organization scoping
     item = db.session.get(InventoryItem, item_id)
     if not item:
@@ -56,6 +123,8 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
             InventoryLot.organization_id == item.organization_id
         )
     )
+    if not include_infinite:
+        query = query.filter(InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE)
 
     # Filter to active lots only if requested
     if active_only:
@@ -105,18 +174,25 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         final_expiration_date = None
         final_shelf_life_days = None
         is_perishable = item.is_perishable  # Always inherit from item
+        is_infinite_anchor = change_type == INFINITE_ANCHOR_SOURCE_TYPE
 
-        if custom_expiration_date:
-            # Only allow custom expiration date, but shelf life still comes from item
-            final_expiration_date = custom_expiration_date
-            is_perishable = True  # If expiration is set, it's perishable
-        elif item.is_perishable and item.shelf_life_days:
-            # Standard case - use item's shelf life to calculate expiration
-            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
+        if not is_infinite_anchor:
+            if custom_expiration_date:
+                # Only allow custom expiration date, but shelf life still comes from item
+                final_expiration_date = custom_expiration_date
+                is_perishable = True  # If expiration is set, it's perishable
+            elif item.is_perishable and item.shelf_life_days:
+                # Standard case - use item's shelf life to calculate expiration
+                final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
 
-        # Lots always inherit shelf_life_days from the item (immutable once created)
-        if item.is_perishable:
-            final_shelf_life_days = item.shelf_life_days
+            # Lots always inherit shelf_life_days from the item (immutable once created)
+            if item.is_perishable:
+                final_shelf_life_days = item.shelf_life_days
+        else:
+            # Infinite anchor lots never expire.
+            is_perishable = False
+            final_expiration_date = None
+            final_shelf_life_days = None
 
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
@@ -194,8 +270,8 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             notes=notes,
             created_by=(getattr(current_user, 'id', None) if getattr(current_user, 'is_authenticated', False) else created_by),
             organization_id=item.organization_id,
-            is_perishable=item.is_perishable,
-            shelf_life_days=item.shelf_life_days,
+            is_perishable=is_perishable,
+            shelf_life_days=final_shelf_life_days,
             expiration_date=final_expiration_date,
             affected_lot_id=lot.id,  # Link to the actual lot
             batch_id=batch_id,
@@ -225,8 +301,6 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
     This function now properly uses the lot-based system instead of history entries.
     """
     try:
-        from app.models.inventory_lot import InventoryLot
-
         # Get the inventory item for validation
         item = db.session.get(InventoryItem, item_id)
         if not item:
@@ -292,6 +366,12 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
             return generate_inventory_event_code(change_type, item_id=item_id, code_type="event"), None
 
         if not effective_tracking_enabled:
+            anchor_ok, anchor_message, anchor_lot = get_or_create_infinite_anchor_lot(
+                item_id=item.id,
+                created_by=created_by,
+            )
+            if not anchor_ok or not anchor_lot:
+                return False, anchor_message or "Infinite anchor lot unavailable"
             deduction_event_code, batch_lineage_id = _resolve_event_code_and_lineage()
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
@@ -302,12 +382,12 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
                 unit=item.unit,
                 unit_cost=float(item.cost_per_unit or 0.0),
                 notes=(
-                    f"Infinite item usage recorded (on-hand quantity unchanged)"
+                    f"Infinite item usage recorded via anchor lot {anchor_lot.display_code} (on-hand quantity unchanged)"
                     + (f" | {notes}" if notes else "")
                 ),
                 created_by=created_by,
                 organization_id=item.organization_id,
-                affected_lot_id=None,
+                affected_lot_id=anchor_lot.id,
                 batch_id=batch_id,
                 lineage_id=batch_lineage_id,
                 fifo_code=deduction_event_code,
@@ -322,7 +402,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity_base > 0
+                InventoryLot.remaining_quantity_base > 0,
+                InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
             )
         )
 
@@ -421,9 +502,6 @@ def calculate_total_available_inventory(item_id):
     Calculate total available inventory from all active lots for an item.
     This now properly uses the InventoryLot model for accurate FIFO calculations.
     """
-    from app.models.inventory_lot import InventoryLot
-    from app.models import InventoryItem
-
     # Get the item for organization scoping
     item = db.session.get(InventoryItem, item_id)
     if not item:
@@ -434,7 +512,8 @@ def calculate_total_available_inventory(item_id):
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
-            InventoryLot.remaining_quantity_base > 0
+            InventoryLot.remaining_quantity_base > 0,
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
         )
     ).all()
 
@@ -463,8 +542,6 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
     Returns 0.0 if no quantity or no active lots.
     """
     try:
-        from app.models.inventory_lot import InventoryLot
-
         item = db.session.get(InventoryItem, item_id)
         if not item:
             return 0.0
@@ -473,7 +550,8 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity_base > 0
+                InventoryLot.remaining_quantity_base > 0,
+                InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
             )
         )
 
@@ -516,11 +594,48 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     Used for reservation releases, returns, and corrections.
     """
     try:
-        from app.models.inventory_lot import InventoryLot
-
         lot = db.session.get(InventoryLot, lot_id)
         if not lot:
             return False, "FIFO lot not found"
+
+        if is_infinite_anchor_lot(lot):
+            item = db.session.get(InventoryItem, lot.inventory_item_id)
+            if not item:
+                return False, "Inventory item not found"
+            quantity_base = to_base_quantity(
+                amount=quantity,
+                unit_name=item.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+            quantity_float = from_base_quantity(
+                base_amount=quantity_base,
+                unit_name=item.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
+            event_code = generate_inventory_event_code("returned", item_id=item.id, code_type="event")
+            db.session.add(
+                UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type="returned",
+                    quantity_change=quantity_float,
+                    quantity_change_base=int(quantity_base),
+                    unit=item.unit,
+                    unit_cost=float(item.cost_per_unit or 0.0),
+                    notes=(
+                        f"Infinite anchor credit recorded on lot {lot.display_code} (on-hand quantity unchanged)"
+                        + (f" | {notes}" if notes else "")
+                    ),
+                    created_by=created_by,
+                    organization_id=item.organization_id,
+                    affected_lot_id=lot.id,
+                    fifo_code=event_code,
+                    valuation_method='average',
+                )
+            )
+            db.session.commit()
+            return True, f"Recorded infinite credit on lot {lot.display_code} (quantity unchanged)"
 
         # Add back to the specific lot (base units)
         quantity_base = to_base_quantity(
