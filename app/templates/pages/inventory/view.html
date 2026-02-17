@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or is_developer() %}
+{% set effective_item_is_tracked = item.is_tracked and org_tracks_inventory_quantities %}
 
 {% block content %}
 <div>
@@ -17,7 +18,7 @@
       </div>
       {% endif %}
 
-      {% if not item.is_tracked or item.quantity > 0 or history|length > 0 %}
+      {% if not effective_item_is_tracked or item.quantity > 0 or history|length > 0 %}
         {% include "inventory/components/item_summary_card.html" %}
 
         <!-- Expired Inventory Section -->
@@ -105,7 +106,7 @@
 {% include "inventory/components/modals.html" %}
 
 <!-- Initial Inventory Modal for Empty FIFO -->
-{% if item.is_tracked and item.quantity == 0 and history|length == 0 %}
+{% if effective_item_is_tracked and item.quantity == 0 and history|length == 0 %}
 <div class="modal fade" id="initialInventoryModal" tabindex="-1" aria-labelledby="initialInventoryModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">

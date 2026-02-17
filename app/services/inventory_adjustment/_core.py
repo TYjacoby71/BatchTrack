@@ -18,6 +18,7 @@ from app.services.quantity_base import (
     from_base_quantity,
     sync_item_quantity_from_base,
 )
+from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
 from ._validation import validate_inventory_fifo_sync
 from app.services.costing_engine import weighted_average_cost_for_item
 
@@ -250,6 +251,15 @@ def process_inventory_adjustment(
             # Special case for recount - set absolute quantity
             logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
             item.quantity_base = int(target_quantity_base)
+            sync_item_quantity_from_base(item)
+
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
+        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        if not effective_tracking_enabled:
+            # Infinite mode must always present as non-depleting stock.
+            item.quantity_base = 0
             sync_item_quantity_from_base(item)
 
         # Validate FIFO sync before commit. During a multi-step batch start (defer_commit=True),
