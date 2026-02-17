@@ -390,6 +390,7 @@ def test_infinite_anchor_lot_is_reused_across_toggles(app):
             .first()
         )
         assert first_anchor is not None
+        first_anchor_id = first_anchor.id
 
         with app.test_request_context():
             login_user(user)
@@ -409,7 +410,7 @@ def test_infinite_anchor_lot_is_reused_across_toggles(app):
             .first()
         )
         assert first_usage is not None
-        assert first_usage.affected_lot_id == first_anchor.id
+        assert first_usage.affected_lot_id == first_anchor_id
 
         # Toggle back to finite and then to infinite again.
         success_back, message_back = update_inventory_item(
@@ -431,7 +432,7 @@ def test_infinite_anchor_lot_is_reused_across_toggles(app):
             .all()
         )
         assert len(anchors) == 1
-        assert anchors[0].id == first_anchor.id
+        assert anchors[0].id == first_anchor_id
 
         with app.test_request_context():
             login_user(user)
@@ -451,4 +452,4 @@ def test_infinite_anchor_lot_is_reused_across_toggles(app):
             .first()
         )
         assert second_usage is not None
-        assert second_usage.affected_lot_id == first_anchor.id
+        assert second_usage.affected_lot_id == first_anchor_id

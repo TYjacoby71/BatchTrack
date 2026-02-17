@@ -2,10 +2,12 @@
 - Locked quantity-edit surfaces when an organization tier does not include `inventory.track_quantities`.
 - Kept item creation available in locked tiers while forcing infinite-mode defaults and suppressing opening quantity input.
 - Added explicit infinite-toggle drain behavior so switching tracked -> infinite zeros remaining lot quantities and logs an audit event.
+- Implemented a FIFO-owned, single-item **infinite anchor lot** model so infinite-mode deductions/credits are traced to one special lot entity (`source_type = infinite_anchor`).
 
 ## Problems Solved
 - Users in quantity-locked tiers could still reach quantity-centric UI paths (update/recount/adjust) that should be upgrade-gated.
 - Existing tracked items switching to infinite mode did not have a deterministic lot-drain policy.
+- Infinite-mode usage lacked a persistent lot entity, so history was traceable but not lot-linked.
 - Quantity recount requests were not consistently blocked server-side when quantity tracking was unavailable.
 
 ## Key Changes
@@ -24,6 +26,18 @@
     - `updated_by` audit attribution,
     - confirmation gate (`confirm_infinite_drain`) for user-driven tracked -> infinite toggles,
     - lot draining + `toggle_infinite_drain` history event logging.
+- `app/services/inventory_adjustment/_fifo_ops.py`
+  - Added canonical infinite-anchor helpers:
+    - `get_infinite_anchor_lot(...)`
+    - `get_or_create_infinite_anchor_lot(...)`
+  - Infinite-mode deduction events now always attach `affected_lot_id` to the anchor lot.
+  - Finite FIFO depletion/cost-estimation paths explicitly exclude `infinite_anchor` rows.
+- `app/services/inventory_adjustment/_additive_ops.py`
+  - Infinite-mode additive operations now log credit events against the anchor lot and keep on-hand quantity unchanged.
+- `app/services/inventory_adjustment/_special_ops.py` and `_validation.py`
+  - Recount and FIFO sync paths now ignore `infinite_anchor` rows in finite-lot reconciliation math.
+- `app/services/stock_check/handlers/ingredient_handler.py`
+  - Finite stock-check lot queries exclude `infinite_anchor` rows.
 - `app/templates/inventory_list.html`
   - Added tier-aware JS gate that bounces quantity-update actions to upgrade modal.
   - Forced create forms into infinite-mode setup by hiding quantity input and normalizing cost entry UX.
@@ -33,15 +47,26 @@
   - Added tracked -> infinite confirmation prompt wiring (`confirm_infinite_drain` hidden input injection).
 - `app/templates/pages/inventory/view.html`
   - Persisted fetched modal state attributes for robust recount/toggle change detection in JS.
+- `app/templates/inventory/components/lots_table.html`
+  - Added explicit rendering for the anchor row (Infinite badges + Infinite Anchor label).
 - `tests/test_inventory_adjustment_initial_stock.py`
-  - Added regression test ensuring tracked -> infinite toggle drains active lots and records a drain history event.
+  - Added regression tests for:
+    - tracked -> infinite lot drain behavior,
+    - single-anchor creation on infinite-item creation,
+    - anchor reuse across repeated finite/infinite toggles.
 
 ## Files Modified
 - `app/blueprints/inventory/routes.py`
 - `app/services/inventory_adjustment/_creation_logic.py`
 - `app/services/inventory_adjustment/_edit_logic.py`
+- `app/services/inventory_adjustment/_fifo_ops.py`
+- `app/services/inventory_adjustment/_additive_ops.py`
+- `app/services/inventory_adjustment/_special_ops.py`
+- `app/services/inventory_adjustment/_validation.py`
+- `app/services/stock_check/handlers/ingredient_handler.py`
 - `app/templates/inventory_list.html`
 - `app/static/js/inventory/inventory_view.js`
+- `app/templates/inventory/components/lots_table.html`
 - `app/templates/pages/inventory/view.html`
 - `tests/test_inventory_adjustment_initial_stock.py`
 - `docs/system/APP_DICTIONARY.md`
