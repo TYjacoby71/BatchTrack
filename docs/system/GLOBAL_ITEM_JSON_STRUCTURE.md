@@ -1,103 +1,90 @@
-
 # Global Item JSON Structure Guide
 
-This document explains the JSON structure for seeding global items across different categories.
+## Synopsis
+This guide defines the current JSON layout used to seed the platform global inventory library (ingredients, containers, packaging, consumables). It reflects the active `app/seeders/globallist/` structure and the seeding pipeline used by the app CLI.
 
-## File Organization
+## Glossary
+- **Category file**: One JSON document containing category metadata and an `items` array.
+- **Global item seed**: A row candidate for `GlobalItem`, including optional domain metadata.
+- **Seed pipeline**: The import flow that reads `globallist` files and writes/updates model records.
 
-Global item seed files are organized by type and material:
+## Directory Layout
 
-```
+```text
 app/seeders/globallist/
-├── ingredients/categories/          # Ingredient categories (existing)
-├── containers/categories/           # Container categories by material
-├── packaging/categories/            # Packaging categories by material
-└── consumables/categories/          # Consumable categories by function
+├── ingredients/categories/
+├── containers/categories/
+├── packaging/categories/
+└── consumables/categories/
 ```
 
-## JSON Structure
+## Category-Level Schema (Root Object)
 
-### Category Level (Root Object)
+All category files should include:
 
 ```json
 {
   "category_name": "Glass Containers",
-  "material": "Glass",                    // Primary material
-  "default_capacity_unit": "oz",          // Default unit for this category
-  "description": "Description of category",
-  "item_type": "container",               // Auto-added by seeder
-  "items": [...]                          // Array of items
+  "description": "Category description",
+  "items": []
 }
 ```
 
-### Item Level (Items Array)
+Common optional category fields:
+- `material` (commonly used by container/packaging/consumable files)
+- `default_capacity_unit` (for container-like categories)
+- `default_density` (used by ingredient categories)
 
-```json
-{
-  "name": "Straight Sided Jar",
-  "capacity": 8.0,                        // Numeric capacity
-  "capacity_unit": "fl oz",               // Unit for this specific item
-  "container_type": "Jar",                // Type: Jar, Bottle, Tin, etc.
-  "container_style": "Straight Sided",    // Style/subtype
-  "container_color": "Clear",             // Color (can be null)
-  "aka_names": ["Alternative Name"],      // Array of synonyms
-  "density_g_per_ml": 0.95,              // Optional density
-  "default_unit": "count",                // Optional default unit
-  "perishable": false,                    // Optional perishable flag
-  "shelf_life_days": 365                  // Optional shelf life
-}
-```
+## Item-Level Schema (Items Array)
 
-## Required Fields by Item Type
-
-### Containers
+All item rows should include:
 - `name` (string)
-- `capacity` (number)
-- `capacity_unit` (string)
-- `container_type` (string)
 
-### Packaging
-- `name` (string)
-- `capacity` (number, often 1.0 for count-based items)
-- `capacity_unit` (string, often "count")
-- `container_type` (string)
+Common optional fields used across domains:
+- `aliases` or `aka_names` (synonyms)
+- `default_unit`
+- `density`
+- `recommended_shelf_life_days`
+- `inci_name`
+- `certifications`
 
-### Consumables
-- `name` (string)
-- `capacity` (number)
-- `capacity_unit` (string)
-- `container_type` (string)
+### Container/Packaging/Consumable-Oriented Fields
+- `capacity`
+- `capacity_unit`
+- `container_type`
+- `container_style`
+- `container_color`
 
-### Ingredients
-- `name` (string)
-- `density_g_per_ml` (number)
+### Ingredient-Oriented Extended Fields
+Ingredient category files may include richer metadata used by formulation and catalog UX, for example:
+- `saponification_value`
+- `iodine_value`
+- `fatty_acid_profile`
+- `is_active_ingredient`
+- nested ingredient identity blocks (for slug/INCI normalization)
 
-## Material Categories
+## Validation and Authoring Notes
+- Keep item names deterministic and human-readable.
+- Prefer standard units (`oz`, `fl oz`, `ml`, `count`, etc.).
+- Keep optional metadata sparse but accurate; omit unknown fields instead of guessing values.
+- Preserve JSON validity and avoid trailing comments (JSON does not allow comments).
 
-### Containers
-- `glass.json` - Glass containers
-- `plastic_pet.json` - PET plastic containers
-- `plastic_hdpe.json` - HDPE plastic containers
-- `aluminum.json` - Aluminum containers
-- `tin_steel.json` - Tin and steel containers
+## Seeding Commands (Current)
 
-### Packaging
-- `boxes_cardboard.json` - Cardboard packaging
-- `bags_pouches.json` - Flexible packaging
-- `labels_stickers.json` - Labels and adhesive materials
-
-### Consumables
-- `tools_supplies.json` - Manufacturing tools and supplies
-- `cleaning_materials.json` - Cleaning and sanitization materials
-
-## Usage
-
-1. Create JSON files following the structure above
-2. Place them in the appropriate category directory
-3. Run the seeder script:
+Preferred app CLI command:
 
 ```bash
-python scripts/seed_global_items_from_density_reference.py
+flask seed-global-inventory
 ```
 
-The seeder will automatically detect the item type based on the directory structure and populate the global items library accordingly.
+Direct script execution (from repo root):
+
+```bash
+python app/seeders/seed_global_inventory_library.py
+```
+
+## Relevance Check (2026-02-17)
+Verified against:
+- `app/seeders/seed_global_inventory_library.py`
+- `app/scripts/commands/seeding.py` (`seed-global-inventory`)
+- `app/seeders/globallist/**/categories/*.json`

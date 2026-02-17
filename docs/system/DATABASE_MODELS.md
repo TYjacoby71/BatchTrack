@@ -1,283 +1,107 @@
-
 # Database Models & Relationships
 
-**Complete guide to BatchTrack's database architecture**
+## Synopsis
+This document maps the current BatchTrack model layer and highlights how tenant scoping, inventory, production, permissions, and billing-related tables connect. Use this as the system-level orientation guide before changing schema, migrations, or service logic that depends on model relationships.
 
-## Core Models
+## Glossary
+- **Scoped model**: A model carrying `organization_id` and tenant-bound query semantics.
+- **Global catalog model**: Platform-owned model shared across tenants (for example `GlobalItem`).
+- **Lifecycle model**: Model that records process states/events (for example batch, reservation, or domain events).
 
-### User
-- **Purpose**: System users across all types
-- **Scoping**: `organization_id` (nullable for developers)
-- **Key Fields**: `user_type`, `is_active`, `timezone`
-- **Relationships**: Organization, UserRoleAssignment
+## Canonical Source of Truth
+- Primary package: `app/models/`
+- Registry/export hub: `app/models/__init__.py`
+- Core compatibility re-exports: `app/models/models.py`
 
-### Organization
-- **Purpose**: Multi-tenant isolation
-- **Scoping**: Root level entity
-- **Key Fields**: `subscription_tier`, `timezone`, `is_active`
-- **Relationships**: Users, custom roles
+## Domain Model Map (Current)
 
-### Role
-- **Purpose**: Permission grouping
-- **Scoping**: `organization_id` (nullable for system roles)
-- **Key Fields**: `is_system_role`, `is_active`
-- **Relationships**: Permissions (many-to-many), UserRoleAssignment
+### 1. Tenant Identity and User State
+- `Organization` (`app/models/models.py`)
+- `User` (`app/models/models.py`)
+- `UserPreferences` (`app/models/user_preferences.py`)
+- `PendingSignup` (`app/models/pending_signup.py`)
 
-### Permission
-- **Purpose**: Granular access control
-- **Scoping**: Global (system-wide)
-- **Key Fields**: `category`, `required_subscription_tier`
-- **Relationships**: Roles (many-to-many)
+### 2. Permissions and Role Assignment
+- `Permission` (`app/models/permission.py`)
+- `Role` (`app/models/role.py`)
+- `UserRoleAssignment` (`app/models/user_role_assignment.py`)
+- `DeveloperRole` (`app/models/developer_role.py`)
+- `DeveloperPermission` (`app/models/developer_permission.py`)
 
-### UserRoleAssignment
-- **Purpose**: User-Role relationship tracking
-- **Scoping**: `organization_id`
-- **Key Fields**: `is_active`, `assigned_at`, `assigned_by`
-- **Relationships**: User, Role, Assigner
+### 3. Recipes and Production Execution
+- `RecipeGroup`, `Recipe`, `RecipeIngredient`, `RecipeConsumable`, `RecipeLineage` (`app/models/recipe.py`)
+- `Batch`, `BatchSequence`, `BatchIngredient`, `BatchContainer`, `BatchConsumable`, `BatchTimer` (`app/models/batch.py`)
+- Extra batch adjustment rows (`ExtraBatchIngredient`, `ExtraBatchContainer`, `ExtraBatchConsumable`) (`app/models/batch.py`)
 
-## Production Models
+### 4. Inventory and Global Library
+- `InventoryItem`, `InventoryHistory`, `BatchInventoryLog` (`app/models/inventory.py`)
+- `InventoryLot` (`app/models/inventory_lot.py`)
+- `UnifiedInventoryHistory` (`app/models/unified_inventory_history.py`)
+- `GlobalItem`, `GlobalItemAlias` (`app/models/global_item.py`, `app/models/global_item_alias.py`)
+- Ingredient reference taxonomy models (`IngredientDefinition`, `PhysicalForm`, `Variation`, tag bridge tables) (`app/models/ingredient_reference.py`)
+- Categories/taxonomy: `IngredientCategory`, `InventoryCategory`, `Tag` (`app/models/category.py`)
 
-### Recipe
-- **Purpose**: Production formulas
-- **Scoping**: `organization_id`
-- **Key Fields**: `is_active`, `total_batch_cost`
-- **Relationships**: RecipeIngredients, Batches
+### 5. Products and Commerce
+- `Product`, `ProductVariant`, `ProductSKU` (`app/models/product.py`)
+- `ProductCategory` (`app/models/product_category.py`)
 
-### RecipeIngredient
-- **Purpose**: Recipe component specifications
-- **Scoping**: Inherited from Recipe
-- **Key Fields**: `quantity`, `unit_id`, `cost_per_unit`
-- **Relationships**: Recipe, Ingredient, Unit
+### 6. Billing, Access, and Retention State
+- `SubscriptionTier` (`app/models/subscription_tier.py`)
+- `Addon`, `OrganizationAddon` (`app/models/addon.py`)
+- `StripeEvent` (`app/models/stripe_event.py`)
+- `RetentionDeletionQueue`, `StorageAddonPurchase`, `StorageAddonSubscription` (`app/models/retention.py`)
+- `Reservation` (`app/models/reservation.py`)
 
-### Batch
-- **Purpose**: Production run tracking
-- **Scoping**: `organization_id`
-- **Key Fields**: `status`, `started_at`, `finished_at`
-- **Relationships**: Recipe, BatchIngredients, Products
+### 7. Telemetry, Statistics, and Operations
+- `UserStats`, `OrganizationStats`, `OrganizationLeaderboardStats`, and related stats models (`app/models/statistics.py`)
+- `DomainEvent` (`app/models/domain_event.py`)
+- `PricingSnapshot` (`app/models/pricing_snapshot.py`)
+- `FeatureFlag` (`app/models/feature_flag.py`)
+- `AppSetting` (`app/models/app_setting.py`)
+- `BatchBotUsage`, `BatchBotCreditBundle`, `FreshnessSnapshot` (`app/models/batchbot_usage.py`, `app/models/batchbot_credit.py`, `app/models/freshness_snapshot.py`)
 
-### BatchIngredient
-- **Purpose**: Actual ingredients used in batch
-- **Scoping**: Inherited from Batch
-- **Key Fields**: `quantity_used`, `lot_numbers`
-- **Relationships**: Batch, Ingredient, InventoryItems
+## Relationship Highlights
 
-## Inventory Models
-
-### GlobalItem
-- **Purpose**: Curated global item library (read-only to orgs)
-- **Scoping**: System-wide (platform-owned)
-- **Key Fields**: `name`, `item_type`, `default_unit`, `density`, `capacity`, `capacity_unit`, `aka_names`
-- **Container Fields** (when `item_type='container'`): `container_material`, `container_type`, `container_style`, `container_color`
-- **Relationships**: Referenced by `InventoryItem.global_item_id`
-
-### Ingredient
-- **Purpose**: Raw materials catalog (legacy/local)
-- **Scoping**: `organization_id`
-- **Key Fields**: `density`, `category_id`, `is_active`
-- **Relationships**: InventoryItems, Category
-
-### InventoryItem
-- **Purpose**: Organization-owned stock with FIFO
-- **Scoping**: `organization_id`
-- **Key Fields**: `quantity`, `cost_per_unit`, `expiration_date`, `type`, `global_item_id` (nullable), `ownership`
-- **Container Fields** (when `type='container'`): `capacity`, `capacity_unit`, `container_material`, `container_type`, `container_style`, `container_color`
-- **Derived**: `container_display_name` builds `[style] [material?] [type]` and avoids duplication (e.g., "Drinking Glass")
-- **Relationships**: GlobalItem (nullable FK), Ingredient (legacy), InventoryHistory
-- See: `docs/GLOBAL_ITEM_LIBRARY.md` and `docs/CONTAINERS_CURATION.md`
-
-### InventoryHistory
-- **Purpose**: All inventory movements
-- **Scoping**: `organization_id`
-- **Key Fields**: `change_type`, `quantity_change`, `reference_type`
-- **Relationships**: InventoryItem, related records
-
-### InventoryAdjustment
-- **Purpose**: Manual stock corrections
-- **Scoping**: `organization_id`
-- **Key Fields**: `adjustment_type`, `reason`, `approved_by`
-- **Relationships**: InventoryItems
-
-## Product Models
-
-### Product
-- **Purpose**: Finished goods catalog
-- **Scoping**: `organization_id`
-- **Key Fields**: `name`, `description`, `is_active`
-- **Relationships**: ProductSKU, ProductInventory
-
-### ProductSKU
-- **Purpose**: Sellable product variants
-- **Scoping**: Inherited from Product
-- **Key Fields**: `sku`, `price`, `weight`, `is_active`
-- **Relationships**: Product, ProductInventory, Sales
-
-### ProductInventory
-- **Purpose**: Finished goods stock
-- **Scoping**: `organization_id`
-- **Key Fields**: `quantity`, `batch_id`, `expiration_date`
-- **Relationships**: ProductSKU, Batch
-
-## Support Models
-
-### Unit
-- **Purpose**: Measurement units (global)
-- **Scoping**: System-wide
-- **Key Fields**: `unit_type`, `symbol`, `conversion_factor`
-- **Relationships**: RecipeIngredients, InventoryItems
-
-### Category
-- **Purpose**: Ingredient categorization
-- **Scoping**: `organization_id`
-- **Key Fields**: `name`, `color`, `is_active`
-- **Relationships**: Ingredients
-
-### UnitConversion
-- **Purpose**: Unit conversion tracking
-- **Scoping**: System-wide
-- **Key Fields**: `from_unit_id`, `to_unit_id`, `conversion_factor`
-- **Relationships**: Units
-
-## Model Relationships
-
-### Organization Hierarchy
+### Tenant Boundary
 ```
 Organization
-├── Users (multiple)
-├── Roles (custom only)
-├── Recipes
-├── Batches
-├── Ingredients
-├── Products
-└── All scoped data
+├── User
+├── Role (org-scoped variants)
+├── InventoryItem
+├── Recipe / Batch
+└── Product / SKU
 ```
 
-### User Management
+### Access Control
 ```
 User
-├── Organization (belongs_to)
-├── UserRoleAssignments (multiple)
-└── Roles (through assignments)
-
-Role
-├── Permissions (many-to-many)
-├── UserAssignments (multiple)
-└── Users (through assignments)
+└── UserRoleAssignment ──> Role ──> Permission
 ```
 
-### Production Flow
+### Recipe to Batch to Inventory
 ```
-Recipe
-├── RecipeIngredients
-├── Batches (multiple)
-└── Products (through batches)
-
-Batch
-├── Recipe (belongs_to)
-├── BatchIngredients
-└── ProductInventory (output)
+RecipeGroup
+└── Recipe (lineage/versioned)
+    └── Batch
+        ├── BatchIngredient / BatchContainer / BatchConsumable
+        └── Inventory movement logs
 ```
 
-### Inventory Management
+### Global Catalog Linkage
 ```
-GlobalItem (curated)
-└── InventoryItems (org-owned)
-
-Ingredient (legacy/local)
-├── InventoryItems (multiple lots)
-├── InventoryHistory (all changes)
-└── RecipeIngredients (usage)
-
-InventoryItem
-├── Ingredient (belongs_to)
-├── History records
-└── FIFO deductions
+GlobalItem (platform-owned)
+└── InventoryItem.global_item_id (nullable, ON DELETE SET NULL)
 ```
 
-## Scoping Patterns
+## Scoping and Timestamp Standards
+- Prefer `ScopedModelMixin` models for tenant data.
+- Scope queries by `organization_id` in services/routes unless explicitly in developer/global context.
+- Use timezone-aware UTC defaults (`TimezoneUtils.utc_now`) for model timestamps.
+- Keep archival/deactivation semantics explicit (`is_active`, `is_archived`) where lifecycle state matters.
 
-### ScopedModelMixin
-```python
-class ScopedModelMixin:
-    organization_id = db.Column(db.Integer, 
-                               db.ForeignKey('organization.id'), 
-                               nullable=False)
-    
-    @classmethod
-    def for_organization(cls, org_id):
-        return cls.query.filter_by(organization_id=org_id)
-```
+## Legacy Compatibility Notes
+- `app/models/models.py` preserves import compatibility for older call sites.
+- `Ingredient` is maintained as a compatibility alias to `InventoryItem` in legacy re-export paths; new code should use `InventoryItem` directly.
 
-### Developer Access Pattern
-```python
-# Developers can access any organization's data
-if current_user.user_type == 'developer':
-    selected_org = session.get('dev_selected_org_id')
-    data = Model.for_organization(selected_org)
-else:
-    # Regular users see only their org
-    data = Model.for_organization(current_user.organization_id)
-```
-
-## Timestamp Standards
-
-### TimestampMixin Implementation
-All models that need timestamps should use the standardized `TimestampMixin`:
-
-```python
-from .mixins import TimestampMixin
-
-class MyModel(TimestampMixin, db.Model):
-    # Model fields here
-    pass
-```
-
-### TimezoneUtils Requirement
-- **ALWAYS** use `TimezoneUtils.utc_now()` for timestamp defaults
-- **NEVER** use `datetime.utcnow()` directly
-- This ensures consistent timezone handling across the application
-
-### Models Without Timestamps
-Some models intentionally exclude timestamps:
-- `IngredientCategory` - Static reference data
-- `Unit` - Global system units
-- System configuration models
-
-## Migration Guidelines
-
-### Adding New Models
-1. Include `organization_id` for scoped models
-2. Add appropriate indexes for performance
-3. Use `TimestampMixin` for audit fields when needed
-4. Consider soft delete with `is_active`
-
-### Modifying Existing Models
-1. Use Alembic migrations for schema changes
-2. Preserve data integrity with careful migrations
-3. Update relationships and constraints
-4. Test with sample data
-
-### Data Integrity Rules
-- Never orphan records (use foreign key constraints)
-- Cascade deletes appropriately
-- Maintain audit trails
-- Respect organization scoping
-
-## Performance Considerations
-
-### Indexing Strategy
-- `organization_id` on all scoped models
-- Composite indexes for common queries
-- Foreign key columns always indexed
-- Date fields for time-based queries
-
-### Query Optimization
-- Always filter by `organization_id` first
-- Use eager loading for related data
-- Implement pagination for large datasets
-- Cache frequently accessed reference data
-
-### Database Maintenance
-- Regular cleanup of old history records
-- Archive completed batches periodically
-- Monitor index usage and performance
-- Implement data retention policies
+## Relevance Check (2026-02-17)
+This document was refreshed against active model modules in `app/models/` and current export wiring in `app/models/__init__.py`.

@@ -1,47 +1,44 @@
-
 # Container Naming Guidelines
 
-## Best Practices for Container Names
+## Synopsis
+This guide defines the canonical container naming behavior used by BatchTrack inventory flows. Container names are generated from structured attributes and normalized so matching items group together. Follow this format when creating or editing container records to reduce duplicates and keep labels consistent.
 
-### ✅ Recommended Format
-Use a concise pattern that encodes capacity first, then name:
+## Glossary
+- **Descriptor**: The text segment assembled from color/style/material/type.
+- **Capacity segment**: The numeric amount and unit, such as `8 oz` or `250 ml`.
+- **Canonical container name**: `<Descriptor> - <Capacity segment>` when both are available.
 
-`{capacity_value}{capacity_unit} {name}`
+## Canonical Pattern (Current Implementation)
+When attributes are available, names should follow:
 
-Examples:
-- `8 fl oz Bottle`
-- `16 oz Mason Jar`
-- `500 ml Boston Round`
-- `4 oz Tin`
+`<Color> <Style> <Material> <Type> - <Capacity> <Unit>`
 
-This format ensures SKU labels like `{variant} {product} ({container})` render cleanly.
+Notes:
+- Missing attributes are skipped.
+- Duplicate words are removed where possible (for example, avoid repeating `Glass`).
+- If no descriptor is available, fallback text is used.
+- If no capacity is valid, only the descriptor is used.
 
-### 🧭 Coaching Rules (free-text but consistent)
-- Always include numeric capacity and unit (oz, fl oz, ml, g, lb, L).
-- Put capacity at the front; keep the rest short and human-friendly.
-- Avoid material/type taxonomies (glass/plastic/amber) unless part of the common name.
-- Singular nouns for item name (Bottle, Jar, Tin). Size is handled by capacity.
+## Examples
+Preferred:
+- `Amber Boston Round Glass Bottle - 8 oz`
+- `Clear Straight Sided Jar - 16 fl oz`
+- `Matte Black Tin - 4 oz`
+- `Container - 500 ml` (when only generic type/capacity is known)
 
-### ❌ Avoid
-- Missing capacity (e.g., `Small Jar`).
-- Vague types (`Container A`, `Medium Box`).
-- Non-standard units or mixed formats (`8ozs`, `0.5Ltr`).
+Avoid:
+- `8ozs Bottle` (non-standard unit formatting)
+- `Medium Box` (no structured capacity)
+- `Container A` (not meaningful for reuse/search)
 
-### 🎯 Why This Matters
-- Clean, deterministic SKU size labels and search.
-- Reduces duplicates from naming drift.
-- Simplifies batch finish flows and reporting.
+## Why This Matters
+- Keeps container names deterministic and searchable.
+- Reduces duplicate inventory rows caused by naming drift.
+- Improves downstream labels and batch/recipe container selection UX.
 
-### 📝 More Examples
-
-Good Names:
-- `8 fl oz Bottle`
-- `250 ml Amber Bottle`
-- `4 oz Tin`
-- `32 fl oz Jug`
-
-Poor Names:
-- `Big Jar`
-- `Container Type A`
-- `Medium Box`
-- `Regular Bottle`
+## Relevance Check (2026-02-17)
+This guidance matches active implementation in:
+- `app/services/container_name_builder.py`
+- `app/services/inventory_adjustment/_creation_logic.py`
+- `app/services/inventory_adjustment/_edit_logic.py`
+- `app/models/inventory.py` (`InventoryItem.container_display_name` for UI display)

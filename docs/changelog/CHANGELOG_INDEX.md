@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-17: Stale System Docs Synopsis/Glossary Refresh](2026-02-17-stale-system-docs-synopsis-glossary-refresh.md)**
+  - Refreshed the four stalest system docs to current schema with required Synopsis/Glossary sections.
+  - Replaced stale implementation references (commands/paths/behavior notes) with active code locations.
+  - Added relevance checks so these docs remain trustworthy operational references.
 - **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
   - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
   - Hardened variation naming and promotion naming behavior for recipe-group consistency.
