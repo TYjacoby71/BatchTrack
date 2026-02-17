@@ -26,6 +26,9 @@
     - `updated_by` audit attribution,
     - confirmation gate (`confirm_infinite_drain`) for user-driven tracked -> infinite toggles,
     - lot draining + `toggle_infinite_drain` history event logging.
+  - Added hard safeguard that forces `item.quantity_base = 0` whenever the item is infinite.
+- `app/services/inventory_adjustment/_core.py`
+  - Added central post-adjustment safeguard to normalize stale quantity values back to `0` in infinite mode.
 - `app/services/inventory_adjustment/_fifo_ops.py`
   - Added canonical infinite-anchor helpers:
     - `get_infinite_anchor_lot(...)`
@@ -47,6 +50,9 @@
   - Added tracked -> infinite confirmation prompt wiring (`confirm_infinite_drain` hidden input injection).
 - `app/templates/pages/inventory/view.html`
   - Persisted fetched modal state attributes for robust recount/toggle change detection in JS.
+  - Added effective-tracking template flag so tier-forced infinite mode always renders summary quantities as Infinite.
+- `app/templates/inventory/components/item_summary_card.html`
+  - Switched summary rendering to effective tracking mode (`item.is_tracked && org_tracks_inventory_quantities`).
 - `app/templates/inventory/components/lots_table.html`
   - Added explicit rendering for the anchor row (Infinite badges + Infinite Anchor label).
 - `tests/test_inventory_adjustment_initial_stock.py`
@@ -63,10 +69,12 @@
 - `app/services/inventory_adjustment/_additive_ops.py`
 - `app/services/inventory_adjustment/_special_ops.py`
 - `app/services/inventory_adjustment/_validation.py`
+- `app/services/inventory_adjustment/_core.py`
 - `app/services/stock_check/handlers/ingredient_handler.py`
 - `app/templates/inventory_list.html`
 - `app/static/js/inventory/inventory_view.js`
 - `app/templates/inventory/components/lots_table.html`
+- `app/templates/inventory/components/item_summary_card.html`
 - `app/templates/pages/inventory/view.html`
 - `tests/test_inventory_adjustment_initial_stock.py`
 - `docs/system/APP_DICTIONARY.md`

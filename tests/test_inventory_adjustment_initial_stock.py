@@ -135,6 +135,53 @@ def test_infinite_item_records_usage_without_quantity_change(app):
         assert anchor_lot.source_type == INFINITE_ANCHOR_SOURCE_TYPE
 
 
+def test_infinite_adjustment_normalizes_stale_item_quantity_to_zero(app):
+    with app.app_context():
+        org = Organization(name='Infinite Stale Quantity Org')
+        db.session.add(org)
+        db.session.flush()
+
+        user = User(
+            email='infinite-stale@test.com',
+            username='infinite-stale-user',
+            organization_id=org.id,
+            is_verified=True
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        stale_item = InventoryItem(
+            name='Stale Infinite Item',
+            unit='g',
+            quantity=42,
+            quantity_base=42000,
+            is_tracked=False,
+            cost_per_unit=0.01,
+            organization_id=org.id,
+            type='ingredient'
+        )
+        db.session.add(stale_item)
+        db.session.commit()
+        item_id = stale_item.id
+
+        with app.test_request_context():
+            login_user(user)
+            success, _message = process_inventory_adjustment(
+                item_id=item_id,
+                change_type='batch',
+                quantity=5,
+                unit='g',
+                notes='Normalize stale infinite quantity',
+                created_by=user.id
+            )
+
+        assert success is True
+        refreshed_item = db.session.get(InventoryItem, item_id)
+        assert refreshed_item is not None
+        assert int(refreshed_item.quantity_base or 0) == 0
+        assert float(refreshed_item.quantity or 0.0) == 0.0
+
+
 def test_create_infinite_item_initializes_single_anchor_lot(app):
     with app.app_context():
         from app.models.permission import Permission
