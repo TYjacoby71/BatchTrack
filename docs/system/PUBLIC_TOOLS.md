@@ -1,21 +1,55 @@
 # Public Tools
 
-Public calculators and draft flow available at `/tools`.
+## Synopsis
+BatchTrack exposes maker-focused public tools under `/tools`, including a full soap formulator and draft handoff into authenticated recipe creation. Public flows are session-backed and integrated with public exports.
 
-## Draft flow
-- Users (anon allowed) fill category fields and select lines.
-- Client posts to `/tools/draft` with:
-  - ingredients: [{ name, global_item_id?, quantity, unit }]
-  - consumables: [{ name, global_item_id?, quantity, unit }]
-  - containers: [{ name?, global_item_id?, quantity }]
-  - name, instructions, predicted_yield, predicted_yield_unit, category_name, optional category_data
-- Server merges into `session['tool_draft']` and persists session.
-- `/recipes/new` reads `session['tool_draft']` to prefill form once user signs in.
+## Glossary
+- **Tool draft**: Session payload (`tool_draft`) captured from public calculators.
+- **Handoff**: Transition from anonymous drafting to authenticated recipe prefill.
+- **Public tool API**: Unauthenticated API endpoints mounted under `/tools/api/*`.
 
-## Typeahead
-- Uses public endpoint: `GET /api/public/global-items/search?type=ingredient|container|consumable`.
-- No org endpoints are called unauthenticated.
+## Public Tool Surfaces (Current)
 
-## Exports
-- Public HTML preview: `/exports/tool/...`
-- CSV/PDF: `/exports/tool/...(.csv|.pdf)`
+### Index and tool pages
+- `/tools`
+- `/tools/soap`
+- `/tools/candles`
+- `/tools/lotions`
+- `/tools/herbal`
+- `/tools/baker`
+
+### Soap APIs
+- `/tools/api/soap/calculate`
+- `/tools/api/soap/recipe-payload`
+- `/tools/api/soap/quality-nudge`
+- `/tools/api/soap/oils-catalog`
+
+### Feedback API
+- `/tools/api/feedback-notes`
+
+## Draft Capture and Handoff
+- Client posts draft payload to `/tools/draft`.
+- Server normalizes line arrays and merges into `session['tool_draft']`.
+- Metadata is tracked in `session['tool_draft_meta']`.
+- Response includes redirect target for recipe creation flow (`/recipes/new`).
+
+## Quotas and Access
+- Soap draft submissions are quota-limited for guest/free contexts in a rolling 24-hour window.
+- Public routes are allow-listed via route access policy.
+
+## Search/Typeahead Inputs
+- Public typeahead uses `/api/public/global-items/search`.
+- Authenticated inventory forms may use `/api/ingredients/global-items/search`.
+
+## Export Integration
+Tool drafts can be exported through `/exports/tool/*` routes:
+- HTML preview
+- CSV
+- PDF
+
+## Relevance Check (2026-02-17)
+Validated against:
+- `app/routes/tools_routes.py`
+- `app/blueprints/api/public.py`
+- `app/routes/exports_routes.py`
+- `app/route_access.py`

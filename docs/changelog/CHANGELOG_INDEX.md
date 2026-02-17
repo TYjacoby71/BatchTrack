@@ -26,6 +26,18 @@ This directory contains the complete history of all fixes, improvements, and cha
   - Added required functional-unit header metadata on touched batch and production-planning route modules.
   - Added missing APP_DICTIONARY coverage entries for touched route files.
   - Restored latest-commit Documentation Guard compliance for changelog + dictionary checks.
+- **[2026-02-17: Stale System Docs Wave 2 Refresh (Next 10)](2026-02-17-stale-system-docs-wave-2-refresh.md)**
+  - Refreshed the next 10 stalest system docs to current schema (`Synopsis` + `Glossary`) and current implementation behavior.
+  - Replaced stale routes/service references across exports, free-tier, public-tools, plan-snapshot, and tracking docs.
+  - Converted outdated SEO/deprecation planning language into present-state system guidance with active backlog notes.
+- **[2026-02-17: Documentation Guard Whole-File Coverage Clarification](2026-02-17-doc-guard-whole-file-coverage-clarification.md)**
+  - Clarified checklist and APP_DICTIONARY wording to require functional-header coverage across the entire touched Python file.
+  - Updated documentation-structure enforcement text to match whole-file validation behavior.
+  - Updated guard messaging to explicitly state file-wide validation scope.
+- **[2026-02-17: Stale System Docs Synopsis/Glossary Refresh](2026-02-17-stale-system-docs-synopsis-glossary-refresh.md)**
+  - Refreshed the four stalest system docs to current schema with required Synopsis/Glossary sections.
+  - Replaced stale implementation references (commands/paths/behavior notes) with active code locations.
+  - Added relevance checks so these docs remain trustworthy operational references.
 - **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
   - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
   - Hardened variation naming and promotion naming behavior for recipe-group consistency.

@@ -6,7 +6,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 ## Update Standard (Agent Instructions)
 - Treat this block as the canonical instruction source for PR documentation checklist items related to Synopsis/Glossary, functional headers, and dictionary updates.
 - For every file touched, add or update the **Synopsis** (max 5 sentences).
-- For every top-level functional unit touched in a file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
+- For every top-level functional unit in a touched file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
 - If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
 - Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
 - Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
