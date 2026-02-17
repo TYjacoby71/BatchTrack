@@ -37,7 +37,7 @@ def start_batch():
         requested_batch_type = data.get('batch_type', 'ingredient')
         org_tracks_batch_outputs = has_tier_permission(
             'batches.track_inventory_outputs',
-            default_if_missing_catalog=True,
+            default_if_missing_catalog=False,
         )
         batch_type = requested_batch_type
         if not org_tracks_batch_outputs:

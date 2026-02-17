@@ -118,7 +118,7 @@ def _complete_batch_internal(batch_id, form_data):
 
         org_tracks_batch_outputs = has_tier_permission(
             'batches.track_inventory_outputs',
-            default_if_missing_catalog=True,
+            default_if_missing_catalog=False,
         )
         requested_output_type = (form_data.get('output_type') or '').strip()
         output_type = requested_output_type or (batch.batch_type or 'ingredient')

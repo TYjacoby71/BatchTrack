@@ -76,7 +76,7 @@ def plan_production_route(recipe_id):
     display_name = format_recipe_lineage_name(recipe)
     org_tracks_batch_outputs = has_tier_permission(
         'batches.track_inventory_outputs',
-        default_if_missing_catalog=True,
+        default_if_missing_catalog=False,
     )
     return render_template('pages/production_planning/plan_production.html', recipe=recipe, breadcrumb_items=[
         {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
