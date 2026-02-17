@@ -8,13 +8,7 @@ from typing import Iterable, Mapping, Sequence
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import (
-    GlobalItem,
-    InventoryItem,
-    Recipe,
-    RecipeIngredient,
-    Unit,
-)
+from app.models import GlobalItem, InventoryItem, Recipe, RecipeIngredient, Unit
 from app.models.global_item_alias import GlobalItemAlias
 from app.services.unit_conversion import ConversionEngine
 
@@ -95,9 +89,7 @@ class RecipeProportionalityService:
         if total_amount <= 0:
             return _RecipeSignature(totals=totals, proportions=None)
 
-        proportions = {
-            key: totals[key] / total_amount for key in totals
-        }
+        proportions = {key: totals[key] / total_amount for key in totals}
         return _RecipeSignature(totals=totals, proportions=proportions)
 
     @classmethod
@@ -139,7 +131,9 @@ class RecipeProportionalityService:
 
     # -- Comparison -------------------------------------------------------------
     @classmethod
-    def _compare_signatures(cls, sig_a: _RecipeSignature, sig_b: _RecipeSignature) -> bool:
+    def _compare_signatures(
+        cls, sig_a: _RecipeSignature, sig_b: _RecipeSignature
+    ) -> bool:
         if not sig_a.totals and not sig_b.totals:
             return True
         if bool(sig_a.proportions) and bool(sig_b.proportions):
@@ -251,7 +245,8 @@ class RecipeProportionalityService:
             from_unit=unit_name,
             to_unit=target_unit,
             ingredient_id=inventory_item.id,
-            density=inventory_item.density or getattr(getattr(inventory_item, "global_item", None), "density", None),
+            density=inventory_item.density
+            or getattr(getattr(inventory_item, "global_item", None), "density", None),
             organization_id=inventory_item.organization_id,
         )
         if not result.get("success"):

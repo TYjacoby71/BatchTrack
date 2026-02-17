@@ -1,0 +1,10 @@
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+"app/**/__init__.py" = ["E402", "F401", "F811"]
+"app/models/__init__.py" = ["F403"]
+"app/blueprints/api/routes.py" = ["E402"]

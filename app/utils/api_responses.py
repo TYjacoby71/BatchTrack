@@ -12,12 +12,16 @@ class APIResponse:
     """Standardized API response helper."""
 
     @staticmethod
-    def success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
+    def success(
+        data: Any = None, message: str = "Success", status_code: int = 200
+    ) -> Response:
         payload = {"success": True, "message": message, "data": data}
         return jsonify(payload), status_code
 
     @staticmethod
-    def error(message: str, errors: Optional[Dict] = None, status_code: int = 400) -> Response:
+    def error(
+        message: str, errors: Optional[Dict] = None, status_code: int = 400
+    ) -> Response:
         payload = {"success": False, "message": message, "errors": errors or {}}
         return jsonify(payload), status_code
 
@@ -42,12 +46,16 @@ class APIResponse:
         return {}
 
 
-def api_error(message: str, status_code: int = 400, errors: Optional[Dict] = None) -> Response:
+def api_error(
+    message: str, status_code: int = 400, errors: Optional[Dict] = None
+) -> Response:
     """Legacy helper function for API error responses."""
     return APIResponse.error(message, errors=errors, status_code=status_code)
 
 
-def api_success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
+def api_success(
+    data: Any = None, message: str = "Success", status_code: int = 200
+) -> Response:
     """Legacy helper function for API success responses."""
     return APIResponse.success(data=data, message=message, status_code=status_code)
 

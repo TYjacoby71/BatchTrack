@@ -1,6 +1,17 @@
 """Dashboard and shared app route handlers."""
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+import logging
+
+from flask import (
+    Blueprint,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.blueprints.expiration.services import ExpirationService
@@ -8,14 +19,7 @@ from app.extensions import db, limiter
 from app.models import Batch
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.statistics import AnalyticsDataService
-from app.utils.permissions import (
-    any_permission_required,
-    get_effective_organization_id,
-    permission_required,
-    require_permission,
-)
-
-import logging
+from app.utils.permissions import permission_required
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +40,10 @@ def dashboard():
     if current_user.user_type == "developer":
         selected_org_id = session.get("dev_selected_org_id")
         if not selected_org_id:
-            flash("Developers must select an organization to view customer dashboard", "warning")
+            flash(
+                "Developers must select an organization to view customer dashboard",
+                "warning",
+            )
             return redirect(url_for("developer.dashboard"))
 
         # Verify the organization still exists.
@@ -47,7 +54,10 @@ def dashboard():
             if not selected_org:
                 session.pop("dev_selected_org_id", None)
                 session.pop("dev_masquerade_context", None)
-                flash("Selected organization no longer exists. Masquerade cleared.", "error")
+                flash(
+                    "Selected organization no longer exists. Masquerade cleared.",
+                    "error",
+                )
                 return redirect(url_for("developer.dashboard"))
         except Exception as org_error:
             print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
@@ -76,7 +86,9 @@ def dashboard():
         try:
             batch_query = Batch.query.filter_by(status="in_progress")
             if current_user.organization_id:
-                batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
+                batch_query = batch_query.filter_by(
+                    organization_id=current_user.organization_id
+                )
             active_batch = batch_query.first()
         except Exception as batch_error:
             print("---!!! BATCH QUERY ERROR (ORIGINAL SIN?) !!!---")
@@ -102,7 +114,9 @@ def dashboard():
 
         # Get inventory alerts with explicit error catching.
         try:
-            low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
+            low_stock_ingredients = (
+                CombinedInventoryAlertService.get_low_stock_ingredients()
+            )
         except Exception as inv_error:
             print("---!!! INVENTORY ALERTS ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {inv_error}")
@@ -130,7 +144,10 @@ def dashboard():
         print(f"Error: {exc}")
         print("------------------------------------")
         db.session.rollback()
-        flash("Dashboard temporarily unavailable. Please try refreshing the page.", "error")
+        flash(
+            "Dashboard temporarily unavailable. Please try refreshing the page.",
+            "error",
+        )
 
     return render_template(
         "dashboard.html",
@@ -181,7 +198,11 @@ def api_dashboard_alerts():
     try:
         dismissed_alerts = session.get("dismissed_alerts", [])
 
-        force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
+        force_refresh = (request.args.get("refresh") or "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         alert_data = AnalyticsDataService.get_dashboard_alerts(
             dismissed_alerts=dismissed_alerts,
             max_alerts=3,
@@ -206,7 +227,11 @@ def auth_check():
 @permission_required("alerts.view")
 def view_fault_log():
     try:
-        force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
+        force_refresh = (request.args.get("refresh") or "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         if current_user.user_type == "developer":
             selected_org_id = session.get("dev_selected_org_id")
             if selected_org_id:
@@ -251,10 +276,21 @@ def vendor_signup():
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         # Validate required fields.
-        required_fields = ["item_name", "item_id", "company_name", "contact_name", "email"]
+        required_fields = [
+            "item_name",
+            "item_id",
+            "company_name",
+            "contact_name",
+            "email",
+        ]
         for field in required_fields:
             if not data.get(field):
-                return jsonify({"success": False, "error": f"Missing required field: {field}"}), 400
+                return (
+                    jsonify(
+                        {"success": False, "error": f"Missing required field: {field}"}
+                    ),
+                    400,
+                )
 
         # Validate email format.
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -289,7 +325,9 @@ def vendor_signup():
         # Save updated list.
         write_json_file(vendor_file, vendor_signups)
 
-        return jsonify({"success": True, "message": "Vendor signup submitted successfully"})
+        return jsonify(
+            {"success": True, "message": "Vendor signup submitted successfully"}
+        )
 
     except Exception as exc:
         logger.error(f"Vendor signup error: {exc}")

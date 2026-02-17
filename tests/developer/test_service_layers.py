@@ -38,7 +38,9 @@ class TestOrganizationService:
             "subscription_tier": str(tier.id),
         }
 
-        success, org, message = OrganizationService.create_organization_with_owner(form_data)
+        success, org, message = OrganizationService.create_organization_with_owner(
+            form_data
+        )
 
         assert success, message
         assert org is not None
@@ -90,7 +92,9 @@ class TestUserService:
 
 @pytest.mark.usefixtures("app_context")
 class TestReferenceDataService:
-    def test_load_curated_lists_falls_back_to_defaults_with_db_values(self, monkeypatch):
+    def test_load_curated_lists_falls_back_to_defaults_with_db_values(
+        self, monkeypatch
+    ):
         # Remove any persisted settings so the DB merge path executes.
         monkeypatch.setattr(
             ReferenceDataService,
@@ -138,8 +142,15 @@ class TestReferenceDataService:
         )
 
         ReferenceDataService.save_curated_container_lists(
-            {"materials": ["Glass"], "types": ["Jar"], "styles": ["Modern"], "colors": ["Clear"]}
+            {
+                "materials": ["Glass"],
+                "types": ["Jar"],
+                "styles": ["Modern"],
+                "colors": ["Clear"],
+            }
         )
 
         assert "payload" in captured
-        assert captured["payload"]["container_management"]["curated_lists"]["materials"] == ["Glass"]
+        assert captured["payload"]["container_management"]["curated_lists"][
+            "materials"
+        ] == ["Glass"]

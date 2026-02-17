@@ -1,7 +1,7 @@
-import uuid
 import logging
+import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from flask_login import current_user
 
@@ -15,24 +15,26 @@ class EventEmitter:
     """Lightweight event emitter that writes to DomainEvent (outbox style)."""
 
     @staticmethod
-    def emit(event_name: str,
-             properties: Optional[Dict[str, Any]] = None,
-             *,
-             organization_id: Optional[int] = None,
-             user_id: Optional[int] = None,
-             entity_type: Optional[str] = None,
-             entity_id: Optional[int] = None,
-             correlation_id: Optional[str] = None,
-             source: str = 'app',
-             schema_version: int = 1,
-             auto_commit: bool = True) -> DomainEvent:
+    def emit(
+        event_name: str,
+        properties: Optional[Dict[str, Any]] = None,
+        *,
+        organization_id: Optional[int] = None,
+        user_id: Optional[int] = None,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[int] = None,
+        correlation_id: Optional[str] = None,
+        source: str = "app",
+        schema_version: int = 1,
+        auto_commit: bool = True,
+    ) -> DomainEvent:
         try:
             # Default tenant/user from session if available
             org_id = organization_id
             usr_id = user_id
-            if current_user and getattr(current_user, 'is_authenticated', False):
-                org_id = org_id or getattr(current_user, 'organization_id', None)
-                usr_id = usr_id or getattr(current_user, 'id', None)
+            if current_user and getattr(current_user, "is_authenticated", False):
+                org_id = org_id or getattr(current_user, "organization_id", None)
+                usr_id = usr_id or getattr(current_user, "id", None)
 
             event = DomainEvent(
                 event_name=event_name,
@@ -46,7 +48,7 @@ class EventEmitter:
                 schema_version=schema_version,
                 properties=(properties or {}),
                 is_processed=False,
-                delivery_attempts=0
+                delivery_attempts=0,
             )
 
             db.session.add(event)
@@ -63,4 +65,3 @@ class EventEmitter:
             except Exception:
                 pass
             return None
-

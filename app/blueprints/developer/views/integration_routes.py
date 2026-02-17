@@ -18,8 +18,8 @@ from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
 from app.config_schema import build_integration_sections
-from app.services.email_service import EmailService
 from app.services.developer.dashboard_service import DeveloperDashboardService
+from app.services.email_service import EmailService
 from app.services.integrations.registry import build_integration_categories
 from app.utils.settings import get_setting, update_settings_value
 
@@ -34,6 +34,7 @@ from ..routes import developer_bp
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
+
     from app.models.subscription_tier import SubscriptionTier
 
     def _env_or_config_value(key):
@@ -45,23 +46,29 @@ def integrations_checklist():
     email_provider = (current_app.config.get("EMAIL_PROVIDER") or "smtp").lower()
     email_configured = EmailService.is_configured()
     configured_verification_mode = (
-        (current_app.config.get("AUTH_EMAIL_VERIFICATION_MODE") or "prompt").strip().lower()
+        (current_app.config.get("AUTH_EMAIL_VERIFICATION_MODE") or "prompt")
+        .strip()
+        .lower()
     )
     effective_verification_mode = EmailService.get_verification_mode()
     auth_email_status = {
         "configured_mode": configured_verification_mode,
         "effective_mode": effective_verification_mode,
-        "provider_required": bool(current_app.config.get("AUTH_EMAIL_REQUIRE_PROVIDER", True)),
+        "provider_required": bool(
+            current_app.config.get("AUTH_EMAIL_REQUIRE_PROVIDER", True)
+        ),
         "provider_configured": email_configured,
         "password_reset_enabled": EmailService.password_reset_enabled(),
-        "provider_fallback_active": configured_verification_mode != effective_verification_mode,
+        "provider_fallback_active": configured_verification_mode
+        != effective_verification_mode,
     }
     email_keys = {
         "SMTP": bool(current_app.config.get("MAIL_SERVER")),
         "SendGrid": bool(current_app.config.get("SENDGRID_API_KEY")),
         "Postmark": bool(current_app.config.get("POSTMARK_SERVER_TOKEN")),
         "Mailgun": bool(
-            current_app.config.get("MAILGUN_API_KEY") and current_app.config.get("MAILGUN_DOMAIN")
+            current_app.config.get("MAILGUN_API_KEY")
+            and current_app.config.get("MAILGUN_DOMAIN")
         ),
     }
 
@@ -81,7 +88,9 @@ def integrations_checklist():
         "source": ENV_DIAGNOSTICS.get("source"),
         "env_variables": ENV_DIAGNOSTICS.get("variables", {}),
         "warnings": ENV_DIAGNOSTICS.get("warnings", ()),
-        "SECRET_KEY_present": bool(os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")),
+        "SECRET_KEY_present": bool(
+            os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")
+        ),
         "LOG_LEVEL": current_app.config.get("LOG_LEVEL", "WARNING"),
     }
 
@@ -93,7 +102,11 @@ def integrations_checklist():
         except Exception:
             return value
 
-    backend = "PostgreSQL" if uri.startswith("postgres") else ("SQLite" if "sqlite" in uri else "Other")
+    backend = (
+        "PostgreSQL"
+        if uri.startswith("postgres")
+        else ("SQLite" if "sqlite" in uri else "Other")
+    )
     if "sqlite" in uri:
         source = "fallback"
     elif os.environ.get("DATABASE_URL"):
@@ -108,7 +121,9 @@ def integrations_checklist():
     }
 
     cache_info = {
-        "RATELIMIT_STORAGE_URI": current_app.config.get("RATELIMIT_STORAGE_URI", "memory://"),
+        "RATELIMIT_STORAGE_URI": current_app.config.get(
+            "RATELIMIT_STORAGE_URI", "memory://"
+        ),
         "REDIS_URL_present": bool(os.environ.get("REDIS_URL")),
     }
 
@@ -119,10 +134,18 @@ def integrations_checklist():
     }
 
     oauth_status = {
-        "GOOGLE_OAUTH_CLIENT_ID_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")),
-        "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")),
-        "FACEBOOK_OAUTH_APP_ID_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_ID")),
-        "FACEBOOK_OAUTH_APP_SECRET_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")),
+        "GOOGLE_OAUTH_CLIENT_ID_present": bool(
+            current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")
+        ),
+        "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(
+            current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")
+        ),
+        "FACEBOOK_OAUTH_APP_ID_present": bool(
+            current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+        ),
+        "FACEBOOK_OAUTH_APP_SECRET_present": bool(
+            current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
+        ),
     }
     whop_status = {
         "WHOP_API_KEY_present": bool(current_app.config.get("WHOP_API_KEY")),
@@ -282,7 +305,9 @@ def integrations_checklist():
     ]
 
     feature_flags = {
-        "FEATURE_INVENTORY_ANALYTICS": bool(current_app.config.get("FEATURE_INVENTORY_ANALYTICS", False)),
+        "FEATURE_INVENTORY_ANALYTICS": bool(
+            current_app.config.get("FEATURE_INVENTORY_ANALYTICS", False)
+        ),
         "TOOLS_SOAP": bool(current_app.config.get("TOOLS_SOAP", True)),
         "TOOLS_CANDLES": bool(current_app.config.get("TOOLS_CANDLES", True)),
         "TOOLS_LOTIONS": bool(current_app.config.get("TOOLS_LOTIONS", True)),
@@ -305,7 +330,7 @@ def integrations_checklist():
     # Create config matrix from launch_env_sections for the table
     config_matrix = []
     for section in launch_env_sections:
-        for row in section.get('rows', []):
+        for row in section.get("rows", []):
             config_matrix.append(row)
 
     integration_categories = build_integration_categories(
@@ -350,9 +375,16 @@ def integrations_test_email():
             return jsonify({"success": False, "error": "Email is not configured"}), 400
         recipient = getattr(current_user, "email", None)
         if not recipient:
-            return jsonify({"success": False, "error": "Current user has no email address"}), 400
+            return (
+                jsonify(
+                    {"success": False, "error": "Current user has no email address"}
+                ),
+                400,
+            )
         subject = "BatchTrack Test Email"
-        html_body = "<p>This is a test email from BatchTrack Integrations Checklist.</p>"
+        html_body = (
+            "<p>This is a test email from BatchTrack Integrations Checklist.</p>"
+        )
         ok = EmailService._send_email(
             recipient,
             subject,
@@ -360,7 +392,9 @@ def integrations_test_email():
             "This is a test email from BatchTrack Integrations Checklist.",
         )
         if ok:
-            return jsonify({"success": True, "message": f"Test email sent to {recipient}"})
+            return jsonify(
+                {"success": True, "message": f"Test email sent to {recipient}"}
+            )
         return jsonify({"success": False, "error": "Failed to send email"}), 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -373,15 +407,24 @@ def integrations_test_email():
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
-        from app.services.billing_service import BillingService
         import stripe
+
+        from app.services.billing_service import BillingService
 
         ok = BillingService.ensure_stripe()
         if not ok:
-            return jsonify({"success": False, "error": "Stripe secret not configured"}), 400
+            return (
+                jsonify({"success": False, "error": "Stripe secret not configured"}),
+                400,
+            )
         try:
             prices = stripe.Price.list(limit=1)
-            return jsonify({"success": True, "message": f"Stripe reachable. Prices found: {len(prices.data)}"})
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Stripe reachable. Prices found: {len(prices.data)}",
+                }
+            )
         except Exception as exc:
             return jsonify({"success": False, "error": f"Stripe API error: {exc}"}), 500
     except Exception as exc:
@@ -406,7 +449,9 @@ def integrations_stripe_events():
                     "last_event_id": last.event_id,
                     "last_event_type": last.event_type,
                     "last_status": last.status,
-                    "last_processed_at": last.processed_at.isoformat() if last.processed_at else None,
+                    "last_processed_at": (
+                        last.processed_at.isoformat() if last.processed_at else None
+                    ),
                 }
             )
         return jsonify({"success": True, "data": payload})
@@ -480,9 +525,20 @@ def integrations_check_webhook():
         try:
             resp = requests.get(url, timeout=5)
             status = resp.status_code
-            message = "reachable (method not allowed expected)" if status == 405 else f"response {status}"
-            return jsonify({"success": True, "url": url, "status": status, "message": message})
+            message = (
+                "reachable (method not allowed expected)"
+                if status == 405
+                else f"response {status}"
+            )
+            return jsonify(
+                {"success": True, "url": url, "status": status, "message": message}
+            )
         except Exception as exc:
-            return jsonify({"success": False, "url": url, "error": f"Connection error: {exc}"}), 500
+            return (
+                jsonify(
+                    {"success": False, "url": url, "error": f"Connection error: {exc}"}
+                ),
+                500,
+            )
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500

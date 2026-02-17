@@ -9,9 +9,8 @@ Glossary:
 """
 
 import logging
-from typing import Optional
 
-from app.models import db, UnifiedInventoryHistory, InventoryItem
+from app.models import InventoryItem, UnifiedInventoryHistory, db
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> 
         events = UnifiedInventoryHistory.query.filter(
             UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
             UnifiedInventoryHistory.batch_id == batch_id,
-            UnifiedInventoryHistory.quantity_change < 0
+            UnifiedInventoryHistory.quantity_change < 0,
         ).all()
 
         if not events:
@@ -57,7 +56,9 @@ def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> 
 
         return total_cost / total_qty
     except Exception as ex:
-        logger.error(f"Error computing weighted unit cost for item {inventory_item_id} in batch {batch_id}: {ex}")
+        logger.error(
+            f"Error computing weighted unit cost for item {inventory_item_id} in batch {batch_id}: {ex}"
+        )
         try:
             item = db.session.get(InventoryItem, inventory_item_id)
             return float(item.cost_per_unit or 0.0) if item else 0.0
@@ -84,20 +85,17 @@ def weighted_average_cost_for_item(inventory_item_id: int) -> float:
             return 0.0
 
         # Import locally to avoid circular imports
-        from app.models.inventory_lot import InventoryLot
         from sqlalchemy import and_
 
-        lots = (
-            InventoryLot.query
-            .filter(
-                and_(
-                    InventoryLot.inventory_item_id == item.id,
-                    InventoryLot.organization_id == item.organization_id,
-                    InventoryLot.remaining_quantity_base > 0
-                )
+        from app.models.inventory_lot import InventoryLot
+
+        lots = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item.id,
+                InventoryLot.organization_id == item.organization_id,
+                InventoryLot.remaining_quantity_base > 0,
             )
-            .all()
-        )
+        ).all()
 
         if not lots:
             return float(item.cost_per_unit or 0.0)
@@ -112,9 +110,15 @@ def weighted_average_cost_for_item(inventory_item_id: int) -> float:
             total_qty += qty
             total_cost += qty * unit_cost
 
-        return (total_cost / total_qty) if total_qty > 0 else float(item.cost_per_unit or 0.0)
+        return (
+            (total_cost / total_qty)
+            if total_qty > 0
+            else float(item.cost_per_unit or 0.0)
+        )
     except Exception as ex:
-        logger.error(f"Error computing weighted average cost for item {inventory_item_id}: {ex}")
+        logger.error(
+            f"Error computing weighted average cost for item {inventory_item_id}: {ex}"
+        )
         try:
             item = db.session.get(InventoryItem, int(inventory_item_id))
             return float(item.cost_per_unit or 0.0) if item else 0.0

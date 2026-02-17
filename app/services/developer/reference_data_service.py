@@ -71,8 +71,12 @@ class ReferenceDataService:
     @staticmethod
     def load_curated_container_lists() -> Dict[str, List[str]]:
         settings = read_json_file("settings.json", default={}) or {}
-        curated_lists = settings.get("container_management", {}).get("curated_lists", {})
-        if curated_lists and all(key in curated_lists for key in ReferenceDataService.DEFAULTS.keys()):
+        curated_lists = settings.get("container_management", {}).get(
+            "curated_lists", {}
+        )
+        if curated_lists and all(
+            key in curated_lists for key in ReferenceDataService.DEFAULTS.keys()
+        ):
             return curated_lists
         return ReferenceDataService._build_default_lists()
 
@@ -84,7 +88,9 @@ class ReferenceDataService:
 
     @staticmethod
     def _build_default_lists() -> Dict[str, List[str]]:
-        defaults = {key: list(values) for key, values in ReferenceDataService.DEFAULTS.items()}
+        defaults = {
+            key: list(values) for key, values in ReferenceDataService.DEFAULTS.items()
+        }
 
         materials = (
             db.session.query(GlobalItem.container_material)

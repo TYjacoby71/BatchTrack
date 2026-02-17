@@ -13,19 +13,17 @@ import logging
 import secrets
 from typing import Optional, Tuple
 
-from flask import session
-from flask_login import login_user
-
-from ..models import db, User, Organization, Role, SubscriptionTier, PendingSignup
+from ..models import Organization, PendingSignup, Role, SubscriptionTier, User, db
 from ..utils.timezone_utils import TimezoneUtils
-from .session_service import SessionService
+from .batchbot_credit_service import BatchBotCreditService
 from .email_service import EmailService
 from .event_emitter import EventEmitter
-from .batchbot_credit_service import BatchBotCreditService
+
 # Import moved to avoid circular dependency
 # from ..blueprints.developer.subscription_tiers import load_tiers_config
 
 logger = logging.getLogger(__name__)
+
 
 # --- Signup service ---
 # Purpose: Orchestrate pending signup records and post-checkout account provisioning.
@@ -57,19 +55,24 @@ class SignupService:
         pending = PendingSignup(
             email=cleaned_email,
             phone=(phone or "").strip() or None,
-            signup_source=signup_source or 'direct',
+            signup_source=signup_source or "direct",
             referral_code=(referral_code or "").strip() or None,
             promo_code=(promo_code or "").strip() or None,
             detected_timezone=detected_timezone or None,
             tier_id=tier.id,
-            oauth_provider=(oauth_user_info or {}).get('oauth_provider'),
-            oauth_provider_id=(oauth_user_info or {}).get('oauth_provider_id'),
+            oauth_provider=(oauth_user_info or {}).get("oauth_provider"),
+            oauth_provider_id=(oauth_user_info or {}).get("oauth_provider_id"),
             extra_metadata=extra_metadata or {},
         )
 
         db.session.add(pending)
         db.session.commit()
-        logger.info("Created pending signup %s for %s (tier %s)", pending.id, cleaned_email, tier.id)
+        logger.info(
+            "Created pending signup %s for %s (tier %s)",
+            pending.id,
+            cleaned_email,
+            tier.id,
+        )
         return pending
 
     @staticmethod
@@ -87,33 +90,52 @@ class SignupService:
         if not pending_signup:
             return None, None
 
-        if pending_signup.status == 'account_created' and pending_signup.organization_id and pending_signup.user_id:
+        if (
+            pending_signup.status == "account_created"
+            and pending_signup.organization_id
+            and pending_signup.user_id
+        ):
             logger.info("Pending signup %s already fulfilled", pending_signup.id)
             org = db.session.get(Organization, pending_signup.organization_id)
             user = db.session.get(User, pending_signup.user_id)
             return org, user
 
-        subscription_tier = pending_signup.tier or db.session.get(SubscriptionTier, pending_signup.tier_id)
+        subscription_tier = pending_signup.tier or db.session.get(
+            SubscriptionTier, pending_signup.tier_id
+        )
         if not subscription_tier:
-            raise ValueError(f"Subscription tier {pending_signup.tier_id} not found for pending signup {pending_signup.id}")
+            raise ValueError(
+                f"Subscription tier {pending_signup.tier_id} not found for pending signup {pending_signup.id}"
+            )
 
-        session_metadata = SignupService._object_to_dict(getattr(checkout_session, 'metadata', {}))
-        customer_details = SignupService._object_to_dict(getattr(checkout_session, 'customer_details', {}))
-        customer_metadata = SignupService._object_to_dict(getattr(customer_obj, 'metadata', {}))
+        session_metadata = SignupService._object_to_dict(
+            getattr(checkout_session, "metadata", {})
+        )
+        customer_details = SignupService._object_to_dict(
+            getattr(checkout_session, "customer_details", {})
+        )
+        customer_metadata = SignupService._object_to_dict(
+            getattr(customer_obj, "metadata", {})
+        )
         pending_extra_metadata = pending_signup.extra_metadata or {}
-        custom_fields = getattr(checkout_session, 'custom_fields', None)
+        custom_fields = getattr(checkout_session, "custom_fields", None)
 
-        pending_signup.stripe_checkout_session_id = pending_signup.stripe_checkout_session_id or getattr(checkout_session, 'id', None)
-        pending_signup.stripe_customer_id = pending_signup.stripe_customer_id or getattr(customer_obj, 'id', None)
-        pending_signup.mark_status('checkout_completed')
+        pending_signup.stripe_checkout_session_id = (
+            pending_signup.stripe_checkout_session_id
+            or getattr(checkout_session, "id", None)
+        )
+        pending_signup.stripe_customer_id = (
+            pending_signup.stripe_customer_id or getattr(customer_obj, "id", None)
+        )
+        pending_signup.mark_status("checkout_completed")
 
         oauth_email = SignupService._first_non_empty(
-            session_metadata.get('oauth_email'),
-            pending_extra_metadata.get('oauth_email'),
+            session_metadata.get("oauth_email"),
+            pending_extra_metadata.get("oauth_email"),
         )
         email = SignupService._first_non_empty(
-            customer_details.get('email'),
-            getattr(customer_obj, 'email', None),
+            customer_details.get("email"),
+            getattr(customer_obj, "email", None),
             oauth_email,
             pending_signup.email,
         )
@@ -129,28 +151,28 @@ class SignupService:
             raise ValueError("Stripe checkout session missing customer email")
 
         phone = SignupService._first_non_empty(
-            customer_details.get('phone'),
-            getattr(customer_obj, 'phone', None),
+            customer_details.get("phone"),
+            getattr(customer_obj, "phone", None),
             pending_signup.phone,
         )
         pending_signup.email = email
         pending_signup.phone = phone
 
         full_name = SignupService._first_non_empty(
-            customer_details.get('name'),
-            getattr(customer_obj, 'name', None),
+            customer_details.get("name"),
+            getattr(customer_obj, "name", None),
         )
         first_name, last_name = SignupService._split_name(full_name)
         metadata_first_name = SignupService._first_non_empty(
-            session_metadata.get('first_name'),
-            pending_extra_metadata.get('first_name'),
+            session_metadata.get("first_name"),
+            pending_extra_metadata.get("first_name"),
         )
         metadata_last_name = SignupService._first_non_empty(
-            session_metadata.get('last_name'),
-            pending_extra_metadata.get('last_name'),
+            session_metadata.get("last_name"),
+            pending_extra_metadata.get("last_name"),
         )
-        custom_first = SignupService._extract_custom_field(custom_fields, 'first_name')
-        custom_last = SignupService._extract_custom_field(custom_fields, 'last_name')
+        custom_first = SignupService._extract_custom_field(custom_fields, "first_name")
+        custom_last = SignupService._extract_custom_field(custom_fields, "last_name")
         if custom_first and not first_name:
             first_name = custom_first
         if custom_last and not last_name:
@@ -160,12 +182,14 @@ class SignupService:
         if metadata_last_name and not last_name:
             last_name = metadata_last_name
 
-        workspace_field = SignupService._extract_custom_field(custom_fields, 'workspace_name')
+        workspace_field = SignupService._extract_custom_field(
+            custom_fields, "workspace_name"
+        )
         org_name = (
             workspace_field
-            or session_metadata.get('org_name')
-            or customer_metadata.get('org_name')
-            or pending_extra_metadata.get('org_name')
+            or session_metadata.get("org_name")
+            or customer_metadata.get("org_name")
+            or pending_extra_metadata.get("org_name")
         )
         if not org_name:
             org_name = f"{first_name or 'New'}'s Workspace"
@@ -178,13 +202,13 @@ class SignupService:
                 name=org_name,
                 contact_email=email,
                 is_active=True,
-                signup_source=pending_signup.signup_source or 'stripe',
+                signup_source=pending_signup.signup_source or "stripe",
                 promo_code=pending_signup.promo_code,
                 referral_code=pending_signup.referral_code,
                 subscription_tier_id=subscription_tier.id,
                 stripe_customer_id=pending_signup.stripe_customer_id,
-                billing_status='active',
-                subscription_status='active',
+                billing_status="active",
+                subscription_status="active",
             )
             db.session.add(org)
             db.session.flush()
@@ -192,33 +216,39 @@ class SignupService:
             owner_user = User(
                 username=username,
                 email=email,
-                first_name=first_name or '',
-                last_name=last_name or '',
+                first_name=first_name or "",
+                last_name=last_name or "",
                 phone=phone,
                 organization_id=org.id,
-                user_type='customer',
+                user_type="customer",
                 is_organization_owner=True,
                 is_active=True,
                 email_verified=not verification_enabled,
                 email_verification_token=(
-                    EmailService.generate_verification_token(email) if verification_enabled else None
+                    EmailService.generate_verification_token(email)
+                    if verification_enabled
+                    else None
                 ),
-                email_verification_sent_at=TimezoneUtils.utc_now() if verification_enabled else None,
+                email_verification_sent_at=(
+                    TimezoneUtils.utc_now() if verification_enabled else None
+                ),
                 oauth_provider=pending_signup.oauth_provider,
                 oauth_provider_id=pending_signup.oauth_provider_id,
             )
             owner_user.set_password(secrets.token_urlsafe(16))
             db.session.add(owner_user)
             db.session.flush()
-            owner_user.timezone = pending_signup.detected_timezone or 'UTC'
+            owner_user.timezone = pending_signup.detected_timezone or "UTC"
 
-            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            org_owner_role = Role.query.filter_by(
+                name="organization_owner", is_system_role=True
+            ).first()
             if org_owner_role:
                 owner_user.assign_role(org_owner_role)
 
             pending_signup.organization_id = org.id
             pending_signup.user_id = owner_user.id
-            pending_signup.mark_status('account_created')
+            pending_signup.mark_status("account_created")
 
             # Prepare password setup + welcome email tokens
             reset_token = EmailService.generate_reset_token(owner_user.id)
@@ -243,12 +273,21 @@ class SignupService:
                     logger.warning("Failed to send verification email: %s", email_error)
 
             try:
-                EmailService.send_welcome_email(owner_user.email, owner_user.first_name or owner_user.username, org.name, subscription_tier.name)
+                EmailService.send_welcome_email(
+                    owner_user.email,
+                    owner_user.first_name or owner_user.username,
+                    org.name,
+                    subscription_tier.name,
+                )
             except Exception as email_error:
                 logger.warning("Failed to send welcome email: %s", email_error)
 
             try:
-                EmailService.send_password_setup_email(owner_user.email, reset_token, owner_user.first_name or owner_user.username)
+                EmailService.send_password_setup_email(
+                    owner_user.email,
+                    reset_token,
+                    owner_user.first_name or owner_user.username,
+                )
             except Exception as email_error:
                 logger.warning("Failed to send password setup email: %s", email_error)
 
@@ -269,10 +308,12 @@ class SignupService:
 
         except Exception as exc:
             db.session.rollback()
-            logger.error("Failed to complete pending signup %s: %s", pending_signup.id, exc)
+            logger.error(
+                "Failed to complete pending signup %s: %s", pending_signup.id, exc
+            )
             fresh = db.session.get(PendingSignup, pending_signup.id)
             if fresh:
-                fresh.mark_status('failed', error=str(exc))
+                fresh.mark_status("failed", error=str(exc))
                 db.session.commit()
             raise
 
@@ -299,7 +340,7 @@ class SignupService:
         for value in values:
             if value is None:
                 continue
-            if isinstance(value, str) and value.strip() == '':
+            if isinstance(value, str) and value.strip() == "":
                 continue
             return value
         return None
@@ -307,18 +348,18 @@ class SignupService:
     @staticmethod
     def _split_name(full_name: Optional[str]) -> Tuple[str, str]:
         if not full_name:
-            return '', ''
+            return "", ""
         parts = full_name.strip().split()
         if not parts:
-            return full_name, ''
+            return full_name, ""
         if len(parts) == 1:
-            return parts[0], ''
-        return parts[0], ' '.join(parts[1:])
+            return parts[0], ""
+        return parts[0], " ".join(parts[1:])
 
     @staticmethod
     def _generate_username(email: str) -> str:
-        base = (email or 'user').split('@')[0]
-        base = ''.join(ch for ch in base if ch.isalnum()) or 'user'
+        base = (email or "user").split("@")[0]
+        base = "".join(ch for ch in base if ch.isalnum()) or "user"
         candidate = base
         counter = 1
         while User.query.filter_by(username=candidate).first():
@@ -334,12 +375,20 @@ class SignupService:
     def _extract_custom_field(custom_fields, key: str):
         try:
             for field in custom_fields or []:
-                current_key = getattr(field, 'key', None) if not isinstance(field, dict) else field.get('key')
+                current_key = (
+                    getattr(field, "key", None)
+                    if not isinstance(field, dict)
+                    else field.get("key")
+                )
                 if current_key != key:
                     continue
-                payload = getattr(field, 'text', None) if not isinstance(field, dict) else field.get('text')
+                payload = (
+                    getattr(field, "text", None)
+                    if not isinstance(field, dict)
+                    else field.get("text")
+                )
                 if isinstance(payload, dict):
-                    return payload.get('value')
+                    return payload.get("value")
         except Exception:
             return None
         return None

@@ -49,7 +49,9 @@ def _append_once(items: list[str], seen: set[str], value: str) -> None:
 # Purpose: Convert one fatty-profile map into normalized quality scoring components.
 # Inputs: Fatty-acid profile mapping.
 # Outputs: Dict with normalized hardness/cleansing/conditioning/bubbly/creamy scores.
-def _compute_oil_quality_scores(fatty_profile: Mapping[str, Any] | None) -> dict[str, float]:
+def _compute_oil_quality_scores(
+    fatty_profile: Mapping[str, Any] | None,
+) -> dict[str, float]:
     if not isinstance(fatty_profile, Mapping):
         return {key: 0.0 for key in _QUALITY_KEYS}
     profile = {
@@ -112,11 +114,23 @@ def build_oil_blend_tips(oils: tuple[SoapToolOilInput, ...]) -> list[str]:
                 f"{display_name} is high in palmitic/stearic; expect a harder bar and quicker set-up.",
             )
         if oleic >= 60:
-            _append_once(tips, seen, f"{display_name} is high oleic; trace may be slow and bars may start softer.")
+            _append_once(
+                tips,
+                seen,
+                f"{display_name} is high oleic; trace may be slow and bars may start softer.",
+            )
         if (linoleic + linolenic) >= 20:
-            _append_once(tips, seen, f"{display_name} is high in PUFAs; keep the % lower to reduce DOS risk.")
+            _append_once(
+                tips,
+                seen,
+                f"{display_name} is high in PUFAs; keep the % lower to reduce DOS risk.",
+            )
         if ricinoleic >= 60:
-            _append_once(tips, seen, f"{display_name} boosts lather but can feel tacky; keep under 10-15%.")
+            _append_once(
+                tips,
+                seen,
+                f"{display_name} boosts lather but can feel tacky; keep under 10-15%.",
+            )
         if len(tips) >= 6:
             break
     return tips[:6]
@@ -154,7 +168,9 @@ def run_quality_nudge(payload: Mapping[str, Any] | None) -> dict:
         if oil.grams > 0:
             row_index = row.get("row_index")
             try:
-                output_index = int(row_index) if row_index not in (None, "", []) else index
+                output_index = (
+                    int(row_index) if row_index not in (None, "", []) else index
+                )
             except (TypeError, ValueError):
                 output_index = index
             indexed_oils.append((output_index, oil))
@@ -169,7 +185,9 @@ def run_quality_nudge(payload: Mapping[str, Any] | None) -> dict:
 
     warnings: list[str] = []
     missing_fatty = sum(
-        1 for _index, oil in indexed_oils if not isinstance(oil.fatty_profile, Mapping) or not oil.fatty_profile
+        1
+        for _index, oil in indexed_oils
+        if not isinstance(oil.fatty_profile, Mapping) or not oil.fatty_profile
     )
     if missing_fatty == len(indexed_oils):
         return {
@@ -179,13 +197,19 @@ def run_quality_nudge(payload: Mapping[str, Any] | None) -> dict:
             "adjusted_rows": [],
         }
     if missing_fatty:
-        warnings.append("Some oils are missing fatty acid data. The nudge will only use oils with profiles.")
+        warnings.append(
+            "Some oils are missing fatty acid data. The nudge will only use oils with profiles."
+        )
 
     oils_only = tuple(oil for _index, oil in indexed_oils)
     fatty = compute_fatty_acids(oils_only)
     current_qualities = compute_qualities(fatty.get("fatty_acids_pct") or {})
     deltas = {
-        key: _clamp((targets[key] - _to_float(current_qualities.get(key), 0.0)) / 100.0, -1.0, 1.0)
+        key: _clamp(
+            (targets[key] - _to_float(current_qualities.get(key), 0.0)) / 100.0,
+            -1.0,
+            1.0,
+        )
         for key in _QUALITY_KEYS
         if key in targets
     }

@@ -100,7 +100,9 @@ def _resolve_redis_url() -> str | None:
 class RedisCache:
     """Redis-backed cache with TTL and namespace scoping."""
 
-    def __init__(self, namespace: str, default_ttl: int = 300, url: str | None = None) -> None:
+    def __init__(
+        self, namespace: str, default_ttl: int = 300, url: str | None = None
+    ) -> None:
         if redis is None:
             raise RuntimeError("redis package not available")
         self._namespace = namespace.strip(":")

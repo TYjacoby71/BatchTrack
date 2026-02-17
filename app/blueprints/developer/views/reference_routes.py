@@ -92,13 +92,20 @@ def add_reference_category():
             is_global_category=True,
             organization_id=None,
             is_active=True,
-            default_density=default_density if isinstance(default_density, (int, float)) else None,
+            default_density=(
+                default_density if isinstance(default_density, (int, float)) else None
+            ),
         )
 
         db.session.add(new_category)
         db.session.commit()
 
-        return jsonify({"success": True, "message": f'Category "{category_name}" added successfully'})
+        return jsonify(
+            {
+                "success": True,
+                "message": f'Category "{category_name}" added successfully',
+            }
+        )
 
     except Exception as exc:
         db.session.rollback()
@@ -126,7 +133,9 @@ def delete_reference_category():
         if not category:
             return jsonify({"success": False, "error": "Category not found"})
 
-        linked_items = GlobalItem.query.filter_by(ingredient_category_id=category.id).count()
+        linked_items = GlobalItem.query.filter_by(
+            ingredient_category_id=category.id
+        ).count()
         if linked_items:
             return jsonify(
                 {
@@ -138,7 +147,12 @@ def delete_reference_category():
         db.session.delete(category)
         db.session.commit()
 
-        return jsonify({"success": True, "message": f'Category "{category_name}" deleted successfully'})
+        return jsonify(
+            {
+                "success": True,
+                "message": f'Category "{category_name}" deleted successfully',
+            }
+        )
 
     except Exception as exc:
         db.session.rollback()
@@ -163,7 +177,9 @@ def update_reference_category_density():
         try:
             density_value = float(density)
         except ValueError:
-            return jsonify({"success": False, "error": "Density must be a numeric value"})
+            return jsonify(
+                {"success": False, "error": "Density must be a numeric value"}
+            )
 
         from app.models.category import IngredientCategory
 
@@ -224,7 +240,9 @@ def calculate_category_density():
         ]
 
         if not densities:
-            return jsonify({"success": False, "error": "No items with valid density values found"})
+            return jsonify(
+                {"success": False, "error": "No items with valid density values found"}
+            )
 
         calculated_density = sum(densities) / len(densities)
 
@@ -266,7 +284,9 @@ def save_curated_container_lists():
         required_keys = ["materials", "types", "styles", "colors"]
         for key in required_keys:
             if key not in curated_lists or not isinstance(curated_lists[key], list):
-                return jsonify({"success": False, "error": f"Invalid or missing {key} list"})
+                return jsonify(
+                    {"success": False, "error": f"Invalid or missing {key} list"}
+                )
 
         ReferenceDataService.save_curated_container_lists(curated_lists)
         return jsonify({"success": True, "message": "Curated lists saved successfully"})
@@ -294,15 +314,19 @@ def manage_ingredient_attributes():
     variation_usage_rows = (
         db.session.query(Variation.id, func.count(GlobalItem.id))
         .join(GlobalItem, GlobalItem.variation_id == Variation.id)
-        .filter(GlobalItem.is_archived != True)
+        .filter(not GlobalItem.is_archived)
         .group_by(Variation.id)
         .all()
     )
-    variation_usage = {variation_id: count for variation_id, count in variation_usage_rows}
+    variation_usage = {
+        variation_id: count for variation_id, count in variation_usage_rows
+    }
 
     function_tags = FunctionTag.query.order_by(FunctionTag.name.asc()).all()
     application_tags = ApplicationTag.query.order_by(ApplicationTag.name.asc()).all()
-    category_tags = IngredientCategoryTag.query.order_by(IngredientCategoryTag.name.asc()).all()
+    category_tags = IngredientCategoryTag.query.order_by(
+        IngredientCategoryTag.name.asc()
+    ).all()
 
     return render_template(
         "developer/ingredient_attributes.html",
@@ -346,14 +370,18 @@ def create_physical_form():
         return redirect(url_for("developer.manage_ingredient_attributes"))
 
     slug = _generate_unique_slug(PhysicalForm, name)
-    new_form = PhysicalForm(name=name, slug=slug, description=description, is_active=True)
+    new_form = PhysicalForm(
+        name=name, slug=slug, description=description, is_active=True
+    )
     db.session.add(new_form)
     db.session.commit()
     flash(f'Physical form "{name}" created.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
-@developer_bp.route("/ingredient-attributes/physical-forms/<int:form_id>/toggle", methods=["POST"])
+@developer_bp.route(
+    "/ingredient-attributes/physical-forms/<int:form_id>/toggle", methods=["POST"]
+)
 @require_developer_permission("dev.system_admin")
 def toggle_physical_form(form_id: int):
     """Toggle a physical form's active state."""
@@ -410,7 +438,9 @@ def create_variation():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
-@developer_bp.route("/ingredient-attributes/variations/<int:variation_id>/toggle", methods=["POST"])
+@developer_bp.route(
+    "/ingredient-attributes/variations/<int:variation_id>/toggle", methods=["POST"]
+)
 @require_developer_permission("dev.system_admin")
 def toggle_variation(variation_id: int):
     variation = Variation.query.get_or_404(variation_id)

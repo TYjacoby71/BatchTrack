@@ -1,7 +1,7 @@
 """Public waitlist capture routes."""
 
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request
@@ -61,8 +61,12 @@ def join_waitlist():
                 block=False,
             )
             if trap_email:
-                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
-                PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
+                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(
+                    trap_email
+                )
+                PublicBotTrapService.add_block(
+                    email=trap_email, user_id=blocked_user_id
+                )
             else:
                 PublicBotTrapService.add_block(
                     ip=PublicBotTrapService.resolve_request_ip(request),
@@ -102,7 +106,9 @@ def join_waitlist():
             "waitlist_key": metadata["waitlist_key"],
             "context": metadata["context"],
             "notes": (payload.get("notes") or "").strip(),
-            "tags": payload.get("tags") if isinstance(payload.get("tags"), list) else [],
+            "tags": (
+                payload.get("tags") if isinstance(payload.get("tags"), list) else []
+            ),
         }
 
         waitlist_file = "data/waitlist.json"

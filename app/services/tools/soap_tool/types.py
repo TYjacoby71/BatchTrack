@@ -102,12 +102,22 @@ class SoapToolOilInput:
         return cls(
             name=_text(payload.get("name"), "Oil"),
             grams=_clamp(_to_float(payload.get("grams"), 0.0), 0.0),
-            sap_koh=_clamp(_to_float(payload.get("sap_koh", payload.get("sapKoh")), 0.0), 0.0),
+            sap_koh=_clamp(
+                _to_float(payload.get("sap_koh", payload.get("sapKoh")), 0.0), 0.0
+            ),
             iodine=_clamp(_to_float(payload.get("iodine"), 0.0), 0.0),
-            fatty_profile=_fatty_profile(payload.get("fatty_profile", payload.get("fattyProfile"))),
-            global_item_id=_to_int(payload.get("global_item_id", payload.get("globalItemId"))),
+            fatty_profile=_fatty_profile(
+                payload.get("fatty_profile", payload.get("fattyProfile"))
+            ),
+            global_item_id=_to_int(
+                payload.get("global_item_id", payload.get("globalItemId"))
+            ),
             default_unit=_text(payload.get("default_unit", payload.get("defaultUnit"))),
-            ingredient_category_name=_text(payload.get("ingredient_category_name", payload.get("ingredientCategoryName"))),
+            ingredient_category_name=_text(
+                payload.get(
+                    "ingredient_category_name", payload.get("ingredientCategoryName")
+                )
+            ),
         )
 
 
@@ -130,10 +140,14 @@ class SoapToolFragranceInput:
             name=_text(payload.get("name"), "Fragrance/Essential Oils"),
             grams=_clamp(_to_float(payload.get("grams"), 0.0), 0.0),
             pct=_clamp(_to_float(payload.get("pct"), 0.0), 0.0, 100.0),
-            global_item_id=_to_int(payload.get("global_item_id", payload.get("globalItemId"))),
+            global_item_id=_to_int(
+                payload.get("global_item_id", payload.get("globalItemId"))
+            ),
             default_unit=_text(payload.get("default_unit", payload.get("defaultUnit"))),
             ingredient_category_name=_text(
-                payload.get("ingredient_category_name", payload.get("ingredientCategoryName"))
+                payload.get(
+                    "ingredient_category_name", payload.get("ingredientCategoryName")
+                )
             ),
         )
 
@@ -168,26 +182,75 @@ class SoapToolAdditivesInput:
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "SoapToolAdditivesInput":
         return cls(
-            lactate_pct=_clamp(_to_float(payload.get("lactate_pct", payload.get("lactatePct")), 0.0), 0.0, 100.0),
-            sugar_pct=_clamp(_to_float(payload.get("sugar_pct", payload.get("sugarPct")), 0.0), 0.0, 100.0),
-            salt_pct=_clamp(_to_float(payload.get("salt_pct", payload.get("saltPct")), 0.0), 0.0, 100.0),
-            citric_pct=_clamp(_to_float(payload.get("citric_pct", payload.get("citricPct")), 0.0), 0.0, 100.0),
-            lactate_name=_text(payload.get("lactate_name", payload.get("lactateName")), "Sodium Lactate"),
-            sugar_name=_text(payload.get("sugar_name", payload.get("sugarName")), "Sugar"),
+            lactate_pct=_clamp(
+                _to_float(payload.get("lactate_pct", payload.get("lactatePct")), 0.0),
+                0.0,
+                100.0,
+            ),
+            sugar_pct=_clamp(
+                _to_float(payload.get("sugar_pct", payload.get("sugarPct")), 0.0),
+                0.0,
+                100.0,
+            ),
+            salt_pct=_clamp(
+                _to_float(payload.get("salt_pct", payload.get("saltPct")), 0.0),
+                0.0,
+                100.0,
+            ),
+            citric_pct=_clamp(
+                _to_float(payload.get("citric_pct", payload.get("citricPct")), 0.0),
+                0.0,
+                100.0,
+            ),
+            lactate_name=_text(
+                payload.get("lactate_name", payload.get("lactateName")),
+                "Sodium Lactate",
+            ),
+            sugar_name=_text(
+                payload.get("sugar_name", payload.get("sugarName")), "Sugar"
+            ),
             salt_name=_text(payload.get("salt_name", payload.get("saltName")), "Salt"),
-            citric_name=_text(payload.get("citric_name", payload.get("citricName")), "Citric Acid"),
-            lactate_global_item_id=_to_int(payload.get("lactate_global_item_id", payload.get("lactateGlobalItemId"))),
-            sugar_global_item_id=_to_int(payload.get("sugar_global_item_id", payload.get("sugarGlobalItemId"))),
-            salt_global_item_id=_to_int(payload.get("salt_global_item_id", payload.get("saltGlobalItemId"))),
-            citric_global_item_id=_to_int(payload.get("citric_global_item_id", payload.get("citricGlobalItemId"))),
-            lactate_default_unit=_text(payload.get("lactate_default_unit", payload.get("lactateDefaultUnit"))),
-            sugar_default_unit=_text(payload.get("sugar_default_unit", payload.get("sugarDefaultUnit"))),
-            salt_default_unit=_text(payload.get("salt_default_unit", payload.get("saltDefaultUnit"))),
-            citric_default_unit=_text(payload.get("citric_default_unit", payload.get("citricDefaultUnit"))),
-            lactate_category_name=_text(payload.get("lactate_category_name", payload.get("lactateCategoryName"))),
-            sugar_category_name=_text(payload.get("sugar_category_name", payload.get("sugarCategoryName"))),
-            salt_category_name=_text(payload.get("salt_category_name", payload.get("saltCategoryName"))),
-            citric_category_name=_text(payload.get("citric_category_name", payload.get("citricCategoryName"))),
+            citric_name=_text(
+                payload.get("citric_name", payload.get("citricName")), "Citric Acid"
+            ),
+            lactate_global_item_id=_to_int(
+                payload.get(
+                    "lactate_global_item_id", payload.get("lactateGlobalItemId")
+                )
+            ),
+            sugar_global_item_id=_to_int(
+                payload.get("sugar_global_item_id", payload.get("sugarGlobalItemId"))
+            ),
+            salt_global_item_id=_to_int(
+                payload.get("salt_global_item_id", payload.get("saltGlobalItemId"))
+            ),
+            citric_global_item_id=_to_int(
+                payload.get("citric_global_item_id", payload.get("citricGlobalItemId"))
+            ),
+            lactate_default_unit=_text(
+                payload.get("lactate_default_unit", payload.get("lactateDefaultUnit"))
+            ),
+            sugar_default_unit=_text(
+                payload.get("sugar_default_unit", payload.get("sugarDefaultUnit"))
+            ),
+            salt_default_unit=_text(
+                payload.get("salt_default_unit", payload.get("saltDefaultUnit"))
+            ),
+            citric_default_unit=_text(
+                payload.get("citric_default_unit", payload.get("citricDefaultUnit"))
+            ),
+            lactate_category_name=_text(
+                payload.get("lactate_category_name", payload.get("lactateCategoryName"))
+            ),
+            sugar_category_name=_text(
+                payload.get("sugar_category_name", payload.get("sugarCategoryName"))
+            ),
+            salt_category_name=_text(
+                payload.get("salt_category_name", payload.get("saltCategoryName"))
+            ),
+            citric_category_name=_text(
+                payload.get("citric_category_name", payload.get("citricCategoryName"))
+            ),
         )
 
 
@@ -225,12 +288,16 @@ class SoapToolWaterInput:
     def from_payload(cls, payload: Mapping[str, Any]) -> "SoapToolWaterInput":
         return cls(
             method=_text(payload.get("method"), "percent"),
-            water_pct=_to_float(payload.get("water_pct", payload.get("waterPct")), 33.0),
+            water_pct=_to_float(
+                payload.get("water_pct", payload.get("waterPct")), 33.0
+            ),
             lye_concentration=_to_float(
                 payload.get("lye_concentration", payload.get("lyeConcentration")),
                 33.0,
             ),
-            water_ratio=_to_float(payload.get("water_ratio", payload.get("waterRatio")), 2.0),
+            water_ratio=_to_float(
+                payload.get("water_ratio", payload.get("waterRatio")), 2.0
+            ),
         )
 
 
@@ -244,7 +311,9 @@ class SoapToolMetaInput:
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "SoapToolMetaInput":
-        unit = _text(payload.get("unit_display", payload.get("unitDisplay")), "g").lower()
+        unit = _text(
+            payload.get("unit_display", payload.get("unitDisplay")), "g"
+        ).lower()
         if unit not in {"g", "oz", "lb"}:
             unit = "g"
         return cls(unit_display=unit)
@@ -272,8 +341,12 @@ class SoapToolComputeRequest:
         water_raw = payload.get("water")
         meta_raw = payload.get("meta")
 
-        oils_list: Iterable[Mapping[str, Any]] = oils_raw if isinstance(oils_raw, list) else []
-        fragrance_list: Iterable[Mapping[str, Any]] = fragrances_raw if isinstance(fragrances_raw, list) else []
+        oils_list: Iterable[Mapping[str, Any]] = (
+            oils_raw if isinstance(oils_raw, list) else []
+        )
+        fragrance_list: Iterable[Mapping[str, Any]] = (
+            fragrances_raw if isinstance(fragrances_raw, list) else []
+        )
         additives_data = additives_raw if isinstance(additives_raw, Mapping) else {}
         lye_data = lye_raw if isinstance(lye_raw, Mapping) else {}
         water_data = water_raw if isinstance(water_raw, Mapping) else {}
@@ -308,4 +381,3 @@ __all__ = [
     "_clamp",
     "_to_float",
 ]
-

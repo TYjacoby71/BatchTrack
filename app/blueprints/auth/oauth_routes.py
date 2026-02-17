@@ -4,15 +4,24 @@ from __future__ import annotations
 
 import logging
 
-from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
+from flask import (
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 from flask_login import login_user
 
-from . import auth_bp
 from ...extensions import db, limiter
 from ...models import User
 from ...services.oauth_service import OAuthService
 from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
+from . import auth_bp
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +36,14 @@ def _safe_relative_path(value: str | None) -> str | None:
     return None
 
 
-def _oauth_success_or_signup_redirect(*, provider: str, email: str, oauth_id: str | None, first_name: str = "", last_name: str = ""):
+def _oauth_success_or_signup_redirect(
+    *,
+    provider: str,
+    email: str,
+    oauth_id: str | None,
+    first_name: str = "",
+    last_name: str = "",
+):
     """Complete OAuth login for existing users or continue payment-gated signup."""
     oauth_next = _safe_relative_path(session.pop("oauth_next", None))
     if not email:
@@ -57,7 +73,11 @@ def _oauth_success_or_signup_redirect(*, provider: str, email: str, oauth_id: st
             next_url = session.pop("login_next", None)
         except Exception:
             next_url = None
-        if isinstance(next_url, str) and next_url.startswith("/") and not next_url.startswith("//"):
+        if (
+            isinstance(next_url, str)
+            and next_url.startswith("/")
+            and not next_url.startswith("//")
+        ):
             return redirect(next_url)
         return redirect(url_for("organization.dashboard"))
 
@@ -69,7 +89,9 @@ def _oauth_success_or_signup_redirect(*, provider: str, email: str, oauth_id: st
         "oauth_provider_id": oauth_id,
         "email_verified": True,
     }
-    flash("Please complete your account setup by selecting a subscription plan.", "info")
+    flash(
+        "Please complete your account setup by selecting a subscription plan.", "info"
+    )
     if oauth_next and oauth_next.startswith("/auth/signup"):
         return redirect(oauth_next)
     return redirect(url_for("auth.signup", tier="free"))
@@ -96,7 +118,9 @@ def oauth_google():
         flash("Unable to initiate OAuth. Please try again.", "error")
         return redirect(url_for("auth.login"))
 
-    logger.info("OAuth authorization URL generated successfully, state: %s...", state[:10])
+    logger.info(
+        "OAuth authorization URL generated successfully, state: %s...", state[:10]
+    )
     session["oauth_state"] = state
     session["oauth_provider"] = "google"
     oauth_next = _safe_relative_path(request.args.get("next"))
@@ -133,7 +157,9 @@ def oauth_callback():
         session_state = session.pop("oauth_state", None)
         session_provider = session.pop("oauth_provider", None)
         if session_provider and session_provider != "google":
-            logger.error("OAuth provider mismatch: expected google, got %s", session_provider)
+            logger.error(
+                "OAuth provider mismatch: expected google, got %s", session_provider
+            )
             flash("OAuth provider validation failed. Please try again.", "error")
             return redirect(url_for("auth.login"))
         if not session_state or session_state != state:
@@ -178,7 +204,9 @@ def oauth_callback():
 def oauth_facebook():
     """Initiate Facebook OAuth flow."""
     if not OAuthService.is_facebook_oauth_configured():
-        flash("Facebook OAuth is not configured. Please contact administrator.", "error")
+        flash(
+            "Facebook OAuth is not configured. Please contact administrator.", "error"
+        )
         return redirect(url_for("auth.login"))
 
     state = OAuthService.generate_state()
@@ -213,7 +241,10 @@ def oauth_facebook_callback():
                 error_reason,
                 error_description,
             )
-            flash("Facebook authentication was canceled or failed. Please try again.", "error")
+            flash(
+                "Facebook authentication was canceled or failed. Please try again.",
+                "error",
+            )
             return redirect(url_for("auth.login"))
 
         if not state or not code:
@@ -281,10 +312,18 @@ def debug_oauth_config():
         {
             "oauth_configuration": config_status,
             "environment_vars": {
-                "GOOGLE_OAUTH_CLIENT_ID_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")),
-                "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")),
-                "FACEBOOK_OAUTH_APP_ID_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_ID")),
-                "FACEBOOK_OAUTH_APP_SECRET_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")),
+                "GOOGLE_OAUTH_CLIENT_ID_present": bool(
+                    current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")
+                ),
+                "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(
+                    current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")
+                ),
+                "FACEBOOK_OAUTH_APP_ID_present": bool(
+                    current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+                ),
+                "FACEBOOK_OAUTH_APP_SECRET_present": bool(
+                    current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
+                ),
             },
             "template_oauth_available": OAuthService.is_oauth_configured(),
             "template_oauth_providers": OAuthService.get_enabled_providers(),

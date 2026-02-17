@@ -28,4 +28,3 @@ class StartBatchRequest:
     portioning: Optional[PortioningPlan]
     projected_yield: Optional[float] = None
     projected_yield_unit: Optional[str] = None
-

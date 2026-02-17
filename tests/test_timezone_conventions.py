@@ -12,9 +12,8 @@ If this test fails, update the offending code path to use
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,7 +76,7 @@ def test_no_naive_datetime_usage():
             line_no = _line_number(text, match.start())
 
             # Capture contextual snippet (covers multi-line calls).
-            snippet = text[match.start(): match.start() + 120]
+            snippet = text[match.start() : match.start() + 120]
 
             if any(marker in snippet for marker in ALLOWED_NOW_CONTEXT):
                 continue
@@ -90,7 +89,11 @@ def test_no_naive_datetime_usage():
                 line_end = len(text)
             line_text = text[line_start:line_end].strip()
 
-            if line_text.startswith("#") or line_text.startswith("'") or line_text.startswith('"'):
+            if (
+                line_text.startswith("#")
+                or line_text.startswith("'")
+                or line_text.startswith('"')
+            ):
                 continue
 
             failures.append(

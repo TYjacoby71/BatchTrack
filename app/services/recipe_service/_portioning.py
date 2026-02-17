@@ -27,15 +27,15 @@ def _apply_portioning_settings(
 ) -> Tuple[bool, Optional[Dict[str, Any]]]:
     def _missing_count_error() -> Dict[str, Any]:
         return {
-            'message': 'For portioned recipes, portion count must be provided.',
-            'error': 'For portioned recipes, portion count must be provided.',
-            'missing_fields': ['portion count']
+            "message": "For portioned recipes, portion count must be provided.",
+            "error": "For portioned recipes, portion count must be provided.",
+            "missing_fields": ["portion count"],
         }
 
     if portioning_data is not None:
-        wants_portioning = bool(portioning_data and portioning_data.get('is_portioned'))
+        wants_portioning = bool(portioning_data and portioning_data.get("is_portioned"))
         if wants_portioning:
-            candidate = portioning_data.get('portion_count')
+            candidate = portioning_data.get("portion_count")
             try:
                 resolved_count = int(candidate) if candidate is not None else 0
             except (TypeError, ValueError):
@@ -49,9 +49,9 @@ def _apply_portioning_settings(
 
             recipe.portioning_data = dict(portioning_data)
             recipe.is_portioned = True
-            recipe.portion_name = portioning_data.get('portion_name')
+            recipe.portion_name = portioning_data.get("portion_name")
             recipe.portion_count = resolved_count
-            recipe.portion_unit_id = portioning_data.get('portion_unit_id')
+            recipe.portion_unit_id = portioning_data.get("portion_unit_id")
         else:
             _clear_portioning(recipe)
 

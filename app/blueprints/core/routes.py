@@ -13,7 +13,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, redirect, render_template, send_file, url_for
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    redirect,
+    render_template,
+    send_file,
+    url_for,
+)
 from flask_login import current_user
 
 from app.extensions import cache
@@ -42,7 +50,9 @@ def _serve_marketing_public_asset(filename: str, *, mimetype: str):
 
 def _serve_cropped_full_logo():
     """Serve a cropped full logo variant sized for navbar display."""
-    asset_path = Path(current_app.root_path).parent / "attached_assets" / "Full Logo.svg"
+    asset_path = (
+        Path(current_app.root_path).parent / "attached_assets" / "Full Logo.svg"
+    )
     if not asset_path.is_file():
         abort(404)
 
@@ -68,12 +78,16 @@ def _render_public_homepage_response():
     Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
     avoid re-rendering the full template on every hit.
     """
-    cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v2")
+    cache_key = current_app.config.get(
+        "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v2"
+    )
     try:
         from app.utils.settings import is_feature_enabled
 
         global_library_enabled = is_feature_enabled("FEATURE_GLOBAL_ITEM_LIBRARY")
-        cache_key = f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
+        cache_key = (
+            f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
+        )
     except Exception:
         pass
     try:
@@ -124,13 +138,17 @@ def sitemap_xml():
 @core_bp.route("/robots.txt")
 def robots_txt():
     """Robots directives for crawlers."""
-    return _serve_marketing_public_asset("robots.txt", mimetype="text/plain; charset=utf-8")
+    return _serve_marketing_public_asset(
+        "robots.txt", mimetype="text/plain; charset=utf-8"
+    )
 
 
 @core_bp.route("/llms.txt")
 def llms_txt():
     """LLMs.txt guidance for AI crawlers and agents."""
-    return _serve_marketing_public_asset("llms.txt", mimetype="text/plain; charset=utf-8")
+    return _serve_marketing_public_asset(
+        "llms.txt", mimetype="text/plain; charset=utf-8"
+    )
 
 
 @core_bp.route("/dev-login")
@@ -144,9 +162,15 @@ def index():
     """Main landing page with proper routing logic."""
     if current_user.is_authenticated:
         if current_user.user_type == "developer":
-            return redirect(url_for("developer.dashboard"))  # Developers go to developer dashboard
-        return redirect(url_for("app_routes.dashboard"))  # Regular users go to user dashboard
-    return _render_public_homepage_response()  # Serve cached public homepage for unauthenticated users
+            return redirect(
+                url_for("developer.dashboard")
+            )  # Developers go to developer dashboard
+        return redirect(
+            url_for("app_routes.dashboard")
+        )  # Regular users go to user dashboard
+    return (
+        _render_public_homepage_response()
+    )  # Serve cached public homepage for unauthenticated users
 
 
 @core_bp.route("/homepage")

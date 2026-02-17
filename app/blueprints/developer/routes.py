@@ -1,19 +1,21 @@
-from flask import Blueprint, render_template, request, jsonify
+import os
+
+from flask import Blueprint, jsonify, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_login import login_required, current_user
 
-from .system_roles import system_roles_bp
-from .subscription_tiers import subscription_tiers_bp
-from .addons import addons_bp
-from app.utils.permissions import permission_required
 from app.utils.json_store import read_json_file, write_json_file
+from app.utils.permissions import permission_required
 from app.utils.timezone_utils import TimezoneUtils
-import os
-import datetime
+
+from .addons import addons_bp
+from .subscription_tiers import subscription_tiers_bp
+from .system_roles import system_roles_bp
 
 # Initialize Limiter
-limiter = Limiter(key_func=get_remote_address, default_limits="200 per day, 50 per hour")
+limiter = Limiter(
+    key_func=get_remote_address, default_limits="200 per day, 50 per hour"
+)
 
 developer_bp = Blueprint("developer", __name__, url_prefix="/developer")
 
@@ -26,26 +28,25 @@ developer_bp.register_blueprint(addons_bp)
 from . import views  # noqa: F401,E402
 
 
-@developer_bp.route('/vendor-signups')
+@developer_bp.route("/vendor-signups")
 @limiter.limit("100 per minute")
-@permission_required('dev.dashboard')
+@permission_required("dev.dashboard")
 def vendor_signups():
     """View vendor signups"""
-    from app.utils.json_store import read_json_file
     import os
 
-    vendor_file = os.path.join('data', 'vendor_signups.json')
+    vendor_file = os.path.join("data", "vendor_signups.json")
     signups = read_json_file(vendor_file, default=[])
 
     # Sort by timestamp, most recent first
-    signups.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    signups.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
-    return render_template('developer/vendor_signups.html', signups=signups)
+    return render_template("developer/vendor_signups.html", signups=signups)
 
 
-@developer_bp.route('/waitlist-signups')
+@developer_bp.route("/waitlist-signups")
 @limiter.limit("100 per minute")
-@permission_required('dev.dashboard')
+@permission_required("dev.dashboard")
 def waitlist_signups_view():
     """
     This is a placeholder for the waitlist signups view.
@@ -58,9 +59,10 @@ def waitlist_signups_view():
 
 # --- Vendor Signup Functionality ---
 
-@developer_bp.route('/api/vendor/signup', methods=['POST'])
+
+@developer_bp.route("/api/vendor/signup", methods=["POST"])
 @limiter.limit("10 per minute")
-@permission_required('dev.dashboard')
+@permission_required("dev.dashboard")
 def api_vendor_signup():
     """API endpoint to handle vendor signup submissions."""
     if not request.is_json:
@@ -68,19 +70,19 @@ def api_vendor_signup():
 
     data = request.get_json()
 
-    required_fields = ['vendor_name', 'vendor_url', 'contact_email']
+    required_fields = ["vendor_name", "vendor_url", "contact_email"]
     if not all(field in data and data[field] for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
     vendor_signup_data = {
-        'vendor_name': data.get('vendor_name'),
-        'vendor_url': data.get('vendor_url'),
-        'contact_email': data.get('contact_email'),
-        'message': data.get('message', ''),
-        'timestamp': TimezoneUtils.utc_now().isoformat()
+        "vendor_name": data.get("vendor_name"),
+        "vendor_url": data.get("vendor_url"),
+        "contact_email": data.get("contact_email"),
+        "message": data.get("message", ""),
+        "timestamp": TimezoneUtils.utc_now().isoformat(),
     }
 
-    vendor_file = os.path.join('data', 'vendor_signups.json')
+    vendor_file = os.path.join("data", "vendor_signups.json")
     try:
         write_json_file(vendor_file, vendor_signup_data, append=True)
     except Exception as e:

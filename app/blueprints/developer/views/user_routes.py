@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
+
 from app.models import User
 from app.services.developer.user_service import UserService
 
@@ -96,14 +97,22 @@ def get_user_details(user_id):
     """Get detailed user information for editing."""
     user = User.query.get_or_404(user_id)
     if user.user_type == "developer":
-        return jsonify({"success": False, "error": "Cannot edit developer users through this endpoint"})
+        return jsonify(
+            {
+                "success": False,
+                "error": "Cannot edit developer users through this endpoint",
+            }
+        )
 
     user_data = UserService.serialize_user(user)
     user_data["is_organization_owner"] = getattr(user, "is_organization_owner", False)
     user_data["_is_organization_owner"] = getattr(user, "_is_organization_owner", False)
     user_data["display_role"] = user.display_role
     if user.organization:
-        user_data["organization"] = {"id": user.organization.id, "name": user.organization.name}
+        user_data["organization"] = {
+            "id": user.organization.id,
+            "name": user.organization.name,
+        }
 
     return jsonify({"success": True, "user": user_data})
 
@@ -124,9 +133,11 @@ def get_developer_user_details(user_id):
     from app.models.user_role_assignment import UserRoleAssignment
 
     all_roles = DeveloperRole.query.filter_by(is_active=True).all()
-    assignments = UserRoleAssignment.query.filter_by(
-        user_id=user_id, is_active=True
-    ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
+    assignments = (
+        UserRoleAssignment.query.filter_by(user_id=user_id, is_active=True)
+        .filter(UserRoleAssignment.developer_role_id.isnot(None))
+        .all()
+    )
     assigned_role_ids = {assignment.developer_role_id for assignment in assignments}
 
     roles_data = [
@@ -147,7 +158,9 @@ def get_developer_user_details(user_id):
         "email": user.email,
         "phone": user.phone,
         "is_active": user.is_active,
-        "last_login": user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None,
+        "last_login": (
+            user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None
+        ),
         "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
         "roles": roles_data,
     }

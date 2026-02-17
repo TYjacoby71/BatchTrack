@@ -11,12 +11,11 @@ Glossary:
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import requests
-from sqlalchemy import select
-
 from flask import current_app, has_app_context
+from sqlalchemy import select
 
 from app.extensions import db
 from app.models.domain_event import DomainEvent
@@ -45,7 +44,9 @@ class DomainEventDispatcher:
         self.batch_size = max(1, batch_size)
         self.max_retry_attempts = max_retry_attempts
 
-    def dispatch_pending_events(self, *, batch_size: Optional[int] = None) -> Dict[str, int]:
+    def dispatch_pending_events(
+        self, *, batch_size: Optional[int] = None
+    ) -> Dict[str, int]:
         """Dispatch a batch of pending events and return processing metrics."""
         limit = max(1, batch_size or self.batch_size)
         processed = 0
@@ -77,7 +78,10 @@ class DomainEventDispatcher:
             try:
                 delivered = self._deliver_event(event)
             except Exception:
-                logger.exception("Domain event delivery raised unexpectedly", extra={"event_id": event.id})
+                logger.exception(
+                    "Domain event delivery raised unexpectedly",
+                    extra={"event_id": event.id},
+                )
                 delivered = False
 
             if delivered:
@@ -87,7 +91,10 @@ class DomainEventDispatcher:
             else:
                 failed += 1
                 event.delivery_attempts = (event.delivery_attempts or 0) + 1
-                if self.max_retry_attempts and event.delivery_attempts >= self.max_retry_attempts:
+                if (
+                    self.max_retry_attempts
+                    and event.delivery_attempts >= self.max_retry_attempts
+                ):
                     logger.error(
                         "Domain event %s exceeded max retry attempts (%s). Marking as processed.",
                         event.id,
@@ -111,7 +118,9 @@ class DomainEventDispatcher:
 
         return {"processed": processed, "succeeded": succeeded, "failed": failed}
 
-    def run_forever(self, *, poll_interval: float = 5.0, batch_size: Optional[int] = None) -> None:
+    def run_forever(
+        self, *, poll_interval: float = 5.0, batch_size: Optional[int] = None
+    ) -> None:
         """Continuously dispatch events until interrupted."""
         interval = max(0.5, poll_interval)
         logger.info(
@@ -139,7 +148,9 @@ class DomainEventDispatcher:
     def _deliver_event(self, event: DomainEvent) -> bool:
         """Deliver the event to configured sinks."""
         if not self.webhook_url:
-            logger.debug("No webhook configured; marking event %s as processed.", event.id)
+            logger.debug(
+                "No webhook configured; marking event %s as processed.", event.id
+            )
             return True
 
         payload = self._build_payload(event)
@@ -151,7 +162,10 @@ class DomainEventDispatcher:
             return True
         except requests.RequestException as exc:
             logger.warning(
-                "Domain event %s delivery failed: %s", event.id, exc, extra={"status_code": getattr(exc.response, "status_code", None)}
+                "Domain event %s delivery failed: %s",
+                event.id,
+                exc,
+                extra={"status_code": getattr(exc.response, "status_code", None)},
             )
             return False
 

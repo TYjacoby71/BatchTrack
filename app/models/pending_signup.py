@@ -37,7 +37,9 @@ class PendingSignup(db.Model):
     status = db.Column(db.String(32), nullable=False, default="pending", index=True)
     last_error = db.Column(db.Text, nullable=True)
 
-    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=True
+    )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
@@ -75,4 +77,3 @@ class PendingSignup(db.Model):
             self.completed_at = TimezoneUtils.utc_now()
         if error:
             self.last_error = error
-

@@ -75,14 +75,18 @@ def test_decimal_sap_values_match_mg_sap_values():
     mg_result = compute_lye_water_values(**mg_payload)
     decimal_result = compute_lye_water_values(**decimal_payload)
 
-    assert round(decimal_result["lye_adjusted_g"], 3) == round(mg_result["lye_adjusted_g"], 3)
+    assert round(decimal_result["lye_adjusted_g"], 3) == round(
+        mg_result["lye_adjusted_g"], 3
+    )
     assert round(decimal_result["water_g"], 3) == round(mg_result["water_g"], 3)
 
 
 def test_lye_is_method_independent_for_same_oils_and_settings():
     base = _base_payload(oils=[{"grams": 650, "sap_koh": 0.188}])
 
-    result_percent = compute_lye_water_values(**{**base, "water_method": "percent", "water_pct": 33})
+    result_percent = compute_lye_water_values(
+        **{**base, "water_method": "percent", "water_pct": 33}
+    )
     result_concentration = compute_lye_water_values(
         **{**base, "water_method": "concentration", "lye_concentration_input_pct": 33}
     )
@@ -90,7 +94,11 @@ def test_lye_is_method_independent_for_same_oils_and_settings():
         **{**base, "water_method": "ratio", "water_ratio_input": 2}
     )
 
-    assert round(result_percent["lye_adjusted_g"], 3) == round(result_concentration["lye_adjusted_g"], 3)
-    assert round(result_percent["lye_adjusted_g"], 3) == round(result_ratio["lye_adjusted_g"], 3)
+    assert round(result_percent["lye_adjusted_g"], 3) == round(
+        result_concentration["lye_adjusted_g"], 3
+    )
+    assert round(result_percent["lye_adjusted_g"], 3) == round(
+        result_ratio["lye_adjusted_g"], 3
+    )
     assert result_concentration["water_g"] > 100
     assert result_ratio["water_g"] > 100

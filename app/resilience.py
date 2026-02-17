@@ -65,9 +65,15 @@ def register_resilience_handlers(app) -> None:
             if parsed_referrer.netloc and parsed_referrer.netloc != parsed_host.netloc:
                 return default_target
             path = parsed_referrer.path or "/"
-            target = f"{path}?{parsed_referrer.query}" if parsed_referrer.query else path
+            target = (
+                f"{path}?{parsed_referrer.query}" if parsed_referrer.query else path
+            )
             if not current_user.is_authenticated:
-                return target if not target.startswith("/auth/") else _csrf_login_target(target)
+                return (
+                    target
+                    if not target.startswith("/auth/")
+                    else _csrf_login_target(target)
+                )
             return target
         except Exception:
             return default_target
@@ -123,5 +129,8 @@ def register_resilience_handlers(app) -> None:
                 ),
                 400,
             )
-        flash("Your session expired or this form is out of date. Please try again.", "warning")
+        flash(
+            "Your session expired or this form is out of date. Please try again.",
+            "warning",
+        )
         return redirect(_csrf_redirect_target(), code=303)

@@ -61,8 +61,12 @@ def _load_item_records() -> list[dict[str, Any]]:
         if not name:
             continue
         aliases = list(row.get("aliases") or [])
-        category = (row.get("ingredient_category_name") or "").strip() or _infer_category(name)
-        default_unit = normalize_soapcalc_unit(row.get("default_unit")) or _infer_default_unit(category)
+        category = (
+            row.get("ingredient_category_name") or ""
+        ).strip() or _infer_category(name)
+        default_unit = normalize_soapcalc_unit(
+            row.get("default_unit")
+        ) or _infer_default_unit(category)
         records.append(
             {
                 "name": name,
@@ -151,7 +155,9 @@ def _build_group_payload(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def search_soapcalc_items(query: str, *, limit: int = 25, group: bool = False) -> list[dict[str, Any]]:
+def search_soapcalc_items(
+    query: str, *, limit: int = 25, group: bool = False
+) -> list[dict[str, Any]]:
     if not query:
         return []
     normalized = query.strip().lower()
@@ -171,5 +177,7 @@ def search_soapcalc_items(query: str, *, limit: int = 25, group: bool = False) -
     return [_build_item_payload(record) for record in records]
 
 
-def search_soapcalc_oils(query: str, *, limit: int = 25, group: bool = False) -> list[dict[str, Any]]:
+def search_soapcalc_oils(
+    query: str, *, limit: int = 25, group: bool = False
+) -> list[dict[str, Any]]:
     return search_soapcalc_items(query, limit=limit, group=group)

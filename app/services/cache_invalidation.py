@@ -160,7 +160,9 @@ def _inventory_namespace(org_id: int | None) -> str:
     return f"{_INVENTORY_LIST_NAMESPACE}:{_org_scope(org_id)}"
 
 
-def inventory_list_cache_key(org_id: int | None, params: Mapping[str, Any] | None = None) -> str:
+def inventory_list_cache_key(
+    org_id: int | None, params: Mapping[str, Any] | None = None
+) -> str:
     """
     Produce a namespaced cache key for inventory list payloads using request filters.
     """

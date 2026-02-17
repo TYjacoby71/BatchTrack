@@ -23,19 +23,27 @@ from app.extensions import db
 from app.models import InventoryItem, Recipe
 from app.models.batch import Batch
 from app.models.product_category import ProductCategory
-from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.lineage_service import format_label_prefix, generate_variation_prefix
+from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
     build_test_template,
     create_recipe,
+)
+from app.services.recipe_service import (
     create_test_version as create_test_version_service,
+)
+from app.services.recipe_service import (
     duplicate_recipe,
-    get_recipe_details,
     get_next_test_sequence,
+    get_recipe_details,
     update_recipe,
 )
 from app.services.recipe_service._core import _derive_variation_name
-from app.utils.permissions import get_effective_organization_id, has_permission, require_permission
+from app.utils.permissions import (
+    get_effective_organization_id,
+    has_permission,
+    require_permission,
+)
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -65,7 +73,7 @@ def _resolve_active_org_id():
     if org_id:
         return org_id
     try:
-        return getattr(current_user, 'organization_id', None)
+        return getattr(current_user, "organization_id", None)
     except Exception:
         return None
 
@@ -103,9 +111,11 @@ def _hydrate_variation_draft(draft, parent_recipe):
 # Purpose: Require tests to change ingredients, yield, or instructions.
 def _ensure_test_has_changes(base_recipe, payload):
     submitted_ingredients = payload.get("ingredients") or []
-    ingredients_same = RecipeProportionalityService.are_recipes_proportionally_identical(
-        submitted_ingredients,
-        base_recipe.recipe_ingredients,
+    ingredients_same = (
+        RecipeProportionalityService.are_recipes_proportionally_identical(
+            submitted_ingredients,
+            base_recipe.recipe_ingredients,
+        )
     )
     submitted_instructions = (payload.get("instructions") or "").strip()
     base_instructions = (base_recipe.instructions or "").strip()
@@ -114,7 +124,9 @@ def _ensure_test_has_changes(base_recipe, payload):
     submitted_unit = (payload.get("yield_unit") or "").strip()
     base_yield = float(base_recipe.predicted_yield or 0)
     base_unit = (base_recipe.predicted_yield_unit or "").strip()
-    yield_same = (float(submitted_yield or 0) == base_yield) and (submitted_unit == base_unit)
+    yield_same = (float(submitted_yield or 0) == base_yield) and (
+        submitted_unit == base_unit
+    )
 
     if ingredients_same and instructions_same and yield_same:
         raise ValidationError(
@@ -159,19 +171,21 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
 # =========================================================
 # --- New recipe ---
 # Purpose: Create a new master recipe.
-@recipes_bp.route('/new', methods=['GET', 'POST'])
+@recipes_bp.route("/new", methods=["GET", "POST"])
 @login_required
-@require_permission('recipes.create')
+@require_permission("recipes.create")
 def new_recipe():
-    if request.method == 'POST':
-        is_clone = request.form.get('is_clone') == 'true'
-        cloned_from_id = safe_int(request.form.get('cloned_from_id'))
+    if request.method == "POST":
+        is_clone = request.form.get("is_clone") == "true"
+        cloned_from_id = safe_int(request.form.get("cloned_from_id"))
         target_status = get_submission_status(request.form)
         try:
             submission = build_recipe_submission(request.form, request.files)
             if not submission.ok:
-                flash(submission.error, 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(submission.error, "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 form_recipe = recipe_from_form(request.form)
                 return render_recipe_form(
                     recipe=form_recipe,
@@ -185,12 +199,12 @@ def new_recipe():
             payload = dict(submission.kwargs)
             payload.update(
                 {
-                    'status': target_status,
-                    'cloned_from_id': cloned_from_id,
+                    "status": target_status,
+                    "cloned_from_id": cloned_from_id,
                 }
             )
 
-            submitted_ingredients = payload.get('ingredients') or []
+            submitted_ingredients = payload.get("ingredients") or []
 
             try:
                 _enforce_anti_plagiarism(
@@ -198,8 +212,10 @@ def new_recipe():
                     skip_check=bool(cloned_from_id),
                 )
             except ValidationError as exc:
-                flash(str(exc), 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(str(exc), "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 form_recipe = recipe_from_form(request.form)
                 return render_recipe_form(
                     recipe=form_recipe,
@@ -216,11 +232,11 @@ def new_recipe():
                 try:
                     created_names = []
                     for ing in submitted_ingredients:
-                        item = db.session.get(InventoryItem, ing['item_id'])
+                        item = db.session.get(InventoryItem, ing["item_id"])
                         if (
                             item
-                            and not getattr(item, 'global_item_id', None)
-                            and float(getattr(item, 'quantity', 0) or 0) == 0.0
+                            and not getattr(item, "global_item_id", None)
+                            and float(getattr(item, "quantity", 0) or 0) == 0.0
                         ):
                             created_names.append(item.name)
                     if created_names:
@@ -231,26 +247,30 @@ def new_recipe():
                         )
                 except Exception:
                     pass
-                if target_status == 'draft':
+                if target_status == "draft":
                     flash(
-                        'Recipe saved as a draft. You can finish it later from the recipes list.',
-                        'info',
+                        "Recipe saved as a draft. You can finish it later from the recipes list.",
+                        "info",
                     )
                 else:
-                    flash('Recipe published successfully.', 'success')
+                    flash("Recipe published successfully.", "success")
                 try:
                     from flask import session as _session
 
-                    _session.pop('tool_draft', None)
-                    _session.pop('tool_draft_meta', None)
+                    _session.pop("tool_draft", None)
+                    _session.pop("tool_draft_meta", None)
                 except Exception:
                     pass
-                return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+                return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
 
             error_message, missing_fields = parse_service_error(result)
-            draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
-            flash(f'Error creating recipe: {error_message}', 'error')
-            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            draft_prompt = build_draft_prompt(
+                missing_fields, target_status, error_message
+            )
+            flash(f"Error creating recipe: {error_message}", "error")
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                request.form
+            )
             form_recipe = recipe_from_form(request.form)
             return render_recipe_form(
                 recipe=form_recipe,
@@ -265,8 +285,10 @@ def new_recipe():
         except Exception as exc:
             db.session.rollback()
             logger.exception("Error creating recipe: %s", exc)
-            flash('An unexpected error occurred', 'error')
-            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            flash("An unexpected error occurred", "error")
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                request.form
+            )
             form_recipe = recipe_from_form(request.form)
             return render_recipe_form(
                 recipe=form_recipe,
@@ -279,16 +301,16 @@ def new_recipe():
 
     from flask import session
 
-    draft = session.get('tool_draft', None)
+    draft = session.get("tool_draft", None)
     try:
-        meta = session.get('tool_draft_meta') or {}
-        created_at = meta.get('created_at')
+        meta = session.get("tool_draft_meta") or {}
+        created_at = meta.get("created_at")
         if created_at:
             created_dt = datetime.fromisoformat(created_at)
             created_dt = TimezoneUtils.ensure_timezone_aware(created_dt)
             if datetime.now(timezone.utc) - created_dt > timedelta(hours=72):
-                session.pop('tool_draft', None)
-                session.pop('tool_draft_meta', None)
+                session.pop("tool_draft", None)
+                session.pop("tool_draft_meta", None)
                 draft = None
     except Exception:
         pass
@@ -296,18 +318,16 @@ def new_recipe():
     if isinstance(draft, dict):
         try:
             prefill = Recipe(
-                name=draft.get('name') or '',
-                instructions=draft.get('instructions') or '',
-                predicted_yield=float(draft.get('predicted_yield') or 0) or 0.0,
-                predicted_yield_unit=(draft.get('predicted_yield_unit') or ''),
+                name=draft.get("name") or "",
+                instructions=draft.get("instructions") or "",
+                predicted_yield=float(draft.get("predicted_yield") or 0) or 0.0,
+                predicted_yield_unit=(draft.get("predicted_yield_unit") or ""),
             )
-            cat_name = (draft.get('category_name') or '').strip()
+            cat_name = (draft.get("category_name") or "").strip()
             if cat_name:
-                cat = (
-                    ProductCategory.query.filter(
-                        func.lower(ProductCategory.name) == func.lower(db.literal(cat_name))
-                    ).first()
-                )
+                cat = ProductCategory.query.filter(
+                    func.lower(ProductCategory.name) == func.lower(db.literal(cat_name))
+                ).first()
                 if cat:
                     prefill.category_id = cat.id
         except Exception:
@@ -321,30 +341,35 @@ def new_recipe():
 # =========================================================
 # --- Create variation ---
 # Purpose: Create a variation from a published master.
-@recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
+@recipes_bp.route("/<int:recipe_id>/variation", methods=["GET", "POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def create_variation(recipe_id):
     try:
         parent = get_recipe_details(recipe_id)
         if not parent:
-            flash('Parent recipe not found.', 'error')
-            return redirect(url_for('recipes.list_recipes'))
+            flash("Parent recipe not found.", "error")
+            return redirect(url_for("recipes.list_recipes"))
         if parent.is_archived:
-            flash('Archived recipes cannot accept new variations.', 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+            flash("Archived recipes cannot accept new variations.", "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
         if not parent.is_master or parent.test_sequence is not None:
-            flash('Variations can only be created from a published master recipe.', 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+            flash(
+                "Variations can only be created from a published master recipe.",
+                "error",
+            )
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
-        if request.method == 'POST':
+        if request.method == "POST":
             target_status = get_submission_status(request.form)
             submission = build_recipe_submission(
                 request.form, request.files, defaults=parent
             )
             if not submission.ok:
-                flash(submission.error, 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(submission.error, "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
                 _hydrate_variation_draft(variation_draft, parent)
@@ -360,19 +385,21 @@ def create_variation(recipe_id):
             payload = dict(submission.kwargs)
             payload.update(
                 {
-                    'parent_recipe_id': parent.id,
-                    'status': target_status,
+                    "parent_recipe_id": parent.id,
+                    "status": target_status,
                 }
             )
-            
-            if not payload.get('label_prefix') and parent.label_prefix:
-                payload['label_prefix'] = ""
+
+            if not payload.get("label_prefix") and parent.label_prefix:
+                payload["label_prefix"] = ""
 
             try:
-                _ensure_variation_has_changes(parent, payload.get('ingredients') or [])
+                _ensure_variation_has_changes(parent, payload.get("ingredients") or [])
             except ValidationError as exc:
-                flash(str(exc), 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(str(exc), "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 variation_draft = recipe_from_form(request.form, base_recipe=parent)
                 variation_draft.parent_recipe_id = parent.id
                 _hydrate_variation_draft(variation_draft, parent)
@@ -386,23 +413,27 @@ def create_variation(recipe_id):
                 )
 
             if parent.org_origin_purchased:
-                payload['is_sellable'] = True
-            elif getattr(parent, 'is_sellable', True) is False:
-                payload['is_sellable'] = False
+                payload["is_sellable"] = True
+            elif getattr(parent, "is_sellable", True) is False:
+                payload["is_sellable"] = False
 
             success, result = create_recipe(**payload)
 
             if success:
-                if target_status == 'draft':
-                    flash('Variation saved as a draft.', 'info')
+                if target_status == "draft":
+                    flash("Variation saved as a draft.", "info")
                 else:
-                    flash('Recipe variation created successfully.')
-                return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+                    flash("Recipe variation created successfully.")
+                return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
 
             error_message, missing_fields = parse_service_error(result)
-            draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
-            flash(f'Error creating variation: {error_message}', 'error')
-            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            draft_prompt = build_draft_prompt(
+                missing_fields, target_status, error_message
+            )
+            flash(f"Error creating variation: {error_message}", "error")
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                request.form
+            )
             variation_draft = recipe_from_form(request.form, base_recipe=parent)
             variation_draft.parent_recipe_id = parent.id
             _hydrate_variation_draft(variation_draft, parent)
@@ -417,7 +448,7 @@ def create_variation(recipe_id):
             )
 
         new_variation = create_variation_template(parent)
-        requested_name = (request.args.get('variation_name') or '').strip()
+        requested_name = (request.args.get("variation_name") or "").strip()
         if requested_name:
             new_variation.name = requested_name
             new_variation.variation_name = requested_name
@@ -439,33 +470,37 @@ def create_variation(recipe_id):
     except Exception as exc:
         flash(f"Error creating variation: {exc}", "error")
         logger.exception("Error creating variation: %s", exc)
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Create test version ---
 # Purpose: Create a test version for master/variation.
-@recipes_bp.route('/<int:recipe_id>/test', methods=['GET', 'POST'])
+@recipes_bp.route("/<int:recipe_id>/test", methods=["GET", "POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def create_test_version(recipe_id):
     try:
         base = get_recipe_details(recipe_id)
         if not base:
-            flash('Recipe not found.', 'error')
-            return redirect(url_for('recipes.list_recipes'))
+            flash("Recipe not found.", "error")
+            return redirect(url_for("recipes.list_recipes"))
         if base.is_archived:
-            flash('Archived recipes cannot be tested.', 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-        if base.status != 'published':
-            flash('Publish the recipe before creating tests.', 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+            flash("Archived recipes cannot be tested.", "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+        if base.status != "published":
+            flash("Publish the recipe before creating tests.", "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
-        if request.method == 'POST':
+        if request.method == "POST":
             target_status = get_submission_status(request.form)
-            submission = build_recipe_submission(request.form, request.files, defaults=base)
+            submission = build_recipe_submission(
+                request.form, request.files, defaults=base
+            )
             if not submission.ok:
-                flash(submission.error, 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(submission.error, "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 test_draft = recipe_from_form(request.form, base_recipe=base)
                 next_sequence = get_next_test_sequence(base)
                 return render_recipe_form(
@@ -473,7 +508,9 @@ def create_test_version(recipe_id):
                     is_test=True,
                     test_base_id=base.id,
                     test_sequence_hint=next_sequence,
-                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                    label_prefix_display=format_label_prefix(
+                        base, test_sequence=next_sequence
+                    ),
                     ingredient_prefill=ingredient_prefill,
                     consumable_prefill=consumable_prefill,
                     form_values=request.form,
@@ -483,8 +520,10 @@ def create_test_version(recipe_id):
             try:
                 _ensure_test_has_changes(base, payload)
             except ValidationError as exc:
-                flash(str(exc), 'error')
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                flash(str(exc), "error")
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 test_draft = recipe_from_form(request.form, base_recipe=base)
                 next_sequence = get_next_test_sequence(base)
                 return render_recipe_form(
@@ -492,7 +531,9 @@ def create_test_version(recipe_id):
                     is_test=True,
                     test_base_id=base.id,
                     test_sequence_hint=next_sequence,
-                    label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                    label_prefix_display=format_label_prefix(
+                        base, test_sequence=next_sequence
+                    ),
                     ingredient_prefill=ingredient_prefill,
                     consumable_prefill=consumable_prefill,
                     form_values=request.form,
@@ -504,16 +545,20 @@ def create_test_version(recipe_id):
                 target_status=target_status,
             )
             if success:
-                if target_status == 'draft':
-                    flash('Test saved as a draft.', 'info')
+                if target_status == "draft":
+                    flash("Test saved as a draft.", "info")
                 else:
-                    flash('Test version created successfully.', 'success')
-                return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+                    flash("Test version created successfully.", "success")
+                return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
 
             error_message, missing_fields = parse_service_error(result)
-            draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
-            flash(f'Error creating test: {error_message}', 'error')
-            ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+            draft_prompt = build_draft_prompt(
+                missing_fields, target_status, error_message
+            )
+            flash(f"Error creating test: {error_message}", "error")
+            ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                request.form
+            )
             test_draft = recipe_from_form(request.form, base_recipe=base)
             next_sequence = get_next_test_sequence(base)
             return render_recipe_form(
@@ -521,7 +566,9 @@ def create_test_version(recipe_id):
                 is_test=True,
                 test_base_id=base.id,
                 test_sequence_hint=next_sequence,
-                label_prefix_display=format_label_prefix(base, test_sequence=next_sequence),
+                label_prefix_display=format_label_prefix(
+                    base, test_sequence=next_sequence
+                ),
                 ingredient_prefill=ingredient_prefill,
                 consumable_prefill=consumable_prefill,
                 form_values=request.form,
@@ -547,7 +594,7 @@ def create_test_version(recipe_id):
     except Exception as exc:
         flash(f"Error creating test: {exc}", "error")
         logger.exception("Error creating test: %s", exc)
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # =========================================================
@@ -555,44 +602,46 @@ def create_test_version(recipe_id):
 # =========================================================
 # --- Edit recipe ---
 # Purpose: Edit a recipe, allowing forced overrides for published masters.
-@recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@recipes_bp.route("/<int:recipe_id>/edit", methods=["GET", "POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def edit_recipe(recipe_id):
     recipe = get_recipe_details(recipe_id)
     if not recipe:
-        flash('Recipe not found.', 'error')
-        return redirect(url_for('recipes.list_recipes'))
+        flash("Recipe not found.", "error")
+        return redirect(url_for("recipes.list_recipes"))
 
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
-    force_edit = (
-        str(request.args.get('force') or request.form.get('force_edit') or '').lower() in {'1', 'true', 'yes'}
-    )
+    force_edit = str(
+        request.args.get("force") or request.form.get("force_edit") or ""
+    ).lower() in {"1", "true", "yes"}
     if recipe.is_locked:
-        flash('This recipe is locked and cannot be edited.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("This recipe is locked and cannot be edited.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
     if recipe.is_archived:
-        flash('Archived recipes cannot be edited.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-    if recipe.status == 'published' and recipe.test_sequence is None and not force_edit:
-        flash('Published versions are locked. Create a test to make edits.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("Archived recipes cannot be edited.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+    if recipe.status == "published" and recipe.test_sequence is None and not force_edit:
+        flash("Published versions are locked. Create a test to make edits.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
     if recipe.test_sequence is not None and existing_batches > 0:
-        flash('Tests cannot be edited after running batches.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("Tests cannot be edited after running batches.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
     draft_prompt = None
     form_override = None
-    if request.method == 'POST':
+    if request.method == "POST":
         target_status = get_submission_status(request.form)
         try:
             submission = build_recipe_submission(
                 request.form, request.files, defaults=recipe, existing=recipe
             )
             if not submission.ok:
-                flash(submission.error, 'error')
+                flash(submission.error, "error")
                 form_override = request.form
-                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(
+                    request.form
+                )
                 return render_recipe_form(
                     recipe=recipe,
                     edit_mode=True,
@@ -603,8 +652,10 @@ def edit_recipe(recipe_id):
                 )
 
             payload = dict(submission.kwargs)
-            payload['status'] = target_status
-            payload['is_test'] = str(request.form.get('is_test') or '').lower() == 'true'
+            payload["status"] = target_status
+            payload["is_test"] = (
+                str(request.form.get("is_test") or "").lower() == "true"
+            )
 
             success, result = update_recipe(
                 recipe_id=recipe_id,
@@ -613,25 +664,27 @@ def edit_recipe(recipe_id):
             )
 
             if success:
-                if target_status == 'draft':
-                    flash('Recipe saved as a draft.', 'info')
+                if target_status == "draft":
+                    flash("Recipe saved as a draft.", "info")
                 else:
-                    flash('Recipe updated successfully.')
-                return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
+                    flash("Recipe updated successfully.")
+                return redirect(url_for("recipes.view_recipe", recipe_id=recipe.id))
             else:
                 error_message, missing_fields = parse_service_error(result)
-                draft_prompt = build_draft_prompt(missing_fields, target_status, error_message)
+                draft_prompt = build_draft_prompt(
+                    missing_fields, target_status, error_message
+                )
                 form_override = request.form
-                flash(f'Error updating recipe: {error_message}', 'error')
+                flash(f"Error updating recipe: {error_message}", "error")
 
         except Exception as exc:
             logger.exception("Error updating recipe: %s", exc)
-            flash('An unexpected error occurred', 'error')
+            flash("An unexpected error occurred", "error")
 
     form_data = get_recipe_form_data()
 
     return render_template(
-        'pages/recipes/recipe_form.html',
+        "pages/recipes/recipe_form.html",
         recipe=recipe,
         edit_mode=True,
         is_test=bool(recipe.test_sequence),
@@ -648,35 +701,38 @@ def edit_recipe(recipe_id):
 # =========================================================
 # --- Clone recipe (deprecated) ---
 # Purpose: Redirect clone requests to new version flow.
-@recipes_bp.route('/<int:recipe_id>/clone')
+@recipes_bp.route("/<int:recipe_id>/clone")
 @login_required
-@require_permission('recipes.create')
+@require_permission("recipes.create")
 def clone_recipe(recipe_id):
     try:
-        flash("Cloning recipes has been retired. Use Create New Version instead.", "warning")
+        flash(
+            "Cloning recipes has been retired. Use Create New Version instead.",
+            "warning",
+        )
 
     except Exception as exc:
         db.session.rollback()
         flash(f"Error handling clone request: {exc}", "error")
         logger.exception("Error cloning recipe: %s", exc)
 
-    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Import recipe ---
 # Purpose: Import a public recipe into the org library.
-@recipes_bp.route('/<int:recipe_id>/import', methods=['GET'])
+@recipes_bp.route("/<int:recipe_id>/import", methods=["GET"])
 @login_required
-@require_permission('recipes.view')
+@require_permission("recipes.view")
 def import_recipe(recipe_id: int):
     effective_org_id = get_effective_organization_id()
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe:
         flash("Recipe not found.", "error")
-        return redirect(url_for('recipe_library_bp.recipe_library'))
+        return redirect(url_for("recipe_library_bp.recipe_library"))
 
     detail_url = url_for(
-        'recipe_library_bp.recipe_library_detail',
+        "recipe_library_bp.recipe_library_detail",
         recipe_id=recipe.id,
         slug=slugify_value(recipe.name),
     )
@@ -687,9 +743,9 @@ def import_recipe(recipe_id: int):
 
     if (
         not recipe.is_public
-        or recipe.status != 'published'
+        or recipe.status != "published"
         or recipe.test_sequence is not None
-        or recipe.marketplace_status != 'listed'
+        or recipe.marketplace_status != "listed"
         or recipe.marketplace_blocked
     ):
         flash("This recipe is not available for import right now.", "error")
@@ -710,9 +766,9 @@ def import_recipe(recipe_id: int):
         flash(f"Error importing recipe: {payload}", "error")
         return redirect(detail_url)
 
-    template_recipe = payload['template']
-    ingredient_prefill = serialize_prefill_rows(payload['ingredients'])
-    consumable_prefill = serialize_prefill_rows(payload['consumables'])
+    template_recipe = payload["template"]
+    ingredient_prefill = serialize_prefill_rows(payload["ingredients"])
+    consumable_prefill = serialize_prefill_rows(payload["consumables"])
 
     if recipe.is_for_sale:
         flash("Confirm your purchase before importing paid recipes.", "warning")
@@ -727,7 +783,7 @@ def import_recipe(recipe_id: int):
         is_clone=True,
         ingredient_prefill=ingredient_prefill,
         consumable_prefill=consumable_prefill,
-        cloned_from_id=payload.get('cloned_from_id'),
+        cloned_from_id=payload.get("cloned_from_id"),
         form_values=None,
         is_import=True,
     )

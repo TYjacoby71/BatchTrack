@@ -50,7 +50,11 @@ def format_retention_cell(
 
     label = str(retention_label or "").strip()
     normalized_label = label.lower()
-    if normalized_label in {"subscribed", "while subscribed", "retained while subscribed"}:
+    if normalized_label in {
+        "subscribed",
+        "while subscribed",
+        "retained while subscribed",
+    }:
         return "Retained while subscribed"
     if normalized_label in {"1 year", "one year"}:
         return "1 year standard retention"
@@ -60,4 +64,3 @@ def format_retention_cell(
     if str(retention_policy or "").strip().lower() == "subscribed":
         return "Retained while subscribed"
     return "1 year standard retention"
-

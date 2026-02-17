@@ -16,7 +16,9 @@ def _uniq(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:8]}"
 
 
-def test_delete_organization_archives_marketplace_recipes_and_detaches_links(app, tmp_path):
+def test_delete_organization_archives_marketplace_recipes_and_detaches_links(
+    app, tmp_path
+):
     with app.app_context():
         app.config["DELETION_ARCHIVE_DIR"] = str(tmp_path)
         category = ProductCategory.query.filter_by(name="Uncategorized").first()
@@ -203,7 +205,9 @@ def test_delete_organization_cancels_stripe_subscription(app, monkeypatch):
     )
 
     with app.app_context():
-        org = Organization(name=_uniq("org_with_stripe"), stripe_customer_id="cus_test_delete_org")
+        org = Organization(
+            name=_uniq("org_with_stripe"), stripe_customer_id="cus_test_delete_org"
+        )
         db.session.add(org)
         db.session.commit()
 
@@ -225,7 +229,9 @@ def test_delete_organization_aborts_when_stripe_cancel_fails(app, monkeypatch):
     )
 
     with app.app_context():
-        org = Organization(name=_uniq("org_stripe_fail"), stripe_customer_id="cus_fail_delete_org")
+        org = Organization(
+            name=_uniq("org_stripe_fail"), stripe_customer_id="cus_fail_delete_org"
+        )
         db.session.add(org)
         db.session.commit()
 

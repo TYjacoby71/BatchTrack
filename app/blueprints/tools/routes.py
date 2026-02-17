@@ -10,9 +10,13 @@ Glossary:
   to the soap tool service package.
 """
 
-from flask import Blueprint, render_template, request, jsonify, url_for
+from flask import Blueprint, jsonify, render_template, request, url_for
 from flask_login import current_user
-from app.services.unit_conversion.unit_conversion import ConversionEngine
+
+from app.extensions import limiter
+from app.models import FeatureFlag
+from app.services.public_bot_trap_service import PublicBotTrapService
+from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.services.tools.soap_tool import (
     SoapToolComputationService,
     build_soap_recipe_payload,
@@ -20,16 +24,13 @@ from app.services.tools.soap_tool import (
     get_soap_tool_policy,
     run_quality_nudge,
 )
-from app.services.tools.feedback_note_service import ToolFeedbackNoteService
-from app.services.public_bot_trap_service import PublicBotTrapService
-from app.models import FeatureFlag
-from app.extensions import limiter
 from app.utils.cache_utils import should_bypass_cache
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
 
-tools_bp = Blueprint('tools_bp', __name__)
+tools_bp = Blueprint("tools_bp", __name__)
+
 
 # --- Feature-flag reader ---
 # Purpose: Resolve tool enablement from persisted feature flags with fallback.
@@ -86,8 +87,9 @@ def _consume_tool_quota(category_name: str | None):
     limit, tier = _soap_calc_limit()
     if not limit:
         return None
+    from datetime import datetime, timedelta, timezone
+
     from flask import session
-    from datetime import datetime, timezone, timedelta
 
     key = "soap_tool_quota"
     now = datetime.now(timezone.utc)
@@ -109,14 +111,19 @@ def _consume_tool_quota(category_name: str | None):
     record["count"] = count
     record["timestamp"] = now.isoformat()
     session[key] = record
-    return {"ok": True, "limit": limit, "tier": tier, "remaining": max(0, limit - count)}
+    return {
+        "ok": True,
+        "limit": limit,
+        "tier": tier,
+        "remaining": max(0, limit - count),
+    }
 
 
 # --- Tools landing route ---
 # Purpose: Render public tools index with per-tool feature visibility flags.
 # Inputs: HTTP request context and feature flag table.
 # Outputs: Public tools index HTML response.
-@tools_bp.route('/')
+@tools_bp.route("/")
 @limiter.limit("60000/hour;5000/minute")
 def tools_index():
     """Public tools landing. Embeds calculators with progressive disclosure.
@@ -124,14 +131,14 @@ def tools_index():
     and quick draft Recipe Tool (category-aware) with Save CTA that invites sign-in.
     """
     flags = {
-        'soap': _is_enabled('TOOLS_SOAP', True),
-        'candles': _is_enabled('TOOLS_CANDLES', True),
-        'lotions': _is_enabled('TOOLS_LOTIONS', True),
-        'herbal': _is_enabled('TOOLS_HERBAL', True),
-        'baker': _is_enabled('TOOLS_BAKING', True),
+        "soap": _is_enabled("TOOLS_SOAP", True),
+        "candles": _is_enabled("TOOLS_CANDLES", True),
+        "lotions": _is_enabled("TOOLS_LOTIONS", True),
+        "herbal": _is_enabled("TOOLS_HERBAL", True),
+        "baker": _is_enabled("TOOLS_BAKING", True),
     }
     return render_template(
-        'tools/index.html',
+        "tools/index.html",
         tool_flags=flags,
         show_public_header=True,
     )
@@ -141,12 +148,12 @@ def tools_index():
 # Purpose: Render the soap formulator page with quota tier context.
 # Inputs: HTTP request/user context.
 # Outputs: Soap tool HTML response.
-@tools_bp.route('/soap')
+@tools_bp.route("/soap")
 def tools_soap():
     calc_limit, calc_tier = _soap_calc_limit()
     return _render_tool(
-        'tools/soaps/index.html',
-        'TOOLS_SOAP',
+        "tools/soaps/index.html",
+        "TOOLS_SOAP",
         calc_limit=calc_limit,
         calc_tier=calc_tier,
         soap_policy=get_soap_tool_policy(),
@@ -157,43 +164,43 @@ def tools_soap():
 # Purpose: Render public candles tool page.
 # Inputs: HTTP request context.
 # Outputs: Candles tool HTML response.
-@tools_bp.route('/candles')
+@tools_bp.route("/candles")
 def tools_candles():
-    return _render_tool('tools/candles.html', 'TOOLS_CANDLES')
+    return _render_tool("tools/candles.html", "TOOLS_CANDLES")
 
 
 # --- Lotions tool route ---
 # Purpose: Render public lotions tool page.
 # Inputs: HTTP request context.
 # Outputs: Lotions tool HTML response.
-@tools_bp.route('/lotions')
+@tools_bp.route("/lotions")
 def tools_lotions():
-    return _render_tool('tools/lotions.html', 'TOOLS_LOTIONS')
+    return _render_tool("tools/lotions.html", "TOOLS_LOTIONS")
 
 
 # --- Herbal tool route ---
 # Purpose: Render public herbal tool page.
 # Inputs: HTTP request context.
 # Outputs: Herbal tool HTML response.
-@tools_bp.route('/herbal')
+@tools_bp.route("/herbal")
 def tools_herbal():
-    return _render_tool('tools/herbal.html', 'TOOLS_HERBAL')
+    return _render_tool("tools/herbal.html", "TOOLS_HERBAL")
 
 
 # --- Baker tool route ---
 # Purpose: Render public baker tool page.
 # Inputs: HTTP request context.
 # Outputs: Baker tool HTML response.
-@tools_bp.route('/baker')
+@tools_bp.route("/baker")
 def tools_baker():
-    return _render_tool('tools/baker.html', 'TOOLS_BAKING')
+    return _render_tool("tools/baker.html", "TOOLS_BAKING")
 
 
 # --- Soap calculate API route ---
 # Purpose: Execute soap lye/water calculation through service package.
 # Inputs: JSON payload with oils/lye/water inputs.
 # Outputs: JSON success response with structured calculation result.
-@tools_bp.route('/api/soap/calculate', methods=['POST'])
+@tools_bp.route("/api/soap/calculate", methods=["POST"])
 @limiter.limit("60000/hour;5000/minute")
 def tools_soap_calculate():
     """Calculate soap stage outputs through structured service package."""
@@ -206,7 +213,7 @@ def tools_soap_calculate():
 # Purpose: Build canonical soap recipe payloads from calc snapshots and UI context.
 # Inputs: JSON payload with calc result snapshot, draft lines, and context metadata.
 # Outputs: JSON success response with normalized recipe payload.
-@tools_bp.route('/api/soap/recipe-payload', methods=['POST'])
+@tools_bp.route("/api/soap/recipe-payload", methods=["POST"])
 @limiter.limit("60000/hour;5000/minute")
 def tools_soap_recipe_payload():
     payload = request.get_json(silent=True) or {}
@@ -218,7 +225,7 @@ def tools_soap_recipe_payload():
 # Purpose: Rebalance oil grams toward selected quality targets in backend authority.
 # Inputs: JSON payload with oil rows, selected targets, and optional target oils grams.
 # Outputs: JSON success response containing nudge status and adjusted rows.
-@tools_bp.route('/api/soap/quality-nudge', methods=['POST'])
+@tools_bp.route("/api/soap/quality-nudge", methods=["POST"])
 @limiter.limit("60000/hour;5000/minute")
 def tools_soap_quality_nudge():
     payload = request.get_json(silent=True) or {}
@@ -230,7 +237,7 @@ def tools_soap_quality_nudge():
 # Purpose: Return paged oils/butters/waxes catalog rows for bulk-oil picker modal.
 # Inputs: Query params mode/q/sort/offset/limit for server-side paging/search.
 # Outputs: JSON payload with normalized paged records and cursor metadata.
-@tools_bp.route('/api/soap/oils-catalog', methods=['GET'])
+@tools_bp.route("/api/soap/oils-catalog", methods=["GET"])
 @limiter.limit("1200/hour;120/minute")
 def tools_soap_oils_catalog():
     result_payload = get_bulk_catalog_page(
@@ -249,7 +256,7 @@ def tools_soap_oils_catalog():
 # Purpose: Persist public feedback notes into JSON buckets by source/flow.
 # Inputs: JSON payload containing source, flow, and note message/details.
 # Outputs: JSON response with saved bucket metadata.
-@tools_bp.route('/api/feedback-notes', methods=['POST'])
+@tools_bp.route("/api/feedback-notes", methods=["POST"])
 @limiter.limit("1200/hour;120/minute")
 def tools_feedback_notes():
     payload = request.get_json(silent=True) or {}
@@ -257,9 +264,15 @@ def tools_feedback_notes():
         payload = {}
 
     trap_value = (payload.get("website") or payload.get("company") or "").strip()
-    trap_email = (payload.get("contact_email") or payload.get("email") or "").strip().lower() or None
+    trap_email = (
+        payload.get("contact_email") or payload.get("email") or ""
+    ).strip().lower() or None
     requester_ip = PublicBotTrapService.resolve_request_ip(request)
-    requester_user_id = getattr(current_user, "id", None) if getattr(current_user, "is_authenticated", False) else None
+    requester_user_id = (
+        getattr(current_user, "id", None)
+        if getattr(current_user, "is_authenticated", False)
+        else None
+    )
     note_source = ToolFeedbackNoteService.derive_location_source(
         page_endpoint=payload.get("page_endpoint"),
         page_path=payload.get("page_path"),
@@ -280,7 +293,9 @@ def tools_feedback_notes():
             block=False,
         )
         if trap_email:
-            blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
+            blocked_user_id = PublicBotTrapService.block_email_if_user_exists(
+                trap_email
+            )
             PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
         else:
             PublicBotTrapService.add_block(ip=requester_ip, user_id=requester_user_id)
@@ -328,7 +343,10 @@ def tools_feedback_notes():
             400,
         )
     except Exception:
-        return jsonify({"success": False, "error": "Unable to save your note right now."}), 500
+        return (
+            jsonify({"success": False, "error": "Unable to save your note right now."}),
+            500,
+        )
 
     return jsonify(
         {
@@ -343,13 +361,14 @@ def tools_feedback_notes():
 # Purpose: Persist public tool draft payload into session for auth handoff.
 # Inputs: JSON draft payload with optional recipe lines.
 # Outputs: JSON response with redirect target or quota error.
-@tools_bp.route('/draft', methods=['POST'])
+@tools_bp.route("/draft", methods=["POST"])
 def tools_draft():
     """Accept a draft from the public tools page and redirect to sign-in/save flow.
     The draft payload is stored in session via query string for now (MVP), then the
     /recipes/new page will read and prefill when user is authenticated.
     """
     from flask import session
+
     data = request.get_json() or {}
     quota = _consume_tool_quota(data.get("category_name"))
     if quota and not quota.get("ok"):
@@ -358,60 +377,65 @@ def tools_draft():
             "Create a free account or upgrade to keep saving drafts."
         )
         return jsonify({"success": False, "error": msg, "limit_reached": True}), 429
+
     # Normalize line arrays if provided
     def _norm_lines(lines, kind):
         out = []
-        for ln in (lines or []):
+        for ln in lines or []:
             try:
-                name = (ln.get('name') or '').strip() or None
-                gi = ln.get('global_item_id')
-                gi = int(gi) if gi not in (None, '', []) else None
-                qty = ln.get('quantity')
+                name = (ln.get("name") or "").strip() or None
+                gi = ln.get("global_item_id")
+                gi = int(gi) if gi not in (None, "", []) else None
+                qty = ln.get("quantity")
                 try:
-                    qty = float(qty) if qty not in (None, '', []) else None
+                    qty = float(qty) if qty not in (None, "", []) else None
                 except Exception:
                     qty = None
-                unit = (ln.get('unit') or '').strip() or None
+                unit = (ln.get("unit") or "").strip() or None
                 rec = {
-                    'name': name,
-                    'global_item_id': gi,
-                    'default_unit': (ln.get('default_unit') or '').strip() or None,
-                    'ingredient_category_name': (ln.get('ingredient_category_name') or '').strip() or None,
+                    "name": name,
+                    "global_item_id": gi,
+                    "default_unit": (ln.get("default_unit") or "").strip() or None,
+                    "ingredient_category_name": (
+                        ln.get("ingredient_category_name") or ""
+                    ).strip()
+                    or None,
                 }
-                if kind == 'container':
-                    rec['quantity'] = int(qty) if qty is not None else 1
+                if kind == "container":
+                    rec["quantity"] = int(qty) if qty is not None else 1
                 else:
-                    rec['quantity'] = float(qty) if qty is not None else 0.0
-                    rec['unit'] = unit or 'gram'
+                    rec["quantity"] = float(qty) if qty is not None else 0.0
+                    rec["unit"] = unit or "gram"
                 out.append(rec)
             except Exception:
                 continue
         return out
 
-    if 'ingredients' in data:
-        data['ingredients'] = _norm_lines(data.get('ingredients'), 'ingredient')
-    if 'consumables' in data:
-        data['consumables'] = _norm_lines(data.get('consumables'), 'consumable')
-    if 'containers' in data:
-        data['containers'] = _norm_lines(data.get('containers'), 'container')
+    if "ingredients" in data:
+        data["ingredients"] = _norm_lines(data.get("ingredients"), "ingredient")
+    if "consumables" in data:
+        data["consumables"] = _norm_lines(data.get("consumables"), "consumable")
+    if "containers" in data:
+        data["containers"] = _norm_lines(data.get("containers"), "container")
     # Merge to preserve any prior progress and keep across redirects
     try:
         from datetime import datetime, timezone
-        existing = session.get('tool_draft', {})
+
+        existing = session.get("tool_draft", {})
         if not isinstance(existing, dict):
             existing = {}
         existing.update(data or {})
-        session['tool_draft'] = existing
+        session["tool_draft"] = existing
 
         # Track draft metadata for TTL and debugging
-        meta = session.get('tool_draft_meta') or {}
+        meta = session.get("tool_draft_meta") or {}
         if not isinstance(meta, dict):
             meta = {}
-        if not meta.get('created_at'):
-            meta['created_at'] = datetime.now(timezone.utc).isoformat()
-        meta['last_updated_at'] = datetime.now(timezone.utc).isoformat()
-        meta['source'] = 'public_tools'
-        session['tool_draft_meta'] = meta
+        if not meta.get("created_at"):
+            meta["created_at"] = datetime.now(timezone.utc).isoformat()
+        meta["last_updated_at"] = datetime.now(timezone.utc).isoformat()
+        meta["source"] = "public_tools"
+        session["tool_draft_meta"] = meta
 
         # Do NOT make the entire session permanent just for a draft
         # Let session behave normally so drafts end with the browser session
@@ -420,10 +444,10 @@ def tools_draft():
         except Exception:
             pass
     except Exception:
-        session['tool_draft'] = data
+        session["tool_draft"] = data
         try:
-            session.pop('tool_draft_meta', None)
+            session.pop("tool_draft_meta", None)
         except Exception:
             pass
     # Redirect to sign-in or directly to recipes new if already logged in
-    return jsonify({'success': True, 'redirect': url_for('recipes.new_recipe')})
+    return jsonify({"success": True, "redirect": url_for("recipes.new_recipe")})

@@ -10,7 +10,9 @@ __all__ = ["slugify_value", "absolute_url"]
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
-def slugify_value(value: str, *, max_length: int | None = None, default: str = "item") -> str:
+def slugify_value(
+    value: str, *, max_length: int | None = None, default: str = "item"
+) -> str:
     """
     Convert arbitrary text to a URL-safe slug.
 

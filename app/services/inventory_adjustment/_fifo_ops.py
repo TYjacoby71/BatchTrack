@@ -9,20 +9,23 @@ Glossary:
 """
 
 import logging
-from datetime import datetime, timedelta
-from decimal import Decimal
-from app.models import db, InventoryItem, UnifiedInventoryHistory
+from datetime import timedelta
+
+from sqlalchemy import and_
+
+from app.models import InventoryItem, UnifiedInventoryHistory, db
 from app.models.inventory_lot import InventoryLot
+from app.services.inventory_tracking_policy import (
+    org_allows_inventory_quantity_tracking,
+)
 from app.services.quantity_base import (
-    to_base_quantity,
     from_base_quantity,
     sync_item_quantity_from_base,
     sync_lot_quantities_from_base,
+    to_base_quantity,
 )
-from app.services.inventory_tracking_policy import org_allows_inventory_quantity_tracking
-from app.utils.timezone_utils import TimezoneUtils
 from app.utils.inventory_event_code_generator import generate_inventory_event_code
-from sqlalchemy import and_
+from app.utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +37,18 @@ INFINITE_ANCHOR_SOURCE_TYPE = "infinite_anchor"
 # Inputs: InventoryLot model instance.
 # Outputs: Boolean indicating infinite-anchor source type.
 def is_infinite_anchor_lot(lot: InventoryLot | None) -> bool:
-    return bool(lot and getattr(lot, "source_type", None) == INFINITE_ANCHOR_SOURCE_TYPE)
+    return bool(
+        lot and getattr(lot, "source_type", None) == INFINITE_ANCHOR_SOURCE_TYPE
+    )
 
 
 # --- Infinite anchor lookup ---
 # Purpose: Fetch the single infinite anchor lot for an item when present.
 # Inputs: Inventory item id and optional organization id for tighter scoping.
 # Outputs: InventoryLot instance or None.
-def get_infinite_anchor_lot(item_id: int, organization_id: int | None = None) -> InventoryLot | None:
+def get_infinite_anchor_lot(
+    item_id: int, organization_id: int | None = None
+) -> InventoryLot | None:
     query = InventoryLot.query.filter(
         InventoryLot.inventory_item_id == item_id,
         InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
@@ -60,7 +67,9 @@ def get_or_create_infinite_anchor_lot(item_id: int, created_by: int | None = Non
     if not item:
         return False, "Inventory item not found", None
 
-    existing_lot = get_infinite_anchor_lot(item_id=item.id, organization_id=item.organization_id)
+    existing_lot = get_infinite_anchor_lot(
+        item_id=item.id, organization_id=item.organization_id
+    )
     if existing_lot:
         if int(existing_lot.remaining_quantity_base or 0) != 0:
             existing_lot.remaining_quantity_base = 0
@@ -100,7 +109,12 @@ def get_or_create_infinite_anchor_lot(item_id: int, created_by: int | None = Non
 # Purpose: Fetch FIFO lots for an item.
 # Inputs: Inventory item id plus active-only/order query options.
 # Outputs: List of InventoryLot records scoped to the item organization.
-def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc', include_infinite: bool = False):
+def get_item_lots(
+    item_id: int,
+    active_only: bool = False,
+    order: str = "desc",
+    include_infinite: bool = False,
+):
     """
     Retrieve lots for an inventory item using the proper InventoryLot model.
     This replaces any legacy history-based lot queries.
@@ -120,7 +134,7 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc', 
     query = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
-            InventoryLot.organization_id == item.organization_id
+            InventoryLot.organization_id == item.organization_id,
         )
     )
     if not include_infinite:
@@ -131,14 +145,16 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc', 
         query = query.filter(InventoryLot.remaining_quantity_base > 0)
 
     # Apply ordering - FIFO uses received_date ascending
-    if order == 'asc':
+    if order == "asc":
         query = query.order_by(InventoryLot.received_date.asc())
     else:
         query = query.order_by(InventoryLot.created_at.desc())
 
     lots = query.all()
 
-    logger.info(f"FIFO: Retrieved {len(lots)} lots for item {item_id} (active_only={active_only})")
+    logger.info(
+        f"FIFO: Retrieved {len(lots)} lots for item {item_id} (active_only={active_only})"
+    )
 
     return lots
 
@@ -147,15 +163,28 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc', 
 # Purpose: Create a new FIFO lot and history entry.
 # Inputs: Item/quantity/change metadata and optional expiration/cost overrides.
 # Outputs: Tuple of (success, message, lot_id|None).
-def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, quantity_base=None, **kwargs):
+def create_new_fifo_lot(
+    item_id,
+    quantity,
+    change_type,
+    unit=None,
+    notes=None,
+    cost_per_unit=None,
+    created_by=None,
+    custom_expiration_date=None,
+    custom_shelf_life_days=None,
+    quantity_base=None,
+    **kwargs,
+):
     """
     Create a new FIFO lot with complete tracking and audit trail.
     This is the primary function for creating new inventory lots.
     """
     try:
+        from flask_login import current_user  # Import current_user
+
         from app.models import InventoryItem
         from app.models.inventory_lot import InventoryLot
-        from flask_login import current_user # Import current_user
 
         # Get the inventory item
         item = db.session.get(InventoryItem, item_id)
@@ -183,7 +212,9 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
                 is_perishable = True  # If expiration is set, it's perishable
             elif item.is_perishable and item.shelf_life_days:
                 # Standard case - use item's shelf life to calculate expiration
-                final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
+                final_expiration_date = TimezoneUtils.utc_now() + timedelta(
+                    days=item.shelf_life_days
+                )
 
             # Lots always inherit shelf_life_days from the item (immutable once created)
             if item.is_perishable:
@@ -195,25 +226,31 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             final_shelf_life_days = None
 
         # Get batch_id from kwargs if provided
-        batch_id = kwargs.get('batch_id')
+        batch_id = kwargs.get("batch_id")
 
         batch_lineage_id = None
         batch = None
         # For finished_batch operations, use batch-specific label if batch_id exists
-        if change_type == 'finished_batch' and batch_id:
+        if change_type == "finished_batch" and batch_id:
             from app.models import Batch
+
             batch = db.session.get(Batch, batch_id)
             if batch and batch.label_code:
                 fifo_code = batch.label_code
                 batch_lineage_id = batch.lineage_id
             else:
-                fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
+                fifo_code = generate_inventory_event_code(
+                    change_type, item_id=item_id, code_type="lot"
+                )
         else:
             # For lot creation, this always creates an actual lot
-            fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
+            fifo_code = generate_inventory_event_code(
+                change_type, item_id=item_id, code_type="lot"
+            )
             if batch_id and not batch:
                 try:
                     from app.models import Batch
+
                     batch = db.session.get(Batch, batch_id)
                 except Exception:
                     batch = None
@@ -251,8 +288,10 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             source_notes=notes,
             created_by=created_by,
             fifo_code=fifo_code,  # Use the shared FIFO code
-            batch_id=batch_id if change_type == 'finished_batch' else None,  # Only link batch for finished_batch
-            organization_id=item.organization_id
+            batch_id=(
+                batch_id if change_type == "finished_batch" else None
+            ),  # Only link batch for finished_batch
+            organization_id=item.organization_id,
         )
 
         db.session.add(lot)
@@ -268,7 +307,11 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             unit=unit,
             unit_cost=cost_per_unit,
             notes=notes,
-            created_by=(getattr(current_user, 'id', None) if getattr(current_user, 'is_authenticated', False) else created_by),
+            created_by=(
+                getattr(current_user, "id", None)
+                if getattr(current_user, "is_authenticated", False)
+                else created_by
+            ),
             organization_id=item.organization_id,
             is_perishable=is_perishable,
             shelf_life_days=final_shelf_life_days,
@@ -281,7 +324,9 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         )
         db.session.add(history_record)
 
-        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
+        logger.info(
+            f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})"
+        )
         # Return lot id for callers that want to create a corresponding history event
         return True, f"Added {quantity} {unit} to inventory", lot.id
 
@@ -295,7 +340,15 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
 # Purpose: Deduct inventory using FIFO ordering.
 # Inputs: Item id, quantity to deduct, and operation metadata.
 # Outputs: Tuple of (success, message) after lot deduction or infinite usage logging.
-def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=None, change_type=None, notes=None, created_by=None, batch_id=None):
+def deduct_fifo_inventory(
+    item_id,
+    quantity_to_deduct,
+    quantity_to_deduct_base=None,
+    change_type=None,
+    notes=None,
+    created_by=None,
+    batch_id=None,
+):
     """
     CONSOLIDATED: Single function to handle FIFO deduction using proper InventoryLot model.
     This function now properly uses the lot-based system instead of history entries.
@@ -306,11 +359,15 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         if not item:
             return False, "Inventory item not found"
 
-        quantity_needed_base = abs(int(quantity_to_deduct_base)) if quantity_to_deduct_base is not None else to_base_quantity(
-            amount=quantity_to_deduct,
-            unit_name=item.unit,
-            ingredient_id=item.id,
-            density=item.density,
+        quantity_needed_base = (
+            abs(int(quantity_to_deduct_base))
+            if quantity_to_deduct_base is not None
+            else to_base_quantity(
+                amount=quantity_to_deduct,
+                unit_name=item.unit,
+                ingredient_id=item.id,
+                density=item.density,
+            )
         )
         quantity_needed = from_base_quantity(
             base_amount=quantity_needed_base,
@@ -322,48 +379,69 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         # Determine valuation method for this deduction event
         valuation_method = None
         try:
-            op = str(change_type).lower() if change_type else ''
+            op = str(change_type).lower() if change_type else ""
             # For commerce operations on products, always use average (WAC)
-            if op in {'sale', 'pos_sale', 'pos_return_neg'} and getattr(item, 'type', None) == 'product':
-                valuation_method = 'average'
+            if (
+                op in {"sale", "pos_sale", "pos_return_neg"}
+                and getattr(item, "type", None) == "product"
+            ):
+                valuation_method = "average"
             # For batch deductions, honor the batch-locked method
-            elif op == 'batch' and batch_id:
+            elif op == "batch" and batch_id:
                 from app.models import Batch
+
                 b = db.session.get(Batch, batch_id)
-                if b and getattr(b, 'cost_method', None):
+                if b and getattr(b, "cost_method", None):
                     valuation_method = b.cost_method
             # Otherwise fall back to organization setting
             if not valuation_method:
-                org = getattr(item, 'organization', None)
-                org_method = getattr(org, 'inventory_cost_method', None) if org else None
-                valuation_method = org_method or 'fifo'
-            if valuation_method not in ('fifo', 'average'):
-                valuation_method = 'fifo'
+                org = getattr(item, "organization", None)
+                org_method = (
+                    getattr(org, "inventory_cost_method", None) if org else None
+                )
+                valuation_method = org_method or "fifo"
+            if valuation_method not in ("fifo", "average"):
+                valuation_method = "fifo"
         except Exception:
-            valuation_method = 'fifo'
+            valuation_method = "fifo"
 
         org_tracks_quantities = org_allows_inventory_quantity_tracking(
             organization=getattr(item, "organization", None)
         )
-        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        effective_tracking_enabled = (
+            bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        )
 
         def _resolve_event_code_and_lineage():
             batch_lineage_id = None
-            if change_type == 'batch' and batch_id:
+            if change_type == "batch" and batch_id:
                 try:
                     from app.models import Batch
+
                     batch = db.session.get(Batch, batch_id)
                     code = (
                         batch.label_code
                         if batch and batch.label_code
-                        else generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
+                        else generate_inventory_event_code(
+                            change_type, item_id=item_id, code_type="event"
+                        )
                     )
                     if batch:
                         batch_lineage_id = batch.lineage_id
                     return code, batch_lineage_id
                 except Exception:
-                    return generate_inventory_event_code(change_type, item_id=item_id, code_type="event"), None
-            return generate_inventory_event_code(change_type, item_id=item_id, code_type="event"), None
+                    return (
+                        generate_inventory_event_code(
+                            change_type, item_id=item_id, code_type="event"
+                        ),
+                        None,
+                    )
+            return (
+                generate_inventory_event_code(
+                    change_type, item_id=item_id, code_type="event"
+                ),
+                None,
+            )
 
         if not effective_tracking_enabled:
             anchor_ok, anchor_message, anchor_lot = get_or_create_infinite_anchor_lot(
@@ -391,10 +469,13 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
                 batch_id=batch_id,
                 lineage_id=batch_lineage_id,
                 fifo_code=deduction_event_code,
-                valuation_method='average',
+                valuation_method="average",
             )
             db.session.add(history_record)
-            logger.info("FIFO DEDUCT INFINITE: Recorded usage event for item %s without lot consumption", item_id)
+            logger.info(
+                "FIFO DEDUCT INFINITE: Recorded usage event for item %s without lot consumption",
+                item_id,
+            )
             return True, "Recorded infinite-item usage (quantity unchanged)"
 
         # Get active lots ordered by FIFO (oldest received first)
@@ -408,17 +489,29 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         )
 
         # For consumption operations, exclude expired lots if the item is perishable
-        consumption_ops = {'use', 'sale', 'sample', 'tester', 'gift', 'batch', 'pos_sale', 'pos_return_neg'}
+        consumption_ops = {
+            "use",
+            "sale",
+            "sample",
+            "tester",
+            "gift",
+            "batch",
+            "pos_sale",
+            "pos_return_neg",
+        }
         if item.is_perishable and (str(change_type).lower() in consumption_ops):
             now_utc = TimezoneUtils.utc_now()
             query = query.filter(
-                (InventoryLot.expiration_date == None) | (InventoryLot.expiration_date >= now_utc)
+                (InventoryLot.expiration_date is None)
+                | (InventoryLot.expiration_date >= now_utc)
             )
 
         active_lots = query.order_by(InventoryLot.received_date.asc()).all()
 
         # Calculate total available quantity from actual lots (base units)
-        total_available_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
+        total_available_base = sum(
+            int(lot.remaining_quantity_base or 0) for lot in active_lots
+        )
         total_available = from_base_quantity(
             base_amount=total_available_base,
             unit_name=item.unit,
@@ -426,10 +519,15 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
             density=item.density,
         )
 
-        logger.info(f"FIFO DEDUCT: Need {quantity_needed}, have {total_available} from {len(active_lots)} active lots")
+        logger.info(
+            f"FIFO DEDUCT: Need {quantity_needed}, have {total_available} from {len(active_lots)} active lots"
+        )
 
         if total_available_base < quantity_needed_base:
-            return False, f"Insufficient inventory: need {quantity_needed}, have {total_available}"
+            return (
+                False,
+                f"Insufficient inventory: need {quantity_needed}, have {total_available}",
+            )
 
         # Execute deduction across lots using FIFO order
         remaining_to_deduct_base = quantity_needed_base
@@ -457,7 +555,11 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
             deduction_event_code, batch_lineage_id = _resolve_event_code_and_lineage()
 
             # Choose unit cost according to valuation method
-            event_unit_cost = float(item.cost_per_unit or 0.0) if valuation_method == 'average' else float(lot.unit_cost or 0.0)
+            event_unit_cost = (
+                float(item.cost_per_unit or 0.0)
+                if valuation_method == "average"
+                else float(lot.unit_cost or 0.0)
+            )
 
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
@@ -467,22 +569,24 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
                 remaining_quantity=None,  # N/A - this is an event record
                 unit=lot.unit,
                 unit_cost=event_unit_cost,
-                notes=f"FIFO deduction: -{deduct_from_lot} from lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
+                notes=f"FIFO deduction: -{deduct_from_lot} from lot {lot.fifo_code}"
+                + (f" | {notes}" if notes else ""),
                 created_by=created_by,
                 organization_id=item.organization_id,
                 affected_lot_id=lot.id,  # Link to the specific lot that was affected
                 batch_id=batch_id,
                 lineage_id=batch_lineage_id,
                 fifo_code=deduction_event_code,  # RCN-xxx for recount, other prefixes for other operations
-                valuation_method=valuation_method
-
+                valuation_method=valuation_method,
             )
             db.session.add(history_record)
 
             remaining_to_deduct_base -= deduct_from_lot_base
             lots_affected += 1
 
-            logger.info(f"FIFO DEDUCT: Consumed {deduct_from_lot} from lot {lot.id} ({lot.fifo_code}), remaining: {lot.remaining_quantity}")
+            logger.info(
+                f"FIFO DEDUCT: Consumed {deduct_from_lot} from lot {lot.id} ({lot.fifo_code}), remaining: {lot.remaining_quantity}"
+            )
 
         logger.info(f"FIFO DEDUCT SUCCESS: Affected {lots_affected} lots")
         return True, f"Deducted from {lots_affected} lots using FIFO order"
@@ -517,7 +621,9 @@ def calculate_total_available_inventory(item_id):
         )
     ).all()
 
-    total_available_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
+    total_available_base = sum(
+        int(lot.remaining_quantity_base or 0) for lot in active_lots
+    )
     total_available = from_base_quantity(
         base_amount=total_available_base,
         unit_name=item.unit,
@@ -525,7 +631,9 @@ def calculate_total_available_inventory(item_id):
         density=item.density,
     )
 
-    logger.info(f"FIFO CALC: Item {item_id} has {total_available} units available across {len(active_lots)} active lots")
+    logger.info(
+        f"FIFO CALC: Item {item_id} has {total_available} units available across {len(active_lots)} active lots"
+    )
 
     return total_available
 
@@ -534,7 +642,9 @@ def calculate_total_available_inventory(item_id):
 # Purpose: Estimate unit cost for FIFO deduction.
 # Inputs: Item id, proposed deduction quantity, and optional change type.
 # Outputs: Estimated weighted unit cost for the prospective issue.
-def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, change_type: str | None = None) -> float:
+def estimate_fifo_issue_unit_cost(
+    item_id: int, quantity_to_deduct: float, change_type: str | None = None
+) -> float:
     """
     Estimate the weighted average unit cost for a prospective FIFO deduction without mutating state.
 
@@ -555,11 +665,23 @@ def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, chang
             )
         )
 
-        consumption_ops = {'use', 'sale', 'sample', 'tester', 'gift', 'batch', 'pos_sale', 'pos_return_neg'}
-        if item.is_perishable and (str(change_type).lower() in consumption_ops if change_type else True):
+        consumption_ops = {
+            "use",
+            "sale",
+            "sample",
+            "tester",
+            "gift",
+            "batch",
+            "pos_sale",
+            "pos_return_neg",
+        }
+        if item.is_perishable and (
+            str(change_type).lower() in consumption_ops if change_type else True
+        ):
             now_utc = TimezoneUtils.utc_now()
             query = query.filter(
-                (InventoryLot.expiration_date == None) | (InventoryLot.expiration_date >= now_utc)
+                (InventoryLot.expiration_date is None)
+                | (InventoryLot.expiration_date >= now_utc)
             )
 
         active_lots = query.order_by(InventoryLot.received_date.asc()).all()
@@ -614,7 +736,9 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
                 ingredient_id=item.id,
                 density=item.density,
             )
-            event_code = generate_inventory_event_code("returned", item_id=item.id, code_type="event")
+            event_code = generate_inventory_event_code(
+                "returned", item_id=item.id, code_type="event"
+            )
             db.session.add(
                 UnifiedInventoryHistory(
                     inventory_item_id=item.id,
@@ -631,11 +755,14 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
                     organization_id=item.organization_id,
                     affected_lot_id=lot.id,
                     fifo_code=event_code,
-                    valuation_method='average',
+                    valuation_method="average",
                 )
             )
             db.session.commit()
-            return True, f"Recorded infinite credit on lot {lot.display_code} (quantity unchanged)"
+            return (
+                True,
+                f"Recorded infinite credit on lot {lot.display_code} (quantity unchanged)",
+            )
 
         # Add back to the specific lot (base units)
         quantity_base = to_base_quantity(
@@ -644,7 +771,9 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
             ingredient_id=lot.inventory_item_id,
             density=getattr(lot.inventory_item, "density", None),
         )
-        lot.remaining_quantity_base = int(lot.remaining_quantity_base or 0) + int(quantity_base)
+        lot.remaining_quantity_base = int(lot.remaining_quantity_base or 0) + int(
+            quantity_base
+        )
         sync_lot_quantities_from_base(lot, lot.inventory_item)
 
         # Update item quantity

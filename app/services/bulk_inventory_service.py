@@ -3,13 +3,15 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence
 
 from flask import current_app
-
 from sqlalchemy import func
 
 from app.extensions import db
 from app.models import InventoryItem
 from app.services.event_emitter import EventEmitter
-from app.services.inventory_adjustment import create_inventory_item, process_inventory_adjustment
+from app.services.inventory_adjustment import (
+    create_inventory_item,
+    process_inventory_adjustment,
+)
 
 
 class BulkInventoryServiceError(RuntimeError):
@@ -31,7 +33,9 @@ class BulkInventoryService:
 
     def __init__(self, *, organization_id: int | None, user):
         if not organization_id:
-            raise BulkInventoryServiceError("Organization context is required for bulk inventory updates.")
+            raise BulkInventoryServiceError(
+                "Organization context is required for bulk inventory updates."
+            )
         self.organization_id = organization_id
         self.user = user
 
@@ -40,7 +44,9 @@ class BulkInventoryService:
         lines: Sequence[Mapping[str, Any]] | None,
         *,
         submit_now: bool = True,
-        note_builder: Optional[Callable[[str, InventoryItem, Mapping[str, Any]], str]] = None,
+        note_builder: Optional[
+            Callable[[str, InventoryItem, Mapping[str, Any]], str]
+        ] = None,
     ) -> Mapping[str, Any]:
         """Normalize incoming lines and optionally execute adjustments immediately."""
         normalized = [self._normalize_line(entry) for entry in (lines or []) if entry]
@@ -59,7 +65,9 @@ class BulkInventoryService:
                 target_change_type = self._map_change_type(change_type)
                 quantity = line.get("quantity")
                 if quantity is None or quantity <= 0:
-                    raise self._abort(idx, line, change_type, "quantity must be greater than zero.")
+                    raise self._abort(
+                        idx, line, change_type, "quantity must be greater than zero."
+                    )
 
                 try:
                     item, _ = self._ensure_inventory_item(line, auto_commit=False)
@@ -75,7 +83,12 @@ class BulkInventoryService:
                 if cost_entry_type != "no_change" and raw_cost is not None:
                     if cost_entry_type == "total":
                         if quantity <= 0:
-                            raise self._abort(idx, line, change_type, "total cost requires a positive quantity.")
+                            raise self._abort(
+                                idx,
+                                line,
+                                change_type,
+                                "total cost requires a positive quantity.",
+                            )
                         cost_override = raw_cost / quantity
                     else:
                         cost_override = raw_cost
@@ -97,9 +110,13 @@ class BulkInventoryService:
                     defer_commit=True,
                     include_event_payload=True,
                 )
-                success, message, event_payload = self._unpack_adjustment_result(adjustment_result)
+                success, message, event_payload = self._unpack_adjustment_result(
+                    adjustment_result
+                )
                 if not success:
-                    raise self._abort(idx, {"inventory_item_name": item.name}, change_type, message)
+                    raise self._abort(
+                        idx, {"inventory_item_name": item.name}, change_type, message
+                    )
 
                 pending_events.append(event_payload)
                 results.append(
@@ -144,19 +161,27 @@ class BulkInventoryService:
     def _normalize_line(self, raw: Mapping[str, Any]) -> MutableMapping[str, Any]:
         return {
             "inventory_item_id": _safe_int(raw.get("inventory_item_id")),
-            "inventory_item_name": _clean_string(raw.get("inventory_item_name") or raw.get("name")),
-            "inventory_type": _clean_string(raw.get("inventory_type") or raw.get("type")) or "ingredient",
+            "inventory_item_name": _clean_string(
+                raw.get("inventory_item_name") or raw.get("name")
+            ),
+            "inventory_type": _clean_string(
+                raw.get("inventory_type") or raw.get("type")
+            )
+            or "ingredient",
             "change_type": (_clean_string(raw.get("change_type")) or "").lower(),
             "quantity": _safe_float(raw.get("quantity")),
             "unit": _clean_string(raw.get("unit")),
             "cost_per_unit": _safe_float(raw.get("cost_per_unit")),
             "cost_entry_type": _clean_string(raw.get("cost_entry_type")),
             "notes": _clean_string(raw.get("notes")),
-            "allow_create": bool(raw.get("allow_create")) or (_clean_string(raw.get("change_type")) == "create"),
+            "allow_create": bool(raw.get("allow_create"))
+            or (_clean_string(raw.get("change_type")) == "create"),
             "global_item_id": _safe_int(raw.get("global_item_id")),
         }
 
-    def _ensure_inventory_item(self, descriptor: Mapping[str, Any], *, auto_commit: bool = True):
+    def _ensure_inventory_item(
+        self, descriptor: Mapping[str, Any], *, auto_commit: bool = True
+    ):
         query = InventoryItem.query.filter(
             InventoryItem.organization_id == self.organization_id,
             InventoryItem.is_archived != True,  # noqa: E712
@@ -181,17 +206,25 @@ class BulkInventoryService:
 
         if not descriptor.get("allow_create"):
             label = name or (f"#{item_id}" if item_id else "selected item")
-            raise BulkInventoryServiceError(f"Inventory item '{label}' was not found and creation was not permitted.")
+            raise BulkInventoryServiceError(
+                f"Inventory item '{label}' was not found and creation was not permitted."
+            )
 
         return self._create_inventory_item(descriptor, auto_commit=auto_commit)
 
-    def _create_inventory_item(self, descriptor: Mapping[str, Any], *, auto_commit: bool = True):
+    def _create_inventory_item(
+        self, descriptor: Mapping[str, Any], *, auto_commit: bool = True
+    ):
         form_data = {
             "name": descriptor.get("inventory_item_name") or "Untitled Item",
             "type": descriptor.get("inventory_type") or "ingredient",
             "unit": descriptor.get("unit") or "gram",
             "quantity": "",
-            "cost_per_unit": "" if descriptor.get("cost_per_unit") is None else str(descriptor.get("cost_per_unit")),
+            "cost_per_unit": (
+                ""
+                if descriptor.get("cost_per_unit") is None
+                else str(descriptor.get("cost_per_unit"))
+            ),
             "cost_entry_type": descriptor.get("cost_entry_type") or "per_unit",
             "notes": descriptor.get("notes") or "",
         }
@@ -205,17 +238,23 @@ class BulkInventoryService:
             auto_commit=auto_commit,
         )
         if not success or not new_item_id:
-            raise BulkInventoryServiceError(message or f"Failed to create inventory item '{form_data['name']}'.")
+            raise BulkInventoryServiceError(
+                message or f"Failed to create inventory item '{form_data['name']}'."
+            )
 
         item = db.session.get(InventoryItem, int(new_item_id))
         if not item:
-            raise BulkInventoryServiceError("Newly created inventory item could not be loaded.")
+            raise BulkInventoryServiceError(
+                "Newly created inventory item could not be loaded."
+            )
         return item, True
 
     def _map_change_type(self, change_type: str) -> str:
         normalized = (change_type or "").lower()
         if normalized not in self.SUPPORTED_CHANGE_TYPES:
-            raise BulkInventoryServiceError(f"Unsupported bulk change type '{change_type}'.")
+            raise BulkInventoryServiceError(
+                f"Unsupported bulk change type '{change_type}'."
+            )
         mapping = {
             "create": "restock",
             "restock": "restock",
@@ -224,7 +263,9 @@ class BulkInventoryService:
         }
         return mapping[normalized]
 
-    def _unpack_adjustment_result(self, result: Any) -> tuple[bool, str, Optional[Mapping[str, Any]]]:
+    def _unpack_adjustment_result(
+        self, result: Any
+    ) -> tuple[bool, str, Optional[Mapping[str, Any]]]:
         if isinstance(result, (list, tuple)):
             if len(result) == 3:
                 return result  # success, message, payload
@@ -242,7 +283,9 @@ class BulkInventoryService:
             except Exception:
                 pass
 
-    def _abort(self, line_number: int, line: Mapping[str, Any], change_type: str, reason: str) -> BulkInventoryAbortError:
+    def _abort(
+        self, line_number: int, line: Mapping[str, Any], change_type: str, reason: str
+    ) -> BulkInventoryAbortError:
         item_label = line.get("inventory_item_name") or "selected item"
         action = self._describe_action(change_type)
         message = (

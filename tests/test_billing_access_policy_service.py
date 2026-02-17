@@ -1,6 +1,9 @@
 from types import SimpleNamespace
 
-from app.services.billing_access_policy_service import BillingAccessAction, BillingAccessPolicyService
+from app.services.billing_access_policy_service import (
+    BillingAccessAction,
+    BillingAccessPolicyService,
+)
 from app.services.billing_service import BillingService
 
 
@@ -88,6 +91,19 @@ def test_unknown_validation_reason_defaults_to_allow(monkeypatch):
 
 
 def test_billing_enforcement_exempt_route_matching():
-    assert BillingAccessPolicyService.is_enforcement_exempt_route("/billing/upgrade", None) is True
-    assert BillingAccessPolicyService.is_enforcement_exempt_route("/dashboard", "billing.upgrade") is True
-    assert BillingAccessPolicyService.is_enforcement_exempt_route("/dashboard", "app_routes.dashboard") is False
+    assert (
+        BillingAccessPolicyService.is_enforcement_exempt_route("/billing/upgrade", None)
+        is True
+    )
+    assert (
+        BillingAccessPolicyService.is_enforcement_exempt_route(
+            "/dashboard", "billing.upgrade"
+        )
+        is True
+    )
+    assert (
+        BillingAccessPolicyService.is_enforcement_exempt_route(
+            "/dashboard", "app_routes.dashboard"
+        )
+        is False
+    )

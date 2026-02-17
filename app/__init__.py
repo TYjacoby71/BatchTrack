@@ -53,7 +53,6 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     register_middleware(app)
     register_blueprints(app)
     from . import models  # noqa: F401  # ensure models registered for Alembic
-
     from .template_context import register_template_context
     from .utils.template_filters import register_template_filters
 
@@ -165,14 +164,21 @@ def _configure_cache(app: Flask) -> None:
             logger.info("Redis cache configured with shared connection pool")
         else:
             cache_config["CACHE_TYPE"] = "SimpleCache"
-            logger.warning("Unable to initialize Redis cache; falling back to SimpleCache.")
+            logger.warning(
+                "Unable to initialize Redis cache; falling back to SimpleCache."
+            )
     else:
         cache_config["CACHE_TYPE"] = "SimpleCache"
         logger.info("Using SimpleCache (no Redis URL configured)")
 
     cache.init_app(app, config=cache_config)
-    if app.config.get("ENV") == "production" and cache_config["CACHE_TYPE"] != "RedisCache":
-        raise RuntimeError("Redis cache not configured; SimpleCache is not permitted in production.")
+    if (
+        app.config.get("ENV") == "production"
+        and cache_config["CACHE_TYPE"] != "RedisCache"
+    ):
+        raise RuntimeError(
+            "Redis cache not configured; SimpleCache is not permitted in production."
+        )
 
 
 # --- Configure sessions ---
@@ -191,7 +197,10 @@ def _configure_sessions(app: Flask) -> None:
             session_redis = LazyRedisClient(session_redis_url, app)
             session_backend = "redis"
         except Exception as exc:
-            logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
+            logger.warning(
+                "Failed to initialize Redis-backed session store (%s); falling back to filesystem.",
+                exc,
+            )
 
     if session_backend == "redis" and session_redis is not None:
         app.config.setdefault("SESSION_TYPE", "redis")
@@ -230,7 +239,6 @@ def _configure_rate_limiter(app: Flask) -> None:
         raise RuntimeError("Rate limiter storage must be Redis-backed in production.")
 
 
-
 # --- Optional create_all ---
 # Purpose: Allow optional db.create_all() for local setups.
 # Inputs: Flask app and SQLALCHEMY_CREATE_ALL environment flag.
@@ -258,12 +266,15 @@ def _run_optional_create_all(app: Flask) -> None:
 
     create_all_flag = _env_flag("SQLALCHEMY_CREATE_ALL")
     if create_all_flag is None:
-        logger.info("db.create_all() not enabled; Alembic migrations are the source of truth")
+        logger.info(
+            "db.create_all() not enabled; Alembic migrations are the source of truth"
+        )
         return
     if create_all_flag is False:
         logger.info("db.create_all() disabled via SQLALCHEMY_CREATE_ALL=0")
         return
     _execute_create_all("SQLALCHEMY_CREATE_ALL")
+
 
 # --- Configure SQLite options ---
 # Purpose: Remove invalid SQLAlchemy pool settings for SQLite.
@@ -312,6 +323,7 @@ def _configure_db_timeouts(app: Flask) -> None:
         return
 
     with app.app_context():
+
         @event.listens_for(db.engine, "connect")
         def _set_session_timeouts(dbapi_connection, _connection_record):
             cursor = dbapi_connection.cursor()
@@ -321,6 +333,7 @@ def _configure_db_timeouts(app: Flask) -> None:
             finally:
                 cursor.close()
 
+
 # --- Setup logging ---
 # Purpose: Configure log levels and app log formatters.
 # Inputs: Flask app placeholder for backward compatibility.
@@ -328,4 +341,3 @@ def _configure_db_timeouts(app: Flask) -> None:
 def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass
-

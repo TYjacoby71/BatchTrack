@@ -136,7 +136,10 @@ def load_soapcalc_catalog_rows() -> list[dict[str, Any]]:
                     "sap_koh": parse_soapcalc_float(row.get("sap_koh")),
                     "iodine": parse_soapcalc_float(row.get("iodine")),
                     "fatty_profile": fatty_profile,
-                    "ingredient_category_name": (row.get("ingredient_category_name") or "").strip() or None,
+                    "ingredient_category_name": (
+                        row.get("ingredient_category_name") or ""
+                    ).strip()
+                    or None,
                     "default_unit": normalize_soapcalc_unit(row.get("default_unit")),
                 }
             )

@@ -8,6 +8,7 @@ Glossary:
 - Archive: Soft-hide recipes beyond tier limits.
 - Current version: Active recipe for a branch.
 """
+
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
@@ -65,7 +66,9 @@ def build_downgrade_context(org, tier) -> Dict[str, object]:
 
 # --- Apply downgrade selection ---
 # Purpose: Apply downgrade selections and archive remainder.
-def apply_downgrade_selection(org, tier, keep_ids: List[int], user_id: int | None = None) -> Tuple[bool, str]:
+def apply_downgrade_selection(
+    org, tier, keep_ids: List[int], user_id: int | None = None
+) -> Tuple[bool, str]:
     limit = _recipe_limit_for_tier(tier)
     if limit is None:
         return True, "No recipe limit for this tier."

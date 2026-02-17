@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
+
 from app.extensions import db
-from app.models import ProductCategory, Product, Recipe
+from app.models import Product, ProductCategory, Recipe
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
@@ -21,7 +22,9 @@ def create_product_category():
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         is_typically_portioned = request.form.get("is_typically_portioned") == "on"
-        sku_name_template = (request.form.get("sku_name_template") or "").strip() or None
+        sku_name_template = (
+            request.form.get("sku_name_template") or ""
+        ).strip() or None
         if not name:
             flash("Name is required", "error")
             return redirect(url_for("developer.create_product_category"))
@@ -48,7 +51,9 @@ def edit_product_category(cat_id):
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         is_typically_portioned = request.form.get("is_typically_portioned") == "on"
-        sku_name_template = (request.form.get("sku_name_template") or "").strip() or None
+        sku_name_template = (
+            request.form.get("sku_name_template") or ""
+        ).strip() or None
         if not name:
             flash("Name is required", "error")
             return redirect(url_for("developer.edit_product_category", cat_id=cat_id))

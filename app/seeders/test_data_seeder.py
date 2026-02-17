@@ -8,23 +8,23 @@ Glossary:
 - Living dataset: Realistic data used for manual QA.
 """
 
-from datetime import timedelta, timezone as dt_timezone
+from datetime import timedelta
+from datetime import timezone as dt_timezone
 from typing import Dict, List, Optional
 
 from ..extensions import db
-from ..utils.timezone_utils import TimezoneUtils
 from ..models import (
     Batch,
-    BatchContainer,
     BatchConsumable,
+    BatchContainer,
     BatchIngredient,
     BatchTimer,
-    ExtraBatchContainer,
     ExtraBatchConsumable,
+    ExtraBatchContainer,
     ExtraBatchIngredient,
+    IngredientCategory,
     InventoryItem,
     InventoryLot,
-    IngredientCategory,
     Organization,
     Product,
     ProductCategory,
@@ -33,13 +33,14 @@ from ..models import (
     Recipe,
     RecipeIngredient,
     Reservation,
-    Unit,
     UnifiedInventoryHistory,
+    Unit,
     User,
 )
 from ..models.global_item import GlobalItem
 from ..services.inventory_adjustment import process_inventory_adjustment
 from ..services.unit_conversion import ConversionEngine
+from ..utils.timezone_utils import TimezoneUtils
 
 
 # --- Seed test data ---
@@ -65,7 +66,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     # ------------------------------------------------------------------
     # Helper functions
     # ------------------------------------------------------------------
-    def ensure_unit(name: str, symbol: str, unit_type: str, base_unit: str, conversion_factor: float):
+    def ensure_unit(
+        name: str, symbol: str, unit_type: str, base_unit: str, conversion_factor: float
+    ):
         unit = Unit.query.filter_by(name=name).first()
         if not unit:
             unit = Unit(
@@ -85,7 +88,9 @@ def seed_test_data(organization_id: Optional[int] = None):
         return unit
 
     def get_or_create_category(name: str) -> IngredientCategory:
-        category = IngredientCategory.query.filter_by(name=name, organization_id=organization_id).first()
+        category = IngredientCategory.query.filter_by(
+            name=name, organization_id=organization_id
+        ).first()
         if not category:
             category = IngredientCategory(name=name, organization_id=organization_id)
             db.session.add(category)
@@ -103,26 +108,49 @@ def seed_test_data(organization_id: Optional[int] = None):
         return global_item
 
     def reset_inventory_item(item: InventoryItem):
-        UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
-        InventoryLot.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
+        UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(
+            synchronize_session=False
+        )
+        InventoryLot.query.filter_by(inventory_item_id=item.id).delete(
+            synchronize_session=False
+        )
         from app.services.quantity_base import sync_item_quantity_from_base
+
         item.quantity_base = 0
         sync_item_quantity_from_base(item)
         db.session.flush()
 
     def remove_existing_batches(labels: List[str]):
         for label in labels:
-            batch = Batch.query.filter_by(label_code=label, organization_id=organization_id).first()
+            batch = Batch.query.filter_by(
+                label_code=label, organization_id=organization_id
+            ).first()
             if not batch:
                 continue
-            UnifiedInventoryHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            BatchIngredient.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            BatchContainer.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            BatchConsumable.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            ExtraBatchIngredient.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            ExtraBatchContainer.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            ExtraBatchConsumable.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            BatchTimer.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
+            UnifiedInventoryHistory.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            BatchIngredient.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            BatchContainer.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            BatchConsumable.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            ExtraBatchIngredient.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            ExtraBatchContainer.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            ExtraBatchConsumable.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
+            BatchTimer.query.filter_by(batch_id=batch.id).delete(
+                synchronize_session=False
+            )
             db.session.delete(batch)
         db.session.flush()
 
@@ -138,13 +166,16 @@ def seed_test_data(organization_id: Optional[int] = None):
             raise RuntimeError(f"{context} failed: {message}")
         return response
 
-    def convert_units(amount: float, from_unit: str, to_unit: str, ingredient: InventoryItem) -> float:
+    def convert_units(
+        amount: float, from_unit: str, to_unit: str, ingredient: InventoryItem
+    ) -> float:
         conversion = ConversionEngine.convert_units(
             amount,
             from_unit,
             to_unit,
             ingredient_id=ingredient.id,
-            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None),
+            density=ingredient.density
+            or (ingredient.category.default_density if ingredient.category else None),
             organization_id=organization_id,
         )
         if not conversion.get("success") or conversion.get("converted_value") is None:
@@ -153,8 +184,16 @@ def seed_test_data(organization_id: Optional[int] = None):
             )
         return conversion["converted_value"]
 
-    def update_history_timestamp(item_id: int, change_type: str, timestamp, notes_contains: Optional[str] = None, batch_id: Optional[int] = None):
-        query = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id, change_type=change_type)
+    def update_history_timestamp(
+        item_id: int,
+        change_type: str,
+        timestamp,
+        notes_contains: Optional[str] = None,
+        batch_id: Optional[int] = None,
+    ):
+        query = UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=item_id, change_type=change_type
+        )
         if batch_id is not None:
             query = query.filter_by(batch_id=batch_id)
         entries = query.all()
@@ -163,14 +202,21 @@ def seed_test_data(organization_id: Optional[int] = None):
                 continue
             entry.timestamp = timestamp
 
-    def update_lot_dates(lot: InventoryLot, received_at, expiration_at=None, source_notes: Optional[str] = None):
+    def update_lot_dates(
+        lot: InventoryLot,
+        received_at,
+        expiration_at=None,
+        source_notes: Optional[str] = None,
+    ):
         lot.received_date = received_at
         lot.created_at = received_at
         if expiration_at is not None:
             lot.expiration_date = expiration_at
         if source_notes is not None:
             lot.source_notes = source_notes
-        history_entries = UnifiedInventoryHistory.query.filter_by(affected_lot_id=lot.id).all()
+        history_entries = UnifiedInventoryHistory.query.filter_by(
+            affected_lot_id=lot.id
+        ).all()
         for entry in history_entries:
             entry.timestamp = received_at
             if expiration_at is not None:
@@ -232,9 +278,25 @@ def seed_test_data(organization_id: Optional[int] = None):
                 "recommended_shelf_life_days": 7,
             },
             "lots": [
-                {"quantity": 2.5, "unit_cost": 4.75, "days_ago": 32, "notes": "Opening month delivery", "expired": True},
-                {"quantity": 3.0, "unit_cost": 4.95, "days_ago": 6, "notes": "Weekly restock from local dairy"},
-                {"quantity": 3.0, "unit_cost": 5.05, "days_ago": 2, "notes": "Fresh restock pending current batch"},
+                {
+                    "quantity": 2.5,
+                    "unit_cost": 4.75,
+                    "days_ago": 32,
+                    "notes": "Opening month delivery",
+                    "expired": True,
+                },
+                {
+                    "quantity": 3.0,
+                    "unit_cost": 4.95,
+                    "days_ago": 6,
+                    "notes": "Weekly restock from local dairy",
+                },
+                {
+                    "quantity": 3.0,
+                    "unit_cost": 5.05,
+                    "days_ago": 2,
+                    "notes": "Fresh restock pending current batch",
+                },
             ],
         },
         {
@@ -255,9 +317,25 @@ def seed_test_data(organization_id: Optional[int] = None):
                 "recommended_shelf_life_days": 540,
             },
             "lots": [
-                {"quantity": 50.0, "unit_cost": 3.45, "days_ago": 210, "notes": "Legacy drum now empty", "expired": True},
-                {"quantity": 60.0, "unit_cost": 3.75, "days_ago": 45, "notes": "Summer harvest purchase"},
-                {"quantity": 60.0, "unit_cost": 3.95, "days_ago": 8, "notes": "Recent cooperative delivery"},
+                {
+                    "quantity": 50.0,
+                    "unit_cost": 3.45,
+                    "days_ago": 210,
+                    "notes": "Legacy drum now empty",
+                    "expired": True,
+                },
+                {
+                    "quantity": 60.0,
+                    "unit_cost": 3.75,
+                    "days_ago": 45,
+                    "notes": "Summer harvest purchase",
+                },
+                {
+                    "quantity": 60.0,
+                    "unit_cost": 3.95,
+                    "days_ago": 8,
+                    "notes": "Recent cooperative delivery",
+                },
             ],
         },
         {
@@ -284,9 +362,26 @@ def seed_test_data(organization_id: Optional[int] = None):
                 "container_type": "Bottle",
             },
             "lots": [
-                {"quantity": 120, "unit_cost": 0.8, "days_ago": 35, "notes": "Bulk glass pallet"},
-                {"quantity": 80, "unit_cost": 0.84, "days_ago": 7, "notes": "Top off order for autumn promotions"},
-                {"quantity": 40, "remaining_quantity": 0, "unit_cost": 0.86, "days_ago": 52, "notes": "Legacy lot fully consumed", "expired": True},
+                {
+                    "quantity": 120,
+                    "unit_cost": 0.8,
+                    "days_ago": 35,
+                    "notes": "Bulk glass pallet",
+                },
+                {
+                    "quantity": 80,
+                    "unit_cost": 0.84,
+                    "days_ago": 7,
+                    "notes": "Top off order for autumn promotions",
+                },
+                {
+                    "quantity": 40,
+                    "remaining_quantity": 0,
+                    "unit_cost": 0.86,
+                    "days_ago": 52,
+                    "notes": "Legacy lot fully consumed",
+                    "expired": True,
+                },
             ],
         },
     ]
@@ -294,7 +389,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     inventory_items: Dict[str, InventoryItem] = {}
 
     for spec in inventory_plan:
-        item = InventoryItem.query.filter_by(name=spec["name"], organization_id=organization_id).first()
+        item = InventoryItem.query.filter_by(
+            name=spec["name"], organization_id=organization_id
+        ).first()
         if not item:
             item = InventoryItem(
                 name=spec["name"],
@@ -333,7 +430,9 @@ def seed_test_data(organization_id: Optional[int] = None):
 
         global_meta = spec.get("global_item")
         if global_meta:
-            global_item = ensure_global_item(spec["name"], global_meta.pop("item_type"), **global_meta)
+            global_item = ensure_global_item(
+                spec["name"], global_meta.pop("item_type"), **global_meta
+            )
             item.global_item_id = global_item.id
             item.reference_item_name = global_item.name
 
@@ -349,22 +448,24 @@ def seed_test_data(organization_id: Optional[int] = None):
         item = inventory_items[spec["key"]]
         for lot_spec in spec["lots"]:
             received_at = now - timedelta(days=lot_spec.get("days_ago", 0))
-            all_lot_operations.append({
-                'item': item,
-                'spec': lot_spec,
-                'received_at': received_at,
-                'operation_type': 'restock'
-            })
-    
+            all_lot_operations.append(
+                {
+                    "item": item,
+                    "spec": lot_spec,
+                    "received_at": received_at,
+                    "operation_type": "restock",
+                }
+            )
+
     # Sort by timestamp (oldest first) to ensure chronological order
-    all_lot_operations.sort(key=lambda x: x['received_at'])
-    
+    all_lot_operations.sort(key=lambda x: x["received_at"])
+
     # Execute lot creation operations in chronological order
     for operation in all_lot_operations:
-        item = operation['item']
-        lot_spec = operation['spec']
-        received_at = operation['received_at']
-        
+        item = operation["item"]
+        lot_spec = operation["spec"]
+        received_at = operation["received_at"]
+
         process_adjustment(
             context=f"Restock {item.name}",
             item_id=item.id,
@@ -377,13 +478,22 @@ def seed_test_data(organization_id: Optional[int] = None):
             defer_commit=True,
         )
         db.session.flush()
-        new_lot = InventoryLot.query.filter_by(inventory_item_id=item.id).order_by(InventoryLot.id.desc()).first()
+        new_lot = (
+            InventoryLot.query.filter_by(inventory_item_id=item.id)
+            .order_by(InventoryLot.id.desc())
+            .first()
+        )
         expiration = None
         if lot_spec.get("expired"):
             expiration = received_at + timedelta(days=1)
         elif item.is_perishable and item.shelf_life_days:
             expiration = received_at + timedelta(days=item.shelf_life_days)
-        update_lot_dates(new_lot, received_at, expiration_at=expiration, source_notes=lot_spec.get("notes"))
+        update_lot_dates(
+            new_lot,
+            received_at,
+            expiration_at=expiration,
+            source_notes=lot_spec.get("notes"),
+        )
         total_lots_created += 1
         db.session.commit()
 
@@ -395,7 +505,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     milk_item = inventory_items["milk"]
 
     recipe_name = "Milk & Honey Elixir"
-    recipe = Recipe.query.filter_by(name=recipe_name, organization_id=organization_id).first()
+    recipe = Recipe.query.filter_by(
+        name=recipe_name, organization_id=organization_id
+    ).first()
     if not recipe:
         recipe = Recipe(
             name=recipe_name,
@@ -404,9 +516,7 @@ def seed_test_data(organization_id: Optional[int] = None):
         )
         db.session.add(recipe)
 
-    recipe.instructions = (
-        "Warm milk to 120F, dissolve honey, blend until uniform, cool, and bottle immediately."
-    )
+    recipe.instructions = "Warm milk to 120F, dissolve honey, blend until uniform, cool, and bottle immediately."
     recipe.predicted_yield = 4.0
     recipe.predicted_yield_unit = "floz"
     recipe.is_portioned = False
@@ -441,7 +551,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     # ------------------------------------------------------------------
     product_item_key = "product"
     product_inventory_name = "Milk & Honey Elixir (Finished)"
-    product_item = InventoryItem.query.filter_by(name=product_inventory_name, organization_id=organization_id).first()
+    product_item = InventoryItem.query.filter_by(
+        name=product_inventory_name, organization_id=organization_id
+    ).first()
     if not product_item:
         product_item = InventoryItem(
             name=product_inventory_name,
@@ -467,7 +579,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     reset_inventory_item(product_item)
     inventory_items[product_item_key] = product_item
 
-    product = Product.query.filter_by(name="Milk & Honey Elixir", organization_id=organization_id).first()
+    product = Product.query.filter_by(
+        name="Milk & Honey Elixir", organization_id=organization_id
+    ).first()
     if not product:
         product = Product(
             name="Milk & Honey Elixir",
@@ -479,7 +593,9 @@ def seed_test_data(organization_id: Optional[int] = None):
         db.session.add(product)
         db.session.flush()
 
-    variant = ProductVariant.query.filter_by(product_id=product.id, name="Original").first()
+    variant = ProductVariant.query.filter_by(
+        product_id=product.id, name="Original"
+    ).first()
     if not variant:
         variant = ProductVariant(
             product_id=product.id,
@@ -585,13 +701,17 @@ def seed_test_data(organization_id: Optional[int] = None):
     }
 
     # Sort batch plan by start date (oldest first) for chronological processing
-    sorted_batch_plan = sorted(batch_plan, key=lambda x: x["started_days_ago"], reverse=True)
+    sorted_batch_plan = sorted(
+        batch_plan, key=lambda x: x["started_days_ago"], reverse=True
+    )
 
     for plan in sorted_batch_plan:
         started_at = normalize_timestamp(now - timedelta(days=plan["started_days_ago"]))
         completed_at = None
         if plan.get("completed_days_ago") is not None:
-            completed_at = normalize_timestamp(now - timedelta(days=plan["completed_days_ago"]))
+            completed_at = normalize_timestamp(
+                now - timedelta(days=plan["completed_days_ago"])
+            )
 
         batch = Batch(
             recipe_id=recipe.id,
@@ -641,7 +761,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
-                
+
                 # Create BatchIngredient record
                 batch_ingredient = BatchIngredient(
                     batch_id=batch.id,
@@ -649,7 +769,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     quantity_used=honey_required,
                     unit=honey_item.unit,
                     cost_per_unit=honey_item.cost_per_unit,
-                    organization_id=organization_id
+                    organization_id=organization_id,
                 )
                 db.session.add(batch_ingredient)
 
@@ -673,7 +793,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
-                
+
                 # Create BatchIngredient record
                 batch_ingredient = BatchIngredient(
                     batch_id=batch.id,
@@ -681,7 +801,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     quantity_used=milk_required,
                     unit=milk_item.unit,
                     cost_per_unit=milk_item.cost_per_unit,
-                    organization_id=organization_id
+                    organization_id=organization_id,
                 )
                 db.session.add(batch_ingredient)
 
@@ -699,7 +819,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
-                
+
                 # Create BatchContainer record
                 batch_container = BatchContainer(
                     batch_id=batch.id,
@@ -708,7 +828,7 @@ def seed_test_data(organization_id: Optional[int] = None):
                     quantity_used=int(container_required),
                     fill_quantity=4.0,  # 4 fl oz per container
                     fill_unit="floz",
-                    cost_each=container_item.cost_per_unit
+                    cost_each=container_item.cost_per_unit,
                 )
                 db.session.add(batch_container)
 
@@ -727,23 +847,45 @@ def seed_test_data(organization_id: Optional[int] = None):
                     defer_commit=True,
                 )
                 db.session.flush()
-                finished_lot = InventoryLot.query.filter_by(
-                    inventory_item_id=product_item.id,
-                    batch_id=batch.id,
-                    source_type="finished_batch",
-                ).order_by(InventoryLot.id.desc()).first()
+                finished_lot = (
+                    InventoryLot.query.filter_by(
+                        inventory_item_id=product_item.id,
+                        batch_id=batch.id,
+                        source_type="finished_batch",
+                    )
+                    .order_by(InventoryLot.id.desc())
+                    .first()
+                )
                 if finished_lot:
                     current_stamp = completed_at or normalize_timestamp(now)
-                    expiration = current_stamp + timedelta(days=product_item.shelf_life_days or 0) if current_stamp else None
-                    update_lot_dates(finished_lot, current_stamp, expiration_at=expiration, source_notes=f"Finished goods from {plan['label_code']}")
+                    expiration = (
+                        current_stamp
+                        + timedelta(days=product_item.shelf_life_days or 0)
+                        if current_stamp
+                        else None
+                    )
+                    update_lot_dates(
+                        finished_lot,
+                        current_stamp,
+                        expiration_at=expiration,
+                        source_notes=f"Finished goods from {plan['label_code']}",
+                    )
                     total_lots_created += 1
 
             db.session.commit()
 
-            update_history_timestamp(honey_item.id, "batch", completed_at, batch_id=batch.id)
-            update_history_timestamp(milk_item.id, "batch", completed_at, batch_id=batch.id)
-            update_history_timestamp(container_item.id, "batch", completed_at, batch_id=batch.id)
-            update_history_timestamp(product_item.id, "finished_batch", completed_at, batch_id=batch.id)
+            update_history_timestamp(
+                honey_item.id, "batch", completed_at, batch_id=batch.id
+            )
+            update_history_timestamp(
+                milk_item.id, "batch", completed_at, batch_id=batch.id
+            )
+            update_history_timestamp(
+                container_item.id, "batch", completed_at, batch_id=batch.id
+            )
+            update_history_timestamp(
+                product_item.id, "finished_batch", completed_at, batch_id=batch.id
+            )
             db.session.commit()
 
         batches_by_label[plan["label_code"]] = batch
@@ -752,9 +894,30 @@ def seed_test_data(organization_id: Optional[int] = None):
     # Sales history
     # ------------------------------------------------------------------
     sales_plan = [
-        {"batch_label": "MH-240901", "quantity": 40, "days_ago": 31, "customer": "Saturday Farmers Market", "order_id": "FM-2409-22", "sale_price": 14.0},
-        {"batch_label": "MH-240915", "quantity": 50, "days_ago": 18, "customer": "Co-op Grocer", "order_id": "COOP-2410", "sale_price": 13.5},
-        {"batch_label": "MH-241001", "quantity": 50, "days_ago": 2, "customer": "Cafe Collective", "order_id": "CAFE-2411", "sale_price": 14.5},
+        {
+            "batch_label": "MH-240901",
+            "quantity": 40,
+            "days_ago": 31,
+            "customer": "Saturday Farmers Market",
+            "order_id": "FM-2409-22",
+            "sale_price": 14.0,
+        },
+        {
+            "batch_label": "MH-240915",
+            "quantity": 50,
+            "days_ago": 18,
+            "customer": "Co-op Grocer",
+            "order_id": "COOP-2410",
+            "sale_price": 13.5,
+        },
+        {
+            "batch_label": "MH-241001",
+            "quantity": 50,
+            "days_ago": 2,
+            "customer": "Cafe Collective",
+            "order_id": "CAFE-2411",
+            "sale_price": 14.5,
+        },
     ]
 
     # Sort sales by days_ago (oldest first) for chronological processing
@@ -791,7 +954,9 @@ def seed_test_data(organization_id: Optional[int] = None):
     # Active reservation using system adjustment
     # ------------------------------------------------------------------
     reservation_order_id = "ORDER-1098"
-    Reservation.query.filter_by(order_id=reservation_order_id, organization_id=organization_id).delete(synchronize_session=False)
+    Reservation.query.filter_by(
+        order_id=reservation_order_id, organization_id=organization_id
+    ).delete(synchronize_session=False)
     db.session.commit()
 
     reservation_timestamp = normalize_timestamp(now - timedelta(days=1))
@@ -812,7 +977,12 @@ def seed_test_data(organization_id: Optional[int] = None):
         defer_commit=True,
     )
     db.session.commit()
-    update_history_timestamp(product_item.id, "reserved", reservation_timestamp, notes_contains=reservation_order_id)
+    update_history_timestamp(
+        product_item.id,
+        "reserved",
+        reservation_timestamp,
+        notes_contains=reservation_order_id,
+    )
     db.session.commit()
 
     reservation = Reservation(
@@ -843,10 +1013,11 @@ def seed_test_data(organization_id: Optional[int] = None):
     print("\n=== Living Account Summary ===")
     print(f"✅ Inventory Items Managed: {len(inventory_items)}")
     print(f"✅ Inventory Lots Created: {total_lots_created}")
-    print(f"✅ Recipe Ready: {recipe.name} (yield {recipe.predicted_yield} {recipe.predicted_yield_unit})")
+    print(
+        f"✅ Recipe Ready: {recipe.name} (yield {recipe.predicted_yield} {recipe.predicted_yield_unit})"
+    )
     print(f"✅ Batches Completed: {completed_batch_count}")
     print(f"✅ Batches In Progress: {in_progress_batch_count}")
     print(f"✅ Finished Goods On Hand: {finished_on_hand} {product_item.unit}")
     print("✅ Active Reservations: 1")
     print("🧪 Dataset reflects a month of live operations with full history logs.")
-

@@ -76,7 +76,9 @@ class OrganizationService:
     # Inputs: Form payload with org + owner fields and tier choice.
     # Outputs: Tuple(success flag, organization or None, status message).
     @staticmethod
-    def create_organization_with_owner(form_data: Dict[str, str]) -> Tuple[bool, Optional[Organization], str]:
+    def create_organization_with_owner(
+        form_data: Dict[str, str],
+    ) -> Tuple[bool, Optional[Organization], str]:
         name = form_data.get("name")
         username = form_data.get("username")
         email = form_data.get("email")
@@ -139,7 +141,9 @@ class OrganizationService:
     # Inputs: Organization row and form payload.
     # Outputs: Tuple(success flag, status message).
     @staticmethod
-    def update_organization(org: Organization, form_data: Dict[str, str]) -> Tuple[bool, str]:
+    def update_organization(
+        org: Organization, form_data: Dict[str, str]
+    ) -> Tuple[bool, str]:
         org.name = form_data.get("name", org.name)
         org.is_active = form_data.get("is_active") == "true"
 
@@ -163,7 +167,9 @@ class OrganizationService:
     # Inputs: Organization row and tier identifier string.
     # Outputs: Tuple(success flag, status message).
     @staticmethod
-    def upgrade_organization(org: Organization, tier_identifier: str) -> Tuple[bool, str]:
+    def upgrade_organization(
+        org: Organization, tier_identifier: str
+    ) -> Tuple[bool, str]:
         from app.models.subscription_tier import SubscriptionTier
 
         tier_record = SubscriptionTier.find_by_identifier(tier_identifier)
@@ -183,17 +189,16 @@ class OrganizationService:
         org_id = org.id
         org_name = org.name
         try:
-            from app.services.billing_service import BillingService
             from sqlalchemy import or_
 
             from app.models import (
                 Batch,
-                BatchContainer,
                 BatchConsumable,
+                BatchContainer,
                 BatchIngredient,
                 BatchTimer,
-                ExtraBatchContainer,
                 ExtraBatchConsumable,
+                ExtraBatchContainer,
                 ExtraBatchIngredient,
                 InventoryHistory,
                 InventoryItem,
@@ -213,11 +218,15 @@ class OrganizationService:
             from app.models.recipe_marketplace import RecipeModerationEvent
             from app.models.reservation import Reservation
             from app.models.retention import RetentionDeletionQueue
-            from app.models.statistics import BatchStats, InventoryChangeLog, InventoryEfficiencyStats
+            from app.models.statistics import (
+                BatchStats,
+                InventoryChangeLog,
+                InventoryEfficiencyStats,
+                UserStats,
+            )
             from app.models.user_preferences import UserPreferences
             from app.models.user_role_assignment import UserRoleAssignment
-            from app.models.statistics import UserStats
-
+            from app.services.billing_service import BillingService
             from app.services.developer.deletion_utils import (
                 archive_marketplace_recipes,
                 clear_user_foreign_keys,
@@ -227,7 +236,9 @@ class OrganizationService:
 
             stripe_cancelled = False
             if org.stripe_customer_id:
-                stripe_cancelled = BillingService.cancel_subscription(org.stripe_customer_id)
+                stripe_cancelled = BillingService.cancel_subscription(
+                    org.stripe_customer_id
+                )
                 if not stripe_cancelled:
                     return (
                         False,
@@ -235,29 +246,57 @@ class OrganizationService:
                         "Deletion aborted to prevent orphan billing.",
                     )
 
-            org_user_ids = [int(row[0]) for row in db.session.query(User.id).filter(User.organization_id == org_id).all()]
-            org_recipe_ids = [int(row[0]) for row in db.session.query(Recipe.id).filter(Recipe.organization_id == org_id).all()]
-            org_batch_ids = [int(row[0]) for row in db.session.query(Batch.id).filter(Batch.organization_id == org_id).all()]
+            org_user_ids = [
+                int(row[0])
+                for row in db.session.query(User.id)
+                .filter(User.organization_id == org_id)
+                .all()
+            ]
+            org_recipe_ids = [
+                int(row[0])
+                for row in db.session.query(Recipe.id)
+                .filter(Recipe.organization_id == org_id)
+                .all()
+            ]
+            org_batch_ids = [
+                int(row[0])
+                for row in db.session.query(Batch.id)
+                .filter(Batch.organization_id == org_id)
+                .all()
+            ]
             org_inventory_ids = [
                 int(row[0])
-                for row in db.session.query(InventoryItem.id).filter(InventoryItem.organization_id == org_id).all()
+                for row in db.session.query(InventoryItem.id)
+                .filter(InventoryItem.organization_id == org_id)
+                .all()
             ]
             org_product_ids = [
-                int(row[0]) for row in db.session.query(Product.id).filter(Product.organization_id == org_id).all()
+                int(row[0])
+                for row in db.session.query(Product.id)
+                .filter(Product.organization_id == org_id)
+                .all()
             ]
             org_variant_ids = [
                 int(row[0])
-                for row in db.session.query(ProductVariant.id).filter(ProductVariant.organization_id == org_id).all()
+                for row in db.session.query(ProductVariant.id)
+                .filter(ProductVariant.organization_id == org_id)
+                .all()
             ]
             org_role_ids = [
                 int(row[0])
-                for row in db.session.query(Role.id).filter(
+                for row in db.session.query(Role.id)
+                .filter(
                     Role.organization_id == org_id,
                     Role.is_system_role.is_(False),
-                ).all()
+                )
+                .all()
             ]
 
-            org_recipes = Recipe.query.filter(Recipe.id.in_(org_recipe_ids)).all() if org_recipe_ids else []
+            org_recipes = (
+                Recipe.query.filter(Recipe.id.in_(org_recipe_ids)).all()
+                if org_recipe_ids
+                else []
+            )
             marketplace_recipe_count = sum(
                 1
                 for recipe in org_recipes
@@ -270,11 +309,15 @@ class OrganizationService:
                 )
             )
             archive_path = archive_marketplace_recipes(org, org_recipes)
-            detached_links = detach_external_recipe_links(
-                org_id,
-                org_recipe_ids,
-                archive_path=archive_path,
-            ) if org_recipe_ids else 0
+            detached_links = (
+                detach_external_recipe_links(
+                    org_id,
+                    org_recipe_ids,
+                    archive_path=archive_path,
+                )
+                if org_recipe_ids
+                else 0
+            )
 
             if org_user_ids:
                 clear_user_foreign_keys(org_user_ids)
@@ -284,9 +327,9 @@ class OrganizationService:
                 UserPreferences.query.filter(
                     UserPreferences.user_id.in_(org_user_ids)
                 ).delete(synchronize_session=False)
-                UserStats.query.filter(
-                    UserStats.user_id.in_(org_user_ids)
-                ).delete(synchronize_session=False)
+                UserStats.query.filter(UserStats.user_id.in_(org_user_ids)).delete(
+                    synchronize_session=False
+                )
 
             # Child tables are not guaranteed to carry organization_id; clear by parent IDs first.
             if org_recipe_ids:
@@ -325,12 +368,12 @@ class OrganizationService:
                 ExtraBatchConsumable.query.filter(
                     ExtraBatchConsumable.batch_id.in_(org_batch_ids)
                 ).delete(synchronize_session=False)
-                BatchTimer.query.filter(
-                    BatchTimer.batch_id.in_(org_batch_ids)
-                ).delete(synchronize_session=False)
-                BatchStats.query.filter(
-                    BatchStats.batch_id.in_(org_batch_ids)
-                ).delete(synchronize_session=False)
+                BatchTimer.query.filter(BatchTimer.batch_id.in_(org_batch_ids)).delete(
+                    synchronize_session=False
+                )
+                BatchStats.query.filter(BatchStats.batch_id.in_(org_batch_ids)).delete(
+                    synchronize_session=False
+                )
                 InventoryHistory.query.filter(
                     or_(
                         InventoryHistory.batch_id.in_(org_batch_ids),
@@ -352,9 +395,7 @@ class OrganizationService:
                     {Reservation.source_batch_id: None},
                     synchronize_session=False,
                 )
-                ProductSKU.query.filter(
-                    ProductSKU.batch_id.in_(org_batch_ids)
-                ).update(
+                ProductSKU.query.filter(ProductSKU.batch_id.in_(org_batch_ids)).update(
                     {ProductSKU.batch_id: None},
                     synchronize_session=False,
                 )
@@ -371,7 +412,9 @@ class OrganizationService:
                 ).delete(synchronize_session=False)
                 UnifiedInventoryHistory.query.filter(
                     or_(
-                        UnifiedInventoryHistory.inventory_item_id.in_(org_inventory_ids),
+                        UnifiedInventoryHistory.inventory_item_id.in_(
+                            org_inventory_ids
+                        ),
                         UnifiedInventoryHistory.container_id.in_(org_inventory_ids),
                     )
                 ).delete(synchronize_session=False)
@@ -404,11 +447,15 @@ class OrganizationService:
                     sku_filters.append(ProductSKU.product_id.in_(org_product_ids))
                 if org_variant_ids:
                     sku_filters.append(ProductSKU.variant_id.in_(org_variant_ids))
-                ProductSKU.query.filter(or_(*sku_filters)).delete(synchronize_session=False)
+                ProductSKU.query.filter(or_(*sku_filters)).delete(
+                    synchronize_session=False
+                )
 
             if org_role_ids:
                 db.session.execute(
-                    role_permission.delete().where(role_permission.c.role_id.in_(org_role_ids))
+                    role_permission.delete().where(
+                        role_permission.c.role_id.in_(org_role_ids)
+                    )
                 )
 
             delete_org_scoped_rows(org_id)
@@ -423,9 +470,7 @@ class OrganizationService:
             if stripe_cancelled:
                 message += " Stripe subscription canceled."
             if archive_path:
-                message += (
-                    f" Archived {marketplace_recipe_count} marketplace recipe snapshot(s) to {archive_path}."
-                )
+                message += f" Archived {marketplace_recipe_count} marketplace recipe snapshot(s) to {archive_path}."
             if detached_links:
                 message += f" Detached {detached_links} external recipe link(s)."
             return True, message
@@ -438,7 +483,9 @@ class OrganizationService:
     # Inputs: Password input, typed confirmation text, expected confirmation phrase.
     # Outputs: Tuple(valid flag, error message when invalid).
     @staticmethod
-    def validate_deletion(password: str, confirm_text: str, expected_confirm: str) -> Tuple[bool, str]:
+    def validate_deletion(
+        password: str, confirm_text: str, expected_confirm: str
+    ) -> Tuple[bool, str]:
         if not current_user.check_password(password or ""):
             return False, "Invalid developer password"
         if confirm_text != expected_confirm:

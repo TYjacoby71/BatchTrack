@@ -64,7 +64,9 @@ class ToolFeedbackNoteService:
     def normalize_source(cls, raw_source: Any) -> str:
         if not isinstance(raw_source, str):
             return cls.DEFAULT_SOURCE
-        cleaned = cls._SOURCE_SANITIZER.sub("_", raw_source.strip().lower()).strip("._-")
+        cleaned = cls._SOURCE_SANITIZER.sub("_", raw_source.strip().lower()).strip(
+            "._-"
+        )
         return cleaned or cls.DEFAULT_SOURCE
 
     @classmethod
@@ -84,7 +86,9 @@ class ToolFeedbackNoteService:
             without_query = path_value.split("?", 1)[0].split("#", 1)[0]
             pieces: list[str] = []
             for part in without_query.split("/"):
-                segment = cls._PATH_SEGMENT_SANITIZER.sub("_", part.strip().lower()).strip("._-")
+                segment = cls._PATH_SEGMENT_SANITIZER.sub(
+                    "_", part.strip().lower()
+                ).strip("._-")
                 if not segment:
                     continue
                 if cls._LIKELY_DYNAMIC_SEGMENT.match(segment):
@@ -158,7 +162,9 @@ class ToolFeedbackNoteService:
             payload.get("flow") or payload.get("type") or payload.get("note_type")
         )
         if not flow:
-            raise ValueError("Choose one type: question, missing feature, glitch, or bad preset data.")
+            raise ValueError(
+                "Choose one type: question, missing feature, glitch, or bad preset data."
+            )
 
         message = cls._clean_text(
             payload.get("message") or payload.get("need") or payload.get("details"),
@@ -179,7 +185,9 @@ class ToolFeedbackNoteService:
             "context": cls._clean_text(payload.get("context"), max_len=120),
             "page_path": cls._clean_text(payload.get("page_path"), max_len=240),
             "page_url": cls._clean_text(payload.get("page_url"), max_len=512),
-            "contact_email": cls._clean_email(payload.get("contact_email") or payload.get("email")),
+            "contact_email": cls._clean_email(
+                payload.get("contact_email") or payload.get("email")
+            ),
         }
 
         metadata = cls._clean_metadata(payload.get("metadata"))
@@ -189,14 +197,18 @@ class ToolFeedbackNoteService:
         if request_meta:
             entry["request"] = {
                 "ip": cls._clean_text(request_meta.get("ip"), max_len=80),
-                "user_agent": cls._clean_text(request_meta.get("user_agent"), max_len=240),
+                "user_agent": cls._clean_text(
+                    request_meta.get("user_agent"), max_len=240
+                ),
                 "referer": cls._clean_text(request_meta.get("referer"), max_len=512),
             }
 
         if user is not None and getattr(user, "is_authenticated", False):
             entry["user"] = {
                 "id": getattr(user, "id", None),
-                "username": cls._clean_text(getattr(user, "username", None), max_len=120),
+                "username": cls._clean_text(
+                    getattr(user, "username", None), max_len=120
+                ),
                 "email": cls._clean_email(getattr(user, "email", None)),
             }
 
@@ -245,7 +257,9 @@ class ToolFeedbackNoteService:
             source = source_dir.name
             source_index_path = source_dir / "index.json"
             source_index = read_json_file(source_index_path, default={}) or {}
-            raw_flows = source_index.get("flows") if isinstance(source_index, dict) else []
+            raw_flows = (
+                source_index.get("flows") if isinstance(source_index, dict) else []
+            )
             flow_lookup: dict[str, dict[str, Any]] = {}
             if isinstance(raw_flows, list):
                 for row in raw_flows:
@@ -255,12 +269,17 @@ class ToolFeedbackNoteService:
             ordered_flows: list[dict[str, Any]] = []
             for flow in cls.FLOW_ORDER:
                 row = flow_lookup.get(flow) or cls._build_flow_summary(source, flow)
-                if int(row.get("count") or 0) <= 0 and not cls._bucket_path(source, flow).exists():
+                if (
+                    int(row.get("count") or 0) <= 0
+                    and not cls._bucket_path(source, flow).exists()
+                ):
                     continue
                 ordered_flows.append(
                     {
                         "flow": flow,
-                        "flow_label": cls.FLOW_LABELS.get(flow, flow.replace("_", " ").title()),
+                        "flow_label": cls.FLOW_LABELS.get(
+                            flow, flow.replace("_", " ").title()
+                        ),
                         "count": int(row.get("count") or 0),
                         "path": f"{source}/{flow}.json",
                     }
@@ -296,7 +315,9 @@ class ToolFeedbackNoteService:
         bucket_path = cls._bucket_path(source, flow)
 
         current_bucket = read_json_file(bucket_path, default={}) or {}
-        entries = current_bucket.get("entries") if isinstance(current_bucket, dict) else []
+        entries = (
+            current_bucket.get("entries") if isinstance(current_bucket, dict) else []
+        )
         if not isinstance(entries, list):
             entries = []
         entries.append(entry)

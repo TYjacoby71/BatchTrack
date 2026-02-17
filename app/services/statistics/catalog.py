@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -48,38 +48,38 @@ class AnalyticsCatalogService:
                 "quantity movement history. Provides the canonical source for "
                 "per-item centralized stats and cost benchmarking."
             ),
-              storage=[
-                  {
-                      "model": "InventoryItem",
-                      "table": "inventory_item",
-                      "scope": "organization",
-                      "notes": "One row per org item; links to global item, density metadata, ownership semantics.",
-                  },
-                  {
-                      "model": "InventoryLot",
-                      "table": "inventory_lot",
-                      "scope": "organization",
-                      "notes": "FIFO lots with received/expiration timestamps and unit cost for cost curves.",
-                  },
-                  {
-                      "model": "UnifiedInventoryHistory",
-                      "table": "unified_inventory_history",
-                      "scope": "event_log",
-                      "notes": "Normalized movement log with change_type, location_id and batch references.",
-                  },
-                  {
-                      "model": "FreshnessSnapshot",
-                      "table": "freshness_snapshot",
-                      "scope": "daily_snapshot",
-                      "notes": "Per-item freshness efficiency scores generated daily for trend analysis.",
-                  },
-                  {
-                      "model": "AnalyticsDataService",
-                      "table": "statistics.analytics_service",
-                      "scope": "application_cache",
-                      "notes": "Cached global inventory analytics payloads consumed by developer dashboards.",
-                  },
-              ],
+            storage=[
+                {
+                    "model": "InventoryItem",
+                    "table": "inventory_item",
+                    "scope": "organization",
+                    "notes": "One row per org item; links to global item, density metadata, ownership semantics.",
+                },
+                {
+                    "model": "InventoryLot",
+                    "table": "inventory_lot",
+                    "scope": "organization",
+                    "notes": "FIFO lots with received/expiration timestamps and unit cost for cost curves.",
+                },
+                {
+                    "model": "UnifiedInventoryHistory",
+                    "table": "unified_inventory_history",
+                    "scope": "event_log",
+                    "notes": "Normalized movement log with change_type, location_id and batch references.",
+                },
+                {
+                    "model": "FreshnessSnapshot",
+                    "table": "freshness_snapshot",
+                    "scope": "daily_snapshot",
+                    "notes": "Per-item freshness efficiency scores generated daily for trend analysis.",
+                },
+                {
+                    "model": "AnalyticsDataService",
+                    "table": "statistics.analytics_service",
+                    "scope": "application_cache",
+                    "notes": "Cached global inventory analytics payloads consumed by developer dashboards.",
+                },
+            ],
             metrics=[
                 "Quantity on hand, reserved, and available (by unit)",
                 "Average lot unit cost and blended inventory value",
@@ -242,32 +242,32 @@ class AnalyticsCatalogService:
                 "Cross-tenant adoption metrics, cost curves and data quality gaps for the "
                 "public global item catalog."
             ),
-              storage=[
-                  {
-                      "model": "GlobalItem",
-                      "table": "global_item",
-                      "scope": "global",
-                      "notes": "Canonical item definitions with density/capacity metadata and cosmetic chemistry fields.",
-                  },
-                  {
-                      "model": "InventoryItem",
-                      "table": "inventory_item",
-                      "scope": "organization",
-                      "notes": "Linkage via global_item_id for adoption counts and quality checks.",
-                  },
-                  {
-                      "model": "GlobalItemStatsService",
-                      "table": "(computed)",
-                      "scope": "aggregate",
-                      "notes": "Derived rollups for cost distribution, stock age, expired quantities.",
-                  },
-                  {
-                      "model": "AnalyticsDataService",
-                      "table": "statistics.analytics_service",
-                      "scope": "application_cache",
-                      "notes": "Service endpoints feeding global item sidebar and inventory analytics UI.",
-                  },
-              ],
+            storage=[
+                {
+                    "model": "GlobalItem",
+                    "table": "global_item",
+                    "scope": "global",
+                    "notes": "Canonical item definitions with density/capacity metadata and cosmetic chemistry fields.",
+                },
+                {
+                    "model": "InventoryItem",
+                    "table": "inventory_item",
+                    "scope": "organization",
+                    "notes": "Linkage via global_item_id for adoption counts and quality checks.",
+                },
+                {
+                    "model": "GlobalItemStatsService",
+                    "table": "(computed)",
+                    "scope": "aggregate",
+                    "notes": "Derived rollups for cost distribution, stock age, expired quantities.",
+                },
+                {
+                    "model": "AnalyticsDataService",
+                    "table": "statistics.analytics_service",
+                    "scope": "application_cache",
+                    "notes": "Service endpoints feeding global item sidebar and inventory analytics UI.",
+                },
+            ],
             metrics=[
                 "Number of org-linked inventory items per global item",
                 "Missing density/capacity/shelf-life completeness score",
@@ -321,12 +321,12 @@ class AnalyticsCatalogService:
                     "scope": "organization",
                     "notes": "Churn cohort data powering retention drawers.",
                 },
-                  {
-                      "model": "AnalyticsDataService",
-                      "table": "statistics.analytics_service",
-                      "scope": "application_cache",
-                      "notes": "System dashboards aggregating user and workforce metrics.",
-                  },
+                {
+                    "model": "AnalyticsDataService",
+                    "table": "statistics.analytics_service",
+                    "scope": "application_cache",
+                    "notes": "System dashboards aggregating user and workforce metrics.",
+                },
             ],
             metrics=[
                 "Total / active users per organization",
@@ -380,12 +380,12 @@ class AnalyticsCatalogService:
                     "scope": "global",
                     "notes": "Derived leaderboard metrics for multi-tenant comparisons.",
                 },
-                  {
-                      "model": "AnalyticsDataService",
-                      "table": "statistics.analytics_service",
-                      "scope": "application_cache",
-                      "notes": "Developer and organization dashboards with cached KPIs.",
-                  },
+                {
+                    "model": "AnalyticsDataService",
+                    "table": "statistics.analytics_service",
+                    "scope": "application_cache",
+                    "notes": "Developer and organization dashboards with cached KPIs.",
+                },
             ],
             metrics=[
                 "Total / active organizations by tier",
@@ -516,4 +516,3 @@ class AnalyticsCatalogService:
 
 
 __all__ = ["AnalyticsCatalogService", "AnalyticsCatalogError", "CatalogDomain"]
-

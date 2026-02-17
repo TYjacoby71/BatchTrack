@@ -3,7 +3,7 @@ from .mixins import TimestampMixin
 
 
 class FeatureFlag(TimestampMixin, db.Model):
-    __tablename__ = 'feature_flag'
+    __tablename__ = "feature_flag"
 
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(128), unique=True, nullable=False, index=True)

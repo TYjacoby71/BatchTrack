@@ -46,7 +46,9 @@ def stable_cache_key(namespace: str, payload: Mapping[str, Any]) -> str:
     Produce a deterministic hash for the given payload so cache keys remain short.
     """
     try:
-        normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        normalized = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), default=str
+        )
     except TypeError:
         normalized = json.dumps(str(payload), sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()

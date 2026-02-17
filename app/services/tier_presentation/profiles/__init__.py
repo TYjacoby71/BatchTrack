@@ -18,4 +18,3 @@ __all__ = [
     "get_public_pricing_highlight_rules",
     "get_public_pricing_max_highlights",
 ]
-

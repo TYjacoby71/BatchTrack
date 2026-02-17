@@ -7,6 +7,7 @@ Glossary:
 - Test: Editable, non-current version.
 - Promotion: Move a version into current/master status.
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,8 +17,8 @@ from typing import Any, Dict, Tuple
 import sqlalchemy as sa
 
 from ...extensions import db
-from ...models import Recipe, RecipeIngredient, RecipeConsumable
-from ._core import create_recipe, _next_test_sequence
+from ...models import Recipe
+from ._core import _next_test_sequence, create_recipe
 from ._current import apply_current_flag
 from ._lineage import _log_lineage_event
 
@@ -65,7 +66,9 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
     template.parent_master_id = base.parent_master_id
     template.parent_master = base.parent_master
     template.portioning_data = (
-        base.portioning_data.copy() if isinstance(base.portioning_data, dict) else base.portioning_data
+        base.portioning_data.copy()
+        if isinstance(base.portioning_data, dict)
+        else base.portioning_data
     )
     template.is_portioned = base.is_portioned
     template.portion_name = base.portion_name
@@ -73,10 +76,12 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
     template.portion_unit_id = base.portion_unit_id
     if base.category_data:
         template.category_data = (
-            base.category_data.copy() if isinstance(base.category_data, dict) else base.category_data
+            base.category_data.copy()
+            if isinstance(base.category_data, dict)
+            else base.category_data
         )
     template.skin_opt_in = base.skin_opt_in
-    template.sharing_scope = 'private'
+    template.sharing_scope = "private"
     template.is_public = False
     template.is_for_sale = False
     return template
@@ -86,7 +91,9 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
 # Purpose: Create a test version from a base recipe.
 # Inputs: Base recipe, request payload, and target lifecycle status.
 # Outputs: Tuple indicating success and either created Recipe or error payload.
-def create_test_version(base: Recipe, payload: Dict[str, Any], target_status: str) -> Tuple[bool, Any]:
+def create_test_version(
+    base: Recipe, payload: Dict[str, Any], target_status: str
+) -> Tuple[bool, Any]:
     next_test_sequence = _next_test_sequence(
         base.recipe_group_id,
         is_master=base.is_master,
@@ -157,8 +164,12 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     )
     if not recipe.is_master:
         normalized_variation_name = (recipe.variation_name or "").strip().lower()
-        base_query = base_query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
-    max_version = base_query.with_entities(sa.func.max(Recipe.version_number)).scalar() or 0
+        base_query = base_query.filter(
+            sa.func.lower(Recipe.variation_name) == normalized_variation_name
+        )
+    max_version = (
+        base_query.with_entities(sa.func.max(Recipe.version_number)).scalar() or 0
+    )
 
     recipe.version_number = int(max_version) + 1
     recipe.test_sequence = None
@@ -308,7 +319,9 @@ def promote_variation_to_master(recipe_id: int) -> Tuple[bool, Any]:
 # Purpose: Promote a variation to a new recipe group.
 # Inputs: Variation recipe id and optional override group name.
 # Outputs: Tuple indicating success and created master Recipe or error message.
-def promote_variation_to_new_group(recipe_id: int, group_name: str | None = None) -> Tuple[bool, Any]:
+def promote_variation_to_new_group(
+    recipe_id: int, group_name: str | None = None
+) -> Tuple[bool, Any]:
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe or recipe.is_master or recipe.test_sequence is not None:
         return False, "Only published variations can start a new recipe group."
@@ -333,7 +346,9 @@ def promote_variation_to_new_group(recipe_id: int, group_name: str | None = None
     if requested_name:
         candidate_name = requested_name
     else:
-        candidate_name = _unique_recipe_name(recipe.name or "New Recipe Group", recipe.organization_id)
+        candidate_name = _unique_recipe_name(
+            recipe.name or "New Recipe Group", recipe.organization_id
+        )
 
     return create_recipe(
         name=candidate_name,

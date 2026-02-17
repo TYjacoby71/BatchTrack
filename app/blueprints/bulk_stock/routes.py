@@ -1,15 +1,24 @@
 """Bulk stock check routes."""
 
-from flask import Blueprint, flash, make_response, redirect, render_template, request, session, url_for
+import csv
+import io
+
+from flask import (
+    Blueprint,
+    flash,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import login_required
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.models import Recipe
 from app.utils.permissions import require_permission
 from app.utils.settings import is_feature_enabled
-
-import csv
-import io
 
 bulk_stock_bp = Blueprint("bulk_stock", __name__)
 
@@ -51,7 +60,9 @@ def bulk_stock_check():
             from app.services.stock_check.core import UniversalStockCheckService
 
             uscs = UniversalStockCheckService()
-            recipe_configs = [{"recipe_id": int(rid), "scale": scale} for rid in selected_ids]
+            recipe_configs = [
+                {"recipe_id": int(rid), "scale": scale} for rid in selected_ids
+            ]
             bulk_results = uscs.check_bulk_recipes(recipe_configs)
 
             if bulk_results["success"]:
@@ -66,7 +77,9 @@ def bulk_stock_check():
                             name = item.get("name", item.get("item_name", "Unknown"))
                             needed = item.get("needed", item.get("needed_quantity", 0))
                             unit = item.get("unit", item.get("needed_unit", "ml"))
-                            available = item.get("available", item.get("available_quantity", 0))
+                            available = item.get(
+                                "available", item.get("available_quantity", 0)
+                            )
 
                             key = (name, unit)
                             if key not in ingredient_totals:
@@ -92,7 +105,9 @@ def bulk_stock_check():
             else:
                 flash("Bulk stock check failed", "error")
 
-        return render_template("bulk_stock_check.html", recipes=recipes, summary=summary)
+        return render_template(
+            "bulk_stock_check.html", recipes=recipes, summary=summary
+        )
     except Exception as exc:
         flash(f"Error checking stock: {str(exc)}")
         return redirect(url_for("bulk_stock.bulk_stock_check"))
@@ -120,7 +135,15 @@ def export_shopping_list_csv():
         csv_writer = csv.writer(string_io)
         csv_writer.writerow(["Ingredient", "Needed", "Available", "Unit", "Status"])
         for item in missing:
-            csv_writer.writerow([item["name"], item["needed"], item["available"], item["unit"], item["status"]])
+            csv_writer.writerow(
+                [
+                    item["name"],
+                    item["needed"],
+                    item["available"],
+                    item["unit"],
+                    item["status"],
+                ]
+            )
 
         output = make_response(string_io.getvalue())
         output.headers["Content-Disposition"] = "attachment; filename=shopping_list.csv"

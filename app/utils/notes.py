@@ -7,13 +7,13 @@ Glossary:
 - Note entry: A single note with a saved timestamp prefix.
 - Timestamp prefix: "[YYYY-MM-DD HH:MM:SS UTC]" header.
 """
+
 from __future__ import annotations
 
 import re
 from datetime import datetime
 
 from .timezone_utils import TimezoneUtils
-
 
 _TIMESTAMP_RE = re.compile(r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\]")
 
@@ -37,7 +37,7 @@ def append_timestamped_note(existing: str | None, incoming: str | None) -> str:
         return existing or existing_text
 
     if existing_text and incoming_text.startswith(existing_text):
-        extra = incoming_text[len(existing_text):].strip()
+        extra = incoming_text[len(existing_text) :].strip()
         if not extra:
             return existing or existing_text
         incoming_text = extra

@@ -47,20 +47,31 @@ class TierPresentationCore:
             else get_public_pricing_highlight_rules()
         )
         self._max_highlights = (
-            max_highlights if max_highlights is not None else get_public_pricing_max_highlights()
+            max_highlights
+            if max_highlights is not None
+            else get_public_pricing_max_highlights()
         )
 
-    def build_comparison_sections(self, pricing_tiers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def build_comparison_sections(
+        self, pricing_tiers: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Return grouped feature/limit rows for table rendering."""
         sections: list[dict[str, Any]] = []
         for section_spec in self._feature_sections:
             rows: list[dict[str, Any]] = []
             for row_spec in section_spec.get("rows", ()):
-                row: dict[str, Any] = {"label": str(row_spec.get("label") or ""), "cells": {}}
+                row: dict[str, Any] = {
+                    "label": str(row_spec.get("label") or ""),
+                    "cells": {},
+                }
                 for tier in pricing_tiers:
-                    row["cells"][tier["key"]] = build_comparison_cell(tier=tier, row_spec=row_spec)
+                    row["cells"][tier["key"]] = build_comparison_cell(
+                        tier=tier, row_spec=row_spec
+                    )
                 rows.append(row)
-            sections.append({"title": str(section_spec.get("title") or ""), "rows": rows})
+            sections.append(
+                {"title": str(section_spec.get("title") or ""), "rows": rows}
+            )
         return sections
 
     def build_single_tier_sections(
@@ -77,12 +88,17 @@ class TierPresentationCore:
                 kind = str(row_spec.get("kind") or "boolean").strip().lower()
                 cell = build_comparison_cell(tier=tier, row_spec=row_spec)
 
-                if not include_not_included and kind == "boolean" and not bool(cell.get("value")):
+                if (
+                    not include_not_included
+                    and kind == "boolean"
+                    and not bool(cell.get("value"))
+                ):
                     continue
                 if (
                     not include_not_included
                     and kind in {"limit", "batchbot_limit"}
-                    and str(cell.get("display") or "").strip().lower() in {"not included", "no assistant access"}
+                    and str(cell.get("display") or "").strip().lower()
+                    in {"not included", "no assistant access"}
                 ):
                     continue
 
@@ -94,7 +110,12 @@ class TierPresentationCore:
                     }
                 )
             if section_rows:
-                sections.append({"title": str(section_spec.get("title") or ""), "rows": section_rows})
+                sections.append(
+                    {
+                        "title": str(section_spec.get("title") or ""),
+                        "rows": section_rows,
+                    }
+                )
         return sections
 
     def build_single_tier_feature_list(
@@ -104,7 +125,9 @@ class TierPresentationCore:
         max_items: int | None = None,
     ) -> list[str]:
         """Return a flat feature checklist for one selected tier."""
-        sections = self.build_single_tier_sections(tier=tier, include_not_included=False)
+        sections = self.build_single_tier_sections(
+            tier=tier, include_not_included=False
+        )
         items: list[str] = []
         seen: set[str] = set()
         for section in sections:
@@ -154,7 +177,9 @@ class TierPresentationCore:
         )
         if highlights:
             return highlights
-        return self.build_fallback_feature_highlights(tier_data=tier_data, all_feature_labels=all_feature_labels)
+        return self.build_fallback_feature_highlights(
+            tier_data=tier_data, all_feature_labels=all_feature_labels
+        )
 
     def build_marketing_feature_highlights(
         self,
@@ -258,4 +283,3 @@ class TierPresentationCore:
         if not normalized:
             return ""
         return " ".join(token.capitalize() for token in normalized.split())
-

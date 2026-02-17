@@ -18,7 +18,11 @@ from flask import url_for
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_checkout_service import SignupCheckoutService
 from .tier_presentation import TierPresentationCore
-from .tier_presentation.helpers import coerce_int, normalize_feature_label, normalize_token_set
+from .tier_presentation.helpers import (
+    coerce_int,
+    normalize_feature_label,
+    normalize_token_set,
+)
 
 
 # --- Public pricing page service ---
@@ -34,14 +38,20 @@ class PublicPricingPageService:
     @classmethod
     def build_context(cls, *, request) -> dict[str, Any]:
         """Return render-ready context for the `/pricing` page."""
-        signup_context = SignupCheckoutService.build_request_context(request=request, oauth_user_info=None)
+        signup_context = SignupCheckoutService.build_request_context(
+            request=request, oauth_user_info=None
+        )
         available_tiers = signup_context.available_tiers
         lifetime_offers = signup_context.lifetime_offers
         offers_by_key = {
-            str(offer.get("key", "")).strip().lower(): offer for offer in lifetime_offers if offer
+            str(offer.get("key", "")).strip().lower(): offer
+            for offer in lifetime_offers
+            if offer
         }
         offers_by_tier_id = {
-            str(offer.get("tier_id") or ""): offer for offer in lifetime_offers if offer and offer.get("tier_id")
+            str(offer.get("tier_id") or ""): offer
+            for offer in lifetime_offers
+            if offer and offer.get("tier_id")
         }
 
         pricing_tiers: list[dict[str, Any]] = []
@@ -54,8 +64,12 @@ class PublicPricingPageService:
             )
             pricing_tiers.append(tier_payload)
 
-        comparison_sections = cls._tier_presentation.build_comparison_sections(pricing_tiers)
-        lifetime_has_capacity = any(tier.get("lifetime_has_remaining") for tier in pricing_tiers)
+        comparison_sections = cls._tier_presentation.build_comparison_sections(
+            pricing_tiers
+        )
+        lifetime_has_capacity = any(
+            tier.get("lifetime_has_remaining") for tier in pricing_tiers
+        )
 
         return {
             "pricing_tiers": pricing_tiers,
@@ -96,13 +110,19 @@ class PublicPricingPageService:
         raw_feature_names = (tier_data or {}).get("all_features") or []
         permission_set = normalize_token_set(raw_feature_names)
         addon_key_set = normalize_token_set((tier_data or {}).get("all_addon_keys"))
-        addon_function_set = normalize_token_set((tier_data or {}).get("all_addon_function_keys"))
-        addon_permission_set = normalize_token_set((tier_data or {}).get("addon_permission_names"))
+        addon_function_set = normalize_token_set(
+            (tier_data or {}).get("all_addon_function_keys")
+        )
+        addon_permission_set = normalize_token_set(
+            (tier_data or {}).get("addon_permission_names")
+        )
 
         all_feature_labels: list[str] = []
         all_feature_set: set[str] = set()
         for raw_feature_name in raw_feature_names:
-            feature_label = LifetimePricingService.format_feature_label(raw_feature_name)
+            feature_label = LifetimePricingService.format_feature_label(
+                raw_feature_name
+            )
             normalized_feature = normalize_feature_label(feature_label)
             if not normalized_feature or normalized_feature in all_feature_set:
                 continue
@@ -114,10 +134,16 @@ class PublicPricingPageService:
             "max_recipes": coerce_int((tier_data or {}).get("max_recipes")),
             "max_batches": coerce_int((tier_data or {}).get("max_batches")),
             "max_products": coerce_int((tier_data or {}).get("max_products")),
-            "max_monthly_batches": coerce_int((tier_data or {}).get("max_monthly_batches")),
-            "max_batchbot_requests": coerce_int((tier_data or {}).get("max_batchbot_requests")),
+            "max_monthly_batches": coerce_int(
+                (tier_data or {}).get("max_monthly_batches")
+            ),
+            "max_batchbot_requests": coerce_int(
+                (tier_data or {}).get("max_batchbot_requests")
+            ),
         }
-        retention_policy = str((tier_data or {}).get("retention_policy") or "").strip().lower()
+        retention_policy = (
+            str((tier_data or {}).get("retention_policy") or "").strip().lower()
+        )
         retention_label = str((tier_data or {}).get("retention_label") or "").strip()
         has_retention_entitlement = bool(
             retention_policy == "subscribed" or "retention" in addon_function_set
@@ -188,7 +214,9 @@ class PublicPricingPageService:
             "retention_policy": retention_policy,
             "retention_label": retention_label,
             "has_retention_entitlement": has_retention_entitlement,
-            "feature_total": int((tier_data or {}).get("feature_total") or len(all_feature_labels)),
+            "feature_total": int(
+                (tier_data or {}).get("feature_total") or len(all_feature_labels)
+            ),
             "lifetime_offer": resolved_offer,
             "lifetime_has_remaining": has_lifetime_remaining,
             "signup_monthly_url": monthly_url,

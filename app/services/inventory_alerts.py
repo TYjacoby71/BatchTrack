@@ -1,9 +1,10 @@
-
 # LEGACY SHIM: This file provides a minimal shim for InventoryAlertService.
 # Real functionality moved to combined_inventory_alerts.py
 
 from __future__ import annotations
-from typing import Optional, Iterable, Any
+
+from typing import Iterable, Optional
+
 
 class InventoryAlertService:
     """LEGACY SHIM: no-op compatibility surface for legacy imports."""
@@ -24,7 +25,9 @@ class InventoryAlertService:
         return []
 
     @staticmethod
-    def trigger_low_stock_alerts(inventory_item_ids: Iterable[int] | None = None) -> None:
+    def trigger_low_stock_alerts(
+        inventory_item_ids: Iterable[int] | None = None,
+    ) -> None:
         """No-op method for compatibility"""
         return
 
@@ -36,4 +39,4 @@ class InventoryAlertService:
     @staticmethod
     def check_ingredient_stock_level(inventory_item_id: int) -> dict:
         """No-op method for compatibility"""
-        return {'status': 'ok', 'level': 'sufficient'}
+        return {"status": "ok", "level": "sufficient"}

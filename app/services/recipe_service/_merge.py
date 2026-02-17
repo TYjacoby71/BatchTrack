@@ -7,6 +7,7 @@ Glossary:
 - Delta: Ingredient differences between two recipe versions.
 - Rebase: Apply deltas from old master to a new master.
 """
+
 from __future__ import annotations
 
 from typing import Dict, Iterable, List, Tuple
@@ -19,7 +20,9 @@ from ...models import Recipe
 def _ingredient_map(rows: Iterable) -> Dict[int, Dict[str, float | str]]:
     mapping: Dict[int, Dict[str, float | str]] = {}
     for row in rows or []:
-        item_id = getattr(row, "inventory_item_id", None) or row.get("inventory_item_id")
+        item_id = getattr(row, "inventory_item_id", None) or row.get(
+            "inventory_item_id"
+        )
         quantity = getattr(row, "quantity", None) or row.get("quantity")
         unit = getattr(row, "unit", None) or row.get("unit")
         if item_id is None:
@@ -62,13 +65,17 @@ def build_rebased_ingredients(
     new_master_map = _ingredient_map(getattr(new_master, "recipe_ingredients", []))
 
     delta_map = _build_delta(variation_map, old_master_map)
-    merged_map = {item_id: payload.copy() for item_id, payload in new_master_map.items()}
+    merged_map = {
+        item_id: payload.copy() for item_id, payload in new_master_map.items()
+    }
     overlap_ids: List[int] = []
 
     for item_id, payload in delta_map.items():
         delta_qty = float(payload["quantity"])
         if item_id in merged_map:
-            merged_map[item_id]["quantity"] = float(merged_map[item_id]["quantity"]) + delta_qty
+            merged_map[item_id]["quantity"] = (
+                float(merged_map[item_id]["quantity"]) + delta_qty
+            )
             overlap_ids.append(item_id)
         else:
             if delta_qty < 0:
