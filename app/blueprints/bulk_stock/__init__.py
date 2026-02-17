@@ -1,6 +1,5 @@
+"""Bulk stock blueprint package."""
 
-from flask import Blueprint
+from .routes import bulk_stock_bp
 
-bulk_stock_bp = Blueprint('bulk_stock', __name__, template_folder='templates')
-
-# Routes will be imported when needed
+__all__ = ["bulk_stock_bp"]

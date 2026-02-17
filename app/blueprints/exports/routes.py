@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, abort, render_template, session
 from flask_login import current_user, login_required
-from app.utils.permissions import require_permission
 
 from app.extensions import db
 from app.models import Recipe
 from app.services.exports import ExportService
+from app.utils.permissions import require_permission
 
 exports_bp = Blueprint("exports", __name__, url_prefix="/exports")
 
@@ -56,7 +56,7 @@ def _render_tool(template: str):
 # Purpose: Render soap INCI sheet for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/soap-inci")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def soap_inci_recipe(recipe_id: int):
     return render_template("exports/soap_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe")
 
@@ -65,7 +65,7 @@ def soap_inci_recipe(recipe_id: int):
 # Purpose: Render candle label sheet for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/candle-label")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def candle_label_recipe(recipe_id: int):
     return render_template("exports/candle_label.html", recipe=_recipe_or_404(recipe_id), source="recipe")
 
@@ -74,7 +74,7 @@ def candle_label_recipe(recipe_id: int):
 # Purpose: Render baker sheet for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/baker-sheet")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def baker_sheet_recipe(recipe_id: int):
     return render_template("exports/baker_sheet.html", recipe=_recipe_or_404(recipe_id), source="recipe")
 
@@ -83,7 +83,7 @@ def baker_sheet_recipe(recipe_id: int):
 # Purpose: Render lotion INCI sheet for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/lotion-inci")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def lotion_inci_recipe(recipe_id: int):
     return render_template("exports/lotion_inci.html", recipe=_recipe_or_404(recipe_id), source="recipe")
 
@@ -134,7 +134,7 @@ def _pdf_response(content: bytes) -> Response:
 # Purpose: Export soap INCI CSV for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/soap-inci.csv")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def soap_inci_recipe_csv(recipe_id: int):
     csv_text = ExportService.soap_inci_csv(recipe=_recipe_or_404(recipe_id))
     return _csv_response(csv_text)
@@ -144,7 +144,7 @@ def soap_inci_recipe_csv(recipe_id: int):
 # Purpose: Export soap INCI PDF for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/soap-inci.pdf")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def soap_inci_recipe_pdf(recipe_id: int):
     pdf_bytes = ExportService.soap_inci_pdf(recipe=_recipe_or_404(recipe_id))
     return _pdf_response(pdf_bytes)
@@ -154,7 +154,7 @@ def soap_inci_recipe_pdf(recipe_id: int):
 # Purpose: Export candle label CSV for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/candle-label.csv")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def candle_label_recipe_csv(recipe_id: int):
     csv_text = ExportService.candle_label_csv(recipe=_recipe_or_404(recipe_id))
     return _csv_response(csv_text)
@@ -164,7 +164,7 @@ def candle_label_recipe_csv(recipe_id: int):
 # Purpose: Export candle label PDF for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/candle-label.pdf")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def candle_label_recipe_pdf(recipe_id: int):
     pdf_bytes = ExportService.candle_label_pdf(recipe=_recipe_or_404(recipe_id))
     return _pdf_response(pdf_bytes)
@@ -174,7 +174,7 @@ def candle_label_recipe_pdf(recipe_id: int):
 # Purpose: Export baker sheet CSV for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/baker-sheet.csv")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def baker_sheet_recipe_csv(recipe_id: int):
     csv_text = ExportService.baker_sheet_csv(recipe=_recipe_or_404(recipe_id))
     return _csv_response(csv_text)
@@ -184,7 +184,7 @@ def baker_sheet_recipe_csv(recipe_id: int):
 # Purpose: Export baker sheet PDF for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/baker-sheet.pdf")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def baker_sheet_recipe_pdf(recipe_id: int):
     pdf_bytes = ExportService.baker_sheet_pdf(recipe=_recipe_or_404(recipe_id))
     return _pdf_response(pdf_bytes)
@@ -194,7 +194,7 @@ def baker_sheet_recipe_pdf(recipe_id: int):
 # Purpose: Export lotion INCI CSV for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/lotion-inci.csv")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def lotion_inci_recipe_csv(recipe_id: int):
     csv_text = ExportService.lotion_inci_csv(recipe=_recipe_or_404(recipe_id))
     return _csv_response(csv_text)
@@ -204,7 +204,7 @@ def lotion_inci_recipe_csv(recipe_id: int):
 # Purpose: Export lotion INCI PDF for a recipe.
 @exports_bp.route("/recipe/<int:recipe_id>/lotion-inci.pdf")
 @login_required
-@require_permission('reports.export')
+@require_permission("reports.export")
 def lotion_inci_recipe_pdf(recipe_id: int):
     pdf_bytes = ExportService.lotion_inci_pdf(recipe=_recipe_or_404(recipe_id))
     return _pdf_response(pdf_bytes)

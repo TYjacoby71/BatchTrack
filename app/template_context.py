@@ -36,7 +36,15 @@ from .utils.timezone_utils import TimezoneUtils
 
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
-_MARKETING_CONTEXT_ENDPOINTS = {"index", "homepage", "public_page"}
+_MARKETING_CONTEXT_ENDPOINTS = {
+    "core.index",
+    "core.homepage",
+    "core.public_page",
+    # Backward-compatibility for legacy endpoint names.
+    "index",
+    "homepage",
+    "public_page",
+}
 _ASSET_MANIFEST_CACHE: Dict[str, Any] = {
     "path": None,
     "mtime": None,

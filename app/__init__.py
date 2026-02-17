@@ -10,11 +10,9 @@ Glossary:
 
 import logging
 import os
-from pathlib import Path
 from typing import Any
 
-from flask import Flask, abort, current_app, redirect, render_template, send_file, url_for
-from flask_login import current_user
+from flask import Flask
 from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 
@@ -24,7 +22,7 @@ from .config import ENV_DIAGNOSTICS
 from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
-from .utils.cache_utils import should_bypass_cache
+from .resilience import register_resilience_handlers
 from .utils.redis_pool import LazyRedisClient, get_redis_pool
 
 logger = logging.getLogger(__name__)
@@ -61,9 +59,8 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
 
     register_template_context(app)
     register_template_filters(app)
-    _add_core_routes(app)
     configure_logging(app)
-    _install_global_resilience_handlers(app)
+    register_resilience_handlers(app)
 
     from .management import register_commands
 
@@ -323,197 +320,6 @@ def _configure_db_timeouts(app: Flask) -> None:
                     cursor.execute(f"SET {key} = {value}")
             finally:
                 cursor.close()
-
-# --- Install resilience handlers ---
-# Purpose: Add global error handlers for known failure modes.
-# Inputs: Flask app to decorate with teardown/error handlers.
-# Outputs: Registers rollback and maintenance/CSRF response handlers.
-def _install_global_resilience_handlers(app):
-    """Install global DB rollback and friendly maintenance handler."""
-    from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
-    from .extensions import db
-    from flask import render_template, request
-    from flask_wtf.csrf import CSRFError
-
-    @app.teardown_request
-    def _rollback_on_error(exc):
-        try:
-            if exc is not None:
-                db.session.rollback()
-        except Exception:
-            pass
-        finally:
-            try:
-                db.session.remove()
-            except Exception:
-                pass
-
-    @app.errorhandler(OperationalError)
-    @app.errorhandler(DBAPIError)
-    def _db_error_handler(e):
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-        # Return lightweight 503 page; avoid cascading errors if template missing
-        try:
-            return render_template("errors/maintenance.html"), 503
-        except Exception:
-            return ("Service temporarily unavailable. Please try again shortly.", 503)
-
-    @app.errorhandler(CSRFError)
-    def _csrf_error_handler(err: CSRFError):
-        """Emit structured diagnostics so load tests can see *why* CSRF failed."""
-        details = {
-            "path": request.path,
-            "endpoint": request.endpoint,
-            "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
-            "user_agent": request.user_agent.string if request.user_agent else None,
-            "reason": err.description,
-        }
-        app.logger.warning("CSRF validation failed: %s", details)
-        rendered = None
-        try:
-            rendered = render_template("errors/csrf.html", reason=err.description, details=details)
-        except Exception:
-            pass
-        if rendered is not None:
-            return rendered, 400
-        return "CSRF validation failed. Please refresh and try again.", 400
-
-# --- Add core routes ---
-# Purpose: Register basic app-wide routes like health checks.
-# Inputs: Flask app used to register route handlers.
-# Outputs: Adds public homepage routes and branding asset routes.
-def _add_core_routes(app):
-    """Add core application routes"""
-
-    def _serve_brand_asset(filename: str):
-        """Serve attached brand SVG assets used by public templates."""
-        asset_path = Path(current_app.root_path).parent / "attached_assets" / filename
-        if not asset_path.is_file():
-            abort(404)
-        return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
-
-    def _serve_marketing_public_asset(filename: str, *, mimetype: str):
-        """Serve crawler-facing public assets from app/marketing/public."""
-        asset_path = Path(current_app.root_path) / "marketing" / "public" / filename
-        if not asset_path.is_file():
-            abort(404)
-        response = send_file(asset_path, mimetype=mimetype, max_age=3600)
-        response.cache_control.public = True
-        return response
-
-    def _serve_cropped_full_logo():
-        """Serve a cropped full logo variant sized for navbar display."""
-        asset_path = Path(current_app.root_path).parent / "attached_assets" / "Full Logo.svg"
-        if not asset_path.is_file():
-            abort(404)
-
-        try:
-            svg_text = asset_path.read_text(encoding="utf-8")
-        except OSError:
-            abort(404)
-
-        # Crop excessive whitespace in the exported asset so the header logo is legible.
-        svg_text = svg_text.replace(
-            'viewBox="0.00 0.00 1024.00 683.00"',
-            'viewBox="145 224 735 216"',
-            1,
-        )
-        response = current_app.response_class(svg_text, mimetype="image/svg+xml")
-        response.cache_control.public = True
-        response.cache_control.max_age = 86400
-        return response
-
-    @app.route("/branding/full-logo.svg")
-    def branding_full_logo():
-        """Full horizontal logo used in marketing headers."""
-        return _serve_brand_asset("Full Logo.svg")
-
-    @app.route("/branding/full-logo-header.svg")
-    def branding_full_logo_header():
-        """Cropped full logo for compact header branding."""
-        return _serve_cropped_full_logo()
-
-    @app.route("/branding/app-tile.svg")
-    def branding_app_tile():
-        """Square logo tile used for browser icon links."""
-        return _serve_brand_asset("App card logo.svg")
-
-    @app.route("/sitemap.xml")
-    def sitemap_xml():
-        """XML sitemap for search engine discovery."""
-        return _serve_marketing_public_asset("sitemap.xml", mimetype="application/xml")
-
-    @app.route("/robots.txt")
-    def robots_txt():
-        """Robots directives for crawlers."""
-        return _serve_marketing_public_asset("robots.txt", mimetype="text/plain; charset=utf-8")
-
-    @app.route("/llms.txt")
-    def llms_txt():
-        """LLMs.txt guidance for AI crawlers and agents."""
-        return _serve_marketing_public_asset("llms.txt", mimetype="text/plain; charset=utf-8")
-
-    @app.route("/dev-login")
-    def dev_login_legacy():
-        """Legacy developer-login path kept for backward compatibility."""
-        return redirect(url_for("auth.dev_login"), code=301)
-
-    def _render_public_homepage_response():
-        """
-        Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
-        avoid re-rendering the full template on every hit.
-        """
-        cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v2")
-        try:
-            from app.utils.settings import is_feature_enabled
-
-            global_library_enabled = is_feature_enabled("FEATURE_GLOBAL_ITEM_LIBRARY")
-            cache_key = f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
-        except Exception:
-            pass
-        try:
-            cache_ttl = int(current_app.config.get("PUBLIC_HOMEPAGE_CACHE_TTL", 600))
-        except (TypeError, ValueError):
-            cache_ttl = 600
-        cache_ttl = max(0, cache_ttl)
-
-        if cache_ttl and not should_bypass_cache():
-            cached_page = cache.get(cache_key)
-            if cached_page is not None:
-                return cached_page
-
-        rendered = render_template("homepage.html")
-        if cache_ttl:
-            try:
-                cache.set(cache_key, rendered, timeout=cache_ttl)
-            except Exception:
-                # Homepage rendering should never fail because cache is unavailable.
-                pass
-        return rendered
-
-    @app.route("/")
-    def index():
-        """Main landing page with proper routing logic"""
-        if current_user.is_authenticated:
-            if current_user.user_type == 'developer':
-                return redirect(url_for('developer.dashboard'))  # Developers go to developer dashboard
-            else:
-                return redirect(url_for('app_routes.dashboard'))  # Regular users go to user dashboard
-        else:
-            return _render_public_homepage_response()  # Serve cached public homepage for unauthenticated users
-
-    @app.route("/homepage")
-    def homepage():
-        """Public homepage - accessible to all users"""
-        return _render_public_homepage_response()
-
-    @app.route("/public")
-    def public_page():
-        """Alternative public page"""
-        return _render_public_homepage_response()
 
 # --- Setup logging ---
 # Purpose: Configure log levels and app log formatters.
