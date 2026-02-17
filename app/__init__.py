@@ -349,11 +349,22 @@ def _install_global_resilience_handlers(app):
         except Exception:
             return bool(request.is_json)
 
+    def _csrf_login_target(next_path: str | None = None) -> str:
+        if (
+            isinstance(next_path, str)
+            and next_path.startswith("/")
+            and not next_path.startswith("//")
+            and not next_path.startswith("/auth/")
+        ):
+            return url_for("auth.login", next=next_path)
+        return url_for("auth.login")
+
     def _csrf_redirect_target() -> str:
+        default_next = request.path if request.path.startswith("/") else None
         default_target = (
             url_for("app_routes.dashboard")
             if current_user.is_authenticated
-            else url_for("auth.login")
+            else _csrf_login_target(default_next)
         )
         referrer = request.referrer
         if not referrer:
@@ -367,9 +378,8 @@ def _install_global_resilience_handlers(app):
                 return default_target
             path = parsed_referrer.path or "/"
             target = f"{path}?{parsed_referrer.query}" if parsed_referrer.query else path
-            # If we cannot trust referrer or it points to a POST route, use a safe default.
-            if target == request.path:
-                return default_target
+            if not current_user.is_authenticated:
+                return target if not target.startswith("/auth/") else _csrf_login_target(target)
             return target
         except Exception:
             return default_target
@@ -407,7 +417,10 @@ def _install_global_resilience_handlers(app):
             "path": request.path,
             "endpoint": request.endpoint,
             "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
-            "user_agent": request.user_agent.string if request.user_agent else None,
+            "user_agent": (
+                (request.user_agent.string if request.user_agent else None)
+                or request.headers.get("User-Agent")
+            ),
             "reason": err.description,
         }
         app.logger.warning("CSRF validation failed: %s", details)
