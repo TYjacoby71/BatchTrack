@@ -11,7 +11,7 @@ This document maps the current BatchTrack model layer and highlights how tenant 
 ## Canonical Source of Truth
 - Primary package: `app/models/`
 - Registry/export hub: `app/models/__init__.py`
-- Core compatibility re-exports: `app/models/models.py`
+- Active compatibility export layer: `app/models/models.py`
 
 ## Domain Model Map (Current)
 
@@ -99,9 +99,9 @@ GlobalItem (platform-owned)
 - Use timezone-aware UTC defaults (`TimezoneUtils.utc_now`) for model timestamps.
 - Keep archival/deactivation semantics explicit (`is_active`, `is_archived`) where lifecycle state matters.
 
-## Legacy Compatibility Notes
-- `app/models/models.py` preserves import compatibility for older call sites.
-- `Ingredient` is maintained as a compatibility alias to `InventoryItem` in legacy re-export paths; new code should use `InventoryItem` directly.
+## Compatibility Surface (Current Behavior)
+- `app/models/models.py` remains part of the supported import surface for app and test call sites.
+- `Ingredient` remains an active compatibility alias to `InventoryItem`; new development should prefer importing `InventoryItem` directly.
 
 ## Relevance Check (2026-02-17)
 This document was refreshed against active model modules in `app/models/` and current export wiring in `app/models/__init__.py`.
