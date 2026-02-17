@@ -13,13 +13,35 @@ from datetime import timezone  # Import timezone for timezone-aware datetime obj
 
 from sqlalchemy import func
 
-from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.models import (
+    db,
+    InventoryItem,
+    IngredientCategory,
+    Unit,
+    UnifiedInventoryHistory,
+    GlobalItem,
+    Organization,
+)
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
 from app.services.quantity_base import to_base_quantity, sync_item_quantity_from_base
+from app.utils.permissions import has_tier_permission
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_bool_flag(raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, bool):
+        return raw_value
+    text = str(raw_value).strip().lower()
+    if text in {"1", "true", "on", "yes"}:
+        return True
+    if text in {"0", "false", "off", "no"}:
+        return False
+    return None
 
 
 # --- Resolve unit cost ---
@@ -214,6 +236,19 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
         if shelf_life_days and not is_perishable:
             is_perishable = True
 
+        requested_is_tracked = _parse_bool_flag(form_data.get("is_tracked"))
+        organization = db.session.get(Organization, organization_id) if organization_id else None
+        org_tracks_quantities = has_tier_permission(
+            "batches.track_inventory_outputs",
+            organization=organization,
+            default_if_missing_catalog=True,
+        )
+        if requested_is_tracked is None:
+            effective_is_tracked = bool(org_tracks_quantities)
+        else:
+            # Tier-level policy can only further restrict tracking, never expand it.
+            effective_is_tracked = bool(requested_is_tracked and org_tracks_quantities)
+
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment
         new_item = InventoryItem(
@@ -222,6 +257,7 @@ def create_inventory_item(form_data, organization_id, created_by, auto_commit: b
             quantity=0.0,  # Start with 0, will be set by initial stock adjustment
             unit=final_unit,
             cost_per_unit=cost_per_unit,
+            is_tracked=effective_is_tracked,
             is_perishable=is_perishable,
             shelf_life_days=shelf_life_days,
             organization_id=organization_id,

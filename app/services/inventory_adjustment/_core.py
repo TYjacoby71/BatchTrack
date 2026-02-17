@@ -26,12 +26,17 @@ from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUP
 from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
 from ._special_ops import handle_cost_override, handle_unit_conversion, handle_recount
 from app.services.event_emitter import EventEmitter
+from app.utils.permissions import has_tier_permission
 
 logger = logging.getLogger(__name__)
 
 ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
     ADDITIVE_OPERATIONS.update(group.get('operations', []))
+
+DEDUCTIVE_OPERATIONS = set()
+for group in DEDUCTIVE_OPERATION_GROUPS.values():
+    DEDUCTIVE_OPERATIONS.update(group.get('operations', []))
 
 # --- Inventory adjustment ---
 # Purpose: Central entry point for inventory adjustments.
@@ -74,6 +79,43 @@ def process_inventory_adjustment(
     item = db.session.get(InventoryItem, item_id)
     if not item:
         return _response(False, "Inventory item not found.")
+
+    org_tracks_quantities = has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=getattr(item, "organization", None),
+        default_if_missing_catalog=True,
+    )
+    effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+
+    if change_type in DEDUCTIVE_OPERATIONS and not effective_tracking_enabled:
+        logger.info(
+            "TRACKING BYPASS: Skipping %s deduction for untracked item %s (%s)",
+            change_type,
+            item.id,
+            item.name,
+        )
+        event_payload: Dict[str, Any] = {
+            'event_name': 'inventory_adjusted',
+            'properties': {
+                'change_type': change_type,
+                'quantity_delta': 0.0,
+                'unit': item.unit,
+                'notes': notes,
+                'cost_override': cost_override,
+                'original_quantity': float(item.quantity or 0.0),
+                'new_quantity': float(item.quantity or 0.0),
+                'item_name': item.name,
+                'item_type': item.type,
+                'batch_id': batch_id,
+                'is_initial_stock': False,
+                'skipped_untracked': True,
+            },
+            'organization_id': item.organization_id,
+            'user_id': created_by,
+            'entity_type': 'inventory_item',
+            'entity_id': item.id,
+        }
+        return _response(True, "Item is configured as untracked; quantity deduction skipped.", event_payload)
 
     if getattr(item, "quantity_base", None) is None:
         item.quantity_base = to_base_quantity(

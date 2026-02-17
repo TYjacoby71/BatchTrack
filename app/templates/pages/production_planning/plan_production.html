@@ -31,7 +31,6 @@
             {% include 'components/production/container_management_card.html' %}
 
             <!-- Stock Check Card -->
-            {% if org_tracks_batch_outputs %}
             <div class="card mb-4" id="stockCheckCard">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -39,6 +38,12 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    {% if not org_tracks_batch_outputs %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-infinity me-1"></i>
+                        This tier uses infinite/untracked ingredient mode. Stock checks still run for unit compatibility, and quantity checks pass for untracked items.
+                    </div>
+                    {% endif %}
                     <p class="text-muted">Check if you have enough ingredients in stock for this recipe at the current scale.</p>
 
                     <button type="button" class="btn btn-primary" id="stockCheckBtn">
@@ -54,16 +59,6 @@
                     </div>
                 </div>
             </div>
-            {% else %}
-            <div class="card mb-4 border-warning">
-                <div class="card-body">
-                    <div class="alert alert-warning mb-0">
-                        <i class="fas fa-lock me-1"></i>
-                        This tier runs in untracked mode. Stock validation and inventory posting are disabled for batch output.
-                    </div>
-                </div>
-            </div>
-            {% endif %}
 
             <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}

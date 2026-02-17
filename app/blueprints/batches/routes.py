@@ -424,18 +424,18 @@ def api_start_batch():
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 
         stock_issues = []
-        if batch_type != 'untracked':
-            # Server-side stock validation to prevent bypassing the UI gate
-            try:
-                uscs = UniversalStockCheckService()
-                stock_result = uscs.check_recipe_stock(recipe_id, scale)
-                if not stock_result.get('success'):
-                    error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
-                    return jsonify({'success': False, 'message': error_msg}), 400
-                stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
-            except Exception as e:
-                logger.error(f"Error during stock validation: {e}")
-                return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
+        # Server-side stock validation to prevent bypassing the UI gate.
+        # Infinite/untracked items are handled inside USCS and reported as available.
+        try:
+            uscs = UniversalStockCheckService()
+            stock_result = uscs.check_recipe_stock(recipe_id, scale)
+            if not stock_result.get('success'):
+                error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
+                return jsonify({'success': False, 'message': error_msg}), 400
+            stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
+        except Exception as e:
+            logger.error(f"Error during stock validation: {e}")
+            return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
 
         skip_ingredient_ids = [
             issue['item_id']

@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.utils.permissions import has_tier_permission
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -45,6 +46,98 @@ class IngredientHandler(BaseInventoryHandler):
         if not ingredient:
             return self._create_not_found_result(request)
 
+        # Effective tracking mode combines item-level tracking with org-tier capability.
+        org_tracks_quantities = has_tier_permission(
+            "batches.track_inventory_outputs",
+            organization=getattr(ingredient, "organization", None),
+            default_if_missing_catalog=True,
+        )
+        effective_tracking_enabled = bool(getattr(ingredient, "is_tracked", True)) and org_tracks_quantities
+
+        stock_unit = ingredient.unit
+        recipe_unit = request.unit
+
+        # Infinite/untracked mode: still validate unit conversion, but force stock status OK.
+        if not effective_tracking_enabled:
+            try:
+                conversion_result = ConversionEngine.convert_units(
+                    amount=float(request.quantity_needed),
+                    from_unit=recipe_unit,
+                    to_unit=stock_unit,
+                    ingredient_id=ingredient.id,
+                    density=ingredient.density,
+                )
+                if not conversion_result.get("success"):
+                    conversion_details = {
+                        "error_code": conversion_result.get("error_code"),
+                        "requires_attention": conversion_result.get("requires_attention", False),
+                        "error_message": conversion_result.get("error_data", {}).get("message", "Conversion failed"),
+                        "requires_conversion_fix": True,
+                    }
+                    if conversion_result.get("requires_drawer"):
+                        conversion_details["requires_drawer"] = True
+                    if conversion_result.get("drawer_payload"):
+                        conversion_details["drawer_payload"] = conversion_result.get("drawer_payload")
+                    return StockCheckResult(
+                        item_id=ingredient.id,
+                        item_name=ingredient.name,
+                        category=InventoryCategory.INGREDIENT,
+                        needed_quantity=request.quantity_needed,
+                        needed_unit=recipe_unit,
+                        available_quantity=0,
+                        available_unit=recipe_unit,
+                        raw_stock=0,
+                        stock_unit=stock_unit,
+                        status=StockStatus.ERROR,
+                        error_message=conversion_details["error_message"],
+                        formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                        formatted_available="Conversion Error",
+                        conversion_details=conversion_details,
+                    )
+
+                needed_in_stock_units = conversion_result.get("converted_value", 0)
+                conversion_details = {
+                    "conversion_type": conversion_result.get("conversion_type", "unknown"),
+                    "density_used": conversion_result.get("density_used"),
+                    "requires_attention": conversion_result.get("requires_attention", False),
+                    "is_tracked": False,
+                    "infinite_stock_mode": True,
+                    "tier_forced_untracked": not org_tracks_quantities,
+                }
+                return StockCheckResult(
+                    item_id=ingredient.id,
+                    item_name=ingredient.name,
+                    category=InventoryCategory.INGREDIENT,
+                    needed_quantity=request.quantity_needed,
+                    needed_unit=recipe_unit,
+                    available_quantity=request.quantity_needed,
+                    available_unit=recipe_unit,
+                    raw_stock=needed_in_stock_units,
+                    stock_unit=stock_unit,
+                    status=StockStatus.OK,
+                    formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                    formatted_available=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                    conversion_details=conversion_details,
+                )
+            except Exception as e:
+                logger.exception("Untracked stock check conversion failed for item %s", ingredient.id)
+                return StockCheckResult(
+                    item_id=ingredient.id,
+                    item_name=ingredient.name,
+                    category=InventoryCategory.INGREDIENT,
+                    needed_quantity=request.quantity_needed,
+                    needed_unit=recipe_unit,
+                    available_quantity=0,
+                    available_unit=recipe_unit,
+                    raw_stock=0,
+                    stock_unit=stock_unit,
+                    status=StockStatus.ERROR,
+                    error_message=f"Conversion error: {str(e)}",
+                    formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                    formatted_available="N/A",
+                    conversion_details={"error_type": "system_error", "message": str(e)},
+                )
+
         # Get available FIFO lots (we will exclude expired below when perishable)
         available_lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == ingredient.id,
@@ -63,9 +156,6 @@ class IngredientHandler(BaseInventoryHandler):
 
         available_lots = available_lots.order_by(InventoryLot.received_date.asc()).all()
         total_available = sum(lot.remaining_quantity for lot in available_lots)
-
-        stock_unit = ingredient.unit
-        recipe_unit = request.unit
 
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 

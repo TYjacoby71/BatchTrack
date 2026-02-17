@@ -14,12 +14,13 @@ from sqlalchemy import and_
 import logging
 import json
 
-from app.models import db, InventoryItem, IngredientCategory
+from app.models import db, InventoryItem, IngredientCategory, Organization
 from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from app.services.unit_conversion import ConversionEngine
+from app.utils.permissions import has_tier_permission
 from app.services.quantity_base import (
     to_base_quantity,
     from_base_quantity,
@@ -28,6 +29,19 @@ from app.services.quantity_base import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_bool_flag(raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, bool):
+        return raw_value
+    text = str(raw_value).strip().lower()
+    if text in {"1", "true", "on", "yes"}:
+        return True
+    if text in {"0", "false", "off", "no"}:
+        return False
+    return None
 
 
 # --- Inventory edit ---
@@ -258,6 +272,18 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 item.low_stock_threshold = float(threshold) if threshold else None
             except (ValueError, TypeError):
                 return False, "Invalid low stock threshold"
+
+        if 'is_tracked' in form_data:
+            requested_is_tracked = _parse_bool_flag(form_data.get('is_tracked'))
+            if requested_is_tracked is not None:
+                organization = db.session.get(Organization, item.organization_id) if item.organization_id else None
+                org_tracks_quantities = has_tier_permission(
+                    "batches.track_inventory_outputs",
+                    organization=organization,
+                    default_if_missing_catalog=True,
+                )
+                # Tier policy can force untracked mode for all items.
+                item.is_tracked = bool(requested_is_tracked and org_tracks_quantities)
 
         # Unit already handled above if present
 

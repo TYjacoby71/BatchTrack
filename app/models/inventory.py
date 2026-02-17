@@ -33,6 +33,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
     inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
     quantity = db.Column(db.Float, default=0.0)
     quantity_base = db.Column(db.BigInteger, default=0, nullable=False)
+    # When False, quantity is treated as infinite for stock checks/deductions.
+    is_tracked = db.Column(db.Boolean, default=True, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)

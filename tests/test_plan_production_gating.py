@@ -25,7 +25,7 @@ def _build_recipe_with_missing_inventory(*, include_output_tracking: bool = True
         db.session.add(perm)
         db.session.flush()
     output_tracking_perm = Permission.query.filter_by(name='batches.track_inventory_outputs').first()
-    if include_output_tracking and not output_tracking_perm:
+    if not output_tracking_perm:
         output_tracking_perm = Permission(
             name='batches.track_inventory_outputs',
             description='Allow tracked batch outputs'
@@ -197,6 +197,53 @@ def test_api_start_batch_forces_untracked_when_output_tracking_tier_permission_m
 
         plan_snapshot = captured_plan['value']
         assert plan_snapshot.get('batch_type') == 'untracked'
+        assert plan_snapshot.get('skip_ingredient_ids') in (None, [])
+        assert plan_snapshot.get('skip_consumable_ids') in (None, [])
+        assert plan_snapshot.get('forced_start_summary') in (None, '')
+
+
+def test_api_start_batch_allows_untracked_inventory_items_without_force(app, monkeypatch):
+    app.config['SKIP_PERMISSIONS'] = True
+    with app.app_context():
+        user_id, recipe_id, ingredient_id, consumable_id = _build_recipe_with_missing_inventory(
+            include_output_tracking=True
+        )
+
+        ingredient = db.session.get(InventoryItem, ingredient_id)
+        consumable = db.session.get(InventoryItem, consumable_id)
+        ingredient.is_tracked = False
+        consumable.is_tracked = False
+        db.session.commit()
+
+        captured_plan = {}
+
+        def fake_start_batch(cls, plan_snapshot):
+            captured_plan['value'] = plan_snapshot
+            return SimpleNamespace(id=888), []
+
+        monkeypatch.setattr(
+            BatchOperationsService,
+            'start_batch',
+            classmethod(fake_start_batch)
+        )
+
+        payload = {
+            'recipe_id': recipe_id,
+            'scale': 1.0,
+            'batch_type': 'ingredient',
+            'notes': '',
+            'containers': []
+        }
+
+        with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
+            login_user(db.session.get(User, user_id))
+            response = api_start_batch()
+            data = response.get_json()
+            assert data['success'] is True
+            assert data['batch_id'] == 888
+
+        plan_snapshot = captured_plan['value']
+        assert plan_snapshot.get('batch_type') == 'ingredient'
         assert plan_snapshot.get('skip_ingredient_ids') in (None, [])
         assert plan_snapshot.get('skip_consumable_ids') in (None, [])
         assert plan_snapshot.get('forced_start_summary') in (None, '')

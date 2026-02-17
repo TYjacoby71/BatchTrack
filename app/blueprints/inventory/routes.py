@@ -105,6 +105,7 @@ def _serialize_inventory_items(items):
                 "cost_per_unit": float(item.cost_per_unit or 0.0),
                 "freshness_percent": freshness,
                 "is_perishable": bool(item.is_perishable),
+                "is_tracked": bool(getattr(item, "is_tracked", True)),
                 "is_archived": bool(item.is_archived),
                 "low_stock_threshold": float(item.low_stock_threshold or 0.0),
                 "global_item_id": item.global_item_id,
@@ -225,6 +226,7 @@ def api_get_inventory_item(item_id):
             'category_id': getattr(item, 'category_id', None),
             'density': item.density,
             'is_perishable': bool(item.is_perishable),
+            'is_tracked': bool(getattr(item, 'is_tracked', True)),
             'shelf_life_days': item.shelf_life_days,
             'capacity': getattr(item, 'capacity', None),
             'capacity_unit': getattr(item, 'capacity_unit', None),
@@ -387,6 +389,7 @@ def api_quick_create_inventory():
                 'name': item.name,
                 'unit': item.unit,
                 'type': item.type,
+                'is_tracked': bool(getattr(item, 'is_tracked', True)),
                 'global_item_id': getattr(item, 'global_item_id', None),
             }
         })

@@ -12,6 +12,7 @@ import logging
 from app.models import db, InventoryItem
 from app.services.quantity_base import from_base_quantity
 from sqlalchemy import and_
+from app.utils.permissions import has_tier_permission
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,21 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     item = db.session.get(InventoryItem, item_id)
     if not item:
         return False, "Item not found", 0, 0
+
+    org_tracks_quantities = has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=getattr(item, "organization", None),
+        default_if_missing_catalog=True,
+    )
+    effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+    if not effective_tracking_enabled:
+        inventory_qty = from_base_quantity(
+            base_amount=int(getattr(item, "quantity_base", 0) or 0),
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        return True, None, inventory_qty, inventory_qty
 
     # Get all active lots for this item with proper organization scoping
     active_lots = InventoryLot.query.filter(

@@ -166,38 +166,33 @@ class BatchOperationsService(BaseService):
                     pass
 
             all_errors = []
-            if snap_batch_type != 'untracked':
-                # Handle containers if required
-                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+            # Always run normal stock/deduction workflow.
+            # Untracked/infinite items are no-op handled inside inventory adjustment.
+            container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
-                skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
-                skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
+            skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+            skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
 
-                # Process ingredient deductions
-                ingredient_errors = cls._process_batch_ingredients(
-                    batch,
-                    recipe,
-                    snap_scale,
-                    skip_ingredient_ids=skip_ingredient_ids,
-                    defer_commit=True
-                )
+            # Process ingredient deductions
+            ingredient_errors = cls._process_batch_ingredients(
+                batch,
+                recipe,
+                snap_scale,
+                skip_ingredient_ids=skip_ingredient_ids,
+                defer_commit=True
+            )
 
-                # Process consumable deductions
-                consumable_errors = cls._process_batch_consumables(
-                    batch,
-                    recipe,
-                    snap_scale,
-                    skip_consumable_ids=skip_consumable_ids,
-                    defer_commit=True
-                )
+            # Process consumable deductions
+            consumable_errors = cls._process_batch_consumables(
+                batch,
+                recipe,
+                snap_scale,
+                skip_consumable_ids=skip_consumable_ids,
+                defer_commit=True
+            )
 
-                # Combine all errors
-                all_errors = container_errors + ingredient_errors + consumable_errors
-            else:
-                logger.info(
-                    "🔒 START BATCH: Creating untracked batch %s with inventory deductions disabled",
-                    label_code,
-                )
+            # Combine all errors
+            all_errors = container_errors + ingredient_errors + consumable_errors
 
             if all_errors:
                 # Any deduction failure should abort the entire start

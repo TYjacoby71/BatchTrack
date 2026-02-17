@@ -19,11 +19,11 @@ class PlanProductionApp {
         this.unit = data.yield_unit || 'units';
         this.scale = this._readScale();
         this.tracksBatchOutputs = (data.tracks_batch_outputs === true || data.tracks_batch_outputs === 'true');
-        this.requiresStockCheck = this.tracksBatchOutputs;
+        this.requiresStockCheck = true;
         this.batchType = data.default_batch_type || '';
         this.requiresContainers = false;
-        this.stockChecked = !this.requiresStockCheck;
-        this.stockCheckPassed = !this.requiresStockCheck;
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
         this.stockIssues = [];
         this.stockOverrideAcknowledged = false;
 
@@ -196,15 +196,6 @@ class PlanProductionApp {
     }
 
     _invalidateStockCheck(reason = 'a configuration change') {
-        if (!this.requiresStockCheck) {
-            this.stockChecked = true;
-            this.stockCheckPassed = true;
-            this.stockOverrideAcknowledged = false;
-            this.stockIssues = [];
-            this.updateValidation();
-            return;
-        }
-
         this.stockChecked = false;
         this.stockCheckPassed = false;
         this.stockOverrideAcknowledged = false;
