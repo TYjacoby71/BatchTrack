@@ -26,31 +26,12 @@ from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUP
 from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
 from ._special_ops import handle_cost_override, handle_unit_conversion, handle_recount
 from app.services.event_emitter import EventEmitter
-from app.utils.permissions import has_tier_permission
-from app.utils.inventory_event_code_generator import generate_inventory_event_code
 
 logger = logging.getLogger(__name__)
 
 ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
     ADDITIVE_OPERATIONS.update(group.get('operations', []))
-
-DEDUCTIVE_OPERATIONS = set()
-for group in DEDUCTIVE_OPERATION_GROUPS.values():
-    DEDUCTIVE_OPERATIONS.update(group.get('operations', []))
-
-
-def _org_tier_allows_quantity_tracking(item: InventoryItem) -> bool:
-    """Return True when org tier allows quantity tracking for inventory."""
-    org = getattr(item, "organization", None)
-    # Preserve legacy behavior for contexts without a tier assignment.
-    if not org or not getattr(org, "subscription_tier_id", None):
-        return True
-    return has_tier_permission(
-        "batches.track_inventory_outputs",
-        organization=org,
-        default_if_missing_catalog=True,
-    )
 
 # --- Inventory adjustment ---
 # Purpose: Central entry point for inventory adjustments.
@@ -93,101 +74,6 @@ def process_inventory_adjustment(
     item = db.session.get(InventoryItem, item_id)
     if not item:
         return _response(False, "Inventory item not found.")
-
-    org_tracks_quantities = _org_tier_allows_quantity_tracking(item)
-    effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
-
-    if change_type in DEDUCTIVE_OPERATIONS and not effective_tracking_enabled:
-        # Infinite/untracked items still record deduction history for usage/cost reporting.
-        normalized_quantity = quantity
-        if unit and item.unit and unit != item.unit:
-            try:
-                conv = ConversionEngine.convert_units(
-                    amount=float(quantity),
-                    from_unit=unit,
-                    to_unit=item.unit,
-                    ingredient_id=item.id,
-                    density=item.density,
-                )
-                if not conv or conv.get("converted_value") is None:
-                    return _response(False, f"Cannot convert {unit} to {item.unit}.")
-                normalized_quantity = conv["converted_value"]
-            except Exception as exc:
-                return _response(False, f"Unit conversion failed: {str(exc)}")
-
-        used_base = abs(
-            int(
-                to_base_quantity(
-                    amount=normalized_quantity,
-                    unit_name=item.unit or unit,
-                    ingredient_id=item.id,
-                    density=item.density,
-                )
-            )
-        )
-        used_quantity = from_base_quantity(
-            base_amount=used_base,
-            unit_name=item.unit,
-            ingredient_id=item.id,
-            density=item.density,
-        )
-
-        history = UnifiedInventoryHistory(
-            inventory_item_id=item.id,
-            change_type=change_type,
-            quantity_change=-used_quantity,
-            quantity_change_base=-used_base,
-            unit=item.unit or (unit or "count"),
-            unit_cost=float(item.cost_per_unit or 0.0),
-            notes=(
-                f"Infinite item usage recorded (on-hand quantity unchanged)."
-                + (f" {notes}" if notes else "")
-            ),
-            created_by=created_by,
-            organization_id=item.organization_id,
-            batch_id=batch_id,
-            is_perishable=bool(item.is_perishable),
-            shelf_life_days=item.shelf_life_days,
-            fifo_code=generate_inventory_event_code(change_type, item_id=item.id, code_type="event"),
-            valuation_method="average",
-        )
-        db.session.add(history)
-
-        event_payload: Dict[str, Any] = {
-            'event_name': 'inventory_adjusted',
-            'properties': {
-                'change_type': change_type,
-                'quantity_delta': 0.0,
-                'quantity_used': float(used_quantity),
-                'unit': item.unit,
-                'notes': notes,
-                'cost_override': cost_override,
-                'original_quantity': float(item.quantity or 0.0),
-                'new_quantity': float(item.quantity or 0.0),
-                'item_name': item.name,
-                'item_type': item.type,
-                'batch_id': batch_id,
-                'is_initial_stock': False,
-                'skipped_untracked': True,
-            },
-            'organization_id': item.organization_id,
-            'user_id': created_by,
-            'entity_type': 'inventory_item',
-            'entity_id': item.id,
-        }
-        if defer_commit:
-            return _response(True, "Infinite item usage recorded; quantity unchanged.", event_payload)
-
-        try:
-            db.session.commit()
-            try:
-                EventEmitter.emit(**event_payload, auto_commit=False)
-            except Exception:
-                pass
-            return _response(True, "Infinite item usage recorded; quantity unchanged.", event_payload)
-        except Exception as exc:
-            db.session.rollback()
-            return _response(False, f"Database error: {str(exc)}")
 
     if getattr(item, "quantity_base", None) is None:
         item.quantity_base = to_base_quantity(

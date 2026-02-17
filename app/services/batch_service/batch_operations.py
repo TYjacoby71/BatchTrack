@@ -746,13 +746,6 @@ class BatchOperationsService(BaseService):
             if batch.organization_id != current_user.organization_id:
                 return False, "Permission denied", []
 
-            from app.utils.permissions import has_tier_permission
-            if batch.batch_type == 'untracked' or not has_tier_permission(
-                'batches.track_inventory_outputs',
-                default_if_missing_catalog=True,
-            ):
-                return False, "Extra inventory adjustments are disabled for untracked batches.", []
-
             extra_ingredients = extra_ingredients or []
             extra_containers = extra_containers or []
             extra_consumables = extra_consumables or []

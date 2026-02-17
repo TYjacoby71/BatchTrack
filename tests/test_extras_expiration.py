@@ -4,6 +4,8 @@ import pytest
 def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.models import InventoryItem, Recipe
     from app.models.inventory_lot import InventoryLot
+    from app.models.permission import Permission
+    from app.models.subscription_tier import SubscriptionTier
     from app.services.batch_service.batch_operations import BatchOperationsService
     from app.services.production_planning.service import PlanProductionService
     from app.utils.timezone_utils import TimezoneUtils
@@ -14,6 +16,26 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.extensions import db
 
     user_id = db.session.merge(test_user).id
+
+    track_outputs_perm = Permission.query.filter_by(name='batches.track_inventory_outputs').first()
+    if not track_outputs_perm:
+        track_outputs_perm = Permission(
+            name='batches.track_inventory_outputs',
+            description='Allow tracked batch outputs'
+        )
+        db_session.add(track_outputs_perm)
+        db_session.flush()
+
+    tier = SubscriptionTier(
+        name=f'Extras Tracked Tier {test_org.id}',
+        billing_provider='exempt',
+        user_limit=5
+    )
+    db_session.add(tier)
+    db_session.flush()
+    tier.permissions.append(track_outputs_perm)
+    test_org.subscription_tier_id = tier.id
+    db_session.flush()
 
     # Create perishable inventory item
     item = InventoryItem(

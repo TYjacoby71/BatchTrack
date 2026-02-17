@@ -17,18 +17,6 @@ from app.utils.permissions import has_tier_permission
 logger = logging.getLogger(__name__)
 
 
-def _org_tier_allows_quantity_tracking(item: InventoryItem) -> bool:
-    org = getattr(item, "organization", None)
-    # Preserve legacy behavior when no tier has been assigned.
-    if not org or not getattr(org, "subscription_tier_id", None):
-        return True
-    return has_tier_permission(
-        "batches.track_inventory_outputs",
-        organization=org,
-        default_if_missing_catalog=True,
-    )
-
-
 # --- FIFO sync validation ---
 # Purpose: Validate inventory quantity against FIFO totals.
 def validate_inventory_fifo_sync(item_id, item_type=None):
@@ -42,7 +30,11 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     if not item:
         return False, "Item not found", 0, 0
 
-    org_tracks_quantities = _org_tier_allows_quantity_tracking(item)
+    org_tracks_quantities = has_tier_permission(
+        "batches.track_inventory_outputs",
+        organization=getattr(item, "organization", None),
+        default_if_missing_catalog=False,
+    )
     effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
     if not effective_tracking_enabled:
         inventory_qty = from_base_quantity(

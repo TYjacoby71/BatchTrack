@@ -20,6 +20,7 @@ from app.services.quantity_base import (
 )
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.inventory_event_code_generator import generate_inventory_event_code
+from app.utils.permissions import has_tier_permission
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -225,6 +226,19 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         if not item:
             return False, "Inventory item not found"
 
+        quantity_needed_base = abs(int(quantity_to_deduct_base)) if quantity_to_deduct_base is not None else to_base_quantity(
+            amount=quantity_to_deduct,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        quantity_needed = from_base_quantity(
+            base_amount=quantity_needed_base,
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+
         # Determine valuation method for this deduction event
         valuation_method = None
         try:
@@ -248,6 +262,57 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
         except Exception:
             valuation_method = 'fifo'
 
+        org_tracks_quantities = has_tier_permission(
+            "batches.track_inventory_outputs",
+            organization=getattr(item, "organization", None),
+            default_if_missing_catalog=False,
+        )
+        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+
+        def _resolve_event_code_and_lineage():
+            batch_lineage_id = None
+            if change_type == 'batch' and batch_id:
+                try:
+                    from app.models import Batch
+                    batch = db.session.get(Batch, batch_id)
+                    code = (
+                        batch.label_code
+                        if batch and batch.label_code
+                        else generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
+                    )
+                    if batch:
+                        batch_lineage_id = batch.lineage_id
+                    return code, batch_lineage_id
+                except Exception:
+                    return generate_inventory_event_code(change_type, item_id=item_id, code_type="event"), None
+            return generate_inventory_event_code(change_type, item_id=item_id, code_type="event"), None
+
+        if not effective_tracking_enabled:
+            deduction_event_code, batch_lineage_id = _resolve_event_code_and_lineage()
+            history_record = UnifiedInventoryHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=-quantity_needed,
+                quantity_change_base=-quantity_needed_base,
+                remaining_quantity=None,
+                unit=item.unit,
+                unit_cost=float(item.cost_per_unit or 0.0),
+                notes=(
+                    f"Infinite item usage recorded (on-hand quantity unchanged)"
+                    + (f" | {notes}" if notes else "")
+                ),
+                created_by=created_by,
+                organization_id=item.organization_id,
+                affected_lot_id=None,
+                batch_id=batch_id,
+                lineage_id=batch_lineage_id,
+                fifo_code=deduction_event_code,
+                valuation_method='average',
+            )
+            db.session.add(history_record)
+            logger.info("FIFO DEDUCT INFINITE: Recorded usage event for item %s without lot consumption", item_id)
+            return True, "Recorded infinite-item usage (quantity unchanged)"
+
         # Get active lots ordered by FIFO (oldest received first)
         query = InventoryLot.query.filter(
             and_(
@@ -269,20 +334,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
 
         # Calculate total available quantity from actual lots (base units)
         total_available_base = sum(int(lot.remaining_quantity_base or 0) for lot in active_lots)
-        quantity_needed_base = abs(int(quantity_to_deduct_base)) if quantity_to_deduct_base is not None else to_base_quantity(
-            amount=quantity_to_deduct,
-            unit_name=item.unit,
-            ingredient_id=item.id,
-            density=item.density,
-        )
         total_available = from_base_quantity(
             base_amount=total_available_base,
-            unit_name=item.unit,
-            ingredient_id=item.id,
-            density=item.density,
-        )
-        quantity_needed = from_base_quantity(
-            base_amount=quantity_needed_base,
             unit_name=item.unit,
             ingredient_id=item.id,
             density=item.density,
@@ -316,22 +369,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, quantity_to_deduct_base=N
             sync_lot_quantities_from_base(lot, item)
 
             # Generate appropriate event code for this deduction event; prefer batch label when available
-            batch_lineage_id = None
-            if change_type == 'batch' and batch_id:
-                try:
-                    from app.models import Batch
-                    batch = db.session.get(Batch, batch_id)
-                    deduction_event_code = (
-                        batch.label_code
-                        if batch and batch.label_code
-                        else generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
-                    )
-                    if batch:
-                        batch_lineage_id = batch.lineage_id
-                except Exception:
-                    deduction_event_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
-            else:
-                deduction_event_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
+            deduction_event_code, batch_lineage_id = _resolve_event_code_and_lineage()
 
             # Choose unit cost according to valuation method
             event_unit_cost = float(item.cost_per_unit or 0.0) if valuation_method == 'average' else float(lot.unit_cost or 0.0)

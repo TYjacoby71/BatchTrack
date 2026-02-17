@@ -9,9 +9,31 @@ from app.services.inventory_adjustment import process_inventory_adjustment
 
 def test_batch_deduction_does_not_create_initial_stock(app):
     with app.app_context():
+        from app.models.permission import Permission
+        from app.models.subscription_tier import SubscriptionTier
+
         org = Organization(name='Initial Stock Org')
         db.session.add(org)
         db.session.flush()
+
+        track_outputs_perm = Permission.query.filter_by(name='batches.track_inventory_outputs').first()
+        if not track_outputs_perm:
+            track_outputs_perm = Permission(
+                name='batches.track_inventory_outputs',
+                description='Allow tracked batch outputs'
+            )
+            db.session.add(track_outputs_perm)
+            db.session.flush()
+
+        tier = SubscriptionTier(
+            name=f'Tracked Tier {org.id}',
+            billing_provider='exempt',
+            user_limit=5
+        )
+        db.session.add(tier)
+        db.session.flush()
+        tier.permissions.append(track_outputs_perm)
+        org.subscription_tier_id = tier.id
 
         user = User(
             email='initial@test.com',

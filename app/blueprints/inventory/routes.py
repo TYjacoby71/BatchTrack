@@ -47,14 +47,10 @@ def _bulk_inventory_updates_enabled() -> bool:
 
 def _org_tracks_inventory_quantities() -> bool:
     """Whether current org tier allows tracked quantity mode."""
-    org = getattr(current_user, "organization", None)
-    # Preserve legacy behavior for orgs without an assigned tier.
-    if not org or not getattr(org, "subscription_tier_id", None):
-        return True
     return has_tier_permission(
         "batches.track_inventory_outputs",
-        organization=org,
-        default_if_missing_catalog=True,
+        organization=getattr(current_user, "organization", None),
+        default_if_missing_catalog=False,
     )
 
 
