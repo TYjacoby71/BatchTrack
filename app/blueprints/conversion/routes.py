@@ -111,7 +111,7 @@ def manage_units():
                             (Unit.is_custom)
                             & (Unit.organization_id == current_user.organization_id)
                         )
-                        | (not Unit.is_custom),
+                        | (Unit.is_custom.is_(False)),
                     ).first()
 
                 if existing:

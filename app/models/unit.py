@@ -50,7 +50,8 @@ class Unit(TimestampMixin, db.Model):
             return cls.query.filter(False)  # Return empty query if no user
         # Return all standard units + user's custom units
         return cls.query.filter(
-            (not cls.is_custom) | (cls.organization_id == current_user.organization_id)
+            (cls.is_custom.is_(False))
+            | (cls.organization_id == current_user.organization_id)
         )
 
     def belongs_to_user(self):
