@@ -9,13 +9,16 @@ Glossary:
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from ...extensions import db
 from ...models import Batch, InventoryItem, Recipe, RecipeGroup, RecipeIngredient
+from ...models.db_dialect import is_postgres
 from ...models.recipe import RecipeConsumable
 from ...services.event_emitter import EventEmitter
 from ...services.lineage_service import generate_group_prefix, generate_variation_prefix
@@ -37,6 +40,59 @@ from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
 
 logger = logging.getLogger(__name__)
+_IS_POSTGRES = is_postgres()
+_RECIPE_GROUP_MAX_INSERT_ATTEMPTS = 4
+_RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS = 1200
+_RETRYABLE_PG_CODES = {"55P03", "40P01", "40001"}
+
+
+def _normalize_group_name(name: str | None) -> str:
+    normalized = (name or "").strip()
+    return normalized or "Recipe Group"
+
+
+def _normalize_group_prefix(prefix: str | None) -> str | None:
+    if prefix in (None, ""):
+        return None
+    normalized = str(prefix).strip().upper()
+    return normalized[:8] if normalized else None
+
+
+def _find_group_by_name(recipe_org_id: int, group_name: str) -> RecipeGroup | None:
+    with db.session.no_autoflush:
+        return RecipeGroup.query.filter_by(
+            organization_id=recipe_org_id,
+            name=group_name,
+        ).first()
+
+
+def _set_short_group_insert_lock_timeout() -> None:
+    if not _IS_POSTGRES:
+        return
+    db.session.execute(
+        sa.text(f"SET LOCAL lock_timeout = {_RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS}")
+    )
+
+
+def _reset_group_insert_lock_timeout() -> None:
+    if not _IS_POSTGRES:
+        return
+    db.session.execute(sa.text("SET LOCAL lock_timeout = DEFAULT"))
+
+
+def _is_retryable_group_insert_error(exc: OperationalError) -> bool:
+    code = getattr(getattr(exc, "orig", None), "pgcode", None)
+    if code in _RETRYABLE_PG_CODES:
+        return True
+    message = str(exc).lower()
+    return any(
+        token in message
+        for token in (
+            "lock timeout",
+            "deadlock detected",
+            "could not serialize access",
+        )
+    )
 
 
 # --- Derive variation name ---
@@ -121,15 +177,59 @@ def _ensure_recipe_group(
     group_name: str,
     group_prefix: str | None = None,
 ) -> RecipeGroup:
-    prefix = group_prefix or generate_group_prefix(group_name, recipe_org_id)
-    recipe_group = RecipeGroup(
-        organization_id=recipe_org_id,
-        name=group_name,
-        prefix=prefix,
-    )
-    db.session.add(recipe_group)
-    db.session.flush()
-    return recipe_group
+    normalized_name = _normalize_group_name(group_name)
+    prefix = _normalize_group_prefix(group_prefix)
+    if not prefix:
+        with db.session.no_autoflush:
+            prefix = generate_group_prefix(normalized_name, recipe_org_id)
+
+    last_error: Exception | None = None
+    for attempt in range(_RECIPE_GROUP_MAX_INSERT_ATTEMPTS):
+        existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+        if existing_group:
+            return existing_group
+
+        try:
+            with db.session.begin_nested():
+                _set_short_group_insert_lock_timeout()
+                recipe_group = RecipeGroup(
+                    organization_id=recipe_org_id,
+                    name=normalized_name,
+                    prefix=prefix,
+                )
+                db.session.add(recipe_group)
+                db.session.flush()
+                _reset_group_insert_lock_timeout()
+                return recipe_group
+        except IntegrityError as exc:
+            last_error = exc
+            try:
+                _reset_group_insert_lock_timeout()
+            except Exception:
+                pass
+            existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+            if existing_group:
+                return existing_group
+            with db.session.no_autoflush:
+                prefix = generate_group_prefix(normalized_name, recipe_org_id)
+        except OperationalError as exc:
+            last_error = exc
+            try:
+                _reset_group_insert_lock_timeout()
+            except Exception:
+                pass
+            existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+            if existing_group:
+                return existing_group
+            if not _is_retryable_group_insert_error(exc):
+                raise
+
+        if attempt < _RECIPE_GROUP_MAX_INSERT_ATTEMPTS - 1:
+            time.sleep(0.05 * (2**attempt))
+
+    if last_error:
+        raise last_error
+    raise RuntimeError("Unable to ensure recipe group.")
 
 
 # --- Create recipe ---
