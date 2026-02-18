@@ -36,7 +36,8 @@ def test_ensure_recipe_group_returns_existing_by_name():
 
     assert ensured.id == existing.id
     assert (
-        RecipeGroup.query.filter_by(organization_id=org.id, name=group_name).count() == 1
+        RecipeGroup.query.filter_by(organization_id=org.id, name=group_name).count()
+        == 1
     )
 
 
