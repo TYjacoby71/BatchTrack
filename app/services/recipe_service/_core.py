@@ -46,11 +46,19 @@ _RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS = 1200
 _RETRYABLE_PG_CODES = {"55P03", "40P01", "40001"}
 
 
+# --- Normalize group name ---
+# Purpose: Canonicalize recipe-group names before persistence and lookups.
+# Inputs: Optional raw group name from request or parent recipe.
+# Outputs: Non-empty trimmed group name with deterministic fallback.
 def _normalize_group_name(name: str | None) -> str:
     normalized = (name or "").strip()
     return normalized or "Recipe Group"
 
 
+# --- Normalize group prefix ---
+# Purpose: Canonicalize optional group prefix to DB-safe format.
+# Inputs: Optional raw prefix value from user input or inherited parent.
+# Outputs: Uppercased prefix up to 8 chars, or None when empty.
 def _normalize_group_prefix(prefix: str | None) -> str | None:
     if prefix in (None, ""):
         return None
@@ -58,6 +66,10 @@ def _normalize_group_prefix(prefix: str | None) -> str | None:
     return normalized[:8] if normalized else None
 
 
+# --- Find group by name ---
+# Purpose: Reuse existing group rows to avoid duplicate-name insert races.
+# Inputs: Organization id and normalized group name.
+# Outputs: Matching RecipeGroup row or None if not found.
 def _find_group_by_name(recipe_org_id: int, group_name: str) -> RecipeGroup | None:
     with db.session.no_autoflush:
         return RecipeGroup.query.filter_by(
@@ -66,6 +78,10 @@ def _find_group_by_name(recipe_org_id: int, group_name: str) -> RecipeGroup | No
         ).first()
 
 
+# --- Set short lock timeout ---
+# Purpose: Bound lock-wait time for group insert attempts under contention.
+# Inputs: None; uses configured lock-timeout constant on current transaction.
+# Outputs: Applies Postgres session-local lock_timeout when supported.
 def _set_short_group_insert_lock_timeout() -> None:
     if not _IS_POSTGRES:
         return
@@ -74,12 +90,20 @@ def _set_short_group_insert_lock_timeout() -> None:
     )
 
 
+# --- Reset lock timeout ---
+# Purpose: Restore default transaction lock-timeout after guarded insert attempt.
+# Inputs: None.
+# Outputs: Resets Postgres session-local lock_timeout to default.
 def _reset_group_insert_lock_timeout() -> None:
     if not _IS_POSTGRES:
         return
     db.session.execute(sa.text("SET LOCAL lock_timeout = DEFAULT"))
 
 
+# --- Retryable insert error ---
+# Purpose: Detect transient DB errors that should retry group insert attempts.
+# Inputs: SQLAlchemy OperationalError raised during insert/flush.
+# Outputs: True for lock/deadlock/serialization failures, else False.
 def _is_retryable_group_insert_error(exc: OperationalError) -> bool:
     code = getattr(getattr(exc, "orig", None), "pgcode", None)
     if code in _RETRYABLE_PG_CODES:
