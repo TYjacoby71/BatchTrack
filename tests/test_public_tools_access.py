@@ -3,6 +3,8 @@ import re
 
 import pytest
 
+_HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
+
 
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
     """Helper to ensure a GET stays public and does not bounce to login."""
@@ -13,6 +15,20 @@ def _assert_public_get(client, path: str, *, label: str, **kwargs):
     location = response.headers.get("Location", "")
     assert "/auth/login" not in location, f"{label} unexpectedly redirected to login"
     return response
+
+
+def _assert_no_heading_level_skips(html: str, *, label: str):
+    """Ensure heading levels do not jump by more than one level."""
+    levels = [int(match.group(1)) for match in _HEADING_LEVEL_PATTERN.finditer(html)]
+    if not levels:
+        return
+
+    previous = levels[0]
+    for current in levels[1:]:
+        assert current <= previous + 1, (
+            f"{label} has heading skip from h{previous} to h{current}"
+        )
+        previous = current
 
 
 @pytest.mark.usefixtures("app")
@@ -84,6 +100,33 @@ def test_public_soap_page_uses_centralized_guidance_dock(app):
     assert 'id="qualityConditioningHint"' not in html
     assert 'id="qualityBubblyHint"' not in html
     assert 'id="qualityCreamyHint"' not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_marketing_pages_do_not_skip_heading_levels(app):
+    """Public pages should keep heading levels sequential for accessibility."""
+    client = app.test_client()
+    public_pages = [
+        ("/", "homepage"),
+        ("/tools/", "tools index"),
+        ("/tools/soap", "soap tool"),
+        ("/tools/candles", "candles tool"),
+        ("/tools/lotions", "lotions tool"),
+        ("/tools/herbal", "herbal tool"),
+        ("/tools/baker", "baker tool"),
+        ("/pricing", "pricing"),
+        ("/help/how-it-works", "how it works"),
+        ("/help/system-faq", "system faq"),
+        ("/legal/privacy", "privacy policy"),
+        ("/legal/terms", "terms of service"),
+        ("/legal/cookies", "cookie policy"),
+        ("/lp/hormozi", "hormozi landing"),
+        ("/lp/robbins", "robbins landing"),
+    ]
+
+    for path, label in public_pages:
+        response = _assert_public_get(client, path, label=label)
+        _assert_no_heading_level_skips(response.get_data(as_text=True), label=label)
 
 
 @pytest.mark.usefixtures("app")

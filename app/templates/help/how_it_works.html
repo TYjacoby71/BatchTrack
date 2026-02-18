@@ -27,7 +27,7 @@
 
       <div class="card mt-4">
         <div class="card-body">
-          <h5 class="card-title">Need Answers Fast?</h5>
+          <h2 class="card-title h5">Need Answers Fast?</h2>
           <p class="card-text">The <a href="{{ url_for('help_routes.help_faq') }}" class="text-decoration-none">Commonly Asked Questions</a> page links every question directly to these instructions.</p>
           <a href="{{ url_for('help_routes.help_faq') }}" class="btn btn-outline-primary w-100">View FAQ</a>
         </div>
@@ -62,7 +62,7 @@
         {% for detail in section.details %}
         <div class="card mb-3">
           <div class="card-body">
-            <h5 class="card-title">{{ detail.title }}</h5>
+            <h3 class="card-title h5">{{ detail.title }}</h3>
             <div class="card-text">{{ detail.body|safe }}</div>
           </div>
         </div>
@@ -71,7 +71,7 @@
         {% if section.gallery %}
         <div class="card border-dashed">
           <div class="card-body">
-            <h6 class="text-uppercase text-muted mb-2">Image Placeholders</h6>
+            <h3 class="h6 text-uppercase text-muted mb-2">Image Placeholders</h3>
             <p class="small text-muted mb-3">Drop screenshots for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. The final onboarding tour can render them as a slideshow.</p>
             <div class="row g-3">
               {% for label in section.gallery %}
