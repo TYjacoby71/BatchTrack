@@ -144,6 +144,57 @@ def test_save_profile_rejects_duplicate_username(client, developer_user, app):
         assert updated.username != taken_username
 
 
+def test_change_developer_password_success(client, developer_user, app):
+    _login_as_developer(client, developer_user)
+
+    with app.app_context():
+        user = db.session.get(User, developer_user.id)
+        user.set_password("OldPass!123")
+        db.session.commit()
+
+    resp = client.post(
+        "/developer/api/profile/change-password",
+        json={
+            "current_password": "OldPass!123",
+            "new_password": "NewPass!456",
+            "confirm_password": "NewPass!456",
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["success"] is True
+
+    with app.app_context():
+        updated = db.session.get(User, developer_user.id)
+        assert updated.check_password("NewPass!456")
+
+
+def test_change_developer_password_rejects_bad_current_password(
+    client, developer_user, app
+):
+    _login_as_developer(client, developer_user)
+
+    with app.app_context():
+        user = db.session.get(User, developer_user.id)
+        user.set_password("OldPass!123")
+        db.session.commit()
+
+    resp = client.post(
+        "/developer/api/profile/change-password",
+        json={
+            "current_password": "WrongPass!000",
+            "new_password": "NewPass!456",
+            "confirm_password": "NewPass!456",
+        },
+    )
+
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["success"] is False
+    assert "incorrect" in data["error"].lower()
+
+
 def test_toggle_user_active_endpoint(client, developer_user, app):
     _login_as_developer(client, developer_user)
     customer_id = _create_customer(app)

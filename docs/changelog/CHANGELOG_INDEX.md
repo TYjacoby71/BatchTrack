@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Developer Password Modal JSON Endpoint Fix](2026-02-18-developer-password-modal-json-endpoint-fix.md)**
+  - Added developer-scoped password-change API for `/developer/users` modal submissions.
+  - Removed dependency on `/settings/password/change` for developer password updates.
+  - Added regression tests for successful and invalid-current-password cases.
 - **[2026-02-18: Support Inbox Recipient for Integrations Test Email](2026-02-18-support-inbox-test-email-recipient.md)**
   - Changed the developer test-email action to send to the support mailbox instead of the current user.
   - Added configurable `SUPPORT_EMAIL` override with `support@batchtrack.com` fallback.

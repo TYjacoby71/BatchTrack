@@ -73,6 +73,25 @@ def update_developer_profile():
     return jsonify(payload), status
 
 
+# --- Change current developer password ---
+# Purpose: Update the authenticated developer's password from the users dashboard modal.
+# Inputs: JSON body with current_password, new_password, and confirm_password.
+# Outputs: JSON success/error payload with HTTP status.
+@developer_bp.route("/api/profile/change-password", methods=["POST"])
+@require_developer_permission("dev.manage_users")
+def change_developer_password():
+    """Change currently authenticated developer password."""
+    data = request.get_json() or {}
+    success, message = UserService.update_own_password(current_user, data)
+    status = 200 if success else 400
+    payload = {"success": success}
+    if success:
+        payload["message"] = message
+    else:
+        payload["error"] = message
+    return jsonify(payload), status
+
+
 # --- Toggle user active status ---
 # Purpose: Activate/deactivate a selected user from developer tools.
 # Inputs: URL user_id.

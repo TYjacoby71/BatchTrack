@@ -465,7 +465,7 @@ async function changePassword() {
     }
 
     try {
-        const response = await fetch('/settings/password/change', {
+        const response = await fetch('/developer/api/profile/change-password', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
