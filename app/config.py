@@ -29,6 +29,8 @@ _FALSE_VALUES = {"0", "false", "no", "off"}
 
 # --- EnvironmentInfo ---
 # Purpose: Hold the resolved runtime environment metadata.
+# Inputs: Normalized environment name, source key, and raw value string.
+# Outputs: Immutable metadata container consumed by config resolution.
 @dataclass(frozen=True)
 class EnvironmentInfo:
     name: str
@@ -38,6 +40,8 @@ class EnvironmentInfo:
 
 # --- EnvReader ---
 # Purpose: Read and coerce environment values with warnings.
+# Inputs: Optional environment mapping (defaults to process environment).
+# Outputs: Typed accessors and warning list for config parsing.
 class EnvReader:
     def __init__(self, data: Mapping[str, str] | None = None):
         self._data = dict(data or os.environ)
@@ -101,6 +105,8 @@ class EnvReader:
 
 # --- Normalize environment ---
 # Purpose: Coerce the environment name into a supported value.
+# Inputs: Raw environment value and optional default fallback.
+# Outputs: Lowercased normalized environment name.
 def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
     if not value:
         return default
@@ -109,6 +115,8 @@ def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
 
 # --- Normalize DB URL ---
 # Purpose: Normalize postgres:// URLs into sqlalchemy-friendly formats.
+# Inputs: Raw database URL string from config/environment.
+# Outputs: SQLAlchemy-compatible database URL.
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
@@ -121,6 +129,8 @@ def _normalize_db_url(url: str | None) -> str | None:
 
 # --- Extract host ---
 # Purpose: Pull the hostname from a URL or host string.
+# Inputs: URL or hostname candidate value.
+# Outputs: Hostname string when resolvable, otherwise None.
 def _extract_host(value: str | None) -> str | None:
     if not value:
         return None
@@ -131,6 +141,8 @@ def _extract_host(value: str | None) -> str | None:
 
 # --- Derive scheme ---
 # Purpose: Infer the scheme (http/https) from a base URL.
+# Inputs: Base URL string.
+# Outputs: URL scheme string or None when not derivable.
 def _derive_scheme(base_url: str | None) -> str | None:
     if not base_url:
         return None
@@ -140,6 +152,8 @@ def _derive_scheme(base_url: str | None) -> str | None:
 
 # --- Resolve rate limit URI ---
 # Purpose: Choose the rate limiter storage URI from settings.
+# Inputs: Resolved settings mapping from config schema.
+# Outputs: Storage URI string for limiter backend selection.
 def _resolve_ratelimit_uri(settings: Mapping[str, Any]) -> str:
     candidate = settings.get("RATELIMIT_STORAGE_URI")
     if candidate:
@@ -152,6 +166,8 @@ def _resolve_ratelimit_uri(settings: Mapping[str, Any]) -> str:
 
 # --- Resolve environment ---
 # Purpose: Validate the configured environment and return metadata.
+# Inputs: EnvReader instance with raw environment data.
+# Outputs: EnvironmentInfo for active runtime environment.
 def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
     for key in _FORBIDDEN_ENV_KEYS:
         if reader.raw(key) not in (None, ""):
@@ -170,6 +186,8 @@ def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
 
 # --- Resolve base URL ---
 # Purpose: Determine APP_BASE_URL for the active environment.
+# Inputs: EnvReader instance and normalized environment name.
+# Outputs: Canonical base URL string for outbound links.
 def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
     value = reader.str("APP_BASE_URL")
     if value:
@@ -187,6 +205,8 @@ def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
 
 # --- Preferred scheme ---
 # Purpose: Pick the canonical scheme for redirects and links.
+# Inputs: Base URL string and normalized environment name.
+# Outputs: Preferred URL scheme string ("http" or "https").
 def _preferred_scheme(base_url: str, env_name: str) -> str:
     scheme = _derive_scheme(base_url)
     if scheme:
@@ -222,6 +242,8 @@ if _AUTH_EMAIL_VERIFICATION_MODE not in {"off", "prompt", "required"}:
 
 # --- BaseConfig ---
 # Purpose: Define shared configuration defaults for all environments.
+# Inputs: Resolved settings, environment metadata, and helper-derived defaults.
+# Outputs: Base Flask config class used by all environment variants.
 class BaseConfig:
     FLASK_ENV = ENV_INFO.name
     SECRET_KEY = SETTINGS.get("FLASK_SECRET_KEY")
@@ -367,6 +389,8 @@ class BaseConfig:
 
 # --- DevelopmentConfig ---
 # Purpose: Override settings for local development defaults.
+# Inputs: BaseConfig defaults and development-specific DB/runtime behavior.
+# Outputs: Development-ready Flask config class.
 class DevelopmentConfig(BaseConfig):
     ENV = "development"
     DEBUG = True
@@ -395,6 +419,8 @@ class DevelopmentConfig(BaseConfig):
 
 # --- TestingConfig ---
 # Purpose: Override settings for tests and in-memory databases.
+# Inputs: BaseConfig defaults with test-friendly overrides.
+# Outputs: Testing Flask config class for isolated test runs.
 class TestingConfig(BaseConfig):
     ENV = "testing"
     TESTING = True
@@ -411,6 +437,8 @@ class TestingConfig(BaseConfig):
 
 # --- StagingConfig ---
 # Purpose: Override settings for staging deployments.
+# Inputs: BaseConfig defaults with staging-specific security/runtime overrides.
+# Outputs: Staging Flask config class.
 class StagingConfig(BaseConfig):
     ENV = "staging"
     SESSION_COOKIE_SECURE = True
@@ -422,6 +450,8 @@ class StagingConfig(BaseConfig):
 
 # --- ProductionConfig ---
 # Purpose: Override settings for production deployments.
+# Inputs: BaseConfig defaults with production-specific security/runtime overrides.
+# Outputs: Production Flask config class.
 class ProductionConfig(BaseConfig):
     ENV = "production"
     SESSION_COOKIE_SECURE = True
@@ -441,12 +471,16 @@ config_map = {
 
 # --- Active config name ---
 # Purpose: Return the resolved environment name.
+# Inputs: None (uses already-resolved global environment metadata).
+# Outputs: Active environment key string.
 def get_active_config_name() -> str:
     return ENV_INFO.name
 
 
 # --- Get config ---
 # Purpose: Return the config class for the active environment.
+# Inputs: None (uses active environment key).
+# Outputs: Flask config class object for the active environment.
 def get_config():
     return config_map[get_active_config_name()]
 
