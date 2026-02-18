@@ -88,7 +88,7 @@ def _render_public_homepage_response():
     avoid re-rendering the full template on every hit.
     """
     cache_key = current_app.config.get(
-        "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v2"
+        "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v3"
     )
     try:
         from app.utils.settings import is_feature_enabled

@@ -9,7 +9,7 @@ Glossary:
 #}
 {% set public_header_home_url = url_for('core.index') %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
-{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'homepage_get_started' %}
+{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'homepage_start_free_trial' %}
 {% if global_library_enabled is not defined %}
 {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
 {% endif %}
