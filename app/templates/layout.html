@@ -20,6 +20,11 @@ Glossary:
       {% set use_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else false) %}
       {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
       {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and current_user.user_type == 'developer') %}
+      {% set ga_measurement_id = (config.get('GOOGLE_ANALYTICS_MEASUREMENT_ID') or '').strip() %}
+      {% set posthog_api_key = (config.get('POSTHOG_PROJECT_API_KEY') or '').strip() %}
+      {% set posthog_host = (config.get('POSTHOG_HOST') or 'https://us.i.posthog.com').rstrip('/') %}
+      {% set posthog_capture_pageview = config.get('POSTHOG_CAPTURE_PAGEVIEW', true) %}
+      {% set posthog_capture_pageleave = config.get('POSTHOG_CAPTURE_PAGELEAVE', true) %}
       <title>{{ resolved_title }}</title>
       <meta name="description" content="{{ resolved_description }}">
       <link rel="canonical" href="{{ resolved_canonical }}">
@@ -83,6 +88,28 @@ Glossary:
       })();
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% if ga_measurement_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', {{ ga_measurement_id | tojson }}, {
+        anonymize_ip: true
+      });
+    </script>
+    {% endif %}
+    {% if posthog_api_key %}
+    <script>
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2===o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people"},o="capture identify alias group set_config reset register register_once unregister people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user pageleave".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      posthog.init({{ posthog_api_key | tojson }}, {
+        api_host: {{ posthog_host | tojson }},
+        capture_pageview: {{ posthog_capture_pageview | tojson }},
+        capture_pageleave: {{ posthog_capture_pageleave | tojson }},
+        person_profiles: "identified_only"
+      });
+    </script>
+    {% endif %}
     {% block head %}{% endblock %}
     <style>
         input[type="hidden"][name="csrf_token"],

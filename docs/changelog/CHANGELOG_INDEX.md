@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Monitoring and Email Integration Bootstrap](2026-02-18-monitoring-and-email-integration-bootstrap.md)**
+  - Added optional GA4 and PostHog website analytics bootstrap in the shared layout.
+  - Added operations config schema keys and runtime config wiring for analytics providers.
+  - Documented recommended GA4 (traffic attribution) + PostHog (product analytics) split.
 - **[2026-02-17: Inventory Quantity Locking and Infinite Toggle Lot Drain](2026-02-17-inventory-quantity-locking-and-infinite-toggle-drain.md)**
   - Locked quantity adjustment/recount surfaces behind `inventory.track_quantities` with upgrade bounce behavior.
   - Forced create flows in quantity-locked tiers to open in infinite mode without opening quantity input.
