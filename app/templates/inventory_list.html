@@ -25,6 +25,8 @@
 {% include 'components/drawer/global_item_stats_offcanvas.html' %}
 
 <script>
+const INVENTORY_PREF_SCOPE = 'inventory_list';
+
 function scopedStorageKey(baseKey) {
   if (window.BT_STORAGE && typeof window.BT_STORAGE.key === 'function') {
     return window.BT_STORAGE.key(baseKey);
@@ -33,14 +35,37 @@ function scopedStorageKey(baseKey) {
 }
 
 function storageGet(baseKey) {
-  return localStorage.getItem(scopedStorageKey(baseKey));
+  if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.get === 'function') {
+    const dbValue = window.BT_LIST_PREFS.get(INVENTORY_PREF_SCOPE, baseKey, null);
+    if (dbValue !== null && dbValue !== undefined) {
+      return String(dbValue);
+    }
+  }
+
+  const fallbackValue = localStorage.getItem(scopedStorageKey(baseKey));
+  if (
+    fallbackValue !== null
+    && window.BT_LIST_PREFS
+    && typeof window.BT_LIST_PREFS.set === 'function'
+  ) {
+    // One-way migration of existing browser-only preferences to DB-backed storage.
+    window.BT_LIST_PREFS.set(INVENTORY_PREF_SCOPE, baseKey, fallbackValue);
+  }
+  return fallbackValue;
 }
 
 function storageSet(baseKey, value) {
-  localStorage.setItem(scopedStorageKey(baseKey), value);
+  const serializedValue = String(value);
+  if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.set === 'function') {
+    window.BT_LIST_PREFS.set(INVENTORY_PREF_SCOPE, baseKey, serializedValue);
+  }
+  localStorage.setItem(scopedStorageKey(baseKey), serializedValue);
 }
 
 function storageRemove(baseKey) {
+  if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.delete === 'function') {
+    window.BT_LIST_PREFS.delete(INVENTORY_PREF_SCOPE, baseKey);
+  }
   localStorage.removeItem(scopedStorageKey(baseKey));
 }
 
@@ -401,7 +426,7 @@ function initTablePagination(tableType) {
     });
   }
 
-  // Column visibility toggle with localStorage
+  // Column visibility toggle with persisted preferences
   const columnCheckboxes = document.querySelectorAll(`#${tableType}FilterSection [data-column]`);
 
   // Load saved column preferences

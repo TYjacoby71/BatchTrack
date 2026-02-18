@@ -584,6 +584,7 @@
 
 <script>
 let currentRecipeView = 'card';
+const RECIPES_LIST_PREF_SCOPE = 'recipes_list';
 
 // Global showView function
 function showView(viewType) {
@@ -605,6 +606,9 @@ function showView(viewType) {
         cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
         tableViewBtn.className = 'btn btn-secondary btn-sm';
     }
+    if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.set === 'function') {
+        window.BT_LIST_PREFS.set(RECIPES_LIST_PREF_SCOPE, 'view', currentRecipeView);
+    }
     if (typeof window.filterRecipes === 'function') {
         window.filterRecipes(); // Re-apply filters for current view
     }
@@ -622,6 +626,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!recipeFilter || !sortFilter || !recipesContainer || !recipesTableContainer || !noResults) {
         return;
+    }
+
+    function getListPreference(key, fallbackValue = '') {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.get !== 'function') {
+            return fallbackValue;
+        }
+        const raw = window.BT_LIST_PREFS.get(RECIPES_LIST_PREF_SCOPE, key, fallbackValue);
+        return raw === null || raw === undefined ? fallbackValue : raw;
+    }
+
+    function setListPreference(key, value) {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.set !== 'function') {
+            return;
+        }
+        window.BT_LIST_PREFS.set(RECIPES_LIST_PREF_SCOPE, key, value);
+    }
+
+    recipeFilter.value = String(getListPreference('search', recipeFilter.value || ''));
+    sortFilter.value = String(getListPreference('sort', sortFilter.value || 'name'));
+    if (originFilter) {
+        originFilter.value = String(getListPreference('origin', originFilter.value || 'any'));
+    }
+    if (showVariations) {
+        showVariations.checked = String(
+            getListPreference(
+                'only_with_variations',
+                showVariations.checked ? 'true' : 'false'
+            )
+        ) === 'true';
     }
 
     function debounce(callback, waitMs) {
@@ -734,27 +767,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners
     const debouncedFilterRecipes = debounce(filterRecipes, 180);
     recipeFilter.addEventListener('input', function() {
+        setListPreference('search', this.value || '');
         syncRecipeClearButton();
         debouncedFilterRecipes();
     });
     recipeFilter.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault();
+            setListPreference('search', this.value || '');
             filterRecipes();
         }
     });
     recipeFilterClearBtn?.addEventListener('click', function() {
         recipeFilter.value = '';
+        setListPreference('search', '');
         syncRecipeClearButton();
         filterRecipes();
         recipeFilter.focus();
     });
-    sortFilter.addEventListener('change', sortRecipes);
+    sortFilter.addEventListener('change', function() {
+        setListPreference('sort', this.value || 'name');
+        sortRecipes();
+    });
     if (originFilter) {
-        originFilter.addEventListener('change', filterRecipes);
+        originFilter.addEventListener('change', function() {
+            setListPreference('origin', this.value || 'any');
+            filterRecipes();
+        });
     }
     if (showVariations) {
-        showVariations.addEventListener('change', filterRecipes);
+        showVariations.addEventListener('change', function() {
+            setListPreference(
+                'only_with_variations',
+                this.checked ? 'true' : 'false'
+            );
+            filterRecipes();
+        });
     }
 
     // Variation toggle functionality
@@ -808,6 +856,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     syncRecipeClearButton();
+    const savedView = String(getListPreference('view', '') || '').toLowerCase();
+    showView(savedView === 'table' ? 'tableView' : 'cardView');
+    sortRecipes();
     filterRecipes();
 });
 </script>

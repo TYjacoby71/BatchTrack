@@ -454,11 +454,34 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const PRODUCT_VIEW_PREF_SCOPE = 'product_view_{{ product.id }}';
     const variantFilter = document.getElementById('variantFilter');
     const variantFilterClearBtn = document.querySelector('[data-clear-filter-target="variantFilter"]');
     const sortFilter = document.getElementById('sortFilter');
     const variantsContainer = document.getElementById('variantsContainer');
     const noResults = document.getElementById('noResults');
+
+    function getListPreference(key, fallbackValue = '') {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.get !== 'function') {
+            return fallbackValue;
+        }
+        const raw = window.BT_LIST_PREFS.get(PRODUCT_VIEW_PREF_SCOPE, key, fallbackValue);
+        return raw === null || raw === undefined ? fallbackValue : raw;
+    }
+
+    function setListPreference(key, value) {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.set !== 'function') {
+            return;
+        }
+        window.BT_LIST_PREFS.set(PRODUCT_VIEW_PREF_SCOPE, key, value);
+    }
+
+    if (variantFilter) {
+        variantFilter.value = String(getListPreference('variant_search', variantFilter.value || ''));
+    }
+    if (sortFilter) {
+        sortFilter.value = String(getListPreference('variant_sort', sortFilter.value || 'name'));
+    }
 
     function debounce(callback, waitMs) {
         let timeoutId = null;
@@ -529,21 +552,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const debouncedVariantFilter = debounce(filterVariants, 180);
     if (variantFilter) {
         variantFilter.addEventListener('input', function() {
+            setListPreference('variant_search', this.value || '');
             syncVariantClearButton();
             debouncedVariantFilter();
         });
         variantFilter.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
+                setListPreference('variant_search', this.value || '');
                 filterVariants();
             }
         });
     }
-    if (sortFilter) sortFilter.addEventListener('change', sortVariants);
+    if (sortFilter) {
+        sortFilter.addEventListener('change', function() {
+            setListPreference('variant_sort', this.value || 'name');
+            sortVariants();
+        });
+    }
     if (variantFilterClearBtn) {
         variantFilterClearBtn.addEventListener('click', function() {
             if (!variantFilter) return;
             variantFilter.value = '';
+            setListPreference('variant_search', '');
             syncVariantClearButton();
             filterVariants();
             variantFilter.focus();
@@ -553,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize carousel
     initializeCarousel();
     syncVariantClearButton();
+    sortVariants();
     filterVariants();
 
     window.addVariant = function() {

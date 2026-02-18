@@ -34,6 +34,7 @@ from app.models import (
     UnifiedInventoryHistory,
     Unit,
     User,
+    UserPreferences,
     db,
 )
 from app.models.inventory_lot import InventoryLot
@@ -634,6 +635,18 @@ def list_inventory():
 def set_column_visibility():
     columns = request.form.getlist("columns")
     session["inventory_columns"] = columns
+    try:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            user_prefs.set_list_preferences(
+                "inventory_list",
+                {"legacy_visible_columns": columns},
+                merge=True,
+            )
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to persist inventory column visibility preferences")
     return redirect(url_for("inventory.list_inventory"))
 
 

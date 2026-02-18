@@ -516,6 +516,7 @@
 
 <script>
 let currentProductView = 'card';
+const PRODUCTS_LIST_PREF_SCOPE = 'products_list';
 
 // Global showView function
 function showView(viewType) {
@@ -544,6 +545,10 @@ function showView(viewType) {
     tableViewBtn.className = 'btn btn-secondary btn-sm';
   }
 
+  if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.set === 'function') {
+    window.BT_LIST_PREFS.set(PRODUCTS_LIST_PREF_SCOPE, 'view', currentProductView);
+  }
+
   if (typeof window.filterProducts === 'function') {
     window.filterProducts();
   }
@@ -553,7 +558,17 @@ function showView(viewType) {
 function sortProducts(sortType) {
   const currentUrl = new URL(window.location);
   currentUrl.searchParams.set('sort', sortType);
-  window.location.href = currentUrl.toString();
+  const nextUrl = currentUrl.toString();
+  if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.set === 'function') {
+    window.BT_LIST_PREFS.set(PRODUCTS_LIST_PREF_SCOPE, 'sort', sortType);
+    if (typeof window.BT_LIST_PREFS.flush === 'function') {
+      window.BT_LIST_PREFS.flush(PRODUCTS_LIST_PREF_SCOPE).finally(() => {
+        window.location.href = nextUrl;
+      });
+      return;
+    }
+  }
+  window.location.href = nextUrl;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -578,6 +593,31 @@ document.addEventListener('DOMContentLoaded', function() {
       summaryMetricInitials[key] = el.textContent;
     }
   });
+
+  function getListPreference(key, fallbackValue = '') {
+    if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.get !== 'function') {
+      return fallbackValue;
+    }
+    const raw = window.BT_LIST_PREFS.get(PRODUCTS_LIST_PREF_SCOPE, key, fallbackValue);
+    return raw === null || raw === undefined ? fallbackValue : raw;
+  }
+
+  function setListPreference(key, value) {
+    if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.set !== 'function') {
+      return;
+    }
+    window.BT_LIST_PREFS.set(PRODUCTS_LIST_PREF_SCOPE, key, value);
+  }
+
+  if (productFilter) {
+    productFilter.value = String(getListPreference('search', productFilter.value || ''));
+  }
+  if (stockFilter) {
+    stockFilter.value = String(getListPreference('stock_status', stockFilter.value || ''));
+  }
+  if (variantFilter) {
+    variantFilter.value = String(getListPreference('variant_name', variantFilter.value || ''));
+  }
 
   function debounce(callback, waitMs) {
     let timeoutId = null;
@@ -754,20 +794,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const debouncedApplyFilters = debounce(applyFilters, 180);
   productFilter?.addEventListener('input', function() {
+    setListPreference('search', this.value || '');
     syncProductClearButton();
     debouncedApplyFilters();
   });
   productFilter?.addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
       event.preventDefault();
+      setListPreference('search', this.value || '');
       applyFilters();
     }
   });
-  stockFilter?.addEventListener('change', applyFilters);
-  variantFilter?.addEventListener('change', applyFilters);
+  stockFilter?.addEventListener('change', function() {
+    setListPreference('stock_status', this.value || '');
+    applyFilters();
+  });
+  variantFilter?.addEventListener('change', function() {
+    setListPreference('variant_name', this.value || '');
+    applyFilters();
+  });
   productFilterClearBtn?.addEventListener('click', function() {
     if (!productFilter) return;
     productFilter.value = '';
+    setListPreference('search', '');
     syncProductClearButton();
     applyFilters();
     productFilter.focus();
@@ -789,6 +838,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   syncProductClearButton();
+  const savedView = String(getListPreference('view', '') || '').toLowerCase();
+  showView(savedView === 'table' ? 'tableView' : 'cardView');
   applyFilters();
 });
 

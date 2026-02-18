@@ -61,6 +61,7 @@ Glossary:
             prefix: prefix,
             key: function(baseKey) { return prefix + baseKey; }
           };
+          window.BT_LIST_PREFERENCES = {{ (list_preferences_payload if list_preferences_payload is defined else {}) | tojson }};
 
           var storageKey = window.BT_STORAGE.key('theme');
           var hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
@@ -704,6 +705,7 @@ Glossary:
       <script type="module" src="{{ static_asset('js/core/DrawerInterceptor.js') }}"></script>
       <script type="module" src="{{ static_asset('js/main.js') }}"></script>
       <script src="{{ static_asset('js/utils/utils.js') }}"></script>
+      <script src="{{ static_asset('js/list_preferences.js') }}"></script>
       <script src="{{ static_asset('js/inventory/inventory_adjust.js') }}"></script>
       <script src="{{ static_asset('js/conversion/unit_converter.js') }}"></script>
       <script type="module" src="{{ static_asset('js/drawers/drawer_cadence.js') }}"></script>

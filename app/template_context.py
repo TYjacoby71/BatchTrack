@@ -208,6 +208,23 @@ def register_template_context(app: Flask) -> None:
         }
 
     @app.context_processor
+    def _inject_list_preferences() -> Dict[str, Any]:
+        if not current_user.is_authenticated:
+            return {"list_preferences_payload": {}}
+        try:
+            from .models import UserPreferences
+
+            prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+            payload = (
+                prefs.list_preferences
+                if prefs and isinstance(prefs.list_preferences, dict)
+                else {}
+            )
+            return {"list_preferences_payload": payload}
+        except Exception:
+            return {"list_preferences_payload": {}}
+
+    @app.context_processor
     def _inject_org_helpers() -> Dict[str, Any]:
         from .models import Organization
 
