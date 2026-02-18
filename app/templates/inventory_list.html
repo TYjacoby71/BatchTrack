@@ -1238,38 +1238,6 @@ window.onclick = function(event) {
   }
 }
 </script>
-<style>
-  .inventory-filter-card {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-3);
-    background: linear-gradient(180deg, var(--color-surface), var(--color-table-header-bg));
-    box-shadow: var(--shadow-1);
-    padding: 1rem;
-  }
-
-  .inventory-filter-input-group .input-group-text {
-    background-color: var(--color-surface);
-    color: var(--color-muted);
-    border-color: var(--color-border);
-  }
-
-  .inventory-filter-input-group .inventory-live-filter {
-    border-left: 0;
-  }
-
-  .inventory-filter-input-group .inventory-live-filter:focus {
-    box-shadow: none;
-  }
-
-  .inventory-filter-input-group:focus-within {
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.18);
-    border-radius: var(--radius-2);
-  }
-
-  .inventory-filter-input-group .inventory-filter-clear-btn {
-    border-color: var(--color-border);
-  }
-</style>
 <script src="{{ static_asset('js/components/suggestions.js') }}"></script>
 <script type="module">
   import { configureGlobalItemStats } from "{{ static_asset('js/global_item_stats.js') }}";

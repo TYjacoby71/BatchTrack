@@ -45,19 +45,28 @@
 
       <!-- Filter Section -->
       <div class="collapse mb-4" id="filterSection">
-        <div class="card card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Search Variants:</label>
-              <input type="text" id="variantFilter" class="form-control" placeholder="Search variants...">
+        <div class="card card-body bt-filter-panel">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-7">
+              <label class="form-label small text-muted mb-1" for="variantFilter">Search variants</label>
+              <div class="input-group bt-filter-search-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="search" id="variantFilter" class="form-control bt-filter-search-input" placeholder="Search variants..." autocomplete="off">
+                <button type="button" class="btn btn-outline-secondary bt-filter-clear-btn d-none" data-clear-filter-target="variantFilter" aria-label="Clear variant search">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Sort By:</label>
+            <div class="col-md-5">
+              <label class="form-label small text-muted mb-1" for="sortFilter">Sort by</label>
               <select id="sortFilter" class="form-select">
-                <option value="name">Sort by Name</option>
-                <option value="quantity">Sort by Quantity</option>
-                <option value="status">Sort by Status</option>
+                <option value="name">Name</option>
+                <option value="quantity">Quantity</option>
+                <option value="status">Status</option>
               </select>
+            </div>
+            <div class="col-12 text-end">
+              <span class="bt-filter-meta">Filters update live</span>
             </div>
           </div>
         </div>
@@ -446,12 +455,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const variantFilter = document.getElementById('variantFilter');
+    const variantFilterClearBtn = document.querySelector('[data-clear-filter-target="variantFilter"]');
     const sortFilter = document.getElementById('sortFilter');
     const variantsContainer = document.getElementById('variantsContainer');
     const noResults = document.getElementById('noResults');
 
+    function debounce(callback, waitMs) {
+        let timeoutId = null;
+        return function(...args) {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            timeoutId = setTimeout(() => callback.apply(this, args), waitMs);
+        };
+    }
+
+    function syncVariantClearButton() {
+        if (!variantFilter || !variantFilterClearBtn) return;
+        variantFilterClearBtn.classList.toggle('d-none', !variantFilter.value.trim());
+    }
+
     // Filter functionality
     function filterVariants() {
+        if (!variantFilter || !variantsContainer || !noResults) return;
         const searchTerm = variantFilter.value.toLowerCase();
         let visibleCount = 0;
 
@@ -459,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cards.forEach(card => {
             const variantName = card.dataset.variantName;
             const isVisible = variantName.includes(searchTerm);
-            card.style.display = isVisible ? 'block' : 'none';
+            card.style.display = isVisible ? '' : 'none';
             if (isVisible) visibleCount++;
         });
 
@@ -471,6 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sort functionality
     function sortVariants() {
+        if (!sortFilter || !variantsContainer) return;
         const sortBy = sortFilter.value;
         const cards = Array.from(variantsContainer.querySelectorAll('.variant-card-item'));
 
@@ -495,14 +522,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update navigation buttons after sorting
         setTimeout(updateNavigationButtons, 100);
+        filterVariants();
     }
 
     // Event listeners
-    if (variantFilter) variantFilter.addEventListener('input', filterVariants);
+    const debouncedVariantFilter = debounce(filterVariants, 180);
+    if (variantFilter) {
+        variantFilter.addEventListener('input', function() {
+            syncVariantClearButton();
+            debouncedVariantFilter();
+        });
+        variantFilter.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                filterVariants();
+            }
+        });
+    }
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
+    if (variantFilterClearBtn) {
+        variantFilterClearBtn.addEventListener('click', function() {
+            if (!variantFilter) return;
+            variantFilter.value = '';
+            syncVariantClearButton();
+            filterVariants();
+            variantFilter.focus();
+        });
+    }
 
     // Initialize carousel
     initializeCarousel();
+    syncVariantClearButton();
+    filterVariants();
 
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');

@@ -20,7 +20,7 @@
 
 <!-- Filter Section for Packaging -->
 <div class="collapse mb-3" id="packagingFilterSection">
-  <div class="card card-body inventory-filter-card">
+  <div class="card card-body inventory-filter-card bt-filter-panel">
     <div class="row g-3">
       <div class="col-md-3">
         <div class="form-check">
@@ -35,10 +35,10 @@
     <div class="row g-3">
       <div class="col-md-4">
         <label class="form-label small text-muted mb-1" for="packagingNameFilter">Search inventory name</label>
-        <div class="input-group inventory-filter-input-group">
+        <div class="input-group inventory-filter-input-group bt-filter-search-group">
           <span class="input-group-text"><i class="fas fa-search"></i></span>
-          <input type="search" id="packagingNameFilter" class="form-control inventory-live-filter" placeholder="Search by name..." autocomplete="off">
-          <button type="button" class="btn btn-outline-secondary inventory-filter-clear-btn d-none" data-clear-filter-target="packagingNameFilter" aria-label="Clear packaging name filter">
+          <input type="search" id="packagingNameFilter" class="form-control inventory-live-filter bt-filter-search-input" placeholder="Search by name..." autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary inventory-filter-clear-btn bt-filter-clear-btn d-none" data-clear-filter-target="packagingNameFilter" aria-label="Clear packaging name filter">
             <i class="fas fa-times"></i>
           </button>
         </div>
