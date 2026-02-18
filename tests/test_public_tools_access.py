@@ -47,6 +47,19 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_tools_index_has_lang_and_ordered_category_headings(app):
+    """Tools index should expose lang metadata and avoid heading-level skips."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/", label="tools index")
+    html = response.get_data(as_text=True)
+
+    assert "<html lang=\"en\"" in html
+    assert '<h1 class="mb-1">Maker Tools</h1>' in html
+    assert '<h2 class="card-title h5 mb-1">Soap Tools</h2>' in html
+    assert '<h5 class="card-title mb-1">Soap Tools</h5>' not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_soap_page_uses_centralized_guidance_dock(app):
     """Soap page should render the single centralized guidance dock surface."""
     client = app.test_client()
