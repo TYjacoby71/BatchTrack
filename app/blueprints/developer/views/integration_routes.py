@@ -26,12 +26,12 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
-@developer_bp.route("/integrations")
-@require_developer_permission("dev.system_admin")
 # --- Integrations checklist ---
 # Purpose: Render the integrations checklist and diagnostics dashboard.
 # Inputs: Current Flask config/environment state plus developer-access context.
 # Outputs: Rendered integrations checklist page with readiness diagnostics.
+@developer_bp.route("/integrations")
+@require_developer_permission("dev.system_admin")
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
@@ -365,12 +365,12 @@ def integrations_checklist():
     )
 
 
-@developer_bp.route("/integrations/test-email", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Test email integration ---
 # Purpose: Send a test email to the support mailbox to confirm provider credentials.
 # Inputs: Configured email provider credentials and optional SUPPORT_EMAIL override.
 # Outputs: JSON success/error payload for support-mailbox test send status.
+@developer_bp.route("/integrations/test-email", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_test_email():
     """Send a test email to support inbox if provider is configured."""
     try:
@@ -413,12 +413,12 @@ def integrations_test_email():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/test-stripe", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Test Stripe integration ---
 # Purpose: Validate Stripe connectivity without exposing secrets.
 # Inputs: Stripe environment credentials loaded in Flask config.
 # Outputs: JSON connectivity result and lightweight Stripe API check summary.
+@developer_bp.route("/integrations/test-stripe", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
@@ -446,12 +446,12 @@ def integrations_test_stripe():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/stripe-events", methods=["GET"])
-@require_developer_permission("dev.system_admin")
 # --- Stripe event audit ---
 # Purpose: Summarize recent Stripe webhook events for diagnostics.
 # Inputs: Stored StripeEvent rows from the application database.
 # Outputs: JSON payload with total/last Stripe event processing snapshot.
+@developer_bp.route("/integrations/stripe-events", methods=["GET"])
+@require_developer_permission("dev.system_admin")
 def integrations_stripe_events():
     """Summarize recent Stripe webhook events from the database."""
     try:
@@ -476,12 +476,12 @@ def integrations_stripe_events():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Set feature flags ---
 # Purpose: Update feature flags from the integrations UI.
 # Inputs: JSON map of toggleable feature-flag keys to boolean states.
 # Outputs: JSON success/error response after persistence transaction.
+@developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_set_feature_flags():
     """Set feature flags via AJAX."""
     from app.extensions import db
@@ -515,12 +515,12 @@ def integrations_set_feature_flags():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/auto-backup", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Set auto backup ---
 # Purpose: Persist the auto-backup toggle from the UI.
 # Inputs: JSON payload containing requested auto-backup enabled state.
 # Outputs: JSON response including saved auto-backup flag value.
+@developer_bp.route("/integrations/auto-backup", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_set_auto_backup():
     """Persist the auto-backup toggle (stubbed)."""
     try:
@@ -532,12 +532,12 @@ def integrations_set_auto_backup():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/check-webhook", methods=["GET"])
-@require_developer_permission("dev.system_admin")
 # --- Check webhook ---
 # Purpose: Verify webhook reachability for Stripe endpoints.
 # Inputs: Current request host URL and Stripe webhook route path.
 # Outputs: JSON reachability report with URL/status or connection error.
+@developer_bp.route("/integrations/check-webhook", methods=["GET"])
+@require_developer_permission("dev.system_admin")
 def integrations_check_webhook():
     """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
     try:
