@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -443,6 +444,30 @@ def test_anonymous_workflow_can_browse_public_site(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_performance_and_accessibility_basics(app):
+    """Homepage should keep key Lighthouse-focused optimizations in place."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    assert '<main id="main-content"' in html
+    assert "cdnjs.cloudflare.com/ajax/libs/font-awesome" not in html
+    assert 'rel="preload"' in html
+    assert "bootstrap.min.css" in html
+    assert "this.onload=null;this.rel='stylesheet'" in html
+
+    # All "Start Free Trial" links should resolve to the same destination.
+    trial_links = re.findall(
+        r'href="(/auth/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        html,
+    )
+    assert len(trial_links) >= 3
+    assert len(set(trial_links)) == 1
+
+
+@pytest.mark.usefixtures("app")
 def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()
@@ -457,6 +482,18 @@ def test_public_branding_assets_are_accessible(app):
         assert response.mimetype == "image/svg+xml"
         body = response.get_data(as_text=True)
         assert "<svg" in body
+
+
+@pytest.mark.usefixtures("app")
+def test_public_branding_assets_have_long_cache_lifetime(app):
+    """Public brand SVGs should use long-lived immutable caching."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/branding/full-logo-header.svg", label="branding header logo"
+    )
+    cache_control = response.headers.get("Cache-Control", "")
+    assert "max-age=31536000" in cache_control
+    assert "immutable" in cache_control
 
 
 @pytest.mark.usefixtures("app")

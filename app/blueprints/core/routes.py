@@ -28,6 +28,7 @@ from app.extensions import cache
 from app.utils.cache_utils import should_bypass_cache
 
 core_bp = Blueprint("core", __name__)
+_BRAND_ASSET_MAX_AGE_SECONDS = 31536000
 
 
 def _serve_brand_asset(filename: str):
@@ -35,7 +36,14 @@ def _serve_brand_asset(filename: str):
     asset_path = Path(current_app.root_path).parent / "attached_assets" / filename
     if not asset_path.is_file():
         abort(404)
-    return send_file(asset_path, mimetype="image/svg+xml", max_age=86400)
+    response = send_file(
+        asset_path,
+        mimetype="image/svg+xml",
+        max_age=_BRAND_ASSET_MAX_AGE_SECONDS,
+    )
+    response.cache_control.public = True
+    response.cache_control.immutable = True
+    return response
 
 
 def _serve_marketing_public_asset(filename: str, *, mimetype: str):
@@ -69,7 +77,8 @@ def _serve_cropped_full_logo():
     )
     response = current_app.response_class(svg_text, mimetype="image/svg+xml")
     response.cache_control.public = True
-    response.cache_control.max_age = 86400
+    response.cache_control.max_age = _BRAND_ASSET_MAX_AGE_SECONDS
+    response.cache_control.immutable = True
     return response
 
 
