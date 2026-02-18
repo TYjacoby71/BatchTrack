@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 # --- Email service ---
 # Purpose: Compose and dispatch transactional emails and auth-email control decisions.
+# Inputs: Runtime config, recipient identity, and message template payloads.
+# Outputs: Provider send attempts with boolean delivery outcomes for auth/account flows.
 class EmailService:
     """Service for sending emails"""
 
@@ -67,12 +69,15 @@ class EmailService:
             The BatchTrack Team
             """
 
-            return EmailService._send_email(
+            sent = EmailService._send_email(
                 recipient=email,
                 subject=subject,
                 html_body=html_body,
                 text_body=text_body,
             )
+            if not sent:
+                logger.warning("Verification email delivery failed for %s", email)
+            return sent
 
         except Exception as e:
             logger.error(f"Error sending verification email: {str(e)}")
@@ -368,10 +373,15 @@ class EmailService:
         """Check if email is properly configured for the selected provider."""
         try:
             provider = (current_app.config.get("EMAIL_PROVIDER") or "smtp").lower()
+            default_sender = current_app.config.get(
+                "MAIL_DEFAULT_SENDER"
+            ) or current_app.config.get("DEFAULT_FROM_EMAIL")
             if provider == "sendgrid":
-                return bool(current_app.config.get("SENDGRID_API_KEY"))
+                return bool(current_app.config.get("SENDGRID_API_KEY") and default_sender)
             if provider == "postmark":
-                return bool(current_app.config.get("POSTMARK_SERVER_TOKEN"))
+                return bool(
+                    current_app.config.get("POSTMARK_SERVER_TOKEN") and default_sender
+                )
             if provider == "mailgun":
                 return bool(
                     current_app.config.get("MAILGUN_API_KEY")
@@ -379,9 +389,6 @@ class EmailService:
                 )
             # SES SMTP or generic SMTP
             mail_server = current_app.config.get("MAIL_SERVER")
-            default_sender = current_app.config.get(
-                "MAIL_DEFAULT_SENDER"
-            ) or current_app.config.get("DEFAULT_FROM_EMAIL")
             if not mail_server or not default_sender:
                 return False
             if current_app.config.get("EMAIL_SMTP_ALLOW_NO_AUTH"):

@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Auth Email Delivery Readiness and Message Accuracy](2026-02-18-auth-email-delivery-readiness-and-message-accuracy.md)**
+  - Required-mode login now only claims verification-link delivery when send succeeds.
+  - Added explicit delivery-failure warning guidance for verification flows.
+  - Tightened Postmark/SendGrid readiness checks to require both provider key and sender address.
 - **[2026-02-18: Developer Password Modal JSON Endpoint Fix](2026-02-18-developer-password-modal-json-endpoint-fix.md)**
   - Added developer-scoped password-change API for `/developer/users` modal submissions.
   - Removed dependency on `/settings/password/change` for developer password updates.

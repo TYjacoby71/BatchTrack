@@ -155,6 +155,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **UserService.hard_delete_user** → Permanent non-developer user deletion with FK-safe cleanup (see `app/services/developer/user_service.py`)
 - **EmailService.get_verification_mode** → Resolves effective verification mode (off/prompt/required) with provider-aware fallback (see `app/services/email_service.py`)
 - **EmailService.password_reset_enabled** → Determines whether forgot/reset token flows are active for the current environment (see `app/services/email_service.py`)
+- **EmailService.is_configured** → Provider-readiness gate for auth-email flows; Postmark/SendGrid readiness requires both provider credentials and sender address (see `app/services/email_service.py`)
 - **LazyRedisClient** → Lazy Redis client for fork-safe sessions (see `app/utils/redis_pool.py`)
 - **GlobalItemSyncService** → Sync linked inventory items to global catalog changes (see `app/services/global_item_sync_service.py`)
 - **CombinedInventoryAlertService** → Unified expiration and low-stock alerts (see `app/services/combined_inventory_alerts.py`)
