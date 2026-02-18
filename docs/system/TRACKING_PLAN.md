@@ -65,7 +65,29 @@ Core fields on every event record:
 - Use `schema_version` for explicit payload evolution.
 - Scope analytics queries by `organization_id` for tenant isolation.
 
-## Relevance Check (2026-02-17)
+## External Website/Product Analytics
+BatchTrack supports optional client-side analytics snippets in the shared layout:
+
+- **GA4** via `GOOGLE_ANALYTICS_MEASUREMENT_ID`
+  - Best for acquisition/SEO/marketing attribution.
+  - Captures website traffic trends and campaign performance.
+- **PostHog** via `POSTHOG_PROJECT_API_KEY`
+  - Best for product analytics and behavioral funnels.
+  - Captures pageviews/pageleave events and can be extended to feature-level events.
+
+Recommended baseline:
+1. Use **GA4** for top-of-funnel traffic and ad attribution.
+2. Use **PostHog** for in-app behavior and retention analysis.
+3. Keep domain events as the backend source of truth for tenant-scoped operational analytics.
+
+### Config keys
+- `GOOGLE_ANALYTICS_MEASUREMENT_ID` (e.g., `G-XXXXXXXXXX`)
+- `POSTHOG_PROJECT_API_KEY`
+- `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`)
+- `POSTHOG_CAPTURE_PAGEVIEW` (default `true`)
+- `POSTHOG_CAPTURE_PAGELEAVE` (default `true`)
+
+## Relevance Check (2026-02-18)
 Validated against:
 - `app/models/domain_event.py`
 - `app/services/event_emitter.py`
@@ -76,3 +98,6 @@ Validated against:
 - `app/services/timer_service.py`
 - `app/services/recipe_service/_core.py`
 - `app/services/product_service.py`
+- `app/config_schema_parts/operations.py`
+- `app/config.py`
+- `app/templates/layout.html`
