@@ -1,0 +1,45 @@
+.bt-filter-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3, 0.75rem);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-table-header-bg));
+  box-shadow: var(--shadow-1);
+  padding: 1rem;
+}
+
+.bt-filter-panel .form-label {
+  font-weight: 600;
+}
+
+.bt-filter-search-group .input-group-text {
+  background-color: var(--color-surface);
+  color: var(--color-muted);
+  border-color: var(--color-border);
+}
+
+.bt-filter-search-group .bt-filter-search-input {
+  border-left: 0;
+}
+
+.bt-filter-search-group .bt-filter-search-input:focus {
+  box-shadow: none;
+}
+
+.bt-filter-search-group .bt-filter-clear-btn {
+  border-color: var(--color-border);
+}
+
+.bt-filter-search-group:focus-within {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.16);
+  border-radius: var(--radius-2, 0.5rem);
+}
+
+.bt-filter-meta {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .bt-filter-panel {
+    padding: 0.85rem;
+  }
+}

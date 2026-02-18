@@ -54,35 +54,44 @@
 
 <!-- Filter Section -->
 <div class="collapse mb-4" id="filterSection">
-    <div class="card card-body">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label small text-muted">Search</label>
-                <input type="text" id="recipeFilter" class="form-control" placeholder="Search recipes...">
+    <div class="card card-body bt-filter-panel">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label small text-muted mb-1" for="recipeFilter">Search recipes</label>
+                <div class="input-group bt-filter-search-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="search" id="recipeFilter" class="form-control bt-filter-search-input" placeholder="Search recipes..." autocomplete="off">
+                    <button type="button" class="btn btn-outline-secondary bt-filter-clear-btn d-none" data-clear-filter-target="recipeFilter" aria-label="Clear recipe search">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small text-muted">Origin</label>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label small text-muted mb-1" for="originFilter">Origin</label>
                 <select id="originFilter" class="form-select">
                     <option value="any">All origins</option>
                     <option value="org">Org owned</option>
                     <option value="purchased">Purchased origin</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small text-muted">Sort</label>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label small text-muted mb-1" for="sortFilter">Sort</label>
                 <select id="sortFilter" class="form-select">
-                    <option value="name">Sort by Name</option>
-                    <option value="created">Sort by Created Date</option>
-                    <option value="batches">Sort by Batch Count</option>
+                    <option value="name">Name</option>
+                    <option value="created">Created date</option>
+                    <option value="batches">Batch count</option>
                 </select>
             </div>
-            <div class="col-md-4 d-flex align-items-end">
+            <div class="col-lg-2 col-md-6">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="showVariations">
                     <label class="form-check-label" for="showVariations">
-                        Show Variations
+                        Only with variations
                     </label>
                 </div>
+            </div>
+            <div class="col-12 text-end">
+                <span class="bt-filter-meta">Filters update live</span>
             </div>
         </div>
     </div>
@@ -96,7 +105,7 @@
     {% set variation_source = recipe.group_variations if recipe.group_variations is defined else recipe.variations %}
     {% set current_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
     {% set published_variations = current_variations %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}" data-created="{{ recipe.created_at.isoformat() if recipe.created_at else '' }}">
         <div class="card h-100 shadow-sm recipe-group-card">
             {% if can_create_variations %}
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -316,7 +325,7 @@
     {% set variation_source = recipe.group_variations if recipe.group_variations is defined else recipe.variations %}
     {% set current_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | selectattr('is_current', 'equalto', True) | list %}
     {% set table_variations = variation_source | selectattr('test_sequence', 'none') | selectattr('is_archived', 'equalto', False) | list %}
-    <tr class="recipe-row" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}">
+    <tr class="recipe-row" data-recipe-name="{{ group_name|lower }}" data-batches="{{ recipe.batch_count }}" data-variations="{{ current_variations|length }}" data-origin="{{ origin_tag }}" data-created="{{ recipe.created_at.isoformat() if recipe.created_at else '' }}">
         {% if can_create_variations %}
         <td>
             <strong>{{ group_name }}</strong>
@@ -575,6 +584,7 @@
 
 <script>
 let currentRecipeView = 'card';
+const RECIPES_LIST_PREF_SCOPE = 'recipes_list';
 
 // Global showView function
 function showView(viewType) {
@@ -596,6 +606,9 @@ function showView(viewType) {
         cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
         tableViewBtn.className = 'btn btn-secondary btn-sm';
     }
+    if (window.BT_LIST_PREFS && typeof window.BT_LIST_PREFS.set === 'function') {
+        window.BT_LIST_PREFS.set(RECIPES_LIST_PREF_SCOPE, 'view', currentRecipeView);
+    }
     if (typeof window.filterRecipes === 'function') {
         window.filterRecipes(); // Re-apply filters for current view
     }
@@ -603,12 +616,61 @@ function showView(viewType) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const recipeFilter = document.getElementById('recipeFilter');
+    const recipeFilterClearBtn = document.querySelector('[data-clear-filter-target="recipeFilter"]');
     const sortFilter = document.getElementById('sortFilter');
     const showVariations = document.getElementById('showVariations');
     const originFilter = document.getElementById('originFilter');
     const recipesContainer = document.getElementById('recipesContainer');
     const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
+
+    if (!recipeFilter || !sortFilter || !recipesContainer || !recipesTableContainer || !noResults) {
+        return;
+    }
+
+    function getListPreference(key, fallbackValue = '') {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.get !== 'function') {
+            return fallbackValue;
+        }
+        const raw = window.BT_LIST_PREFS.get(RECIPES_LIST_PREF_SCOPE, key, fallbackValue);
+        return raw === null || raw === undefined ? fallbackValue : raw;
+    }
+
+    function setListPreference(key, value) {
+        if (!window.BT_LIST_PREFS || typeof window.BT_LIST_PREFS.set !== 'function') {
+            return;
+        }
+        window.BT_LIST_PREFS.set(RECIPES_LIST_PREF_SCOPE, key, value);
+    }
+
+    recipeFilter.value = String(getListPreference('search', recipeFilter.value || ''));
+    sortFilter.value = String(getListPreference('sort', sortFilter.value || 'name'));
+    if (originFilter) {
+        originFilter.value = String(getListPreference('origin', originFilter.value || 'any'));
+    }
+    if (showVariations) {
+        showVariations.checked = String(
+            getListPreference(
+                'only_with_variations',
+                showVariations.checked ? 'true' : 'false'
+            )
+        ) === 'true';
+    }
+
+    function debounce(callback, waitMs) {
+        let timeoutId = null;
+        return function(...args) {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            timeoutId = setTimeout(() => callback.apply(this, args), waitMs);
+        };
+    }
+
+    function syncRecipeClearButton() {
+        if (!recipeFilterClearBtn) return;
+        recipeFilterClearBtn.classList.toggle('d-none', !recipeFilter.value.trim());
+    }
 
     function matchesOrigin(element) {
         if (!originFilter) {
@@ -622,8 +684,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return originValue === selected;
     }
 
-    // Make filterRecipes globally accessible
-    window.filterRecipes = function() {
+    function matchesVariationRequirement(element) {
+        if (!showVariations || !showVariations.checked) {
+            return true;
+        }
+        return (parseInt(element.dataset.variations, 10) || 0) > 0;
+    }
+
+    const filterRecipes = function() {
         const searchTerm = recipeFilter.value.toLowerCase();
         let visibleCount = 0;
 
@@ -633,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const cards = recipesContainer.querySelectorAll('.recipe-card');
             cards.forEach(card => {
                 const recipeName = card.dataset.recipeName;
-                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(card);
+                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(card) && matchesVariationRequirement(card);
                 card.style.display = isVisible ? 'block' : 'none';
                 if (isVisible) visibleCount++;
             });
@@ -641,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rows = recipesTableContainer.querySelectorAll('.recipe-row');
             rows.forEach(row => {
                 const recipeName = row.dataset.recipeName;
-                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(row);
+                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(row) && matchesVariationRequirement(row);
                 row.style.display = isVisible ? '' : 'none';
                 if (isVisible) visibleCount++;
             });
@@ -649,6 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
     };
+    window.filterRecipes = filterRecipes;
 
     // Sort functionality
     function sortRecipes() {
@@ -692,21 +761,61 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             rows.forEach(row => tbody.appendChild(row));
         }
+        filterRecipes();
     }
 
     // Event listeners
-    recipeFilter.addEventListener('input', filterRecipes);
-    sortFilter.addEventListener('change', sortRecipes);
+    const debouncedFilterRecipes = debounce(filterRecipes, 180);
+    recipeFilter.addEventListener('input', function() {
+        setListPreference('search', this.value || '');
+        syncRecipeClearButton();
+        debouncedFilterRecipes();
+    });
+    recipeFilter.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            setListPreference('search', this.value || '');
+            filterRecipes();
+        }
+    });
+    recipeFilterClearBtn?.addEventListener('click', function() {
+        recipeFilter.value = '';
+        setListPreference('search', '');
+        syncRecipeClearButton();
+        filterRecipes();
+        recipeFilter.focus();
+    });
+    sortFilter.addEventListener('change', function() {
+        setListPreference('sort', this.value || 'name');
+        sortRecipes();
+    });
     if (originFilter) {
-        originFilter.addEventListener('change', filterRecipes);
+        originFilter.addEventListener('change', function() {
+            setListPreference('origin', this.value || 'any');
+            filterRecipes();
+        });
+    }
+    if (showVariations) {
+        showVariations.addEventListener('change', function() {
+            setListPreference(
+                'only_with_variations',
+                this.checked ? 'true' : 'false'
+            );
+            filterRecipes();
+        });
     }
 
     // Variation toggle functionality
     document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        const targetSelector = button.dataset.bsTarget || '';
+        if (!targetSelector.startsWith('#variations-') && !targetSelector.startsWith('#table-variations-')) {
+            return;
+        }
         button.addEventListener('click', function() {
             const icon = this.querySelector('i');
             setTimeout(() => {
                 const target = document.querySelector(this.dataset.bsTarget);
+                if (!target || !icon) return;
                 if (target.classList.contains('show')) {
                     icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
                 } else {
@@ -720,9 +829,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         const filterSection = document.getElementById('filterSection');
         const filterToggle = document.querySelector('[data-bs-target="#filterSection"]');
+        if (!filterSection || !filterToggle) {
+            return;
+        }
 
         if (!filterSection.contains(e.target) && !filterToggle.contains(e.target)) {
-            const bsCollapse = new bootstrap.Collapse(filterSection, { toggle: false });
+            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(filterSection, { toggle: false });
             bsCollapse.hide();
         }
     });
@@ -742,6 +854,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    syncRecipeClearButton();
+    const savedView = String(getListPreference('view', '') || '').toLowerCase();
+    showView(savedView === 'table' ? 'tableView' : 'cardView');
+    sortRecipes();
+    filterRecipes();
 });
 </script>
 {% endif %}

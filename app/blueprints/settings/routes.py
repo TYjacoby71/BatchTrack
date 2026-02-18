@@ -168,6 +168,64 @@ def update_user_preferences():
         return jsonify({"error": str(e)}), 500
 
 
+@settings_bp.route("/api/list-preferences/<string:scope>", methods=["GET"])
+@login_required
+def get_list_preferences(scope):
+    """Get persisted list preferences for the current user and scope."""
+    try:
+        if not re.fullmatch(r"[A-Za-z0-9:_-]{1,80}", scope or ""):
+            return jsonify({"success": False, "error": "Invalid preference scope"}), 400
+
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if not user_prefs:
+            return jsonify({"success": True, "scope": scope, "values": {}})
+
+        values = user_prefs.get_list_preferences(scope)
+        return jsonify({"success": True, "scope": scope, "values": values})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@settings_bp.route("/api/list-preferences/<string:scope>", methods=["POST"])
+@login_required
+def update_list_preferences(scope):
+    """Persist list/table preferences for the current user and scope."""
+    try:
+        if not re.fullmatch(r"[A-Za-z0-9:_-]{1,80}", scope or ""):
+            return jsonify({"success": False, "error": "Invalid preference scope"}), 400
+
+        payload = request.get_json(silent=True) or {}
+        values = payload.get("values")
+        mode = str(payload.get("mode", "merge") or "merge").lower()
+        merge = mode != "replace"
+
+        if values is None:
+            # Backward-compatible payload shape: treat the root object as values.
+            values = payload
+            mode = "merge"
+            merge = True
+
+        if not isinstance(values, dict):
+            return (
+                jsonify({"success": False, "error": "Preference values must be an object"}),
+                400,
+            )
+
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if not user_prefs:
+            return jsonify({"success": False, "error": "Preferences unavailable"}), 400
+
+        next_scope_values = user_prefs.set_list_preferences(scope, values, merge=merge)
+        user_prefs.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return jsonify(
+            {"success": True, "scope": scope, "values": next_scope_values, "mode": mode}
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @settings_bp.route("/api/system-settings", methods=["POST"])
 @login_required
 @require_permission("settings.edit")

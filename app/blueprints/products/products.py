@@ -12,7 +12,13 @@ from flask import (
 from flask_login import current_user, login_required
 
 from ...extensions import cache
-from ...models import InventoryItem, InventoryLot, UnifiedInventoryHistory, db
+from ...models import (
+    InventoryItem,
+    InventoryLot,
+    UnifiedInventoryHistory,
+    UserPreferences,
+    db,
+)
 from ...models.product import Product, ProductSKU
 from ...services.cache_invalidation import (
     product_list_cache_key,
@@ -61,6 +67,7 @@ def _write_product_created_audit(variant):
 # The second definition `_write_product_created_audit(sku)` which is likely for testing, is kept as is.
 
 products_bp = Blueprint("products", __name__, url_prefix="/products")
+PRODUCTS_LIST_PREF_SCOPE = "products_list"
 
 
 class _ProductInventoryEntryView:
@@ -228,7 +235,30 @@ def create_product_from_data(data):
 @require_permission("products.view")
 def list_products():
     """List all products with inventory summary and sorting"""
-    sort_type = (request.args.get("sort", "name") or "name").lower()
+    sort_type = (request.args.get("sort") or "").strip().lower()
+    user_prefs = None
+    if not sort_type:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            saved_scope = user_prefs.get_list_preferences(PRODUCTS_LIST_PREF_SCOPE)
+            sort_type = str(saved_scope.get("sort") or "").strip().lower()
+    if sort_type not in {"name", "popular", "stock"}:
+        sort_type = "name"
+
+    if user_prefs is None:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+    if user_prefs:
+        try:
+            current_scope = user_prefs.get_list_preferences(PRODUCTS_LIST_PREF_SCOPE)
+            if current_scope.get("sort") != sort_type:
+                user_prefs.set_list_preferences(
+                    PRODUCTS_LIST_PREF_SCOPE,
+                    {"sort": sort_type},
+                    merge=True,
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
     page_cache_key = product_list_page_cache_key(org_id, sort_type)

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -34,6 +35,7 @@ class UserPreferences(ScopedModelMixin, db.Model):
     dashboard_layout = db.Column(db.String(32), default="standard")
     compact_view = db.Column(db.Boolean, default=False)
     show_quick_actions = db.Column(db.Boolean, default=True)
+    list_preferences = db.Column(db.JSON, nullable=True)
 
     # Timezone preferences (mirrors user.timezone for easy access)
     timezone = db.Column(db.String(64), default="America/New_York")
@@ -83,3 +85,38 @@ class UserPreferences(ScopedModelMixin, db.Model):
             print(f"Error getting user preferences for user {user_id}: {e}")
             db.session.rollback()
             return None
+
+    def get_list_preferences(self, scope: str) -> dict[str, Any]:
+        """Return saved list preferences for a scope."""
+        if not scope:
+            return {}
+        all_prefs = self.list_preferences if isinstance(self.list_preferences, dict) else {}
+        scoped = all_prefs.get(scope, {})
+        return scoped if isinstance(scoped, dict) else {}
+
+    def set_list_preferences(
+        self,
+        scope: str,
+        values: dict[str, Any],
+        *,
+        merge: bool = True,
+    ) -> dict[str, Any]:
+        """Set saved list preferences for a scope and return that scope payload."""
+        if not scope:
+            return {}
+        incoming = values if isinstance(values, dict) else {}
+        all_prefs = (
+            dict(self.list_preferences)
+            if isinstance(self.list_preferences, dict)
+            else {}
+        )
+        current_scoped = all_prefs.get(scope, {})
+        current_scoped = current_scoped if isinstance(current_scoped, dict) else {}
+        next_scoped = (
+            {**current_scoped, **incoming}
+            if merge
+            else dict(incoming)
+        )
+        all_prefs[scope] = next_scoped
+        self.list_preferences = all_prefs
+        return next_scoped
