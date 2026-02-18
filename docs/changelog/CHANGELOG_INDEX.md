@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Support Inbox Recipient for Integrations Test Email](2026-02-18-support-inbox-test-email-recipient.md)**
+  - Changed the developer test-email action to send to the support mailbox instead of the current user.
+  - Added configurable `SUPPORT_EMAIL` override with `support@batchtrack.com` fallback.
+  - Added recipient validation and clearer error feedback for misconfigured support inbox values.
 - **[2026-02-18: Monitoring and Email Integration Bootstrap](2026-02-18-monitoring-and-email-integration-bootstrap.md)**
   - Added optional GA4 and PostHog website analytics bootstrap in the shared layout.
   - Added operations config schema keys and runtime config wiring for analytics providers.

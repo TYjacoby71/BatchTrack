@@ -14,7 +14,6 @@ import os
 import re
 
 from flask import jsonify, render_template, request, url_for
-from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
 from app.config_schema import build_integration_sections
@@ -367,17 +366,27 @@ def integrations_checklist():
 @developer_bp.route("/integrations/test-email", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 # --- Test email integration ---
-# Purpose: Send a test email to confirm provider credentials.
+# Purpose: Send a test email to the support mailbox to confirm provider credentials.
 def integrations_test_email():
-    """Send a test email to current user's email if configured."""
+    """Send a test email to support inbox if provider is configured."""
     try:
+        from flask import current_app
+
         if not EmailService.is_configured():
             return jsonify({"success": False, "error": "Email is not configured"}), 400
-        recipient = getattr(current_user, "email", None)
-        if not recipient:
+
+        recipient = (
+            (current_app.config.get("SUPPORT_EMAIL") or "support@batchtrack.com")
+            .strip()
+            .lower()
+        )
+        if not recipient or "@" not in recipient:
             return (
                 jsonify(
-                    {"success": False, "error": "Current user has no email address"}
+                    {
+                        "success": False,
+                        "error": "Support email is not configured correctly",
+                    }
                 ),
                 400,
             )
