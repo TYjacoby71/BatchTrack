@@ -207,7 +207,8 @@ Glossary:
         }
         .public-marketing-nav .brand-full-logo {
             height: 42px;
-            width: auto;
+            width: 210px;
+            aspect-ratio: 5 / 1;
             display: block;
         }
         .app-brand-logo {
@@ -624,8 +625,8 @@ Glossary:
             {% endif %}
             {% else %}
             {% if use_public_header %}
-            {% set public_header_is_homepage = false %}
-            {% set public_header_signup_source = 'public_header' %}
+            {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
+            {% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'public_header' %}
             {% include 'components/shared/public_marketing_header.html' %}
             {% else %}
             <div class="navbar-nav me-auto"></div>
