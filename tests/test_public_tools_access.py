@@ -1,6 +1,9 @@
 import json
+import re
 
 import pytest
+
+_HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
 
 
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
@@ -12,6 +15,20 @@ def _assert_public_get(client, path: str, *, label: str, **kwargs):
     location = response.headers.get("Location", "")
     assert "/auth/login" not in location, f"{label} unexpectedly redirected to login"
     return response
+
+
+def _assert_no_heading_level_skips(html: str, *, label: str):
+    """Ensure heading levels do not jump by more than one level."""
+    levels = [int(match.group(1)) for match in _HEADING_LEVEL_PATTERN.finditer(html)]
+    if not levels:
+        return
+
+    previous = levels[0]
+    for current in levels[1:]:
+        assert current <= previous + 1, (
+            f"{label} has heading skip from h{previous} to h{current}"
+        )
+        previous = current
 
 
 @pytest.mark.usefixtures("app")
@@ -46,6 +63,19 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_tools_index_has_lang_and_ordered_category_headings(app):
+    """Tools index should expose lang metadata and avoid heading-level skips."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/", label="tools index")
+    html = response.get_data(as_text=True)
+
+    assert "<html lang=\"en\"" in html
+    assert '<h1 class="mb-1">Maker Tools</h1>' in html
+    assert '<h2 class="card-title h5 mb-1">Soap Tools</h2>' in html
+    assert '<h5 class="card-title mb-1">Soap Tools</h5>' not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_soap_page_uses_centralized_guidance_dock(app):
     """Soap page should render the single centralized guidance dock surface."""
     client = app.test_client()
@@ -70,6 +100,33 @@ def test_public_soap_page_uses_centralized_guidance_dock(app):
     assert 'id="qualityConditioningHint"' not in html
     assert 'id="qualityBubblyHint"' not in html
     assert 'id="qualityCreamyHint"' not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_marketing_pages_do_not_skip_heading_levels(app):
+    """Public pages should keep heading levels sequential for accessibility."""
+    client = app.test_client()
+    public_pages = [
+        ("/", "homepage"),
+        ("/tools/", "tools index"),
+        ("/tools/soap", "soap tool"),
+        ("/tools/candles", "candles tool"),
+        ("/tools/lotions", "lotions tool"),
+        ("/tools/herbal", "herbal tool"),
+        ("/tools/baker", "baker tool"),
+        ("/pricing", "pricing"),
+        ("/help/how-it-works", "how it works"),
+        ("/help/system-faq", "system faq"),
+        ("/legal/privacy", "privacy policy"),
+        ("/legal/terms", "terms of service"),
+        ("/legal/cookies", "cookie policy"),
+        ("/lp/hormozi", "hormozi landing"),
+        ("/lp/robbins", "robbins landing"),
+    ]
+
+    for path, label in public_pages:
+        response = _assert_public_get(client, path, label=label)
+        _assert_no_heading_level_skips(response.get_data(as_text=True), label=label)
 
 
 @pytest.mark.usefixtures("app")
@@ -443,6 +500,30 @@ def test_anonymous_workflow_can_browse_public_site(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_performance_and_accessibility_basics(app):
+    """Homepage should keep key Lighthouse-focused optimizations in place."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    assert '<main id="main-content"' in html
+    assert "cdnjs.cloudflare.com/ajax/libs/font-awesome" not in html
+    assert 'rel="preload"' in html
+    assert "bootstrap.min.css" in html
+    assert "this.onload=null;this.rel='stylesheet'" in html
+
+    # All "Start Free Trial" links should resolve to the same destination.
+    trial_links = re.findall(
+        r'href="(/auth/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        html,
+    )
+    assert len(trial_links) >= 3
+    assert len(set(trial_links)) == 1
+
+
+@pytest.mark.usefixtures("app")
 def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()
@@ -457,6 +538,18 @@ def test_public_branding_assets_are_accessible(app):
         assert response.mimetype == "image/svg+xml"
         body = response.get_data(as_text=True)
         assert "<svg" in body
+
+
+@pytest.mark.usefixtures("app")
+def test_public_branding_assets_have_long_cache_lifetime(app):
+    """Public brand SVGs should use long-lived immutable caching."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/branding/full-logo-header.svg", label="branding header logo"
+    )
+    cache_control = response.headers.get("Cache-Control", "")
+    assert "max-age=31536000" in cache_control
+    assert "immutable" in cache_control
 
 
 @pytest.mark.usefixtures("app")
