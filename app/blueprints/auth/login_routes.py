@@ -113,11 +113,25 @@ def _send_verification_if_needed(user: User) -> bool:
         user.email_verification_sent_at = TimezoneUtils.utc_now()
         db.session.commit()
 
-        return EmailService.send_verification_email(
+        sent = EmailService.send_verification_email(
             user.email,
             user.email_verification_token,
             user.first_name or user.username,
         )
+        if not sent:
+            # Do not enforce resend cooldown when delivery failed.
+            user.email_verification_token = None
+            user.email_verification_sent_at = None
+            try:
+                db.session.commit()
+            except Exception as clear_exc:
+                db.session.rollback()
+                logger.warning(
+                    "Failed to clear verification token after send failure for user %s: %s",
+                    user.id,
+                    clear_exc,
+                )
+        return sent
     except Exception as exc:
         db.session.rollback()
         logger.warning(

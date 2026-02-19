@@ -196,6 +196,12 @@ def test_required_mode_login_message_handles_verification_send_failure(client, a
         assert any("could not send a verification email" in msg for msg in flashes)
         assert all("We sent you a verification link." not in msg for msg in flashes)
 
+    with app.app_context():
+        refreshed = User.query.filter_by(username=username).first()
+        assert refreshed is not None
+        assert refreshed.email_verification_token is None
+        assert refreshed.email_verification_sent_at is None
+
 
 # --- Prompt mode send-failure messaging ---
 # Purpose: Verify prompt-mode login reports delivery failure accurately when send fails.
@@ -232,6 +238,12 @@ def test_prompt_mode_login_message_handles_verification_send_failure(
         assert any("could not send a verification email" in msg for msg in flashes)
         assert all("A verification link was sent." not in msg for msg in flashes)
         assert sess.get("_user_id") is not None
+
+    with app.app_context():
+        refreshed = User.query.filter_by(username=username).first()
+        assert refreshed is not None
+        assert refreshed.email_verification_token is None
+        assert refreshed.email_verification_sent_at is None
 
 
 # --- Forgot/reset flow ---
