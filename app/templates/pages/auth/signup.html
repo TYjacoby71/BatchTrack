@@ -515,6 +515,16 @@ function proceedToPayment() {
         entries.push(['promo', initialPromoCode]);
     }
 
+    if (
+        window.BTAnalytics &&
+        typeof window.BTAnalytics.getFirstLandingAt === 'function'
+    ) {
+        const firstLandingAt = window.BTAnalytics.getFirstLandingAt();
+        if (firstLandingAt) {
+            entries.push(['client_first_landing_at', String(firstLandingAt)]);
+        }
+    }
+
     try {
         const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         entries.push(['detected_timezone', detectedTimezone]);
