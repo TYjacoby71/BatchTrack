@@ -564,6 +564,33 @@ def create_inventory_item(
             logger.error(f"Item {new_item.id} not found after creation")
             return False, "Item creation failed - not found after commit", None
 
+        try:
+            from ..event_emitter import EventEmitter
+
+            creation_source = "global" if global_item else "custom"
+            EventEmitter.emit(
+                event_name="inventory_item_created",
+                properties={
+                    "item_type": created_item.type,
+                    "unit": created_item.unit,
+                    "creation_source": creation_source,
+                    "global_item_id": (
+                        int(created_item.global_item_id)
+                        if created_item.global_item_id
+                        else None
+                    ),
+                    "is_tracked": bool(created_item.is_tracked),
+                    "initial_quantity": float(initial_quantity or 0.0),
+                },
+                organization_id=created_item.organization_id,
+                user_id=created_by,
+                entity_type="inventory_item",
+                entity_id=created_item.id,
+                auto_commit=auto_commit,
+            )
+        except Exception:
+            pass
+
         return True, f"Created {new_item.name}", new_item.id
 
     except Exception as e:

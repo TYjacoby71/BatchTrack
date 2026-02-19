@@ -39,9 +39,11 @@ from ...services.billing_access_policy_service import (
     BillingAccessPolicyService,
 )
 from ...services.email_service import EmailService
+from ...services.event_emitter import EventEmitter
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
+from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -376,6 +378,9 @@ def login():
             login_user(user)
             SessionService.rotate_user_session(user)
             session.pop("dismissed_alerts", None)
+            previous_last_login = TimezoneUtils.ensure_timezone_aware(
+                getattr(user, "last_login", None)
+            )
             user.last_login = TimezoneUtils.utc_now()
             try:
                 db.session.commit()
@@ -389,6 +394,30 @@ def login():
                 )
                 flash("Login temporarily unavailable. Please try again.")
                 return _render_login_page(503)
+
+            try:
+                login_props = {
+                    "is_first_login": previous_last_login is None,
+                    "login_method": "password",
+                    "destination_hint": (
+                        "developer_dashboard"
+                        if user.user_type == "developer"
+                        else "app_dashboard"
+                    ),
+                }
+                seconds_from_landing = seconds_since_first_landing(request)
+                if seconds_from_landing is not None:
+                    login_props["seconds_since_first_landing"] = seconds_from_landing
+                EventEmitter.emit(
+                    event_name="user_login_succeeded",
+                    properties=login_props,
+                    organization_id=getattr(user, "organization_id", None),
+                    user_id=user.id,
+                    entity_type="user",
+                    entity_id=user.id,
+                )
+            except Exception:
+                pass
 
             if user.user_type == "developer":
                 return redirect(url_for("developer.dashboard"))
@@ -723,10 +752,28 @@ def dev_login():
     """Quick developer login for system access."""
     dev_user = User.query.filter_by(username="dev").first()
     if dev_user:
+        previous_last_login = TimezoneUtils.ensure_timezone_aware(
+            getattr(dev_user, "last_login", None)
+        )
         login_user(dev_user)
         SessionService.rotate_user_session(dev_user)
         dev_user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
+        try:
+            EventEmitter.emit(
+                event_name="user_login_succeeded",
+                properties={
+                    "is_first_login": previous_last_login is None,
+                    "login_method": "dev_quick_login",
+                    "destination_hint": "developer_dashboard",
+                },
+                organization_id=getattr(dev_user, "organization_id", None),
+                user_id=dev_user.id,
+                entity_type="user",
+                entity_id=dev_user.id,
+            )
+        except Exception:
+            pass
         flash("Developer access granted", "success")
         return redirect(url_for("developer.dashboard"))
 

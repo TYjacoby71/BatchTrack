@@ -485,6 +485,15 @@ function proceedToPayment() {
         selectedLifetimeTier = '';
     }
 
+    if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
+        window.BTAnalytics.capture('signup_continue_to_payment_clicked', {
+            selected_tier: String(selectedTier || ''),
+            billing_mode: billingMode,
+            billing_cycle: billingCycle,
+            signup_source: signupSource || null
+        });
+    }
+
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ url_for("auth.signup") }}';
@@ -583,6 +592,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!selectedTier || !getTierData(selectedTier)) {
         selectedTier = '';
+    }
+
+    if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
+        window.BTAnalytics.capture('signup_page_viewed', {
+            selected_tier: String(selectedTier || ''),
+            requested_plan_kind: selectedPlanKind || null,
+            signup_source: signupSource || null
+        });
     }
 
     updateToggleState();

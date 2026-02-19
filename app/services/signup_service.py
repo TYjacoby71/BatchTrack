@@ -303,6 +303,32 @@ class SignupService:
                 },
                 auto_commit=True,
             )
+            completion_properties = {
+                "pending_signup_id": pending_signup.id,
+                "tier_id": subscription_tier.id,
+                "signup_source": pending_signup.signup_source or "direct",
+                "checkout_session_id": pending_signup.stripe_checkout_session_id,
+                "stripe_customer_id": pending_signup.stripe_customer_id,
+                "billing_provider": "stripe",
+            }
+            EventEmitter.emit(
+                "signup_checkout_completed",
+                organization_id=org.id,
+                user_id=owner_user.id,
+                properties=completion_properties,
+                entity_type="organization",
+                entity_id=org.id,
+                auto_commit=True,
+            )
+            EventEmitter.emit(
+                "purchase_completed",
+                organization_id=org.id,
+                user_id=owner_user.id,
+                properties=completion_properties,
+                entity_type="organization",
+                entity_id=org.id,
+                auto_commit=True,
+            )
 
             return org, owner_user
 

@@ -15,6 +15,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import Recipe
+from app.services.event_emitter import EventEmitter
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import (
     analyze_container_options,
@@ -63,6 +64,28 @@ def plan_production_route(recipe_id):
             planning_result = plan_production_comprehensive(
                 recipe_id, scale, container_id
             )
+            try:
+                EventEmitter.emit(
+                    event_name="plan_production_requested",
+                    properties={
+                        "recipe_id": recipe_id,
+                        "scale": scale,
+                        "container_id": (
+                            int(container_id)
+                            if str(container_id or "").isdigit()
+                            else None
+                        ),
+                        "success": bool(planning_result.get("success")),
+                        "all_available": bool(planning_result.get("all_available")),
+                        "issue_count": len(planning_result.get("issues") or []),
+                    },
+                    organization_id=getattr(current_user, "organization_id", None),
+                    user_id=getattr(current_user, "id", None),
+                    entity_type="recipe",
+                    entity_id=recipe_id,
+                )
+            except Exception:
+                pass
 
             if planning_result.get("success", False):
                 return jsonify(
@@ -337,6 +360,22 @@ def check_stock():
         uscs = UniversalStockCheckService()
 
         result = uscs.check_recipe_stock(recipe_id, scale)
+        try:
+            EventEmitter.emit(
+                event_name="stock_check_run",
+                properties={
+                    "recipe_id": recipe_id,
+                    "scale": scale,
+                    "success": bool(result.get("success")),
+                    "stock_item_count": len(result.get("stock_check") or []),
+                },
+                organization_id=getattr(current_user, "organization_id", None),
+                user_id=getattr(current_user, "id", None),
+                entity_type="recipe",
+                entity_id=recipe_id,
+            )
+        except Exception:
+            pass
 
         # Process results for frontend
         if result.get("success"):

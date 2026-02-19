@@ -112,6 +112,179 @@ Glossary:
       });
     </script>
     {% endif %}
+    <script>
+      (function() {
+        var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
+        var FIRST_LANDING_COOKIE_KEY = 'bt_first_landing_at';
+
+        function nowMs() {
+          return Date.now ? Date.now() : new Date().getTime();
+        }
+
+        function parseInteger(value) {
+          if (value === null || value === undefined || value === '') {
+            return null;
+          }
+          var parsed = Number.parseInt(String(value), 10);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function getCookie(name) {
+          var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
+          return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        function setCookie(name, value) {
+          try {
+            document.cookie = name + '=' + encodeURIComponent(String(value)) + '; path=/; max-age=31536000; SameSite=Lax';
+          } catch (error) {}
+        }
+
+        function resolveFirstLandingAt() {
+          var fromStorage = null;
+          try {
+            fromStorage = parseInteger(window.localStorage && window.localStorage.getItem(FIRST_LANDING_STORAGE_KEY));
+          } catch (error) {}
+          var fromCookie = parseInteger(getCookie(FIRST_LANDING_COOKIE_KEY));
+          var first = fromStorage || fromCookie;
+          if (!first) {
+            first = nowMs();
+          }
+          try {
+            if (window.localStorage) {
+              window.localStorage.setItem(FIRST_LANDING_STORAGE_KEY, String(first));
+            }
+          } catch (error) {}
+          setCookie(FIRST_LANDING_COOKIE_KEY, String(first));
+          return first;
+        }
+
+        function canCapture() {
+          return Boolean(
+            window.posthog &&
+            typeof window.posthog.capture === 'function'
+          );
+        }
+
+        var firstLandingAt = resolveFirstLandingAt();
+        var firstLandingRecordedKey = 'bt:first_landing_recorded_sent';
+
+        window.BTAnalytics = window.BTAnalytics || {};
+        window.BTAnalytics.getFirstLandingAt = function() {
+          return firstLandingAt;
+        };
+        window.BTAnalytics.secondsSinceFirstLanding = function() {
+          var elapsedMs = Math.max(0, nowMs() - firstLandingAt);
+          return Math.round(elapsedMs / 1000);
+        };
+        window.BTAnalytics.capture = function(eventName, properties) {
+          if (!eventName || !canCapture()) {
+            return;
+          }
+          var payload = Object.assign(
+            {
+              seconds_since_first_landing: window.BTAnalytics.secondsSinceFirstLanding(),
+              page_path: window.location.pathname,
+              page_url: window.location.href
+            },
+            properties || {}
+          );
+          try {
+            window.posthog.capture(eventName, payload);
+          } catch (error) {}
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+          var body = document.body || null;
+          var isAuthenticated = body ? body.getAttribute('data-authenticated') === 'true' : false;
+          var userId = body ? body.getAttribute('data-user-id') : '';
+          var orgId = body ? body.getAttribute('data-org-id') : '';
+          var endpoint = body ? body.getAttribute('data-page-endpoint') : '';
+
+          if (canCapture() && isAuthenticated && userId) {
+            try {
+              window.posthog.identify(String(userId), {
+                organization_id: orgId || null,
+                authenticated: true
+              });
+              if (orgId && typeof window.posthog.group === 'function') {
+                window.posthog.group('organization', String(orgId));
+              }
+            } catch (error) {}
+          }
+
+          try {
+            if (canCapture() && window.localStorage && !window.localStorage.getItem(firstLandingRecordedKey)) {
+              window.BTAnalytics.capture('first_landing_recorded', {
+                first_landing_at_ms: firstLandingAt
+              });
+              window.localStorage.setItem(firstLandingRecordedKey, '1');
+            }
+          } catch (error) {}
+
+          window.BTAnalytics.capture('page_context_viewed', {
+            page_endpoint: endpoint || '',
+            authenticated: isAuthenticated
+          });
+
+          var pageEnteredAt = nowMs();
+          var dwellSent = false;
+          var sendDwell = function() {
+            if (dwellSent) {
+              return;
+            }
+            dwellSent = true;
+            var dwellSeconds = Math.max(0, Math.round((nowMs() - pageEnteredAt) / 1000));
+            window.BTAnalytics.capture('page_dwell_recorded', {
+              page_endpoint: endpoint || '',
+              seconds_on_page: dwellSeconds,
+              authenticated: isAuthenticated
+            });
+          };
+          window.addEventListener('pagehide', sendDwell, { once: true });
+          document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+              sendDwell();
+            }
+          });
+
+          document.addEventListener('click', function(event) {
+            var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+            if (!anchor) {
+              return;
+            }
+            var href = anchor.getAttribute('href') || '';
+            if (!href || href.startsWith('#')) {
+              return;
+            }
+            var url;
+            try {
+              url = new URL(href, window.location.origin);
+            } catch (error) {
+              return;
+            }
+            var path = url.pathname || '';
+            if (path.includes('/auth/signup')) {
+              window.BTAnalytics.capture('public_signup_cta_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120),
+                signup_source: url.searchParams.get('source') || null,
+                destination_path: path
+              });
+            } else if (path.includes('/auth/login')) {
+              window.BTAnalytics.capture('public_login_cta_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120),
+                destination_path: path
+              });
+            } else if (path === '/pricing') {
+              window.BTAnalytics.capture('public_pricing_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120)
+              });
+            }
+          });
+        });
+      })();
+    </script>
     {% block head %}{% endblock %}
     <style>
         input[type="hidden"][name="csrf_token"],

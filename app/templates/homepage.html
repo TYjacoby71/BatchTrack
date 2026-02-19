@@ -7,6 +7,10 @@
     {% set home_description = "BatchTrack helps small-batch makers track recipes, FIFO lots, batch lifecycle, and output products. Free maker tools with calm, neurodivergent-friendly design." %}
     {% set home_canonical = url_for('core.index', _external=True) %}
     {% set home_og_image = url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
+    {% set posthog_api_key = (config.get('POSTHOG_PROJECT_API_KEY') or '').strip() %}
+    {% set posthog_host = (config.get('POSTHOG_HOST') or 'https://us.i.posthog.com').rstrip('/') %}
+    {% set posthog_capture_pageview = config.get('POSTHOG_CAPTURE_PAGEVIEW', true) %}
+    {% set posthog_capture_pageleave = config.get('POSTHOG_CAPTURE_PAGELEAVE', true) %}
     <title>{{ home_title }}</title>
     <meta name="description" content="{{ home_description }}">
     <link rel="canonical" href="{{ home_canonical }}">
@@ -38,6 +42,88 @@
             crossorigin
         >
     </noscript>
+    {% if posthog_api_key %}
+    <script>
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2===o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people"},o="capture identify alias group set_config reset register register_once unregister people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user pageleave".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      posthog.init({{ posthog_api_key | tojson }}, {
+        api_host: {{ posthog_host | tojson }},
+        capture_pageview: {{ posthog_capture_pageview | tojson }},
+        capture_pageleave: {{ posthog_capture_pageleave | tojson }},
+        person_profiles: "identified_only"
+      });
+    </script>
+    {% endif %}
+    <script>
+      (function() {
+        var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
+        var FIRST_LANDING_COOKIE_KEY = 'bt_first_landing_at';
+
+        function nowMs() {
+          return Date.now ? Date.now() : new Date().getTime();
+        }
+
+        function parseInteger(value) {
+          if (value === null || value === undefined || value === '') {
+            return null;
+          }
+          var parsed = Number.parseInt(String(value), 10);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function getCookie(name) {
+          var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
+          return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        function setCookie(name, value) {
+          try {
+            document.cookie = name + '=' + encodeURIComponent(String(value)) + '; path=/; max-age=31536000; SameSite=Lax';
+          } catch (error) {}
+        }
+
+        var firstLandingAt = parseInteger(getCookie(FIRST_LANDING_COOKIE_KEY));
+        if (!firstLandingAt) {
+          try {
+            firstLandingAt = parseInteger(window.localStorage && window.localStorage.getItem(FIRST_LANDING_STORAGE_KEY));
+          } catch (error) {}
+        }
+        if (!firstLandingAt) {
+          firstLandingAt = nowMs();
+        }
+        try {
+          if (window.localStorage) {
+            window.localStorage.setItem(FIRST_LANDING_STORAGE_KEY, String(firstLandingAt));
+          }
+        } catch (error) {}
+        setCookie(FIRST_LANDING_COOKIE_KEY, String(firstLandingAt));
+
+        function canCapture() {
+          return Boolean(window.posthog && typeof window.posthog.capture === 'function');
+        }
+
+        window.BTAnalytics = window.BTAnalytics || {};
+        window.BTAnalytics.secondsSinceFirstLanding = function() {
+          return Math.max(0, Math.round((nowMs() - firstLandingAt) / 1000));
+        };
+        window.BTAnalytics.capture = function(eventName, properties) {
+          if (!eventName || !canCapture()) {
+            return;
+          }
+          var payload = Object.assign(
+            {
+              seconds_since_first_landing: window.BTAnalytics.secondsSinceFirstLanding(),
+              page_path: window.location.pathname,
+              page_url: window.location.href
+            },
+            properties || {}
+          );
+          try {
+            window.posthog.capture(eventName, payload);
+          } catch (error) {}
+        };
+      })();
+    </script>
     <style>
         html {
             scroll-behavior: smooth;
@@ -771,5 +857,62 @@
 
     <!-- Bootstrap JS -->
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+          return;
+        }
+        window.BTAnalytics.capture('homepage_viewed', {
+          landing_variant: 'homepage',
+          authenticated: false
+        });
+
+        var enteredAt = Date.now ? Date.now() : new Date().getTime();
+        var sentDwell = false;
+        var sendDwell = function() {
+          if (sentDwell) {
+            return;
+          }
+          sentDwell = true;
+          var now = Date.now ? Date.now() : new Date().getTime();
+          var seconds = Math.max(0, Math.round((now - enteredAt) / 1000));
+          window.BTAnalytics.capture('homepage_dwell_recorded', {
+            seconds_on_homepage: seconds
+          });
+        };
+        window.addEventListener('pagehide', sendDwell, { once: true });
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'hidden') {
+            sendDwell();
+          }
+        });
+
+        document.addEventListener('click', function(event) {
+          var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+          if (!anchor) {
+            return;
+          }
+          var href = anchor.getAttribute('href') || '';
+          if (!href) {
+            return;
+          }
+          if (href.indexOf('/auth/signup') >= 0) {
+            var signupSource = null;
+            try {
+              var parsed = new URL(href, window.location.origin);
+              signupSource = parsed.searchParams.get('source');
+            } catch (error) {}
+            window.BTAnalytics.capture('homepage_signup_cta_clicked', {
+              cta_text: (anchor.textContent || '').trim().slice(0, 120),
+              signup_source: signupSource
+            });
+          } else if (href.indexOf('/pricing') >= 0) {
+            window.BTAnalytics.capture('homepage_pricing_cta_clicked', {
+              cta_text: (anchor.textContent || '').trim().slice(0, 120)
+            });
+          }
+        });
+      });
+    </script>
 </body>
 </html>
