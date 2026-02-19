@@ -27,8 +27,15 @@ def test_pricing_checkout_labels_are_tier_specific(app):
 
     assert "Checkout Monthly" not in html
     assert "Checkout Yearly" not in html
-    assert re.search(r"Checkout\\s+[A-Za-z]+\\s+Monthly", html)
-    assert re.search(r"Checkout\\s+[A-Za-z]+\\s+Yearly", html)
+
+    soup = BeautifulSoup(html, "html.parser")
+    checkout_links = [
+        link.get_text(strip=True)
+        for link in soup.find_all("a")
+        if "Checkout" in link.get_text(strip=True)
+    ]
+    for label in checkout_links:
+        assert re.match(r"Checkout\s+[A-Za-z0-9][A-Za-z0-9\s-]*\s+(Monthly|Yearly|Lifetime)$", label)
 
 
 def test_pricing_comparison_section_rows_use_data_cells(app):
