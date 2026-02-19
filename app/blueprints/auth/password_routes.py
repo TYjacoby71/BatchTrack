@@ -36,7 +36,9 @@ def _password_reset_expiry_hours() -> int:
 
 def _is_reset_token_expired(user: User) -> bool:
     """Return True when token timestamp is absent or expired."""
-    sent_at = getattr(user, "password_reset_sent_at", None)
+    sent_at = TimezoneUtils.ensure_timezone_aware(
+        getattr(user, "password_reset_sent_at", None)
+    )
     if not sent_at:
         return True
     expires_at = sent_at + timedelta(hours=_password_reset_expiry_hours())

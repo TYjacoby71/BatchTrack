@@ -116,10 +116,9 @@ def verify_email(token):
             flash("Invalid verification link.", "error")
             return redirect(url_for("auth.login"))
 
-        if user.email_verification_sent_at:
-            expires_at = user.email_verification_sent_at + timedelta(
-                hours=_verification_expiry_hours()
-            )
+        sent_at = TimezoneUtils.ensure_timezone_aware(user.email_verification_sent_at)
+        if sent_at:
+            expires_at = sent_at + timedelta(hours=_verification_expiry_hours())
             if TimezoneUtils.utc_now() > expires_at:
                 flash(
                     "Verification link has expired. Please request a new one.", "error"
