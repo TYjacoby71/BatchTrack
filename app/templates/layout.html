@@ -668,14 +668,14 @@ Glossary:
                     <strong>Email verification needed.</strong>
                     Request a fresh verification email now if you did not receive the original link.
                 </div>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
                     <form method="post" action="{{ url_for('auth.resend_verification') }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="email" value="{{ current_user.email }}">
                         <input type="hidden" name="next" value="{{ request.path }}">
                         <button type="submit" class="btn btn-sm btn-warning">Resend verification email</button>
                     </form>
-                    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-warning">Open settings</a>
+                    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary py-1 px-2">Open settings</a>
                 </div>
             </div>
             {% endif %}
