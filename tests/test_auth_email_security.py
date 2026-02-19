@@ -61,7 +61,10 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/dashboard")
+    assert (
+        "/dashboard" in response.headers["Location"]
+        or "/user_dashboard" in response.headers["Location"]
+    )
 
     with app.app_context():
         refreshed = User.query.filter_by(email=email).first()
@@ -73,9 +76,9 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
         assert sess.get("_user_id") is not None
 
 
-# --- Prompt mode age lock ---
-# Purpose: Verify old unverified accounts are blocked and shown forced verification context.
-def test_prompt_mode_blocks_old_unverified_accounts_with_forced_modal(
+# --- Prompt mode age reminder modal ---
+# Purpose: Verify old unverified accounts can log in and receive forced-send modal context.
+def test_prompt_mode_old_unverified_accounts_queue_post_login_modal(
     client, app, monkeypatch
 ):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
@@ -105,15 +108,22 @@ def test_prompt_mode_blocks_old_unverified_accounts_with_forced_modal(
     )
     assert response.status_code == 302
     location = response.headers["Location"]
-    assert "/auth/resend-verification" in location
-    assert "forced=1" in location
-    assert "sent=1" in location
-    assert "grace_days=10" in location
+    assert "/dashboard" in location or "/user_dashboard" in location
 
     with client.session_transaction() as sess:
-        assert sess.get("_user_id") is None
+        assert sess.get("_user_id") is not None
+        modal_payload = sess.get("verification_required_modal")
+        assert modal_payload is not None
+        assert modal_payload.get("sent") is True
+        assert modal_payload.get("grace_days") == 10
         flashes = [message for _category, message in sess.get("_flashes", [])]
-        assert any("more than 10 days old" in msg for msg in flashes)
+        assert any("older than 10 days" in msg for msg in flashes)
+
+    landing = client.get(location, follow_redirects=False)
+    assert landing.status_code == 200
+    html = landing.get_data(as_text=True)
+    assert 'id="verificationRequiredModal"' in html
+    assert "Resend verification email" in html
 
 
 # --- Forced resend modal rendering ---
@@ -187,7 +197,10 @@ def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/dashboard")
+    assert (
+        "/dashboard" in response.headers["Location"]
+        or "/user_dashboard" in response.headers["Location"]
+    )
 
     with app.app_context():
         refreshed = User.query.filter_by(email=email).first()

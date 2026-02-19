@@ -91,7 +91,7 @@ class LoginForm(FlaskForm):
 # Purpose: Issue and email a fresh verification token with a resend cooldown.
 # Inputs: User model for the account currently attempting to log in.
 # Outputs: Boolean indicating whether a verification email was successfully sent.
-def _send_verification_if_needed(user: User) -> bool:
+def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
     """Issue and send verification token when prompt/required mode is active."""
     if not user.email or user.email_verified:
         return False
@@ -104,7 +104,7 @@ def _send_verification_if_needed(user: User) -> bool:
             and TimezoneUtils.utc_now() - user.email_verification_sent_at
             < timedelta(minutes=15)
         )
-        if recently_sent and user.email_verification_token:
+        if not force and recently_sent and user.email_verification_token:
             return False
 
         user.email_verification_token = EmailService.generate_verification_token(
@@ -325,33 +325,12 @@ def login():
                     return _render_login_page()
 
             if user.user_type != "developer" and user.email and not user.email_verified:
-                force_age_lock, account_age_days, grace_days = (
+                force_age_prompt, account_age_days, grace_days = (
                     _age_based_verification_lock(user)
                     if EmailService.should_issue_verification_tokens()
                     else (False, 0, 0)
                 )
-                sent = _send_verification_if_needed(user)
-                if force_age_lock:
-                    if sent:
-                        flash(
-                            f"A new verification email has been sent because this account is more than {grace_days} days old and still unverified. You must verify your email before logging in.",
-                            "warning",
-                        )
-                    else:
-                        flash(
-                            f"This account is more than {grace_days} days old and must be verified before logging in. We could not send a verification email automatically right now; use resend verification and check email provider settings.",
-                            "warning",
-                        )
-                    return redirect(
-                        url_for(
-                            "auth.resend_verification",
-                            email=user.email,
-                            forced="1",
-                            sent="1" if sent else "0",
-                            age_days=account_age_days,
-                            grace_days=grace_days,
-                        )
-                    )
+                sent = _send_verification_if_needed(user, force=force_age_prompt)
                 if EmailService.should_require_verified_email_on_login():
                     if sent:
                         flash(
@@ -367,7 +346,24 @@ def login():
                         url_for("auth.resend_verification", email=user.email)
                     )
                 if EmailService.should_issue_verification_tokens():
-                    if sent:
+                    if force_age_prompt:
+                        session["verification_required_modal"] = {
+                            "sent": bool(sent),
+                            "age_days": int(account_age_days),
+                            "grace_days": int(grace_days),
+                            "email": user.email,
+                        }
+                        if sent:
+                            flash(
+                                f"We sent a new verification email because this account is older than {grace_days} days and still unverified. Please check your inbox and verify.",
+                                "warning",
+                            )
+                        else:
+                            flash(
+                                "Your account needs email verification. We could not send a verification email automatically right now; use resend verification and check email provider settings.",
+                                "warning",
+                            )
+                    elif sent:
                         flash(
                             "Please verify your email while you finish account setup. A verification link was sent.",
                             "info",
