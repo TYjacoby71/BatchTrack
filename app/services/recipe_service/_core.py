@@ -662,18 +662,46 @@ def create_recipe(
 
         # Emit recipe_created
         try:
+            base_properties = {
+                "name": name,
+                "yield_amount": yield_amount,
+                "yield_unit": yield_unit,
+                "status": recipe.status,
+                "is_test": bool(is_test_flag),
+                "is_variation": bool(parent_recipe_id),
+                "is_master": bool(recipe.is_master),
+                "parent_recipe_id": parent_recipe_id,
+                "parent_master_id": parent_master_id,
+                "cloned_from_id": cloned_from_id,
+                "recipe_group_id": recipe.recipe_group_id,
+                "test_sequence": recipe.test_sequence,
+            }
             EventEmitter.emit(
                 event_name="recipe_created",
-                properties={
-                    "name": name,
-                    "yield_amount": yield_amount,
-                    "yield_unit": yield_unit,
-                },
+                properties=base_properties,
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
                 entity_type="recipe",
                 entity_id=recipe.id,
             )
+            if is_test_flag:
+                EventEmitter.emit(
+                    event_name="recipe_test_created",
+                    properties=base_properties,
+                    organization_id=recipe.organization_id,
+                    user_id=current_user.id,
+                    entity_type="recipe",
+                    entity_id=recipe.id,
+                )
+            elif parent_recipe_id:
+                EventEmitter.emit(
+                    event_name="recipe_variation_created",
+                    properties=base_properties,
+                    organization_id=recipe.organization_id,
+                    user_id=current_user.id,
+                    entity_type="recipe",
+                    entity_id=recipe.id,
+                )
         except Exception:
             pass
 

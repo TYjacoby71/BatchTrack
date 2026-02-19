@@ -11,6 +11,10 @@ def privacy_policy():
     return render_template(
         "legal/privacy_policy.html",
         show_public_header=True,
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
         page_title="BatchTrack Privacy Policy",
         page_description="Read how BatchTrack collects, uses, and protects account and production data.",
         canonical_url=url_for("legal.privacy_policy", _external=True),
@@ -23,6 +27,10 @@ def terms_of_service():
     return render_template(
         "legal/terms_of_service.html",
         show_public_header=True,
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
         page_title="BatchTrack Terms of Service",
         page_description="Review BatchTrack terms governing account access, subscriptions, and acceptable use.",
         canonical_url=url_for("legal.terms_of_service", _external=True),
@@ -35,6 +43,10 @@ def cookie_policy():
     return render_template(
         "legal/cookie_policy.html",
         show_public_header=True,
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
         page_title="BatchTrack Cookie Policy",
         page_description="Understand how BatchTrack uses cookies for authentication, analytics, and product performance.",
         canonical_url=url_for("legal.cookie_policy", _external=True),

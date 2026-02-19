@@ -178,7 +178,7 @@ Glossary:
       We handle the accounting details so makers can focus on their art.
     </p>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('auth.signup', source='lp_robbins_hero_trial') }}" class="btn btn-primary btn-lg">
+      <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'lp_robbins_start_free_trial') }}" class="btn btn-primary btn-lg">
         Start Free Trial
       </a>
       <a href="{{ url_for('pricing_routes.pricing') }}" class="btn btn-outline-primary btn-lg">
@@ -266,7 +266,7 @@ Glossary:
       Start free, choose your plan, and build a steady rhythm where accounting is handled and your creativity leads.
     </p>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('auth.signup', source='lp_robbins_bottom_trial') }}" class="btn btn-primary btn-lg">
+      <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'lp_robbins_start_free_trial') }}" class="btn btn-primary btn-lg">
         Start Free Trial
       </a>
       <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
@@ -275,4 +275,14 @@ Glossary:
     </div>
   </section>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+    return;
+  }
+  window.BTAnalytics.capture('landing_variant_viewed', {
+    landing_variant: 'robbins'
+  });
+});
+</script>
 {% endblock %}

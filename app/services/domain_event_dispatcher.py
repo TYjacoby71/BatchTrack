@@ -12,6 +12,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urljoin
 
 import requests
 from flask import current_app, has_app_context
@@ -41,6 +42,17 @@ class DomainEventDispatcher:
             self.webhook_url = current_app.config.get("DOMAIN_EVENT_WEBHOOK_URL")
         else:
             self.webhook_url = None
+        if has_app_context():
+            self.posthog_api_key = (
+                current_app.config.get("POSTHOG_PROJECT_API_KEY") or ""
+            ).strip() or None
+            self.posthog_host = (
+                current_app.config.get("POSTHOG_HOST") or "https://us.i.posthog.com"
+            ).rstrip("/")
+        else:
+            self.posthog_api_key = None
+            self.posthog_host = None
+        self.posthog_enabled = bool(self.posthog_api_key and self.posthog_host)
         self.batch_size = max(1, batch_size)
         self.max_retry_attempts = max_retry_attempts
 
@@ -147,27 +159,19 @@ class DomainEventDispatcher:
 
     def _deliver_event(self, event: DomainEvent) -> bool:
         """Deliver the event to configured sinks."""
-        if not self.webhook_url:
+        if not self.webhook_url and not self.posthog_enabled:
             logger.debug(
-                "No webhook configured; marking event %s as processed.", event.id
-            )
-            return True
-
-        payload = self._build_payload(event)
-
-        try:
-            response = requests.post(self.webhook_url, json=payload, timeout=5)
-            response.raise_for_status()
-            logger.debug("Domain event %s delivered successfully", event.id)
-            return True
-        except requests.RequestException as exc:
-            logger.warning(
-                "Domain event %s delivery failed: %s",
+                "No domain-event sinks configured; marking event %s as processed.",
                 event.id,
-                exc,
-                extra={"status_code": getattr(exc.response, "status_code", None)},
             )
-            return False
+            return True
+
+        sink_results: list[bool] = []
+        if self.webhook_url:
+            sink_results.append(self._deliver_webhook(event))
+        if self.posthog_enabled:
+            sink_results.append(self._deliver_to_posthog(event))
+        return all(sink_results) if sink_results else True
 
     @staticmethod
     def _build_payload(event: DomainEvent) -> Dict[str, Any]:
@@ -184,3 +188,68 @@ class DomainEventDispatcher:
             "schema_version": event.schema_version,
             "properties": event.properties or {},
         }
+
+    def _deliver_webhook(self, event: DomainEvent) -> bool:
+        payload = self._build_payload(event)
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=5)
+            response.raise_for_status()
+            logger.debug("Domain event %s delivered to webhook", event.id)
+            return True
+        except requests.RequestException as exc:
+            logger.warning(
+                "Domain event %s webhook delivery failed: %s",
+                event.id,
+                exc,
+                extra={"status_code": getattr(exc.response, "status_code", None)},
+            )
+            return False
+
+    def _deliver_to_posthog(self, event: DomainEvent) -> bool:
+        try:
+            distinct_id = (
+                str(event.user_id)
+                if event.user_id
+                else (
+                    f"org:{event.organization_id}"
+                    if event.organization_id
+                    else f"domain_event:{event.id}"
+                )
+            )
+            properties = dict(event.properties or {})
+            properties.setdefault("organization_id", event.organization_id)
+            properties.setdefault("entity_type", event.entity_type)
+            properties.setdefault("entity_id", event.entity_id)
+            properties.setdefault("source", event.source)
+            properties.setdefault("schema_version", event.schema_version)
+            properties.setdefault("domain_event_id", event.id)
+            properties.setdefault("correlation_id", event.correlation_id)
+            if event.organization_id:
+                groups = properties.get("$groups")
+                if not isinstance(groups, dict):
+                    groups = {}
+                groups.setdefault("organization", str(event.organization_id))
+                properties["$groups"] = groups
+
+            payload = {
+                "api_key": self.posthog_api_key,
+                "event": event.event_name,
+                "distinct_id": distinct_id,
+                "timestamp": (
+                    event.occurred_at.isoformat() if event.occurred_at else None
+                ),
+                "properties": properties,
+            }
+            endpoint = urljoin(f"{self.posthog_host}/", "capture/")
+            response = requests.post(endpoint, json=payload, timeout=5)
+            response.raise_for_status()
+            logger.debug("Domain event %s delivered to PostHog", event.id)
+            return True
+        except requests.RequestException as exc:
+            logger.warning(
+                "Domain event %s PostHog delivery failed: %s",
+                event.id,
+                exc,
+                extra={"status_code": getattr(exc.response, "status_code", None)},
+            )
+            return False

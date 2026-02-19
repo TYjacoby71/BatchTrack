@@ -4,7 +4,7 @@
   <div class="mb-4 text-center">
     <h1 class="mb-2">How BatchTrack Works</h1>
     <p class="text-muted">From your first login to finished products, here’s how to move through the system step by step.</p>
-    <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg mt-2">See it in action — start free today</a>
+    <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'help_overview_start_free_trial') }}" class="btn btn-primary btn-lg mt-2">See it in action — start free today</a>
   </div>
 
   <div class="row g-4">
@@ -80,7 +80,7 @@
                 {% set image_path = 'images/help/' ~ section.slug ~ '/' ~ image_name %}
                 {% if image_path|static_file_exists %}
                 <div class="placeholder-image-slot h-100">
-                  <img src="{{ url_for('static', filename=image_path) }}" class="img-fluid rounded mb-2" alt="{{ label }}">
+                  <img src="{{ url_for('static', filename=image_path) }}" class="img-fluid rounded mb-2" alt="{{ label }}" loading="lazy" decoding="async">
                   <p class="small text-muted mb-0">{{ label }}</p>
                 </div>
                 {% else %}
@@ -103,7 +103,7 @@
 <div class="cta-banner my-5">
   <h2 class="h4 mb-2">Ready to run a batch the smart way?</h2>
   <p class="mb-3">Sign up for BatchTrack, follow the checklist above, and you’ll have inventory, recipes, and production planning humming in minutes.</p>
-  <a href="{{ url_for('auth.signup') }}" class="btn btn-light btn-lg me-2">Start Free Trial</a>
+  <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'help_overview_start_free_trial') }}" class="btn btn-light btn-lg me-2">Start Free Trial</a>
   <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Log In</a>
 </div>
 <style>
@@ -111,7 +111,19 @@
     border: 2px dashed rgba(0,0,0,0.1);
   }
   .placeholder-image-slot {
-    background: var(--theme-ext-color-645b0e3807);
+    background: #f5f7fb;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    color: #1f2937;
+  }
+  .placeholder-image-slot .text-muted,
+  .placeholder-image-slot .small {
+    color: #334155 !important;
+  }
+  .placeholder-image-slot code {
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.25rem;
   }
   .cta-banner {
     background: var(--theme-ext-color-ea8ce6a9ef);

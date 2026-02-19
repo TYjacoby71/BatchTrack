@@ -14,7 +14,10 @@ This document defines the current domain-event tracking layer used for analytics
 2. Events persist to `domain_event` with context and JSON properties.
 3. Dispatcher command processes pending rows:
    - `flask dispatch-domain-events`
-4. Downstream consumers read webhook payloads or analytics tables.
+4. Dispatcher can forward events to:
+   - custom webhook (`DOMAIN_EVENT_WEBHOOK_URL`)
+   - PostHog capture API (`POSTHOG_PROJECT_API_KEY` + `POSTHOG_HOST`)
+5. Downstream consumers read webhook payloads, PostHog events, or analytics tables.
 
 ## Event Envelope (Current)
 Core fields on every event record:
@@ -35,6 +38,10 @@ Core fields on every event record:
 ### Inventory
 - `inventory_adjusted`
   - source: inventory adjustment core delegator
+- `inventory_item_created`
+  - includes `creation_source` (`custom` or `global`)
+- `inventory_item_custom_created`
+- `inventory_item_global_created`
 
 ### Batch lifecycle
 - `batch_started`
@@ -48,6 +55,8 @@ Core fields on every event record:
 
 ### Recipe lifecycle
 - `recipe_created`
+- `recipe_variation_created`
+- `recipe_test_created`
 - `recipe_updated`
 - `recipe_deleted`
 
@@ -59,11 +68,26 @@ Core fields on every event record:
 ### Stats/analytics internals
 - `batch_metrics_computed`
 
+### Planning and readiness
+- `plan_production_requested`
+- `stock_check_run`
+
+### Auth, onboarding, and billing funnel
+- `user_login_succeeded`
+- `signup_checkout_started`
+- `signup_checkout_completed`
+- `purchase_completed`
+- `onboarding_completed`
+
 ## Analytics Mapping Guidance
 - Keep `event_name` stable for downstream models.
 - Prefer additive property fields over destructive schema changes.
 - Use `schema_version` for explicit payload evolution.
 - Scope analytics queries by `organization_id` for tenant isolation.
+- Core onboarding/use events include additive timing properties:
+  - `seconds_since_first_login`
+  - `user_use_index`, `org_use_index`
+  - first/second-use booleans for quick funnel filters
 
 ## External Website/Product Analytics
 BatchTrack supports optional client-side analytics snippets in the shared layout:
@@ -73,12 +97,62 @@ BatchTrack supports optional client-side analytics snippets in the shared layout
   - Captures website traffic trends and campaign performance.
 - **PostHog** via `POSTHOG_PROJECT_API_KEY`
   - Best for product analytics and behavioral funnels.
-  - Captures pageviews/pageleave events and can be extended to feature-level events.
+  - Captures pageviews/pageleave events and now includes:
+    - public funnel click/view timing events (landing/signup/pricing)
+    - backend domain events forwarded server-side for lifecycle analytics
 
 Recommended baseline:
 1. Use **GA4** for top-of-funnel traffic and ad attribution.
 2. Use **PostHog** for in-app behavior and retention analysis.
 3. Keep domain events as the backend source of truth for tenant-scoped operational analytics.
+
+## Recommended PostHog Funnels (Launch)
+
+1. **Visit → Signup → Checkout Start → Purchase Complete**
+   - `first_landing_recorded`
+   - `signup_page_viewed`
+   - `signup_checkout_started` (server)
+   - `purchase_completed` (server)
+
+2. **First Login → Setup Complete**
+   - `user_login_succeeded` where `is_first_login=true`
+   - `onboarding_completed`
+
+3. **First Value (Activation)**
+   - `user_login_succeeded` first login
+   - `inventory_item_created` (first custom/global)
+   - `recipe_created` (first)
+   - `batch_started` (first)
+
+4. **Recipe Maturity Path**
+   - `recipe_created`
+   - `recipe_variation_created`
+   - `recipe_test_created`
+   - `batch_started`
+
+5. **Planning Behavior**
+   - `plan_production_requested`
+   - `stock_check_run`
+   - `batch_started`
+
+## Launch KPI Baseline Set (SaaS)
+
+- **Visitor → Signup conversion**
+- **Signup → Purchase conversion**
+- **Purchase → First login rate**
+- **Time to first value (TTFV)**:
+  - first custom inventory item
+  - first global inventory item
+  - first recipe
+  - first variation
+  - first test
+  - first stock check
+  - first production plan
+  - first batch started
+- **Median + P75 time to first and second use** for each core action
+- **Onboarding completion rate** and median completion time
+- **7-day activation rate** (completed first-value bundle in 7 days)
+- **Week-1 retention** (returned and did a core action)
 
 ### Config keys
 - `GOOGLE_ANALYTICS_MEASUREMENT_ID` (e.g., `G-XXXXXXXXXX`)

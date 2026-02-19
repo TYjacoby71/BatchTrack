@@ -115,6 +115,27 @@ Glossary:
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+        return;
+    }
+
+    window.BTAnalytics.capture('login_page_viewed', {
+        authenticated: false
+    });
+
+    const loginForm = document.querySelector('form[action="{{ url_for('auth.login') }}"]');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function() {
+            window.BTAnalytics.capture('login_form_submitted', {
+                authenticated: false
+            });
+        });
+    }
+});
+</script>
+
 <style>
 .divider {
     position: relative;

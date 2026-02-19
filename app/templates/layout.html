@@ -20,11 +20,20 @@ Glossary:
       {% set use_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else false) %}
       {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
       {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and current_user.user_type == 'developer') %}
+      {% set requested_lightweight_public_shell = lightweight_public_shell if lightweight_public_shell is defined else false %}
+      {% set lightweight_public_shell = requested_lightweight_public_shell and public_shell_mode %}
+      {% set load_analytics = (load_analytics if load_analytics is defined else true) if public_shell_mode else true %}
+      {% set load_fontawesome = (load_fontawesome if load_fontawesome is defined else true) if public_shell_mode else true %}
+      {% set load_feedback_widget = (load_feedback_widget if load_feedback_widget is defined else customer_feedback_bubble_enabled) if public_shell_mode else customer_feedback_bubble_enabled %}
       {% set ga_measurement_id = (config.get('GOOGLE_ANALYTICS_MEASUREMENT_ID') or '').strip() %}
       {% set posthog_api_key = (config.get('POSTHOG_PROJECT_API_KEY') or '').strip() %}
       {% set posthog_host = (config.get('POSTHOG_HOST') or 'https://us.i.posthog.com').rstrip('/') %}
       {% set posthog_capture_pageview = config.get('POSTHOG_CAPTURE_PAGEVIEW', true) %}
       {% set posthog_capture_pageleave = config.get('POSTHOG_CAPTURE_PAGELEAVE', true) %}
+      {% if not load_analytics %}
+      {% set ga_measurement_id = '' %}
+      {% set posthog_api_key = '' %}
+      {% endif %}
       <title>{{ resolved_title }}</title>
       <meta name="description" content="{{ resolved_description }}">
       <link rel="canonical" href="{{ resolved_canonical }}">
@@ -40,16 +49,42 @@ Glossary:
     <link rel="icon" type="image/svg+xml" href="{{ url_for('core.branding_app_tile') }}">
     <link rel="shortcut icon" href="{{ url_for('core.branding_app_tile') }}">
     <link rel="apple-touch-icon" href="{{ url_for('core.branding_app_tile') }}">
+    {% if lightweight_public_shell %}
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin>
+    </noscript>
+    {% else %}
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% endif %}
+    {% if load_fontawesome %}
+    {% if lightweight_public_shell %}
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" crossorigin>
+    </noscript>
+    {% else %}
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    {% endif %}
+    {% endif %}
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ static_asset('style.css') }}">
     <link rel="stylesheet" href="{{ static_asset('css/theme.css') }}">
+    {% if not lightweight_public_shell %}
     <link rel="stylesheet" href="{{ static_asset('css/filter_panels.css') }}">
-    {% if customer_feedback_bubble_enabled %}
+    {% endif %}
+    {% if load_feedback_widget %}
     <link rel="stylesheet" href="{{ static_asset('css/tools/feedback_note_modal.css') }}">
+    {% endif %}
+    {% if posthog_api_key %}
+    <link rel="preconnect" href="{{ posthog_host }}" crossorigin>
+    <link rel="dns-prefetch" href="{{ posthog_host|replace('https://', '//')|replace('http://', '//') }}">
     {% endif %}
     <script>
       // Minimal theme bootstrap: scope localStorage per user + org.
@@ -89,7 +124,9 @@ Glossary:
         } catch (e) {}
       })();
     </script>
+    {% if not lightweight_public_shell %}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% endif %}
     {% if ga_measurement_id %}
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
     <script>
@@ -112,6 +149,179 @@ Glossary:
       });
     </script>
     {% endif %}
+    <script>
+      (function() {
+        var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
+        var FIRST_LANDING_COOKIE_KEY = 'bt_first_landing_at';
+
+        function nowMs() {
+          return Date.now ? Date.now() : new Date().getTime();
+        }
+
+        function parseInteger(value) {
+          if (value === null || value === undefined || value === '') {
+            return null;
+          }
+          var parsed = Number.parseInt(String(value), 10);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function getCookie(name) {
+          var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
+          return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        function setCookie(name, value) {
+          try {
+            document.cookie = name + '=' + encodeURIComponent(String(value)) + '; path=/; max-age=31536000; SameSite=Lax';
+          } catch (error) {}
+        }
+
+        function resolveFirstLandingAt() {
+          var fromStorage = null;
+          try {
+            fromStorage = parseInteger(window.localStorage && window.localStorage.getItem(FIRST_LANDING_STORAGE_KEY));
+          } catch (error) {}
+          var fromCookie = parseInteger(getCookie(FIRST_LANDING_COOKIE_KEY));
+          var first = fromStorage || fromCookie;
+          if (!first) {
+            first = nowMs();
+          }
+          try {
+            if (window.localStorage) {
+              window.localStorage.setItem(FIRST_LANDING_STORAGE_KEY, String(first));
+            }
+          } catch (error) {}
+          setCookie(FIRST_LANDING_COOKIE_KEY, String(first));
+          return first;
+        }
+
+        function canCapture() {
+          return Boolean(
+            window.posthog &&
+            typeof window.posthog.capture === 'function'
+          );
+        }
+
+        var firstLandingAt = resolveFirstLandingAt();
+        var firstLandingRecordedKey = 'bt:first_landing_recorded_sent';
+
+        window.BTAnalytics = window.BTAnalytics || {};
+        window.BTAnalytics.getFirstLandingAt = function() {
+          return firstLandingAt;
+        };
+        window.BTAnalytics.secondsSinceFirstLanding = function() {
+          var elapsedMs = Math.max(0, nowMs() - firstLandingAt);
+          return Math.round(elapsedMs / 1000);
+        };
+        window.BTAnalytics.capture = function(eventName, properties) {
+          if (!eventName || !canCapture()) {
+            return;
+          }
+          var payload = Object.assign(
+            {
+              seconds_since_first_landing: window.BTAnalytics.secondsSinceFirstLanding(),
+              page_path: window.location.pathname,
+              page_url: window.location.href
+            },
+            properties || {}
+          );
+          try {
+            window.posthog.capture(eventName, payload);
+          } catch (error) {}
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+          var body = document.body || null;
+          var isAuthenticated = body ? body.getAttribute('data-authenticated') === 'true' : false;
+          var userId = body ? body.getAttribute('data-user-id') : '';
+          var orgId = body ? body.getAttribute('data-org-id') : '';
+          var endpoint = body ? body.getAttribute('data-page-endpoint') : '';
+
+          if (canCapture() && isAuthenticated && userId) {
+            try {
+              window.posthog.identify(String(userId), {
+                organization_id: orgId || null,
+                authenticated: true
+              });
+              if (orgId && typeof window.posthog.group === 'function') {
+                window.posthog.group('organization', String(orgId));
+              }
+            } catch (error) {}
+          }
+
+          try {
+            if (canCapture() && window.localStorage && !window.localStorage.getItem(firstLandingRecordedKey)) {
+              window.BTAnalytics.capture('first_landing_recorded', {
+                first_landing_at_ms: firstLandingAt
+              });
+              window.localStorage.setItem(firstLandingRecordedKey, '1');
+            }
+          } catch (error) {}
+
+          window.BTAnalytics.capture('page_context_viewed', {
+            page_endpoint: endpoint || '',
+            authenticated: isAuthenticated
+          });
+
+          var pageEnteredAt = nowMs();
+          var dwellSent = false;
+          var sendDwell = function() {
+            if (dwellSent) {
+              return;
+            }
+            dwellSent = true;
+            var dwellSeconds = Math.max(0, Math.round((nowMs() - pageEnteredAt) / 1000));
+            window.BTAnalytics.capture('page_dwell_recorded', {
+              page_endpoint: endpoint || '',
+              seconds_on_page: dwellSeconds,
+              authenticated: isAuthenticated
+            });
+          };
+          window.addEventListener('pagehide', sendDwell, { once: true });
+          document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+              sendDwell();
+            }
+          });
+
+          document.addEventListener('click', function(event) {
+            var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+            if (!anchor) {
+              return;
+            }
+            var href = anchor.getAttribute('href') || '';
+            if (!href || href.startsWith('#')) {
+              return;
+            }
+            var url;
+            try {
+              url = new URL(href, window.location.origin);
+            } catch (error) {
+              return;
+            }
+            var path = url.pathname || '';
+            if (path.includes('/auth/signup')) {
+              window.BTAnalytics.capture('public_signup_cta_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120),
+                signup_source: url.searchParams.get('source') || null,
+                destination_path: path
+              });
+            } else if (path.includes('/auth/login')) {
+              window.BTAnalytics.capture('public_login_cta_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120),
+                destination_path: path
+              });
+            } else if (path === '/pricing') {
+              window.BTAnalytics.capture('public_pricing_clicked', {
+                cta_text: (anchor.textContent || '').trim().slice(0, 120)
+              });
+            }
+          });
+        });
+      })();
+    </script>
     {% block head %}{% endblock %}
     <style>
         input[type="hidden"][name="csrf_token"],
@@ -170,7 +380,8 @@ Glossary:
         }
         .public-marketing-nav .brand-full-logo {
             height: 42px;
-            width: auto;
+            width: 210px;
+            aspect-ratio: 5 / 1;
             display: block;
         }
         .app-brand-logo {
@@ -587,8 +798,8 @@ Glossary:
             {% endif %}
             {% else %}
             {% if use_public_header %}
-            {% set public_header_is_homepage = false %}
-            {% set public_header_signup_source = 'public_header' %}
+            {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
+            {% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'public_header' %}
             {% include 'components/shared/public_marketing_header.html' %}
             {% else %}
             <div class="navbar-nav me-auto"></div>
@@ -684,6 +895,7 @@ Glossary:
             {% block content %}{% endblock %}
         </div>
     </main>
+    {% if not lightweight_public_shell %}
     {% include 'components/shared/unit_converter_modal.html' %}
     <div class="modal fade" id="featureUpgradeModal" tabindex="-1" aria-labelledby="featureUpgradeModalTitle" aria-hidden="true">
         <div class="modal-dialog">
@@ -739,7 +951,7 @@ Glossary:
         </div>
     </div>
     {% endif %}
-    {% if customer_feedback_bubble_enabled %}
+    {% if load_feedback_widget %}
     {{ render_feedback_note_widget(
       modal_id='globalFeedbackNoteModal',
       default_source=request.endpoint or request.path,
@@ -755,6 +967,7 @@ Glossary:
       default_flow='question',
       floating_bottom_offset='1.25rem'
     ) }}
+    {% endif %}
     {% endif %}
     {% if not current_user.is_authenticated %}
     <a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='layout') }}" rel="nofollow" aria-hidden="true" tabindex="-1">Continue</a>
@@ -774,6 +987,9 @@ Glossary:
                 </div>
             </div>
         </footer>
+    {% if lightweight_public_shell %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% else %}
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 -->
@@ -781,22 +997,24 @@ Glossary:
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-      <!-- Custom scripts - Load SessionGuard before other modules -->
-      <script type="module" src="{{ static_asset('js/core/SessionGuard.js') }}"></script>
-      <!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
-      <script type="module" src="{{ static_asset('js/core/DrawerProtocol.js') }}"></script>
-      <script type="module" src="{{ static_asset('js/core/DrawerInterceptor.js') }}"></script>
-      <script type="module" src="{{ static_asset('js/main.js') }}"></script>
-      <script src="{{ static_asset('js/utils/utils.js') }}"></script>
-      <script src="{{ static_asset('js/list_preferences.js') }}"></script>
-      <script src="{{ static_asset('js/inventory/inventory_adjust.js') }}"></script>
-      <script src="{{ static_asset('js/conversion/unit_converter.js') }}"></script>
-      <script type="module" src="{{ static_asset('js/drawers/drawer_cadence.js') }}"></script>
-      <script src="{{ static_asset('js/drawers/container_unit_mismatch_drawer.js') }}"></script>
-    {% if customer_feedback_bubble_enabled %}
+    <!-- Custom scripts - Load SessionGuard before other modules -->
+    <script type="module" src="{{ static_asset('js/core/SessionGuard.js') }}"></script>
+    <!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
+    <script type="module" src="{{ static_asset('js/core/DrawerProtocol.js') }}"></script>
+    <script type="module" src="{{ static_asset('js/core/DrawerInterceptor.js') }}"></script>
+    <script type="module" src="{{ static_asset('js/main.js') }}"></script>
+    <script src="{{ static_asset('js/utils/utils.js') }}"></script>
+    <script src="{{ static_asset('js/list_preferences.js') }}"></script>
+    <script src="{{ static_asset('js/inventory/inventory_adjust.js') }}"></script>
+    <script src="{{ static_asset('js/conversion/unit_converter.js') }}"></script>
+    <script type="module" src="{{ static_asset('js/drawers/drawer_cadence.js') }}"></script>
+    <script src="{{ static_asset('js/drawers/container_unit_mismatch_drawer.js') }}"></script>
+    {% if load_feedback_widget %}
     <script src="{{ static_asset('js/components/feedback_note_modal.js') }}"></script>
     {% endif %}
+    {% endif %}
 {% block scripts %}{% endblock %}
+    {% if not lightweight_public_shell %}
     <script src="{{ static_asset('js/expiration_alerts.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -845,6 +1063,7 @@ Glossary:
         setInterval(updateClock, 1000);
         updateClock();
     </script>
+    {% endif %}
 
     </body>
 </html>
