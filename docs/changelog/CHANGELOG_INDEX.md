@@ -17,6 +17,7 @@ This directory contains the complete history of all fixes, improvements, and cha
 - **[2026-02-18: Legacy Account Forced Verification Modal](2026-02-18-legacy-account-forced-verification-modal.md)**
   - Added 10-day age-based legacy-account flow that force-sends a new verification email and allows login.
   - Added immediate in-app modal guidance plus persistent resend actions in authenticated UI surfaces.
+  - Updated resend messaging so logged-in users receive direct confirmation copy instead of generic account-existence text.
   - Added regression tests for post-login modal queue/render behavior.
 - **[2026-02-18: Auth Email Delivery Readiness and Message Accuracy](2026-02-18-auth-email-delivery-readiness-and-message-accuracy.md)**
   - Required-mode login now only claims verification-link delivery when send succeeds.
