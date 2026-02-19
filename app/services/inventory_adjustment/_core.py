@@ -14,6 +14,9 @@ from typing import Any, Dict, Optional
 from app.models import InventoryItem, UnifiedInventoryHistory, db
 from app.services.costing_engine import weighted_average_cost_for_item
 from app.services.event_emitter import EventEmitter
+from app.services.inventory_tracking_policy import (
+    org_allows_inventory_quantity_tracking,
+)
 from app.services.quantity_base import (
     from_base_quantity,
     sync_item_quantity_from_base,
@@ -277,7 +280,9 @@ def process_inventory_adjustment(
         org_tracks_quantities = org_allows_inventory_quantity_tracking(
             organization=getattr(item, "organization", None)
         )
-        effective_tracking_enabled = bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        effective_tracking_enabled = (
+            bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+        )
         if not effective_tracking_enabled:
             # Infinite mode must always present as non-depleting stock.
             item.quantity_base = 0
@@ -404,6 +409,7 @@ def process_inventory_adjustment(
             exc_info=True,
         )
         return _response(False, "A critical internal error occurred.")
+
 
 # --- Operation module delegator ---
 # Purpose: Route normalized adjustments to additive, deductive, or special handlers.

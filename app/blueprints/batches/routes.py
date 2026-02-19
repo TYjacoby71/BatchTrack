@@ -15,7 +15,7 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from flask_login import current_user, login_required
 
 from ...extensions import limiter
-from ...models import InventoryItem, Recipe, db
+from ...models import InventoryItem, Recipe, UserPreferences, db
 from ...services.batch_service import (
     BatchManagementService,
     BatchOperationsService,
@@ -35,6 +35,56 @@ from .start_batch import start_batch_bp
 logger = logging.getLogger(__name__)
 
 BLOCKING_STOCK_STATUSES = {"NEEDED", "OUT_OF_STOCK", "ERROR", "DENSITY_MISSING"}
+BATCH_LIST_PREF_SCOPE = "batches_list"
+DEFAULT_VISIBLE_COLUMNS = ["recipe", "timestamp", "total_cost", "product_quantity", "tags"]
+ALLOWED_VISIBLE_COLUMNS = {
+    "recipe",
+    "timestamp",
+    "completed_date",
+    "total_cost",
+    "product_quantity",
+    "tags",
+}
+
+
+def _normalize_visible_columns(raw_columns):
+    if not isinstance(raw_columns, list):
+        return list(DEFAULT_VISIBLE_COLUMNS)
+    normalized = [
+        column
+        for column in raw_columns
+        if isinstance(column, str) and column in ALLOWED_VISIBLE_COLUMNS
+    ]
+    if not normalized:
+        return list(DEFAULT_VISIBLE_COLUMNS)
+    seen = set()
+    deduped = []
+    for column in normalized:
+        if column in seen:
+            continue
+        seen.add(column)
+        deduped.append(column)
+    return deduped
+
+
+def _persist_batch_list_preferences(visible_columns, filters):
+    """Persist batch list settings to user preferences."""
+    user_prefs = UserPreferences.get_for_user(current_user.id)
+    if not user_prefs:
+        return
+    next_values = {
+        "visible_columns": _normalize_visible_columns(visible_columns),
+        "status": filters.get("status") or "all",
+        "recipe_id": filters.get("recipe_id"),
+        "start": filters.get("start"),
+        "end": filters.get("end"),
+        "sort_by": filters.get("sort_by") or "date_desc",
+    }
+    previous_values = user_prefs.get_list_preferences(BATCH_LIST_PREF_SCOPE)
+    if previous_values == next_values:
+        return
+    user_prefs.set_list_preferences(BATCH_LIST_PREF_SCOPE, next_values, merge=False)
+    db.session.commit()
 
 
 # --- Extract blocking stock issues ---
@@ -163,8 +213,20 @@ def get_batch_inventory_summary(batch_id):
 @require_permission("batches.view")
 def set_column_visibility():
     """Set column visibility preferences"""
-    columns = request.form.getlist("columns")
+    columns = _normalize_visible_columns(request.form.getlist("columns"))
     session["visible_columns"] = columns
+    try:
+        filters = {
+            "status": session.get("batch_filter_status", "all"),
+            "recipe_id": session.get("batch_filter_recipe"),
+            "start": session.get("batch_filter_start"),
+            "end": session.get("batch_filter_end"),
+            "sort_by": session.get("batch_sort_by", "date_desc"),
+        }
+        _persist_batch_list_preferences(columns, filters)
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to persist batch column visibility preferences")
     flash("Column preferences updated")
     return redirect(url_for("batches.list_batches"))
 
@@ -187,22 +249,36 @@ def list_batches():
         in_progress_page = request.args.get("in_progress_page", 1, type=int)
         completed_page = request.args.get("completed_page", 1, type=int)
 
-        # Default columns to show if user has not set preference
-        visible_columns = session.get(
-            "visible_columns",
-            ["recipe", "timestamp", "total_cost", "product_quantity", "tags"],
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        saved_scope = (
+            user_prefs.get_list_preferences(BATCH_LIST_PREF_SCOPE) if user_prefs else {}
         )
+
+        session_visible_columns = session.get("visible_columns")
+        if session_visible_columns is None:
+            session_visible_columns = saved_scope.get("visible_columns")
+        visible_columns = _normalize_visible_columns(session_visible_columns)
+        session["visible_columns"] = visible_columns
 
         # Get filters from request args or session
         filters = {
             "status": request.args.get("status")
-            or session.get("batch_filter_status", "all"),
+            or session.get("batch_filter_status")
+            or saved_scope.get("status")
+            or "all",
             "recipe_id": request.args.get("recipe_id")
-            or session.get("batch_filter_recipe"),
-            "start": request.args.get("start") or session.get("batch_filter_start"),
-            "end": request.args.get("end") or session.get("batch_filter_end"),
+            or session.get("batch_filter_recipe")
+            or saved_scope.get("recipe_id"),
+            "start": request.args.get("start")
+            or session.get("batch_filter_start")
+            or saved_scope.get("start"),
+            "end": request.args.get("end")
+            or session.get("batch_filter_end")
+            or saved_scope.get("end"),
             "sort_by": request.args.get("sort_by")
-            or session.get("batch_sort_by", "date_desc"),
+            or session.get("batch_sort_by")
+            or saved_scope.get("sort_by")
+            or "date_desc",
         }
 
         # Store current filters in session
@@ -215,6 +291,12 @@ def list_batches():
                 "batch_sort_by": filters["sort_by"],
             }
         )
+
+        try:
+            _persist_batch_list_preferences(visible_columns, filters)
+        except Exception:
+            db.session.rollback()
+            logger.exception("Failed to persist batch list preferences")
 
         # Pagination configuration
         pagination_config = {
@@ -251,11 +333,7 @@ def list_batches():
             InventoryItem=InventoryItem,
             TimezoneUtils=TimezoneUtils,
             visible_columns=[
-                "recipe",
-                "timestamp",
-                "total_cost",
-                "product_quantity",
-                "tags",
+                *DEFAULT_VISIBLE_COLUMNS,
             ],
             breadcrumb_items=[{"label": "Batches"}],
         )

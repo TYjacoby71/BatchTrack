@@ -20,7 +20,7 @@
 
 <!-- Filter Section for Consumables -->
 <div class="collapse mb-3" id="consumablesFilterSection">
-  <div class="card card-body">
+  <div class="card card-body inventory-filter-card bt-filter-panel">
     <div class="row g-3">
       <div class="col-md-3">
         <div class="form-check">
@@ -34,7 +34,14 @@
     </div>
     <div class="row g-3">
       <div class="col-md-4">
-        <input type="text" id="consumablesNameFilter" class="form-control" placeholder="Search by name...">
+        <label class="form-label small text-muted mb-1" for="consumablesNameFilter">Search inventory name</label>
+        <div class="input-group inventory-filter-input-group bt-filter-search-group">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="search" id="consumablesNameFilter" class="form-control inventory-live-filter bt-filter-search-input" placeholder="Search by name..." autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary inventory-filter-clear-btn bt-filter-clear-btn d-none" data-clear-filter-target="consumablesNameFilter" aria-label="Clear consumable name filter">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
       <div class="col-md-3">
         <select id="consumablesSortFilter" class="form-select">

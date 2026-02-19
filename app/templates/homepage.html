@@ -22,11 +22,29 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('core.branding_app_tile') }}">
     <link rel="shortcut icon" href="{{ url_for('core.branding_app_tile') }}">
     <link rel="apple-touch-icon" href="{{ url_for('core.branding_app_tile') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link
+        rel="preload"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+        as="style"
+        crossorigin
+        onload="this.onload=null;this.rel='stylesheet'"
+    >
+    <noscript>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+            crossorigin
+        >
+    </noscript>
     <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
         :root {
-            --navbar-height: 80px;
+            --navbar-height: 72px;
         }
 
         body {
@@ -36,14 +54,13 @@
         }
 
         .navbar {
-            transition: box-shadow 0.3s ease, background-color 0.3s ease;
+            min-height: var(--navbar-height);
         }
 
-        body.scrolled .navbar {
-            box-shadow: 0 6px 18px rgba(14, 30, 37, 0.12);
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(6px);
+        .navbar > .container {
+            min-height: var(--navbar-height);
         }
+
         .hero-banner {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -108,9 +125,55 @@
         }
 
         .navbar .brand-full-logo {
+            width: 210px;
             height: 42px;
-            width: auto;
             display: block;
+        }
+
+        .homepage-main .text-muted {
+            color: #495057 !important;
+        }
+
+        .feature-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3.25rem;
+            height: 3.25rem;
+            padding: 0 0.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(22, 32, 61, 0.2);
+            background: rgba(13, 110, 253, 0.08);
+            color: #0b2f6b;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            line-height: 1;
+        }
+
+        .check-symbol {
+            display: inline-block;
+            min-width: 1.25rem;
+            margin-right: 0.35rem;
+            color: #198754;
+            font-weight: 700;
+        }
+
+        .footer-link-chip {
+            color: #f8f9fa;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
+            padding: 0.18rem 0.65rem;
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+
+        .footer-link-chip:hover {
+            color: #ffffff;
+            text-decoration: none;
+            border-color: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .placeholder-img {
@@ -184,19 +247,34 @@
             font-size: 0.95rem;
             color: #16203d;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+
+            .scrolling-content {
+                animation: none;
+            }
+
+            .feature-card {
+                transition: none;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Header with Navigation -->
     {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
     {% set public_header_is_homepage = true %}
-    {% set public_header_signup_source = 'homepage_get_started' %}
+    {% set public_header_signup_source = 'homepage_start_free_trial' %}
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
         <div class="container">
             {% include 'components/shared/public_marketing_header.html' %}
         </div>
     </nav>
 
+    <main id="main-content" class="homepage-main">
     <!-- Hero Banner -->
     <section class="hero-section bg-light py-5 border-bottom">
         <div class="container">
@@ -210,12 +288,12 @@
     <!-- Scrolling Banner -->
     <div class="scrolling-banner">
         <div class="scrolling-content">
-            <span class="me-5"><i class="fas fa-check text-success"></i> FIFO Inventory Tracking</span>
-            <span class="me-5"><i class="fas fa-check text-success"></i> Batch Production Management</span>
-            <span class="me-5"><i class="fas fa-check text-success"></i> Real-time Stock Alerts</span>
-            <span class="me-5"><i class="fas fa-check text-success"></i> Cost Tracking & Analytics</span>
-            <span class="me-5"><i class="fas fa-check text-success"></i> Container Management</span>
-            <span class="me-5"><i class="fas fa-check text-success"></i> Recipe Scaling</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>FIFO Inventory Tracking</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Batch Production Management</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Real-time Stock Alerts</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Cost Tracking & Analytics</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Container Management</span>
+            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Recipe Scaling</span>
         </div>
     </div>
 
@@ -232,9 +310,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-flask fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">BT</span>
                             </div>
-                            <h5 class="card-title">Batch Tracking</h5>
+                            <h3 class="card-title h5">Batch Tracking</h3>
                             <p class="card-text">Track every batch from start to finish with detailed logs and real-time status updates.</p>
                         </div>
                     </div>
@@ -244,9 +322,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-boxes fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">FI</span>
                             </div>
-                            <h5 class="card-title">FIFO Inventory</h5>
+                            <h3 class="card-title h5">FIFO Inventory</h3>
                             <p class="card-text">First-in, first-out inventory management with expiration tracking and automated alerts.</p>
                         </div>
                     </div>
@@ -256,9 +334,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-chart-line fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">AN</span>
                             </div>
-                            <h5 class="card-title">Analytics Dashboard</h5>
+                            <h3 class="card-title h5">Analytics Dashboard</h3>
                             <p class="card-text">Get insights into your production costs, efficiency, and inventory turnover.</p>
                         </div>
                     </div>
@@ -284,7 +362,7 @@
                         <div class="col-sm-6">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold mb-2">Batch-first</h5>
+                                    <h3 class="fw-bold h5 mb-2">Batch-first</h3>
                                     <p class="text-muted mb-0 small">Track every run from prep to finished output with cleaner records.</p>
                                 </div>
                             </div>
@@ -292,7 +370,7 @@
                         <div class="col-sm-6">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold mb-2">Inventory clarity</h5>
+                                    <h3 class="fw-bold h5 mb-2">Inventory clarity</h3>
                                     <p class="text-muted mb-0 small">FIFO-aware ingredient flow keeps costs and stock decisions grounded.</p>
                                 </div>
                             </div>
@@ -300,7 +378,7 @@
                         <div class="col-sm-6">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold mb-2">Calm UX</h5>
+                                    <h3 class="fw-bold h5 mb-2">Calm UX</h3>
                                     <p class="text-muted mb-0 small">Minimal friction interface designed for focus during production hours.</p>
                                 </div>
                             </div>
@@ -308,7 +386,7 @@
                         <div class="col-sm-6">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold mb-2">Team-ready</h5>
+                                    <h3 class="fw-bold h5 mb-2">Team-ready</h3>
                                     <p class="text-muted mb-0 small">Scale from one maker to multiple operators without workflow rewrites.</p>
                                 </div>
                             </div>
@@ -328,7 +406,7 @@
                     <p class="mb-0">Join thousands of makers who trust BatchTrack for their inventory management.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="{{ url_for('auth.signup', source='homepage_cta_primary') }}" class="btn btn-light btn-lg">Start Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-light btn-lg">Start Free Trial</a>
                 </div>
             </div>
         </div>
@@ -351,6 +429,7 @@
                             {% if r.logo %}
                             <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-logo.png') }}" 
                                  alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 width="180" height="60" loading="lazy" decoding="async"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                             {% endif %}
                             <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
@@ -361,6 +440,7 @@
                                 {% if r.photo %}
                                 <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-photo.jpg') }}" 
                                      alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     width="50" height="50" loading="lazy" decoding="async"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                                 {% endif %}
                                 <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
@@ -385,6 +465,7 @@
                             {% if r.logo %}
                             <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-logo.png') }}" 
                                  alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 width="180" height="60" loading="lazy" decoding="async"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                             {% endif %}
                             <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
@@ -395,6 +476,7 @@
                                 {% if r.photo %}
                                 <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-photo.jpg') }}" 
                                      alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     width="50" height="50" loading="lazy" decoding="async"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                                 {% endif %}
                                 <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
@@ -419,6 +501,7 @@
                             {% if r.logo %}
                             <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-logo.png') }}" 
                                  alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 width="180" height="60" loading="lazy" decoding="async"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                             {% endif %}
                             <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
@@ -429,6 +512,7 @@
                                 {% if r.photo %}
                                 <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-photo.jpg') }}" 
                                      alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     width="50" height="50" loading="lazy" decoding="async"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                                 {% endif %}
                                 <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
@@ -488,9 +572,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-clock fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">TM</span>
                             </div>
-                            <h5 class="card-title">Timer Management</h5>
+                            <h3 class="card-title h5">Timer Management</h3>
                             <p class="card-text">Built-in timers for each production step to ensure consistency and quality.</p>
                         </div>
                     </div>
@@ -500,9 +584,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-qrcode fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">QR</span>
                             </div>
-                            <h5 class="card-title">QR Code Labels</h5>
+                            <h3 class="card-title h5">QR Code Labels</h3>
                             <p class="card-text">Generate QR codes for easy batch identification and tracking throughout your workflow.</p>
                         </div>
                     </div>
@@ -512,9 +596,9 @@
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3">
-                                <i class="fas fa-mobile-alt fa-3x"></i>
+                                <span class="feature-icon" aria-hidden="true">MB</span>
                             </div>
-                            <h5 class="card-title">Mobile Friendly</h5>
+                            <h3 class="card-title h5">Mobile Friendly</h3>
                             <p class="card-text">Access your production data anywhere with our responsive web application.</p>
                         </div>
                     </div>
@@ -529,7 +613,7 @@
             <h2 class="fw-bold mb-4">Transform Your Production Process Today</h2>
             <p class="lead mb-4">Join the growing community of makers who have streamlined their operations with BatchTrack</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="{{ url_for('auth.signup', source='homepage_cta_secondary') }}" class="btn btn-light btn-lg px-4">Start Free Trial</a>
+                <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-light btn-lg px-4">Start Free Trial</a>
             </div>
         </div>
     </section>
@@ -540,7 +624,7 @@
         <div class="scrolling-content">
             {% for s in marketing_spotlights %}
             <span class="me-5">
-                <i class="fas fa-bullhorn text-primary"></i>
+                <span aria-hidden="true" class="me-1">[Spotlight]</span>
                 <a href="{{ s.url }}" target="_blank">{{ s.business_name }}</a>
             </span>
             {% endfor %}
@@ -599,12 +683,12 @@
                     <h2 class="fw-bold mb-4">See BatchTrack in Action</h2>
                     <p class="lead mb-4">Watch how easy it is to track batches, manage inventory, and scale your production with our intuitive interface.</p>
                     <ul class="list-unstyled mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 5-minute setup</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> No credit card required</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Start Free Trial</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Cancel anytime</li>
+                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>5-minute setup</li>
+                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>No credit card required</li>
+                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Start Free Trial</li>
+                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Cancel anytime</li>
                     </ul>
-                    <a href="{{ url_for('auth.signup', source='homepage_final_trial') }}" class="btn btn-cta btn-lg text-white">Start Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-cta btn-lg text-white">Start Free Trial</a>
                 </div>
             </div>
         </div>
@@ -621,31 +705,30 @@
                 </div>
                 <div class="col-lg-5">
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-primary">Help Center</a>
+                        <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-dark">Help Center</a>
                         <a href="mailto:support@batchtrack.com" class="btn btn-primary">Contact Support</a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
+    </main>
 
     <!-- Footer -->
     <footer class="bg-dark text-white py-5">
         <div class="container">
             <div class="row">
                 <div class="col-lg-4 mb-4">
-                    <h5 class="fw-bold">
-                        <i class="fas fa-flask me-2"></i>BatchTrack
-                    </h5>
+                    <p class="fw-bold h5 mb-3">BatchTrack</p>
                     <p>The complete solution for production and inventory management.</p>
                     <div class="d-flex gap-3">
-                        <a href="mailto:support@batchtrack.com" class="text-light" aria-label="Email support"><i class="fas fa-envelope"></i></a>
-                        <a href="{{ url_for('help_routes.help_overview') }}" class="text-light" aria-label="Help center"><i class="fas fa-life-ring"></i></a>
-                        <a href="{{ url_for('pricing_routes.pricing') }}" class="text-light" aria-label="View pricing"><i class="fas fa-tags"></i></a>
+                        <a href="mailto:support@batchtrack.com" class="footer-link-chip" aria-label="Email support">Email</a>
+                        <a href="{{ url_for('help_routes.help_overview') }}" class="footer-link-chip" aria-label="Help center">Help</a>
+                        <a href="{{ url_for('pricing_routes.pricing') }}" class="footer-link-chip" aria-label="View pricing">Pricing</a>
                     </div>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
-                    <h6 class="fw-bold">Product</h6>
+                    <p class="fw-bold mb-3">Product</p>
                     <ul class="list-unstyled">
                         <li><a href="#features" class="text-light text-decoration-none">Features</a></li>
                         <li><a href="{{ url_for('pricing_routes.pricing') }}" class="text-light text-decoration-none">Pricing</a></li>
@@ -653,7 +736,7 @@
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
-                    <h6 class="fw-bold">Company</h6>
+                    <p class="fw-bold mb-3">Company</p>
                     <ul class="list-unstyled">
                         <li><a href="#about" class="text-light text-decoration-none">About</a></li>
                         <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
@@ -661,7 +744,7 @@
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
-                    <h6 class="fw-bold">Support</h6>
+                    <p class="fw-bold mb-3">Support</p>
                     <ul class="list-unstyled">
                         <li><a href="{{ url_for('help_routes.help_overview') }}" class="text-light text-decoration-none">Help Center</a></li>
                         <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
@@ -669,7 +752,7 @@
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
-                    <h6 class="fw-bold">Legal</h6>
+                    <p class="fw-bold mb-3">Legal</p>
                     <ul class="list-unstyled">
                         <li><a href="{{ url_for('legal.privacy_policy') }}" class="text-light text-decoration-none">Privacy</a></li>
                         <li><a href="{{ url_for('legal.terms_of_service') }}" class="text-light text-decoration-none">Terms</a></li>
@@ -687,48 +770,6 @@
     <a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='homepage') }}" rel="nofollow" aria-hidden="true" tabindex="-1">More</a>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Smooth scrolling for anchor links -->
-    <script>
-        function updateNavbarSpacing() {
-            const navbar = document.querySelector('.navbar');
-            if (!navbar) return;
-
-            const height = navbar.offsetHeight;
-            document.documentElement.style.setProperty('--navbar-height', `${height}px`);
-            document.body.style.paddingTop = `${height}px`;
-            document.body.style.setProperty('scroll-padding-top', `${height + 16}px`);
-        }
-
-        function handleNavbarScrollState() {
-            if (window.scrollY > 4) {
-                document.body.classList.add('scrolled');
-            } else {
-                document.body.classList.remove('scrolled');
-            }
-        }
-
-        window.addEventListener('load', () => {
-            updateNavbarSpacing();
-            handleNavbarScrollState();
-        });
-
-        window.addEventListener('resize', updateNavbarSpacing);
-        window.addEventListener('scroll', handleNavbarScrollState);
-
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
