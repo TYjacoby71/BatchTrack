@@ -91,7 +91,7 @@ class LoginForm(FlaskForm):
 # Purpose: Issue and email a fresh verification token with a resend cooldown.
 # Inputs: User model for the account currently attempting to log in.
 # Outputs: Boolean indicating whether a verification email was successfully sent.
-def _send_verification_if_needed(user: User) -> bool:
+def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
     """Issue and send verification token when prompt/required mode is active."""
     if not user.email or user.email_verified:
         return False
@@ -104,7 +104,7 @@ def _send_verification_if_needed(user: User) -> bool:
             and TimezoneUtils.utc_now() - user.email_verification_sent_at
             < timedelta(minutes=15)
         )
-        if recently_sent and user.email_verification_token:
+        if not force and recently_sent and user.email_verification_token:
             return False
 
         user.email_verification_token = EmailService.generate_verification_token(
@@ -113,17 +113,53 @@ def _send_verification_if_needed(user: User) -> bool:
         user.email_verification_sent_at = TimezoneUtils.utc_now()
         db.session.commit()
 
-        return EmailService.send_verification_email(
+        sent = EmailService.send_verification_email(
             user.email,
             user.email_verification_token,
             user.first_name or user.username,
         )
+        if not sent:
+            # Do not enforce resend cooldown when delivery failed.
+            user.email_verification_token = None
+            user.email_verification_sent_at = None
+            try:
+                db.session.commit()
+            except Exception as clear_exc:
+                db.session.rollback()
+                logger.warning(
+                    "Failed to clear verification token after send failure for user %s: %s",
+                    user.id,
+                    clear_exc,
+                )
+        return sent
     except Exception as exc:
         db.session.rollback()
         logger.warning(
             "Unable to queue verification email for user %s: %s", user.id, exc
         )
         return False
+
+
+# --- Evaluate age-based verification lock ---
+# Purpose: Enforce verification login lock for older unverified customer accounts.
+# Inputs: User model with created_at timestamp and verification state.
+# Outputs: Tuple[should_lock, account_age_days, grace_window_days].
+def _age_based_verification_lock(user: User) -> tuple[bool, int, int]:
+    grace_days_raw = current_app.config.get("AUTH_EMAIL_FORCE_REQUIRED_AFTER_DAYS", 10)
+    try:
+        grace_days = max(0, int(grace_days_raw))
+    except (TypeError, ValueError):
+        grace_days = 10
+
+    if grace_days <= 0:
+        return False, 0, grace_days
+
+    created_at = TimezoneUtils.ensure_timezone_aware(getattr(user, "created_at", None))
+    if not created_at:
+        return False, 0, grace_days
+
+    account_age_days = max(0, (TimezoneUtils.utc_now() - created_at).days)
+    return account_age_days >= grace_days, account_age_days, grace_days
 
 
 # --- Login route ---
@@ -289,7 +325,12 @@ def login():
                     return _render_login_page()
 
             if user.user_type != "developer" and user.email and not user.email_verified:
-                sent = _send_verification_if_needed(user)
+                force_age_prompt, account_age_days, grace_days = (
+                    _age_based_verification_lock(user)
+                    if EmailService.should_issue_verification_tokens()
+                    else (False, 0, 0)
+                )
+                sent = _send_verification_if_needed(user, force=force_age_prompt)
                 if EmailService.should_require_verified_email_on_login():
                     if sent:
                         flash(
@@ -305,14 +346,31 @@ def login():
                         url_for("auth.resend_verification", email=user.email)
                     )
                 if EmailService.should_issue_verification_tokens():
-                    if sent:
+                    if force_age_prompt:
+                        session["verification_required_modal"] = {
+                            "sent": bool(sent),
+                            "age_days": int(account_age_days),
+                            "grace_days": int(grace_days),
+                            "email": user.email,
+                        }
+                        if sent:
+                            flash(
+                                f"We sent a new verification email because this account is older than {grace_days} days and still unverified. Please check your inbox and verify.",
+                                "warning",
+                            )
+                        else:
+                            flash(
+                                "Your account needs email verification. We could not send a verification email automatically right now; use resend verification and check email provider settings.",
+                                "warning",
+                            )
+                    elif sent:
                         flash(
                             "Please verify your email while you finish account setup. A verification link was sent.",
                             "info",
                         )
                     else:
                         flash(
-                            "Please verify your email while you finish account setup.",
+                            "Please verify your email while you finish account setup. We could not send a verification email right now; use resend verification and check email provider settings.",
                             "info",
                         )
 

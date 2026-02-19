@@ -659,6 +659,19 @@ Glossary:
                     {% endfor %}
                 {% endif %}
             {% endwith %}
+            {% if current_user.is_authenticated and current_user.user_type != 'developer' and current_user.email and not current_user.email_verified %}
+            <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
+                <div>
+                    <strong>Email verification needed.</strong>
+                    We sent a verification link during login or signup; if you did not receive it, request a new one now.
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('auth.resend_verification', email=current_user.email) }}" class="btn btn-sm btn-warning">Send verification email</a>
+                    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-warning">Open settings</a>
+                </div>
+            </div>
+            {% endif %}
+            {% set verification_required_modal = session.pop('verification_required_modal', None) %}
             {% set TimezoneUtils = TimezoneUtils_global() %}
             {% block content %}{% endblock %}
         </div>
@@ -683,6 +696,36 @@ Glossary:
             </div>
         </div>
     </div>
+    {% if verification_required_modal %}
+    <div class="modal fade" id="verificationRequiredModal" tabindex="-1" aria-labelledby="verificationRequiredModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="verificationRequiredModalTitle">Please verify your email</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if verification_required_modal.sent %}
+                    <p class="mb-0">
+                        We sent a new verification email to <strong>{{ verification_required_modal.email }}</strong>.
+                        Your account is {{ verification_required_modal.age_days }} days old and has passed the
+                        {{ verification_required_modal.grace_days }}-day verification window. Please verify your email now.
+                    </p>
+                    {% else %}
+                    <p class="mb-0">
+                        Your account is {{ verification_required_modal.age_days }} days old and must be verified.
+                        We could not send a verification email automatically. Click resend below after checking provider settings.
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary">Open settings</a>
+                    <a href="{{ url_for('auth.resend_verification', email=verification_required_modal.email) }}" class="btn btn-primary">Resend verification email</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% if customer_feedback_bubble_enabled %}
     {{ render_feedback_note_widget(
       modal_id='globalFeedbackNoteModal',
@@ -746,6 +789,10 @@ Glossary:
         document.addEventListener('DOMContentLoaded', function () {
             const upgradeModal = document.getElementById('featureUpgradeModal');
             if (!upgradeModal) {
+                const verificationRequiredModal = document.getElementById('verificationRequiredModal');
+                if (verificationRequiredModal && typeof bootstrap !== 'undefined') {
+                    new bootstrap.Modal(verificationRequiredModal).show();
+                }
                 return;
             }
 
@@ -764,6 +811,11 @@ Glossary:
                     modalBody.textContent = featureDescription || 'This feature is locked on your current plan.';
                 }
             });
+
+            const verificationRequiredModal = document.getElementById('verificationRequiredModal');
+            if (verificationRequiredModal && typeof bootstrap !== 'undefined') {
+                new bootstrap.Modal(verificationRequiredModal).show();
+            }
         });
     </script>
 
