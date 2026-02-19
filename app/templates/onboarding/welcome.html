@@ -130,4 +130,24 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+        return;
+    }
+    window.BTAnalytics.capture('onboarding_welcome_viewed', {
+        requires_password_setup: {{ 'true' if requires_password_setup else 'false' }},
+        show_team_step: {{ 'true' if show_team_step else 'false' }}
+    });
+
+    const completeBtn = document.querySelector('button[name="complete_checklist"][value="true"]');
+    if (completeBtn) {
+        completeBtn.addEventListener('click', function() {
+            window.BTAnalytics.capture('onboarding_complete_clicked', {
+                requires_password_setup: {{ 'true' if requires_password_setup else 'false' }}
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

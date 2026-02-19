@@ -271,4 +271,14 @@ Glossary:
     </div>
   </section>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+    return;
+  }
+  window.BTAnalytics.capture('landing_variant_viewed', {
+    landing_variant: 'hormozi'
+  });
+});
+</script>
 {% endblock %}

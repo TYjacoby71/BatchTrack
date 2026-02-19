@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,6 +12,7 @@ from flask import url_for
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
 from .billing_service import BillingService
+from .event_emitter import EventEmitter
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_plan_catalog_service import SignupPlanCatalogService
 from .signup_service import SignupService
@@ -61,6 +63,7 @@ class SignupSubmission:
     selected_lifetime_key: str
     effective_promo_code: str | None
     detected_timezone: str | None
+    client_first_landing_at: int | None = None
     price_lookup_key_override: str | None = None
     stripe_coupon_id: str | None = None
     stripe_promotion_code_id: str | None = None
@@ -386,6 +389,27 @@ class SignupCheckoutService:
             )
 
         metadata["pending_signup_id"] = str(pending_signup.id)
+        try:
+            EventEmitter.emit(
+                event_name="signup_checkout_started",
+                properties={
+                    "pending_signup_id": pending_signup.id,
+                    "tier_id": str(submission.selected_tier or ""),
+                    "billing_mode": submission.selected_mode,
+                    "billing_cycle": (
+                        "lifetime"
+                        if submission.selected_mode == "lifetime"
+                        else submission.selected_standard_cycle
+                    ),
+                    "signup_source": context.signup_source,
+                    "is_oauth_signup": bool(submission.oauth_signup),
+                    "seconds_since_first_landing": cls._seconds_since_first_landing(
+                        submission.client_first_landing_at
+                    ),
+                },
+            )
+        except Exception:
+            pass
         success_url = (
             url_for("billing.complete_signup_from_stripe", _external=True)
             + "?session_id={CHECKOUT_SESSION_ID}"
@@ -507,6 +531,9 @@ class SignupCheckoutService:
             selected_lifetime_key=selected_lifetime_key,
             effective_promo_code=context.promo_code,
             detected_timezone=form_data.get("detected_timezone"),
+            client_first_landing_at=cls._parse_client_epoch_ms(
+                form_data.get("client_first_landing_at")
+            ),
         )
 
         if not context.has_lifetime_capacity and submission.selected_mode == "lifetime":
@@ -582,6 +609,8 @@ class SignupCheckoutService:
                 else submission.selected_standard_cycle
             ),
         }
+        if submission.client_first_landing_at:
+            metadata["client_first_landing_at"] = str(submission.client_first_landing_at)
 
         if submission.detected_timezone:
             metadata["detected_timezone"] = submission.detected_timezone
@@ -615,3 +644,23 @@ class SignupCheckoutService:
             metadata["promo_code"] = submission.effective_promo_code
 
         return metadata
+
+    @staticmethod
+    def _parse_client_epoch_ms(raw_value: Any) -> int | None:
+        if raw_value in (None, ""):
+            return None
+        try:
+            parsed = int(str(raw_value).strip())
+        except (TypeError, ValueError):
+            return None
+        if parsed < 946684800000 or parsed > 4102444800000:
+            return None
+        return parsed
+
+    @staticmethod
+    def _seconds_since_first_landing(first_landing_at_ms: int | None) -> int | None:
+        if not first_landing_at_ms:
+            return None
+        now_ms = int(time.time() * 1000)
+        elapsed_seconds = int(max(0, (now_ms - int(first_landing_at_ms)) / 1000))
+        return elapsed_seconds

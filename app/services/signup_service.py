@@ -303,6 +303,47 @@ class SignupService:
                 },
                 auto_commit=True,
             )
+            completion_properties = {
+                "pending_signup_id": pending_signup.id,
+                "tier_id": subscription_tier.id,
+                "signup_source": pending_signup.signup_source or "direct",
+                "checkout_session_id": pending_signup.stripe_checkout_session_id,
+                "stripe_customer_id": pending_signup.stripe_customer_id,
+                "billing_provider": "stripe",
+            }
+            try:
+                raw_first_landing = (
+                    (pending_signup.metadata or {}).get("client_first_landing_at")
+                    if isinstance(pending_signup.metadata, dict)
+                    else None
+                )
+                if raw_first_landing not in (None, ""):
+                    first_landing_ms = int(str(raw_first_landing).strip())
+                    if 946684800000 <= first_landing_ms <= 4102444800000:
+                        now_ms = int(TimezoneUtils.utc_now().timestamp() * 1000)
+                        completion_properties["seconds_since_first_landing"] = int(
+                            max(0, (now_ms - first_landing_ms) / 1000)
+                        )
+            except (TypeError, ValueError):
+                pass
+            EventEmitter.emit(
+                "signup_checkout_completed",
+                organization_id=org.id,
+                user_id=owner_user.id,
+                properties=completion_properties,
+                entity_type="organization",
+                entity_id=org.id,
+                auto_commit=True,
+            )
+            EventEmitter.emit(
+                "purchase_completed",
+                organization_id=org.id,
+                user_id=owner_user.id,
+                properties=completion_properties,
+                entity_type="organization",
+                entity_id=org.id,
+                auto_commit=True,
+            )
 
             return org, owner_user
 

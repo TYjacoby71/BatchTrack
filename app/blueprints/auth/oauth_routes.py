@@ -18,8 +18,10 @@ from flask_login import login_user
 
 from ...extensions import db, limiter
 from ...models import User
+from ...services.event_emitter import EventEmitter
 from ...services.oauth_service import OAuthService
 from ...services.session_service import SessionService
+from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -62,8 +64,34 @@ def _oauth_success_or_signup_redirect(
         SessionService.rotate_user_session(user)
         session.pop("dismissed_alerts", None)
 
+        previous_last_login = TimezoneUtils.ensure_timezone_aware(
+            getattr(user, "last_login", None)
+        )
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
+        try:
+            login_props = {
+                "is_first_login": previous_last_login is None,
+                "login_method": f"oauth_{provider}",
+                "destination_hint": (
+                    "developer_dashboard"
+                    if user.user_type == "developer"
+                    else "organization_dashboard"
+                ),
+            }
+            landing_elapsed = seconds_since_first_landing(request)
+            if landing_elapsed is not None:
+                login_props["seconds_since_first_landing"] = landing_elapsed
+            EventEmitter.emit(
+                event_name="user_login_succeeded",
+                properties=login_props,
+                organization_id=getattr(user, "organization_id", None),
+                user_id=user.id,
+                entity_type="user",
+                entity_id=user.id,
+            )
+        except Exception:
+            pass
         flash(f"Welcome back, {user.first_name or user.username}!", "success")
 
         if user.user_type == "developer":
