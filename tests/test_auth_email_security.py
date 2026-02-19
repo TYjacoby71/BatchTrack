@@ -138,6 +138,81 @@ def test_resend_verification_renders_forced_age_modal(client, app):
     assert "10-day verification window" in html
 
 
+# --- Naive verification timestamp compatibility ---
+# Purpose: Verify login flow handles legacy naive verification timestamps without crashing.
+def test_login_handles_naive_verification_timestamp_without_send_crash(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"naive_verify_{uuid.uuid4().hex[:6]}",
+            email=f"naive_verify_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        user.email_verification_token = f"legacy-{uuid.uuid4().hex}"
+        user.email_verification_sent_at = TimezoneUtils.utc_now().replace(tzinfo=None)
+        db.session.commit()
+        username = user.username
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/dashboard" in response.headers["Location"] or "/user_dashboard" in response.headers["Location"]
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is not None
+
+
+# --- Authenticated resend messaging ---
+# Purpose: Verify authenticated resend uses specific user-facing confirmation copy.
+def test_authenticated_resend_verification_uses_specific_message(client, app, monkeypatch):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"auth_resend_{uuid.uuid4().hex[:6]}",
+            email=f"auth_resend_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        username = user.username
+        email = user.email
+
+    login_response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert login_response.status_code == 302
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.verification_routes.EmailService.send_verification_email",
+        lambda *args, **kwargs: True,
+    )
+
+    resend_response = client.post(
+        "/auth/resend-verification",
+        data={"email": email, "next": "/dashboard"},
+        follow_redirects=False,
+    )
+    assert resend_response.status_code == 302
+    assert "/dashboard" in resend_response.headers["Location"]
+
+    with client.session_transaction() as sess:
+        flashes = [message for _category, message in sess.get("_flashes", [])]
+        assert any(f"Verification email sent to {email}." in msg for msg in flashes)
+        assert all(
+            "If an account with that email exists and is unverified" not in msg
+            for msg in flashes
+        )
+
+
 # --- Email identifier login ---
 # Purpose: Verify login accepts email as credential identifier in addition to username.
 def test_login_accepts_email_identifier(client, app):

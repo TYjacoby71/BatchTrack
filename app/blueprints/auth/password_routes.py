@@ -24,6 +24,10 @@ from . import auth_bp
 logger = logging.getLogger(__name__)
 
 
+# --- Resolve reset expiry hours ---
+# Purpose: Normalize reset token expiry configuration to a safe integer window.
+# Inputs: App config value `PASSWORD_RESET_TOKEN_EXPIRY_HOURS`.
+# Outputs: Positive integer expiry duration in hours.
 def _password_reset_expiry_hours() -> int:
     """Resolve reset token expiry window from config."""
     raw = current_app.config.get("PASSWORD_RESET_TOKEN_EXPIRY_HOURS", 24)
@@ -34,19 +38,27 @@ def _password_reset_expiry_hours() -> int:
     return max(1, hours)
 
 
+# --- Check reset-token expiry ---
+# Purpose: Determine whether password-reset token timestamp has expired safely.
+# Inputs: User model with `password_reset_sent_at` timestamp.
+# Outputs: Boolean indicating whether token is expired/invalid.
 def _is_reset_token_expired(user: User) -> bool:
     """Return True when token timestamp is absent or expired."""
-    sent_at = getattr(user, "password_reset_sent_at", None)
+    sent_at = TimezoneUtils.ensure_timezone_aware(
+        getattr(user, "password_reset_sent_at", None)
+    )
     if not sent_at:
         return True
     expires_at = sent_at + timedelta(hours=_password_reset_expiry_hours())
     return TimezoneUtils.utc_now() > expires_at
 
 
-@auth_bp.route("/forgot-password", methods=["GET", "POST"])
-@limiter.limit("120/minute")
 # --- Forgot password route ---
 # Purpose: Issue password reset tokens while keeping responses account-enumeration safe.
+# Inputs: Optional account email payload from public forgot-password form.
+# Outputs: Generic redirect response plus optional token issuance side effects.
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("120/minute")
 def forgot_password():
     """Request a password reset link. Response is intentionally generic."""
     if request.method == "POST":
@@ -80,10 +92,12 @@ def forgot_password():
     return render_template("pages/auth/forgot_password.html")
 
 
-@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
-@limiter.limit("120/minute")
 # --- Reset password route ---
 # Purpose: Validate one-time tokens and finalize password changes securely.
+# Inputs: Password reset token route parameter and optional form submission.
+# Outputs: Rendered reset form or redirect response after reset completion/failure.
+@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+@limiter.limit("120/minute")
 def reset_password(token):
     """Reset password using a one-time token delivered via email."""
     user = User.query.filter_by(password_reset_token=token).first()

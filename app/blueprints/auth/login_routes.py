@@ -99,10 +99,9 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
         return False
 
     try:
+        sent_at = TimezoneUtils.ensure_timezone_aware(user.email_verification_sent_at)
         recently_sent = (
-            user.email_verification_sent_at
-            and TimezoneUtils.utc_now() - user.email_verification_sent_at
-            < timedelta(minutes=15)
+            sent_at and TimezoneUtils.utc_now() - sent_at < timedelta(minutes=15)
         )
         if not force and recently_sent and user.email_verification_token:
             return False

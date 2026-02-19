@@ -16,10 +16,15 @@ Added an age-based legacy-account verification flow that force-sends a fresh ver
   - provides direct resend + settings actions
 - Added a persistent global in-app warning alert (for authenticated unverified users) with a direct resend-verification button.
 - Added an explicit verification action card in Settings profile tab so users can always resend verification on demand.
+- Updated resend-verification behavior for authenticated users to:
+  - return specific non-generic feedback ("Verification email sent to ...")
+  - redirect back to safe in-app targets instead of always bouncing through login
+  - keep privacy-safe generic copy only for unauthenticated requests
 - Added regression tests covering post-login modal queue/render behavior.
 
 ## Files Modified
 - `app/blueprints/auth/login_routes.py`
+- `app/blueprints/auth/verification_routes.py`
 - `app/templates/layout.html`
 - `app/templates/settings/components/profile_tab.html`
 - `app/templates/pages/auth/resend_verification.html`
