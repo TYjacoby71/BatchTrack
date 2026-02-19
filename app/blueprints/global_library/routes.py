@@ -276,6 +276,7 @@ def global_library():
         page_description=" ".join(description_bits),
         canonical_url=canonical_url,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
 
     if not bypass_cache:
@@ -417,6 +418,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         slugify=slugify_value,
         preview_remaining=preview_remaining,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
 
 

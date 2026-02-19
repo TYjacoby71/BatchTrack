@@ -56,6 +56,7 @@ def _render_tool(template_name: str, flag_key: str, **context):
         template_name,
         tool_enabled=enabled,
         show_public_header=True,
+        lightweight_public_shell=True,
         **context,
     )
 
@@ -141,6 +142,7 @@ def tools_index():
         "tools/index.html",
         tool_flags=flags,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
 
 

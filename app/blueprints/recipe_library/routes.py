@@ -202,6 +202,7 @@ def recipe_library():
         origin_filter=origin_filter,
         sort_mode=sort_mode,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
     cache.set(
         cache_key,
@@ -269,6 +270,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
         reveal_details=reveal_details,
         org_marketplace_enabled=org_marketplace_enabled,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
 
 
@@ -355,6 +357,7 @@ def organization_marketplace(organization_id: int):
         sale_filter=sale_filter,
         sort_mode=sort_mode,
         show_public_header=True,
+        lightweight_public_shell=True,
     )
 
 
