@@ -40,6 +40,8 @@ Core fields on every event record:
   - source: inventory adjustment core delegator
 - `inventory_item_created`
   - includes `creation_source` (`custom` or `global`)
+- `inventory_item_custom_created`
+- `inventory_item_global_created`
 
 ### Batch lifecycle
 - `batch_started`

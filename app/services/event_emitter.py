@@ -23,6 +23,8 @@ class EventEmitter:
         "purchase_completed",
         "onboarding_completed",
         "inventory_item_created",
+        "inventory_item_custom_created",
+        "inventory_item_global_created",
         "recipe_created",
         "recipe_variation_created",
         "recipe_test_created",

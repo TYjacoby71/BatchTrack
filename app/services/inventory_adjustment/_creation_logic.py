@@ -588,6 +588,31 @@ def create_inventory_item(
                 entity_id=created_item.id,
                 auto_commit=auto_commit,
             )
+            source_event_name = (
+                "inventory_item_global_created"
+                if creation_source == "global"
+                else "inventory_item_custom_created"
+            )
+            EventEmitter.emit(
+                event_name=source_event_name,
+                properties={
+                    "item_type": created_item.type,
+                    "unit": created_item.unit,
+                    "creation_source": creation_source,
+                    "global_item_id": (
+                        int(created_item.global_item_id)
+                        if created_item.global_item_id
+                        else None
+                    ),
+                    "is_tracked": bool(created_item.is_tracked),
+                    "initial_quantity": float(initial_quantity or 0.0),
+                },
+                organization_id=created_item.organization_id,
+                user_id=created_by,
+                entity_type="inventory_item",
+                entity_id=created_item.id,
+                auto_commit=auto_commit,
+            )
         except Exception:
             pass
 
