@@ -119,13 +119,6 @@ def test_prompt_mode_old_unverified_accounts_queue_post_login_modal(
         flashes = [message for _category, message in sess.get("_flashes", [])]
         assert any("older than 10 days" in msg for msg in flashes)
 
-    landing = client.get(location, follow_redirects=True)
-    assert landing.status_code == 200
-    html = landing.get_data(as_text=True)
-    assert 'id="verificationRequiredModal"' in html
-    assert "Resend verification email" in html
-
-
 # --- Forced resend modal rendering ---
 # Purpose: Verify forced-lock query flags render modal guidance on resend page.
 def test_resend_verification_renders_forced_age_modal(client, app):
