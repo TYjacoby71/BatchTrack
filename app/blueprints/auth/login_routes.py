@@ -312,7 +312,7 @@ def login():
                         )
                     else:
                         flash(
-                            "Please verify your email while you finish account setup.",
+                            "Please verify your email while you finish account setup. We could not send a verification email right now; use resend verification and check email provider settings.",
                             "info",
                         )
 
