@@ -112,6 +112,37 @@ class UserService:
             db.session.rollback()
             return False, str(exc)
 
+    # --- Update own password ---
+    # Purpose: Validate and change the authenticated developer's password.
+    # Inputs: Current user row and JSON payload with current/new/confirm password fields.
+    # Outputs: Tuple(success flag, status message).
+    @staticmethod
+    def update_own_password(user: User, data: Dict) -> Tuple[bool, str]:
+        current_password = data.get("current_password") or data.get("current") or ""
+        new_password = data.get("new_password") or data.get("new") or ""
+        confirm_password = data.get("confirm_password") or data.get("confirm") or ""
+
+        if not current_password or not new_password or not confirm_password:
+            return False, "All fields are required"
+
+        if not user.check_password(current_password):
+            return False, "Current password is incorrect"
+
+        if new_password != confirm_password:
+            return False, "New passwords do not match"
+
+        if len(new_password) < 6:
+            return False, "Password must be at least 6 characters"
+
+        user.set_password(new_password)
+
+        try:
+            db.session.commit()
+            return True, "Password changed successfully"
+        except Exception as exc:  # pragma: no cover - defensive
+            db.session.rollback()
+            return False, str(exc)
+
     # --- Toggle user active flag ---
     # Purpose: Flip active/inactive state for a user account.
     # Inputs: User row.

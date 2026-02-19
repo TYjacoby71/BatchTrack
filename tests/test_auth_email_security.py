@@ -163,6 +163,40 @@ def test_login_blocks_unverified_when_required_mode(client, app):
         assert sess.get("_user_id") is None
 
 
+# --- Required mode send-failure messaging ---
+# Purpose: Verify required-mode login does not claim delivery when verification send fails.
+def test_required_mode_login_message_handles_verification_send_failure(client, app, monkeypatch):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "required"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"required_fail_{uuid.uuid4().hex[:6]}",
+            email=f"required_fail_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        username = user.username
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.login_routes.EmailService.send_verification_email",
+        lambda *args, **kwargs: False,
+    )
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/auth/resend-verification" in response.headers["Location"]
+
+    with client.session_transaction() as sess:
+        flashes = [message for _category, message in sess.get("_flashes", [])]
+        assert any("could not send a verification email" in msg for msg in flashes)
+        assert all("We sent you a verification link." not in msg for msg in flashes)
+
+
 # --- Forgot/reset flow ---
 # Purpose: Verify reset token issuance, password update, and successful relogin path.
 def test_forgot_password_and_reset_flow(client, app):

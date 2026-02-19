@@ -50,6 +50,8 @@ logger = logging.getLogger(__name__)
 
 # --- Loadtest login diagnostics ---
 # Purpose: Emit safe context for debugging load-test auth failures.
+# Inputs: Failure reason string plus optional structured context dictionary.
+# Outputs: Conditional warning log entry when loadtest diagnostics are enabled.
 def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
     """Emit structured diagnostics for load-test login failures."""
     if not current_app.config.get("LOADTEST_LOG_LOGIN_FAILURE_CONTEXT"):
@@ -77,6 +79,8 @@ def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
 
 # --- Login form ---
 # Purpose: Validate credential form input for the login route.
+# Inputs: Username/email and password field submissions.
+# Outputs: Flask-WTF form validation state for login processing.
 class LoginForm(FlaskForm):
     username = StringField("Email or Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
@@ -85,6 +89,8 @@ class LoginForm(FlaskForm):
 
 # --- Send verification if needed ---
 # Purpose: Issue and email a fresh verification token with a resend cooldown.
+# Inputs: User model for the account currently attempting to log in.
+# Outputs: Boolean indicating whether a verification email was successfully sent.
 def _send_verification_if_needed(user: User) -> bool:
     """Issue and send verification token when prompt/required mode is active."""
     if not user.email or user.email_verified:
@@ -107,12 +113,11 @@ def _send_verification_if_needed(user: User) -> bool:
         user.email_verification_sent_at = TimezoneUtils.utc_now()
         db.session.commit()
 
-        EmailService.send_verification_email(
+        return EmailService.send_verification_email(
             user.email,
             user.email_verification_token,
             user.first_name or user.username,
         )
-        return True
     except Exception as exc:
         db.session.rollback()
         logger.warning(
@@ -121,10 +126,12 @@ def _send_verification_if_needed(user: User) -> bool:
         return False
 
 
-@auth_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("6000/minute")
 # --- Login route ---
 # Purpose: Authenticate users and apply env-driven unverified email behavior.
+# Inputs: Login form credentials and current auth-email policy configuration.
+# Outputs: Redirect/HTML response with session state updates and auth-email guidance.
+@auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("6000/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
@@ -284,10 +291,16 @@ def login():
             if user.user_type != "developer" and user.email and not user.email_verified:
                 sent = _send_verification_if_needed(user)
                 if EmailService.should_require_verified_email_on_login():
-                    flash(
-                        "Please verify your email before logging in. We sent you a verification link.",
-                        "warning",
-                    )
+                    if sent:
+                        flash(
+                            "Please verify your email before logging in. We sent you a verification link.",
+                            "warning",
+                        )
+                    else:
+                        flash(
+                            "Please verify your email before logging in. We could not send a verification email right now; use resend verification and check email provider settings.",
+                            "warning",
+                        )
                     return redirect(
                         url_for("auth.resend_verification", email=user.email)
                     )
@@ -357,6 +370,8 @@ def login():
 
 # --- Sanitize next path ---
 # Purpose: Prevent open redirects by allowing only safe relative paths.
+# Inputs: Optional next URL/path candidate.
+# Outputs: Safe relative path string or None when invalid/unsafe.
 def _safe_next_path(value: str | None):
     """Only allow relative, non-protocol next URLs."""
     if not value or not isinstance(value, str):
@@ -371,6 +386,8 @@ def _safe_next_path(value: str | None):
 
 # --- Generate username from email ---
 # Purpose: Build a unique username candidate for quick-signup accounts.
+# Inputs: Raw email address string.
+# Outputs: Unique username string derived from local-part and numeric suffixes.
 def _generate_username_from_email(email: str) -> str:
     base = (email or "user").split("@")[0]
     base = re.sub(r"[^a-zA-Z0-9]+", "", base) or "user"
@@ -382,10 +399,12 @@ def _generate_username_from_email(email: str) -> str:
     return candidate
 
 
-@auth_bp.route("/quick-signup", methods=["GET", "POST"])
-@limiter.limit("600/minute")
 # --- Quick signup route ---
 # Purpose: Create a lightweight account from public pages and enter onboarding.
+# Inputs: Public signup form payload plus optional return path/global item context.
+# Outputs: Rendered form, validation feedback, or authenticated redirect after creation.
+@auth_bp.route("/quick-signup", methods=["GET", "POST"])
+@limiter.limit("600/minute")
 def quick_signup():
     """Lightweight, free-account signup used by public global item pages."""
     if current_user.is_authenticated:
@@ -611,9 +630,11 @@ def quick_signup():
     )
 
 
-@auth_bp.route("/logout")
 # --- Logout route ---
 # Purpose: Clear scoped session state and invalidate the current session token.
+# Inputs: Authenticated session context and current user.
+# Outputs: Cleared session/login state with redirect to homepage.
+@auth_bp.route("/logout")
 def logout():
     session.pop("dev_selected_org_id", None)
     session.pop("dismissed_alerts", None)
@@ -636,9 +657,11 @@ def logout():
     return redirect(url_for("core.homepage"))
 
 
-@auth_bp.route("/dev-login")
 # --- Developer quick login ---
 # Purpose: Internal convenience login route for developer account access.
+# Inputs: Request context for developer quick-login invocation.
+# Outputs: Developer session login redirect or auth error flash + login redirect.
+@auth_bp.route("/dev-login")
 def dev_login():
     """Quick developer login for system access."""
     dev_user = User.query.filter_by(username="dev").first()
