@@ -140,6 +140,28 @@ def _send_verification_if_needed(user: User) -> bool:
         return False
 
 
+# --- Evaluate age-based verification lock ---
+# Purpose: Enforce verification login lock for older unverified customer accounts.
+# Inputs: User model with created_at timestamp and verification state.
+# Outputs: Tuple[should_lock, account_age_days, grace_window_days].
+def _age_based_verification_lock(user: User) -> tuple[bool, int, int]:
+    grace_days_raw = current_app.config.get("AUTH_EMAIL_FORCE_REQUIRED_AFTER_DAYS", 10)
+    try:
+        grace_days = max(0, int(grace_days_raw))
+    except (TypeError, ValueError):
+        grace_days = 10
+
+    if grace_days <= 0:
+        return False, 0, grace_days
+
+    created_at = TimezoneUtils.ensure_timezone_aware(getattr(user, "created_at", None))
+    if not created_at:
+        return False, 0, grace_days
+
+    account_age_days = max(0, (TimezoneUtils.utc_now() - created_at).days)
+    return account_age_days >= grace_days, account_age_days, grace_days
+
+
 # --- Login route ---
 # Purpose: Authenticate users and apply env-driven unverified email behavior.
 # Inputs: Login form credentials and current auth-email policy configuration.
@@ -303,7 +325,33 @@ def login():
                     return _render_login_page()
 
             if user.user_type != "developer" and user.email and not user.email_verified:
+                force_age_lock, account_age_days, grace_days = (
+                    _age_based_verification_lock(user)
+                    if EmailService.should_issue_verification_tokens()
+                    else (False, 0, 0)
+                )
                 sent = _send_verification_if_needed(user)
+                if force_age_lock:
+                    if sent:
+                        flash(
+                            f"A new verification email has been sent because this account is more than {grace_days} days old and still unverified. You must verify your email before logging in.",
+                            "warning",
+                        )
+                    else:
+                        flash(
+                            f"This account is more than {grace_days} days old and must be verified before logging in. We could not send a verification email automatically right now; use resend verification and check email provider settings.",
+                            "warning",
+                        )
+                    return redirect(
+                        url_for(
+                            "auth.resend_verification",
+                            email=user.email,
+                            forced="1",
+                            sent="1" if sent else "0",
+                            age_days=account_age_days,
+                            grace_days=grace_days,
+                        )
+                    )
                 if EmailService.should_require_verified_email_on_login():
                     if sent:
                         flash(

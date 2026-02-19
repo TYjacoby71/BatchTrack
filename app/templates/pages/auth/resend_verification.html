@@ -8,6 +8,10 @@ Glossary:
 {% extends "layout.html" %}
 
 {% block title %}Resend Email Verification{% endblock %}
+{% set force_verification_modal = request.args.get('forced') == '1' %}
+{% set force_verification_sent = request.args.get('sent') == '1' %}
+{% set force_account_age_days = request.args.get('age_days', '0') | int %}
+{% set force_grace_days = request.args.get('grace_days', '10') | int %}
 
 {% block content %}
 <div class="mt-4">
@@ -18,6 +22,11 @@ Glossary:
                     <h4>Resend Email Verification</h4>
                 </div>
                 <div class="card-body">
+                    {% if force_verification_modal %}
+                    <div class="alert alert-warning" role="alert">
+                        This account must be verified before login because it is older than the {{ force_grace_days }}-day verification window.
+                    </div>
+                    {% endif %}
                     <p class="text-muted">Enter your email address and we'll send you a new verification link.</p>
                     
                     <form method="POST">
@@ -46,4 +55,52 @@ Glossary:
         </div>
     </div>
 </div>
+
+{% if force_verification_modal %}
+<div class="modal fade" id="forcedVerificationModal" tabindex="-1" aria-labelledby="forcedVerificationModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="forcedVerificationModalTitle">Email verification required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if force_verification_sent %}
+                <p class="mb-0">
+                    A new verification email was sent to <strong>{{ prefill_email }}</strong>.
+                    This account is {{ force_account_age_days }} days old and has passed the
+                    {{ force_grace_days }}-day verification window. You must verify your email before logging in.
+                </p>
+                {% else %}
+                <p class="mb-0">
+                    This account is {{ force_account_age_days }} days old and has passed the
+                    {{ force_grace_days }}-day verification window. We could not send a verification
+                    email automatically right now. Please use the form on this page to resend it after checking provider settings.
+                </p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">Back to Login</a>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I understand</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if force_verification_modal %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modalElement = document.getElementById("forcedVerificationModal");
+    if (!modalElement || typeof bootstrap === "undefined") {
+        return;
+    }
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+});
+</script>
+{% endif %}
 {% endblock %}

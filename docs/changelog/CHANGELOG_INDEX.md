@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Legacy Account Forced Verification Modal](2026-02-18-legacy-account-forced-verification-modal.md)**
+  - Added 10-day age-based login lock for unverified legacy accounts with forced resend-verification redirect.
+  - Added immediate modal guidance explaining that verification is now required due to account age policy.
+  - Added regression tests for forced-lock redirect metadata and modal rendering.
 - **[2026-02-18: Auth Email Delivery Readiness and Message Accuracy](2026-02-18-auth-email-delivery-readiness-and-message-accuracy.md)**
   - Required-mode login now only claims verification-link delivery when send succeeds.
   - Added explicit delivery-failure warning guidance for verification flows.

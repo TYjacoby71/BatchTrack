@@ -11,6 +11,7 @@ Glossary:
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from app.extensions import db
 from app.models import Organization, User
@@ -70,6 +71,68 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
 
     with client.session_transaction() as sess:
         assert sess.get("_user_id") is not None
+
+
+# --- Prompt mode age lock ---
+# Purpose: Verify old unverified accounts are blocked and shown forced verification context.
+def test_prompt_mode_blocks_old_unverified_accounts_with_forced_modal(
+    client, app, monkeypatch
+):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+    app.config["AUTH_EMAIL_FORCE_REQUIRED_AFTER_DAYS"] = 10
+
+    with app.app_context():
+        user = _create_user(
+            username=f"legacy_{uuid.uuid4().hex[:6]}",
+            email=f"legacy_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        user.created_at = TimezoneUtils.utc_now() - timedelta(days=12)
+        db.session.commit()
+        username = user.username
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.login_routes.EmailService.send_verification_email",
+        lambda *args, **kwargs: True,
+    )
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert "/auth/resend-verification" in location
+    assert "forced=1" in location
+    assert "sent=1" in location
+    assert "grace_days=10" in location
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is None
+        flashes = [message for _category, message in sess.get("_flashes", [])]
+        assert any("more than 10 days old" in msg for msg in flashes)
+
+
+# --- Forced resend modal rendering ---
+# Purpose: Verify forced-lock query flags render modal guidance on resend page.
+def test_resend_verification_renders_forced_age_modal(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    response = client.get(
+        "/auth/resend-verification"
+        "?forced=1&sent=1&age_days=12&grace_days=10&email=legacy_user@example.com"
+    )
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    assert 'id="forcedVerificationModal"' in html
+    assert "legacy_user@example.com" in html
+    assert "has passed the" in html
+    assert "10-day verification window" in html
 
 
 # --- Email identifier login ---
