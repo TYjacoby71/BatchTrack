@@ -175,7 +175,7 @@ Glossary:
       This is not just another accounting app: we handle the accounting so your team can focus on the art.
     </p>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('auth.signup', source='lp_hormozi_hero_trial') }}" class="btn btn-warning btn-lg">
+      <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'lp_hormozi_start_free_trial') }}" class="btn btn-warning btn-lg">
         Start Free Trial
       </a>
       <a href="{{ url_for('pricing_routes.pricing') }}" class="btn btn-outline-light btn-lg">
@@ -262,7 +262,7 @@ Glossary:
       Start your free trial, choose your tier, and move from patchwork tools to a calm, all-inclusive production system.
     </p>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('auth.signup', source='lp_hormozi_bottom_trial') }}" class="btn btn-primary btn-lg">
+      <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'lp_hormozi_start_free_trial') }}" class="btn btn-primary btn-lg">
         Start Free Trial
       </a>
       <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">

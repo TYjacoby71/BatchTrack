@@ -22,8 +22,9 @@ def lp_hormozi():
     return render_template(
         "pages/public/landing_hormozi.html",
         show_public_header=True,
+        lightweight_public_shell=True,
         public_header_is_homepage=True,
-        public_header_signup_source="lp_hormozi_header",
+        public_header_signup_source="lp_hormozi_start_free_trial",
         page_title="BatchTrack.com | Results-First System for Small-Batch Makers",
         page_description=(
             "A results-first BatchTrack landing page for makers who need full batch lifecycle tracking, "
@@ -46,8 +47,9 @@ def lp_robbins():
     return render_template(
         "pages/public/landing_robbins.html",
         show_public_header=True,
+        lightweight_public_shell=True,
         public_header_is_homepage=True,
-        public_header_signup_source="lp_robbins_header",
+        public_header_signup_source="lp_robbins_start_free_trial",
         page_title="BatchTrack.com | Calm, Inclusive Production Flow for Makers",
         page_description=(
             "A transformation-focused BatchTrack landing page built for neurodivergent small-batch makers "
