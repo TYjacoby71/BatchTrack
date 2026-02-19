@@ -20,6 +20,7 @@ Added an age-based legacy-account verification flow that force-sends a fresh ver
   - return specific non-generic feedback ("Verification email sent to ...")
   - redirect back to safe in-app targets instead of always bouncing through login
   - keep privacy-safe generic copy only for unauthenticated requests
+- Polished the dashboard email-warning action styling so the secondary "Open settings" control remains compact and visually subordinate to resend.
 - Added regression tests covering post-login modal queue/render behavior.
 
 ## Files Modified
