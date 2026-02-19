@@ -158,9 +158,11 @@
     font-size: var(--theme-ext-size-e87070bfde);
   }
 
-  .tier-feature-list i {
+  .tier-feature-marker {
     margin-top: var(--theme-ext-space-6166d0e813);
     color: var(--theme-ext-color-960ccd0cac);
+    font-weight: 700;
+    line-height: 1;
   }
 
   .lifetime-seat-copy {
@@ -200,7 +202,7 @@
     background: var(--theme-ext-color-333b2a35fa);
   }
 
-  .comparison-section-row th {
+  .comparison-section-row td {
     background: var(--theme-ext-color-8f053ca9f2);
     color: var(--theme-ext-color-25aa5ed6a9);
     font-size: var(--theme-ext-size-910b7a07ff);
@@ -270,7 +272,7 @@
 {% block content %}
 <div class="pricing-shell py-4">
   <section class="pricing-hero mb-4 mb-lg-5">
-    <span class="pricing-kicker"><i class="fas fa-bolt"></i> Batch-first pricing</span>
+    <span class="pricing-kicker">⚡ Batch-first pricing</span>
     <h1>Choose the right BatchTrack plan for your production stage</h1>
     <p>
       Compare Hobbyist, Enthusiast, and Fanatic side-by-side. Every plan starts with a free trial
@@ -332,7 +334,7 @@
           <span class="tier-chip">
             {{ tier.name }}
             {% if tier.key == 'enthusiast' %}
-            <i class="fas fa-star text-warning"></i>
+            <span aria-hidden="true">★</span>
             {% endif %}
           </span>
           <h3>{{ tier.name }}</h3>
@@ -349,7 +351,7 @@
           </div>
           <ul class="tier-feature-list">
             {% for feature in tier.feature_highlights[:6] %}
-            <li><i class="fas fa-check-circle"></i><span>{{ feature }}</span></li>
+            <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ feature }}</span></li>
             {% endfor %}
           </ul>
           {% if tier.feature_total > (tier.feature_highlights|length) %}
@@ -357,13 +359,13 @@
           {% endif %}
           <div class="mt-auto d-grid gap-2">
             {% if tier.signup_monthly_url %}
-            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Checkout Monthly</a>
+            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Checkout {{ tier.name }} Monthly</a>
             {% else %}
             <button type="button" class="btn btn-outline-secondary" disabled>Unavailable</button>
             {% endif %}
 
             {% if tier.signup_yearly_url %}
-            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Checkout Yearly</a>
+            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Checkout {{ tier.name }} Yearly</a>
             {% else %}
             <button type="button" class="btn btn-outline-secondary" disabled>Yearly Unavailable</button>
             {% endif %}
@@ -394,7 +396,7 @@
         <tbody>
           {% for section in comparison_sections %}
           <tr class="comparison-section-row">
-            <th colspan="{{ 1 + (pricing_tiers|length) }}">{{ section.title }}</th>
+            <td colspan="{{ 1 + (pricing_tiers|length) }}">{{ section.title }}</td>
           </tr>
           {% for row in section.rows %}
           <tr>
@@ -404,9 +406,9 @@
             <td class="text-center">
               {% if cell.type == "boolean" %}
               {% if cell.value %}
-              <span class="comparison-icon-yes" title="{{ cell.display }}"><i class="fas fa-check"></i></span>
+              <span class="comparison-icon-yes" title="{{ cell.display }}" aria-label="{{ cell.display }}">✓</span>
               {% else %}
-              <span class="comparison-icon-no" title="{{ cell.display }}"><i class="fas fa-minus"></i></span>
+              <span class="comparison-icon-no" title="{{ cell.display }}" aria-label="{{ cell.display }}">−</span>
               {% endif %}
               {% else %}
               <span class="comparison-cell-text">{{ cell.display }}</span>
