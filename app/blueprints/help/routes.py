@@ -455,27 +455,47 @@ def help_faq():
         {
             "question": "What should I do right after signing up?",
             "answer": "Open the dashboard, decide whether you want to add inventory or a recipe first, and follow the in-app ribbon that links to the first-login checklist.",
-            "link": ("First Login Checklist", "help_routes.help_overview", "first-login"),
+            "link": (
+                "First Login Checklist",
+                "help_routes.help_overview",
+                "first-login",
+            ),
         },
         {
             "question": "How do I add ingredients, containers, consumables, or packaging?",
             "answer": "Use the inventory drawer to select a global item or create an org-owned item, then capture quantity, cost, and storage details.",
-            "link": ("Add Inventory", "help_routes.help_overview", "inventory-creation"),
+            "link": (
+                "Add Inventory",
+                "help_routes.help_overview",
+                "inventory-creation",
+            ),
         },
         {
             "question": "How do I plan and start a batch?",
             "answer": "Use Production Planning to select recipes, configure intermediate ingredients, auto-fill containers, and submit the PlanSnapshot.",
-            "link": ("Plan & Start Production", "help_routes.help_overview", "plan-production"),
+            "link": (
+                "Plan & Start Production",
+                "help_routes.help_overview",
+                "plan-production",
+            ),
         },
         {
             "question": "Where do I see timers, extras, and final yields?",
             "answer": "The batch in-progress screen keeps projected vs actual data, timers, extras, and the finish modal in one place.",
-            "link": ("Batch In-Progress", "help_routes.help_overview", "batch-in-progress"),
+            "link": (
+                "Batch In-Progress",
+                "help_routes.help_overview",
+                "batch-in-progress",
+            ),
         },
         {
             "question": "How do products, SKUs, and reservations work?",
             "answer": "Define variants on the product page, link batches to SKUs, and hold finished goods for wholesale or subscription orders.",
-            "link": ("Product Variants & SKUs", "help_routes.help_overview", "product-variants"),
+            "link": (
+                "Product Variants & SKUs",
+                "help_routes.help_overview",
+                "product-variants",
+            ),
         },
         {
             "question": "Can prospects try BatchTrack without an account?",
@@ -485,7 +505,11 @@ def help_faq():
         {
             "question": "How do I fix counts or recount inventory without breaking FIFO?",
             "answer": "Open Quick Adjust from the inventory list, choose restock/spoil/recount, and BatchTrack logs the change with the right cost and audit trail.",
-            "link": ("Inventory Adjustments", "help_routes.help_overview", "inventory-adjustments"),
+            "link": (
+                "Inventory Adjustments",
+                "help_routes.help_overview",
+                "inventory-adjustments",
+            ),
         },
         {
             "question": "Where can I see actual costing versus my plan?",

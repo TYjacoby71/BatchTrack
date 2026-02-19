@@ -115,6 +115,4 @@ def build_integration_categories(
         }
         grouped.setdefault(spec.category, []).append(item)
 
-    return [
-        {"title": title, "items": items} for title, items in grouped.items()
-    ]
+    return [{"title": title, "items": items} for title, items in grouped.items()]

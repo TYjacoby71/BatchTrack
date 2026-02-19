@@ -22,9 +22,8 @@ from app.extensions import db
 from app.utils.cache_manager import app_cache
 from app.utils.unit_utils import get_global_unit_list
 
-from .utils.json_store import read_json_file
-from .utils.settings import get_settings, is_feature_enabled
 from .services.lifetime_pricing_service import LifetimePricingService
+from .utils.json_store import read_json_file
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -32,11 +31,20 @@ from .utils.permissions import (
     is_developer,
     is_organization_owner,
 )
+from .utils.settings import get_settings, is_feature_enabled
 from .utils.timezone_utils import TimezoneUtils
 
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
-_MARKETING_CONTEXT_ENDPOINTS = {"index", "homepage", "public_page"}
+_MARKETING_CONTEXT_ENDPOINTS = {
+    "core.index",
+    "core.homepage",
+    "core.public_page",
+    # Backward-compatibility for legacy endpoint names.
+    "index",
+    "homepage",
+    "public_page",
+}
 _ASSET_MANIFEST_CACHE: Dict[str, Any] = {
     "path": None,
     "mtime": None,
@@ -130,19 +138,33 @@ def register_template_context(app: Flask) -> None:
 
         def get_reservation_summary(inventory_item_id: Any) -> Dict[str, Any]:
             if not inventory_item_id:
-                return {"available": 0.0, "reserved": 0.0, "total": 0.0, "reservations": []}
+                return {
+                    "available": 0.0,
+                    "reserved": 0.0,
+                    "total": 0.0,
+                    "reservations": [],
+                }
 
             org_id = _effective_org_id()
-            cache_key = f"template:reservation_summary:{org_id or 'public'}:{inventory_item_id}"
+            cache_key = (
+                f"template:reservation_summary:{org_id or 'public'}:{inventory_item_id}"
+            )
             cached = app_cache.get(cache_key)
             if cached is not None:
                 return cached
 
-            sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
+            sku = ProductSKU.query.filter_by(
+                inventory_item_id=inventory_item_id
+            ).first()
             summary = (
                 ReservationService.get_reservation_summary_for_sku(sku)
                 if sku
-                else {"available": 0.0, "reserved": 0.0, "total": 0.0, "reservations": []}
+                else {
+                    "available": 0.0,
+                    "reserved": 0.0,
+                    "total": 0.0,
+                    "reservations": [],
+                }
             )
             app_cache.set(cache_key, summary, ttl=60)
             return summary
@@ -184,6 +206,23 @@ def register_template_context(app: Flask) -> None:
             "theme_preference": theme_preference,
             "theme_preference_scoped": theme_preference_scoped,
         }
+
+    @app.context_processor
+    def _inject_list_preferences() -> Dict[str, Any]:
+        if not current_user.is_authenticated:
+            return {"list_preferences_payload": {}}
+        try:
+            from .models import UserPreferences
+
+            prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+            payload = (
+                prefs.list_preferences
+                if prefs and isinstance(prefs.list_preferences, dict)
+                else {}
+            )
+            return {"list_preferences_payload": payload}
+        except Exception:
+            return {"list_preferences_payload": {}}
 
     @app.context_processor
     def _inject_org_helpers() -> Dict[str, Any]:
@@ -234,7 +273,9 @@ def register_template_context(app: Flask) -> None:
 
         reviews = read_json_file(_REVIEWS_PATH, default=[]) or []
         all_spotlights = read_json_file(_SPOTLIGHTS_PATH, default=[]) or []
-        spotlights = [spotlight for spotlight in all_spotlights if spotlight.get("approved")]
+        spotlights = [
+            spotlight for spotlight in all_spotlights if spotlight.get("approved")
+        ]
 
         total_active_users = 0
         lifetime_offers: list[dict] = []
@@ -246,9 +287,9 @@ def register_template_context(app: Flask) -> None:
                 active_user_cache_key = "marketing:active_users"
                 cached_total_users = app_cache.get(active_user_cache_key)
                 if cached_total_users is None:
-                    total_active_users = (
-                        User.query.filter(User.user_type != "developer", User.is_active.is_(True)).count()
-                    )
+                    total_active_users = User.query.filter(
+                        User.user_type != "developer", User.is_active.is_(True)
+                    ).count()
                     app_cache.set(active_user_cache_key, total_active_users, ttl=600)
                 else:
                     total_active_users = cached_total_users
@@ -260,10 +301,14 @@ def register_template_context(app: Flask) -> None:
                             is_customer_facing=True,
                             billing_provider="stripe",
                         )
-                        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+                        .order_by(
+                            SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc()
+                        )
                         .all()
                     )
-                    lifetime_offers = LifetimePricingService.build_lifetime_offers(paid_tiers)
+                    lifetime_offers = LifetimePricingService.build_lifetime_offers(
+                        paid_tiers
+                    )
                     app_cache.set(lifetime_tiers_cache_key, lifetime_offers, ttl=300)
                 else:
                     lifetime_offers = cached_lifetime_offers
@@ -271,9 +316,16 @@ def register_template_context(app: Flask) -> None:
                 pass
 
         if lifetime_offers:
-            lifetime_total = sum(int(offer.get("seat_total", 0) or 0) for offer in lifetime_offers)
-            lifetime_true_left = sum(int(offer.get("true_spots_left", 0) or 0) for offer in lifetime_offers)
-            lifetime_display_left = sum(int(offer.get("display_spots_left", 0) or 0) for offer in lifetime_offers)
+            lifetime_total = sum(
+                int(offer.get("seat_total", 0) or 0) for offer in lifetime_offers
+            )
+            lifetime_true_left = sum(
+                int(offer.get("true_spots_left", 0) or 0) for offer in lifetime_offers
+            )
+            lifetime_display_left = sum(
+                int(offer.get("display_spots_left", 0) or 0)
+                for offer in lifetime_offers
+            )
 
         cfg = get_settings()
         marketing_messages = {"day_1": "", "day_3": "", "day_5": ""}
@@ -368,7 +420,11 @@ def static_asset_url(relative_path: str, *, include_version: bool = True) -> str
 
     manifest = _load_asset_manifest()
     manifest_path = manifest.get(requested_path)
-    if isinstance(manifest_path, str) and manifest_path and static_file_exists_filter(manifest_path):
+    if (
+        isinstance(manifest_path, str)
+        and manifest_path
+        and static_file_exists_filter(manifest_path)
+    ):
         # Hashed manifest assets are already cache-busted by filename.
         return url_for("static", filename=manifest_path)
 

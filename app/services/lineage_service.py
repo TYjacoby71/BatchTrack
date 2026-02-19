@@ -14,7 +14,7 @@ Glossary:
 from __future__ import annotations
 
 import re
-from typing import Iterable, List, Optional, Set
+from typing import Iterable, List, Set
 
 import sqlalchemy as sa
 
@@ -48,11 +48,17 @@ def _build_prefix_candidates(words: List[str]) -> List[str]:
         candidates.append((upper_words[0][:2] + upper_words[1][:1]))
         candidates.append((upper_words[0][:1] + upper_words[1][:2]))
     else:
-        candidates.append((upper_words[0][:1] + upper_words[1][:1] + upper_words[2][:1]))
-        candidates.append((upper_words[0][:1] + upper_words[1][:2] + upper_words[2][:1]))
+        candidates.append(
+            (upper_words[0][:1] + upper_words[1][:1] + upper_words[2][:1])
+        )
+        candidates.append(
+            (upper_words[0][:1] + upper_words[1][:2] + upper_words[2][:1])
+        )
 
     # Ensure consistent casing and non-empty
-    normalized = [candidate for candidate in (c.upper().strip() for c in candidates) if candidate]
+    normalized = [
+        candidate for candidate in (c.upper().strip() for c in candidates) if candidate
+    ]
     return normalized or ["RCP"]
 
 
@@ -88,7 +94,8 @@ def generate_group_prefix(name: str, org_id: int | None) -> str:
     existing: Set[str] = set()
     if org_id:
         existing = _resolve_existing_prefixes(
-            row[0] for row in db.session.query(RecipeGroup.prefix).filter(
+            row[0]
+            for row in db.session.query(RecipeGroup.prefix).filter(
                 RecipeGroup.organization_id == org_id
             )
         )
@@ -103,7 +110,8 @@ def generate_variation_prefix(name: str, recipe_group_id: int | None) -> str:
     existing: Set[str] = set()
     if recipe_group_id:
         existing = _resolve_existing_prefixes(
-            row[0] for row in db.session.query(Recipe.variation_prefix).filter(
+            row[0]
+            for row in db.session.query(Recipe.variation_prefix).filter(
                 Recipe.recipe_group_id == recipe_group_id,
                 Recipe.variation_prefix.isnot(None),
             )
@@ -120,14 +128,14 @@ def generate_label_prefix(name: str, org_id: int | None) -> str:
     if org_id:
         existing = _resolve_existing_prefixes(
             row[0]
-            for row in db.session.query(RecipeGroup.prefix)
-            .filter(RecipeGroup.organization_id == org_id)
+            for row in db.session.query(RecipeGroup.prefix).filter(
+                RecipeGroup.organization_id == org_id
+            )
         )
         existing.update(
             _resolve_existing_prefixes(
                 row[0]
-                for row in db.session.query(Recipe.label_prefix)
-                .filter(
+                for row in db.session.query(Recipe.label_prefix).filter(
                     Recipe.organization_id == org_id,
                     Recipe.label_prefix.isnot(None),
                 )
@@ -198,8 +206,12 @@ def generate_lineage_id(version_obj: Recipe) -> str:
         master_version = getattr(version_obj, "version_number", None) or 0
     else:
         parent_master = getattr(version_obj, "parent_master", None)
-        master_version = getattr(parent_master, "version_number", None) if parent_master else None
-        master_version = master_version or getattr(version_obj, "version_number", None) or 0
+        master_version = (
+            getattr(parent_master, "version_number", None) if parent_master else None
+        )
+        master_version = (
+            master_version or getattr(version_obj, "version_number", None) or 0
+        )
 
     parts = [str(group_number), str(master_version)]
     if not is_master:
@@ -223,15 +235,21 @@ def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
     if not group_prefix:
         group_prefix = getattr(version_obj, "label_prefix", None) or ""
     if not group_prefix:
-        group_prefix = _build_prefix_candidates(_clean_and_split(getattr(version_obj, "name", "") or ""))[0]
+        group_prefix = _build_prefix_candidates(
+            _clean_and_split(getattr(version_obj, "name", "") or "")
+        )[0]
     group_prefix = group_prefix.upper()
 
     if getattr(version_obj, "is_master", False):
         master_version = getattr(version_obj, "version_number", None) or 0
     else:
         parent_master = getattr(version_obj, "parent_master", None)
-        master_version = getattr(parent_master, "version_number", None) if parent_master else None
-        master_version = master_version or getattr(version_obj, "version_number", None) or 0
+        master_version = (
+            getattr(parent_master, "version_number", None) if parent_master else None
+        )
+        master_version = (
+            master_version or getattr(version_obj, "version_number", None) or 0
+        )
 
     label = f"{group_prefix}{master_version}"
 
@@ -239,7 +257,11 @@ def generate_batch_label(version_obj: Recipe, year: int, seq_num: int) -> str:
         var_prefix = getattr(version_obj, "variation_prefix", None)
         if not var_prefix:
             var_prefix = _build_prefix_candidates(
-                _clean_and_split(getattr(version_obj, "variation_name", "") or getattr(version_obj, "name", "") or "")
+                _clean_and_split(
+                    getattr(version_obj, "variation_name", "")
+                    or getattr(version_obj, "name", "")
+                    or ""
+                )
             )[0]
         var_prefix = var_prefix.upper()
         var_version = getattr(version_obj, "version_number", None) or 0
@@ -262,7 +284,11 @@ def format_label_prefix(
     include_master_version_for_master: bool = False,
 ) -> str:
     group = getattr(version_obj, "recipe_group", None)
-    resolved_test = test_sequence if test_sequence is not None else getattr(version_obj, "test_sequence", None)
+    resolved_test = (
+        test_sequence
+        if test_sequence is not None
+        else getattr(version_obj, "test_sequence", None)
+    )
     is_master = bool(getattr(version_obj, "is_master", False))
 
     if not is_master:

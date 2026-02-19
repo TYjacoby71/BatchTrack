@@ -6,18 +6,6 @@ from typing import Any, Callable, Dict
 from flask import has_request_context
 from flask_login import current_user
 
-from ..extensions import db
-from ..models import Organization
-from ..services.unit_conversion import ConversionEngine
-from ..utils.timezone_utils import TimezoneUtils
-from .duration_utils import humanize_duration_days
-from .permissions import (
-    has_permission as perm_has_permission,
-    has_role as perm_has_role,
-    has_subscription_feature,
-    is_developer,
-    is_organization_owner as permissions_is_organization_owner,
-)
 from app.filters.product_filters import (
     ingredient_cost_currency,
     product_variant_name,
@@ -26,12 +14,25 @@ from app.filters.product_filters import (
 )
 from app.utils.recipe_display import format_recipe_lineage_name
 
+from ..extensions import db
+from ..models import Organization
+from ..services.unit_conversion import ConversionEngine
+from ..utils.timezone_utils import TimezoneUtils
+from .duration_utils import humanize_duration_days
+from .permissions import has_permission as perm_has_permission
+from .permissions import has_role as perm_has_role
+from .permissions import has_subscription_feature
+from .permissions import has_tier_permission as perm_has_tier_permission
+from .permissions import is_developer
+from .permissions import is_organization_owner as permissions_is_organization_owner
+
 __all__ = ["register_template_filters"]
 
 
 # ---------------------------------------------------------------------------
 # Basic formatting helpers
 # ---------------------------------------------------------------------------
+
 
 def _format_currency(value: Any) -> str:
     if value is None:
@@ -40,6 +41,28 @@ def _format_currency(value: Any) -> str:
         return f"${float(value):.2f}"
     except (TypeError, ValueError):
         return "$0.00"
+
+
+def _format_unit_cost(value: Any) -> str:
+    """
+    Format unit costs with extra precision for sub-cent values.
+
+    Example:
+    - 0.15   -> $0.15
+    - 0.0042 -> $0.0042
+    """
+    if value is None:
+        return "$0.00"
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "$0.00"
+
+    if numeric == 0:
+        return "$0.00"
+    if abs(numeric) < 0.01:
+        return f"${numeric:.4f}"
+    return f"${numeric:.2f}"
 
 
 def _format_percentage(value: Any, decimal_places: int = 1) -> str:
@@ -72,6 +95,7 @@ def _nl2br(value: str | None) -> str:
 # Timezone-aware formatting
 # ---------------------------------------------------------------------------
 
+
 def _format_user_datetime(value: Any, format_string: str) -> str:
     if not value:
         return ""
@@ -101,7 +125,9 @@ def _user_time_filter(value: Any, format_string: str = "%H:%M:%S") -> str:
     return _format_user_datetime(value, format_string)
 
 
-def _format_user_time_filter(value: Any, format_string: str = "%Y-%m-%d %H:%M:%S") -> str:
+def _format_user_time_filter(
+    value: Any, format_string: str = "%Y-%m-%d %H:%M:%S"
+) -> str:
     return _format_user_datetime(value, format_string)
 
 
@@ -115,7 +141,9 @@ def _timestamp_to_date_filter(value: Any) -> str:
     if not value:
         return "N/A"
     try:
-        dt_obj = datetime.fromtimestamp(value) if isinstance(value, (int, float)) else value
+        dt_obj = (
+            datetime.fromtimestamp(value) if isinstance(value, (int, float)) else value
+        )
         aware = TimezoneUtils.ensure_timezone_aware(dt_obj)
         return TimezoneUtils.format_for_user(aware, "%B %d, %Y")
     except Exception:
@@ -146,6 +174,7 @@ def _format_datetime_filter(value: Any) -> str:
 # ---------------------------------------------------------------------------
 # Miscellaneous filters
 # ---------------------------------------------------------------------------
+
 
 def _from_symbol_filter(symbol: str):
     if not symbol:
@@ -179,6 +208,7 @@ def _recipe_lineage_name_filter(recipe: Any, include_test_number: bool = False) 
 # ---------------------------------------------------------------------------
 # Template globals
 # ---------------------------------------------------------------------------
+
 
 def _timezone_utils_global():
     return TimezoneUtils
@@ -235,14 +265,8 @@ def _current_user_organization():
 
 
 def _has_tier_permission_global(permission_name: str) -> bool:
-    organization = _current_user_organization()
-    if organization is None:
-        return False
     try:
-        from app.utils.permissions import AuthorizationHierarchy
-
-        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
-        return permission_name in tier_permissions
+        return perm_has_tier_permission(permission_name)
     except Exception:
         return False
 
@@ -264,7 +288,9 @@ def _get_tier_features_global(tier_key: Any = None):
         except (TypeError, ValueError):
             tier_id = None
 
-        tier = db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
+        tier = (
+            db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
+        )
         if not tier:
             return []
         return [permission.name for permission in getattr(tier, "permissions", [])]
@@ -298,6 +324,7 @@ def _can_access_route_global(_route: str) -> bool:
 # Registration
 # ---------------------------------------------------------------------------
 
+
 def register_template_filters(app) -> None:
     """Attach custom filters and globals to the provided Flask app."""
 
@@ -305,6 +332,7 @@ def register_template_filters(app) -> None:
 
     filter_map: Dict[str, Callable[..., Any]] = {
         "format_currency": _format_currency,
+        "format_unit_cost": _format_unit_cost,
         "format_percentage": _format_percentage,
         "pluralize": _pluralize,
         "nl2br": _nl2br,

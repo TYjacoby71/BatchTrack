@@ -7,6 +7,7 @@ Glossary:
 - Current version: Active master/variation used in production and UI.
 - Branch: Master or variation line within a recipe group.
 """
+
 from __future__ import annotations
 
 from typing import Any, Tuple
@@ -42,7 +43,9 @@ def _clear_branch_current(recipe: Recipe) -> None:
         Recipe.is_master.is_(recipe.is_master),
     )
     if not recipe.is_master:
-        branch_query = branch_query.filter(Recipe.variation_name == recipe.variation_name)
+        branch_query = branch_query.filter(
+            Recipe.variation_name == recipe.variation_name
+        )
     branch_query = branch_query.filter(Recipe.id != recipe.id)
     branch_query.update({Recipe.is_current: False}, synchronize_session=False)
 

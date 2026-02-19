@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import flash, redirect, session, url_for
+
 from app.extensions import db
 from app.models import Organization
 from app.utils.timezone_utils import TimezoneUtils
@@ -35,7 +36,10 @@ def view_as_organization(org_id):
     }
     session.permanent = True
 
-    flash(f"Now viewing as organization: {organization.name}. Landing on user dashboard.", "info")
+    flash(
+        f"Now viewing as organization: {organization.name}. Landing on user dashboard.",
+        "info",
+    )
     return redirect(url_for("app_routes.dashboard"))
 
 

@@ -1,14 +1,15 @@
+"""Public waitlist capture routes."""
 
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request
 
-from app.utils.json_store import read_json_file, write_json_file
 from app.services.public_bot_trap_service import PublicBotTrapService
+from app.utils.json_store import read_json_file, write_json_file
 
-waitlist_bp = Blueprint('waitlist', __name__)
+waitlist_bp = Blueprint("waitlist", __name__)
 
 _DEFAULT_WAITLIST_KEY = "public_homepage"
 
@@ -60,8 +61,12 @@ def join_waitlist():
                 block=False,
             )
             if trap_email:
-                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(trap_email)
-                PublicBotTrapService.add_block(email=trap_email, user_id=blocked_user_id)
+                blocked_user_id = PublicBotTrapService.block_email_if_user_exists(
+                    trap_email
+                )
+                PublicBotTrapService.add_block(
+                    email=trap_email, user_id=blocked_user_id
+                )
             else:
                 PublicBotTrapService.add_block(
                     ip=PublicBotTrapService.resolve_request_ip(request),
@@ -101,13 +106,19 @@ def join_waitlist():
             "waitlist_key": metadata["waitlist_key"],
             "context": metadata["context"],
             "notes": (payload.get("notes") or "").strip(),
-            "tags": payload.get("tags") if isinstance(payload.get("tags"), list) else [],
+            "tags": (
+                payload.get("tags") if isinstance(payload.get("tags"), list) else []
+            ),
         }
 
         waitlist_file = "data/waitlist.json"
         waitlist = read_json_file(waitlist_file, default=[]) or []
 
-        if any(entry.get("email") == waitlist_entry["email"] and entry.get("waitlist_key") == waitlist_entry["waitlist_key"] for entry in waitlist):
+        if any(
+            entry.get("email") == waitlist_entry["email"]
+            and entry.get("waitlist_key") == waitlist_entry["waitlist_key"]
+            for entry in waitlist
+        ):
             return jsonify({"message": "Email already on this waitlist"}), 200
 
         waitlist.append(waitlist_entry)

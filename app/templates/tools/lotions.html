@@ -2,12 +2,12 @@
 {% block content %}
 {% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
 <div class="py-1">
-  <h2 class="mb-3 d-flex align-items-center gap-2">
+  <h1 class="h2 mb-3 d-flex align-items-center gap-2">
     Lotion & Cosmetic Tools
     {% if not tool_enabled %}
     <span class="badge bg-secondary">Coming Soon</span>
     {% endif %}
-  </h2>
+  </h1>
   {% if not tool_enabled %}
   <div class="alert alert-warning d-flex align-items-center" role="alert">
     <i class="fas fa-hourglass-half me-2"></i>
@@ -21,17 +21,17 @@
     <div class="card-header">Phase Summary</div>
     <div class="card-body">
       <div class="mb-3">
-        <h6>Ingredients</h6>
+        <h2 class="h6">Ingredients</h2>
         <div id="tool-ingredients"></div>
         <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
       </div>
       <div class="mb-3">
-        <h6>Consumables</h6>
+        <h2 class="h6">Consumables</h2>
         <div id="tool-consumables"></div>
         <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
       </div>
       <div class="mb-3">
-        <h6>Containers</h6>
+        <h2 class="h6">Containers</h2>
         <div id="tool-containers"></div>
         <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
       </div>
@@ -175,7 +175,7 @@
     } catch(_) {}
     const modalHtml = `
       <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+        <div class="modal-header"><h2 class="modal-title h5">Save to BatchTrack</h2>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body"><p>Create a free account to store this as a recipe.</p></div>
         <div class="modal-footer">

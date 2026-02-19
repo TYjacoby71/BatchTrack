@@ -10,7 +10,7 @@ Glossary:
 import uuid
 
 from app.extensions import db
-from app.models.models import User, Organization
+from app.models.models import Organization, User
 
 
 # --- Create user helper ---
@@ -30,16 +30,14 @@ def _create_user(app):
         db.session.add(org)
         db.session.flush()
 
-        perm = Permission.query.filter_by(name='dashboard.view').first()
+        perm = Permission.query.filter_by(name="dashboard.view").first()
         if not perm:
-            perm = Permission(name='dashboard.view', description='View dashboard')
+            perm = Permission(name="dashboard.view", description="View dashboard")
             db.session.add(perm)
             db.session.flush()
 
         tier = SubscriptionTier(
-            name=f"Session Tier {suffix}",
-            billing_provider='exempt',
-            user_limit=5
+            name=f"Session Tier {suffix}", billing_provider="exempt", user_limit=5
         )
         db.session.add(tier)
         db.session.flush()
@@ -57,7 +55,9 @@ def _create_user(app):
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        org_owner_role = Role.query.filter_by(
+            name="organization_owner", is_system_role=True
+        ).first()
         if org_owner_role:
             user.assign_role(org_owner_role)
 
@@ -80,7 +80,9 @@ def test_subsequent_login_invalidates_existing_session(app):
     assert response.status_code == 302
 
     # Confirm authenticated access works with the first session.
-    authed_response = first_client.get("/auth-check", headers={"Accept": "application/json"})
+    authed_response = first_client.get(
+        "/auth-check", headers={"Accept": "application/json"}
+    )
     assert authed_response.status_code == 200
 
     response = second_client.post(
@@ -91,10 +93,14 @@ def test_subsequent_login_invalidates_existing_session(app):
     assert response.status_code == 302
 
     # The first session should now be invalidated and receive a 401 JSON response.
-    invalidated = first_client.get("/auth-check", headers={"Accept": "application/json"})
+    invalidated = first_client.get(
+        "/auth-check", headers={"Accept": "application/json"}
+    )
     assert invalidated.status_code == 401
     assert invalidated.get_json().get("error") == "Authentication required"
 
     # The second session remains valid.
-    still_valid = second_client.get("/auth-check", headers={"Accept": "application/json"})
+    still_valid = second_client.get(
+        "/auth-check", headers={"Accept": "application/json"}
+    )
     assert still_valid.status_code == 200

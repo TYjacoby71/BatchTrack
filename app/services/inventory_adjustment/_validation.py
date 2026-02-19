@@ -9,32 +9,57 @@ Glossary:
 """
 
 import logging
-from app.models import db, InventoryItem
-from app.services.quantity_base import from_base_quantity
+
 from sqlalchemy import and_
+
+from app.models import InventoryItem, db
+from app.services.inventory_tracking_policy import (
+    org_allows_inventory_quantity_tracking,
+)
+from app.services.quantity_base import from_base_quantity
+
+from ._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
 
 logger = logging.getLogger(__name__)
 
 
 # --- FIFO sync validation ---
 # Purpose: Validate inventory quantity against FIFO totals.
+# Inputs: Inventory item id and optional item-type context.
+# Outputs: Tuple (is_valid, error_message, inventory_qty, fifo_total).
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validate that inventory quantity matches FIFO totals using proper InventoryLot model.
     This ensures the item.quantity field stays in sync with actual lot quantities.
     """
     from app.models.inventory_lot import InventoryLot
-    
+
     item = db.session.get(InventoryItem, item_id)
     if not item:
         return False, "Item not found", 0, 0
+
+    org_tracks_quantities = org_allows_inventory_quantity_tracking(
+        organization=getattr(item, "organization", None)
+    )
+    effective_tracking_enabled = (
+        bool(getattr(item, "is_tracked", True)) and org_tracks_quantities
+    )
+    if not effective_tracking_enabled:
+        inventory_qty = from_base_quantity(
+            base_amount=int(getattr(item, "quantity_base", 0) or 0),
+            unit_name=item.unit,
+            ingredient_id=item.id,
+            density=item.density,
+        )
+        return True, None, inventory_qty, inventory_qty
 
     # Get all active lots for this item with proper organization scoping
     active_lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
-            InventoryLot.remaining_quantity_base > 0
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE,
+            InventoryLot.remaining_quantity_base > 0,
         )
     ).all()
 
@@ -62,11 +87,13 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         logger.error(f"  FIFO total: {fifo_total}")
         logger.error(f"  Difference: {abs(inventory_qty - fifo_total)}")
         logger.error(f"  Active FIFO lots: {len(active_lots)}")
-        
+
         # Log individual FIFO lots for debugging
         for i, lot in enumerate(active_lots):
-            logger.error(f"    Lot {i+1}: {lot.remaining_quantity} ({lot.source_type}, {lot.received_date})")
-        
+            logger.error(
+                f"    Lot {i+1}: {lot.remaining_quantity} ({lot.source_type}, {lot.received_date})"
+            )
+
         error_msg = f"FIFO sync error: inventory={inventory_qty}, fifo_total={fifo_total}, diff={abs(inventory_qty - fifo_total)}"
         return False, error_msg, inventory_qty, fifo_total
 

@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 CANONICAL_ALLOWLIST = {
     # Known transitional modules that still perform manual adjustments and need refactors.

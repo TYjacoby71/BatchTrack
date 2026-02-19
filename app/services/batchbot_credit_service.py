@@ -54,13 +54,21 @@ class BatchBotCreditService:
         return bundle
 
     @staticmethod
-    def grant_signup_bonus(org: Organization, *, requests: Optional[int] = None) -> Optional[BatchBotCreditBundle]:
-        bonus = requests if requests is not None else current_app.config.get("BATCHBOT_SIGNUP_BONUS_REQUESTS", 0)
+    def grant_signup_bonus(
+        org: Organization, *, requests: Optional[int] = None
+    ) -> Optional[BatchBotCreditBundle]:
+        bonus = (
+            requests
+            if requests is not None
+            else current_app.config.get("BATCHBOT_SIGNUP_BONUS_REQUESTS", 0)
+        )
         if bonus <= 0:
             return None
 
         existing = (
-            BatchBotCreditBundle.query.filter_by(organization_id=org.id, source="signup_bonus")
+            BatchBotCreditBundle.query.filter_by(
+                organization_id=org.id, source="signup_bonus"
+            )
             .order_by(BatchBotCreditBundle.created_at.asc())
             .first()
         )
@@ -76,7 +84,9 @@ class BatchBotCreditService:
         )
 
     @staticmethod
-    def grant_from_addon(org: Organization, addon: Addon, reference: Optional[str] = None) -> Optional[BatchBotCreditBundle]:
+    def grant_from_addon(
+        org: Organization, addon: Addon, reference: Optional[str] = None
+    ) -> Optional[BatchBotCreditBundle]:
         amount = getattr(addon, "batchbot_credit_amount", 0) or 0
         if amount <= 0:
             return None
@@ -93,7 +103,11 @@ class BatchBotCreditService:
     def available_credits(org: Organization) -> int:
         now = TimezoneUtils.utc_now()
         total = (
-            db.session.query(db.func.coalesce(db.func.sum(BatchBotCreditBundle.remaining_requests), 0))
+            db.session.query(
+                db.func.coalesce(
+                    db.func.sum(BatchBotCreditBundle.remaining_requests), 0
+                )
+            )
             .filter(
                 BatchBotCreditBundle.organization_id == org.id,
                 db.or_(
@@ -123,7 +137,9 @@ class BatchBotCreditService:
         total = sum(b.purchased_requests for b in bundles)
         remaining = sum(b.remaining_requests for b in bundles)
         next_expiry = min((b.expires_at for b in bundles if b.expires_at), default=None)
-        return CreditSnapshot(total=total, remaining=remaining, expires_next=next_expiry)
+        return CreditSnapshot(
+            total=total, remaining=remaining, expires_next=next_expiry
+        )
 
     @staticmethod
     def consume(org: Organization, amount: int) -> None:
@@ -141,7 +157,9 @@ class BatchBotCreditService:
                     BatchBotCreditBundle.expires_at > now,
                 ),
             )
-            .order_by(BatchBotCreditBundle.created_at.asc(), BatchBotCreditBundle.id.asc())
+            .order_by(
+                BatchBotCreditBundle.created_at.asc(), BatchBotCreditBundle.id.asc()
+            )
             .with_for_update()
             .all()
         )

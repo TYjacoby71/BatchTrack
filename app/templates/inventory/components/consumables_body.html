@@ -20,7 +20,7 @@
 
 <!-- Filter Section for Consumables -->
 <div class="collapse mb-3" id="consumablesFilterSection">
-  <div class="card card-body">
+  <div class="card card-body inventory-filter-card bt-filter-panel">
     <div class="row g-3">
       <div class="col-md-3">
         <div class="form-check">
@@ -34,7 +34,14 @@
     </div>
     <div class="row g-3">
       <div class="col-md-4">
-        <input type="text" id="consumablesNameFilter" class="form-control" placeholder="Search by name...">
+        <label class="form-label small text-muted mb-1" for="consumablesNameFilter">Search inventory name</label>
+        <div class="input-group inventory-filter-input-group bt-filter-search-group">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="search" id="consumablesNameFilter" class="form-control inventory-live-filter bt-filter-search-input" placeholder="Search by name..." autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary inventory-filter-clear-btn bt-filter-clear-btn d-none" data-clear-filter-target="consumablesNameFilter" aria-label="Clear consumable name filter">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
       <div class="col-md-3">
         <select id="consumablesSortFilter" class="form-select">
@@ -115,6 +122,20 @@
       <label class="form-label">Cost</label>
       <input type="number" step="0.01" name="cost_per_unit" class="form-control" id="addConsumableCost" required>
       <small class="form-text text-muted" id="addConsumableCostHelp">Enter total cost (will be divided by quantity)</small>
+    </div>
+    <div class="col">
+      <label class="form-label d-block">Quantity Tracking</label>
+      <div class="form-check form-switch mt-2">
+        <input type="checkbox"
+               class="form-check-input"
+               name="is_tracked"
+               value="1"
+               id="addConsumableIsTracked"
+               {% if not org_forces_infinite_items %}checked{% endif %}
+               {% if org_forces_infinite_items %}disabled{% endif %}>
+        <input type="hidden" name="is_tracked" value="0">
+        <label class="form-check-label" for="addConsumableIsTracked">Infinite when off</label>
+      </div>
     </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-success" id="saveConsumableBtn">
@@ -235,9 +256,13 @@
             </td>
             <td class="col-unit">{{ item.unit }}</td>
             <td class="col-quantity">
+              {% if not item.is_tracked %}
+              <span class="badge bg-info text-dark">Infinite</span>
+              {% else %}
               <span class="badge bg-{{ 'danger' if item.quantity == 0 else 'warning' if item.low_stock_threshold and item.quantity <= item.low_stock_threshold else 'success' }}">
                 {{ "%.2f"|format(item.quantity) }} {{ item.unit or 'count' }}
               </span>
+              {% endif %}
             </td>
             <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
             <td class="col-status">

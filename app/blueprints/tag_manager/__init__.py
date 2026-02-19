@@ -1,6 +1,5 @@
+"""Tag manager blueprint package."""
 
-from flask import Blueprint
+from .routes import tag_manager_bp
 
-tag_manager_bp = Blueprint('tag_manager', __name__, template_folder='templates')
-
-# Routes will be imported when needed
+__all__ = ["tag_manager_bp"]

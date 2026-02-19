@@ -101,17 +101,27 @@ class MiddlewareProbeService:
         normalized_path = (path or "").strip().lower()
         if not normalized_path or normalized_path == "/":
             return False
-        if any(normalized_path.startswith(prefix) for prefix in cls.SUSPICIOUS_UNKNOWN_PATH_PREFIXES):
+        if any(
+            normalized_path.startswith(prefix)
+            for prefix in cls.SUSPICIOUS_UNKNOWN_PATH_PREFIXES
+        ):
             return True
-        if any(token in normalized_path for token in cls.SUSPICIOUS_UNKNOWN_PATH_TOKENS):
+        if any(
+            token in normalized_path for token in cls.SUSPICIOUS_UNKNOWN_PATH_TOKENS
+        ):
             return True
         last_segment = normalized_path.rsplit("/", 1)[-1]
-        if any(last_segment.endswith(suffix) for suffix in cls.SUSPICIOUS_UNKNOWN_PATH_SUFFIXES):
+        if any(
+            last_segment.endswith(suffix)
+            for suffix in cls.SUSPICIOUS_UNKNOWN_PATH_SUFFIXES
+        ):
             return True
         return False
 
     @classmethod
-    def maybe_block_suspicious_unknown_probe(cls, *, request, path: str, status_code: int) -> None:
+    def maybe_block_suspicious_unknown_probe(
+        cls, *, request, path: str, status_code: int
+    ) -> None:
         """Persist a bot-trap block when an unknown path looks like a scanner probe."""
         if not cls.is_suspicious_unknown_path(path):
             return
@@ -133,4 +143,6 @@ class MiddlewareProbeService:
                 status_code,
             )
         except Exception as exc:
-            logger.warning("Unable to auto-block suspicious unknown path %s: %s", path, exc)
+            logger.warning(
+                "Unable to auto-block suspicious unknown path %s: %s", path, exc
+            )

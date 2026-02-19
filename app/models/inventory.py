@@ -8,44 +8,53 @@ Glossary:
 - InventoryHistory: Audit log of inventory changes.
 """
 
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 
 from flask_login import current_user
 from sqlalchemy import event
 
-from ..extensions import db
-from ..utils.timezone_utils import TimezoneUtils
-from .mixins import ScopedModelMixin
 from app.services.cache_invalidation import (
     invalidate_ingredient_list_cache,
     invalidate_inventory_list_cache,
     invalidate_product_list_cache,
 )
 
+from ..extensions import db
+from ..utils.timezone_utils import TimezoneUtils
+from .mixins import ScopedModelMixin
+
+
 class InventoryItem(ScopedModelMixin, db.Model):
     """Ingredients and raw materials"""
-    __tablename__ = 'inventory_item'
+
+    __tablename__ = "inventory_item"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False, index=True)
     # Ingredient-specific category (for density defaults, etc.)
-    category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'))
+    category_id = db.Column(db.Integer, db.ForeignKey("ingredient_category.id"))
     # Inventory category (separate taxonomy aligned to item type)
-    inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
+    inventory_category_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_category.id"), nullable=True
+    )
     quantity = db.Column(db.Float, default=0.0)
     quantity_base = db.Column(db.BigInteger, default=0, nullable=False)
+    # When False, quantity is treated as infinite for stock checks/deductions.
+    is_tracked = db.Column(db.Boolean, default=True, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
     # Density for unit conversion (g/ml for volume-weight conversions) - should never be 0
     density = db.Column(db.Float, nullable=True)
-    type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient', 'container', 'product', or 'product-reserved'
+    type = db.Column(
+        db.String(32), nullable=False, default="ingredient"
+    )  # 'ingredient', 'container', 'product', or 'product-reserved'
     is_active = db.Column(db.Boolean, default=True)
     is_archived = db.Column(db.Boolean, default=False)
     __table_args__ = (
-        db.UniqueConstraint('organization_id', 'name', name='_org_name_uc'),
-        db.Index('ix_inventory_item_type', 'type'),
-        db.Index('ix_inventory_item_is_archived', 'is_archived'),
-        db.Index('ix_inventory_item_org', 'organization_id'),
+        db.UniqueConstraint("organization_id", "name", name="_org_name_uc"),
+        db.Index("ix_inventory_item_type", "type"),
+        db.Index("ix_inventory_item_is_archived", "is_archived"),
+        db.Index("ix_inventory_item_org", "organization_id"),
     )
     # Perishable tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
@@ -58,28 +67,39 @@ class InventoryItem(ScopedModelMixin, db.Model):
     container_type = db.Column(db.String(64), nullable=True)  # bottle, jar, tube, etc.
     container_style = db.Column(db.String(64), nullable=True)
     container_color = db.Column(db.String(64), nullable=True)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Reference guide integration
-    reference_item_name = db.Column(db.String(128), nullable=True)  # Exact match from density_reference.json
-    density_source = db.Column(db.String(32), default='manual')  # 'manual', 'reference_item', 'category_default', 'auto_assigned'
+    reference_item_name = db.Column(
+        db.String(128), nullable=True
+    )  # Exact match from density_reference.json
+    density_source = db.Column(
+        db.String(32), default="manual"
+    )  # 'manual', 'reference_item', 'category_default', 'auto_assigned'
 
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
     # Global library linkage (nullable)
-    global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
+    global_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("global_item.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     # Ownership semantics: 'global' when linked, 'org' when unlinked/customized
     ownership = db.Column(db.String(16), nullable=True, index=True)
 
     # Organization relationship
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)
-    organization = db.relationship('Organization', backref='inventory_items')
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=True, index=True
+    )
+    organization = db.relationship("Organization", backref="inventory_items")
 
-    category = db.relationship('IngredientCategory', backref='inventory_items')
-    inventory_category = db.relationship('InventoryCategory', backref='inventory_items')
-    global_item = db.relationship('GlobalItem')
+    category = db.relationship("IngredientCategory", backref="inventory_items")
+    inventory_category = db.relationship("InventoryCategory", backref="inventory_items")
+    global_item = db.relationship("GlobalItem")
 
     # Legacy aliases removed: use capacity and capacity_unit exclusively
     @property
@@ -94,11 +114,11 @@ class InventoryItem(ScopedModelMixin, db.Model):
         - Fallback to item name on any error.
         """
         try:
-            if self.type != 'container':
+            if self.type != "container":
                 return self.name
-            style = (self.container_style or '').strip()
-            material = (self.container_material or '').strip()
-            base_type = (self.container_type or '').strip()
+            style = (self.container_style or "").strip()
+            material = (self.container_material or "").strip()
+            base_type = (self.container_type or "").strip()
 
             parts = []
 
@@ -135,19 +155,28 @@ class InventoryItem(ScopedModelMixin, db.Model):
             return self.quantity
 
         from sqlalchemy import and_
+
         from app.models.inventory_lot import InventoryLot
         from app.services.quantity_base import from_base_quantity
 
         today = datetime.now(timezone.utc).date()
-        expired_total_base = db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))\
-            .filter(and_(
-                InventoryLot.inventory_item_id == self.id,
-                InventoryLot.remaining_quantity_base > 0,
-                InventoryLot.expiration_date != None,
-                InventoryLot.expiration_date < today
-            )).scalar() or 0
+        expired_total_base = (
+            db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))
+            .filter(
+                and_(
+                    InventoryLot.inventory_item_id == self.id,
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.expiration_date is not None,
+                    InventoryLot.expiration_date < today,
+                )
+            )
+            .scalar()
+            or 0
+        )
 
-        available_base = max(0, int(self.quantity_base or 0) - int(expired_total_base or 0))
+        available_base = max(
+            0, int(self.quantity_base or 0) - int(expired_total_base or 0)
+        )
         return from_base_quantity(
             base_amount=available_base,
             unit_name=self.unit,
@@ -162,17 +191,24 @@ class InventoryItem(ScopedModelMixin, db.Model):
             return 0
 
         from sqlalchemy import and_
+
         from app.models.inventory_lot import InventoryLot
         from app.services.quantity_base import from_base_quantity
 
         today = datetime.now(timezone.utc).date()
-        expired_total_base = db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))\
-            .filter(and_(
-                InventoryLot.inventory_item_id == self.id,
-                InventoryLot.remaining_quantity_base > 0,
-                InventoryLot.expiration_date != None,
-                InventoryLot.expiration_date < today
-            )).scalar() or 0
+        expired_total_base = (
+            db.session.query(db.func.sum(InventoryLot.remaining_quantity_base))
+            .filter(
+                and_(
+                    InventoryLot.inventory_item_id == self.id,
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.expiration_date is not None,
+                    InventoryLot.expiration_date < today,
+                )
+            )
+            .scalar()
+            or 0
+        )
         return from_base_quantity(
             base_amount=expired_total_base or 0,
             unit_name=self.unit,
@@ -187,11 +223,13 @@ def _derive_ownership_before_insert(mapper, connection, target):
     try:
         # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
         # If ownership is not provided, default based on global linkage.
-        if getattr(target, 'ownership', None) in (None, ''):
-            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        if getattr(target, "ownership", None) in (None, ""):
+            target.ownership = (
+                "global" if getattr(target, "global_item_id", None) else "org"
+            )
         # If the item is disconnected (no global_item_id), always mark as org-owned.
-        if getattr(target, 'global_item_id', None) is None:
-            target.ownership = 'org'
+        if getattr(target, "global_item_id", None) is None:
+            target.ownership = "org"
     except Exception:
         # Best-effort; do not block insert on ownership derivation
         pass
@@ -204,11 +242,13 @@ def _derive_ownership_before_update(mapper, connection, target):
         # Respect explicit ownership values set by callers (e.g., unlink/relink flows).
         # Only fill ownership when missing; never forcibly flip 'org' -> 'global' just
         # because a global_item_id exists (we may be intentionally unlinked but retaining source).
-        if getattr(target, 'ownership', None) in (None, ''):
-            target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+        if getattr(target, "ownership", None) in (None, ""):
+            target.ownership = (
+                "global" if getattr(target, "global_item_id", None) else "org"
+            )
         # If the item is disconnected (no global_item_id), always mark as org-owned.
-        if getattr(target, 'global_item_id', None) is None:
-            target.ownership = 'org'
+        if getattr(target, "global_item_id", None) is None:
+            target.ownership = "org"
     except Exception:
         # Best-effort; do not block update on ownership derivation
         pass
@@ -240,39 +280,54 @@ def _inventory_item_after_update(mapper, connection, target):
 def _inventory_item_after_delete(mapper, connection, target):
     _invalidate_inventory_item_caches(target)
 
+
 class InventoryHistory(ScopedModelMixin, db.Model):
-    __tablename__ = 'inventory_history'
+    __tablename__ = "inventory_history"
     id = db.Column(db.Integer, primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    inventory_item_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=False
+    )
     timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    change_type = db.Column(db.String(50), nullable=True)  # manual_addition, batch_usage, spoil, trash, tester, damaged, recount
+    change_type = db.Column(
+        db.String(50), nullable=True
+    )  # manual_addition, batch_usage, spoil, trash, tester, damaged, recount
     quantity_change = db.Column(db.Float, nullable=True)
     unit = db.Column(db.String(32), nullable=False)
     remaining_quantity = db.Column(db.Float, nullable=True)  # For FIFO tracking
     unit_cost = db.Column(db.Float, nullable=True)
-    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)
-    fifo_code = db.Column(db.String(32), nullable=True)  # Base32 encoded unique identifier
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    fifo_reference_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_history.id"), nullable=True
+    )
+    fifo_code = db.Column(
+        db.String(32), nullable=True
+    )  # Base32 encoded unique identifier
+    batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"), nullable=True)
     lineage_id = db.Column(db.String(64), nullable=True)
     note = db.Column(db.Text)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    quantity_used = db.Column(db.Float, default=0.0)  # Track actual consumption vs deduction
-    used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)  # Track which batch used this
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+    quantity_used = db.Column(
+        db.Float, default=0.0
+    )  # Track actual consumption vs deduction
+    used_for_batch_id = db.Column(
+        db.Integer, db.ForeignKey("batch.id"), nullable=True
+    )  # Track which batch used this
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
     # Organization relationship
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=True
+    )
 
     # Relationships
-    inventory_item = db.relationship('InventoryItem', backref='history')
-    batch = db.relationship('Batch', foreign_keys=[batch_id])
-    used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
-    user = db.relationship('User')
+    inventory_item = db.relationship("InventoryItem", backref="history")
+    batch = db.relationship("Batch", foreign_keys=[batch_id])
+    used_for_batch = db.relationship("Batch", foreign_keys=[used_for_batch_id])
+    user = db.relationship("User")
 
     def __repr__(self):
-        return f'<InventoryHistory {self.id}: {self.change_type} {self.quantity_change} {self.unit}>'
+        return f"<InventoryHistory {self.id}: {self.change_type} {self.quantity_change} {self.unit}>"
 
 
 @event.listens_for(InventoryHistory, "before_insert")
@@ -281,17 +336,21 @@ def _set_org_on_history(mapper, connection, target):
         inv_tbl = InventoryItem.__table__
         row = connection.execute(
             inv_tbl.select()
-                   .with_only_columns(inv_tbl.c.organization_id)
-                   .where(inv_tbl.c.id == target.inventory_item_id)
+            .with_only_columns(inv_tbl.c.organization_id)
+            .where(inv_tbl.c.id == target.inventory_item_id)
         ).first()
         if row:
             target.organization_id = row[0]
 
+
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
+
     id = db.Column(db.Integer, primary_key=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"), nullable=False)
+    inventory_item_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=False
+    )
     action = db.Column(db.String(32), nullable=False)  # deduct, credit
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
@@ -299,5 +358,5 @@ class BatchInventoryLog(ScopedModelMixin, db.Model):
     new_stock = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
-    batch = db.relationship('Batch')
-    inventory_item = db.relationship('InventoryItem')
+    batch = db.relationship("Batch")
+    inventory_item = db.relationship("InventoryItem")

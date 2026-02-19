@@ -20,7 +20,7 @@
 
 <!-- Filter Section for Containers -->
 <div class="collapse mb-3" id="containersFilterSection">
-  <div class="card card-body">
+  <div class="card card-body inventory-filter-card bt-filter-panel">
     <div class="row g-3">
       <div class="col-md-4">
         <div class="form-check mb-2">
@@ -34,7 +34,14 @@
     </div>
     <div class="row g-3">
       <div class="col-md-4">
-        <input type="text" id="containersNameFilter" class="form-control" placeholder="Search by name...">
+        <label class="form-label small text-muted mb-1" for="containersNameFilter">Search inventory name</label>
+        <div class="input-group inventory-filter-input-group bt-filter-search-group">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="search" id="containersNameFilter" class="form-control inventory-live-filter bt-filter-search-input" placeholder="Search by name..." autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary inventory-filter-clear-btn bt-filter-clear-btn d-none" data-clear-filter-target="containersNameFilter" aria-label="Clear container name filter">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
       <div class="col-md-3">
         <select id="containersSortFilter" class="form-select">
@@ -150,6 +157,20 @@
         <label class="form-label">Cost</label>
         <input type="number" step="0.01" min="0" name="cost_per_unit" class="form-control" id="addContainerCost" required>
         <small class="form-text text-muted" id="addContainerCostHelp">Enter total cost (will be divided by quantity)</small>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label d-block">Quantity Tracking</label>
+        <div class="form-check form-switch mt-2">
+          <input type="checkbox"
+                 class="form-check-input"
+                 name="is_tracked"
+                 value="1"
+                 id="addContainerIsTracked"
+                 {% if not org_forces_infinite_items %}checked{% endif %}
+                 {% if org_forces_infinite_items %}disabled{% endif %}>
+          <input type="hidden" name="is_tracked" value="0">
+          <label class="form-check-label" for="addContainerIsTracked">Infinite when off</label>
+        </div>
       </div>
     </div>
 
@@ -299,9 +320,13 @@
             <td class="col-storage">{{ item.capacity or 'N/A' }}</td>
             <td class="col-storage_unit">{{ item.capacity_unit or 'N/A' }}</td>
             <td class="col-quantity">
+              {% if not item.is_tracked %}
+              <span class="badge bg-info text-dark">Infinite</span>
+              {% else %}
               <span class="badge bg-{{ 'danger' if item.temp_available_quantity == 0 else 'warning' if item.low_stock_threshold and item.temp_available_quantity <= item.low_stock_threshold else 'success' }}">
                 {{ "%.2f"|format(item.temp_available_quantity) }} {{ item.unit or 'count' }}
               </span>
+              {% endif %}
             </td>
             <td class="col-expired">
               {% if item.temp_expired_quantity > 0 %}

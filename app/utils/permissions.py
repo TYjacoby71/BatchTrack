@@ -8,16 +8,28 @@ Glossary:
 - Scope: Developer vs customer permission namespace.
 """
 
-from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app, g, has_app_context
-from flask_login import current_user, login_required
-from functools import wraps, lru_cache
-from werkzeug.exceptions import Forbidden
-from typing import Iterable
-from enum import Enum
-from dataclasses import dataclass
-from urllib.parse import urlparse
-from markupsafe import Markup, escape
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from functools import lru_cache, wraps
+from typing import Iterable
+from urllib.parse import urlparse
+
+from flask import (
+    abort,
+    current_app,
+    flash,
+    g,
+    has_app_context,
+    jsonify,
+    redirect,
+    request,
+    session,
+    url_for,
+)
+from flask_login import current_user
+from markupsafe import Markup, escape
+from werkzeug.exceptions import Forbidden
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +47,7 @@ def _get_request_cache() -> dict[str, object] | None:
 def _rollback_if_inactive() -> None:
     try:
         from ..extensions import db
+
         if not getattr(db.session, "is_active", True):
             db.session.rollback()
     except Exception:
@@ -58,8 +71,10 @@ class PermissionScope:
     def is_shared(self) -> bool:
         return self.dev and self.customer
 
+
 class AppPermission(Enum):
     """Enumeration of application permissions"""
+
     # Product permissions
     PRODUCT_VIEW = "product.view"
     PRODUCT_CREATE = "product.create"
@@ -89,9 +104,11 @@ class AppPermission(Enum):
     ORGANIZATION_EDIT = "organization.edit"
     ORGANIZATION_BILLING = "organization.billing"
 
+
 def wants_json() -> bool:
     """Check if the request wants JSON response"""
     from app.utils.http import wants_json as http_wants_json
+
     return http_wants_json()
 
 
@@ -135,7 +152,9 @@ def resolve_permission_scope(permission_name: str) -> PermissionScope:
         )
         return PermissionScope(dev=dev_allowed, customer=customer_allowed)
     except Exception as exc:
-        logger.warning("Permission scope lookup failed for %s: %s", permission_name, exc)
+        logger.warning(
+            "Permission scope lookup failed for %s: %s", permission_name, exc
+        )
         return PermissionScope()
 
 
@@ -151,11 +170,15 @@ def permission_exists_in_catalog(permission_name: str) -> bool:
         from app.models.permission import Permission
 
         return bool(
-            DeveloperPermission.query.filter_by(name=permission_name, is_active=True).first()
+            DeveloperPermission.query.filter_by(
+                name=permission_name, is_active=True
+            ).first()
             or Permission.query.filter_by(name=permission_name, is_active=True).first()
         )
     except Exception as exc:
-        logger.warning("Permission existence lookup failed for %s: %s", permission_name, exc)
+        logger.warning(
+            "Permission existence lookup failed for %s: %s", permission_name, exc
+        )
         return False
 
 
@@ -172,7 +195,10 @@ def _safe_referrer() -> str | None:
     try:
         ref_parts = urlparse(referrer)
         host_parts = urlparse(request.host_url)
-        if ref_parts.scheme in {"http", "https"} and ref_parts.netloc == host_parts.netloc:
+        if (
+            ref_parts.scheme in {"http", "https"}
+            and ref_parts.netloc == host_parts.netloc
+        ):
             return referrer
     except Exception:
         return None
@@ -198,7 +224,9 @@ def _build_upgrade_markup(upgrade_tiers):
     )
 
 
-def _build_permission_denied_message(permission_name: str, *, reason: str | None = None, upgrade_tiers=None):
+def _build_permission_denied_message(
+    permission_name: str, *, reason: str | None = None, upgrade_tiers=None
+):
     if reason == "developer_only":
         base = "Developer access required to use this feature."
     elif reason == "organization_required":
@@ -212,7 +240,9 @@ def _build_permission_denied_message(permission_name: str, *, reason: str | None
     return base
 
 
-def _select_primary_permission(permission_names: Iterable[str]) -> tuple[str, PermissionScope]:
+def _select_primary_permission(
+    permission_names: Iterable[str],
+) -> tuple[str, PermissionScope]:
     permissions = [p for p in permission_names if p]
     if not permissions:
         return "unknown", PermissionScope()
@@ -228,17 +258,29 @@ def _permission_denied_response(permission_names: Iterable[str]):
     permission_name, scope = _select_primary_permission(permission_names)
 
     if scope.is_dev_only and getattr(current_user, "user_type", None) != "developer":
-        message = _build_permission_denied_message(permission_name, reason="developer_only")
+        message = _build_permission_denied_message(
+            permission_name, reason="developer_only"
+        )
         if wants_json():
             return jsonify({"error": "developer_only", "message": str(message)}), 403
         flash(message, "error")
         return _redirect_back()
 
-    if scope.is_customer_only and getattr(current_user, "user_type", None) == "developer":
+    if (
+        scope.is_customer_only
+        and getattr(current_user, "user_type", None) == "developer"
+    ):
         if not (session.get("dev_selected_org_id") or session.get("masquerade_org_id")):
-            message = _build_permission_denied_message(permission_name, reason="organization_required")
+            message = _build_permission_denied_message(
+                permission_name, reason="organization_required"
+            )
             if wants_json():
-                return jsonify({"error": "organization_required", "message": str(message)}), 403
+                return (
+                    jsonify(
+                        {"error": "organization_required", "message": str(message)}
+                    ),
+                    403,
+                )
             flash(message, "warning")
             return _redirect_back()
 
@@ -246,7 +288,9 @@ def _permission_denied_response(permission_names: Iterable[str]):
     try:
         organization = get_effective_organization()
         if organization and scope.customer:
-            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(
+                organization
+            )
             if permission_name not in tier_permissions:
                 from app.services.billing_service import BillingService
 
@@ -257,7 +301,9 @@ def _permission_denied_response(permission_names: Iterable[str]):
     except Exception as exc:
         logger.warning("Permission denial context failed: %s", exc)
 
-    message = _build_permission_denied_message(permission_name, upgrade_tiers=upgrade_tiers)
+    message = _build_permission_denied_message(
+        permission_name, upgrade_tiers=upgrade_tiers
+    )
     if wants_json():
         payload = {
             "error": "permission_denied",
@@ -272,16 +318,18 @@ def _permission_denied_response(permission_names: Iterable[str]):
     flash(message, "error")
     return _redirect_back()
 
+
 def require_permission(permission_name: str):
     """
     Decorator to require specific permissions with proper error handling
     Single source of truth for permission checking
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
             # Skip permissions only if explicitly disabled
-            if current_app.config.get('SKIP_PERMISSIONS'):
+            if current_app.config.get("SKIP_PERMISSIONS"):
                 return f(*args, **named_args)
 
             # Basic auth check - check authentication first
@@ -298,13 +346,17 @@ def require_permission(permission_name: str):
             return _permission_denied_response([permission_name])
 
         return _record_required_permissions(decorated_function, [permission_name])
+
     return decorator
+
 
 # Alias for backward compatibility
 permission_required = require_permission
 
+
 def any_permission_required(*permission_names):
     """Decorator that requires any one of the specified permissions"""
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
@@ -318,8 +370,11 @@ def any_permission_required(*permission_names):
                 return _permission_denied_response(permission_names)
 
             return f(*args, **named_args)
+
         return _record_required_permissions(decorated_function, permission_names)
+
     return decorator
+
 
 def tier_required(min_tier: str):
     """
@@ -327,6 +382,7 @@ def tier_required(min_tier: str):
     Note: This is now deprecated in favor of permission-based access control.
     Use require_permission() instead for specific feature gating.
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
@@ -354,29 +410,40 @@ def tier_required(min_tier: str):
                 raise Forbidden("No subscription tier assigned.")
 
             # Exempt organizations have access to everything
-            if org.tier.name == 'Exempt Plan':
+            if org.tier.name == "Exempt Plan":
                 return f(*args, **named_args)
 
             # For specific tier requirements, check the tier name directly
             if min_tier and org.tier.name != min_tier:
                 if wants_json_response:
-                    return jsonify(error="tier_forbidden", required=min_tier, current=org.tier.name), 403
+                    return (
+                        jsonify(
+                            error="tier_forbidden",
+                            required=min_tier,
+                            current=org.tier.name,
+                        ),
+                        403,
+                    )
                 raise Forbidden(f"Requires {min_tier} tier.")
 
             return f(*args, **named_args)
+
         return decorated_function
+
     return decorator
+
 
 def role_required(*roles):
     """
     Decorator to require specific roles
     Allows everything during testing
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
             # Allow everything during tests
-            if current_app.config.get('TESTING', False):
+            if current_app.config.get("TESTING", False):
                 return f(*args, **named_args)
 
             # Basic auth check for non-test environments
@@ -386,19 +453,50 @@ def role_required(*roles):
             # TODO: Implement proper role checking
             # For now, just check if user is authenticated
             return f(*args, **named_args)
+
         return decorated_function
+
     return decorator
+
 
 def has_permission(user, permission_name: str) -> bool:
     """
     Check if user has the given permission using the authorization hierarchy
     Single source of truth for permission checking logic
     """
-    if not user or not hasattr(user, 'is_authenticated') or not user.is_authenticated:
+    if not user or not hasattr(user, "is_authenticated") or not user.is_authenticated:
         return False
 
     # Use the authorization hierarchy for permission checking
     return AuthorizationHierarchy.check_user_authorization(user, permission_name)
+
+
+def has_tier_permission(
+    permission_name: str, *, organization=None, default_if_missing_catalog: bool = False
+) -> bool:
+    """Check whether the effective organization tier includes a permission.
+
+    This bypasses user-role checks and is useful for org-wide feature behavior
+    that must not vary by individual role assignments.
+    """
+    if not permission_name:
+        return False
+
+    try:
+        if default_if_missing_catalog and not permission_exists_in_catalog(
+            permission_name
+        ):
+            return True
+
+        org = organization or get_effective_organization()
+        if not org:
+            return False
+
+        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(org)
+        return permission_name in tier_permissions
+    except Exception:
+        return False
+
 
 def get_user_permissions(user=None):
     """Get all permissions for the current user using authorization hierarchy"""
@@ -411,14 +509,16 @@ def get_user_permissions(user=None):
     # Use the authorization hierarchy
     return AuthorizationHierarchy.get_user_effective_permissions(user)
 
+
 def get_effective_organization_id():
     """Get the effective organization ID for the current user context"""
     # For developers viewing an organization
-    if current_user.user_type == 'developer':
-        return session.get('dev_selected_org_id')
+    if current_user.user_type == "developer":
+        return session.get("dev_selected_org_id")
 
     # For regular users
     return current_user.organization_id if current_user.organization_id else None
+
 
 def get_effective_organization():
     """Get the effective organization for the current user context"""
@@ -427,27 +527,28 @@ def get_effective_organization():
     _rollback_if_inactive()
 
     try:
-        if current_user.user_type == 'developer':
+        if current_user.user_type == "developer":
             # Developers can view organizations via session
-            org_id = session.get('dev_selected_org_id')
+            org_id = session.get("dev_selected_org_id")
             if org_id:
                 try:
-                    from ..models import Organization
                     from ..extensions import db
+                    from ..models import Organization
+
                     org = db.session.get(Organization, org_id)
                     if not org:
                         # Organization was deleted - clear masquerade
-                        session.pop('dev_selected_org_id', None)
-                        session.pop('dev_masquerade_context', None)
+                        session.pop("dev_selected_org_id", None)
+                        session.pop("dev_masquerade_context", None)
                         return None
                     return org
                 except Exception as e:
-                    print(f"---!!! DEVELOPER ORG QUERY ERROR !!!---")
+                    print("---!!! DEVELOPER ORG QUERY ERROR !!!---")
                     print(f"Error: {e}")
                     print("--------------------------------------")
                     try:
                         db.session.rollback()
-                    except:
+                    except Exception:
                         pass
                     return None
             return None
@@ -456,23 +557,24 @@ def get_effective_organization():
             try:
                 return current_user.organization
             except Exception as e:
-                print(f"---!!! USER ORGANIZATION QUERY ERROR !!!---")
+                print("---!!! USER ORGANIZATION QUERY ERROR !!!---")
                 print(f"Error: {e}")
                 print("-------------------------------------------")
                 try:
                     db.session.rollback()
-                except:
+                except Exception:
                     pass
                 return None
     except Exception as e:
-        print(f"---!!! GENERAL ORGANIZATION ACCESS ERROR !!!---")
+        print("---!!! GENERAL ORGANIZATION ACCESS ERROR !!!---")
         print(f"Error: {e}")
         print("-----------------------------------------------")
         try:
             db.session.rollback()
-        except:
+        except Exception:
             pass
         return None
+
 
 def is_organization_owner():
     """Check if current user is organization owner"""
@@ -480,18 +582,23 @@ def is_organization_owner():
         return False
 
     # Developers in customer view mode act as organization owners
-    if current_user.user_type == 'developer':
-        return session.get('dev_selected_org_id') is not None
+    if current_user.user_type == "developer":
+        return session.get("dev_selected_org_id") is not None
 
     # Organization owners are customers with the organization_owner role
-    if current_user.user_type == 'customer':
-        return any(role.name == 'organization_owner' for role in current_user.get_active_roles())
+    if current_user.user_type == "customer":
+        return any(
+            role.name == "organization_owner"
+            for role in current_user.get_active_roles()
+        )
 
     return False
 
+
 def is_developer():
     """Check if current user is developer"""
-    return current_user.is_authenticated and current_user.user_type == 'developer'
+    return current_user.is_authenticated and current_user.user_type == "developer"
+
 
 def has_role(role_name):
     """Check if current user has specific role"""
@@ -499,7 +606,7 @@ def has_role(role_name):
         return False
 
     try:
-        if hasattr(current_user, 'get_active_roles'):
+        if hasattr(current_user, "get_active_roles"):
             roles = current_user.get_active_roles()
             return any(role.name == role_name for role in roles)
     except Exception as e:
@@ -507,17 +614,19 @@ def has_role(role_name):
 
     return False
 
+
 def has_subscription_feature(feature):
     """Check if current user's organization has subscription feature"""
     if not current_user.is_authenticated:
         return False
 
     # Developers can access everything
-    if current_user.user_type == 'developer':
+    if current_user.user_type == "developer":
         return True
 
     org_features = current_user.organization.get_subscription_features()
-    return feature in org_features or 'all_features' in org_features
+    return feature in org_features or "all_features" in org_features
+
 
 def _org_tier_includes_permission(organization, permission_name):
     """
@@ -531,6 +640,7 @@ def _org_tier_includes_permission(organization, permission_name):
     tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
     return permission_name in tier_permissions
 
+
 class AuthorizationHierarchy:
     """Handles the authorization hierarchy for the application"""
 
@@ -543,7 +653,7 @@ class AuthorizationHierarchy:
             return False, "No organization"
 
         # Exempt organizations have access
-        if organization.effective_subscription_tier == 'exempt':
+        if organization.effective_subscription_tier == "exempt":
             return True, "Exempt status"
 
         # Strict gating: no tier means no access
@@ -555,8 +665,17 @@ class AuthorizationHierarchy:
             return False, "Subscription tier unavailable"
 
         # For paid tiers, check billing status using org.billing_status only
-        if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
+        if (
+            organization.tier.requires_stripe_billing
+            or organization.tier.requires_whop_billing
+        ):
+            if getattr(organization, "billing_status", None) in [
+                "past_due",
+                "payment_failed",
+                "suspended",
+                "canceled",
+                "cancelled",
+            ]:
                 return False, f"Billing status: {organization.billing_status}"
 
         return True, "Subscription in good standing"
@@ -581,9 +700,10 @@ class AuthorizationHierarchy:
                 return cache[cache_key]
 
         try:
-            from ..extensions import db
             from app.models.permission import Permission
             from app.models.subscription_tier import subscription_tier_permission
+
+            from ..extensions import db
 
             rows = (
                 db.session.query(Permission.name)
@@ -603,13 +723,23 @@ class AuthorizationHierarchy:
 
         tier = getattr(organization, "tier", None)
         try:
-            allowed_addons = getattr(tier, 'allowed_addons', []) or []
-            included_addons = getattr(tier, 'included_addons', []) or []
-            addon_perm_names = {a.permission_name for a in allowed_addons if a and a.permission_name}
-            addon_perm_names |= {a.permission_name for a in included_addons if a and a.permission_name}
-            included_perm_names = {a.permission_name for a in included_addons if a and a.permission_name}
+            allowed_addons = getattr(tier, "allowed_addons", []) or []
+            included_addons = getattr(tier, "included_addons", []) or []
+            addon_perm_names = {
+                a.permission_name for a in allowed_addons if a and a.permission_name
+            }
+            addon_perm_names |= {
+                a.permission_name for a in included_addons if a and a.permission_name
+            }
+            included_perm_names = {
+                a.permission_name for a in included_addons if a and a.permission_name
+            }
             if addon_perm_names:
-                permissions = [p for p in permissions if p not in addon_perm_names or p in included_perm_names]
+                permissions = [
+                    p
+                    for p in permissions
+                    if p not in addon_perm_names or p in included_perm_names
+                ]
         except Exception:
             pass
 
@@ -631,18 +761,24 @@ class AuthorizationHierarchy:
 
         try:
             # Developers have scoped access based on developer roles + masquerade context
-            if user.user_type == 'developer':
+            if user.user_type == "developer":
                 from app.models.developer_permission import DeveloperPermission
                 from app.models.permission import Permission
 
-                dev_scoped = permission_name.startswith('dev.')
+                dev_scoped = permission_name.startswith("dev.")
                 if not dev_scoped:
-                    dev_scoped = DeveloperPermission.query.filter_by(
+                    dev_scoped = (
+                        DeveloperPermission.query.filter_by(
+                            name=permission_name, is_active=True
+                        ).first()
+                        is not None
+                    )
+                org_scoped = (
+                    Permission.query.filter_by(
                         name=permission_name, is_active=True
-                    ).first() is not None
-                org_scoped = Permission.query.filter_by(
-                    name=permission_name, is_active=True
-                ).first() is not None
+                    ).first()
+                    is not None
+                )
 
                 if dev_scoped and user.has_developer_permission(permission_name):
                     return True
@@ -650,7 +786,7 @@ class AuthorizationHierarchy:
                 # For organization permissions, require masquerade context
                 if not org_scoped:
                     return False
-                selected_org_id = session.get('dev_selected_org_id')
+                selected_org_id = session.get("dev_selected_org_id")
                 if not selected_org_id:
                     return False
                 # If viewing a specific organization, continue with organization checks
@@ -662,21 +798,29 @@ class AuthorizationHierarchy:
                 return False
 
             # Step 1: Check subscription standing
-            subscription_ok, reason = AuthorizationHierarchy.check_subscription_standing(organization)
+            subscription_ok, reason = (
+                AuthorizationHierarchy.check_subscription_standing(organization)
+            )
             if not subscription_ok:
-                logger.warning(f"Subscription check failed for org {organization.id}: {reason}")
+                logger.warning(
+                    f"Subscription check failed for org {organization.id}: {reason}"
+                )
                 return False
 
             # Step 2: Check if subscription tier allows this permission
-            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(
+                organization
+            )
             if permission_name not in tier_permissions:
-                logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
+                logger.debug(
+                    f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}"
+                )
                 return False
 
             # Step 3: Check user role permissions
             # Organization owners should have the organization_owner role with proper permissions
             # They still need to check permissions, but get all tier-allowed permissions
-            if getattr(user, 'is_organization_owner', False):
+            if getattr(user, "is_organization_owner", False):
                 # Organization owners get all permissions that are allowed by their tier
                 # This ensures they respect subscription tier limits but get full access within their tier
                 return permission_name in tier_permissions
@@ -692,19 +836,19 @@ class AuthorizationHierarchy:
                 logger.warning(f"User roles error in authorization: {role_error}")
                 try:
                     db.session.rollback()
-                except:
+                except Exception:
                     pass
                 return False
 
             return False
 
         except Exception as e:
-            print(f"---!!! AUTHORIZATION CHECK ERROR !!!---")
+            print("---!!! AUTHORIZATION CHECK ERROR !!!---")
             print(f"Error: {e}")
             print("--------------------------------------")
             try:
                 db.session.rollback()
-            except:
+            except Exception:
                 pass
             return False
 
@@ -717,8 +861,8 @@ class AuthorizationHierarchy:
         cache_key = None
         if cache is not None:
             org_id = None
-            if getattr(user, "user_type", None) == 'developer':
-                org_id = session.get('dev_selected_org_id')
+            if getattr(user, "user_type", None) == "developer":
+                org_id = session.get("dev_selected_org_id")
             else:
                 org_id = getattr(user, "organization_id", None)
             cache_key = ("user_permissions", getattr(user, "id", None), org_id)
@@ -726,10 +870,12 @@ class AuthorizationHierarchy:
                 return cache[cache_key]
 
         # Developers without masquerade context only see developer permissions
-        if user.user_type == 'developer':
-            selected_org_id = session.get('dev_selected_org_id')
+        if user.user_type == "developer":
+            selected_org_id = session.get("dev_selected_org_id")
             if not selected_org_id:
-                permissions = AuthorizationHierarchy.get_developer_role_permissions(user)
+                permissions = AuthorizationHierarchy.get_developer_role_permissions(
+                    user
+                )
                 if cache is not None and cache_key is not None:
                     cache[cache_key] = permissions
                 return permissions
@@ -743,14 +889,18 @@ class AuthorizationHierarchy:
             return []
 
         # Check subscription standing
-        subscription_ok, _ = AuthorizationHierarchy.check_subscription_standing(organization)
+        subscription_ok, _ = AuthorizationHierarchy.check_subscription_standing(
+            organization
+        )
         if not subscription_ok:
             if cache is not None and cache_key is not None:
                 cache[cache_key] = []
             return []
 
         # Get tier-allowed permissions (may be empty if tier missing)
-        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(
+            organization
+        )
 
         # Add-on entitlements from:
         # 1) Included add-ons on the tier (Stripe-bypassed)
@@ -759,7 +909,11 @@ class AuthorizationHierarchy:
         try:
             # Included add-ons
             try:
-                included = getattr(organization.tier, 'included_addons', []) if organization.tier else []
+                included = (
+                    getattr(organization.tier, "included_addons", [])
+                    if organization.tier
+                    else []
+                )
                 for a in included or []:
                     if a and a.permission_name:
                         addon_permissions.append(a.permission_name)
@@ -767,7 +921,10 @@ class AuthorizationHierarchy:
                 pass
             # Purchased add-ons
             from app.models.addon import OrganizationAddon
-            active_addons = OrganizationAddon.query.filter_by(organization_id=organization.id, active=True).all()
+
+            active_addons = OrganizationAddon.query.filter_by(
+                organization_id=organization.id, active=True
+            ).all()
             for ent in active_addons:
                 if ent.addon and ent.addon.permission_name:
                     addon_permissions.append(ent.addon.permission_name)
@@ -775,7 +932,7 @@ class AuthorizationHierarchy:
             logger.warning(f"Addon entitlement lookup failed: {_e}")
 
         # Organization owners get all tier-allowed + addon permissions.
-        if getattr(user, 'is_organization_owner', False):
+        if getattr(user, "is_organization_owner", False):
             permissions = list(set(tier_permissions + addon_permissions))
             if cache is not None and cache_key is not None:
                 cache[cache_key] = permissions
@@ -807,6 +964,7 @@ class AuthorizationHierarchy:
         """Get permissions from developer role assignments."""
         try:
             from app.models.developer_role import DeveloperRole
+
             roles = user.get_active_roles()
             permissions = set()
             for role in roles:
@@ -825,7 +983,7 @@ class AuthorizationHierarchy:
             return False, "No organization found"
 
         # Exempt organizations have access
-        if organization.effective_subscription_tier == 'exempt':
+        if organization.effective_subscription_tier == "exempt":
             return True, "Exempt organization"
 
         # Check subscription tier exists and is valid
@@ -837,14 +995,24 @@ class AuthorizationHierarchy:
             return False, "Subscription tier integration not configured"
 
         # For billing-required tiers, check billing_status only
-        if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
+        if (
+            organization.tier.requires_stripe_billing
+            or organization.tier.requires_whop_billing
+        ):
+            if getattr(organization, "billing_status", None) in [
+                "past_due",
+                "payment_failed",
+                "suspended",
+                "canceled",
+                "cancelled",
+            ]:
                 return False, "Subscription not active"
 
             # Additional billing validations can be added here
             # e.g., check for past due payments, etc.
 
         return True, "Active subscription"
+
 
 class FeatureGate:
     """Feature gating based on subscription tiers"""
@@ -859,12 +1027,13 @@ class FeatureGate:
             return False
 
         # Check subscription standing first
-        subscription_ok, _ = AuthorizationHierarchy.check_subscription_standing(organization)
+        subscription_ok, _ = AuthorizationHierarchy.check_subscription_standing(
+            organization
+        )
         if not subscription_ok:
             return False
 
         # Get available features from organization's tier
-        tier_key = organization.effective_subscription_tier
         available_features = organization.get_subscription_features()
         return feature_name in available_features
 
@@ -878,7 +1047,7 @@ class FeatureGate:
             return False, "No subscription tier"
 
         # Example limit checks
-        if limit_name == 'users':
+        if limit_name == "users":
             max_users = organization.tier.user_limit
             if max_users == -1:  # Unlimited
                 return True, "Unlimited"
@@ -887,24 +1056,30 @@ class FeatureGate:
         # Add other limit checks as needed
         return True, "No limits defined"
 
+
 # Legacy compatibility functions
 def require_permission_with_org_scoping(permission_name, require_org_scoping=True):
     """Legacy compatibility - use require_permission instead"""
     return require_permission(permission_name)
 
+
 def require_organization_scoping(f):
     """Legacy compatibility - organization scoping is handled automatically"""
     return f
 
+
 def require_system_admin(f):
     """Legacy compatibility - use require_permission('dev.system_admin') instead"""
-    return require_permission('dev.system_admin')(f)
+    return require_permission("dev.system_admin")(f)
+
 
 def require_organization_owner(f):
     """Legacy compatibility - check in the function itself"""
+
     @wraps(f)
     def decorated_function(*args, **named_args):
         if not is_organization_owner():
             abort(403)
         return f(*args, **named_args)
+
     return decorated_function

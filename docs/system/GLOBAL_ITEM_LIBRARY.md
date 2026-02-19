@@ -1,90 +1,63 @@
 # Global Item Library (Library & Shelf Model)
 
-## Executive Summary
+## Synopsis
+The Global Item Library separates platform-curated item intelligence from organization-owned inventory rows. `GlobalItem` is the shared catalog authority; `InventoryItem` is the tenant-owned stock record that can link back to a global entry. This model keeps naming/density metadata consistent while preserving organization control over quantity, cost, and operational state.
 
-The Global Item Library separates platform-managed knowledge from organization-owned stock. A read-only `GlobalItem` (the Library) provides vetted identity and expert data; an `InventoryItem` (the Shelf) represents actual, editable stock owned by an organization. This design solves bad density data, reduces friction, and preserves data integrity through a global-locked relationship.
+## Glossary
+- **Library item**: A platform-managed `GlobalItem` record.
+- **Shelf item**: An organization-managed `InventoryItem` record.
+- **Global link**: The nullable FK connection `InventoryItem.global_item_id -> GlobalItem.id`.
 
-## The Core Problem
+## Core Architecture
 
-- Bad or missing density caused incorrect weight ↔ volume conversions.
-- Users faced a blank-slate, high-friction data entry burden.
-- Workflows were ambiguous without contextual hints (e.g., portioned vs container-defined products).
+### Library (`GlobalItem`)
+- System-level curated data model in `app/models/global_item.py`.
+- Stores canonical name/type plus optional metadata (aliases, density, INCI, category tags, container metadata, formulation fields, archive state).
+- Supports metadata enrichment through `app/services/global_item_metadata_service.py`.
 
-## The Architectural Solution
+### Shelf (`InventoryItem`)
+- Tenant-scoped stock model in `app/models/inventory.py`.
+- Stores operational fields (quantity, base quantity, unit, cost, expiration/perishability, category mappings, ownership).
+- Optional global linkage via `global_item_id` with `ON DELETE SET NULL`.
 
-- Library (`GlobalItem`): Centralized, curated data: name, `item_type`, synonyms, `default_unit`, `density`, `capacity`, perishables, contextual hints.
-- Shelf (`InventoryItem`): Organization stock: quantity, cost, location, expiration, lots, etc.
-- Link: Nullable `inventory_item.global_item_id` references `global_item.id` with ON DELETE SET NULL.
+## Linking Semantics (Current)
+- `InventoryItem.global_item_id` is nullable and indexed.
+- When linked, `ownership` is derived as global-sourced unless explicitly overridden by workflow logic.
+- When unlinked (`global_item_id` removed), ownership is normalized back to `org`.
+- Deleting/archiving global entries does not delete tenant inventory rows.
 
-## Global-Locked Principle
+## Curation and Seeding
+- Seed data lives in `app/seeders/globallist/`.
+- Main seeding pipeline: `app/seeders/seed_global_inventory_library.py`.
+- App CLI entrypoint: `flask seed-global-inventory` (see `app/scripts/commands/seeding.py`).
 
-- Creation as template: Selecting a `GlobalItem` pre-fills identity fields on the new `InventoryItem`.
-- Immutability: When linked to a `GlobalItem`, identity fields are read-only for users. Users manage stock, not identity.
-- Decoupling: Archiving/deleting a `GlobalItem` breaks the link (set NULL) without deleting user stock.
+## User and Developer Surfaces
 
-## Data Model
+### Public/Authenticated Library Browsing
+- Routes in `app/routes/global_library_routes.py`.
+- Canonical endpoints include:
+  - `/global-items`
+  - `/global-items/<id>` (and slug variant)
+  - `/global-items/<id>/save-to-inventory`
 
-- `global_item`
-  - id, name, item_type, synonyms, default_unit, density, capacity, perishables, reference_category
-  - curation: platform-owned and versioned; soft-delete supported (`is_archived`)
-- `inventory_item`
-  - id, organization_id, name, type, quantity, unit, cost_per_unit, location, expiration, `global_item_id` (nullable), ownership ('global' | 'org')
-  - relationships: FIFO history, lots, categories
+### Developer Curation Surfaces
+- Admin workflows under `app/blueprints/developer/views/global_item_routes.py`.
+- Used to manage global entries and metadata quality.
 
-## Behaviors and Validation
+## Integration Touchpoints
+- Inventory creation/edit flows consume global defaults and naming metadata.
+- Search and suggestion layers use global catalog semantics for better matching.
+- Statistics/services reference global item adoption and usage patterns.
 
-- Type validation: `InventoryItem.type` must match linked `GlobalItem.item_type`.
-- Perishable defaults: Apply from global when not explicitly set by user.
-- Categories: Suggested inventory category can be inherited from global.
-- Ownership: Derived as 'global' when linked, 'org' when custom/unlinked.
+## Operational Guardrails
+- Prefer linking to existing global entries before creating net-new custom items.
+- Keep item-type alignment consistent between `GlobalItem.item_type` and `InventoryItem.type`.
+- Avoid duplicating canonical metadata across unrelated services; source from global catalog ownership boundaries.
 
-## UX: The Wall of Drawers
-
-- Smart search: One box finds curated `GlobalItem`s.
-- Intelligent pre-fill: Only private fields (quantity, cost) require input.
-- Proactive hints: Context (e.g., portioning) configures the correct workflow by default.
-- In-context fixes: Drawer protocol resolves missing data without leaving the task.
-
-## Developer Do / Don't
-
-- Do link to a `GlobalItem` when creating common items; prefer library data.
-- Do prevent edits to identity fields when `global_item_id` is set.
-- Do keep the library curated via migrations/seeders; users should not mutate it.
-- Don't duplicate library fields across services; use the link and copied fields.
-- Don't cascade delete to `inventory_item`; always ON DELETE SET NULL.
-
-## Migrations and Seeding
-
-- `inventory_item.global_item_id` is nullable, indexed, and FK with ON DELETE SET NULL.
-- Ownership backfill: set ownership to 'global' when linked, else 'org'.
-- Seeding: `scripts/seed_global_items_from_density_reference.py` populates curated items from `data/density_reference.json`.
-
-### Seeding Commands
-
-Run inside the project root with a configured app environment:
-
-```bash
-python scripts/seed_global_items_from_density_reference.py
-```
-
-Or, if exposed via Flask CLI (example):
-
-```bash
-flask seed-global-items
-```
-
-## Integration Points
-
-- Inventory Adjustment Creation: Applies `GlobalItem` defaults; enforces type alignment and global-locked edits.
-- Density Assignment Service: Prefers library data for reference and UI suggestions.
-- Developer Tools: `app/blueprints/developer/routes.py` exposes library filters and admin utilities.
-
-## Future Extensions
-
-- Category-level density hints refined by product category.
-- Regional variants of `GlobalItem` via locale-scoped curation.
-- Versioned `GlobalItem` releases with migration helpers.
-
-## On the "Global Inventory List"
-
-There is no separate "Global Inventory List" document. The function of a global list is fulfilled by the curated `GlobalItem` library plus links from `InventoryItem`. Keeping this together avoids duplication and drift; any global catalog changes belong here and in migrations/seeders.
+## Relevance Check (2026-02-17)
+Validated against:
+- `app/models/global_item.py`
+- `app/models/inventory.py`
+- `app/routes/global_library_routes.py`
+- `app/blueprints/developer/views/global_item_routes.py`
+- `app/seeders/seed_global_inventory_library.py`

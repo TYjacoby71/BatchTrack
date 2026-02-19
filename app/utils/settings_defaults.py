@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict
 import copy
+from typing import Any, Dict
 
 DEFAULT_APP_SETTINGS: Dict[str, Any] = {
     "low_stock_threshold": 5,

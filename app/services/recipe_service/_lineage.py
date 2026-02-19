@@ -26,8 +26,8 @@ def _log_lineage_event(
             source_recipe_id=source_recipe_id,
             event_type=event_type,
             organization_id=recipe.organization_id,
-            user_id=getattr(current_user, 'id', None),
-            notes=notes
+            user_id=getattr(current_user, "id", None),
+            notes=notes,
         )
         db.session.add(lineage)
     except Exception as exc:  # pragma: no cover - audit best-effort

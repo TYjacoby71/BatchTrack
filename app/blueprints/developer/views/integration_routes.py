@@ -14,12 +14,11 @@ import os
 import re
 
 from flask import jsonify, render_template, request, url_for
-from flask_login import current_user
 
 from app.config import ENV_DIAGNOSTICS
 from app.config_schema import build_integration_sections
-from app.services.email_service import EmailService
 from app.services.developer.dashboard_service import DeveloperDashboardService
+from app.services.email_service import EmailService
 from app.services.integrations.registry import build_integration_categories
 from app.utils.settings import get_setting, update_settings_value
 
@@ -27,13 +26,16 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
-@developer_bp.route("/integrations")
-@require_developer_permission("dev.system_admin")
 # --- Integrations checklist ---
 # Purpose: Render the integrations checklist and diagnostics dashboard.
+# Inputs: Current Flask config/environment state plus developer-access context.
+# Outputs: Rendered integrations checklist page with readiness diagnostics.
+@developer_bp.route("/integrations")
+@require_developer_permission("dev.system_admin")
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
+
     from app.models.subscription_tier import SubscriptionTier
 
     def _env_or_config_value(key):
@@ -45,23 +47,29 @@ def integrations_checklist():
     email_provider = (current_app.config.get("EMAIL_PROVIDER") or "smtp").lower()
     email_configured = EmailService.is_configured()
     configured_verification_mode = (
-        (current_app.config.get("AUTH_EMAIL_VERIFICATION_MODE") or "prompt").strip().lower()
+        (current_app.config.get("AUTH_EMAIL_VERIFICATION_MODE") or "prompt")
+        .strip()
+        .lower()
     )
     effective_verification_mode = EmailService.get_verification_mode()
     auth_email_status = {
         "configured_mode": configured_verification_mode,
         "effective_mode": effective_verification_mode,
-        "provider_required": bool(current_app.config.get("AUTH_EMAIL_REQUIRE_PROVIDER", True)),
+        "provider_required": bool(
+            current_app.config.get("AUTH_EMAIL_REQUIRE_PROVIDER", True)
+        ),
         "provider_configured": email_configured,
         "password_reset_enabled": EmailService.password_reset_enabled(),
-        "provider_fallback_active": configured_verification_mode != effective_verification_mode,
+        "provider_fallback_active": configured_verification_mode
+        != effective_verification_mode,
     }
     email_keys = {
         "SMTP": bool(current_app.config.get("MAIL_SERVER")),
         "SendGrid": bool(current_app.config.get("SENDGRID_API_KEY")),
         "Postmark": bool(current_app.config.get("POSTMARK_SERVER_TOKEN")),
         "Mailgun": bool(
-            current_app.config.get("MAILGUN_API_KEY") and current_app.config.get("MAILGUN_DOMAIN")
+            current_app.config.get("MAILGUN_API_KEY")
+            and current_app.config.get("MAILGUN_DOMAIN")
         ),
     }
 
@@ -81,7 +89,9 @@ def integrations_checklist():
         "source": ENV_DIAGNOSTICS.get("source"),
         "env_variables": ENV_DIAGNOSTICS.get("variables", {}),
         "warnings": ENV_DIAGNOSTICS.get("warnings", ()),
-        "SECRET_KEY_present": bool(os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")),
+        "SECRET_KEY_present": bool(
+            os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")
+        ),
         "LOG_LEVEL": current_app.config.get("LOG_LEVEL", "WARNING"),
     }
 
@@ -93,7 +103,11 @@ def integrations_checklist():
         except Exception:
             return value
 
-    backend = "PostgreSQL" if uri.startswith("postgres") else ("SQLite" if "sqlite" in uri else "Other")
+    backend = (
+        "PostgreSQL"
+        if uri.startswith("postgres")
+        else ("SQLite" if "sqlite" in uri else "Other")
+    )
     if "sqlite" in uri:
         source = "fallback"
     elif os.environ.get("DATABASE_URL"):
@@ -108,7 +122,9 @@ def integrations_checklist():
     }
 
     cache_info = {
-        "RATELIMIT_STORAGE_URI": current_app.config.get("RATELIMIT_STORAGE_URI", "memory://"),
+        "RATELIMIT_STORAGE_URI": current_app.config.get(
+            "RATELIMIT_STORAGE_URI", "memory://"
+        ),
         "REDIS_URL_present": bool(os.environ.get("REDIS_URL")),
     }
 
@@ -119,10 +135,18 @@ def integrations_checklist():
     }
 
     oauth_status = {
-        "GOOGLE_OAUTH_CLIENT_ID_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")),
-        "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")),
-        "FACEBOOK_OAUTH_APP_ID_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_ID")),
-        "FACEBOOK_OAUTH_APP_SECRET_present": bool(current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")),
+        "GOOGLE_OAUTH_CLIENT_ID_present": bool(
+            current_app.config.get("GOOGLE_OAUTH_CLIENT_ID")
+        ),
+        "GOOGLE_OAUTH_CLIENT_SECRET_present": bool(
+            current_app.config.get("GOOGLE_OAUTH_CLIENT_SECRET")
+        ),
+        "FACEBOOK_OAUTH_APP_ID_present": bool(
+            current_app.config.get("FACEBOOK_OAUTH_APP_ID")
+        ),
+        "FACEBOOK_OAUTH_APP_SECRET_present": bool(
+            current_app.config.get("FACEBOOK_OAUTH_APP_SECRET")
+        ),
     }
     whop_status = {
         "WHOP_API_KEY_present": bool(current_app.config.get("WHOP_API_KEY")),
@@ -216,19 +240,19 @@ def integrations_checklist():
         {
             "endpoint": "GET /global-items",
             "limit": "500/hour",
-            "source": "app/routes/global_library_routes.py::global_library",
+            "source": "app/blueprints/global_library/routes.py::global_library",
             "notes": "Public global item library browsing.",
         },
         {
             "endpoint": "GET /tools",
             "limit": "800/hour",
-            "source": "app/routes/tools_routes.py::tools_index",
+            "source": "app/blueprints/tools/routes.py::tools_index",
             "notes": "Public calculator tools.",
         },
         {
             "endpoint": "GET /recipes/library",
             "limit": "400/hour",
-            "source": "app/routes/recipe_library_routes.py::recipe_library",
+            "source": "app/blueprints/recipe_library/routes.py::recipe_library",
             "notes": "Public recipe browsing and marketplace.",
         },
         {
@@ -282,7 +306,9 @@ def integrations_checklist():
     ]
 
     feature_flags = {
-        "FEATURE_INVENTORY_ANALYTICS": bool(current_app.config.get("FEATURE_INVENTORY_ANALYTICS", False)),
+        "FEATURE_INVENTORY_ANALYTICS": bool(
+            current_app.config.get("FEATURE_INVENTORY_ANALYTICS", False)
+        ),
         "TOOLS_SOAP": bool(current_app.config.get("TOOLS_SOAP", True)),
         "TOOLS_CANDLES": bool(current_app.config.get("TOOLS_CANDLES", True)),
         "TOOLS_LOTIONS": bool(current_app.config.get("TOOLS_LOTIONS", True)),
@@ -305,7 +331,7 @@ def integrations_checklist():
     # Create config matrix from launch_env_sections for the table
     config_matrix = []
     for section in launch_env_sections:
-        for row in section.get('rows', []):
+        for row in section.get("rows", []):
             config_matrix.append(row)
 
     integration_categories = build_integration_categories(
@@ -339,20 +365,39 @@ def integrations_checklist():
     )
 
 
+# --- Test email integration ---
+# Purpose: Send a test email to the support mailbox to confirm provider credentials.
+# Inputs: Configured email provider credentials and optional SUPPORT_EMAIL override.
+# Outputs: JSON success/error payload for support-mailbox test send status.
 @developer_bp.route("/integrations/test-email", methods=["POST"])
 @require_developer_permission("dev.system_admin")
-# --- Test email integration ---
-# Purpose: Send a test email to confirm provider credentials.
 def integrations_test_email():
-    """Send a test email to current user's email if configured."""
+    """Send a test email to support inbox if provider is configured."""
     try:
+        from flask import current_app
+
         if not EmailService.is_configured():
             return jsonify({"success": False, "error": "Email is not configured"}), 400
-        recipient = getattr(current_user, "email", None)
-        if not recipient:
-            return jsonify({"success": False, "error": "Current user has no email address"}), 400
+
+        recipient = (
+            (current_app.config.get("SUPPORT_EMAIL") or "support@batchtrack.com")
+            .strip()
+            .lower()
+        )
+        if not recipient or "@" not in recipient:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Support email is not configured correctly",
+                    }
+                ),
+                400,
+            )
         subject = "BatchTrack Test Email"
-        html_body = "<p>This is a test email from BatchTrack Integrations Checklist.</p>"
+        html_body = (
+            "<p>This is a test email from BatchTrack Integrations Checklist.</p>"
+        )
         ok = EmailService._send_email(
             recipient,
             subject,
@@ -360,38 +405,53 @@ def integrations_test_email():
             "This is a test email from BatchTrack Integrations Checklist.",
         )
         if ok:
-            return jsonify({"success": True, "message": f"Test email sent to {recipient}"})
+            return jsonify(
+                {"success": True, "message": f"Test email sent to {recipient}"}
+            )
         return jsonify({"success": False, "error": "Failed to send email"}), 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/test-stripe", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Test Stripe integration ---
 # Purpose: Validate Stripe connectivity without exposing secrets.
+# Inputs: Stripe environment credentials loaded in Flask config.
+# Outputs: JSON connectivity result and lightweight Stripe API check summary.
+@developer_bp.route("/integrations/test-stripe", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
-        from app.services.billing_service import BillingService
         import stripe
+
+        from app.services.billing_service import BillingService
 
         ok = BillingService.ensure_stripe()
         if not ok:
-            return jsonify({"success": False, "error": "Stripe secret not configured"}), 400
+            return (
+                jsonify({"success": False, "error": "Stripe secret not configured"}),
+                400,
+            )
         try:
             prices = stripe.Price.list(limit=1)
-            return jsonify({"success": True, "message": f"Stripe reachable. Prices found: {len(prices.data)}"})
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Stripe reachable. Prices found: {len(prices.data)}",
+                }
+            )
         except Exception as exc:
             return jsonify({"success": False, "error": f"Stripe API error: {exc}"}), 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/stripe-events", methods=["GET"])
-@require_developer_permission("dev.system_admin")
 # --- Stripe event audit ---
 # Purpose: Summarize recent Stripe webhook events for diagnostics.
+# Inputs: Stored StripeEvent rows from the application database.
+# Outputs: JSON payload with total/last Stripe event processing snapshot.
+@developer_bp.route("/integrations/stripe-events", methods=["GET"])
+@require_developer_permission("dev.system_admin")
 def integrations_stripe_events():
     """Summarize recent Stripe webhook events from the database."""
     try:
@@ -406,7 +466,9 @@ def integrations_stripe_events():
                     "last_event_id": last.event_id,
                     "last_event_type": last.event_type,
                     "last_status": last.status,
-                    "last_processed_at": last.processed_at.isoformat() if last.processed_at else None,
+                    "last_processed_at": (
+                        last.processed_at.isoformat() if last.processed_at else None
+                    ),
                 }
             )
         return jsonify({"success": True, "data": payload})
@@ -414,10 +476,12 @@ def integrations_stripe_events():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Set feature flags ---
 # Purpose: Update feature flags from the integrations UI.
+# Inputs: JSON map of toggleable feature-flag keys to boolean states.
+# Outputs: JSON success/error response after persistence transaction.
+@developer_bp.route("/integrations/feature-flags/set", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_set_feature_flags():
     """Set feature flags via AJAX."""
     from app.extensions import db
@@ -451,10 +515,12 @@ def integrations_set_feature_flags():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/auto-backup", methods=["POST"])
-@require_developer_permission("dev.system_admin")
 # --- Set auto backup ---
 # Purpose: Persist the auto-backup toggle from the UI.
+# Inputs: JSON payload containing requested auto-backup enabled state.
+# Outputs: JSON response including saved auto-backup flag value.
+@developer_bp.route("/integrations/auto-backup", methods=["POST"])
+@require_developer_permission("dev.system_admin")
 def integrations_set_auto_backup():
     """Persist the auto-backup toggle (stubbed)."""
     try:
@@ -466,10 +532,12 @@ def integrations_set_auto_backup():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@developer_bp.route("/integrations/check-webhook", methods=["GET"])
-@require_developer_permission("dev.system_admin")
 # --- Check webhook ---
 # Purpose: Verify webhook reachability for Stripe endpoints.
+# Inputs: Current request host URL and Stripe webhook route path.
+# Outputs: JSON reachability report with URL/status or connection error.
+@developer_bp.route("/integrations/check-webhook", methods=["GET"])
+@require_developer_permission("dev.system_admin")
 def integrations_check_webhook():
     """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
     try:
@@ -480,9 +548,20 @@ def integrations_check_webhook():
         try:
             resp = requests.get(url, timeout=5)
             status = resp.status_code
-            message = "reachable (method not allowed expected)" if status == 405 else f"response {status}"
-            return jsonify({"success": True, "url": url, "status": status, "message": message})
+            message = (
+                "reachable (method not allowed expected)"
+                if status == 405
+                else f"response {status}"
+            )
+            return jsonify(
+                {"success": True, "url": url, "status": status, "message": message}
+            )
         except Exception as exc:
-            return jsonify({"success": False, "url": url, "error": f"Connection error: {exc}"}), 500
+            return (
+                jsonify(
+                    {"success": False, "url": url, "error": f"Connection error: {exc}"}
+                ),
+                500,
+            )
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500

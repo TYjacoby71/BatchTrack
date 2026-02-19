@@ -3,19 +3,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from flask import (
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
+from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from sqlalchemy import or_
 
-from app.extensions import db
 from app.models import Organization, User
 from app.services.developer.organization_service import OrganizationService
 from app.services.statistics import AnalyticsDataService
@@ -83,7 +74,9 @@ def create_organization():
 
     if request.method == "POST":
         form_data = request.form
-        success, org, message = OrganizationService.create_organization_with_owner(form_data)
+        success, org, message = OrganizationService.create_organization_with_owner(
+            form_data
+        )
         if success and org:
             flash(f'Organization "{org.name}" created successfully', "success")
             return redirect(url_for("developer.organization_detail", org_id=org.id))
@@ -118,7 +111,9 @@ def organization_detail(org_id):
         )
 
     users_query = users_query.order_by(User.created_at.desc())
-    users_pagination = users_query.paginate(page=page, per_page=per_page, error_out=False)
+    users_pagination = users_query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
     total_users = base_query.count()
     active_users_count = base_query.filter_by(is_active=True).count()
@@ -159,7 +154,9 @@ def edit_organization(org_id):
 def upgrade_organization(org_id):
     """Upgrade organization subscription."""
     org = Organization.query.get_or_404(org_id)
-    success, message = OrganizationService.upgrade_organization(org, request.form.get("tier", ""))
+    success, message = OrganizationService.upgrade_organization(
+        org, request.form.get("tier", "")
+    )
     flash(message, "success" if success else "error")
     return redirect(url_for("developer.organization_detail", org_id=org_id))
 

@@ -30,11 +30,14 @@ from flask_login import current_user, logout_user
 
 from .extensions import db
 from .route_access import RouteAccessConfig
-from .utils.permissions import PermissionScope, resolve_permission_scope
+from .services.billing_access_policy_service import (
+    BillingAccessAction,
+    BillingAccessPolicyService,
+)
 from .services.middleware_probe_service import MiddlewareProbeService
-from .services.billing_access_policy_service import BillingAccessAction, BillingAccessPolicyService
 from .services.public_bot_trap_service import PublicBotTrapService
 from .services.session_service import SessionService
+from .utils.permissions import PermissionScope, resolve_permission_scope
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +169,9 @@ def _resolve_route_permission_scope(endpoint: str | None) -> PermissionScope | N
 
 # --- Route category ---
 # Purpose: Classify routes for analytics and logging.
-def _classify_route_category(path: str, permission_scope: PermissionScope | None) -> str:
+def _classify_route_category(
+    path: str, permission_scope: PermissionScope | None
+) -> str:
     if permission_scope:
         if permission_scope.is_dev_only:
             return "dev"
@@ -183,12 +188,16 @@ def _classify_route_category(path: str, permission_scope: PermissionScope | None
 def register_middleware(app: Flask) -> None:
     """Attach global middleware to the Flask app."""
 
-    trust_proxy_headers = _config_flag("ENABLE_PROXY_FIX", app=app) or _config_flag("TRUST_PROXY_HEADERS", app=app)
+    trust_proxy_headers = _config_flag("ENABLE_PROXY_FIX", app=app) or _config_flag(
+        "TRUST_PROXY_HEADERS", app=app
+    )
     if trust_proxy_headers and not getattr(app.wsgi_app, "_batchtrack_proxyfix", False):
         try:
             from werkzeug.middleware.proxy_fix import ProxyFix
         except Exception as exc:  # pragma: no cover
-            logger.warning("ProxyFix unavailable; unable to honor proxy header trust: %s", exc)
+            logger.warning(
+                "ProxyFix unavailable; unable to honor proxy header trust: %s", exc
+            )
         else:
             proxy_fix_kwargs = {
                 "x_for": _config_int("PROXY_FIX_X_FOR", 1, app=app),
@@ -230,7 +239,9 @@ def register_middleware(app: Flask) -> None:
         if path.startswith("/static/"):
             return None
 
-        if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get("TESTING_DISABLE_AUTH"):
+        if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get(
+            "TESTING_DISABLE_AUTH"
+        ):
             return None
 
         try:
@@ -259,11 +270,17 @@ def register_middleware(app: Flask) -> None:
             return None
 
         if not current_user.is_authenticated:
-            endpoint_info = f"endpoint={request.endpoint}, path={path}, method={request.method}"
-            level_name = str(current_app.config.get("ANON_REQUEST_LOG_LEVEL", "DEBUG")).upper()
+            endpoint_info = (
+                f"endpoint={request.endpoint}, path={path}, method={request.method}"
+            )
+            level_name = str(
+                current_app.config.get("ANON_REQUEST_LOG_LEVEL", "DEBUG")
+            ).upper()
             log_level = getattr(logging, level_name, logging.DEBUG)
             if request.endpoint is None:
-                status_code = MiddlewareProbeService.derive_unknown_endpoint_status(request)
+                status_code = MiddlewareProbeService.derive_unknown_endpoint_status(
+                    request
+                )
                 if status_code is None:
                     return None
                 MiddlewareProbeService.maybe_block_suspicious_unknown_probe(
@@ -277,12 +294,16 @@ def register_middleware(app: Flask) -> None:
                     request.headers.get("User-Agent", "unknown")[:100],
                 )
                 if _wants_json_response():
-                    message = "Method not allowed" if status_code == 405 else "Not found"
+                    message = (
+                        "Method not allowed" if status_code == 405 else "Not found"
+                    )
                     return jsonify({"error": message}), status_code
                 body = "Method Not Allowed" if status_code == 405 else "Not Found"
                 return (body, status_code)
             elif logger.isEnabledFor(log_level):
-                logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
+                logger.log(
+                    log_level, "Unauthenticated access attempt: %s", endpoint_info
+                )
 
             if _wants_json_response():
                 return jsonify({"error": "Authentication required"}), 401
@@ -294,7 +315,10 @@ def register_middleware(app: Flask) -> None:
             if RouteAccessConfig.is_developer_only_path(path):
                 if getattr(current_user, "user_type", None) != "developer":
                     if _wants_json_response():
-                        return jsonify({"error": "forbidden", "reason": "developer_only"}), 403
+                        return (
+                            jsonify({"error": "forbidden", "reason": "developer_only"}),
+                            403,
+                        )
                     try:
                         flash("Developer access required.", "error")
                     except Exception:
@@ -306,7 +330,10 @@ def register_middleware(app: Flask) -> None:
         if permission_scope and permission_scope.is_dev_only:
             if getattr(current_user, "user_type", None) != "developer":
                 if _wants_json_response():
-                    return jsonify({"error": "forbidden", "reason": "developer_only"}), 403
+                    return (
+                        jsonify({"error": "forbidden", "reason": "developer_only"}),
+                        403,
+                    )
                 try:
                     flash("Developer access required.", "error")
                 except Exception:
@@ -336,7 +363,9 @@ def register_middleware(app: Flask) -> None:
                 return True
             forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
             if forwarded_proto:
-                forwarded_values = {value.strip().lower() for value in forwarded_proto.split(",")}
+                forwarded_values = {
+                    value.strip().lower() for value in forwarded_proto.split(",")
+                }
                 if "https" in forwarded_values:
                     return True
             preferred_scheme = app.config.get("PREFERRED_URL_SCHEME", "http")
@@ -370,11 +399,16 @@ def _handle_developer_context(
             permission_scope = _resolve_route_permission_scope(endpoint)
 
         route_category = _classify_route_category(path, permission_scope)
-        requires_org = route_category in {"customer", "unknown"} and not allowed_without_org
+        requires_org = (
+            route_category in {"customer", "unknown"} and not allowed_without_org
+        )
 
         if requires_org and not (selected_org_id or masquerade_org_id):
             try:
-                flash("Please select an organization to view customer features.", "warning")
+                flash(
+                    "Please select an organization to view customer features.",
+                    "warning",
+                )
             except Exception:
                 pass
             return redirect(url_for("developer.organizations"))
@@ -417,7 +451,9 @@ def _enforce_billing() -> Response | None:
 
         path = request.path
         endpoint = request.endpoint
-        is_exempt_request = BillingAccessPolicyService.is_enforcement_exempt_route(path, endpoint)
+        is_exempt_request = BillingAccessPolicyService.is_enforcement_exempt_route(
+            path, endpoint
+        )
         decision = BillingAccessPolicyService.evaluate_organization(organization)
 
         if decision.action == BillingAccessAction.ALLOW:

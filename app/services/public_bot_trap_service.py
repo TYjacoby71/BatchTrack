@@ -125,8 +125,12 @@ class PublicBotTrapService:
     ) -> None:
         state = cls._load_state()
         cls._append_unique(state.setdefault("blocked_ips", []), cls._normalize_ip(ip))
-        cls._append_unique(state.setdefault("blocked_emails", []), cls._normalize_email(email))
-        cls._append_unique(state.setdefault("blocked_users", []), cls._normalize_user_id(user_id))
+        cls._append_unique(
+            state.setdefault("blocked_emails", []), cls._normalize_email(email)
+        )
+        cls._append_unique(
+            state.setdefault("blocked_users", []), cls._normalize_user_id(user_id)
+        )
         write_json_file(cls.BOT_TRAP_FILE, state)
 
     @classmethod

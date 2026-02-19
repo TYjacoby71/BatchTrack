@@ -1,25 +1,35 @@
 from sqlalchemy import event
 
+from app.services.cache_invalidation import invalidate_global_library_cache
+
 from ..extensions import db
 from ..utils.seo import slugify_value
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
-from app.services.cache_invalidation import invalidate_global_library_cache
+
 
 class GlobalItem(db.Model):
-    __tablename__ = 'global_item'
+    __tablename__ = "global_item"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False, index=True)
-    item_type = db.Column(db.String(32), nullable=False, index=True)  # ingredient, container, packaging, consumable
+    item_type = db.Column(
+        db.String(32), nullable=False, index=True
+    )  # ingredient, container, packaging, consumable
     aliases = db.Column(db.JSON, nullable=True)  # list of strings for alternative names
     density = db.Column(db.Float, nullable=True)  # g/ml
     default_unit = db.Column(db.String(32), nullable=True)
 
     # Category relationship - proper FK to IngredientCategory
-    ingredient_category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True, index=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True, index=True)
-    variation_id = db.Column(db.Integer, db.ForeignKey('variation.id'), nullable=True, index=True)
+    ingredient_category_id = db.Column(
+        db.Integer, db.ForeignKey("ingredient_category.id"), nullable=True, index=True
+    )
+    ingredient_id = db.Column(
+        db.Integer, db.ForeignKey("ingredient.id"), nullable=True, index=True
+    )
+    variation_id = db.Column(
+        db.Integer, db.ForeignKey("variation.id"), nullable=True, index=True
+    )
 
     # Perishable information
     default_is_perishable = db.Column(db.Boolean, nullable=True, default=False)
@@ -66,28 +76,35 @@ class GlobalItem(db.Model):
     # Soft-delete/archive flags
     is_archived = db.Column(db.Boolean, nullable=False, default=False)
     archived_at = db.Column(db.DateTime, nullable=True)
-    archived_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
-    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=TimezoneUtils.utc_now,
+        onupdate=TimezoneUtils.utc_now,
+        nullable=False,
+    )
 
     # Relationships
-    ingredient_category = db.relationship('IngredientCategory', backref='global_items')
+    ingredient_category = db.relationship("IngredientCategory", backref="global_items")
     ingredient = db.relationship(
-        'IngredientDefinition',
-        backref=db.backref('global_items', lazy='dynamic'),
+        "IngredientDefinition",
+        backref=db.backref("global_items", lazy="dynamic"),
     )
     variation = db.relationship(
-        'Variation',
-        backref=db.backref('global_items', lazy='dynamic'),
+        "Variation",
+        backref=db.backref("global_items", lazy="dynamic"),
         foreign_keys=[variation_id],
     )
 
     @property
     def physical_form(self):
         """Backwards-compatible accessor referencing the variation's physical form."""
-        return self.variation.physical_form if getattr(self, "variation", None) else None
+        return (
+            self.variation.physical_form if getattr(self, "variation", None) else None
+        )
 
     @physical_form.setter
     def physical_form(self, value):
@@ -103,7 +120,9 @@ class GlobalItem(db.Model):
             return
 
         if not isinstance(value, PhysicalForm):
-            raise TypeError("physical_form must be a PhysicalForm or Variation instance")
+            raise TypeError(
+                "physical_form must be a PhysicalForm or Variation instance"
+            )
 
         variation = (
             Variation.query.filter_by(physical_form_id=value.id)
@@ -142,35 +161,38 @@ class GlobalItem(db.Model):
         if not form_obj:
             raise ValueError("Invalid physical form id")
         self.physical_form = form_obj
+
     functions = db.relationship(
-        'FunctionTag',
-        secondary='global_item_function_tag',
-        back_populates='global_items',
+        "FunctionTag",
+        secondary="global_item_function_tag",
+        back_populates="global_items",
     )
     applications = db.relationship(
-        'ApplicationTag',
-        secondary='global_item_application_tag',
-        back_populates='global_items',
+        "ApplicationTag",
+        secondary="global_item_application_tag",
+        back_populates="global_items",
     )
     category_tags = db.relationship(
-        'IngredientCategoryTag',
-        secondary='global_item_category_tag',
-        back_populates='global_items',
+        "IngredientCategoryTag",
+        secondary="global_item_category_tag",
+        back_populates="global_items",
     )
-    archived_by_user = db.relationship('User', foreign_keys=[archived_by])
+    archived_by_user = db.relationship("User", foreign_keys=[archived_by])
 
     _IS_PG = is_postgres()
 
     _table_args = [
-        db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
-        db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
+        db.UniqueConstraint("name", "item_type", name="_global_item_name_type_uc"),
+        db.Index(
+            "ix_global_item_archive_type_name", "is_archived", "item_type", "name"
+        ),
     ]
     if _IS_PG:
         _table_args.append(
             db.Index(
-                'ix_global_item_aliases_gin',
-                db.text('(aliases::jsonb)'),
-                postgresql_using='gin',
+                "ix_global_item_aliases_gin",
+                db.text("(aliases::jsonb)"),
+                postgresql_using="gin",
             )
         )
     __table_args__ = tuple(_table_args)

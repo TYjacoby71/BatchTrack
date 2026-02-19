@@ -9,7 +9,6 @@ from flask import current_app
 from app.utils.json_store import write_json_file
 from app.utils.settings import get_settings, save_settings
 
-
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
     {
         "title": "Core business features",
@@ -479,7 +478,9 @@ class DeveloperDashboardService:
         support_queue_total = len(fault_feed)
 
         generated_iso = dashboard_data.get("generated_at")
-        generated_display = DeveloperDashboardService._format_generated_at(generated_iso)
+        generated_display = DeveloperDashboardService._format_generated_at(
+            generated_iso
+        )
 
         return {
             "total_orgs": overview.get("total_organizations", 0),
@@ -554,7 +555,9 @@ class DeveloperDashboardService:
                     "description": entry["description"],
                     "is_secret": entry.get("secret", False),
                     "is_set": is_set,
-                    "value": "Configured" if entry.get("secret") and is_set else formatted,
+                    "value": (
+                        "Configured" if entry.get("secret") and is_set else formatted
+                    ),
                 }
             )
 
@@ -593,7 +596,8 @@ class DeveloperDashboardService:
             },
             {
                 "label": "Stripe refill lookup key",
-                "value": current_app.config.get("BATCHBOT_REFILL_LOOKUP_KEY") or "Not set",
+                "value": current_app.config.get("BATCHBOT_REFILL_LOOKUP_KEY")
+                or "Not set",
                 "description": "Must match the price lookup key used by the `batchbot_refill_100` add-on.",
             },
             {
@@ -648,9 +652,7 @@ class DeveloperDashboardService:
     def get_waitlist_statistics(force_refresh: bool = False) -> Dict[str, Any]:
         from app.services.statistics import AnalyticsDataService
 
-        return AnalyticsDataService.get_waitlist_statistics(
-            force_refresh=force_refresh
-        )
+        return AnalyticsDataService.get_waitlist_statistics(force_refresh=force_refresh)
 
     @staticmethod
     def _format_generated_at(generated_iso: Optional[str]) -> Optional[str]:

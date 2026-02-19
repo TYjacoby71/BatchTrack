@@ -11,9 +11,9 @@ from sqlalchemy.orm import load_only
 
 from ..extensions import db
 from ..models import Unit
+from ..services.unit_conversion import ConversionEngine
 from .cache_manager import app_cache
 from .validation_helpers import validate_density
-from ..services.unit_conversion import ConversionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,9 @@ def _build_unit_query():
     if user and getattr(user, "is_authenticated", False):
         org_id = getattr(user, "organization_id", None)
         if org_id:
-            scope_filter = (Unit.is_custom.is_(False)) | (Unit.organization_id == org_id)
+            scope_filter = (Unit.is_custom.is_(False)) | (
+                Unit.organization_id == org_id
+            )
         elif getattr(user, "user_type", None) == "developer" and has_request_context():
             selected_org = session.get("dev_selected_org_id")
             if selected_org:
@@ -214,4 +216,6 @@ def validate_density_requirements(
     from_unit: Any, to_unit: Any, ingredient: Any | None = None
 ) -> tuple[bool, str | None]:
     """Backward-compatible shim that delegates to ConversionEngine."""
-    return ConversionEngine.validate_density_requirements(from_unit, to_unit, ingredient)
+    return ConversionEngine.validate_density_requirements(
+        from_unit, to_unit, ingredient
+    )

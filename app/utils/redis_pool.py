@@ -92,10 +92,7 @@ def _resolve_worker_count(app: Flask | None) -> int:
         logger.warning("WEB_CONCURRENCY is ignored; use GUNICORN_WORKERS instead.")
     if _get_setting(app, "WORKERS") not in (None, ""):
         logger.warning("WORKERS is ignored; use GUNICORN_WORKERS instead.")
-    worker_count = (
-        _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None)
-        or 1
-    )
+    worker_count = _int_setting(_get_setting(app, "GUNICORN_WORKERS"), None) or 1
     return max(worker_count, 1)
 
 
@@ -104,7 +101,9 @@ def _resolve_worker_count(app: Flask | None) -> int:
 def _resolve_pool_max_connections(app: Flask | None) -> int:
     explicit = _int_setting(_get_setting(app, "REDIS_POOL_MAX_CONNECTIONS"), None)
     if explicit is None:
-        explicit = _int_setting(_get_setting(app, "SESSION_REDIS_MAX_CONNECTIONS"), None)
+        explicit = _int_setting(
+            _get_setting(app, "SESSION_REDIS_MAX_CONNECTIONS"), None
+        )
     if explicit is not None:
         return explicit
 
@@ -128,7 +127,9 @@ def _build_pool(app: Flask | None, redis_url: str):
     try:
         import redis
     except ImportError:  # pragma: no cover - optional dependency
-        logger.warning("Redis library not installed; skipping shared connection pool setup.")
+        logger.warning(
+            "Redis library not installed; skipping shared connection pool setup."
+        )
         return None, None, None
 
     max_conns = _resolve_pool_max_connections(app)
@@ -183,7 +184,11 @@ def get_redis_pool(app: Flask | None = None):
                 try:
                     pool.disconnect()
                 except Exception as exc:  # pragma: no cover - defensive logging
-                    logger.warning("Failed to disconnect inherited Redis pool (pid=%s): %s", cached_pid, exc)
+                    logger.warning(
+                        "Failed to disconnect inherited Redis pool (pid=%s): %s",
+                        cached_pid,
+                        exc,
+                    )
             extensions.pop(_POOL_INFO_KEY, None)
 
     pool, max_conns, pool_timeout = _build_pool(app, redis_url)
@@ -192,7 +197,9 @@ def get_redis_pool(app: Flask | None = None):
 
     extensions[_POOL_INFO_KEY] = {"pid": current_pid, "pool": pool}
     if app is not None:
-        app.extensions["redis_pool"] = pool  # backwards compatibility for any legacy access
+        app.extensions["redis_pool"] = (
+            pool  # backwards compatibility for any legacy access
+        )
 
     logger.info(
         "Initialized Redis connection pool (pid=%s, max_connections=%s, timeout=%ss)",

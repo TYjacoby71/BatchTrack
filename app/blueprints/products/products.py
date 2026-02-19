@@ -1,23 +1,47 @@
 from datetime import datetime
 
-from flask import Blueprint, request, render_template, redirect, url_for, flash, current_app
-from flask_login import login_required, current_user
-from ...models import db, InventoryItem
-from ...models.product import Product, ProductVariant, ProductSKU
-from ...models import UnifiedInventoryHistory, InventoryLot
-from ...models.batch import Batch
-from ...utils.unit_utils import get_global_unit_list
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_login import current_user, login_required
+
+from ...extensions import cache
+from ...models import (
+    InventoryItem,
+    InventoryLot,
+    UnifiedInventoryHistory,
+    UserPreferences,
+    db,
+)
+from ...models.product import Product, ProductSKU
+from ...services.cache_invalidation import (
+    product_list_cache_key,
+    product_list_page_cache_key,
+)
+from ...services.product_service import ProductService
+from ...utils.cache_utils import should_bypass_cache
 from ...utils.settings import is_feature_enabled
+from ...utils.unit_utils import get_global_unit_list
 
 try:
     from ...utils.permissions import require_permission
 except ImportError:
+
     def require_permission(permission_name):
-        def _wrap(f): return f
+        def _wrap(f):
+            return f
+
         return _wrap
 
+
 # Helper for product audit entries, now using canonical service
-import app.services.inventory_adjustment as inv_adj
+
 
 # This function is defined twice in the original code.
 # The second definition is the one that will be used due to Python's execution order.
@@ -28,12 +52,6 @@ def _write_product_created_audit(variant):
     # No separate audit entry needed
     return True
 
-
-from ...extensions import cache
-from ...services.cache_invalidation import product_list_cache_key, product_list_page_cache_key
-from ...services.product_service import ProductService
-from ...services.inventory_adjustment import process_inventory_adjustment
-from ...utils.cache_utils import should_bypass_cache
 
 # Wrapper for audit entry - used by tests
 # This function is also defined twice, the second one is the one that is used.
@@ -48,7 +66,8 @@ from ...utils.cache_utils import should_bypass_cache
 # For now, I am applying the change to the function that is called during product creation.
 # The second definition `_write_product_created_audit(sku)` which is likely for testing, is kept as is.
 
-products_bp = Blueprint('products', __name__, url_prefix='/products')
+products_bp = Blueprint("products", __name__, url_prefix="/products")
+PRODUCTS_LIST_PREF_SCOPE = "products_list"
 
 
 class _ProductInventoryEntryView:
@@ -109,8 +128,12 @@ class _ProductSummaryCacheView:
                 self.last_updated = None
         else:
             self.last_updated = last_updated
-        self.variations = [_ProductVariationView(item) for item in data.get("variations", [])]
-        self.inventory = [_ProductInventoryEntryView(item) for item in data.get("inventory", [])]
+        self.variations = [
+            _ProductVariationView(item) for item in data.get("variations", [])
+        ]
+        self.inventory = [
+            _ProductInventoryEntryView(item) for item in data.get("inventory", [])
+        ]
 
 
 def _serialize_product_summary(product) -> dict:
@@ -154,8 +177,12 @@ def _serialize_product_summary(product) -> dict:
         "total_packaged": float(getattr(product, "total_packaged", 0) or 0),
         "variant_count": getattr(product, "variant_count", 0),
         "last_updated": last_updated,
-        "variations": [_serialize_variation(v) for v in getattr(product, "variations", [])],
-        "inventory": [_serialize_inventory(entry) for entry in getattr(product, "inventory", [])],
+        "variations": [
+            _serialize_variation(v) for v in getattr(product, "variations", [])
+        ],
+        "inventory": [
+            _serialize_inventory(entry) for entry in getattr(product, "inventory", [])
+        ],
     }
 
 
@@ -169,20 +196,20 @@ def create_product_from_data(data):
     and quick add functionality
     """
     try:
-        from ...models import db, InventoryItem
+        from ...models import InventoryItem, db
         from ...utils.permissions import get_effective_organization_id
 
         organization_id = get_effective_organization_id()
-        if not organization_id and current_user.user_type != 'developer':
-            return {'success': False, 'error': 'No organization context'}
+        if not organization_id and current_user.user_type != "developer":
+            return {"success": False, "error": "No organization context"}
 
         # Create inventory item for product
         product = InventoryItem(
-            name=data['name'],
-            type='product',
-            unit=data.get('unit', 'count'),
+            name=data["name"],
+            type="product",
+            unit=data.get("unit", "count"),
             quantity=0,
-            organization_id=organization_id
+            organization_id=organization_id,
         )
 
         db.session.add(product)
@@ -193,26 +220,45 @@ def create_product_from_data(data):
         db.session.commit()
 
         return {
-            'success': True,
-            'product': {
-                'id': product.id,
-                'name': product.name,
-                'unit': product.unit
-            }
+            "success": True,
+            "product": {"id": product.id, "name": product.name, "unit": product.unit},
         }
 
     except Exception as e:
         db.session.rollback()
-        return {'success': False, 'error': str(e)}
+        return {"success": False, "error": str(e)}
 
 
-@products_bp.route('/')
-@products_bp.route('/list')
+@products_bp.route("/")
+@products_bp.route("/list")
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def list_products():
     """List all products with inventory summary and sorting"""
-    sort_type = (request.args.get('sort', 'name') or 'name').lower()
+    sort_type = (request.args.get("sort") or "").strip().lower()
+    user_prefs = None
+    if not sort_type:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            saved_scope = user_prefs.get_list_preferences(PRODUCTS_LIST_PREF_SCOPE)
+            sort_type = str(saved_scope.get("sort") or "").strip().lower()
+    if sort_type not in {"name", "popular", "stock"}:
+        sort_type = "name"
+
+    if user_prefs is None:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+    if user_prefs:
+        try:
+            current_scope = user_prefs.get_list_preferences(PRODUCTS_LIST_PREF_SCOPE)
+            if current_scope.get("sort") != sort_type:
+                user_prefs.set_list_preferences(
+                    PRODUCTS_LIST_PREF_SCOPE,
+                    {"sort": sort_type},
+                    merge=True,
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
     page_cache_key = product_list_page_cache_key(org_id, sort_type)
@@ -230,10 +276,10 @@ def list_products():
         if cached_payload is not None:
             products = [_hydrate_product_summary(entry) for entry in cached_payload]
             rendered = render_template(
-                'pages/products/list_products.html',
+                "pages/products/list_products.html",
                 products=products,
                 current_sort=sort_type,
-                breadcrumb_items=[{'label': 'Products'}],
+                breadcrumb_items=[{"label": "Products"}],
             )
             try:
                 cache.set(page_cache_key, rendered, timeout=cache_ttl)
@@ -246,41 +292,43 @@ def list_products():
     # Convert dict data to objects with the attributes the template expects
     class ProductSummary:
         def __init__(self, data):
-            self.name = data.get('product_name', '')
-            self.product_base_unit = data.get('product_base_unit', '')
-            self.last_updated = data.get('last_updated')
+            self.name = data.get("product_name", "")
+            self.product_base_unit = data.get("product_base_unit", "")
+            self.last_updated = data.get("last_updated")
             self.inventory = []
-            self.total_quantity = data.get('total_quantity', 0)
-            self.id = data.get('product_id', None)
+            self.total_quantity = data.get("total_quantity", 0)
+            self.id = data.get("product_id", None)
             self.total_bulk = 0
             self.total_packaged = 0
 
             if self.id:
-                from ...models.product import ProductSKU, Product, ProductVariant
+                from ...models.product import Product, ProductSKU, ProductVariant
 
                 product = Product.query.filter_by(
-                    name=self.name,
-                    organization_id=current_user.organization_id
+                    name=self.name, organization_id=current_user.organization_id
                 ).first()
 
                 if product:
                     self.id = product.id
 
                     actual_variants = ProductVariant.query.filter_by(
-                        product_id=product.id,
-                        is_active=True
+                        product_id=product.id, is_active=True
                     ).all()
 
                     self.variations = []
                     variant_map = {}
                     for variant in actual_variants:
-                        variant_obj = type('Variation', (), {
-                            'name': variant.name,
-                            'description': variant.description,
-                            'id': variant.id,
-                            'sku': None,
-                            'created_at': variant.created_at
-                        })()
+                        variant_obj = type(
+                            "Variation",
+                            (),
+                            {
+                                "name": variant.name,
+                                "description": variant.description,
+                                "id": variant.id,
+                                "sku": None,
+                                "created_at": variant.created_at,
+                            },
+                        )()
                         self.variations.append(variant_obj)
                         variant_map[variant.id] = variant_obj
 
@@ -289,75 +337,99 @@ def list_products():
                     product_skus = ProductSKU.query.filter_by(
                         product_id=product.id,
                         organization_id=current_user.organization_id,
-                        is_active=True
+                        is_active=True,
                     ).all()
 
                     for sku in product_skus:
-                        size_label = sku.size_label if sku.size_label else 'Bulk'
-                        quantity = float(sku.inventory_item.quantity or 0.0) if sku.inventory_item else 0.0
-                        unit = sku.unit or (sku.inventory_item.unit if sku.inventory_item else '')
+                        size_label = sku.size_label if sku.size_label else "Bulk"
+                        quantity = (
+                            float(sku.inventory_item.quantity or 0.0)
+                            if sku.inventory_item
+                            else 0.0
+                        )
+                        unit = sku.unit or (
+                            sku.inventory_item.unit if sku.inventory_item else ""
+                        )
 
                         variant_obj = variant_map.get(sku.variant_id)
                         if not variant_obj and sku.variant:
-                            variant_obj = type('Variation', (), {
-                                'name': sku.variant.name,
-                                'description': sku.variant.description,
-                                'id': sku.variant.id,
-                                'sku': None,
-                                'created_at': sku.variant.created_at
-                            })()
+                            variant_obj = type(
+                                "Variation",
+                                (),
+                                {
+                                    "name": sku.variant.name,
+                                    "description": sku.variant.description,
+                                    "id": sku.variant.id,
+                                    "sku": None,
+                                    "created_at": sku.variant.created_at,
+                                },
+                            )()
                             self.variations.append(variant_obj)
                             variant_map[sku.variant_id] = variant_obj
 
-                        if variant_obj and not getattr(variant_obj, 'sku', None):
+                        if variant_obj and not getattr(variant_obj, "sku", None):
                             variant_obj.sku = sku.sku or sku.sku_code
 
-                        inventory_entry = type('InventoryEntry', (), {
-                            'variant': variant_obj.name if variant_obj else (sku.variant.name if sku.variant else 'Unassigned'),
-                            'size_label': size_label if size_label else 'Bulk',
-                            'quantity': quantity,
-                            'unit': unit or '',
-                            'sku_id': sku.inventory_item_id,
-                            'sku_code': sku.sku or sku.sku_code,
-                            'retail_price': sku.retail_price
-                        })()
+                        inventory_entry = type(
+                            "InventoryEntry",
+                            (),
+                            {
+                                "variant": (
+                                    variant_obj.name
+                                    if variant_obj
+                                    else (
+                                        sku.variant.name
+                                        if sku.variant
+                                        else "Unassigned"
+                                    )
+                                ),
+                                "size_label": size_label if size_label else "Bulk",
+                                "quantity": quantity,
+                                "unit": unit or "",
+                                "sku_id": sku.inventory_item_id,
+                                "sku_code": sku.sku or sku.sku_code,
+                                "retail_price": sku.retail_price,
+                            },
+                        )()
                         self.inventory.append(inventory_entry)
 
                         if quantity > 0:
-                            if size_label.lower() == 'bulk':
+                            if size_label.lower() == "bulk":
                                 self.total_bulk += quantity
                             else:
                                 self.total_packaged += quantity
 
                     self.variant_count = len(self.variations)
                 else:
-                    self.variant_count = data.get('sku_count', 0)
+                    self.variant_count = data.get("sku_count", 0)
                     self.variations = []
             else:
-                self.variant_count = data.get('sku_count', 0)
+                self.variant_count = data.get("sku_count", 0)
                 self.variations = []
 
     # Get product IDs for the summary objects
     enhanced_product_data = []
     for data in product_data:
         # Get the actual product ID instead of SKU inventory_item_id
-        first_sku = ProductSKU.query.filter_by(
-            organization_id=current_user.organization_id,
-            is_active=True
-        ).join(ProductSKU.product).filter(
-            Product.name == data['product_name']
-        ).first()
+        first_sku = (
+            ProductSKU.query.filter_by(
+                organization_id=current_user.organization_id, is_active=True
+            )
+            .join(ProductSKU.product)
+            .filter(Product.name == data["product_name"])
+            .first()
+        )
         if first_sku:
-            data['product_id'] = first_sku.product_id  # Use actual product ID
+            data["product_id"] = first_sku.product_id  # Use actual product ID
             enhanced_product_data.append(data)
 
     products = [ProductSummary(data) for data in enhanced_product_data]
 
     # Sort products based on the requested sort type
-    if sort_type == 'popular':
+    if sort_type == "popular":
         # Sort by sales volume (most sales first) - TODO: implement sales tracking for SKUs
         products.sort(key=lambda p: p.total_quantity, reverse=True)
-    elif sort_type == 'stock':
+    elif sort_type == "stock":
         # Sort by stock level (low stock first)
         products.sort(key=lambda p: p.total_quantity)
     else:  # default to name
@@ -370,105 +442,117 @@ def list_products():
         timeout=cache_ttl,
     )
 
-    rendered = render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
-                           breadcrumb_items=[{'label': 'Products'}])
+    rendered = render_template(
+        "pages/products/list_products.html",
+        products=products,
+        current_sort=sort_type,
+        breadcrumb_items=[{"label": "Products"}],
+    )
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
     except Exception:
         pass
     return rendered
 
-@products_bp.route('/new', methods=['GET', 'POST'])
+
+@products_bp.route("/new", methods=["GET", "POST"])
 @login_required
-@require_permission('products.create')
+@require_permission("products.create")
 def new_product():
-    if request.method == 'POST':
-        name = (request.form.get('name') or '').strip()
-        category_id = request.form.get('category_id')
-        low_stock_threshold = request.form.get('low_stock_threshold', 0)
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        category_id = request.form.get("category_id")
+        low_stock_threshold = request.form.get("low_stock_threshold", 0)
 
         if not name:
-            flash('Product name is required', 'error')
-            return redirect(url_for('products.new_product'))
+            flash("Product name is required", "error")
+            return redirect(url_for("products.new_product"))
         if not category_id or not str(category_id).isdigit():
-            flash('Product category is required', 'error')
-            return redirect(url_for('products.new_product'))
+            flash("Product category is required", "error")
+            return redirect(url_for("products.new_product"))
 
         # Check if product already exists (check both new Product model and legacy ProductSKU)
         from ...models.product import Product
+
         existing_product = Product.query.filter_by(
-            name=name,
-            organization_id=current_user.organization_id
+            name=name, organization_id=current_user.organization_id
         ).first()
 
         # Also check legacy ProductSKU table
         existing_sku = ProductSKU.query.filter_by(
-            product_name=name,
-            organization_id=current_user.organization_id
+            product_name=name, organization_id=current_user.organization_id
         ).first()
 
         if existing_product or existing_sku:
-            flash('Product with this name already exists', 'error')
-            return redirect(url_for('products.new_product'))
+            flash("Product with this name already exists", "error")
+            return redirect(url_for("products.new_product"))
 
         try:
             # Use ProductService to create the entire hierarchy
             from ...services.product_service import ProductService
+
             base_sku = ProductService.get_or_create_sku(
                 product_name=name,
-                variant_name='Base',
-                size_label='Bulk',
-                unit='oz'  # Default unit
+                variant_name="Base",
+                size_label="Bulk",
+                unit="oz",  # Default unit
             )
 
             # Set the category_id and low_stock_threshold on the created product
             if base_sku.product:
                 base_sku.product.category_id = int(category_id)
-                base_sku.product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
-                base_sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+                base_sku.product.low_stock_threshold = (
+                    float(low_stock_threshold) if low_stock_threshold else 0
+                )
+                base_sku.low_stock_threshold = (
+                    float(low_stock_threshold) if low_stock_threshold else 0
+                )
 
             db.session.commit()
 
-            flash('Product created successfully.', 'success')
-            return redirect(url_for('products.view_product', product_id=base_sku.product.id))
+            flash("Product created successfully.", "success")
+            return redirect(
+                url_for("products.view_product", product_id=base_sku.product.id)
+            )
 
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating product: {str(e)}', 'error')
-            return redirect(url_for('products.new_product'))
+            flash(f"Error creating product: {str(e)}", "error")
+            return redirect(url_for("products.new_product"))
 
     # Load product categories for selection if template supports it later
     try:
         from ...models.product_category import ProductCategory
+
         categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     except Exception:
         categories = []
-    return render_template('pages/products/new_product.html', product_categories=categories)
+    return render_template(
+        "pages/products/new_product.html", product_categories=categories
+    )
 
-@products_bp.route('/<int:product_id>')
+
+@products_bp.route("/<int:product_id>")
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def view_product(product_id):
     """View product details with all SKUs by product ID"""
-    from ...services.product_service import ProductService
     from ...models.product import Product
 
     # First try to find the product directly by ID
     product = Product.query.filter_by(
-        id=product_id,
-        organization_id=current_user.organization_id
+        id=product_id, organization_id=current_user.organization_id
     ).first()
 
     if not product:
         # If not found by product ID, try to find by inventory_item_id (legacy support)
         base_sku = ProductSKU.query.filter_by(
-            inventory_item_id=product_id,
-            organization_id=current_user.organization_id
+            inventory_item_id=product_id, organization_id=current_user.organization_id
         ).first()
 
         if not base_sku:
-            flash('Product not found', 'error')
-            return redirect(url_for('products.list_products'))
+            flash("Product not found", "error")
+            return redirect(url_for("products.list_products"))
 
         product = base_sku.product
 
@@ -476,7 +560,7 @@ def view_product(product_id):
     skus = ProductSKU.query.filter_by(
         product_id=product.id,
         is_active=True,
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
     ).all()
 
     # Group SKUs by variant, including variants without SKUs
@@ -484,36 +568,50 @@ def view_product(product_id):
     product_variants = product.variants.filter_by(is_active=True).all()
     for variant in product_variants:
         variants[variant.name] = {
-            'name': variant.name,
-            'description': variant.description,
-            'skus': []
+            "name": variant.name,
+            "description": variant.description,
+            "skus": [],
         }
 
     for sku in skus:
         variant_rel = sku.variant
-        variant_key = variant_rel.name if variant_rel else 'Unassigned'
+        variant_key = variant_rel.name if variant_rel else "Unassigned"
         if variant_key not in variants:
             variants[variant_key] = {
-                'name': variant_key,
-                'description': variant_rel.description if variant_rel else None,
-                'skus': []
+                "name": variant_key,
+                "description": variant_rel.description if variant_rel else None,
+                "skus": [],
             }
-        variants[variant_key]['skus'].append(sku)
+        variants[variant_key]["skus"].append(sku)
 
     # Get available containers for manual stock addition
-    available_containers = InventoryItem.query.filter_by(
-        type='container',
-        is_archived=False
-    ).filter(InventoryItem.quantity > 0).all()
+    available_containers = (
+        InventoryItem.query.filter_by(type="container", is_archived=False)
+        .filter(InventoryItem.quantity > 0)
+        .all()
+    )
 
     # Use the actual Product model
     # Add variations for template compatibility
-    product.variations = [type('Variation', (), {
-        'name': variant_name,
-        'description': variant_data['description'],
-        'id': variant_data['skus'][0].inventory_item_id if variant_data['skus'] else None,
-        'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
-    })() for variant_name, variant_data in variants.items()]
+    product.variations = [
+        type(
+            "Variation",
+            (),
+            {
+                "name": variant_name,
+                "description": variant_data["description"],
+                "id": (
+                    variant_data["skus"][0].inventory_item_id
+                    if variant_data["skus"]
+                    else None
+                ),
+                "sku": (
+                    variant_data["skus"][0].sku_code if variant_data["skus"] else None
+                ),
+            },
+        )()
+        for variant_name, variant_data in variants.items()
+    ]
 
     # Also add skus to product for template compatibility
     product.skus = skus
@@ -521,146 +619,161 @@ def view_product(product_id):
     # Load product categories for edit modal
     try:
         from ...models.product_category import ProductCategory
-        product_categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+
+        product_categories = ProductCategory.query.order_by(
+            ProductCategory.name.asc()
+        ).all()
     except Exception:
         product_categories = []
 
-    auto_create_bulk_sku_on_variant = is_feature_enabled("FEATURE_AUTO_BULK_SKU_ON_VARIANT")
+    auto_create_bulk_sku_on_variant = is_feature_enabled(
+        "FEATURE_AUTO_BULK_SKU_ON_VARIANT"
+    )
 
-    return render_template('pages/products/view_product.html',
-                         product=product,
-                         variants=variants,
-                         available_containers=available_containers,
-                         get_global_unit_list=get_global_unit_list,
-                         auto_create_bulk_sku_on_variant=auto_create_bulk_sku_on_variant,
-                         inventory_groups={},
-                         product_categories=product_categories,
-                         breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}])
+    return render_template(
+        "pages/products/view_product.html",
+        product=product,
+        variants=variants,
+        available_containers=available_containers,
+        get_global_unit_list=get_global_unit_list,
+        auto_create_bulk_sku_on_variant=auto_create_bulk_sku_on_variant,
+        inventory_groups={},
+        product_categories=product_categories,
+        breadcrumb_items=[
+            {"label": "Product Dashboard", "url": url_for("products.list_products")},
+            {"label": product.name + " Overview"},
+        ],
+    )
+
 
 # Keep the old route for backward compatibility
-@products_bp.route('/<product_name>')
+@products_bp.route("/<product_name>")
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def view_product_by_name(product_name):
     """Redirect to product by ID for backward compatibility"""
     # Find the first SKU for this product to get the ID
-    sku = ProductSKU.query.filter_by(
-        product_name=product_name,
-        is_active=True
-    ).first()
+    sku = ProductSKU.query.filter_by(product_name=product_name, is_active=True).first()
 
     if not sku:
-        flash('Product not found', 'error')
-        return redirect(url_for('products.list_products'))
+        flash("Product not found", "error")
+        return redirect(url_for("products.list_products"))
 
-    return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
+    return redirect(url_for("products.view_product", product_id=sku.inventory_item_id))
 
 
-
-@products_bp.route('/<int:product_id>/edit', methods=['POST'])
+@products_bp.route("/<int:product_id>/edit", methods=["POST"])
 @login_required
-@require_permission('products.edit')
+@require_permission("products.edit")
 def edit_product(product_id):
     """Edit product details by product ID"""
     from ...models.product import Product
 
     # First try to find the product directly by ID
     product = Product.query.filter_by(
-        id=product_id,
-        organization_id=current_user.organization_id
+        id=product_id, organization_id=current_user.organization_id
     ).first()
 
     if not product:
-        flash('Product not found', 'error')
-        return redirect(url_for('products.list_products'))
+        flash("Product not found", "error")
+        return redirect(url_for("products.list_products"))
 
-    name = (request.form.get('name') or '').strip()
-    category_id = request.form.get('category_id')
-    low_stock_threshold = request.form.get('low_stock_threshold')
+    name = (request.form.get("name") or "").strip()
+    category_id = request.form.get("category_id")
+    low_stock_threshold = request.form.get("low_stock_threshold")
 
     if not name or not category_id:
-        flash('Name and category are required', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        flash("Name and category are required", "error")
+        return redirect(url_for("products.view_product", product_id=product_id))
 
     # Check if another product has this name
     existing = Product.query.filter(
         Product.name == name,
         Product.id != product.id,
-        Product.organization_id == current_user.organization_id
+        Product.organization_id == current_user.organization_id,
     ).first()
     if existing:
-        flash('Another product with this name already exists', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        flash("Another product with this name already exists", "error")
+        return redirect(url_for("products.view_product", product_id=product_id))
 
     # Update the product
     product.name = name
     if low_stock_threshold is not None:
-        product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+        product.low_stock_threshold = (
+            float(low_stock_threshold) if low_stock_threshold else 0
+        )
     try:
         product.category_id = int(category_id)
     except Exception:
         pass
 
     db.session.commit()
-    flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_id=product.id))
+    flash("Product updated successfully", "success")
+    return redirect(url_for("products.view_product", product_id=product.id))
 
-@products_bp.route('/<int:product_id>/delete', methods=['POST'])
+
+@products_bp.route("/<int:product_id>/delete", methods=["POST"])
 @login_required
-@require_permission('products.delete')
+@require_permission("products.delete")
 def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
         # Get the base SKU to find the product - with org scoping
         base_sku = ProductSKU.query.filter_by(
-            inventory_item_id=product_id,
-            organization_id=current_user.organization_id
+            inventory_item_id=product_id, organization_id=current_user.organization_id
         ).first()
 
         if not base_sku:
-            flash('Product not found', 'error')
-            return redirect(url_for('products.list_products'))
+            flash("Product not found", "error")
+            return redirect(url_for("products.list_products"))
 
         product = base_sku.product
 
         # Get all SKUs for this product - with org scoping
         skus = ProductSKU.query.filter_by(
-            product_id=product.id,
-            organization_id=current_user.organization_id
+            product_id=product.id, organization_id=current_user.organization_id
         ).all()
 
         if not skus:
-            flash('Product not found', 'error')
-            return redirect(url_for('products.list_products'))
+            flash("Product not found", "error")
+            return redirect(url_for("products.list_products"))
 
         # Check if any SKU has inventory
-        total_inventory = sum((sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in skus)
+        total_inventory = sum(
+            (sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in skus
+        )
         if total_inventory > 0:
-            flash('Cannot delete product with remaining inventory', 'error')
-            return redirect(url_for('products.view_product', product_id=product_id))
+            flash("Cannot delete product with remaining inventory", "error")
+            return redirect(url_for("products.view_product", product_id=product_id))
 
         # Delete unified history and lot records first
         for sku in skus:
-            UnifiedInventoryHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).delete(synchronize_session=False)
-            InventoryLot.query.filter_by(inventory_item_id=sku.inventory_item_id).delete(synchronize_session=False)
+            UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=sku.inventory_item_id
+            ).delete(synchronize_session=False)
+            InventoryLot.query.filter_by(
+                inventory_item_id=sku.inventory_item_id
+            ).delete(synchronize_session=False)
 
         # Delete the SKUs
         ProductSKU.query.filter_by(product_id=product.id).delete()
 
         # Delete the product and its variants
         from ...models.product import Product, ProductVariant
+
         ProductVariant.query.filter_by(product_id=product.id).delete()
         Product.query.filter_by(id=product.id).delete()
 
         db.session.commit()
 
-        flash(f'Product "{product.name}" deleted successfully', 'success')
-        return redirect(url_for('products.list_products'))
+        flash(f'Product "{product.name}" deleted successfully', "success")
+        return redirect(url_for("products.list_products"))
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error deleting product: {str(e)}', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        flash(f"Error deleting product: {str(e)}", "error")
+        return redirect(url_for("products.view_product", product_id=product_id))
+
 
 # Legacy adjust_sku route removed - use product_inventory routes instead
 

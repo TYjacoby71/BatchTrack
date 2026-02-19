@@ -11,8 +11,8 @@ Glossary:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 from typing import Dict, Tuple
 
 from flask_login import current_user
@@ -95,7 +95,9 @@ class UserService:
             return False, "Username is already in use"
 
         user.username = username
-        user.first_name = (data.get("first_name", user.first_name) or "").strip() or None
+        user.first_name = (
+            data.get("first_name", user.first_name) or ""
+        ).strip() or None
         user.last_name = (data.get("last_name", user.last_name) or "").strip() or None
         user.email = (data.get("email", user.email) or "").strip() or None
         user.phone = (data.get("phone", user.phone) or "").strip() or None
@@ -106,6 +108,37 @@ class UserService:
         try:
             db.session.commit()
             return True, "Profile updated successfully"
+        except Exception as exc:  # pragma: no cover - defensive
+            db.session.rollback()
+            return False, str(exc)
+
+    # --- Update own password ---
+    # Purpose: Validate and change the authenticated developer's password.
+    # Inputs: Current user row and JSON payload with current/new/confirm password fields.
+    # Outputs: Tuple(success flag, status message).
+    @staticmethod
+    def update_own_password(user: User, data: Dict) -> Tuple[bool, str]:
+        current_password = data.get("current_password") or data.get("current") or ""
+        new_password = data.get("new_password") or data.get("new") or ""
+        confirm_password = data.get("confirm_password") or data.get("confirm") or ""
+
+        if not current_password or not new_password or not confirm_password:
+            return False, "All fields are required"
+
+        if not user.check_password(current_password):
+            return False, "Current password is incorrect"
+
+        if new_password != confirm_password:
+            return False, "New passwords do not match"
+
+        if len(new_password) < 6:
+            return False, "Password must be at least 6 characters"
+
+        user.set_password(new_password)
+
+        try:
+            db.session.commit()
+            return True, "Password changed successfully"
         except Exception as exc:  # pragma: no cover - defensive
             db.session.rollback()
             return False, str(exc)
@@ -138,8 +171,12 @@ class UserService:
             "is_active": user.is_active,
             "organization_id": user.organization_id,
             "organization_name": user.organization.name if user.organization else None,
-            "last_login": user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None,
-            "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
+            "last_login": (
+                user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None
+            ),
+            "created_at": (
+                user.created_at.strftime("%Y-%m-%d") if user.created_at else None
+            ),
         }
 
     # --- Update customer user ---
@@ -170,7 +207,7 @@ class UserService:
                 other_owners = User.query.filter(
                     User.organization_id == user.organization_id,
                     User.id != user.id,
-                    User._is_organization_owner == True,
+                    User._is_organization_owner,
                 ).all()
                 for other in other_owners:
                     other.is_organization_owner = False
@@ -210,9 +247,11 @@ class UserService:
 
         from app.models.user_role_assignment import UserRoleAssignment
 
-        existing_assignments = UserRoleAssignment.query.filter_by(
-            user_id=user.id, is_active=True
-        ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
+        existing_assignments = (
+            UserRoleAssignment.query.filter_by(user_id=user.id, is_active=True)
+            .filter(UserRoleAssignment.developer_role_id.isnot(None))
+            .all()
+        )
 
         for assignment in existing_assignments:
             assignment.is_active = False
@@ -282,17 +321,17 @@ class UserService:
             stripe_cancelled = False
             org = user.organization
             if org and org.stripe_customer_id:
-                remaining_customer_users = (
-                    User.query.filter(
-                        User.organization_id == org.id,
-                        User.user_type == "customer",
-                        User.id != user.id,
-                        User.is_deleted.is_(False),
-                    ).count()
-                )
+                remaining_customer_users = User.query.filter(
+                    User.organization_id == org.id,
+                    User.user_type == "customer",
+                    User.id != user.id,
+                    User.is_deleted.is_(False),
+                ).count()
                 # If this is the final customer account in the organization, cancel billing first.
                 if remaining_customer_users == 0:
-                    stripe_cancelled = BillingService.cancel_subscription(org.stripe_customer_id)
+                    stripe_cancelled = BillingService.cancel_subscription(
+                        org.stripe_customer_id
+                    )
                     if not stripe_cancelled:
                         return (
                             False,

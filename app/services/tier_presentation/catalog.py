@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
     {
         "title": "Core workflow features",
@@ -25,6 +24,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                     "inventory.adjust",
                     "inventory.view_costs",
                 ),
+            },
+            {
+                "label": "Inventory quantity tracking from deductions",
+                "kind": "boolean",
+                "permissions_any": ("inventory.track_quantities",),
             },
             {
                 "label": "FIFO lot tracking and traceability",
@@ -45,6 +49,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 "label": "Batch production workflow",
                 "kind": "boolean",
                 "permissions_any": ("batches.create", "batches.finish"),
+            },
+            {
+                "label": "Batch output posting to inventory",
+                "kind": "boolean",
+                "permissions_any": ("batches.track_inventory_outputs",),
             },
             {
                 "label": "Product catalog and SKU workflows",
@@ -118,7 +127,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
             {
                 "label": "Advanced analytics suite",
                 "kind": "boolean",
-                "permissions_any": ("reports.advanced", "reports.custom", "reports.analytics"),
+                "permissions_any": (
+                    "reports.advanced",
+                    "reports.custom",
+                    "reports.analytics",
+                ),
                 "addon_keys_any": ("advanced_analytics",),
             },
             {
@@ -200,15 +213,27 @@ MAX_MARKETING_HIGHLIGHTS = 8
 MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
     {
         "label": "Inventory tracking with FIFO lot history",
-        "permissions_any": ("inventory.view", "inventory.adjust"),
+        "permissions_any": (
+            "inventory.view",
+            "inventory.adjust",
+            "inventory.track_quantities",
+        ),
     },
     {
         "label": "Recipe management, scaling, and production planning",
-        "permissions_any": ("recipes.create", "recipes.scale", "recipes.plan_production"),
+        "permissions_any": (
+            "recipes.create",
+            "recipes.scale",
+            "recipes.plan_production",
+        ),
     },
     {
         "label": "Batch production workflow",
         "permissions_any": ("batches.create", "batches.finish"),
+    },
+    {
+        "label": "Batch output posting to inventory",
+        "permissions_any": ("batches.track_inventory_outputs",),
     },
     {
         "label": "Product catalog with SKU and variant support",
@@ -230,7 +255,10 @@ MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
     },
     {
         "label": "Recipe Library and marketplace publishing",
-        "permissions_any": ("recipes.marketplace_dashboard", "recipes.sharing_controls"),
+        "permissions_any": (
+            "recipes.marketplace_dashboard",
+            "recipes.sharing_controls",
+        ),
     },
     {
         "label": "Shopify, marketplace, and API integrations",
@@ -250,4 +278,3 @@ MARKETING_HIGHLIGHT_RULES: tuple[dict[str, Any], ...] = (
         "require_retention_entitlement": True,
     },
 )
-

@@ -63,7 +63,11 @@ def _assemble_descriptor(
 
 
 def _clean(value: Optional[str]) -> str:
-    return value.strip() if isinstance(value, str) else (str(value).strip() if value is not None else "")
+    return (
+        value.strip()
+        if isinstance(value, str)
+        else (str(value).strip() if value is not None else "")
+    )
 
 
 def _title_case(value: str) -> str:

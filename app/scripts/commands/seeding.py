@@ -5,8 +5,13 @@ from flask.cli import with_appcontext
 from sqlalchemy import inspect
 
 from ...extensions import db
-from ...models import Organization, Permission, User
-from ...seeders import seed_app_settings, seed_feature_flags, seed_subscriptions, seed_units
+from ...models import Organization, User
+from ...seeders import (
+    seed_app_settings,
+    seed_feature_flags,
+    seed_subscriptions,
+    seed_units,
+)
 from ...seeders.addon_seeder import seed_addons
 from ...seeders.consolidated_permission_seeder import seed_consolidated_permissions
 from ...seeders.user_seeder import seed_users_and_organization
@@ -43,7 +48,13 @@ def init_production_command():
 
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
-        required_tables = ["permission", "subscription_tier", "unit", "organization", "user"]
+        required_tables = [
+            "permission",
+            "subscription_tier",
+            "unit",
+            "organization",
+            "user",
+        ]
         missing_tables = [t for t in required_tables if t not in tables]
 
         if missing_tables:
@@ -122,7 +133,9 @@ def init_production_command():
             print(f"⚠️  Product category seeding issue: {e}")
 
         try:
-            from ...seeders.seed_global_inventory_library import seed_global_inventory_library
+            from ...seeders.seed_global_inventory_library import (
+                seed_global_inventory_library,
+            )
 
             seed_global_inventory_library()
             print("✅ Global inventory library seeded")
@@ -151,9 +164,11 @@ def init_production_command():
             )
 
             org_permissions = Permission.query.filter_by(is_active=True).count()
-            dev_permissions = DeveloperPermission.query.filter_by(is_active=True).count()
+            dev_permissions = DeveloperPermission.query.filter_by(
+                is_active=True
+            ).count()
             dev_roles = DeveloperRole.query.filter_by(is_active=True).count()
-            system_roles = Role.query.filter_by(is_system_role=True).count()
+            Role.query.filter_by(is_system_role=True).count()
             sub_tiers = SubscriptionTier.query.count()
             addons = Addon.query.filter_by(is_active=True).count()
             units = Unit.query.count()
@@ -165,10 +180,14 @@ def init_production_command():
 
             ingredient_categories = IngredientCategory.query.count()
             product_categories = ProductCategory.query.count()
-            ingredients_count = GlobalItem.query.filter_by(item_type="ingredient").count()
+            ingredients_count = GlobalItem.query.filter_by(
+                item_type="ingredient"
+            ).count()
             containers_count = GlobalItem.query.filter_by(item_type="container").count()
             packaging_count = GlobalItem.query.filter_by(item_type="packaging").count()
-            consumables_count = GlobalItem.query.filter_by(item_type="consumable").count()
+            consumables_count = GlobalItem.query.filter_by(
+                item_type="consumable"
+            ).count()
             total_global_items = GlobalItem.query.count()
 
             print(
@@ -256,14 +275,23 @@ def seed_units_command():
             return
 
         columns = [col["name"] for col in inspector.get_columns("unit")]
-        required_cols = ["id", "name", "symbol", "unit_type", "base_unit", "conversion_factor"]
+        required_cols = [
+            "id",
+            "name",
+            "symbol",
+            "unit_type",
+            "base_unit",
+            "conversion_factor",
+        ]
         missing_cols = [col for col in required_cols if col not in columns]
         if missing_cols:
             print(f"❌ Missing required columns in unit table: {missing_cols}")
             return
 
         has_timestamps = "created_at" in columns and "updated_at" in columns
-        print(f"ℹ️  Unit table timestamp columns: {'✅ Present' if has_timestamps else '❌ Missing'}")
+        print(
+            f"ℹ️  Unit table timestamp columns: {'✅ Present' if has_timestamps else '❌ Missing'}"
+        )
 
         seed_units()
         print("✅ Units seeded successfully")
@@ -357,7 +385,10 @@ def seed_product_categories_command():
 
 
 @click.command("seed-permission-categories")
-@click.option("--category", help="Specific permission category to seed (app, organization, system, developer)")
+@click.option(
+    "--category",
+    help="Specific permission category to seed (app, organization, system, developer)",
+)
 @with_appcontext
 def seed_permission_categories_command(category):
     """Seed permissions by category."""
@@ -399,7 +430,9 @@ def seed_test_data_command():
 
         while True:
             try:
-                choice = input(f"\nSelect organization (1-{len(orgs)}) or press Enter for first: ").strip()
+                choice = input(
+                    f"\nSelect organization (1-{len(orgs)}) or press Enter for first: "
+                ).strip()
 
                 if not choice:
                     selected_org = orgs[0]
@@ -437,7 +470,9 @@ def seed_global_inventory_command():
     """Seed complete global inventory library (ingredients, containers, packaging, consumables)."""
     try:
         print("🔄 Seeding global inventory library...")
-        from ...seeders.seed_global_inventory_library import seed_global_inventory_library
+        from ...seeders.seed_global_inventory_library import (
+            seed_global_inventory_library,
+        )
 
         seed_global_inventory_library()
         print("✅ Global inventory library seeded successfully!")
@@ -484,4 +519,3 @@ INDIVIDUAL_SEED_COMMANDS = [
 RECOVERY_COMMANDS = [activate_users]
 
 SEEDING_COMMANDS = BOOTSTRAP_COMMANDS + INDIVIDUAL_SEED_COMMANDS + RECOVERY_COMMANDS
-

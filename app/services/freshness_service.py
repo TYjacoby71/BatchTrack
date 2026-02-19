@@ -1,15 +1,15 @@
 import logging
-from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
 
 from flask_login import current_user
 
 from app.models import db
-from app.models.unified_inventory_history import UnifiedInventoryHistory
-from app.models.inventory_lot import InventoryLot
+from app.models.batch import Batch
 from app.models.inventory import InventoryItem
-from app.models.batch import Batch, BatchIngredient
+from app.models.inventory_lot import InventoryLot
+from app.models.unified_inventory_history import UnifiedInventoryHistory
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,9 @@ class FreshnessService:
     """
 
     @staticmethod
-    def _compute_lot_freshness_percent_at_time(lot: InventoryLot, when: datetime) -> Optional[float]:
+    def _compute_lot_freshness_percent_at_time(
+        lot: InventoryLot, when: datetime
+    ) -> Optional[float]:
         """Compute freshness percent of a lot at a given time.
 
         freshness = max(0, min(100, (expiration - when) / (expiration - received_date) * 100))
@@ -60,9 +62,14 @@ class FreshnessService:
                 # Derive expiration when possible
                 if lot.shelf_life_days:
                     expiration = received + timedelta(days=int(lot.shelf_life_days))
-                elif lot.inventory_item and lot.inventory_item.is_perishable and lot.inventory_item.shelf_life_days:
-                    from datetime import timedelta
-                    expiration = received + timedelta(days=int(lot.inventory_item.shelf_life_days))
+                elif (
+                    lot.inventory_item
+                    and lot.inventory_item.is_perishable
+                    and lot.inventory_item.shelf_life_days
+                ):
+                    expiration = received + timedelta(
+                        days=int(lot.inventory_item.shelf_life_days)
+                    )
                 else:
                     return None
 
@@ -82,11 +89,15 @@ class FreshnessService:
     @staticmethod
     def _get_batch_consumption_events(batch_id: int) -> List[UnifiedInventoryHistory]:
         """Fetch all deduction events for a batch, joined with lots for freshness computation."""
-        events = UnifiedInventoryHistory.query.filter(
-            UnifiedInventoryHistory.batch_id == batch_id,
-            UnifiedInventoryHistory.change_type == 'batch',
-            UnifiedInventoryHistory.quantity_change < 0
-        ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+        events = (
+            UnifiedInventoryHistory.query.filter(
+                UnifiedInventoryHistory.batch_id == batch_id,
+                UnifiedInventoryHistory.change_type == "batch",
+                UnifiedInventoryHistory.quantity_change < 0,
+            )
+            .order_by(UnifiedInventoryHistory.timestamp.asc())
+            .all()
+        )
         return events
 
     @staticmethod
@@ -96,7 +107,10 @@ class FreshnessService:
             return []
 
         # Scope by org for safety
-        if current_user.is_authenticated and batch.organization_id != current_user.organization_id:
+        if (
+            current_user.is_authenticated
+            and batch.organization_id != current_user.organization_id
+        ):
             return []
 
         events = FreshnessService._get_batch_consumption_events(batch.id)
@@ -128,19 +142,35 @@ class FreshnessService:
                 if ev.affected_lot_id:
                     lot = db.session.get(InventoryLot, ev.affected_lot_id)
                     if lot:
-                        freshness_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, ev.timestamp or datetime.now(timezone.utc))
+                        freshness_percent = (
+                            FreshnessService._compute_lot_freshness_percent_at_time(
+                                lot, ev.timestamp or datetime.now(timezone.utc)
+                            )
+                        )
                         lots_contributed += 1
 
                 # Fallback: if lot freshness can't be computed, try item's shelf life against event time
-                if freshness_percent is None and item.is_perishable and item.shelf_life_days and ev.timestamp:
-                    from datetime import timedelta
-                    received_guess = ev.timestamp - timedelta(days=int(item.shelf_life_days))
+                if (
+                    freshness_percent is None
+                    and item.is_perishable
+                    and item.shelf_life_days
+                    and ev.timestamp
+                ):
+                    received_guess = ev.timestamp - timedelta(
+                        days=int(item.shelf_life_days)
+                    )
+
                     class _FakeLot:
                         received_date = received_guess
                         expiration_date = ev.timestamp
                         shelf_life_days = item.shelf_life_days
                         inventory_item = item
-                    freshness_percent = FreshnessService._compute_lot_freshness_percent_at_time(_FakeLot, ev.timestamp)
+
+                    freshness_percent = (
+                        FreshnessService._compute_lot_freshness_percent_at_time(
+                            _FakeLot, ev.timestamp
+                        )
+                    )
 
                 if freshness_percent is None:
                     # Skip contribution if freshness unknowable
@@ -150,17 +180,26 @@ class FreshnessService:
                 total_weighted += freshness_percent * used_amount
 
             if total_used > 0:
-                results.append(ItemFreshness(
-                    inventory_item_id=item_id,
-                    item_name=item.name,
-                    weighted_freshness_percent=round(total_weighted / total_used, 1),
-                    lots_contributed=lots_contributed,
-                    total_used=total_used,
-                    unit=item.unit or ''
-                ))
+                results.append(
+                    ItemFreshness(
+                        inventory_item_id=item_id,
+                        item_name=item.name,
+                        weighted_freshness_percent=round(
+                            total_weighted / total_used, 1
+                        ),
+                        lots_contributed=lots_contributed,
+                        total_used=total_used,
+                        unit=item.unit or "",
+                    )
+                )
 
         # Sort by lowest freshness first to highlight risk
-        results.sort(key=lambda r: (r.weighted_freshness_percent is None, r.weighted_freshness_percent or 999.0))
+        results.sort(
+            key=lambda r: (
+                r.weighted_freshness_percent is None,
+                r.weighted_freshness_percent or 999.0,
+            )
+        )
         return results
 
     @staticmethod
@@ -171,17 +210,26 @@ class FreshnessService:
         """
         items = FreshnessService.compute_item_freshness_for_batch(batch)
         if not items:
-            return BatchFreshnessSummary(batch_id=batch.id, overall_freshness_percent=None, items=[])
+            return BatchFreshnessSummary(
+                batch_id=batch.id, overall_freshness_percent=None, items=[]
+            )
 
         total_used_all = sum(i.total_used for i in items)
         if total_used_all <= 0:
-            return BatchFreshnessSummary(batch_id=batch.id, overall_freshness_percent=None, items=items)
+            return BatchFreshnessSummary(
+                batch_id=batch.id, overall_freshness_percent=None, items=items
+            )
 
         total_weighted_all = 0.0
         for i in items:
             if i.weighted_freshness_percent is not None and i.total_used > 0:
                 total_weighted_all += i.weighted_freshness_percent * i.total_used
 
-        overall = round(total_weighted_all / total_used_all, 1) if total_weighted_all > 0 else None
-        return BatchFreshnessSummary(batch_id=batch.id, overall_freshness_percent=overall, items=items)
-
+        overall = (
+            round(total_weighted_all / total_used_all, 1)
+            if total_weighted_all > 0
+            else None
+        )
+        return BatchFreshnessSummary(
+            batch_id=batch.id, overall_freshness_percent=overall, items=items
+        )

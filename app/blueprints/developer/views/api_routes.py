@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import jsonify, request
+
 from app.services.statistics import AnalyticsDataService
 
 from ..decorators import require_developer_permission
@@ -26,8 +27,6 @@ def api_stats():
             "active": overview.get("active_users", 0),
         },
     }
-
-    from app.models.subscription_tier import SubscriptionTier
 
     for tier in ["exempt", "free", "solo", "team", "enterprise"]:
         stats["organizations"]["by_tier"].setdefault(tier, 0)

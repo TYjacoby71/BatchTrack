@@ -5,7 +5,7 @@ Handles validation of recipe data, ingredients, and business rules.
 """
 
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ...extensions import db
 from ...models import InventoryItem, Recipe
@@ -13,10 +13,20 @@ from ...models import InventoryItem, Recipe
 logger = logging.getLogger(__name__)
 
 
-def validate_recipe_data(name: str, ingredients: List[Dict] = None,
-                         yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
-                         portioning_data: Dict | None = None, allow_partial: bool = False, organization_id: int | None = None,
-                         allow_duplicate_name: bool = False) -> Dict[str, Any]:
+def validate_recipe_data(
+    name: str,
+    ingredients: List[Dict] = None,
+    yield_amount: float = None,
+    recipe_id: int = None,
+    notes: str = None,
+    category: str = None,
+    tags: str = None,
+    batch_size: float = None,
+    portioning_data: Dict | None = None,
+    allow_partial: bool = False,
+    organization_id: int | None = None,
+    allow_duplicate_name: bool = False,
+) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
 
@@ -42,7 +52,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
             allow_duplicate=allow_duplicate_name,
         )
         if not is_valid:
-            return {'valid': False, 'error': error, 'missing_fields': []}
+            return {"valid": False, "error": error, "missing_fields": []}
 
         missing_fields: List[str] = []
         existing_recipe = None
@@ -50,14 +60,16 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
             try:
                 existing_recipe = db.session.get(Recipe, recipe_id)
             except Exception as e:
-                logger.error(f"Exception loading recipe {recipe_id} for validation: {e}")
+                logger.error(
+                    f"Exception loading recipe {recipe_id} for validation: {e}"
+                )
                 existing_recipe = None
 
         has_direct_yield = bool(yield_amount is not None and yield_amount > 0)
         bulk_yield_ok = False
         try:
-            if portioning_data and portioning_data.get('is_portioned'):
-                byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+            if portioning_data and portioning_data.get("is_portioned"):
+                byq = float(portioning_data.get("bulk_yield_quantity") or 0)
                 bulk_yield_ok = byq > 0
         except Exception:
             bulk_yield_ok = False
@@ -69,50 +81,62 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                 has_valid_yield = True
 
             if not has_valid_yield:
-                missing_fields.append('yield amount')
+                missing_fields.append("yield amount")
 
         portion_requires_count = False
         portion_count_candidate = 0
-        if portioning_data and portioning_data.get('is_portioned'):
+        if portioning_data and portioning_data.get("is_portioned"):
             portion_requires_count = True
             try:
-                portion_count_candidate = int(portioning_data.get('portion_count') or 0)
+                portion_count_candidate = int(portioning_data.get("portion_count") or 0)
             except Exception:
                 portion_count_candidate = 0
         elif existing_recipe and existing_recipe.is_portioned:
             portion_requires_count = True
             portion_count_candidate = existing_recipe.portion_count or 0
 
-        if portion_requires_count and not allow_partial and portion_count_candidate <= 0:
-            missing_fields.append('portion count')
+        if (
+            portion_requires_count
+            and not allow_partial
+            and portion_count_candidate <= 0
+        ):
+            missing_fields.append("portion count")
 
         if ingredients:
             is_valid, error = validate_ingredient_quantities(ingredients)
             if not is_valid:
-                return {'valid': False, 'error': error, 'missing_fields': []}
+                return {"valid": False, "error": error, "missing_fields": []}
         elif not allow_partial:
-            missing_fields.append('ingredients')
+            missing_fields.append("ingredients")
 
         if missing_fields:
+
             def _humanize(fields: List[str]) -> str:
                 if not fields:
-                    return ''
+                    return ""
                 if len(fields) == 1:
                     return fields[0].capitalize()
-                return ', '.join(field.capitalize() for field in fields[:-1]) + f" and {fields[-1].capitalize()}"
+                return (
+                    ", ".join(field.capitalize() for field in fields[:-1])
+                    + f" and {fields[-1].capitalize()}"
+                )
 
             pretty = _humanize(missing_fields)
             return {
-                'valid': False,
-                'error': f"Missing required fields: {pretty}",
-                'missing_fields': missing_fields
+                "valid": False,
+                "error": f"Missing required fields: {pretty}",
+                "missing_fields": missing_fields,
             }
 
-        return {'valid': True, 'error': '', 'missing_fields': []}
+        return {"valid": True, "error": "", "missing_fields": []}
 
     except Exception as e:
         logger.error(f"Error validating recipe data: {e}")
-        return {'valid': False, 'error': "Validation error occurred", 'missing_fields': []}
+        return {
+            "valid": False,
+            "error": "Validation error occurred",
+            "missing_fields": [],
+        }
 
 
 def validate_recipe_name(
@@ -148,8 +172,8 @@ def validate_recipe_name(
         if allow_duplicate:
             return True, ""
 
-        from flask_login import current_user
         from flask import session
+        from flask_login import current_user
 
         scoped_org_id = organization_id
         if scoped_org_id is None and recipe_id:
@@ -162,11 +186,11 @@ def validate_recipe_name(
 
         if scoped_org_id is None:
             try:
-                if getattr(current_user, 'is_authenticated', False):
-                    if getattr(current_user, 'user_type', None) == 'developer':
-                        scoped_org_id = session.get('dev_selected_org_id')
+                if getattr(current_user, "is_authenticated", False):
+                    if getattr(current_user, "user_type", None) == "developer":
+                        scoped_org_id = session.get("dev_selected_org_id")
                     else:
-                        scoped_org_id = getattr(current_user, 'organization_id', None)
+                        scoped_org_id = getattr(current_user, "organization_id", None)
             except Exception:
                 scoped_org_id = scoped_org_id or None
 
@@ -207,17 +231,17 @@ def validate_ingredient_quantities(ingredients: List[Dict]) -> Tuple[bool, str]:
 
         for i, ingredient in enumerate(ingredients):
             # Check required fields
-            if 'item_id' not in ingredient:
+            if "item_id" not in ingredient:
                 return False, f"Ingredient {i+1}: item_id is required"
 
-            if 'quantity' not in ingredient:
+            if "quantity" not in ingredient:
                 return False, f"Ingredient {i+1}: quantity is required"
 
-            if 'unit' not in ingredient:
+            if "unit" not in ingredient:
                 return False, f"Ingredient {i+1}: unit is required"
 
-            item_id = ingredient['item_id']
-            quantity = ingredient['quantity']
+            item_id = ingredient["item_id"]
+            quantity = ingredient["quantity"]
 
             # Check for duplicates
             if item_id in seen_ingredients:
@@ -238,7 +262,7 @@ def validate_ingredient_quantities(ingredients: List[Dict]) -> Tuple[bool, str]:
                 return False, f"Ingredient {item_id} not found"
 
             # Check if it's actually an ingredient
-            if item.type not in ['ingredient', 'container']:
+            if item.type not in ["ingredient", "container"]:
                 return False, f"{item.name} is not a valid ingredient type"
 
         return True, ""

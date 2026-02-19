@@ -8,21 +8,22 @@ Glossary:
 - Variant: Option set under a product (size, scent, etc.).
 """
 
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 
-from flask_login import current_user, UserMixin
-from sqlalchemy import func, event
+from sqlalchemy import event, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import object_session, synonym
 
-from ..extensions import db
-from ..utils.timezone_utils import TimezoneUtils
-from .mixins import ScopedModelMixin
 from app.services.cache_invalidation import invalidate_product_list_cache
+
+from ..extensions import db
+from .mixins import ScopedModelMixin
+
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
-    __tablename__ = 'product'
+
+    __tablename__ = "product"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
@@ -31,7 +32,9 @@ class Product(ScopedModelMixin, db.Model):
     # Removed base_unit; units are defined at SKU/Inventory level
 
     # Product-level settings
-    category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
+    category_id = db.Column(
+        db.Integer, db.ForeignKey("product_category.id"), nullable=False
+    )
     subcategory = db.Column(db.String(64), nullable=True)
     tags = db.Column(db.Text, nullable=True)
     low_stock_threshold = db.Column(db.Float, default=10.0)
@@ -40,29 +43,45 @@ class Product(ScopedModelMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_discontinued = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     # Marketplace integration (product-level)
     shopify_product_id = db.Column(db.String(64), nullable=True)
     etsy_shop_section_id = db.Column(db.String(64), nullable=True)
 
     # Relationships
-    variants = db.relationship('ProductVariant', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
-    skus = db.relationship('ProductSKU', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
-    product_category = db.relationship('ProductCategory')
+    variants = db.relationship(
+        "ProductVariant",
+        back_populates="product",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    skus = db.relationship(
+        "ProductSKU",
+        back_populates="product",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    product_category = db.relationship("ProductCategory")
 
     # Unique constraint on name per organization
     __table_args__ = (
-        db.UniqueConstraint('name', 'organization_id', name='unique_product_name_per_org'),
-        db.Index('ix_product_category_id', 'category_id'),
-        db.Index('ix_product_org_active', 'organization_id', 'is_active'),
+        db.UniqueConstraint(
+            "name", "organization_id", name="unique_product_name_per_org"
+        ),
+        db.Index("ix_product_category_id", "category_id"),
+        db.Index("ix_product_org_active", "organization_id", "is_active"),
     )
 
     @property
     def base_variant(self):
         """Get the base variant for this product"""
-        return self.variants.filter_by(name='Base').first()
+        return self.variants.filter_by(name="Base").first()
 
     @property
     def variant_count(self):
@@ -70,14 +89,16 @@ class Product(ScopedModelMixin, db.Model):
         return self.variants.filter_by(is_active=True).count()
 
     def __repr__(self):
-        return f'<Product {self.name}>'
+        return f"<Product {self.name}>"
+
 
 class ProductVariant(ScopedModelMixin, db.Model):
     """Product Variant model - represents variations of a product"""
-    __tablename__ = 'product_variant'
+
+    __tablename__ = "product_variant"
 
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
@@ -89,28 +110,35 @@ class ProductVariant(ScopedModelMixin, db.Model):
     # Status
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     # Relationships
-    product = db.relationship('Product', back_populates='variants')
-    skus = db.relationship('ProductSKU', back_populates='variant', lazy='dynamic', cascade='all, delete-orphan')
+    product = db.relationship("Product", back_populates="variants")
+    skus = db.relationship(
+        "ProductSKU",
+        back_populates="variant",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def bulk_sku(self):
         """Get the bulk SKU for this variant"""
-        return self.skus.filter_by(size_label='Bulk').first()
+        return self.skus.filter_by(size_label="Bulk").first()
 
     # Unique constraint on product + variant name
     __table_args__ = (
-        db.UniqueConstraint('product_id', 'name', name='unique_product_variant'),
+        db.UniqueConstraint("product_id", "name", name="unique_product_variant"),
     )
 
     def __repr__(self):
-        return f'<ProductVariant {self.product.name} - {self.name}>'
+        return f"<ProductVariant {self.product.name} - {self.name}>"
+
 
 class ProductSKU(db.Model, ScopedModelMixin):
     """Product SKU model - represents sellable units of inventory"""
-    __tablename__ = 'product_sku'
+
+    __tablename__ = "product_sku"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
@@ -118,16 +146,22 @@ class ProductSKU(db.Model, ScopedModelMixin):
     name = synonym("sku")
 
     # INVENTORY ITEM REFERENCE - unified inventory control (PRIMARY KEY)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, index=True)
+    inventory_item_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=False, index=True
+    )
 
     # CORE PRODUCT IDENTIFICATION
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
-    variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=True)
-    size_label = db.Column(db.String(64), nullable=False, default='Bulk')
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=True)
+    variant_id = db.Column(
+        db.Integer, db.ForeignKey("product_variant.id"), nullable=True
+    )
+    size_label = db.Column(db.String(64), nullable=False, default="Bulk")
     sku_code = db.Column(db.String(64), nullable=True)
-    sku = db.Column(db.String(64), unique=True, nullable=False) # Renamed from sku_code to sku
+    sku = db.Column(
+        db.String(64), unique=True, nullable=False
+    )  # Renamed from sku_code to sku
     sku_name = db.Column(db.String(128), nullable=True)
-    _quantity = db.Column('quantity_override', db.Float, default=0.0, nullable=True)
+    _quantity = db.Column("quantity_override", db.Float, default=0.0, nullable=True)
 
     # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)
     unit = db.Column(db.String(32), nullable=True)
@@ -135,8 +169,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     # FIFO REFERENCE
     fifo_id = db.Column(db.String(32), nullable=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
-    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"), nullable=True)
+    container_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=True
+    )
 
     # PRICING - cost comes from inventory_item.cost_per_unit
     retail_price = db.Column(db.Float, nullable=True)
@@ -154,8 +190,12 @@ class ProductSKU(db.Model, ScopedModelMixin):
     is_product_active = db.Column(db.Boolean, default=True)
     is_discontinued = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     # SUPPLIER AND SOURCING
     supplier_name = db.Column(db.String(128), nullable=True)
@@ -174,7 +214,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     # QUALITY CONTROL
     quality_status = db.Column(db.String(32), nullable=True)
     compliance_status = db.Column(db.String(32), nullable=True)
-    quality_checked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    quality_checked_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     quality_checked_at = db.Column(db.DateTime, nullable=True)
 
     # STORAGE
@@ -221,7 +261,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     @hybrid_property
     def quantity(self):
         """Get current quantity from inventory item"""
-        if hasattr(self, '_quantity') and self._quantity is not None:
+        if hasattr(self, "_quantity") and self._quantity is not None:
             return self._quantity
 
         if not self.inventory_item_id:
@@ -251,10 +291,14 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
         from ..models.inventory_lot import InventoryLot
 
-        lots = InventoryLot.query.filter(
-            InventoryLot.inventory_item_id == self.inventory_item_id,
-            InventoryLot.remaining_quantity_base > 0
-        ).order_by(InventoryLot.received_date.asc()).all()
+        lots = (
+            InventoryLot.query.filter(
+                InventoryLot.inventory_item_id == self.inventory_item_id,
+                InventoryLot.remaining_quantity_base > 0,
+            )
+            .order_by(InventoryLot.received_date.asc())
+            .all()
+        )
 
         if not lots:
             return self.cost_per_unit
@@ -289,12 +333,14 @@ class ProductSKU(db.Model, ScopedModelMixin):
         except ImportError:
             return 0.0
 
-        total_reserved = db.session.query(
-            func.coalesce(func.sum(Reservation.quantity), 0.0)
-        ).filter(
-            Reservation.product_item_id == self.inventory_item_id,
-            Reservation.status == 'active'
-        ).scalar()
+        total_reserved = (
+            db.session.query(func.coalesce(func.sum(Reservation.quantity), 0.0))
+            .filter(
+                Reservation.product_item_id == self.inventory_item_id,
+                Reservation.status == "active",
+            )
+            .scalar()
+        )
 
         try:
             return float(total_reserved or 0.0)
@@ -326,61 +372,86 @@ class ProductSKU(db.Model, ScopedModelMixin):
         return max(0, current_qty - (self.reserved_quantity or 0))
 
     # RELATIONSHIPS
-    product = db.relationship('Product', back_populates='skus')
-    variant = db.relationship('ProductVariant', back_populates='skus')
-    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='product_sku')
-    batch = db.relationship('Batch', foreign_keys=[batch_id], backref='source_product_skus')
-    container = db.relationship('InventoryItem', foreign_keys=[container_id])
-    quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
+    product = db.relationship("Product", back_populates="skus")
+    variant = db.relationship("ProductVariant", back_populates="skus")
+    inventory_item = db.relationship(
+        "InventoryItem", foreign_keys=[inventory_item_id], backref="product_sku"
+    )
+    batch = db.relationship(
+        "Batch", foreign_keys=[batch_id], backref="source_product_skus"
+    )
+    container = db.relationship("InventoryItem", foreign_keys=[container_id])
+    quality_checker = db.relationship("User", foreign_keys=[quality_checked_by])
 
     # Data integrity validation
     def validate_product_variant_consistency(self):
         """Ensure product_id matches variant.product_id for data integrity"""
         if self.variant and self.product_id != self.variant.product_id:
-            raise ValueError(f"SKU product_id ({self.product_id}) does not match variant's product_id ({self.variant.product_id})")
+            raise ValueError(
+                f"SKU product_id ({self.product_id}) does not match variant's product_id ({self.variant.product_id})"
+            )
 
     @staticmethod
     @event.listens_for(db.session, "before_flush")
     def _enforce_inventory_item_type(session, flush_context, instances):
         """Ensure linked InventoryItem is of type 'product' for all ProductSKUs"""
         from ..models.inventory import InventoryItem
+
         for obj in session.new.union(session.dirty):
-            if isinstance(obj, ProductSKU) and getattr(obj, 'inventory_item_id', None):
+            if isinstance(obj, ProductSKU) and getattr(obj, "inventory_item_id", None):
                 inv = session.get(InventoryItem, obj.inventory_item_id)
-                if inv and inv.type != 'product':
-                    raise ValueError(f"InventoryItem {inv.id} type '{inv.type}' is not 'product' for ProductSKU")
+                if inv and inv.type != "product":
+                    raise ValueError(
+                        f"InventoryItem {inv.id} type '{inv.type}' is not 'product' for ProductSKU"
+                    )
 
     # Table constraints
     __table_args__ = (
-        db.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_combination'),
-        db.UniqueConstraint('barcode', name='unique_barcode'),
-        db.UniqueConstraint('upc', name='unique_upc'),
-        db.Index('idx_product_variant', 'product_id', 'variant_id'),
-        db.Index('idx_active_skus', 'is_active', 'is_product_active'),
-        db.Index('idx_inventory_item', 'inventory_item_id'),
+        db.UniqueConstraint(
+            "product_id",
+            "variant_id",
+            "size_label",
+            "fifo_id",
+            name="unique_sku_combination",
+        ),
+        db.UniqueConstraint("barcode", name="unique_barcode"),
+        db.UniqueConstraint("upc", name="unique_upc"),
+        db.Index("idx_product_variant", "product_id", "variant_id"),
+        db.Index("idx_active_skus", "is_active", "is_product_active"),
+        db.Index("idx_inventory_item", "inventory_item_id"),
     )
-
-    @property
-    def display_name(self):
-        """Get display name for the SKU"""
-        if self.sku_name:
-            return self.sku_name
-        elif self.product and self.variant:
-            return f"{self.product.name} - {self.variant.name} - {self.size_label}"
-        else:
-            return self.sku_code or f"SKU #{self.id}"
 
     @classmethod
     def generate_sku_code(cls, product_name, variant_name, size_label):
         """Generate a standardized SKU code from product/variant/size"""
         # Create slugs from names
-        product_slug = ''.join(c.upper() if c.isalnum() else '' for c in product_name)[:8]
-        variant_slug = ''.join(c.upper() if c.isalnum() else '' for c in variant_name)[:6]
-        size_slug = ''.join(c.upper() if c.isalnum() else '' for c in size_label)[:6]
+        product_slug = "".join(c.upper() if c.isalnum() else "" for c in product_name)[
+            :8
+        ]
+        variant_slug = "".join(c.upper() if c.isalnum() else "" for c in variant_name)[
+            :6
+        ]
+        size_slug = "".join(c.upper() if c.isalnum() else "" for c in size_label)[:6]
 
         return f"{product_slug}-{variant_slug}-{size_slug}"
 
-    def __init__(self, product_id=None, variant_id=None, size_label='Bulk', sku_code=None, sku=None, sku_name=None, unit=None, low_stock_threshold=10.0, inventory_item_id=None, organization_id=None, created_by=None, quantity=None, id=None, **remaining_kwargs):
+    def __init__(
+        self,
+        product_id=None,
+        variant_id=None,
+        size_label="Bulk",
+        sku_code=None,
+        sku=None,
+        sku_name=None,
+        unit=None,
+        low_stock_threshold=10.0,
+        inventory_item_id=None,
+        organization_id=None,
+        created_by=None,
+        quantity=None,
+        id=None,
+        **remaining_kwargs,
+    ):
         # Allow tests to pass quantity= and map to quantity_override
         qty = quantity
         # Don't pass id=None to avoid SQLite autoincrement issues
@@ -392,12 +463,12 @@ class ProductSKU(db.Model, ScopedModelMixin):
         self.variant_id = variant_id
         # Normalize size_label to a clean string
         try:
-            _sz = ('' if size_label is None else str(size_label)).strip()
+            _sz = ("" if size_label is None else str(size_label)).strip()
             if not _sz:
-                _sz = 'Bulk'
-            _sz = ' '.join(_sz.split())[:64]
+                _sz = "Bulk"
+            _sz = " ".join(_sz.split())[:64]
         except Exception:
-            _sz = 'Bulk'
+            _sz = "Bulk"
         self.size_label = _sz
         self.sku_code = sku_code
         self.sku = sku
@@ -415,7 +486,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
             self._quantity = qty
 
     def __repr__(self):
-        return f'<ProductSKU {self.display_name}>'
+        return f"<ProductSKU {self.display_name}>"
 
 
 def _invalidate_product_caches(target) -> None:
@@ -472,10 +543,13 @@ def _product_sku_after_delete(mapper, connection, target):
 # Auto-fill organization_id from the linked inventory item if missing
 @event.listens_for(ProductSKU, "before_insert")
 def _sku_fill_org_id(mapper, connection, target):
-    if not getattr(target, "organization_id", None) and getattr(target, "inventory_item_id", None):
+    if not getattr(target, "organization_id", None) and getattr(
+        target, "inventory_item_id", None
+    ):
         sess = object_session(target)
         if sess is not None:
             from app.models.inventory import InventoryItem
+
             inv = sess.get(InventoryItem, target.inventory_item_id)
-            if inv and getattr(inv, 'organization_id', None):
+            if inv and getattr(inv, "organization_id", None):
                 target.organization_id = inv.organization_id

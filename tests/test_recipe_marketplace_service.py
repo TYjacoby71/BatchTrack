@@ -47,7 +47,9 @@ def test_existing_recipe_defaults_when_fields_missing():
         skin_opt_in=False,
     )
     form = {}
-    ok, payload = RecipeMarketplaceService.extract_submission(form, {}, existing=existing)
+    ok, payload = RecipeMarketplaceService.extract_submission(
+        form, {}, existing=existing
+    )
     assert ok
     marketplace = payload["marketplace"]
     assert marketplace["is_public"] is True

@@ -31,13 +31,17 @@ def format_recipe_lineage_name(recipe: Any, include_test_number: bool = False) -
             base_master = getattr(recipe, "name", None)
         else:
             parent_master = getattr(recipe, "parent_master", None)
-            base_master = getattr(parent_master, "name", None) or getattr(recipe, "name", None)
+            base_master = getattr(parent_master, "name", None) or getattr(
+                recipe, "name", None
+            )
 
     base_master = (base_master or "").strip()
 
     variation_name = None
     if not getattr(recipe, "is_master", False):
-        variation_name = getattr(recipe, "variation_name", None) or getattr(recipe, "name", None)
+        variation_name = getattr(recipe, "variation_name", None) or getattr(
+            recipe, "name", None
+        )
         variation_name = (variation_name or "").strip()
         if not variation_name or variation_name == base_master:
             variation_name = None

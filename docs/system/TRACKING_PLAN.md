@@ -1,91 +1,103 @@
 # Tracking Plan
 
-This plan defines domain events emitted by the app, their properties, and how they map to analytics metrics and warehouse models.
+## Synopsis
+This document defines the current domain-event tracking layer used for analytics and outbox delivery. Events are written to `domain_event` and can be dispatched asynchronously to downstream webhooks.
 
-## Events
+## Glossary
+- **DomainEvent**: Persisted event envelope row in `domain_event`.
+- **Emitter**: `EventEmitter` helper that writes domain events.
+- **Dispatcher**: Background process that delivers unprocessed outbox events.
 
-1) inventory_adjusted
-- When: Any inventory adjustment via canonical delegator
-- Entity: inventory_item
-- Properties:
-  - change_type: string (restock, finished_batch, batch, spoil, expired, trash, damaged, sale, recount, returned, refunded, release_reservation)
-  - quantity_delta: float (positive for adds, negative for deductions)
-  - unit: string
-  - notes: string
-  - cost_override: float|null
-  - original_quantity: float
-  - new_quantity: float
-  - item_name: string
-  - item_type: string (ingredient, container, product)
-  - batch_id: int|null
-  - is_initial_stock: bool
+## Event Transport Architecture
 
-2) batch_started
-- When: After batch creation and deductions commit
-- Entity: batch
-- Properties:
-  - recipe_id: int
-  - scale: float
-  - batch_type: string (ingredient|product)
-  - projected_yield: float
-  - projected_yield_unit: string
-  - label_code: string
+1. Application/services emit events via `EventEmitter.emit(...)`.
+2. Events persist to `domain_event` with context and JSON properties.
+3. Dispatcher command processes pending rows:
+   - `flask dispatch-domain-events`
+4. Downstream consumers read webhook payloads or analytics tables.
 
-3) batch_completed
-- When: After batch completion commit
-- Entity: batch
-- Properties:
-  - label_code: string
-  - final_quantity: float
-  - output_unit: string
-  - completed_at: ISO8601 string
+## Event Envelope (Current)
+Core fields on every event record:
+- `event_name`
+- `occurred_at`
+- `organization_id`
+- `user_id`
+- `entity_type`
+- `entity_id`
+- `correlation_id`
+- `source`
+- `schema_version`
+- `properties` (JSON)
+- outbox status fields (`is_processed`, `processed_at`, `delivery_attempts`)
 
-4) batch_cancelled
-- When: After batch cancellation and restoration commit
-- Entity: batch
-- Properties:
-  - label_code: string
-  - restoration_summary: array of strings
+## Currently Emitted Event Families
 
-5) timer_started
-- When: After `TimerService.create_timer`
-- Entity: timer
-- Properties:
-  - batch_id: int
-  - duration_seconds: int
-  - description: string
+### Inventory
+- `inventory_adjusted`
+  - source: inventory adjustment core delegator
 
-6) timer_stopped
-- When: After `TimerService.stop_timer`
-- Entity: timer
-- Properties:
-  - batch_id: int
-  - duration_seconds: int
+### Batch lifecycle
+- `batch_started`
+- `batch_completed`
+- `batch_cancelled`
+- `batch_failed`
 
-## Warehouse modeling
+### Timer lifecycle
+- `timer_started`
+- `timer_stopped`
 
-- Raw table: `domain_event` (already persisted by the app)
-- Staging (dbt): `stg_events` normalizes event_name, timestamps, tenant and user context
-- Facts:
-  - fct_inventory_movement: from inventory_adjusted events (signed quantity, cost)
-  - fct_batch: from batch_started/completed/cancelled and joins to batch tables
-  - fct_timer: from timer_started/stopped deriving durations
+### Recipe lifecycle
+- `recipe_created`
+- `recipe_updated`
+- `recipe_deleted`
 
-## Core metrics
+### Product lifecycle
+- `product_created`
+- `product_variant_created`
+- `sku_created`
 
-- Inventory usage: sum(quantity_delta) where change_type in ('batch','use','sale','tester','sample','gift') and entity_type='inventory_item'
-- Spoilage cost: sum(cost) where change_type in ('spoil','expired','damaged','trash')
-- Total cost held: latest inventory valuation from application tables; events provide changes
-- Batch time: p50/p90 from `fct_timer` grouped by batch_id
-- Batch cost average: avg(total_actual_cost) from `BatchStats` combined with events for coverage
-- Freshness score: derived from lot age in application tables; events carry item_age context if extended later
-- Overbuying index: days_of_stock vs target; compute with rolling usage from events or existing history
+### Stats/analytics internals
+- `batch_metrics_computed`
 
-## Governance
+## Analytics Mapping Guidance
+- Keep `event_name` stable for downstream models.
+- Prefer additive property fields over destructive schema changes.
+- Use `schema_version` for explicit payload evolution.
+- Scope analytics queries by `organization_id` for tenant isolation.
 
-- All events carry `organization_id` and `user_id` when available. Aggregate across orgs only with strict thresholds.
-- Version schemas using `schema_version` per event; this plan is v1.
+## External Website/Product Analytics
+BatchTrack supports optional client-side analytics snippets in the shared layout:
 
-## Backfill
+- **GA4** via `GOOGLE_ANALYTICS_MEASUREMENT_ID`
+  - Best for acquisition/SEO/marketing attribution.
+  - Captures website traffic trends and campaign performance.
+- **PostHog** via `POSTHOG_PROJECT_API_KEY`
+  - Best for product analytics and behavioral funnels.
+  - Captures pageviews/pageleave events and can be extended to feature-level events.
 
-- Backfill scripts should read from `UnifiedInventoryHistory` and `Batch` to create historical `DomainEvent` rows for key events (inventory_adjusted, batch_completed, etc.).
+Recommended baseline:
+1. Use **GA4** for top-of-funnel traffic and ad attribution.
+2. Use **PostHog** for in-app behavior and retention analysis.
+3. Keep domain events as the backend source of truth for tenant-scoped operational analytics.
+
+### Config keys
+- `GOOGLE_ANALYTICS_MEASUREMENT_ID` (e.g., `G-XXXXXXXXXX`)
+- `POSTHOG_PROJECT_API_KEY`
+- `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`)
+- `POSTHOG_CAPTURE_PAGEVIEW` (default `true`)
+- `POSTHOG_CAPTURE_PAGELEAVE` (default `true`)
+
+## Relevance Check (2026-02-18)
+Validated against:
+- `app/models/domain_event.py`
+- `app/services/event_emitter.py`
+- `app/services/domain_event_dispatcher.py`
+- `app/scripts/commands/maintenance.py`
+- `app/services/inventory_adjustment/_core.py`
+- `app/services/batch_service/batch_operations.py`
+- `app/services/timer_service.py`
+- `app/services/recipe_service/_core.py`
+- `app/services/product_service.py`
+- `app/config_schema_parts/operations.py`
+- `app/config.py`
+- `app/templates/layout.html`

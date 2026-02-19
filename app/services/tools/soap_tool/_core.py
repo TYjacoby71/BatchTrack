@@ -13,7 +13,11 @@ from __future__ import annotations
 from ._additives import compute_additives
 from ._lye_water import compute_lye_water
 from ._quality_report import build_quality_report
-from ._sheet import build_formula_csv_rows, build_formula_csv_text, build_formula_sheet_html
+from ._sheet import (
+    build_formula_csv_rows,
+    build_formula_csv_text,
+    build_formula_sheet_html,
+)
 from .types import SoapToolComputeRequest, _to_float
 
 
@@ -21,7 +25,9 @@ from .types import SoapToolComputeRequest, _to_float
 # Purpose: Build normalized card metrics from computed totals.
 # Inputs: Lye/water result dict, additives dict, quality report dict, and oils total.
 # Outputs: Result-card metric dictionary.
-def _build_results_card(lye_water: dict, additives: dict, quality_report: dict, total_oils: float) -> dict:
+def _build_results_card(
+    lye_water: dict, additives: dict, quality_report: dict, total_oils: float
+) -> dict:
     lye_adjusted = _to_float(lye_water.get("lye_adjusted_g"), 0.0)
     water_g = _to_float(lye_water.get("water_g"), 0.0)
     batch_yield = (
@@ -37,7 +43,9 @@ def _build_results_card(lye_water: dict, additives: dict, quality_report: dict, 
     sat_unsat = quality_report.get("sat_unsat") or {}
     sat = _to_float(sat_unsat.get("saturated"), 0.0)
     unsat = _to_float(sat_unsat.get("unsaturated"), 0.0)
-    sat_unsat_label = f"{round(sat, 0)}:{round(unsat, 0)}" if (sat + unsat) > 0 else "--"
+    sat_unsat_label = (
+        f"{round(sat, 0)}:{round(unsat, 0)}" if (sat + unsat) > 0 else "--"
+    )
     return {
         "lye_adjusted_g": lye_adjusted,
         "water_g": water_g,
@@ -68,17 +76,25 @@ def _apply_citric_lye_adjustment(lye_water: dict, additives: dict) -> dict:
     water_g = _to_float(merged.get("water_g"), 0.0)
     if method == "concentration":
         concentration_input = _to_float(merged.get("lye_concentration_input_pct"), 0.0)
-        water_g = total_adjusted * ((100.0 - concentration_input) / concentration_input) if concentration_input > 0 else 0.0
+        water_g = (
+            total_adjusted * ((100.0 - concentration_input) / concentration_input)
+            if concentration_input > 0
+            else 0.0
+        )
     elif method == "ratio":
         ratio_input = _to_float(merged.get("water_ratio_input"), 0.0)
         water_g = total_adjusted * ratio_input if total_adjusted > 0 else 0.0
     merged["water_g"] = water_g
 
     if (total_adjusted + water_g) > 0:
-        merged["lye_concentration_pct"] = (total_adjusted / (total_adjusted + water_g)) * 100.0
+        merged["lye_concentration_pct"] = (
+            total_adjusted / (total_adjusted + water_g)
+        ) * 100.0
     else:
         merged["lye_concentration_pct"] = 0.0
-    merged["water_lye_ratio"] = (water_g / total_adjusted) if total_adjusted > 0 else 0.0
+    merged["water_lye_ratio"] = (
+        (water_g / total_adjusted) if total_adjusted > 0 else 0.0
+    )
     return merged
 
 
@@ -105,7 +121,9 @@ class SoapToolComputationService:
             sap_avg=_to_float(lye_water.get("sap_avg_koh"), 0.0),
             superfat=_to_float(lye_water.get("superfat_pct"), 0.0),
             water_data={
-                "lye_concentration_pct": _to_float(lye_water.get("lye_concentration_pct"), 0.0),
+                "lye_concentration_pct": _to_float(
+                    lye_water.get("lye_concentration_pct"), 0.0
+                ),
                 "water_lye_ratio": _to_float(lye_water.get("water_lye_ratio"), 0.0),
                 "water_g": _to_float(lye_water.get("water_g"), 0.0),
             },
@@ -148,4 +166,3 @@ class SoapToolComputationService:
 
 
 __all__ = ["SoapToolComputationService"]
-

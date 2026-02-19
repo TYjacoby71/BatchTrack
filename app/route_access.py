@@ -23,12 +23,12 @@ class RouteAccessConfig:
 
     PUBLIC_ENDPOINTS: Tuple[str, ...] = (
         "static",
-        "homepage",
-        "index",
-        "branding_full_logo",
-        "branding_full_logo_header",
-        "branding_app_tile",
-        "public_page",
+        "core.homepage",
+        "core.index",
+        "core.branding_full_logo",
+        "core.branding_full_logo_header",
+        "core.branding_app_tile",
+        "core.public_page",
         "pricing_routes.pricing",
         "landing_pages.lp_hormozi",
         "landing_pages.lp_robbins",
@@ -79,10 +79,10 @@ class RouteAccessConfig:
         "waitlist.join_waitlist",
         "api.health_check",
         "app_routes.vendor_signup",
-        "sitemap_xml",
-        "robots_txt",
-        "llms_txt",
-        "dev_login_legacy",
+        "core.sitemap_xml",
+        "core.robots_txt",
+        "core.llms_txt",
+        "core.dev_login_legacy",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (

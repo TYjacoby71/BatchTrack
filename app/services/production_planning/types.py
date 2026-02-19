@@ -8,8 +8,8 @@ Glossary:
 - Line item: Ingredient/consumable/container data in a plan.
 """
 
-from dataclasses import dataclass, asdict
-from typing import List, Optional, Dict, Any
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -84,22 +84,21 @@ class PlanSnapshot:
             "consumables_plan": [cons.to_dict() for cons in self.consumables_plan],
             "containers": [cont.to_dict() for cont in self.containers],
             "requires_containers": self.requires_containers,
-            "category_extension": self.category_extension
+            "category_extension": self.category_extension,
         }
+
 
 """
 Production Planning Types
 
-Simplified data structures focused on orchestrating recipe → stock → container → batch flow.
+Simplified data structures focused on orchestrating recipe -> stock -> container -> batch flow.
 """
-
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
 
 
 @dataclass
 class ProductionRequest:
     """Request for production planning analysis"""
+
     recipe_id: int
     scale: float = 1.0
     organization_id: Optional[int] = None
@@ -108,6 +107,7 @@ class ProductionRequest:
 @dataclass
 class IngredientRequirement:
     """Individual ingredient requirement from USCS stock check"""
+
     ingredient_id: int
     ingredient_name: str
     scale: float
@@ -123,23 +123,24 @@ class IngredientRequirement:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'item_id': self.ingredient_id,
-            'item_name': self.ingredient_name,
-            'scale': self.scale,
-            'unit': self.unit,
-            'total_cost': self.total_cost,
-            'status': self.status,
-            'category': 'ingredient',
-            'base_quantity': self.base_quantity,
-            'scaled_quantity': self.scaled_quantity,
-            'available_quantity': self.available_quantity,
-            'cost_per_unit': self.cost_per_unit
+            "item_id": self.ingredient_id,
+            "item_name": self.ingredient_name,
+            "scale": self.scale,
+            "unit": self.unit,
+            "total_cost": self.total_cost,
+            "status": self.status,
+            "category": "ingredient",
+            "base_quantity": self.base_quantity,
+            "scaled_quantity": self.scaled_quantity,
+            "available_quantity": self.available_quantity,
+            "cost_per_unit": self.cost_per_unit,
         }
 
 
 @dataclass
 class ContainerFillStrategy:
     """Container fill strategy for production batches"""
+
     selected_containers: List[Dict[str, Any]] = field(default_factory=list)
     total_capacity: float = 0.0
     containment_percentage: float = 0.0
@@ -148,16 +149,17 @@ class ContainerFillStrategy:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'selected_containers': self.selected_containers,
-            'total_capacity': self.total_capacity,
-            'containment_percentage': self.containment_percentage,
-            'strategy_type': self.strategy_type
+            "selected_containers": self.selected_containers,
+            "total_capacity": self.total_capacity,
+            "containment_percentage": self.containment_percentage,
+            "strategy_type": self.strategy_type,
         }
 
 
 @dataclass
 class ContainerOption:
     """Individual container option for selection"""
+
     container_id: int
     container_name: str
     capacity: float
@@ -168,19 +170,20 @@ class ContainerOption:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'container_id': self.container_id,
-            'container_name': self.container_name,
-            'capacity': self.capacity,
-            'available_quantity': self.available_quantity,
-            'containers_needed': self.containers_needed,
-            'cost_each': self.cost_each,
-            'category': 'container'
+            "container_id": self.container_id,
+            "container_name": self.container_name,
+            "capacity": self.capacity,
+            "available_quantity": self.available_quantity,
+            "containers_needed": self.containers_needed,
+            "cost_each": self.cost_each,
+            "category": "container",
         }
 
 
 @dataclass
 class ContainerStrategy:
     """Complete container strategy for production"""
+
     selected_containers: List[ContainerOption] = field(default_factory=list)
     total_capacity: float = 0.0
     containment_percentage: float = 0.0
@@ -190,17 +193,20 @@ class ContainerStrategy:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'selected_containers': [c.__dict__ for c in self.selected_containers],
-            'total_capacity': self.total_capacity,
-            'containment_percentage': self.containment_percentage,
-            'fill_strategy': self.fill_strategy.to_dict() if self.fill_strategy else None,
-            'warnings': self.warnings
+            "selected_containers": [c.__dict__ for c in self.selected_containers],
+            "total_capacity": self.total_capacity,
+            "containment_percentage": self.containment_percentage,
+            "fill_strategy": (
+                self.fill_strategy.to_dict() if self.fill_strategy else None
+            ),
+            "warnings": self.warnings,
         }
 
 
 @dataclass
 class CostBreakdown:
     """Simple cost analysis"""
+
     ingredient_costs: List[Dict[str, Any]] = field(default_factory=list)
     container_costs: List[Dict[str, Any]] = field(default_factory=list)
     total_ingredient_cost: float = 0.0
@@ -208,25 +214,26 @@ class CostBreakdown:
     total_production_cost: float = 0.0
     cost_per_unit: float = 0.0
     yield_amount: float = 0.0
-    yield_unit: str = 'count'
+    yield_unit: str = "count"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'total_cost': self.total_production_cost,
-            'cost_per_unit': self.cost_per_unit,
-            'ingredient_cost': self.total_ingredient_cost,
-            'container_cost': self.total_container_cost,
-            'ingredient_costs': self.ingredient_costs,
-            'container_costs': self.container_costs,
-            'yield_amount': self.yield_amount,
-            'yield_unit': self.yield_unit
+            "total_cost": self.total_production_cost,
+            "cost_per_unit": self.cost_per_unit,
+            "ingredient_cost": self.total_ingredient_cost,
+            "container_cost": self.total_container_cost,
+            "ingredient_costs": self.ingredient_costs,
+            "container_costs": self.container_costs,
+            "yield_amount": self.yield_amount,
+            "yield_unit": self.yield_unit,
         }
 
 
 @dataclass
 class ProductionPlan:
     """Complete production plan for batch handoff"""
+
     request: ProductionRequest
     feasible: bool
     ingredient_requirements: List[IngredientRequirement]
@@ -250,12 +257,16 @@ class ProductionPlan:
             stock_results.append(container.to_dict())
 
         return {
-            'success': True,
-            'feasible': self.feasible,
-            'stock_results': stock_results,
-            'ingredient_requirements': [req.to_dict() for req in self.ingredient_requirements],
-            'container_options': [opt.to_dict() for opt in self.container_options],
-            'projected_yield': self.projected_yield,
-            'cost_breakdown': self.cost_breakdown.to_dict() if self.cost_breakdown else {},
-            'issues': self.issues
+            "success": True,
+            "feasible": self.feasible,
+            "stock_results": stock_results,
+            "ingredient_requirements": [
+                req.to_dict() for req in self.ingredient_requirements
+            ],
+            "container_options": [opt.to_dict() for opt in self.container_options],
+            "projected_yield": self.projected_yield,
+            "cost_breakdown": (
+                self.cost_breakdown.to_dict() if self.cost_breakdown else {}
+            ),
+            "issues": self.issues,
         }

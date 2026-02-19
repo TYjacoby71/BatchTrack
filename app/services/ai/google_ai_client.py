@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+)
 
 import google.generativeai as genai
 from flask import current_app
@@ -89,7 +98,9 @@ class GoogleAIClient:
     ) -> GoogleAIResult:
         """Call Gemini and normalize the response."""
         if not contents:
-            raise GoogleAIClientError("Gemini requests require at least one content block.")
+            raise GoogleAIClientError(
+                "Gemini requests require at least one content block."
+            )
 
         payload: MutableMapping[str, Any] = {
             "contents": list(contents),
@@ -118,7 +129,11 @@ class GoogleAIClient:
             response = _collect_stream(response)
 
         text = _first_text(response)
-        finish_reason = getattr(response, "candidates", [{}])[0].get("finish_reason") if hasattr(response, "candidates") else None
+        finish_reason = (
+            getattr(response, "candidates", [{}])[0].get("finish_reason")
+            if hasattr(response, "candidates")
+            else None
+        )
         usage = getattr(response, "usage_metadata", None)
         tool_calls = _extract_tool_calls(response)
 

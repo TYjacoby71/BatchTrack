@@ -93,7 +93,9 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
             global_item_id = to_int(pick(row, "global_item_id", "globalItemId"))
             quantity = to_float(row.get("quantity"), 0.0)
             if kind == "container":
-                entry: dict[str, Any] = {"quantity": int(quantity) if quantity > 0 else 1}
+                entry: dict[str, Any] = {
+                    "quantity": int(quantity) if quantity > 0 else 1
+                }
             else:
                 entry = {
                     "quantity": float(quantity) if quantity >= 0 else 0.0,
@@ -120,9 +122,10 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
         fatty_profile = pick(oil, "fatty_profile", "fattyProfile") or None
         global_item_id = to_int(pick(oil, "global_item_id", "globalItemId"))
         default_unit = text(pick(oil, "default_unit", "defaultUnit")) or None
-        ingredient_category_name = text(
-            pick(oil, "ingredient_category_name", "ingredientCategoryName")
-        ) or None
+        ingredient_category_name = (
+            text(pick(oil, "ingredient_category_name", "ingredientCategoryName"))
+            or None
+        )
 
         oil_note = {
             "name": oil_name,
@@ -155,10 +158,22 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
     lye_adjusted = to_float(calc.get("lyeAdjusted"), 0.0)
     water_g = to_float(calc.get("water"), 0.0)
     if lye_adjusted > 0:
-        lye_name = "Potassium Hydroxide (KOH)" if lye_type == "KOH" else "Sodium Hydroxide (NaOH)"
-        base_ingredients.append({"name": lye_name, "quantity": round_to(lye_adjusted, 2), "unit": "gram"})
+        lye_name = (
+            "Potassium Hydroxide (KOH)"
+            if lye_type == "KOH"
+            else "Sodium Hydroxide (NaOH)"
+        )
+        base_ingredients.append(
+            {"name": lye_name, "quantity": round_to(lye_adjusted, 2), "unit": "gram"}
+        )
     if water_g > 0:
-        base_ingredients.append({"name": "Distilled Water", "quantity": round_to(water_g, 2), "unit": "gram"})
+        base_ingredients.append(
+            {
+                "name": "Distilled Water",
+                "quantity": round_to(water_g, 2),
+                "unit": "gram",
+            }
+        )
 
     additives = as_mapping(calc.get("additives"))
     fragrances_raw = as_list(calc.get("fragrances"))
@@ -178,9 +193,17 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
         }
         row_global_item_id = to_int(pick(row, "global_item_id", "globalItemId"))
         row_default_unit = text(pick(row, "default_unit", "defaultUnit")) or None
-        row_category = text(
-            pick(row, "ingredient_category_name", "ingredientCategoryName", "categoryName")
-        ) or None
+        row_category = (
+            text(
+                pick(
+                    row,
+                    "ingredient_category_name",
+                    "ingredientCategoryName",
+                    "categoryName",
+                )
+            )
+            or None
+        )
         if row_global_item_id is not None:
             ingredient_entry["global_item_id"] = row_global_item_id
         if row_default_unit:
@@ -220,17 +243,21 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
                 f"{prefix}_global_item_id",
             )
         )
-        additive_default_unit = text(
-            pick(additives, f"{prefix}DefaultUnit", f"{prefix}_default_unit")
-        ) or None
-        additive_category = text(
-            pick(
-                additives,
-                f"{prefix}CategoryName",
-                f"{prefix}_ingredient_category_name",
-                f"{prefix}_category_name",
+        additive_default_unit = (
+            text(pick(additives, f"{prefix}DefaultUnit", f"{prefix}_default_unit"))
+            or None
+        )
+        additive_category = (
+            text(
+                pick(
+                    additives,
+                    f"{prefix}CategoryName",
+                    f"{prefix}_ingredient_category_name",
+                    f"{prefix}_category_name",
+                )
             )
-        ) or None
+            or None
+        )
         if additive_gi is not None:
             entry["global_item_id"] = additive_gi
         if additive_default_unit:
@@ -270,9 +297,15 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
         "waterWeight": to_float(pick(mold_raw, "waterWeight", "water_weight"), 0.0),
         "oilPct": to_float(pick(mold_raw, "oilPct", "oil_pct"), 0.0),
         "shape": text(mold_raw.get("shape"), "loaf"),
-        "useCylinder": bool(pick(mold_raw, "useCylinder", "use_cylinder", default=False)),
-        "cylinderFactor": to_float(pick(mold_raw, "cylinderFactor", "cylinder_factor"), 0.0),
-        "effectiveCapacity": to_float(pick(mold_raw, "effectiveCapacity", "effective_capacity"), 0.0),
+        "useCylinder": bool(
+            pick(mold_raw, "useCylinder", "use_cylinder", default=False)
+        ),
+        "cylinderFactor": to_float(
+            pick(mold_raw, "cylinderFactor", "cylinder_factor"), 0.0
+        ),
+        "effectiveCapacity": to_float(
+            pick(mold_raw, "effectiveCapacity", "effective_capacity"), 0.0
+        ),
         "targetOils": to_float(pick(mold_raw, "targetOils", "target_oils"), 0.0),
     }
 
@@ -336,9 +369,15 @@ def build_soap_recipe_payload(payload: dict | None) -> dict:
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    custom_ingredients = normalize_line_rows(as_list(lines.get("ingredients")), "ingredient")
-    custom_consumables = normalize_line_rows(as_list(lines.get("consumables")), "consumable")
-    custom_containers = normalize_line_rows(as_list(lines.get("containers")), "container")
+    custom_ingredients = normalize_line_rows(
+        as_list(lines.get("ingredients")), "ingredient"
+    )
+    custom_consumables = normalize_line_rows(
+        as_list(lines.get("consumables")), "consumable"
+    )
+    custom_containers = normalize_line_rows(
+        as_list(lines.get("containers")), "container"
+    )
 
     return {
         "name": "Soap (Draft)",

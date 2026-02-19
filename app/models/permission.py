@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+
 from ..extensions import db
 
+
 class Permission(db.Model):
-    __tablename__ = 'permission'
+    __tablename__ = "permission"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
@@ -13,10 +15,12 @@ class Permission(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationship to roles
-    roles = db.relationship('Role', secondary='role_permission', back_populates='permissions')
+    roles = db.relationship(
+        "Role", secondary="role_permission", back_populates="permissions"
+    )
 
     def __repr__(self):
-        return f'<Permission {self.name}>'
+        return f"<Permission {self.name}>"
 
     @classmethod
     def get_all_permissions(cls):
@@ -29,8 +33,12 @@ class Permission(db.Model):
         # This can be extended to check tier-specific permissions
         return True
 
+
 # Association table for many-to-many relationship
-role_permission = db.Table('role_permission',
-    db.Column('role_id', db.Integer, db.ForeignKey('role.id'), primary_key=True),
-    db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True)
+role_permission = db.Table(
+    "role_permission",
+    db.Column("role_id", db.Integer, db.ForeignKey("role.id"), primary_key=True),
+    db.Column(
+        "permission_id", db.Integer, db.ForeignKey("permission.id"), primary_key=True
+    ),
 )

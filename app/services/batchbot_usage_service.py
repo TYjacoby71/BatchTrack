@@ -15,7 +15,14 @@ from .batchbot_credit_service import BatchBotCreditService
 class BatchBotLimitError(RuntimeError):
     """Raised when an organization exceeds its BatchBot quota."""
 
-    def __init__(self, *, allowed: int | None, used: int, window_end: date, credits_remaining: int = 0):
+    def __init__(
+        self,
+        *,
+        allowed: int | None,
+        used: int,
+        window_end: date,
+        credits_remaining: int = 0,
+    ):
         super().__init__("BatchBot request limit reached for the current window.")
         self.allowed = allowed
         self.used = used
@@ -59,13 +66,21 @@ class BatchBotUsageService:
             window_start=window_start,
         ).first()
 
-        metadata = record.details if isinstance(record, BatchBotUsage) and isinstance(record.details, dict) else {}
+        metadata = (
+            record.details
+            if isinstance(record, BatchBotUsage) and isinstance(record.details, dict)
+            else {}
+        )
         used = record.request_count if record else 0
         remaining = None if allowed is None or allowed < 0 else max(allowed - used, 0)
 
         chat_limit = BatchBotUsageService._resolve_chat_limit()
         chat_used = int((metadata or {}).get("chat_messages", 0) or 0)
-        chat_remaining = None if chat_limit is None or chat_limit < 0 else max(chat_limit - chat_used, 0)
+        chat_remaining = (
+            None
+            if chat_limit is None or chat_limit < 0
+            else max(chat_limit - chat_used, 0)
+        )
 
         return BatchBotUsageSnapshot(
             allowed=allowed,
@@ -136,18 +151,28 @@ class BatchBotUsageService:
             if new_credit_need > 0:
                 BatchBotCreditService.consume(org, new_credit_need)
                 credits_consumed += new_credit_need
-                metadata_dict.update({
-                    "limit": allowed,
-                    "credits_consumed": credits_consumed,
-                    "chat_messages": chat_messages,
-                })
+                metadata_dict.update(
+                    {
+                        "limit": allowed,
+                        "credits_consumed": credits_consumed,
+                        "chat_messages": chat_messages,
+                    }
+                )
                 record.details = metadata_dict
 
         db.session.commit()
 
-        remaining = None if allowed is None or allowed < 0 else max(allowed - record.request_count, 0)
+        remaining = (
+            None
+            if allowed is None or allowed < 0
+            else max(allowed - record.request_count, 0)
+        )
         chat_limit = BatchBotUsageService._resolve_chat_limit()
-        chat_remaining = None if chat_limit is None or chat_limit < 0 else max(chat_limit - chat_messages, 0)
+        chat_remaining = (
+            None
+            if chat_limit is None or chat_limit < 0
+            else max(chat_limit - chat_messages, 0)
+        )
 
         return BatchBotUsageSnapshot(
             allowed=allowed,
@@ -161,7 +186,9 @@ class BatchBotUsageService:
         )
 
     @staticmethod
-    def record_chat(*, org: Organization, user: User | None, delta: int = 1) -> BatchBotUsageSnapshot:
+    def record_chat(
+        *, org: Organization, user: User | None, delta: int = 1
+    ) -> BatchBotUsageSnapshot:
         BatchBotUsageService._ensure_chat_quota(org, delta=delta)
 
         allowed = BatchBotUsageService._resolve_limit(org)
@@ -196,7 +223,9 @@ class BatchBotUsageService:
     @staticmethod
     def _window_bounds(now: Optional[datetime] = None) -> tuple[date, date]:
         now = now or TimezoneUtils.utc_now()
-        window_days = max(1, int(current_app.config.get("BATCHBOT_REQUEST_WINDOW_DAYS", 30)))
+        window_days = max(
+            1, int(current_app.config.get("BATCHBOT_REQUEST_WINDOW_DAYS", 30))
+        )
 
         epoch = date(2024, 1, 1)
         delta_days = (now.date() - epoch).days
@@ -236,4 +265,6 @@ class BatchBotUsageService:
         snapshot = BatchBotUsageService.get_usage_snapshot(org)
         projected = snapshot.chat_used + max(delta, 0)
         if limit and projected > limit:
-            raise BatchBotChatLimitError(limit=limit, used=snapshot.chat_used, window_end=snapshot.window_end)
+            raise BatchBotChatLimitError(
+                limit=limit, used=snapshot.chat_used, window_end=snapshot.window_end
+            )

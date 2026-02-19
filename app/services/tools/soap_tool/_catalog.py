@@ -94,7 +94,9 @@ def _load_soapcalc_catalog_records() -> list[dict[str, Any]]:
         name = (row.get("name") or "").strip()
         if not name:
             continue
-        category_name = (row.get("ingredient_category_name") or "").strip() or "Oils (Carrier & Fixed)"
+        category_name = (
+            row.get("ingredient_category_name") or ""
+        ).strip() or "Oils (Carrier & Fixed)"
         records.append(
             {
                 "key": f"soapcalc:{name.lower()}",
@@ -102,7 +104,9 @@ def _load_soapcalc_catalog_records() -> list[dict[str, Any]]:
                 "aliases": _parse_soap_catalog_aliases(row.get("aliases")),
                 "sap_koh": _parse_soap_catalog_float(row.get("sap_koh")),
                 "iodine": _parse_soap_catalog_float(row.get("iodine")),
-                "fatty_profile": _normalize_soap_catalog_fatty_profile(row.get("fatty_profile")),
+                "fatty_profile": _normalize_soap_catalog_fatty_profile(
+                    row.get("fatty_profile")
+                ),
                 "default_unit": (row.get("default_unit") or "").strip() or "gram",
                 "ingredient_category_name": category_name,
                 "global_item_id": None,
@@ -120,9 +124,10 @@ def _load_soapcalc_catalog_records() -> list[dict[str, Any]]:
 def _load_global_oil_catalog_records() -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     items = (
-        GlobalItem.query
-        .options(
-            selectinload(GlobalItem.ingredient).selectinload(IngredientDefinition.category),
+        GlobalItem.query.options(
+            selectinload(GlobalItem.ingredient).selectinload(
+                IngredientDefinition.category
+            ),
             selectinload(GlobalItem.ingredient_category),
         )
         .filter(GlobalItem.item_type == "ingredient")
@@ -140,7 +145,9 @@ def _load_global_oil_catalog_records() -> list[dict[str, Any]]:
             if ingredient_obj and getattr(ingredient_obj, "category", None)
             else getattr(gi, "ingredient_category", None)
         )
-        category_name = (ingredient_category_obj.name if ingredient_category_obj else "") or ""
+        category_name = (
+            ingredient_category_obj.name if ingredient_category_obj else ""
+        ) or ""
         if category_name.strip().lower() not in SOAP_BULK_ALLOWED_CATEGORIES:
             continue
         records.append(
@@ -148,9 +155,13 @@ def _load_global_oil_catalog_records() -> list[dict[str, Any]]:
                 "key": f"global:{gi.id}",
                 "name": name,
                 "aliases": _parse_soap_catalog_aliases(getattr(gi, "aliases", None)),
-                "sap_koh": _parse_soap_catalog_float(getattr(gi, "saponification_value", None)),
+                "sap_koh": _parse_soap_catalog_float(
+                    getattr(gi, "saponification_value", None)
+                ),
                 "iodine": _parse_soap_catalog_float(getattr(gi, "iodine_value", None)),
-                "fatty_profile": _normalize_soap_catalog_fatty_profile(getattr(gi, "fatty_acid_profile", None)),
+                "fatty_profile": _normalize_soap_catalog_fatty_profile(
+                    getattr(gi, "fatty_acid_profile", None)
+                ),
                 "default_unit": (getattr(gi, "default_unit", None) or "gram"),
                 "ingredient_category_name": category_name or "Oils (Carrier & Fixed)",
                 "global_item_id": gi.id,
@@ -234,7 +245,9 @@ def _soap_bulk_cache_key(namespace: str, payload: dict[str, Any]) -> str:
 # Purpose: Reuse merged catalog payloads for hot modal traffic.
 # Inputs: Mode token and optional bypass flag.
 # Outputs: Catalog rows ready for page/filter operations.
-def build_bulk_catalog(mode: str, *, bypass_cache: bool = False) -> list[dict[str, Any]]:
+def build_bulk_catalog(
+    mode: str, *, bypass_cache: bool = False
+) -> list[dict[str, Any]]:
     normalized_mode = normalize_bulk_mode(mode)
     if bypass_cache or not cache:
         return _build_soap_bulk_catalog_uncached(normalized_mode)
@@ -288,7 +301,8 @@ def serialize_bulk_record(record: dict[str, Any]) -> dict[str, Any]:
         "iodine": record.get("iodine"),
         "fatty_profile": record.get("fatty_profile") or {},
         "default_unit": record.get("default_unit") or "gram",
-        "ingredient_category_name": record.get("ingredient_category_name") or "Oils (Carrier & Fixed)",
+        "ingredient_category_name": record.get("ingredient_category_name")
+        or "Oils (Carrier & Fixed)",
         "global_item_id": record.get("global_item_id"),
         "source": record.get("source") or "soapcalc",
         "is_basic": bool(record.get("is_basic")),
@@ -311,6 +325,7 @@ def page_bulk_catalog(
     normalized_query = (query or "").strip().lower()
     query_terms = [term for term in normalized_query.split() if term]
     if query_terms:
+
         def _matches_query(record: dict[str, Any]) -> bool:
             blob = " ".join(
                 [
@@ -326,10 +341,14 @@ def page_bulk_catalog(
         filtered = list(records)
 
     normalized_sort_key = normalize_bulk_sort_key(sort_key)
-    normalized_sort_dir = "desc" if (sort_dir or "").strip().lower() == "desc" else "asc"
+    normalized_sort_dir = (
+        "desc" if (sort_dir or "").strip().lower() == "desc" else "asc"
+    )
     reverse = normalized_sort_dir == "desc"
     if normalized_sort_key == "name":
-        filtered.sort(key=lambda row: str(row.get("name") or "").lower(), reverse=reverse)
+        filtered.sort(
+            key=lambda row: str(row.get("name") or "").lower(), reverse=reverse
+        )
     else:
         filtered.sort(
             key=lambda row: (
@@ -342,7 +361,7 @@ def page_bulk_catalog(
     total_count = len(filtered)
     safe_offset = max(0, _to_int(offset, 0))
     safe_limit = max(1, min(SOAP_BULK_PAGE_MAX, _to_int(limit, SOAP_BULK_PAGE_DEFAULT)))
-    page_rows = filtered[safe_offset:safe_offset + safe_limit]
+    page_rows = filtered[safe_offset : safe_offset + safe_limit]
     return page_rows, total_count
 
 
@@ -363,7 +382,9 @@ def get_bulk_catalog_page(
     normalized_mode = normalize_bulk_mode(mode)
     normalized_query = (query or "").strip()
     normalized_sort_key = normalize_bulk_sort_key(sort_key)
-    normalized_sort_dir = "desc" if (sort_dir or "").strip().lower() == "desc" else "asc"
+    normalized_sort_dir = (
+        "desc" if (sort_dir or "").strip().lower() == "desc" else "asc"
+    )
     safe_offset = max(0, _to_int(offset, 0))
     safe_limit = max(1, min(SOAP_BULK_PAGE_MAX, _to_int(limit, SOAP_BULK_PAGE_DEFAULT)))
 

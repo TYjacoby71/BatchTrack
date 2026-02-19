@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from typing import Dict, List, Set, Tuple
 
 import pytz
@@ -123,14 +124,18 @@ class TimezoneUtils:
 
         region = TimezoneUtils._get_timezone_region(tz_name)
         grouped.setdefault(region, [])
-        grouped[region].append((tz_name, TimezoneUtils._format_timezone_display(tz_name)))
+        grouped[region].append(
+            (tz_name, TimezoneUtils._format_timezone_display(tz_name))
+        )
         seen.add(tz_name)
 
     @staticmethod
     def _build_suggestions(
         detected_timezone: str | None, seen: Set[str]
     ) -> List[Tuple[str, str]]:
-        if not detected_timezone or not TimezoneUtils.validate_timezone(detected_timezone):
+        if not detected_timezone or not TimezoneUtils.validate_timezone(
+            detected_timezone
+        ):
             return []
 
         suggestions: List[Tuple[str, str]] = [
@@ -147,7 +152,9 @@ class TimezoneUtils:
                 continue
             if TimezoneUtils._get_timezone_region(tz_name) != region:
                 continue
-            suggestions.append((tz_name, TimezoneUtils._format_timezone_display(tz_name)))
+            suggestions.append(
+                (tz_name, TimezoneUtils._format_timezone_display(tz_name))
+            )
             seen.add(tz_name)
             if len(suggestions) >= 5:  # detected + 4 related entries
                 break
@@ -160,7 +167,11 @@ class TimezoneUtils:
         if prefix in {"US", "Canada"}:
             return "North America"
         if prefix == "America":
-            return "South America" if tz_name.startswith(_SOUTH_AMERICA_PREFIXES) else "North America"
+            return (
+                "South America"
+                if tz_name.startswith(_SOUTH_AMERICA_PREFIXES)
+                else "North America"
+            )
         if prefix == "Europe":
             return "Europe"
         if prefix == "Asia":
@@ -216,7 +227,11 @@ class TimezoneUtils:
         """Convert a datetime into the target timezone, assuming UTC for naive values."""
         if dt is None:
             return None
-        target = TimezoneUtils._get_timezone(to_timezone if TimezoneUtils.validate_timezone(to_timezone) else DEFAULT_TIMEZONE)
+        target = TimezoneUtils._get_timezone(
+            to_timezone
+            if TimezoneUtils.validate_timezone(to_timezone)
+            else DEFAULT_TIMEZONE
+        )
         aware = TimezoneUtils.ensure_timezone_aware(dt, assume_utc=assume_utc)
         return aware.astimezone(target)
 
@@ -298,7 +313,9 @@ class TimezoneUtils:
 
     @staticmethod
     def format_for_user(
-        dt: datetime | None, format_string: str = "%Y-%m-%d %H:%M:%S", user_timezone: str | None = None
+        dt: datetime | None,
+        format_string: str = "%Y-%m-%d %H:%M:%S",
+        user_timezone: str | None = None,
     ) -> str:
         """Format a datetime for presentation in the user's timezone."""
         localized = TimezoneUtils.to_user_timezone(dt, user_timezone)
@@ -313,7 +330,9 @@ class TimezoneUtils:
             return None
         if dt.tzinfo is None:
             if not assume_utc:
-                raise ValueError("Naive datetime provided without explicit timezone handling.")
+                raise ValueError(
+                    "Naive datetime provided without explicit timezone handling."
+                )
             return dt.replace(tzinfo=dt_timezone.utc)
         return dt
 
@@ -346,6 +365,8 @@ class TimezoneUtils:
         return {
             "utc": aware.isoformat(),
             "local": localized.isoformat() if localized else None,
-            "display": localized.strftime("%b %d, %Y %I:%M %p %Z") if localized else None,
+            "display": (
+                localized.strftime("%b %d, %Y %I:%M %p %Z") if localized else None
+            ),
             "timezone": target_name,
         }

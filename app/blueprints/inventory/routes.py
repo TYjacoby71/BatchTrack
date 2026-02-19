@@ -8,43 +8,87 @@ Glossary:
 - FIFO lot: Individual inventory lot tracked by FIFO.
 """
 
+import logging
 from datetime import datetime, timezone
-
 from types import SimpleNamespace
 
-from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, current_app
-from flask_login import login_required, current_user
-from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User, GlobalItem
-from app.utils.permissions import permission_required, role_required
-from app.utils.api_responses import api_error, api_success
-from app.extensions import cache, limiter
-from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
-from app.services.inventory_alerts import InventoryAlertService
-from app.services.reservation_service import ReservationService
-from app.utils.timezone_utils import TimezoneUtils
-import logging
-from ...utils.unit_utils import get_global_unit_list
-from ...utils.inventory_event_code_generator import int_to_base36
-from sqlalchemy import and_, or_, func
+from flask import (
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_login import current_user, login_required
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload, selectinload
+
+from app.extensions import cache, limiter
+from app.models import (
+    GlobalItem,
+    IngredientCategory,
+    InventoryItem,
+    UnifiedInventoryHistory,
+    Unit,
+    User,
+    UserPreferences,
+    db,
+)
 from app.models.inventory_lot import InventoryLot
-from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
-from app.services.bulk_inventory_service import BulkInventoryService, BulkInventoryServiceError
-from datetime import datetime, timezone # Fix missing timezone import
+from app.services.bulk_inventory_service import (
+    BulkInventoryService,
+    BulkInventoryServiceError,
+)
+from app.services.cache_invalidation import inventory_list_cache_key
+from app.services.inventory_adjustment import (
+    create_inventory_item,
+    process_inventory_adjustment,
+    update_inventory_item,
+)
+from app.services.inventory_adjustment._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
+from app.services.inventory_tracking_policy import (
+    org_allows_inventory_quantity_tracking,
+)
+from app.utils.cache_utils import should_bypass_cache
+from app.utils.permissions import permission_required
+from app.utils.settings import is_feature_enabled
+from app.utils.timezone_utils import TimezoneUtils
+
+from ...utils.inventory_event_code_generator import int_to_base36
+from ...utils.unit_utils import get_global_unit_list
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
-from app.services.cache_invalidation import inventory_list_cache_key
-from app.utils.cache_utils import should_bypass_cache
-from app.utils.settings import is_feature_enabled
 
 logger = logging.getLogger(__name__)
 
 
+# --- Bulk-updates feature flag ---
+# Purpose: Determine whether bulk inventory updates are enabled in this environment.
+# Inputs: None.
+# Outputs: Boolean indicating if bulk-inventory UI/API surfaces should be available.
 def _bulk_inventory_updates_enabled() -> bool:
     return is_feature_enabled("FEATURE_BULK_INVENTORY_UPDATES")
 
 
+# --- Inventory quantity-tracking entitlement ---
+# Purpose: Resolve whether current organization tier allows tracked quantities.
+# Inputs: Current authenticated user context.
+# Outputs: Boolean indicating whether quantity tracking mode is allowed.
+def _org_tracks_inventory_quantities() -> bool:
+    """Whether current org tier allows tracked quantity mode."""
+    return org_allows_inventory_quantity_tracking(
+        organization=getattr(current_user, "organization", None),
+    )
+
+
+# --- Expired quantity map ---
+# Purpose: Compute expired remaining quantities by inventory item id.
+# Inputs: Iterable of inventory item ids.
+# Outputs: Dictionary mapping item_id -> expired remaining quantity (base units).
 def _expired_quantity_map(item_ids):
     if not item_ids:
         return {}
@@ -57,7 +101,7 @@ def _expired_quantity_map(item_ids):
         .filter(
             InventoryLot.inventory_item_id.in_(item_ids),
             InventoryLot.remaining_quantity_base > 0,
-            InventoryLot.expiration_date != None,
+            InventoryLot.expiration_date is not None,
             InventoryLot.expiration_date < today,
         )
         .group_by(InventoryLot.inventory_item_id)
@@ -66,12 +110,18 @@ def _expired_quantity_map(item_ids):
     return {row[0]: int(row[1] or 0) for row in rows}
 
 
+# --- Serialize inventory list payload ---
+# Purpose: Build template/cache-safe inventory item payloads with computed fields.
+# Inputs: InventoryItem ORM rows for one list query.
+# Outputs: Tuple of (serialized item dictionaries, total inventory value float).
 def _serialize_inventory_items(items):
-    from ...blueprints.expiration.services import ExpirationService
     from app.services.quantity_base import from_base_quantity
+
+    from ...blueprints.expiration.services import ExpirationService
 
     serialized = []
     total_value = 0.0
+    org_tracks_quantities = _org_tracks_inventory_quantities()
     perishable_ids = [item.id for item in items if item.is_perishable]
     expired_map = _expired_quantity_map(perishable_ids)
 
@@ -105,6 +155,8 @@ def _serialize_inventory_items(items):
                 "cost_per_unit": float(item.cost_per_unit or 0.0),
                 "freshness_percent": freshness,
                 "is_perishable": bool(item.is_perishable),
+                "is_tracked": bool(getattr(item, "is_tracked", True))
+                and org_tracks_quantities,
                 "is_archived": bool(item.is_archived),
                 "low_stock_threshold": float(item.low_stock_threshold or 0.0),
                 "global_item_id": item.global_item_id,
@@ -124,6 +176,10 @@ def _serialize_inventory_items(items):
     return serialized, total_value
 
 
+# --- Hydrate serialized inventory items ---
+# Purpose: Reconstruct lightweight template objects from cached serialized payloads.
+# Inputs: List of serialized inventory item dictionaries.
+# Outputs: List of SimpleNamespace objects mirroring inventory attributes.
 def _hydrate_inventory_items(serialized_items):
     hydrated = []
     for entry in serialized_items:
@@ -153,23 +209,31 @@ def _hydrate_inventory_items(serialized_items):
         hydrated.append(item)
     return hydrated
 
+
+# --- Inventory edit authorization helper ---
+# Purpose: Decide whether current user may mutate a specific inventory item.
+# Inputs: InventoryItem object to evaluate against current user scope.
+# Outputs: Boolean authorization decision.
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
     if not current_user.is_authenticated:
         return False
-    if current_user.user_type == 'developer':
+    if current_user.user_type == "developer":
         return True
     return item.organization_id == current_user.organization_id
+
 
 # =========================================================
 # INVENTORY APIs
 # =========================================================
 # --- Inventory search ---
 # Purpose: Search inventory items for typeahead results.
-@inventory_bp.route('/api/search')
+# Inputs: Query-string search text plus optional type/change_type filters.
+# Outputs: JSON payload with suggestion records or error details.
+@inventory_bp.route("/api/search")
 @login_required
 @limiter.limit("2000/minute")
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def api_search_inventory():
     """Search inventory items by name (org-scoped), optionally filtered by type.
 
@@ -182,26 +246,30 @@ def api_search_inventory():
     """
     try:
         from app.services.inventory_search import InventorySearchService
-        q = (request.args.get('q') or '').strip()
-        inv_type = (request.args.get('type') or '').strip()
-        change_type = (request.args.get('change_type') or '').strip()
+
+        q = (request.args.get("q") or "").strip()
+        inv_type = (request.args.get("type") or "").strip()
+        change_type = (request.args.get("change_type") or "").strip()
         results = InventorySearchService.search_inventory_items(
             query_text=q,
             inventory_type=inv_type if inv_type else None,
             organization_id=current_user.organization_id,
             change_type=change_type,
-            limit=20
+            limit=20,
         )
-        return jsonify({'results': results})
+        return jsonify({"results": results})
     except Exception as e:
-        logger.exception('Inventory search failed')
-        return jsonify({'results': [], 'error': str(e)}), 500
+        logger.exception("Inventory search failed")
+        return jsonify({"results": [], "error": str(e)}), 500
+
 
 # --- Inventory detail ---
 # Purpose: Return inventory item details for the edit modal.
-@inventory_bp.route('/api/get-item/<int:item_id>')
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON item detail payload for edit modal population.
+@inventory_bp.route("/api/get-item/<int:item_id>")
 @login_required
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def api_get_inventory_item(item_id):
     """Return inventory item details for the edit modal (org-scoped)."""
     try:
@@ -210,40 +278,47 @@ def api_get_inventory_item(item_id):
             query = query.filter_by(organization_id=current_user.organization_id)
         item = query.filter_by(id=item_id).first()
         if not item:
-            return jsonify({'error': 'Item not found'}), 404
+            return jsonify({"error": "Item not found"}), 404
 
-        return jsonify({
-            'id': item.id,
-            'name': item.name,
-            'quantity': float(item.quantity or 0),
-            'unit': item.unit,
-            'cost_per_unit': float(item.cost_per_unit or 0),
-            'type': item.type,
-            'global_item_id': getattr(item, 'global_item_id', None),
-            'ownership': getattr(item, 'ownership', None),
-            'global_item_name': getattr(getattr(item, 'global_item', None), 'name', None),
-            'category_id': getattr(item, 'category_id', None),
-            'density': item.density,
-            'is_perishable': bool(item.is_perishable),
-            'shelf_life_days': item.shelf_life_days,
-            'capacity': getattr(item, 'capacity', None),
-            'capacity_unit': getattr(item, 'capacity_unit', None),
-            'container_material': getattr(item, 'container_material', None),
-            'container_type': getattr(item, 'container_type', None),
-            'container_style': getattr(item, 'container_style', None),
-            'container_color': getattr(item, 'container_color', None),
-            'notes': ''
-        })
+        return jsonify(
+            {
+                "id": item.id,
+                "name": item.name,
+                "quantity": float(item.quantity or 0),
+                "unit": item.unit,
+                "cost_per_unit": float(item.cost_per_unit or 0),
+                "type": item.type,
+                "global_item_id": getattr(item, "global_item_id", None),
+                "ownership": getattr(item, "ownership", None),
+                "global_item_name": getattr(
+                    getattr(item, "global_item", None), "name", None
+                ),
+                "category_id": getattr(item, "category_id", None),
+                "density": item.density,
+                "is_perishable": bool(item.is_perishable),
+                "is_tracked": bool(getattr(item, "is_tracked", True)),
+                "shelf_life_days": item.shelf_life_days,
+                "capacity": getattr(item, "capacity", None),
+                "capacity_unit": getattr(item, "capacity_unit", None),
+                "container_material": getattr(item, "container_material", None),
+                "container_type": getattr(item, "container_type", None),
+                "container_style": getattr(item, "container_style", None),
+                "container_color": getattr(item, "container_color", None),
+                "notes": "",
+            }
+        )
     except Exception as e:
-        logger.exception('Failed to load inventory item for edit modal')
-        return jsonify({'error': str(e)}), 500
+        logger.exception("Failed to load inventory item for edit modal")
+        return jsonify({"error": str(e)}), 500
 
 
 # --- Global link toggle ---
 # Purpose: Link/unlink a local item to a global item.
-@inventory_bp.route('/api/global-link/<int:item_id>', methods=['POST'])
+# Inputs: Item id route parameter and action payload (unlink/relink/resync).
+# Outputs: JSON success/error payload with updated ownership metadata.
+@inventory_bp.route("/api/global-link/<int:item_id>", methods=["POST"])
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def api_toggle_global_link(item_id: int):
     """Link/unlink (soft) an inventory item to its GlobalItem.
 
@@ -254,70 +329,86 @@ def api_toggle_global_link(item_id: int):
     """
     try:
         data = request.get_json(force=True, silent=True) or {}
-        action = (data.get('action') or '').strip().lower()
-        if action not in {'unlink', 'relink', 'resync'}:
-            return jsonify({'success': False, 'error': 'Invalid action'}), 400
+        action = (data.get("action") or "").strip().lower()
+        if action not in {"unlink", "relink", "resync"}:
+            return jsonify({"success": False, "error": "Invalid action"}), 400
 
         query = InventoryItem.query
         if current_user.organization_id:
             query = query.filter_by(organization_id=current_user.organization_id)
         item = query.filter_by(id=item_id).first()
         if not item:
-            return jsonify({'success': False, 'error': 'Item not found'}), 404
+            return jsonify({"success": False, "error": "Item not found"}), 404
 
-        if not getattr(item, 'global_item_id', None):
-            return jsonify({'success': False, 'error': 'Item is not associated with a global item'}), 400
+        if not getattr(item, "global_item_id", None):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Item is not associated with a global item",
+                    }
+                ),
+                400,
+            )
 
         gi = db.session.get(GlobalItem, int(item.global_item_id))
         if not gi:
-            return jsonify({'success': False, 'error': 'Global item not found'}), 404
+            return jsonify({"success": False, "error": "Global item not found"}), 404
 
         # Prevent cross-type mismatch
         if gi.item_type != item.type:
-            return jsonify({'success': False, 'error': 'Global item type does not match inventory item type'}), 400
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Global item type does not match inventory item type",
+                    }
+                ),
+                400,
+            )
 
         from app.services.global_item_sync_service import GlobalItemSyncService
 
-        if action == 'unlink':
-            item.ownership = 'org'
+        if action == "unlink":
+            item.ownership = "org"
             db.session.add(
                 UnifiedInventoryHistory(
                     inventory_item_id=item.id,
-                    change_type='unlink_global',
+                    change_type="unlink_global",
                     quantity_change=0.0,
                     quantity_change_base=0,
-                    unit=item.unit or 'count',
+                    unit=item.unit or "count",
                     notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
-                    created_by=getattr(current_user, 'id', None),
+                    created_by=getattr(current_user, "id", None),
                     organization_id=item.organization_id,
                 )
             )
-        elif action == 'relink':
+        elif action == "relink":
             GlobalItemSyncService.relink_inventory_item(item, gi)
             db.session.add(
                 UnifiedInventoryHistory(
                     inventory_item_id=item.id,
-                    change_type='relink_global',
+                    change_type="relink_global",
                     quantity_change=0.0,
                     quantity_change_base=0,
-                    unit=item.unit or 'count',
+                    unit=item.unit or "count",
                     notes=f"Relinked to GlobalItem '{gi.name}'",
-                    created_by=getattr(current_user, 'id', None),
+                    created_by=getattr(current_user, "id", None),
                     organization_id=item.organization_id,
                 )
             )
-        elif action == 'resync':
+        elif action == "resync":
             # Keep linked, re-apply global specs. (Unit is preserved if user chose a different one.)
             GlobalItemSyncService.relink_inventory_item(item, gi)
             db.session.add(
                 UnifiedInventoryHistory(
                     inventory_item_id=item.id,
-                    change_type='sync_global',
+                    change_type="sync_global",
                     quantity_change=0.0,
                     quantity_change_base=0,
-                    unit=item.unit or 'count',
+                    unit=item.unit or "count",
                     notes=f"Re-synced from GlobalItem '{gi.name}'",
-                    created_by=getattr(current_user, 'id', None),
+                    created_by=getattr(current_user, "id", None),
                     organization_id=item.organization_id,
                 )
             )
@@ -326,25 +417,28 @@ def api_toggle_global_link(item_id: int):
 
         return jsonify(
             {
-                'success': True,
-                'item': {
-                    'id': item.id,
-                    'global_item_id': item.global_item_id,
-                    'global_item_name': getattr(gi, 'name', None),
-                    'ownership': getattr(item, 'ownership', None),
+                "success": True,
+                "item": {
+                    "id": item.id,
+                    "global_item_id": item.global_item_id,
+                    "global_item_name": getattr(gi, "name", None),
+                    "ownership": getattr(item, "ownership", None),
                 },
             }
         )
     except Exception as exc:
         db.session.rollback()
         logger.exception("Failed to toggle global link")
-        return jsonify({'success': False, 'error': str(exc)}), 500
+        return jsonify({"success": False, "error": str(exc)}), 500
+
 
 # --- Quick create ---
 # Purpose: Create a new inventory item from a minimal payload.
-@inventory_bp.route('/api/quick-create', methods=['POST'])
+# Inputs: JSON payload with minimal inventory creation fields.
+# Outputs: JSON payload containing created item summary or validation error.
+@inventory_bp.route("/api/quick-create", methods=["POST"])
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def api_quick_create_inventory():
     """JSON endpoint to quickly create an inventory item (zero qty) and return it.
     Uses existing create_inventory_item service. Org-scoped.
@@ -353,62 +447,75 @@ def api_quick_create_inventory():
     """
     try:
         # Validate CSRF token from header
-        csrf_token = request.headers.get('X-CSRFToken')
+        csrf_token = request.headers.get("X-CSRFToken")
         if not csrf_token:
-            return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
+            return jsonify({"success": False, "error": "CSRF token missing"}), 400
 
         data = request.get_json(force=True, silent=True) or {}
 
         # Normalize form-like dict for service
         form_like = {}
-        for key, value in (data.items() if hasattr(data, 'items') else []):
-            form_like[str(key)] = value if value is not None else ''
+        for key, value in (data.items() if hasattr(data, "items") else []):
+            form_like[str(key)] = value if value is not None else ""
 
         success, message, item_id = create_inventory_item(
             form_data=form_like,
             organization_id=current_user.organization_id,
-            created_by=current_user.id
+            created_by=current_user.id,
         )
 
         if not success or not item_id:
-            return jsonify({
-                'success': False,
-                'error': message or 'Failed to create inventory item'
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": message or "Failed to create inventory item",
+                    }
+                ),
+                400,
+            )
 
         item = db.session.get(InventoryItem, int(item_id))
         if not item:
-            return jsonify({'success': False, 'error': 'Created item not found'}), 500
+            return jsonify({"success": False, "error": "Created item not found"}), 500
 
-        return jsonify({
-            'success': True,
-            'item': {
-                'id': item.id,
-                'name': item.name,
-                'unit': item.unit,
-                'type': item.type,
-                'global_item_id': getattr(item, 'global_item_id', None),
+        return jsonify(
+            {
+                "success": True,
+                "item": {
+                    "id": item.id,
+                    "name": item.name,
+                    "unit": item.unit,
+                    "type": item.type,
+                    "is_tracked": bool(getattr(item, "is_tracked", True)),
+                    "global_item_id": getattr(item, "global_item_id", None),
+                },
             }
-        })
+        )
 
     except Exception as e:
-        logging.exception('Quick-create inventory failed')
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception("Quick-create inventory failed")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # =========================================================
 # INVENTORY VIEWS
 # =========================================================
 # --- Inventory list ---
 # Purpose: Render the inventory list page.
-@inventory_bp.route('/')
+# Inputs: Query parameters for type/search/category/archive/zero filters.
+# Outputs: Rendered inventory list template with scoped inventory context.
+@inventory_bp.route("/")
 @login_required
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def list_inventory():
-    inventory_type = request.args.get('type')
-    raw_search = (request.args.get('search') or '').strip()
-    category_filter = request.args.get('category')
-    show_archived = request.args.get('show_archived') == 'true'
-    show_zero_qty = request.args.get('show_zero_qty', 'true') == 'true'  # Show zero quantity by default
+    inventory_type = request.args.get("type")
+    raw_search = (request.args.get("search") or "").strip()
+    category_filter = request.args.get("category")
+    show_archived = request.args.get("show_archived") == "true"
+    show_zero_qty = (
+        request.args.get("show_zero_qty", "true") == "true"
+    )  # Show zero quantity by default
     normalized_search = raw_search.lower()
     org_id = getattr(current_user, "organization_id", None)
 
@@ -430,8 +537,9 @@ def list_inventory():
     except Exception:
         pass
 
-    units = Unit.scoped().filter(Unit.is_active == True).all()
+    units = Unit.scoped().filter(Unit.is_active).all()
     categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
         cached_payload = None
@@ -443,7 +551,7 @@ def list_inventory():
             cached_items = _hydrate_inventory_items(cached_payload.get("items", []))
             total_value = cached_payload.get("total_value", 0.0)
             return render_template(
-                'inventory_list.html',
+                "inventory_list.html",
                 inventory_items=cached_items,
                 items=cached_items,
                 categories=categories,
@@ -451,21 +559,24 @@ def list_inventory():
                 units=units,
                 show_archived=show_archived,
                 show_zero_qty=show_zero_qty,
+                org_tracks_inventory_quantities=org_tracks_inventory_quantities,
                 get_global_unit_list=get_global_unit_list,
-                breadcrumb_items=[{'label': 'Inventory'}],
+                breadcrumb_items=[{"label": "Inventory"}],
             )
 
     query = InventoryItem.query
     if org_id:
         query = query.filter_by(organization_id=org_id)
-    query = query.filter(~InventoryItem.type.in_(('product', 'product-reserved')))
+    query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
 
     if not show_archived:
         query = query.filter(InventoryItem.is_archived.is_(False))
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     if not show_zero_qty:
-        query = query.filter(InventoryItem.quantity > 0)
+        query = query.filter(
+            or_(InventoryItem.quantity > 0, InventoryItem.is_tracked.is_(False))
+        )
     if raw_search:
         like_pattern = f"%{raw_search}%"
         query = query.filter(InventoryItem.name.ilike(like_pattern))
@@ -477,7 +588,9 @@ def list_inventory():
 
     query = query.options(
         selectinload(InventoryItem.category),
-        selectinload(InventoryItem.global_item).selectinload(GlobalItem.ingredient_category),
+        selectinload(InventoryItem.global_item).selectinload(
+            GlobalItem.ingredient_category
+        ),
     ).order_by(InventoryItem.name.asc())
 
     inventory_records = query.all()
@@ -498,7 +611,7 @@ def list_inventory():
     hydrated_items = _hydrate_inventory_items(serialized_items)
 
     return render_template(
-        'inventory_list.html',
+        "inventory_list.html",
         inventory_items=hydrated_items,
         items=hydrated_items,
         categories=categories,
@@ -506,29 +619,48 @@ def list_inventory():
         units=units,
         show_archived=show_archived,
         show_zero_qty=show_zero_qty,
+        org_tracks_inventory_quantities=org_tracks_inventory_quantities,
         get_global_unit_list=get_global_unit_list,
-        breadcrumb_items=[{'label': 'Inventory'}],
+        breadcrumb_items=[{"label": "Inventory"}],
     )
+
 
 # --- Inventory column visibility ---
 # Purpose: Persist column visibility preferences.
-@inventory_bp.route('/set-columns', methods=['POST'])
+# Inputs: Form list containing selected column identifiers.
+# Outputs: Redirect response back to inventory list.
+@inventory_bp.route("/set-columns", methods=["POST"])
 @login_required
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def set_column_visibility():
-    columns = request.form.getlist('columns')
-    session['inventory_columns'] = columns
-    return redirect(url_for('inventory.list_inventory'))
+    columns = request.form.getlist("columns")
+    session["inventory_columns"] = columns
+    try:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            user_prefs.set_list_preferences(
+                "inventory_list",
+                {"legacy_visible_columns": columns},
+                merge=True,
+            )
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to persist inventory column visibility preferences")
+    return redirect(url_for("inventory.list_inventory"))
+
 
 # --- Inventory detail view ---
 # Purpose: Render the inventory item detail page.
-@inventory_bp.route('/view/<int:id>')
+# Inputs: Inventory item id route parameter and optional pagination/filter query values.
+# Outputs: Rendered inventory detail template with history, lots, and freshness context.
+@inventory_bp.route("/view/<int:id>")
 @login_required
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def view_inventory(id):
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)
     per_page = 5
-    fifo_filter = request.args.get('fifo') == 'true'
+    fifo_filter = request.args.get("fifo") == "true"
 
     # Get scoped inventory item - regular users only see their org's inventory
     query = InventoryItem.query
@@ -537,12 +669,11 @@ def view_inventory(id):
     item = query.filter_by(id=id).first_or_404()
 
     if not item:
-        flash('Inventory item not found or access denied.', 'error')
-        return redirect(url_for('inventory.list_inventory'))
+        flash("Inventory item not found or access denied.", "error")
+        return redirect(url_for("inventory.list_inventory"))
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
-    from sqlalchemy import and_
 
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
@@ -550,16 +681,19 @@ def view_inventory(id):
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
         from app.services.quantity_base import from_base_quantity
+
         # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.remaining_quantity_base > 0,
-                InventoryLot.expiration_date != None,
-                InventoryLot.expiration_date < today
+                InventoryLot.expiration_date.isnot(None),
+                InventoryLot.expiration_date < today,
             )
         ).all()
-        expired_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc)
+        expired_base = sum(
+            int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc
+        )
         total_base = int(getattr(item, "quantity_base", 0) or 0)
         available_base = max(0, total_base - expired_base)
         item.temp_expired_quantity = from_base_quantity(
@@ -577,6 +711,7 @@ def view_inventory(id):
     else:
         item.temp_expired_quantity = 0
         from app.services.quantity_base import from_base_quantity
+
         total_base = int(getattr(item, "quantity_base", 0) or 0)
         item.temp_available_quantity = from_base_quantity(
             base_amount=total_base,
@@ -586,15 +721,17 @@ def view_inventory(id):
         )
 
     # Ensure these attributes are always set for template display
-    if not hasattr(item, 'temp_expired_quantity'):
+    if not hasattr(item, "temp_expired_quantity"):
         item.temp_expired_quantity = 0
-    if not hasattr(item, 'temp_available_quantity'):
+    if not hasattr(item, "temp_available_quantity"):
         item.temp_available_quantity = float(item.quantity)
 
-    history_query = UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).options(
+    history_query = UnifiedInventoryHistory.query.filter_by(
+        inventory_item_id=id
+    ).options(
         joinedload(UnifiedInventoryHistory.batch),
         joinedload(UnifiedInventoryHistory.used_for_batch),
-        joinedload(UnifiedInventoryHistory.affected_lot)
+        joinedload(UnifiedInventoryHistory.affected_lot),
     )
 
     # Lots: retrieve via FIFO service to preserve service authority
@@ -602,118 +739,152 @@ def view_inventory(id):
 
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    # When FIFO toggle is ON, show ALL lots (including depleted ones)
-    # When FIFO toggle is OFF, show only active lots
+    # When FIFO toggle is ON, show ALL lots (including depleted ones).
+    # When FIFO toggle is OFF, show only active lots.
+    # In tracked mode, hide infinite-anchor rows from the default lot table.
     lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+    if item.is_tracked:
+        lots_query = lots_query.filter(
+            InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE
+        )
     if not fifo_filter:  # fifo_filter=False means show only active lots
-        lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
-    lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
-
-    from datetime import datetime
+        if item.is_tracked:
+            lots_query = lots_query.filter(InventoryLot.remaining_quantity_base > 0)
+        else:
+            lots_query = lots_query.filter(
+                or_(
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
+                )
+            )
+    lots = lots_query.order_by(
+        case((InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE, 1), else_=0),
+        InventoryLot.created_at.asc(),
+    ).all()
 
     # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
-    from sqlalchemy import and_
-
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
         today = TimezoneUtils.utc_now().date()
         from app.services.quantity_base import from_base_quantity
+
         # Only check InventoryLot for expired entries
-        expired_entries = InventoryLot.query.filter(
-            and_(
-                InventoryLot.inventory_item_id == id,
-                InventoryLot.remaining_quantity_base > 0,
-                InventoryLot.expiration_date != None,
-                InventoryLot.expiration_date < today
+        expired_entries = (
+            InventoryLot.query.filter(
+                and_(
+                    InventoryLot.inventory_item_id == id,
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.expiration_date.isnot(None),
+                    InventoryLot.expiration_date < today,
+                )
             )
-        ).order_by(InventoryLot.expiration_date.asc()).all()
-        expired_total_base = sum(int(lot.remaining_quantity_base or 0) for lot in expired_entries)
+            .order_by(InventoryLot.expiration_date.asc())
+            .all()
+        )
+        expired_total_base = sum(
+            int(lot.remaining_quantity_base or 0) for lot in expired_entries
+        )
         expired_total = from_base_quantity(
             base_amount=expired_total_base,
             unit_name=item.unit,
             ingredient_id=item.id,
             density=item.density,
         )
-    return render_template('pages/inventory/view.html',
-                         abs=abs,
-                         item=item,
-                         history=history,
-                         lots=lots,
-                         pagination=pagination,
-                         expired_entries=expired_entries,
-                         expired_total=expired_total,
-                         units=get_global_unit_list(),
-                         get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
-                         User=User,
-                         UnifiedInventoryHistory=UnifiedInventoryHistory,
-                         now=datetime.now(timezone.utc),
-                         int_to_base36=int_to_base36,
-                         fifo_filter=fifo_filter,
-                         TimezoneUtils=TimezoneUtils,
-                         breadcrumb_items=[
-                             {'label': 'Inventory', 'url': url_for('inventory.list_inventory')},
-                             {'label': item.name}
-                         ])
+    return render_template(
+        "pages/inventory/view.html",
+        abs=abs,
+        item=item,
+        history=history,
+        lots=lots,
+        pagination=pagination,
+        expired_entries=expired_entries,
+        expired_total=expired_total,
+        units=get_global_unit_list(),
+        get_global_unit_list=get_global_unit_list,
+        get_ingredient_categories=IngredientCategory.query.order_by(
+            IngredientCategory.name
+        ).all,
+        User=User,
+        UnifiedInventoryHistory=UnifiedInventoryHistory,
+        now=datetime.now(timezone.utc),
+        int_to_base36=int_to_base36,
+        fifo_filter=fifo_filter,
+        org_tracks_inventory_quantities=_org_tracks_inventory_quantities(),
+        TimezoneUtils=TimezoneUtils,
+        breadcrumb_items=[
+            {"label": "Inventory", "url": url_for("inventory.list_inventory")},
+            {"label": item.name},
+        ],
+    )
+
 
 # --- Inventory add ---
 # Purpose: Create a new inventory item from form data.
-@inventory_bp.route('/add', methods=['POST'])
+# Inputs: Inventory create form fields from POST payload.
+# Outputs: Redirect response to created item detail or inventory list with flash.
+@inventory_bp.route("/add", methods=["POST"])
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def add_inventory():
     """Create new inventory items"""
     try:
-        logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
+        logger.info(
+            f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}"
+        )
 
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
-            created_by=current_user.id
+            created_by=current_user.id,
         )
 
         if success:
             # Ensure database transaction is committed
             db.session.commit()
-            flash(f'New inventory item created: {message}', 'success')
+            flash(f"New inventory item created: {message}", "success")
             if item_id:
-                return redirect(url_for('inventory.view_inventory', id=item_id))
+                return redirect(url_for("inventory.view_inventory", id=item_id))
         else:
-            flash(f'Failed to create inventory item: {message}', 'error')
+            flash(f"Failed to create inventory item: {message}", "error")
 
-        return redirect(url_for('inventory.list_inventory'))
+        return redirect(url_for("inventory.list_inventory"))
 
     except Exception as e:
         logger.error(f"Error in add_inventory route: {str(e)}")
-        flash(f'System error creating inventory: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
+        flash(f"System error creating inventory: {str(e)}", "error")
+        return redirect(url_for("inventory.list_inventory"))
+
 
 # --- Inventory adjust ---
 # Purpose: Apply inventory adjustments via central service.
-@inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
+# Inputs: Item id route parameter and adjustment form payload.
+# Outputs: JSON or redirect response describing adjustment success/failure.
+@inventory_bp.route("/adjust/<int:item_id>", methods=["POST"])
 @login_required
-@permission_required('inventory.adjust')
+@permission_required("inventory.adjust")
 def adjust_inventory(item_id):
     """Handle inventory adjustments"""
     try:
         wants_json = (
-            request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-            or request.accept_mimetypes['application/json']
-            >= request.accept_mimetypes['text/html']
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.accept_mimetypes["application/json"]
+            >= request.accept_mimetypes["text/html"]
         )
 
-        def respond(success, message, *, status_code=200, flash_category=None, redirect_url=None):
+        def respond(
+            success, message, *, status_code=200, flash_category=None, redirect_url=None
+        ):
             if wants_json:
-                payload = {'success': success, 'item_id': item_id}
+                payload = {"success": success, "item_id": item_id}
                 if success:
-                    payload['message'] = message
+                    payload["message"] = message
                 else:
-                    payload['error'] = message
+                    payload["error"] = message
                 return jsonify(payload), status_code
             if flash_category and message:
                 flash(message, flash_category)
-            return redirect(redirect_url or url_for('.view_inventory', id=item_id))
+            return redirect(redirect_url or url_for(".view_inventory", id=item_id))
 
         item = db.session.get(InventoryItem, int(item_id))
         if not item:
@@ -722,7 +893,7 @@ def adjust_inventory(item_id):
                 "Inventory item not found.",
                 status_code=404,
                 flash_category="error",
-                redirect_url=url_for('.list_inventory'),
+                redirect_url=url_for(".list_inventory"),
             )
 
         # Authority check
@@ -732,7 +903,18 @@ def adjust_inventory(item_id):
                 "Permission denied.",
                 status_code=403,
                 flash_category="error",
-                redirect_url=url_for('.list_inventory'),
+                redirect_url=url_for(".list_inventory"),
+            )
+
+        if not org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        ):
+            return respond(
+                False,
+                "Inventory quantity adjustments are locked on your current tier. Upgrade to enable this feature.",
+                status_code=403,
+                flash_category="warning",
+                redirect_url=url_for(".view_inventory", id=item_id),
             )
 
         # Extract and validate form data
@@ -740,29 +922,46 @@ def adjust_inventory(item_id):
         logger.info(f"ADJUST INVENTORY - Item: {item.name} (ID: {item_id})")
 
         # Validate required fields
-        change_type = form_data.get('change_type', '').strip().lower()
+        change_type = form_data.get("change_type", "").strip().lower()
         if not change_type:
-            return respond(False, "Adjustment type is required.", status_code=400, flash_category="error")
+            return respond(
+                False,
+                "Adjustment type is required.",
+                status_code=400,
+                flash_category="error",
+            )
 
         try:
-            quantity = float(form_data.get('quantity', 0.0))
+            quantity = float(form_data.get("quantity", 0.0))
             if quantity <= 0:
-                return respond(False, "Quantity must be greater than 0.", status_code=400, flash_category="error")
+                return respond(
+                    False,
+                    "Quantity must be greater than 0.",
+                    status_code=400,
+                    flash_category="error",
+                )
         except (ValueError, TypeError):
-            return respond(False, "Invalid quantity provided.", status_code=400, flash_category="error")
+            return respond(
+                False,
+                "Invalid quantity provided.",
+                status_code=400,
+                flash_category="error",
+            )
 
         # Extract optional parameters
         cost_override = None
         # Support either per-unit or total cost entry; if total, convert to per-unit
-        raw_cost = form_data.get('cost_per_unit')
-        cost_entry_type = (form_data.get('cost_entry_type') or 'no_change').strip().lower()
-        if cost_entry_type not in {'no_change', 'per_unit', 'total'}:
-            cost_entry_type = 'no_change'
-        if cost_entry_type != 'no_change' and raw_cost not in (None, ''):
+        raw_cost = form_data.get("cost_per_unit")
+        cost_entry_type = (
+            (form_data.get("cost_entry_type") or "no_change").strip().lower()
+        )
+        if cost_entry_type not in {"no_change", "per_unit", "total"}:
+            cost_entry_type = "no_change"
+        if cost_entry_type != "no_change" and raw_cost not in (None, ""):
             try:
                 parsed_cost = float(raw_cost)
-                if cost_entry_type == 'total':
-                    qty_val = float(form_data.get('quantity', 0.0) or 0.0)
+                if cost_entry_type == "total":
+                    qty_val = float(form_data.get("quantity", 0.0) or 0.0)
                     if qty_val <= 0:
                         return respond(
                             False,
@@ -774,11 +973,16 @@ def adjust_inventory(item_id):
                 else:
                     cost_override = parsed_cost
             except (ValueError, TypeError):
-                return respond(False, "Invalid cost provided.", status_code=400, flash_category="error")
+                return respond(
+                    False,
+                    "Invalid cost provided.",
+                    status_code=400,
+                    flash_category="error",
+                )
 
-        custom_expiration_date = form_data.get('custom_expiration_date')
-        notes = form_data.get('notes', '')
-        input_unit = form_data.get('input_unit') or item.unit or 'count'
+        custom_expiration_date = form_data.get("custom_expiration_date")
+        notes = form_data.get("notes", "")
+        input_unit = form_data.get("input_unit") or item.unit or "count"
 
         # Call the central inventory adjustment service
         success, message = process_inventory_adjustment(
@@ -789,26 +993,43 @@ def adjust_inventory(item_id):
             created_by=current_user.id,
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
-            unit=input_unit
+            unit=input_unit,
         )
 
         # Flash result and redirect
         if success:
             logger.info(f"Adjustment successful: {message}")
-            return respond(True, f'{change_type.title()} completed: {message}', flash_category='success')
+            return respond(
+                True,
+                f"{change_type.title()} completed: {message}",
+                flash_category="success",
+            )
         else:
             logger.error(f"Adjustment failed: {message}")
-            return respond(False, f'Adjustment failed: {message}', status_code=400, flash_category='error')
+            return respond(
+                False,
+                f"Adjustment failed: {message}",
+                status_code=400,
+                flash_category="error",
+            )
 
     except Exception as e:
         logger.error(f"Error in adjust_inventory route: {str(e)}")
-        return respond(False, f'System error during adjustment: {str(e)}', status_code=500, flash_category='error')
+        return respond(
+            False,
+            f"System error during adjustment: {str(e)}",
+            status_code=500,
+            flash_category="error",
+        )
+
 
 # --- Inventory edit ---
 # Purpose: Update inventory item metadata.
-@inventory_bp.route('/edit/<int:id>', methods=['POST'])
+# Inputs: Inventory item id route parameter and edit form payload.
+# Outputs: Redirect response back to inventory detail with status flash.
+@inventory_bp.route("/edit/<int:id>", methods=["POST"])
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def edit_inventory(id):
     """Handle inventory item editing and recounts"""
     try:
@@ -820,8 +1041,8 @@ def edit_inventory(id):
 
         # Authority check
         if not can_edit_inventory_item(item):
-            flash('Permission denied.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
+            flash("Permission denied.", "error")
+            return redirect(url_for("inventory.view_inventory", id=id))
 
         # Extract form data
         form_data = request.form.to_dict()
@@ -830,72 +1051,94 @@ def edit_inventory(id):
         # Enforce global item type validation if linked
         try:
             from app.models import GlobalItem
-            new_type = form_data.get('type', item.type)
-            if getattr(item, 'global_item_id', None):
+
+            new_type = form_data.get("type", item.type)
+            if getattr(item, "global_item_id", None):
                 gi = db.session.get(GlobalItem, int(item.global_item_id))
                 if gi and gi.item_type != new_type:
-                    flash(f"Type '{new_type}' does not match linked global item type '{gi.item_type}'.", 'error')
-                    return redirect(url_for('inventory.view_inventory', id=id))
+                    flash(
+                        f"Type '{new_type}' does not match linked global item type '{gi.item_type}'.",
+                        "error",
+                    )
+                    return redirect(url_for("inventory.view_inventory", id=id))
         except Exception as _e:
             # Fail closed with informative error if validation cannot complete
             logger.warning(f"Global item type validation skipped due to error: {_e}")
 
-        # Check if this is a quantity recount
-        new_quantity = form_data.get('quantity')
-        recount_performed = False
+        org_tracks_quantities = org_allows_inventory_quantity_tracking(
+            organization=getattr(item, "organization", None)
+        )
 
-        if new_quantity is not None and new_quantity != '':
+        # Check if this is a quantity recount
+        new_quantity = form_data.get("quantity")
+
+        if new_quantity is not None and new_quantity != "":
             try:
                 target_quantity = float(new_quantity)
-                logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
+                current_quantity = float(item.quantity or 0.0)
+                quantity_changed = abs(target_quantity - current_quantity) > 1e-9
+                if quantity_changed and not org_tracks_quantities:
+                    flash(
+                        "Quantity recount is locked on your current tier. Upgrade to enable this feature.",
+                        "warning",
+                    )
+                    return redirect(url_for("inventory.view_inventory", id=id))
 
-                # Use central inventory adjustment service for recount
-                success, message = process_inventory_adjustment(
-                    item_id=item.id,
-                    quantity=target_quantity,
-                    change_type='recount',
-                    notes=f'Inventory recount via edit form - target: {target_quantity}',
-                    created_by=current_user.id,
-                    target_quantity=target_quantity
-                )
+                if quantity_changed:
+                    logger.info(
+                        f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}"
+                    )
 
-                if not success:
-                    flash(f'Recount failed: {message}', 'error')
-                    return redirect(url_for('inventory.view_inventory', id=id))
+                    # Use central inventory adjustment service for recount
+                    success, message = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=target_quantity,
+                        change_type="recount",
+                        notes=f"Inventory recount via edit form - target: {target_quantity}",
+                        created_by=current_user.id,
+                        target_quantity=target_quantity,
+                    )
 
-                logger.info(f"RECOUNT SUCCESS: {message}")
-                recount_performed = True
+                    if not success:
+                        flash(f"Recount failed: {message}", "error")
+                        return redirect(url_for("inventory.view_inventory", id=id))
+
+                    logger.info(f"RECOUNT SUCCESS: {message}")
 
             except (ValueError, TypeError):
                 flash("Invalid quantity provided for recount.", "error")
-                return redirect(url_for('inventory.view_inventory', id=id))
+                return redirect(url_for("inventory.view_inventory", id=id))
 
         # Handle other field updates
         update_form_data = form_data.copy()
-        if recount_performed:
-            update_form_data.pop('quantity', None)
+        # Quantity edits must only flow through recount path above.
+        update_form_data.pop("quantity", None)
 
         # Enforce immutability for globally-managed identity fields
         is_global_locked = (
-            getattr(item, 'global_item_id', None) is not None
-            and getattr(item, 'ownership', None) != 'org'
+            getattr(item, "global_item_id", None) is not None
+            and getattr(item, "ownership", None) != "org"
         )
 
         # Update basic fields
         if not is_global_locked:
-            item.name = form_data.get('name', item.name)
+            item.name = form_data.get("name", item.name)
         else:
             # Ignore attempted name changes
-            form_data['name'] = item.name
+            form_data["name"] = item.name
 
         # Unit changes (with conversion) are handled in update_inventory_item
-        item.cost_per_unit = float(form_data.get('cost_per_unit', item.cost_per_unit or 0))
-        item.low_stock_threshold = float(form_data.get('low_stock_threshold', item.low_stock_threshold or 0))
-        item.type = form_data.get('type', item.type)
+        item.cost_per_unit = float(
+            form_data.get("cost_per_unit", item.cost_per_unit or 0)
+        )
+        item.low_stock_threshold = float(
+            form_data.get("low_stock_threshold", item.low_stock_threshold or 0)
+        )
+        item.type = form_data.get("type", item.type)
 
         # Handle category (only for ingredients)
-        if item.type == 'ingredient':
-            raw_category_id = form_data.get('category_id')
+        if item.type == "ingredient":
+            raw_category_id = form_data.get("category_id")
             if raw_category_id and not is_global_locked:
                 try:
                     parsed_category_id = int(raw_category_id)
@@ -903,26 +1146,32 @@ def edit_inventory(id):
                     # Apply category default density when category is chosen
                     try:
                         cat_obj = db.session.get(IngredientCategory, parsed_category_id)
-                        if cat_obj and cat_obj.default_density and cat_obj.default_density > 0:
+                        if (
+                            cat_obj
+                            and cat_obj.default_density
+                            and cat_obj.default_density > 0
+                        ):
                             item.density = cat_obj.default_density
-                            item.density_source = 'category_default'
+                            item.density_source = "category_default"
                         else:
-                            item.density_source = 'manual'
+                            item.density_source = "manual"
                     except Exception:
-                        item.density_source = 'manual'
+                        item.density_source = "manual"
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid category_id provided: {raw_category_id}")
             else:
                 item.category_id = None
-                item.density_source = 'manual'
+                item.density_source = "manual"
         else:
             item.category_id = None
 
         # Handle container-specific fields
-        if item.type == 'container':
-            capacity = form_data.get('capacity')
-            capacity_unit = form_data.get('capacity_unit')
-            logger.info(f"Container update - capacity: {capacity}, capacity_unit: {capacity_unit}")
+        if item.type == "container":
+            capacity = form_data.get("capacity")
+            capacity_unit = form_data.get("capacity_unit")
+            logger.info(
+                f"Container update - capacity: {capacity}, capacity_unit: {capacity_unit}"
+            )
             if capacity:
                 old_capacity = item.capacity
                 item.capacity = float(capacity)
@@ -930,64 +1179,79 @@ def edit_inventory(id):
             if capacity_unit:
                 old_capacity_unit = item.capacity_unit
                 item.capacity_unit = capacity_unit
-                logger.info(f"Updated capacity_unit: {old_capacity_unit} -> {item.capacity_unit}")
+                logger.info(
+                    f"Updated capacity_unit: {old_capacity_unit} -> {item.capacity_unit}"
+                )
 
             # Containers are always counted by "count" - never use capacity_unit as the item unit
-            item.unit = 'count'
-            logger.info(f"Container unit set to 'count' (capacity unit is {item.capacity_unit})")
+            item.unit = "count"
+            logger.info(
+                f"Container unit set to 'count' (capacity unit is {item.capacity_unit})"
+            )
 
         # Prevent density changes if globally locked
         if is_global_locked:
-            update_form_data.pop('density', None)
-            update_form_data.pop('item_density', None)
-            update_form_data.pop('category_id', None)
-            update_form_data.pop('unit', None)
-        success, message = update_inventory_item(id, update_form_data)
-        flash(message, 'success' if success else 'error')
-        return redirect(url_for('inventory.view_inventory', id=id))
+            update_form_data.pop("density", None)
+            update_form_data.pop("item_density", None)
+            update_form_data.pop("category_id", None)
+            update_form_data.pop("unit", None)
+        success, message = update_inventory_item(
+            id, update_form_data, updated_by=current_user.id
+        )
+        flash(message, "success" if success else "error")
+        return redirect(url_for("inventory.view_inventory", id=id))
 
     except Exception as e:
         logger.error(f"Error in edit_inventory route: {str(e)}")
-        flash(f'System error during edit: {str(e)}', 'error')
-        return redirect(url_for('inventory.view_inventory', id=id))
+        flash(f"System error during edit: {str(e)}", "error")
+        return redirect(url_for("inventory.view_inventory", id=id))
+
 
 # --- Inventory archive ---
 # Purpose: Archive an inventory item.
-@inventory_bp.route('/archive/<int:id>')
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with archive status flash.
+@inventory_bp.route("/archive/<int:id>")
 @login_required
-@permission_required('inventory.delete')
+@permission_required("inventory.delete")
 def archive_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     try:
         item.is_archived = True
         db.session.commit()
-        flash('Inventory item archived successfully.')
+        flash("Inventory item archived successfully.")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error archiving item: {str(e)}', 'error')
-    return redirect(url_for('inventory.list_inventory'))
+        flash(f"Error archiving item: {str(e)}", "error")
+    return redirect(url_for("inventory.list_inventory"))
+
 
 # --- Inventory restore ---
 # Purpose: Restore an archived inventory item.
-@inventory_bp.route('/restore/<int:id>')
+# Inputs: Inventory item id route parameter.
+# Outputs: Redirect response to inventory list with restore status flash.
+@inventory_bp.route("/restore/<int:id>")
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def restore_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     try:
         item.is_archived = False
         db.session.commit()
-        flash('Inventory item restored successfully.')
+        flash("Inventory item restored successfully.")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error restoring item: {str(e)}', 'error')
-    return redirect(url_for('inventory.list_inventory'))
+        flash(f"Error restoring item: {str(e)}", "error")
+    return redirect(url_for("inventory.list_inventory"))
+
 
 # --- Inventory debug ---
 # Purpose: Render debug information for inventory and FIFO sync.
-@inventory_bp.route('/debug/<int:id>')
+# Inputs: Inventory item id route parameter.
+# Outputs: JSON payload with inventory/FIFO diagnostics.
+@inventory_bp.route("/debug/<int:id>")
 @login_required
-@permission_required('inventory.view')
+@permission_required("inventory.view")
 def debug_inventory(id):
     """Debug endpoint to check inventory status"""
     try:
@@ -995,46 +1259,49 @@ def debug_inventory(id):
 
         # Check FIFO sync
         from app.services.inventory_adjustment import validate_inventory_fifo_sync
+
         is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
 
         debug_info = {
-            'item_id': item.id,
-            'item_name': item.name,
-            'item_quantity': item.quantity,
-            'item_unit': item.unit,
-            'item_type': item.type,
-            'fifo_valid': is_valid,
-            'fifo_error': error_msg,
-            'inventory_qty': inv_qty,
-            'fifo_total': fifo_total,
-            'history_count': UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).count()
+            "item_id": item.id,
+            "item_name": item.name,
+            "item_quantity": item.quantity,
+            "item_unit": item.unit,
+            "item_type": item.type,
+            "fifo_valid": is_valid,
+            "fifo_error": error_msg,
+            "inventory_qty": inv_qty,
+            "fifo_total": fifo_total,
+            "history_count": UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=id
+            ).count(),
         }
 
         return jsonify(debug_info)
 
     except Exception as e:
         import traceback
-        return jsonify({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
+
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 # --- Bulk update view ---
 # Purpose: Render the bulk inventory update page.
-@inventory_bp.route('/bulk-updates')
+# Inputs: Current user organization context and feature flag state.
+# Outputs: Rendered bulk-update template or redirect when feature is disabled.
+@inventory_bp.route("/bulk-updates")
 @login_required
-@permission_required('inventory.edit')
+@permission_required("inventory.edit")
 def bulk_inventory_updates():
     if not _bulk_inventory_updates_enabled():
         flash("Bulk inventory updates are not enabled for your plan.", "warning")
-        return redirect(url_for('inventory.list_inventory'))
+        return redirect(url_for("inventory.list_inventory"))
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    query = query.filter(~InventoryItem.type.in_(('product', 'product-reserved')))
+    query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
     inventory_records = (
-        query.filter(InventoryItem.is_archived != True)
+        query.filter(not InventoryItem.is_archived)
         .order_by(InventoryItem.name.asc())
         .limit(750)
         .all()
@@ -1042,25 +1309,25 @@ def bulk_inventory_updates():
 
     inventory_payload = [
         {
-            'id': item.id,
-            'name': item.name,
-            'unit': item.unit,
-            'type': item.type,
-            'quantity': float(item.quantity or 0),
+            "id": item.id,
+            "name": item.name,
+            "unit": item.unit,
+            "type": item.type,
+            "quantity": float(item.quantity or 0),
         }
         for item in inventory_records
     ]
     unit_options = [
         {
-            'name': unit.name,
-            'symbol': unit.symbol,
-            'unit_type': unit.unit_type,
+            "name": unit.name,
+            "symbol": unit.symbol,
+            "unit_type": unit.unit_type,
         }
         for unit in (get_global_unit_list() or [])
     ]
 
     return render_template(
-        'inventory/bulk_updates.html',
+        "inventory/bulk_updates.html",
         inventory_items=inventory_payload,
         unit_options=unit_options,
     )
@@ -1068,24 +1335,34 @@ def bulk_inventory_updates():
 
 # --- Bulk adjustments API ---
 # Purpose: Apply bulk inventory adjustments.
-@inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
+# Inputs: JSON payload of bulk adjustment lines.
+# Outputs: JSON success/error payload from bulk inventory service.
+@inventory_bp.route("/api/bulk-adjustments", methods=["POST"])
 @login_required
-@permission_required('inventory.adjust')
+@permission_required("inventory.adjust")
 def api_bulk_inventory_adjustments():
     payload = request.get_json() or {}
     if not _bulk_inventory_updates_enabled():
-        return jsonify({"success": False, "error": "Bulk inventory updates are not enabled."}), 403
-    org_id = getattr(current_user, 'organization_id', None)
+        return (
+            jsonify(
+                {"success": False, "error": "Bulk inventory updates are not enabled."}
+            ),
+            403,
+        )
+    org_id = getattr(current_user, "organization_id", None)
     if not org_id:
-        return jsonify({'success': False, 'error': 'Organization context required.'}), 400
+        return (
+            jsonify({"success": False, "error": "Organization context required."}),
+            400,
+        )
 
     service = BulkInventoryService(organization_id=org_id, user=current_user)
     try:
-        result = service.submit_bulk_inventory_update(payload.get('lines') or [])
-        status = 200 if result.get('success') else 400
+        result = service.submit_bulk_inventory_update(payload.get("lines") or [])
+        status = 200 if result.get("success") else 400
         return jsonify(result), status
     except BulkInventoryServiceError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        return jsonify({"success": False, "error": str(exc)}), 400
     except Exception as exc:
         current_app.logger.exception("Bulk adjustment API failure")
-        return jsonify({'success': False, 'error': str(exc)}), 500
+        return jsonify({"success": False, "error": str(exc)}), 500

@@ -8,20 +8,23 @@ Glossary:
 - Expiring soon: Items nearing expiration within a window.
 """
 
-from flask import render_template, jsonify, request
-from flask_login import login_required, current_user
+from flask import jsonify, render_template, request
+from flask_login import current_user, login_required
+
 from app.utils.permissions import require_permission
-from .services import ExpirationService
+
 from . import expiration_bp
+from .services import ExpirationService
+
 
 # =========================================================
 # EXPIRATION APIs
 # =========================================================
 # --- Expired items ---
 # Purpose: Return expired inventory items summary.
-@expiration_bp.route('/api/expired-items')
+@expiration_bp.route("/api/expired-items")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_expired_items():
     """API endpoint for expired items"""
     expired = ExpirationService.get_expired_inventory_items()
@@ -30,21 +33,21 @@ def api_expired_items():
 
 # --- Expiring soon ---
 # Purpose: Return inventory items expiring within a window.
-@expiration_bp.route('/api/expiring-soon')
+@expiration_bp.route("/api/expiring-soon")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_expiring_soon():
     """API endpoint for items expiring soon"""
-    days_ahead = request.args.get('days', 7, type=int)
+    days_ahead = request.args.get("days", 7, type=int)
     expiring = ExpirationService.get_expiring_soon_items(days_ahead)
     return jsonify(expiring)
 
 
 # --- Expiration summary ---
 # Purpose: Return aggregated expiration counts.
-@expiration_bp.route('/api/summary')
+@expiration_bp.route("/api/summary")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_summary():
     """API endpoint for expiration summary"""
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -52,230 +55,304 @@ def api_summary():
     # Get user's expiration warning preference
     days_ahead = 7  # Default
     from flask_login import current_user
+
     if current_user and current_user.is_authenticated:
         from ...models.user_preferences import UserPreferences
+
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
-            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
+            days_ahead = (
+                30  # Default to 30 days since expiration_warning_days was removed
+            )
 
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
 
-    return jsonify({
-        'expired_total': expiration_data['expired_total'],
-        'expiring_soon_total': expiration_data['expiring_soon_total']
-    })
+    return jsonify(
+        {
+            "expired_total": expiration_data["expired_total"],
+            "expiring_soon_total": expiration_data["expiring_soon_total"],
+        }
+    )
 
 
 # --- Calculate expiration ---
 # Purpose: Calculate expiration date from entry data.
-@expiration_bp.route('/api/calculate-expiration', methods=['POST'])
+@expiration_bp.route("/api/calculate-expiration", methods=["POST"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_calculate_expiration():
     """Calculate expiration date from entry date and shelf life"""
     data = request.get_json()
-    entry_date_str = data.get('entry_date')
-    shelf_life_days = data.get('shelf_life_days')
+    entry_date_str = data.get("entry_date")
+    shelf_life_days = data.get("shelf_life_days")
 
     if not entry_date_str or not shelf_life_days:
-        return jsonify({'error': 'Missing required parameters'}), 400
+        return jsonify({"error": "Missing required parameters"}), 400
 
     try:
         from datetime import datetime
-        entry_date = datetime.fromisoformat(entry_date_str.replace('Z', '+00:00'))
-        expiration_date = ExpirationService.calculate_expiration_date(entry_date, shelf_life_days)
 
-        return jsonify({
-            'expiration_date': expiration_date.isoformat() if expiration_date else None,
-            'days_until_expiration': ExpirationService.get_days_until_expiration(expiration_date)
-        })
+        entry_date = datetime.fromisoformat(entry_date_str.replace("Z", "+00:00"))
+        expiration_date = ExpirationService.calculate_expiration_date(
+            entry_date, shelf_life_days
+        )
+
+        return jsonify(
+            {
+                "expiration_date": (
+                    expiration_date.isoformat() if expiration_date else None
+                ),
+                "days_until_expiration": ExpirationService.get_days_until_expiration(
+                    expiration_date
+                ),
+            }
+        )
     except ValueError as e:
-        return jsonify({'error': f'Invalid date format: {str(e)}'}), 400
+        return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
 
-@expiration_bp.route('/api/life-remaining/<int:fifo_id>')
+
+@expiration_bp.route("/api/life-remaining/<int:fifo_id>")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_life_remaining(fifo_id):
     """Get life remaining percentage for a FIFO entry"""
     from app.models import UnifiedInventoryHistory
 
     entry = UnifiedInventoryHistory.query.get_or_404(fifo_id)
     if not entry.expiration_date:
-        return jsonify({'life_remaining_percent': None, 'non_perishable': True})
+        return jsonify({"life_remaining_percent": None, "non_perishable": True})
 
-    percent = ExpirationService.get_life_remaining_percent(entry.timestamp, entry.expiration_date)
+    percent = ExpirationService.get_life_remaining_percent(
+        entry.timestamp, entry.expiration_date
+    )
     days_until = ExpirationService.get_days_until_expiration(entry.expiration_date)
 
-    return jsonify({
-        'life_remaining_percent': round(percent, 1) if percent is not None else None,
-        'days_until_expiration': days_until,
-        'is_expired': days_until < 0 if days_until is not None else False
-    })
+    return jsonify(
+        {
+            "life_remaining_percent": (
+                round(percent, 1) if percent is not None else None
+            ),
+            "days_until_expiration": days_until,
+            "is_expired": days_until < 0 if days_until is not None else False,
+        }
+    )
 
-@expiration_bp.route('/api/archive-expired', methods=['POST'])
+
+@expiration_bp.route("/api/archive-expired", methods=["POST"])
 @login_required
-@require_permission('inventory.adjust')
+@require_permission("inventory.adjust")
 def api_archive_expired():
     """Archive expired items with zero quantity"""
     count = ExpirationService.archive_expired_items()
-    return jsonify({'archived_count': count})
+    return jsonify({"archived_count": count})
 
-@expiration_bp.route('/api/debug-expiration')
+
+@expiration_bp.route("/api/debug-expiration")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_debug_expiration():
     """Debug endpoint to check expiration setup"""
-    from ...models import InventoryItem, InventoryLot
-    from ...models import db
-    from sqlalchemy import and_
     from flask_login import current_user
+    from sqlalchemy import and_
 
-    sku_lots = db.session.query(InventoryLot).join(
-        InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id
-    ).filter(and_(
-        InventoryLot.remaining_quantity_base > 0,
-        InventoryItem.type == 'product',
-        InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-    )).all()
+    from ...models import InventoryItem, InventoryLot, db
+
+    sku_lots = (
+        db.session.query(InventoryLot)
+        .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
+        .filter(
+            and_(
+                InventoryLot.remaining_quantity_base > 0,
+                InventoryItem.type == "product",
+                (
+                    InventoryItem.organization_id == current_user.organization_id
+                    if current_user.is_authenticated and current_user.organization_id
+                    else True
+                ),
+            )
+        )
+        .all()
+    )
 
     debug_info = []
     for lot in sku_lots:
-        inventory_item = lot.inventory_item or db.session.get(InventoryItem, lot.inventory_item_id)
+        inventory_item = lot.inventory_item or db.session.get(
+            InventoryItem, lot.inventory_item_id
+        )
         expiration = ExpirationService.get_effective_sku_expiration_date(lot)
-        debug_info.append({
-            'lot_id': lot.id,
-            'inventory_item_name': inventory_item.name if inventory_item else 'Unknown',
-            'inventory_item_id': lot.inventory_item_id,
-            'is_perishable': inventory_item.is_perishable if inventory_item else False,
-            'shelf_life_days': inventory_item.shelf_life_days if inventory_item else None,
-            'remaining_quantity': float(lot.remaining_quantity or 0.0),
-            'received_date': lot.received_date.isoformat() if lot.received_date else None,
-            'batch_id': lot.batch_id,
-            'calculated_expiration': expiration.isoformat() if expiration else None
-        })
+        debug_info.append(
+            {
+                "lot_id": lot.id,
+                "inventory_item_name": (
+                    inventory_item.name if inventory_item else "Unknown"
+                ),
+                "inventory_item_id": lot.inventory_item_id,
+                "is_perishable": (
+                    inventory_item.is_perishable if inventory_item else False
+                ),
+                "shelf_life_days": (
+                    inventory_item.shelf_life_days if inventory_item else None
+                ),
+                "remaining_quantity": float(lot.remaining_quantity or 0.0),
+                "received_date": (
+                    lot.received_date.isoformat() if lot.received_date else None
+                ),
+                "batch_id": lot.batch_id,
+                "calculated_expiration": expiration.isoformat() if expiration else None,
+            }
+        )
 
-    return jsonify({
-        'total_product_lots': len(sku_lots),
-        'entries': debug_info[:10],
-        'perishable_count': len([e for e in debug_info if e['is_perishable']]),
-        'non_perishable_count': len([e for e in debug_info if not e['is_perishable']])
-    })
+    return jsonify(
+        {
+            "total_product_lots": len(sku_lots),
+            "entries": debug_info[:10],
+            "perishable_count": len([e for e in debug_info if e["is_perishable"]]),
+            "non_perishable_count": len(
+                [e for e in debug_info if not e["is_perishable"]]
+            ),
+        }
+    )
 
-@expiration_bp.route('/api/mark-expired', methods=['POST'])
+
+@expiration_bp.route("/api/mark-expired", methods=["POST"])
 @login_required
-@require_permission('inventory.adjust')
+@require_permission("inventory.adjust")
 def api_mark_expired():
     """Mark expired items as expired and remove from inventory"""
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No JSON data provided'}), 400
+            return jsonify({"error": "No JSON data provided"}), 400
 
-        item_type = data.get('type')  # 'fifo' or 'product'
-        item_id = data.get('id')
+        item_type = data.get("type")  # 'fifo' or 'product'
+        item_id = data.get("id")
 
         print(f"Mark expired request - type: {item_type}, id: {item_id}")
 
         if not item_type or not item_id:
-            return jsonify({'error': 'Missing type or id'}), 400
+            return jsonify({"error": "Missing type or id"}), 400
 
-        if item_type not in ['fifo', 'product', 'raw']:
-            return jsonify({'error': 'Invalid item type. Must be "fifo", "product", or "raw"'}), 400
+        if item_type not in ["fifo", "product", "raw"]:
+            return (
+                jsonify(
+                    {"error": 'Invalid item type. Must be "fifo", "product", or "raw"'}
+                ),
+                400,
+            )
 
         success, message = ExpirationService.mark_as_expired(item_type, item_id)
 
         if success:
-            return jsonify({'success': True, 'message': message, 'expired_count': 1})
+            return jsonify({"success": True, "message": message, "expired_count": 1})
         else:
-            return jsonify({'success': False, 'error': message, 'expired_count': 0}), 400
+            return (
+                jsonify({"success": False, "error": message, "expired_count": 0}),
+                400,
+            )
     except Exception as e:
         print(f"Error marking item as expired: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@expiration_bp.route('/api/summary')
+
+@expiration_bp.route("/api/summary")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_expiration_summary():
     """Get expiration summary for dashboard widgets"""
     summary = ExpirationService.get_expiration_summary()
     return jsonify(summary)
 
-@expiration_bp.route('/api/inventory-status/<int:inventory_item_id>')
+
+@expiration_bp.route("/api/inventory-status/<int:inventory_item_id>")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_inventory_status(inventory_item_id):
     """Get expiration status for a specific inventory item"""
     status = ExpirationService.get_inventory_item_expiration_status(inventory_item_id)
-    return jsonify({
-        'expired_count': len(status['expired_entries']),
-        'expiring_soon_count': len(status['expiring_soon_entries']),
-        'has_expiration_issues': status['has_expiration_issues']
-    })
+    return jsonify(
+        {
+            "expired_count": len(status["expired_entries"]),
+            "expiring_soon_count": len(status["expiring_soon_entries"]),
+            "has_expiration_issues": status["has_expiration_issues"],
+        }
+    )
 
-@expiration_bp.route('/api/product-status/<int:product_id>')
+
+@expiration_bp.route("/api/product-status/<int:product_id>")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_product_status(product_id):
     """Get expiration status for a specific product"""
     status = ExpirationService.get_product_expiration_status(product_id)
-    return jsonify({
-        'expired_count': len(status['expired_inventory']),
-        'expiring_soon_count': len(status['expiring_soon_inventory']),
-        'has_expiration_issues': status['has_expiration_issues']
-    })
+    return jsonify(
+        {
+            "expired_count": len(status["expired_inventory"]),
+            "expiring_soon_count": len(status["expiring_soon_inventory"]),
+            "has_expiration_issues": status["has_expiration_issues"],
+        }
+    )
 
-@expiration_bp.route('/api/product-inventory/<int:inventory_id>/expiration')
+
+@expiration_bp.route("/api/product-inventory/<int:inventory_id>/expiration")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def api_product_inventory_expiration(inventory_id):
     """Get calculated expiration date for specific product inventory"""
-    expiration_date = ExpirationService.get_product_inventory_expiration_date(inventory_id)
+    expiration_date = ExpirationService.get_product_inventory_expiration_date(
+        inventory_id
+    )
 
     if not expiration_date:
-        return jsonify({
-            'expiration_date': None,
-            'days_until_expiration': None,
-            'is_expired': False,
-            'is_perishable': False
-        })
+        return jsonify(
+            {
+                "expiration_date": None,
+                "days_until_expiration": None,
+                "is_expired": False,
+                "is_perishable": False,
+            }
+        )
 
     days_until = ExpirationService.get_days_until_expiration(expiration_date)
 
-    return jsonify({
-        'expiration_date': expiration_date.isoformat(),
-        'days_until_expiration': days_until,
-        'is_expired': days_until < 0 if days_until is not None else False,
-        'is_perishable': True
-    })
+    return jsonify(
+        {
+            "expiration_date": expiration_date.isoformat(),
+            "days_until_expiration": days_until,
+            "is_expired": days_until < 0 if days_until is not None else False,
+            "is_perishable": True,
+        }
+    )
 
-@expiration_bp.route('/alerts')
+
+@expiration_bp.route("/alerts")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def alerts():
     """Display expiration alerts and management"""
+    from ...models.user_preferences import UserPreferences
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
     from ...utils.timezone_utils import TimezoneUtils
-    from ...models.user_preferences import UserPreferences
-    import logging
 
     # Get user's expiration warning preference
     days_ahead = 7  # Default
     if current_user and current_user.is_authenticated:
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
-            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
+            days_ahead = (
+                30  # Default to 30 days since expiration_warning_days was removed
+            )
 
     # Get comprehensive expiration data
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
 
     # For template compatibility, structure the data as expected by the template
     expired = {
-        'fifo_entries': expiration_data['expired_fifo_entries'],
-        'product_inventory': expiration_data['expired_products']
+        "fifo_entries": expiration_data["expired_fifo_entries"],
+        "product_inventory": expiration_data["expired_products"],
     }
     expiring_soon = {
-        'fifo_entries': expiration_data['expiring_fifo_entries'], 
-        'product_inventory': expiration_data['expiring_products']
+        "fifo_entries": expiration_data["expiring_fifo_entries"],
+        "product_inventory": expiration_data["expiring_products"],
     }
 
     # Get timezone-aware current time for template calculations
@@ -285,15 +362,19 @@ def alerts():
         user_now = user_now.replace(tzinfo=None)
     today = user_now.date()
 
-    return render_template('expiration/alerts.html',
-                         expired=expired,
-                         expiring_soon=expiring_soon,
-                         days_ahead=days_ahead,
-                         user_now=user_now,
-                         today=today)
-@expiration_bp.route('/api/expiration-summary')
+    return render_template(
+        "expiration/alerts.html",
+        expired=expired,
+        expiring_soon=expiring_soon,
+        days_ahead=days_ahead,
+        user_now=user_now,
+        today=today,
+    )
+
+
+@expiration_bp.route("/api/expiration-summary")
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def expiration_summary():
     """Get summary of expiring inventory"""
     try:
@@ -301,4 +382,7 @@ def expiration_summary():
         return jsonify(summary)
     except Exception as e:
         print(f"Expiration summary error: {e}")
-        return jsonify({'error': str(e), 'message': 'Failed to load expiration data'}), 500
+        return (
+            jsonify({"error": str(e), "message": "Failed to load expiration data"}),
+            500,
+        )

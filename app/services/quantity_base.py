@@ -10,11 +10,12 @@ Glossary:
 
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
 
-from app.models import Unit
 from sqlalchemy import func
+
+from app.models import Unit
 from app.services.unit_conversion import ConversionEngine
 
 DEFAULT_SCALE = 1_000_000
@@ -24,9 +25,9 @@ BASE_SCALES = {
     "weight": DEFAULT_SCALE,  # grams
     "volume": DEFAULT_SCALE,  # milliliters
     "length": DEFAULT_SCALE,  # centimeters
-    "area": DEFAULT_SCALE,    # square centimeters
-    "time": DEFAULT_SCALE,    # seconds
-    "count": COUNT_SCALE,     # counts in 1/32
+    "area": DEFAULT_SCALE,  # square centimeters
+    "time": DEFAULT_SCALE,  # seconds
+    "count": COUNT_SCALE,  # counts in 1/32
 }
 
 DISPLAY_DECIMALS = {
@@ -59,23 +60,24 @@ def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
         return None
     unit_key_lower = unit_key.lower()
     unit = Unit.query.filter(
-        (Unit.name == unit_key) |
-        (Unit.symbol == unit_key) |
-        (func.lower(Unit.name) == unit_key_lower) |
-        (func.lower(Unit.symbol) == unit_key_lower)
+        (Unit.name == unit_key)
+        | (Unit.symbol == unit_key)
+        | (func.lower(Unit.name) == unit_key_lower)
+        | (func.lower(Unit.symbol) == unit_key_lower)
     ).first()
     if unit:
         return unit
     try:
         from app.seeders.unit_seeder import seed_units
+
         seed_units()
     except Exception:
         return None
     return Unit.query.filter(
-        (Unit.name == unit_key) |
-        (Unit.symbol == unit_key) |
-        (func.lower(Unit.name) == unit_key_lower) |
-        (func.lower(Unit.symbol) == unit_key_lower)
+        (Unit.name == unit_key)
+        | (Unit.symbol == unit_key)
+        | (func.lower(Unit.name) == unit_key_lower)
+        | (func.lower(Unit.symbol) == unit_key_lower)
     ).first()
 
 
@@ -185,13 +187,21 @@ def from_base_quantity(
             density=density,
             rounding_decimals=None,
         )
-        if not result or not result.get("success") or result.get("converted_value") is None:
+        if (
+            not result
+            or not result.get("success")
+            or result.get("converted_value") is None
+        ):
             raise ValueError(f"Cannot convert {base_unit} to unit {unit_name}")
         amount_dec = _to_decimal(result["converted_value"])
     else:
         amount_dec = base_dec
 
-    decimals = display_decimals if display_decimals is not None else _display_decimals_for_unit_type(unit_type)
+    decimals = (
+        display_decimals
+        if display_decimals is not None
+        else _display_decimals_for_unit_type(unit_type)
+    )
     quantizer = Decimal("1") if decimals <= 0 else Decimal("0." + ("0" * decimals))
     rounded = amount_dec.quantize(quantizer, rounding=ROUND_HALF_UP)
     return float(rounded)
@@ -212,7 +222,11 @@ def sync_item_quantity_from_base(item) -> None:
 # Purpose: Update lot quantities from base fields.
 def sync_lot_quantities_from_base(lot, item=None) -> None:
     ingredient_id = item.id if item else getattr(lot, "inventory_item_id", None)
-    density = item.density if item else getattr(lot, "inventory_item", None) and lot.inventory_item.density
+    density = (
+        item.density
+        if item
+        else getattr(lot, "inventory_item", None) and lot.inventory_item.density
+    )
     lot.remaining_quantity = from_base_quantity(
         base_amount=getattr(lot, "remaining_quantity_base", 0),
         unit_name=lot.unit,

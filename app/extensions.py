@@ -58,6 +58,7 @@ try:
 
     mail = Mail()
 except ImportError:  # pragma: no cover - optional dependency
+
     class _MailStub:
         def send(self, *_, **__):
             raise RuntimeError("Flask-Mail is not installed; install it to send email.")
@@ -74,9 +75,9 @@ login_manager.login_message_category = "info"
 # Purpose: Load user for Flask-Login sessions.
 @login_manager.user_loader
 def load_user(user_id: str):
-    from .models import User
-    from flask import current_app
     from sqlalchemy.orm import joinedload
+
+    from .models import User
 
     try:
         user_id_int = int(user_id)

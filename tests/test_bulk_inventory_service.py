@@ -5,7 +5,9 @@ from app.models import GlobalItem, InventoryItem
 from app.services.bulk_inventory_service import BulkInventoryService
 
 
-def _make_inventory_item(org_id: int, name: str = "Test Oil", quantity: float = 0.0) -> InventoryItem:
+def _make_inventory_item(
+    org_id: int, name: str = "Test Oil", quantity: float = 0.0
+) -> InventoryItem:
     item = InventoryItem(
         name=name,
         organization_id=org_id,
@@ -21,7 +23,9 @@ def _make_inventory_item(org_id: int, name: str = "Test Oil", quantity: float = 
 def test_bulk_service_restock_existing_item(app, test_user):
     with app.app_context():
         item = _make_inventory_item(test_user.organization_id)
-        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+        service = BulkInventoryService(
+            organization_id=test_user.organization_id, user=test_user
+        )
 
         payload = [
             {
@@ -44,11 +48,15 @@ def test_bulk_service_restock_existing_item(app, test_user):
 
 def test_bulk_service_creates_inventory_from_global_item(app, test_user):
     with app.app_context():
-        global_item = GlobalItem(name="Global Wax", item_type="ingredient", default_unit="oz")
+        global_item = GlobalItem(
+            name="Global Wax", item_type="ingredient", default_unit="oz"
+        )
         db.session.add(global_item)
         db.session.commit()
 
-        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+        service = BulkInventoryService(
+            organization_id=test_user.organization_id, user=test_user
+        )
 
         payload = [
             {
@@ -65,7 +73,9 @@ def test_bulk_service_creates_inventory_from_global_item(app, test_user):
         result = service.submit_bulk_inventory_update(payload)
 
         assert result["success"] is True
-        created = InventoryItem.query.filter_by(name="My Global Wax", organization_id=test_user.organization_id).first()
+        created = InventoryItem.query.filter_by(
+            name="My Global Wax", organization_id=test_user.organization_id
+        ).first()
         assert created is not None
         assert pytest.approx(float(created.quantity)) == 7.0
         assert created.unit == "oz"
@@ -73,7 +83,9 @@ def test_bulk_service_creates_inventory_from_global_item(app, test_user):
 
 def test_bulk_service_returns_draft_when_not_submitting(app, test_user):
     with app.app_context():
-        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+        service = BulkInventoryService(
+            organization_id=test_user.organization_id, user=test_user
+        )
 
         payload = [
             {
@@ -96,7 +108,9 @@ def test_bulk_service_returns_draft_when_not_submitting(app, test_user):
 def test_bulk_service_aborts_and_rolls_back_on_error(app, test_user):
     with app.app_context():
         item = _make_inventory_item(test_user.organization_id)
-        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+        service = BulkInventoryService(
+            organization_id=test_user.organization_id, user=test_user
+        )
 
         payload = [
             {
@@ -127,7 +141,9 @@ def test_bulk_service_aborts_and_rolls_back_on_error(app, test_user):
 
 def test_bulk_service_creates_custom_item_without_global(app, test_user):
     with app.app_context():
-        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+        service = BulkInventoryService(
+            organization_id=test_user.organization_id, user=test_user
+        )
 
         payload = [
             {
@@ -143,7 +159,9 @@ def test_bulk_service_creates_custom_item_without_global(app, test_user):
         result = service.submit_bulk_inventory_update(payload)
 
         assert result["success"] is True
-        created = InventoryItem.query.filter_by(name="Custom Cocoa Chips", organization_id=test_user.organization_id).first()
+        created = InventoryItem.query.filter_by(
+            name="Custom Cocoa Chips", organization_id=test_user.organization_id
+        ).first()
         assert created is not None
         assert created.unit == "scoops"
         assert pytest.approx(float(created.quantity)) == 4.0

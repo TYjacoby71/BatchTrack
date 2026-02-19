@@ -14,6 +14,55 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-18: Legacy Account Forced Verification Modal](2026-02-18-legacy-account-forced-verification-modal.md)**
+  - Added 10-day age-based legacy-account flow that force-sends a new verification email and allows login.
+  - Added immediate in-app modal guidance plus persistent resend actions in authenticated UI surfaces.
+  - Updated resend messaging so logged-in users receive direct confirmation copy instead of generic account-existence text.
+  - Added regression tests for post-login modal queue/render behavior.
+- **[2026-02-18: Auth Email Delivery Readiness and Message Accuracy](2026-02-18-auth-email-delivery-readiness-and-message-accuracy.md)**
+  - Required-mode login now only claims verification-link delivery when send succeeds.
+  - Added explicit delivery-failure warning guidance for verification flows.
+  - Tightened Postmark/SendGrid readiness checks to require both provider key and sender address.
+- **[2026-02-18: Developer Password Modal JSON Endpoint Fix](2026-02-18-developer-password-modal-json-endpoint-fix.md)**
+  - Added developer-scoped password-change API for `/developer/users` modal submissions.
+  - Removed dependency on `/settings/password/change` for developer password updates.
+  - Added regression tests for successful and invalid-current-password cases.
+- **[2026-02-18: Support Inbox Recipient for Integrations Test Email](2026-02-18-support-inbox-test-email-recipient.md)**
+  - Changed the developer test-email action to send to the support mailbox instead of the current user.
+  - Added configurable `SUPPORT_EMAIL` override with `support@batchtrack.com` fallback.
+  - Added recipient validation and clearer error feedback for misconfigured support inbox values.
+- **[2026-02-18: Recipe Group Insert Contention Hardening](2026-02-18-recipe-group-insert-contention-hardening.md)**
+  - Hardened recipe-group creation with retry/backoff, short lock-timeout, and race-safe existing-group reuse.
+  - Added targeted regression tests for group-name reuse and prefix-collision fallback behavior.
+  - Fixed documentation-guard blockers for new helper header schema and stale APP_DICTIONARY route paths.
+- **[2026-02-18: Monitoring and Email Integration Bootstrap](2026-02-18-monitoring-and-email-integration-bootstrap.md)**
+  - Added optional GA4 and PostHog website analytics bootstrap in the shared layout.
+  - Added operations config schema keys and runtime config wiring for analytics providers.
+  - Documented recommended GA4 (traffic attribution) + PostHog (product analytics) split.
+- **[2026-02-17: Inventory Quantity Locking and Infinite Toggle Lot Drain](2026-02-17-inventory-quantity-locking-and-infinite-toggle-drain.md)**
+  - Locked quantity adjustment/recount surfaces behind `inventory.track_quantities` with upgrade bounce behavior.
+  - Forced create flows in quantity-locked tiers to open in infinite mode without opening quantity input.
+  - Added tracked -> infinite lot drain behavior plus FIFO-owned single-item `infinite_anchor` lot routing for infinite-mode traceability.
+- **[2026-02-17: Split Inventory Quantity Tracking from Batch Output Permission](2026-02-17-split-inventory-quantity-tracking-from-batch-output-permission.md)**
+  - Added new `inventory.track_quantities` entitlement to separate deduction quantity behavior from batch output posting.
+  - Refactored inventory/stock-check quantity-tracking policy checks to use inventory-scoped entitlement logic.
+  - Updated pricing feature catalog rows to present quantity tracking and batch output posting as distinct capabilities.
+- **[2026-02-17: Infinite Inventory Guardrail + Route Documentation Compliance](2026-02-17-infinite-inventory-guardrail-route-doc-compliance.md)**
+  - Added required functional-unit header metadata on touched batch and production-planning route modules.
+  - Added missing APP_DICTIONARY coverage entries for touched route files.
+  - Restored latest-commit Documentation Guard compliance for changelog + dictionary checks.
+- **[2026-02-17: Stale System Docs Wave 2 Refresh (Next 10)](2026-02-17-stale-system-docs-wave-2-refresh.md)**
+  - Refreshed the next 10 stalest system docs to current schema (`Synopsis` + `Glossary`) and current implementation behavior.
+  - Replaced stale routes/service references across exports, free-tier, public-tools, plan-snapshot, and tracking docs.
+  - Converted outdated SEO/deprecation planning language into present-state system guidance with active backlog notes.
+- **[2026-02-17: Documentation Guard Whole-File Coverage Clarification](2026-02-17-doc-guard-whole-file-coverage-clarification.md)**
+  - Clarified checklist and APP_DICTIONARY wording to require functional-header coverage across the entire touched Python file.
+  - Updated documentation-structure enforcement text to match whole-file validation behavior.
+  - Updated guard messaging to explicitly state file-wide validation scope.
+- **[2026-02-17: Stale System Docs Synopsis/Glossary Refresh](2026-02-17-stale-system-docs-synopsis-glossary-refresh.md)**
+  - Refreshed the four stalest system docs to current schema with required Synopsis/Glossary sections.
+  - Replaced stale implementation references (commands/paths/behavior notes) with active code locations.
+  - Added relevance checks so these docs remain trustworthy operational references.
 - **[2026-02-17: Recipe Lineage UI + Documentation Guard Alignment](2026-02-17-recipe-lineage-ui-doc-guard-alignment.md)**
   - Split recipe lineage actions into dedicated New Test/New Variation flows and simplified lineage view surfaces.
   - Hardened variation naming and promotion naming behavior for recipe-group consistency.

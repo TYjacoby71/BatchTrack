@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from uuid import uuid4
 from typing import Any, Dict, Optional, Tuple
+from uuid import uuid4
 
 from flask import current_app, url_for
 from werkzeug.datastructures import FileStorage
@@ -15,7 +15,9 @@ class RecipeMarketplaceService:
     _ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
     @classmethod
-    def extract_submission(cls, form, files=None, *, existing=None) -> Tuple[bool, Dict[str, Dict[str, Any]] | str]:
+    def extract_submission(
+        cls, form, files=None, *, existing=None
+    ) -> Tuple[bool, Dict[str, Dict[str, Any]] | str]:
         """
         Normalize marketplace-related form data and optional cover image uploads.
 
@@ -55,7 +57,12 @@ class RecipeMarketplaceService:
         is_for_sale = is_public and sale_mode == "sale"
 
         sale_price = _get("sale_price")
-        if sale_price is None and existing is not None and "sale_mode" not in form and "sale_price" not in form:
+        if (
+            sale_price is None
+            and existing is not None
+            and "sale_mode" not in form
+            and "sale_price" not in form
+        ):
             sale_price = getattr(existing, "sale_price", None)
         if isinstance(sale_price, str):
             sale_price = sale_price.strip()
@@ -65,24 +72,44 @@ class RecipeMarketplaceService:
             sale_price = None
 
         product_store_url = _get("product_store_url")
-        if product_store_url is None and existing is not None and "product_store_url" not in form:
+        if (
+            product_store_url is None
+            and existing is not None
+            and "product_store_url" not in form
+        ):
             product_store_url = getattr(existing, "product_store_url", None)
         if isinstance(product_store_url, str):
             product_store_url = product_store_url or None
 
         marketplace_notes = _get("marketplace_notes")
-        if marketplace_notes is None and existing is not None and "marketplace_notes" not in form:
+        if (
+            marketplace_notes is None
+            and existing is not None
+            and "marketplace_notes" not in form
+        ):
             marketplace_notes = getattr(existing, "marketplace_notes", None)
 
         public_description = _get("public_description")
-        if public_description is None and existing is not None and "public_description" not in form:
+        if (
+            public_description is None
+            and existing is not None
+            and "public_description" not in form
+        ):
             public_description = getattr(existing, "public_description", None)
 
         skin_opt_value = _get("skin_opt_in", strip=False)
-        if skin_opt_value is None and existing is not None and "skin_opt_in" not in form:
+        if (
+            skin_opt_value is None
+            and existing is not None
+            and "skin_opt_in" not in form
+        ):
             skin_opt = getattr(existing, "skin_opt_in", True)
         else:
-            skin_opt = str(skin_opt_value).lower() == "true" if skin_opt_value is not None else True
+            skin_opt = (
+                str(skin_opt_value).lower() == "true"
+                if skin_opt_value is not None
+                else True
+            )
 
         payload = {
             "sharing_scope": scope_value,
@@ -133,7 +160,9 @@ class RecipeMarketplaceService:
         full_path = os.path.join(target_dir, generated)
         file_storage.save(full_path)
 
-        relative_path = os.path.relpath(full_path, current_app.static_folder).replace("\\", "/")
+        relative_path = os.path.relpath(full_path, current_app.static_folder).replace(
+            "\\", "/"
+        )
         cover_url = url_for("static", filename=relative_path)
         return relative_path, cover_url
 

@@ -9,19 +9,23 @@ Glossary:
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
-
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from ...extensions import db
-from ...models import InventoryItem, Recipe, RecipeIngredient, RecipeGroup, Batch
+from ...models import Batch, InventoryItem, Recipe, RecipeGroup, RecipeIngredient
+from ...models.db_dialect import is_postgres
 from ...models.recipe import RecipeConsumable
 from ...services.event_emitter import EventEmitter
-from ...utils.code_generator import generate_recipe_prefix
 from ...services.lineage_service import generate_group_prefix, generate_variation_prefix
+from ...utils.code_generator import generate_recipe_prefix
+from ...utils.notes import append_timestamped_note
 from ._constants import _UNSET
+from ._current import apply_current_flag
 from ._helpers import (
     _derive_label_prefix,
     _extract_category_data_from_request,
@@ -34,10 +38,86 @@ from ._marketplace import _apply_marketplace_settings
 from ._origin import _build_org_origin_context, _resolve_is_sellable
 from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
-from ._current import apply_current_flag
-from ...utils.notes import append_timestamped_note
 
 logger = logging.getLogger(__name__)
+_IS_POSTGRES = is_postgres()
+_RECIPE_GROUP_MAX_INSERT_ATTEMPTS = 4
+_RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS = 1200
+_RETRYABLE_PG_CODES = {"55P03", "40P01", "40001"}
+
+
+# --- Normalize group name ---
+# Purpose: Canonicalize recipe-group names before persistence and lookups.
+# Inputs: Optional raw group name from request or parent recipe.
+# Outputs: Non-empty trimmed group name with deterministic fallback.
+def _normalize_group_name(name: str | None) -> str:
+    normalized = (name or "").strip()
+    return normalized or "Recipe Group"
+
+
+# --- Normalize group prefix ---
+# Purpose: Canonicalize optional group prefix to DB-safe format.
+# Inputs: Optional raw prefix value from user input or inherited parent.
+# Outputs: Uppercased prefix up to 8 chars, or None when empty.
+def _normalize_group_prefix(prefix: str | None) -> str | None:
+    if prefix in (None, ""):
+        return None
+    normalized = str(prefix).strip().upper()
+    return normalized[:8] if normalized else None
+
+
+# --- Find group by name ---
+# Purpose: Reuse existing group rows to avoid duplicate-name insert races.
+# Inputs: Organization id and normalized group name.
+# Outputs: Matching RecipeGroup row or None if not found.
+def _find_group_by_name(recipe_org_id: int, group_name: str) -> RecipeGroup | None:
+    with db.session.no_autoflush:
+        return RecipeGroup.query.filter_by(
+            organization_id=recipe_org_id,
+            name=group_name,
+        ).first()
+
+
+# --- Set short lock timeout ---
+# Purpose: Bound lock-wait time for group insert attempts under contention.
+# Inputs: None; uses configured lock-timeout constant on current transaction.
+# Outputs: Applies Postgres session-local lock_timeout when supported.
+def _set_short_group_insert_lock_timeout() -> None:
+    if not _IS_POSTGRES:
+        return
+    db.session.execute(
+        sa.text(f"SET LOCAL lock_timeout = {_RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS}")
+    )
+
+
+# --- Reset lock timeout ---
+# Purpose: Restore default transaction lock-timeout after guarded insert attempt.
+# Inputs: None.
+# Outputs: Resets Postgres session-local lock_timeout to default.
+def _reset_group_insert_lock_timeout() -> None:
+    if not _IS_POSTGRES:
+        return
+    db.session.execute(sa.text("SET LOCAL lock_timeout = DEFAULT"))
+
+
+# --- Retryable insert error ---
+# Purpose: Detect transient DB errors that should retry group insert attempts.
+# Inputs: SQLAlchemy OperationalError raised during insert/flush.
+# Outputs: True for lock/deadlock/serialization failures, else False.
+def _is_retryable_group_insert_error(exc: OperationalError) -> bool:
+    code = getattr(getattr(exc, "orig", None), "pgcode", None)
+    if code in _RETRYABLE_PG_CODES:
+        return True
+    message = str(exc).lower()
+    return any(
+        token in message
+        for token in (
+            "lock timeout",
+            "deadlock detected",
+            "could not serialize access",
+        )
+    )
+
 
 # --- Derive variation name ---
 # Purpose: Derive a variation display name.
@@ -51,7 +131,7 @@ def _derive_variation_name(name: str | None, parent_name: str | None) -> str | N
             parent_lower = parent_name.strip().lower()
             name_lower = name.strip().lower()
             if name_lower.startswith(parent_lower):
-                suffix = name.strip()[len(parent_name):].strip(" -:")
+                suffix = name.strip()[len(parent_name) :].strip(" -:")
                 if suffix:
                     return suffix
         except Exception:
@@ -78,7 +158,9 @@ def _next_version_number(
     )
     if not is_master:
         normalized_variation_name = (variation_name or "").strip().lower()
-        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
+        query = query.filter(
+            sa.func.lower(Recipe.variation_name) == normalized_variation_name
+        )
     max_ver = query.with_entities(sa.func.max(Recipe.version_number)).scalar()
     return int(max_ver or 0) + 1
 
@@ -102,7 +184,9 @@ def _next_test_sequence(
     )
     if not is_master:
         normalized_variation_name = (variation_name or "").strip().lower()
-        query = query.filter(sa.func.lower(Recipe.variation_name) == normalized_variation_name)
+        query = query.filter(
+            sa.func.lower(Recipe.variation_name) == normalized_variation_name
+        )
     max_test = query.with_entities(sa.func.max(Recipe.test_sequence)).scalar()
     return int(max_test or 0) + 1
 
@@ -117,55 +201,110 @@ def _ensure_recipe_group(
     group_name: str,
     group_prefix: str | None = None,
 ) -> RecipeGroup:
-    prefix = group_prefix or generate_group_prefix(group_name, recipe_org_id)
-    recipe_group = RecipeGroup(
-        organization_id=recipe_org_id,
-        name=group_name,
-        prefix=prefix,
-    )
-    db.session.add(recipe_group)
-    db.session.flush()
-    return recipe_group
+    normalized_name = _normalize_group_name(group_name)
+    prefix = _normalize_group_prefix(group_prefix)
+    if not prefix:
+        with db.session.no_autoflush:
+            prefix = generate_group_prefix(normalized_name, recipe_org_id)
+
+    last_error: Exception | None = None
+    for attempt in range(_RECIPE_GROUP_MAX_INSERT_ATTEMPTS):
+        existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+        if existing_group:
+            return existing_group
+
+        try:
+            with db.session.begin_nested():
+                _set_short_group_insert_lock_timeout()
+                recipe_group = RecipeGroup(
+                    organization_id=recipe_org_id,
+                    name=normalized_name,
+                    prefix=prefix,
+                )
+                db.session.add(recipe_group)
+                db.session.flush()
+                _reset_group_insert_lock_timeout()
+                return recipe_group
+        except IntegrityError as exc:
+            last_error = exc
+            try:
+                _reset_group_insert_lock_timeout()
+            except Exception:
+                pass
+            existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+            if existing_group:
+                return existing_group
+            with db.session.no_autoflush:
+                prefix = generate_group_prefix(normalized_name, recipe_org_id)
+        except OperationalError as exc:
+            last_error = exc
+            try:
+                _reset_group_insert_lock_timeout()
+            except Exception:
+                pass
+            existing_group = _find_group_by_name(recipe_org_id, normalized_name)
+            if existing_group:
+                return existing_group
+            if not _is_retryable_group_insert_error(exc):
+                raise
+
+        if attempt < _RECIPE_GROUP_MAX_INSERT_ATTEMPTS - 1:
+            time.sleep(0.05 * (2**attempt))
+
+    if last_error:
+        raise last_error
+    raise RuntimeError("Unable to ensure recipe group.")
 
 
 # --- Create recipe ---
 # Purpose: Create a recipe with group/version metadata.
 # Inputs: Recipe payload fields, lineage metadata, and publish flags.
 # Outputs: Tuple of success flag with Recipe model or error payload.
-def create_recipe(name: str, description: str = "", instructions: str = "",
-                 yield_amount: float = 0.0, yield_unit: str = "",
-                 ingredients: List[Dict] = None, parent_id: int = None,
-                 parent_recipe_id: int = None, cloned_from_id: int | None = None,
-                 root_recipe_id: int | None = None,
-                 allowed_containers: List[int] = None, label_prefix: str = "",
-                 consumables: List[Dict] = None, category_id: int | None = None,
-                 portioning_data: Dict | None = None,
-                 is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None,
-                 status: str = 'published',
-                 sharing_scope: str = 'private',
-                 is_public: bool | None = None,
-                 is_for_sale: bool = False,
-                 sale_price: Any = None,
-                 marketplace_status: str | None = None,
-                 marketplace_notes: str | None = None,
-                 public_description: str | None = None,
-                 product_store_url: str | None = None,
-                 cover_image_path: str | None = None,
-                 cover_image_url: str | None = None,
-                 skin_opt_in: bool | None = None,
-                 remove_cover_image: bool = False,
-                 is_sellable: bool | None = None,
-                 recipe_group_id: int | None = None,
-                 group_name: str | None = None,
-                 group_prefix: str | None = None,
-                 variation_name: str | None = None,
-                 parent_master_id: int | None = None,
-                 test_sequence: int | None = None,
-                 is_test: bool | None = None,
-                 is_master_override: bool | None = None,
-                 version_number_override: int | None = None,
-                 allow_duplicate_name_override: bool = False) -> Tuple[bool, Any]:
+def create_recipe(
+    name: str,
+    description: str = "",
+    instructions: str = "",
+    yield_amount: float = 0.0,
+    yield_unit: str = "",
+    ingredients: List[Dict] = None,
+    parent_id: int = None,
+    parent_recipe_id: int = None,
+    cloned_from_id: int | None = None,
+    root_recipe_id: int | None = None,
+    allowed_containers: List[int] = None,
+    label_prefix: str = "",
+    consumables: List[Dict] = None,
+    category_id: int | None = None,
+    portioning_data: Dict | None = None,
+    is_portioned: bool = None,
+    portion_name: str = None,
+    portion_count: int = None,
+    portion_unit_id: int = None,
+    status: str = "published",
+    sharing_scope: str = "private",
+    is_public: bool | None = None,
+    is_for_sale: bool = False,
+    sale_price: Any = None,
+    marketplace_status: str | None = None,
+    marketplace_notes: str | None = None,
+    public_description: str | None = None,
+    product_store_url: str | None = None,
+    cover_image_path: str | None = None,
+    cover_image_url: str | None = None,
+    skin_opt_in: bool | None = None,
+    remove_cover_image: bool = False,
+    is_sellable: bool | None = None,
+    recipe_group_id: int | None = None,
+    group_name: str | None = None,
+    group_prefix: str | None = None,
+    variation_name: str | None = None,
+    parent_master_id: int | None = None,
+    test_sequence: int | None = None,
+    is_test: bool | None = None,
+    is_master_override: bool | None = None,
+    version_number_override: int | None = None,
+    allow_duplicate_name_override: bool = False,
+) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -188,15 +327,14 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         # Validate input data
         normalized_status = _normalize_status(status)
         is_test_flag = bool(is_test or test_sequence is not None)
-        allow_partial = normalized_status == 'draft'
+        allow_partial = normalized_status == "draft"
 
         current_org_id = _resolve_current_org_id()
         recipe_org_id = current_org_id if current_org_id else (1)
 
         allow_duplicate_name = bool(
             allow_duplicate_name_override
-            or
-            is_test_flag
+            or is_test_flag
             or parent_recipe_id
             or parent_master_id
             or (is_master_override is False)
@@ -211,7 +349,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             allow_duplicate_name=allow_duplicate_name,
         )
 
-        if not validation_result['valid']:
+        if not validation_result["valid"]:
             return False, validation_result
 
         parent_recipe_id = parent_recipe_id or parent_id
@@ -239,16 +377,17 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         derived_yield = yield_amount
         derived_unit = yield_unit
         try:
-            if portioning_data and portioning_data.get('is_portioned'):
-                byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+            if portioning_data and portioning_data.get("is_portioned"):
+                byq = float(portioning_data.get("bulk_yield_quantity") or 0)
                 if byq > 0:
                     derived_yield = byq
                     # Map bulk_yield_unit_id -> unit string if available
-                    buid = portioning_data.get('bulk_yield_unit_id')
+                    buid = portioning_data.get("bulk_yield_unit_id")
                     if buid:
                         from ...models.unit import Unit
+
                         u = db.session.get(Unit, buid)
-                        if u and getattr(u, 'name', None):
+                        if u and getattr(u, "name", None):
                             derived_unit = u.name
         except Exception:
             pass
@@ -257,7 +396,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if recipe_group_id:
             recipe_group = db.session.get(RecipeGroup, recipe_group_id)
         if not recipe_group and parent_recipe:
-            recipe_group = parent_recipe.recipe_group if parent_recipe.recipe_group_id else None
+            recipe_group = (
+                parent_recipe.recipe_group if parent_recipe.recipe_group_id else None
+            )
             if not recipe_group:
                 inherited_prefix = parent_recipe.label_prefix or None
                 if inherited_prefix:
@@ -288,9 +429,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         resolved_variation_name = None
         resolved_variation_prefix = None
         if not is_master:
-            resolved_variation_name = (variation_name or _derive_variation_name(
-                name, parent_recipe.name if parent_recipe else None
-            ) or "").strip()
+            resolved_variation_name = (
+                variation_name
+                or _derive_variation_name(
+                    name, parent_recipe.name if parent_recipe else None
+                )
+                or ""
+            ).strip()
             if not resolved_variation_name:
                 return False, {
                     "valid": False,
@@ -304,10 +449,15 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                     Recipe.recipe_group_id == recipe_group.id,
                     Recipe.is_master.is_(False),
                     Recipe.test_sequence.is_(None),
-                    sa.func.lower(Recipe.variation_name) == resolved_variation_name.lower(),
+                    sa.func.lower(Recipe.variation_name)
+                    == resolved_variation_name.lower(),
                 )
-                existing_variation = existing_variation_query.order_by(Recipe.version_number.desc()).first()
-                creating_new_variation_branch = bool(parent_recipe and parent_recipe.is_master and not is_test_flag)
+                existing_variation = existing_variation_query.order_by(
+                    Recipe.version_number.desc()
+                ).first()
+                creating_new_variation_branch = bool(
+                    parent_recipe and parent_recipe.is_master and not is_test_flag
+                )
                 if existing_variation and creating_new_variation_branch:
                     return False, {
                         "valid": False,
@@ -337,13 +487,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                 resolved_parent_master = db.session.get(Recipe, parent_master_id)
             if not resolved_parent_master and parent_recipe:
                 resolved_parent_master = (
-                    parent_recipe if parent_recipe.is_master else parent_recipe.parent_master
+                    parent_recipe
+                    if parent_recipe.is_master
+                    else parent_recipe.parent_master
                 )
             if not resolved_parent_master and recipe_group:
-                resolved_parent_master = Recipe.query.filter(
-                    Recipe.recipe_group_id == recipe_group.id,
-                    Recipe.is_master.is_(True),
-                ).order_by(Recipe.version_number.desc()).first()
+                resolved_parent_master = (
+                    Recipe.query.filter(
+                        Recipe.recipe_group_id == recipe_group.id,
+                        Recipe.is_master.is_(True),
+                    )
+                    .order_by(Recipe.version_number.desc())
+                    .first()
+                )
 
         resolved_test_sequence = None
         if is_test_flag:
@@ -358,7 +514,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             parent_recipe=parent_recipe,
             clone_source=clone_source,
         )
-        pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
+        pending_org_origin_recipe_id = origin_context.get("org_origin_recipe_id")
 
         stamped_instructions = append_timestamped_note(None, instructions)
         recipe = Recipe(
@@ -372,13 +528,15 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             variation_name=resolved_variation_name,
             variation_prefix=resolved_variation_prefix,
             version_number=version_number,
-            parent_master_id=resolved_parent_master.id if resolved_parent_master else None,
+            parent_master_id=(
+                resolved_parent_master.id if resolved_parent_master else None
+            ),
             test_sequence=resolved_test_sequence,
             parent_recipe_id=parent_recipe_id,
             cloned_from_id=cloned_from_id,
             label_prefix=final_label_prefix,
             category_id=category_id,
-            status=normalized_status
+            status=normalized_status,
         )
         recipe.is_sellable = _resolve_is_sellable(
             explicit_flag=is_sellable,
@@ -387,10 +545,12 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             clone_source=clone_source,
             origin_context=origin_context,
         )
-        recipe.org_origin_type = origin_context['org_origin_type']
-        recipe.org_origin_source_org_id = origin_context['org_origin_source_org_id']
-        recipe.org_origin_source_recipe_id = origin_context['org_origin_source_recipe_id']
-        recipe.org_origin_purchased = origin_context['org_origin_purchased']
+        recipe.org_origin_type = origin_context["org_origin_type"]
+        recipe.org_origin_source_org_id = origin_context["org_origin_source_org_id"]
+        recipe.org_origin_source_recipe_id = origin_context[
+            "org_origin_source_recipe_id"
+        ]
+        recipe.org_origin_purchased = origin_context["org_origin_purchased"]
 
         # Set allowed containers
         if allowed_containers:
@@ -441,9 +601,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         for ingredient_data in ingredients or []:
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
-                inventory_item_id=ingredient_data['item_id'],
-                quantity=ingredient_data['quantity'],
-                unit=ingredient_data['unit']
+                inventory_item_id=ingredient_data["item_id"],
+                quantity=ingredient_data["quantity"],
+                unit=ingredient_data["unit"],
             )
             db.session.add(recipe_ingredient)
 
@@ -451,13 +611,17 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         for consumable in consumables or []:
             recipe_consumable = RecipeConsumable(
                 recipe_id=recipe.id,
-                inventory_item_id=consumable['item_id'],
-                quantity=consumable['quantity'],
-                unit=consumable['unit']
+                inventory_item_id=consumable["item_id"],
+                quantity=consumable["quantity"],
+                unit=consumable["unit"],
             )
             db.session.add(recipe_consumable)
 
-        if normalized_status == "published" and not is_test_flag and not recipe.is_archived:
+        if (
+            normalized_status == "published"
+            and not is_test_flag
+            and not recipe.is_archived
+        ):
             apply_current_flag(recipe)
         else:
             recipe.is_current = False
@@ -481,16 +645,16 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         db.session.commit()
 
         # Log lineage metadata after commit to ensure recipe.id is available
-        lineage_event = 'CREATE'
+        lineage_event = "CREATE"
         lineage_source_id = None
         if is_test_flag:
-            lineage_event = 'TEST'
+            lineage_event = "TEST"
             lineage_source_id = parent_recipe_id or parent_master_id
         elif parent_recipe_id:
-            lineage_event = 'VARIATION'
+            lineage_event = "VARIATION"
             lineage_source_id = parent_recipe_id
         elif cloned_from_id:
-            lineage_event = 'CLONE'
+            lineage_event = "CLONE"
             lineage_source_id = cloned_from_id
 
         _log_lineage_event(recipe, lineage_event, lineage_source_id)
@@ -499,12 +663,16 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         # Emit recipe_created
         try:
             EventEmitter.emit(
-                event_name='recipe_created',
-                properties={'name': name, 'yield_amount': yield_amount, 'yield_unit': yield_unit},
+                event_name="recipe_created",
+                properties={
+                    "name": name,
+                    "yield_amount": yield_amount,
+                    "yield_unit": yield_unit,
+                },
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type='recipe',
-                entity_id=recipe.id
+                entity_type="recipe",
+                entity_id=recipe.id,
             )
         except Exception:
             pass
@@ -521,29 +689,39 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 # Purpose: Update a recipe with lock/version safeguards and audit notes.
 # Inputs: Target recipe id and partial update payload fields.
 # Outputs: Tuple of success flag with updated Recipe model or error.
-def update_recipe(recipe_id: int, name: str = None, description: str = None,
-                 instructions: str = None, yield_amount: float = None,
-                 yield_unit: str = None, ingredients: List[Dict] = None,
-                 allowed_containers: List[int] = None, label_prefix: str = None,
-                 consumables: List[Dict] = None, category_id: int | None = None,
-                 portioning_data: Dict | None = None,
-                 is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None,
-                 status: str | None = None,
-                 sharing_scope: str | None = None,
-                 is_public: bool | None = None,
-                 is_for_sale: bool | None = None,
-                 sale_price: Any = None,
-                 marketplace_status: str | None = None,
-                 marketplace_notes: str | None = None,
-                 public_description: str | None = None,
-                 product_store_url: str | None = None,
-                 cover_image_path: Any = _UNSET,
-                 cover_image_url: Any = _UNSET,
-                 skin_opt_in: bool | None = None,
-                 remove_cover_image: bool = False,
-                 is_test: bool | None = None,
-                 allow_published_edit: bool = False) -> Tuple[bool, Any]:
+def update_recipe(
+    recipe_id: int,
+    name: str = None,
+    description: str = None,
+    instructions: str = None,
+    yield_amount: float = None,
+    yield_unit: str = None,
+    ingredients: List[Dict] = None,
+    allowed_containers: List[int] = None,
+    label_prefix: str = None,
+    consumables: List[Dict] = None,
+    category_id: int | None = None,
+    portioning_data: Dict | None = None,
+    is_portioned: bool = None,
+    portion_name: str = None,
+    portion_count: int = None,
+    portion_unit_id: int = None,
+    status: str | None = None,
+    sharing_scope: str | None = None,
+    is_public: bool | None = None,
+    is_for_sale: bool | None = None,
+    sale_price: Any = None,
+    marketplace_status: str | None = None,
+    marketplace_notes: str | None = None,
+    public_description: str | None = None,
+    product_store_url: str | None = None,
+    cover_image_path: Any = _UNSET,
+    cover_image_url: Any = _UNSET,
+    skin_opt_in: bool | None = None,
+    remove_cover_image: bool = False,
+    is_test: bool | None = None,
+    allow_published_edit: bool = False,
+) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -572,11 +750,13 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             normalized = []
             for entry in items:
                 try:
-                    normalized.append((
-                        int(entry.get('item_id')),
-                        float(entry.get('quantity')),
-                        str(entry.get('unit') or '').strip(),
-                    ))
+                    normalized.append(
+                        (
+                            int(entry.get("item_id")),
+                            float(entry.get("quantity")),
+                            str(entry.get("unit") or "").strip(),
+                        )
+                    )
                 except Exception:
                     continue
             return sorted(normalized)
@@ -600,7 +780,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 (
                     int(row.inventory_item_id),
                     float(row.quantity),
-                    str(row.unit or '').strip(),
+                    str(row.unit or "").strip(),
                 )
                 for row in (recipe.recipe_ingredients or [])
             ),
@@ -608,7 +788,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 (
                     int(row.inventory_item_id),
                     float(row.quantity),
-                    str(row.unit or '').strip(),
+                    str(row.unit or "").strip(),
                 )
                 for row in (recipe.recipe_consumables or [])
             ),
@@ -620,16 +800,26 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             return False, "Archived recipes cannot be modified"
 
         has_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
-        if recipe.status == 'published' and recipe.test_sequence is None and not allow_published_edit:
+        if (
+            recipe.status == "published"
+            and recipe.test_sequence is None
+            and not allow_published_edit
+        ):
             return False, "Published versions are locked. Create a test to make edits."
         if recipe.test_sequence is not None and has_batches > 0:
             return False, "Tests cannot be edited after running batches."
 
-        target_status = _normalize_status(status if status is not None else recipe.status)
-        allow_partial = target_status == 'draft'
+        target_status = _normalize_status(
+            status if status is not None else recipe.status
+        )
+        allow_partial = target_status == "draft"
         recipe.status = target_status
 
-        if recipe.parent_recipe_id and recipe.is_master and recipe.test_sequence is None:
+        if (
+            recipe.parent_recipe_id
+            and recipe.is_master
+            and recipe.test_sequence is None
+        ):
             recipe.is_master = False
 
         if recipe.recipe_group_id is None and recipe.organization_id:
@@ -639,7 +829,10 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             if parent_candidate and parent_candidate.recipe_group_id:
                 recipe.recipe_group_id = parent_candidate.recipe_group_id
             else:
-                inherited_prefix = getattr(parent_candidate, "label_prefix", None) or recipe.label_prefix
+                inherited_prefix = (
+                    getattr(parent_candidate, "label_prefix", None)
+                    or recipe.label_prefix
+                )
                 if inherited_prefix:
                     collision = RecipeGroup.query.filter_by(
                         organization_id=recipe.organization_id,
@@ -649,7 +842,9 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                         inherited_prefix = None
                 recipe_group = _ensure_recipe_group(
                     recipe_org_id=recipe.organization_id,
-                    group_name=(parent_candidate.name if parent_candidate else recipe.name),
+                    group_name=(
+                        parent_candidate.name if parent_candidate else recipe.name
+                    ),
                     group_prefix=inherited_prefix,
                 )
                 recipe.recipe_group_id = recipe_group.id
@@ -667,16 +862,26 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                     recipe.recipe_group_id,
                 )
             if recipe.parent_master_id is None:
-                resolved_parent_master = recipe.parent if recipe.parent and recipe.parent.is_master else recipe.parent_master
+                resolved_parent_master = (
+                    recipe.parent
+                    if recipe.parent and recipe.parent.is_master
+                    else recipe.parent_master
+                )
                 if not resolved_parent_master and recipe.recipe_group_id:
-                    resolved_parent_master = Recipe.query.filter(
-                        Recipe.recipe_group_id == recipe.recipe_group_id,
-                        Recipe.is_master.is_(True),
-                    ).order_by(Recipe.version_number.desc()).first()
+                    resolved_parent_master = (
+                        Recipe.query.filter(
+                            Recipe.recipe_group_id == recipe.recipe_group_id,
+                            Recipe.is_master.is_(True),
+                        )
+                        .order_by(Recipe.version_number.desc())
+                        .first()
+                    )
                 if resolved_parent_master:
                     recipe.parent_master_id = resolved_parent_master.id
 
-        effective_is_test = is_test if is_test is not None else (recipe.test_sequence is not None)
+        effective_is_test = (
+            is_test if is_test is not None else (recipe.test_sequence is not None)
+        )
         if effective_is_test:
             if recipe.test_sequence is None:
                 recipe.test_sequence = _next_test_sequence(
@@ -695,14 +900,23 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 recipe_id=recipe_id,
                 allow_partial=True,
                 organization_id=recipe.organization_id,
-                allow_duplicate_name=bool(recipe.test_sequence) or (not recipe.is_master),
+                allow_duplicate_name=bool(recipe.test_sequence)
+                or (not recipe.is_master),
             )
-            if not validation_result['valid']:
+            if not validation_result["valid"]:
                 return False, validation_result
             recipe.name = name
-            if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
+            if (
+                recipe.is_master
+                and recipe.test_sequence is None
+                and recipe.recipe_group_id
+            ):
                 group_name = name.strip() if name else ""
-                if group_name and recipe.recipe_group and recipe.recipe_group.name != group_name:
+                if (
+                    group_name
+                    and recipe.recipe_group
+                    and recipe.recipe_group.name != group_name
+                ):
                     conflict = RecipeGroup.query.filter(
                         RecipeGroup.organization_id == recipe.organization_id,
                         RecipeGroup.name == group_name,
@@ -716,7 +930,9 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                         }
                     recipe.recipe_group.name = group_name
         if instructions is not None:
-            recipe.instructions = append_timestamped_note(recipe.instructions, instructions)
+            recipe.instructions = append_timestamped_note(
+                recipe.instructions, instructions
+            )
         if yield_amount is not None:
             recipe.predicted_yield = yield_amount
         if yield_unit is not None:
@@ -746,14 +962,16 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
-                yield_amount=yield_amount if yield_amount is not None else recipe.predicted_yield,
+                yield_amount=(
+                    yield_amount if yield_amount is not None else recipe.predicted_yield
+                ),
                 recipe_id=recipe_id,
                 portioning_data=portioning_data,
                 allow_partial=allow_partial,
-                organization_id=recipe.organization_id
+                organization_id=recipe.organization_id,
             )
 
-            if not validation_result['valid']:
+            if not validation_result["valid"]:
                 return False, validation_result
 
             # Remove existing ingredients
@@ -763,29 +981,36 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             for ingredient_data in ingredients:
                 recipe_ingredient = RecipeIngredient(
                     recipe_id=recipe.id,
-                    inventory_item_id=ingredient_data['item_id'],
-                    quantity=ingredient_data['quantity'],
-                    unit=ingredient_data['unit']
+                    inventory_item_id=ingredient_data["item_id"],
+                    quantity=ingredient_data["quantity"],
+                    unit=ingredient_data["unit"],
                 )
                 db.session.add(recipe_ingredient)
 
         # Update consumables if provided
         if consumables is not None:
             from ...models.recipe import RecipeConsumable
+
             RecipeConsumable.query.filter_by(recipe_id=recipe_id).delete()
             for item in consumables:
-                db.session.add(RecipeConsumable(
-                    recipe_id=recipe.id,
-                    inventory_item_id=item['item_id'],
-                    quantity=item['quantity'],
-                    unit=item['unit']
-                ))
+                db.session.add(
+                    RecipeConsumable(
+                        recipe_id=recipe.id,
+                        inventory_item_id=item["item_id"],
+                        quantity=item["quantity"],
+                        unit=item["unit"],
+                    )
+                )
 
         category_data_payload = _extract_category_data_from_request()
         if category_data_payload:
             recipe.category_data = category_data_payload
 
-        if recipe.status == "published" and recipe.test_sequence is None and not recipe.is_archived:
+        if (
+            recipe.status == "published"
+            and recipe.test_sequence is None
+            and not recipe.is_archived
+        ):
             apply_current_flag(recipe)
         else:
             recipe.is_current = False
@@ -809,23 +1034,46 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         change_fields = []
         if name is not None and name.strip() != original_snapshot["name"]:
             change_fields.append("name")
-        if instructions is not None and instructions.strip() and instructions.strip() != original_snapshot["instructions"].strip():
+        if (
+            instructions is not None
+            and instructions.strip()
+            and instructions.strip() != original_snapshot["instructions"].strip()
+        ):
             change_fields.append("instructions")
-        if yield_amount is not None and float(yield_amount or 0) != original_snapshot["yield_amount"]:
+        if (
+            yield_amount is not None
+            and float(yield_amount or 0) != original_snapshot["yield_amount"]
+        ):
             change_fields.append("yield amount")
-        if yield_unit is not None and (yield_unit or "") != original_snapshot["yield_unit"]:
+        if (
+            yield_unit is not None
+            and (yield_unit or "") != original_snapshot["yield_unit"]
+        ):
             change_fields.append("yield unit")
-        if label_prefix is not None and (label_prefix or "") != original_snapshot["label_prefix"]:
+        if (
+            label_prefix is not None
+            and (label_prefix or "") != original_snapshot["label_prefix"]
+        ):
             change_fields.append("label prefix")
         if category_id is not None and category_id != original_snapshot["category_id"]:
             change_fields.append("category")
         if status is not None and (recipe.status or "") != original_snapshot["status"]:
             change_fields.append("status")
-        if allowed_containers is not None and sorted(list(allowed_containers or [])) != original_snapshot["allowed_containers"]:
+        if (
+            allowed_containers is not None
+            and sorted(list(allowed_containers or []))
+            != original_snapshot["allowed_containers"]
+        ):
             change_fields.append("containers")
-        if ingredients is not None and _normalize_items(ingredients) != original_snapshot["ingredients"]:
+        if (
+            ingredients is not None
+            and _normalize_items(ingredients) != original_snapshot["ingredients"]
+        ):
             change_fields.append("ingredients")
-        if consumables is not None and _normalize_items(consumables) != original_snapshot["consumables"]:
+        if (
+            consumables is not None
+            and _normalize_items(consumables) != original_snapshot["consumables"]
+        ):
             change_fields.append("consumables")
 
         updated_portioning = (
@@ -849,12 +1097,12 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         # Emit recipe_updated
         try:
             EventEmitter.emit(
-                event_name='recipe_updated',
-                properties={'recipe_id': recipe_id},
+                event_name="recipe_updated",
+                properties={"recipe_id": recipe_id},
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type='recipe',
-                entity_id=recipe.id
+                entity_type="recipe",
+                entity_id=recipe.id,
             )
         except Exception:
             pass
@@ -865,7 +1113,6 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         db.session.rollback()
         logger.error(f"Error updating recipe {recipe_id}: {e}")
         return False, str(e)
-
 
 
 # --- Delete recipe ---
@@ -892,10 +1139,14 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
 
         # Check for any batches (active or completed/cancelled)
         from ...models.batch import Batch
+
         any_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
 
         if any_batches > 0:
-            return False, "Cannot delete recipe that has been used in batches. Archive the recipe instead."
+            return (
+                False,
+                "Cannot delete recipe that has been used in batches. Archive the recipe instead.",
+            )
 
         recipe_name = recipe.name
 
@@ -910,12 +1161,12 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         # Emit recipe_deleted
         try:
             EventEmitter.emit(
-                event_name='recipe_deleted',
-                properties={'name': recipe_name},
+                event_name="recipe_deleted",
+                properties={"name": recipe_name},
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type='recipe',
-                entity_id=recipe_id
+                entity_type="recipe",
+                entity_id=recipe_id,
             )
         except Exception:
             pass
@@ -927,12 +1178,13 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         return False, f"Error deleting recipe: {str(e)}"
 
 
-
 # --- Fetch recipe details ---
 # Purpose: Fetch a recipe with access checks.
 # Inputs: Recipe id and optional cross-org import flag.
 # Outputs: Recipe model when accessible, otherwise None or error.
-def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Optional[Recipe]:
+def get_recipe_details(
+    recipe_id: int, *, allow_cross_org: bool = False
+) -> Optional[Recipe]:
     """
     Get detailed recipe information with all relationships loaded.
 
@@ -952,13 +1204,17 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
     try:
         from sqlalchemy.orm import joinedload
 
-        from ...models import RecipeIngredient, RecipeConsumable, InventoryItem
+        from ...models import RecipeConsumable, RecipeIngredient
 
         recipe = (
             db.session.query(Recipe)
             .options(
-                joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
-                joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item),
+                joinedload(Recipe.recipe_ingredients).joinedload(
+                    RecipeIngredient.inventory_item
+                ),
+                joinedload(Recipe.recipe_consumables).joinedload(
+                    RecipeConsumable.inventory_item
+                ),
             )
             .filter(Recipe.id == recipe_id)
             .first()
@@ -968,7 +1224,11 @@ def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Opti
             return None
 
         effective_org_id = _resolve_current_org_id()
-        if not allow_cross_org and effective_org_id and recipe.organization_id != effective_org_id:
+        if (
+            not allow_cross_org
+            and effective_org_id
+            and recipe.organization_id != effective_org_id
+        ):
             raise PermissionError("Access denied to recipe")
 
         if allow_cross_org:
@@ -1016,35 +1276,50 @@ def duplicate_recipe(
         consumable_globals: set[int] = set()
         for ri in original.recipe_ingredients:
             try:
-                gi = getattr(getattr(ri, "inventory_item", None), "global_item_id", None)
+                gi = getattr(
+                    getattr(ri, "inventory_item", None), "global_item_id", None
+                )
                 if gi:
                     ingredient_globals.add(int(gi))
             except Exception:
                 continue
         for rc in original.recipe_consumables:
             try:
-                gi = getattr(getattr(rc, "inventory_item", None), "global_item_id", None)
+                gi = getattr(
+                    getattr(rc, "inventory_item", None), "global_item_id", None
+                )
                 if gi:
                     consumable_globals.add(int(gi))
             except Exception:
                 continue
 
-        target_org_for_mapping = target_org_id if allow_cross_org and target_org_id else original.organization_id
+        target_org_for_mapping = (
+            target_org_id
+            if allow_cross_org and target_org_id
+            else original.organization_id
+        )
         global_match_map: dict[int, int] = {}
-        if allow_cross_org and target_org_for_mapping and (ingredient_globals or consumable_globals):
+        if (
+            allow_cross_org
+            and target_org_for_mapping
+            and (ingredient_globals or consumable_globals)
+        ):
             candidate_ids = list(ingredient_globals.union(consumable_globals))
             try:
-                matches = (
-                    InventoryItem.query.filter(
-                        InventoryItem.organization_id == target_org_for_mapping,
-                        InventoryItem.global_item_id.in_(candidate_ids),
-                    ).all()
-                )
+                matches = InventoryItem.query.filter(
+                    InventoryItem.organization_id == target_org_for_mapping,
+                    InventoryItem.global_item_id.in_(candidate_ids),
+                ).all()
                 for item in matches:
-                    if item.global_item_id and item.global_item_id not in global_match_map:
+                    if (
+                        item.global_item_id
+                        and item.global_item_id not in global_match_map
+                    ):
                         global_match_map[item.global_item_id] = item.id
             except Exception:
-                logger.debug("Unable to pre-map inventory items for import; proceeding without matches.")
+                logger.debug(
+                    "Unable to pre-map inventory items for import; proceeding without matches."
+                )
 
         ingredients: List[Dict[str, Any]] = []
         for ri in original.recipe_ingredients:
@@ -1128,10 +1403,14 @@ def duplicate_recipe(
             category_id=original.category_id,
             organization_id=original.organization_id,
             cloned_from_id=original.id,
-            root_recipe_id=original.root_recipe_id or original.id
+            root_recipe_id=original.root_recipe_id or original.id,
         )
         template.allowed_containers = list(original.allowed_containers or [])
-        template.portioning_data = original.portioning_data.copy() if isinstance(original.portioning_data, dict) else original.portioning_data
+        template.portioning_data = (
+            original.portioning_data.copy()
+            if isinstance(original.portioning_data, dict)
+            else original.portioning_data
+        )
         template.is_portioned = original.is_portioned
         template.portion_name = original.portion_name
         template.portion_count = original.portion_count
@@ -1143,18 +1422,18 @@ def duplicate_recipe(
         template.is_sellable = bool(getattr(original, "is_sellable", True))
         if allow_cross_org or getattr(original, "org_origin_purchased", False):
             template.is_sellable = False
-        template.sharing_scope = 'private'
+        template.sharing_scope = "private"
         template.is_public = False
         template.is_for_sale = False
         template.sale_price = None
-        template.marketplace_status = 'draft'
+        template.marketplace_status = "draft"
 
         return True, {
-            'template': template,
-            'ingredients': ingredients,
-            'consumables': consumables,
-            'cloned_from_id': original.id,
-            'root_recipe_id': original.root_recipe_id or original.id
+            "template": template,
+            "ingredients": ingredients,
+            "consumables": consumables,
+            "cloned_from_id": original.id,
+            "root_recipe_id": original.root_recipe_id or original.id,
         }
 
     except Exception as e:

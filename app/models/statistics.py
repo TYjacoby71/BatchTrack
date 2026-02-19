@@ -8,21 +8,25 @@ Glossary:
 - OrganizationStats: Aggregated org counts for dashboards.
 """
 
-from datetime import datetime, timedelta
-from sqlalchemy import func, extract
+from sqlalchemy import extract, func
+
 from ..extensions import db
-from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+from .mixins import ScopedModelMixin
+
 
 # --- UserStats ---
 # Purpose: Track per-user statistics for reporting and gamification.
 class UserStats(ScopedModelMixin, db.Model):
     """Track user statistics for reporting and gamification"""
-    __tablename__ = 'user_stats'
+
+    __tablename__ = "user_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False
+    )
 
     # Batch statistics
     total_batches = db.Column(db.Integer, default=0)
@@ -50,12 +54,14 @@ class UserStats(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    user = db.relationship('User', backref='stats')
+    user = db.relationship("User", backref="stats")
 
     @classmethod
     def get_or_create(cls, user_id, organization_id):
         """Get existing stats or create new ones"""
-        stats = cls.query.filter_by(user_id=user_id, organization_id=organization_id).first()
+        stats = cls.query.filter_by(
+            user_id=user_id, organization_id=organization_id
+        ).first()
         if not stats:
             stats = cls(user_id=user_id, organization_id=organization_id)
             db.session.add(stats)
@@ -64,23 +70,27 @@ class UserStats(ScopedModelMixin, db.Model):
 
     def refresh_from_database(self):
         """Recalculate all statistics from actual data"""
-        from .models import Batch, Recipe, InventoryItem, InventoryHistory
+        from .models import Batch, InventoryHistory, InventoryItem, Recipe
         from .product import Product
 
         # Batch statistics - use explicit column references for consistency
         user_batches = Batch.query.filter(
             Batch.created_by == self.user_id,
-            Batch.organization_id == self.organization_id
+            Batch.organization_id == self.organization_id,
         )
         self.total_batches = user_batches.count()
-        self.completed_batches = user_batches.filter(Batch.status == 'completed').count()
-        self.failed_batches = user_batches.filter(Batch.status == 'failed').count()
-        self.cancelled_batches = user_batches.filter(Batch.status == 'cancelled').count()
+        self.completed_batches = user_batches.filter(
+            Batch.status == "completed"
+        ).count()
+        self.failed_batches = user_batches.filter(Batch.status == "failed").count()
+        self.cancelled_batches = user_batches.filter(
+            Batch.status == "cancelled"
+        ).count()
 
         # Recipe statistics - use explicit column references for consistency
         user_recipes = Recipe.query.filter(
             Recipe.created_by == self.user_id,
-            Recipe.organization_id == self.organization_id
+            Recipe.organization_id == self.organization_id,
         )
         self.total_recipes = user_recipes.count()
         self.recipes_created = user_recipes.count()
@@ -99,20 +109,20 @@ class UserStats(ScopedModelMixin, db.Model):
         # Inventory statistics - use explicit column references for consistency
         user_inventory = InventoryItem.query.filter(
             InventoryItem.created_by == self.user_id,
-            InventoryItem.organization_id == self.organization_id
+            InventoryItem.organization_id == self.organization_id,
         )
         self.inventory_items_created = user_inventory.count()
 
         user_adjustments = InventoryHistory.query.filter(
             InventoryHistory.created_by == self.user_id,
-            InventoryHistory.organization_id == self.organization_id
+            InventoryHistory.organization_id == self.organization_id,
         )
         self.inventory_adjustments = user_adjustments.count()
 
         # Product statistics - use explicit column references for consistency
         user_products = Product.query.filter(
             Product.created_by == self.user_id,
-            Product.organization_id == self.organization_id
+            Product.organization_id == self.organization_id,
         )
         self.products_created = user_products.count()
 
@@ -133,25 +143,29 @@ class UserStats(ScopedModelMixin, db.Model):
         monthly_batches = Batch.query.filter(
             Batch.created_by == self.user_id,
             Batch.organization_id == self.organization_id,
-            extract('year', Batch.started_at) == year,
-            extract('month', Batch.started_at) == month
+            extract("year", Batch.started_at) == year,
+            extract("month", Batch.started_at) == month,
         ).count()
 
         return {
-            'year': year,
-            'month': month,
-            'batches': monthly_batches,
-            'user_id': self.user_id
+            "year": year,
+            "month": month,
+            "batches": monthly_batches,
+            "user_id": self.user_id,
         }
+
 
 # --- OrganizationStats ---
 # Purpose: Track organization-level aggregates for dashboards and reports.
 class OrganizationStats(db.Model):
     """Track organization-wide statistics"""
-    __tablename__ = 'organization_stats'
+
+    __tablename__ = "organization_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, unique=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False, unique=True
+    )
 
     # Batch statistics
     total_batches = db.Column(db.Integer, default=0)
@@ -182,7 +196,7 @@ class OrganizationStats(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    organization = db.relationship('Organization', backref='stats')
+    organization = db.relationship("Organization", backref="stats")
 
     @classmethod
     def get_or_create(cls, organization_id):
@@ -197,30 +211,38 @@ class OrganizationStats(db.Model):
     def refresh_from_database(self):
         """Refresh statistics from current database state"""
         try:
-            from .models import Batch, User, InventoryItem, Recipe
+            from .models import Batch, InventoryItem, Recipe, User
             from .product import Product
 
             # Batch statistics - use direct organization_id filtering since we're not in a request context
             # Note: We can't use Batch.scoped() here because it relies on current_user being available
-            batch_query = Batch.query.filter(Batch.organization_id == self.organization_id)
+            batch_query = Batch.query.filter(
+                Batch.organization_id == self.organization_id
+            )
             self.total_batches = batch_query.count()
-            self.completed_batches = batch_query.filter(Batch.status == 'completed').count()
-            self.failed_batches = batch_query.filter(Batch.status == 'failed').count()
-            self.cancelled_batches = batch_query.filter(Batch.status == 'cancelled').count()
+            self.completed_batches = batch_query.filter(
+                Batch.status == "completed"
+            ).count()
+            self.failed_batches = batch_query.filter(Batch.status == "failed").count()
+            self.cancelled_batches = batch_query.filter(
+                Batch.status == "cancelled"
+            ).count()
 
             # User statistics - exclude developers from organization counts
             self.total_users = User.query.filter(
                 User.organization_id == self.organization_id,
-                User.user_type != 'developer'
+                User.user_type != "developer",
             ).count()
             self.active_users = User.query.filter(
                 User.organization_id == self.organization_id,
-                User.is_active == True,
-                User.user_type != 'developer'
+                User.is_active,
+                User.user_type != "developer",
             ).count()
 
             # Recipe statistics - scoped by organization
-            self.total_recipes = Recipe.query.filter(Recipe.organization_id == self.organization_id).count()
+            self.total_recipes = Recipe.query.filter(
+                Recipe.organization_id == self.organization_id
+            ).count()
             self.total_master_recipes = Recipe.query.filter(
                 Recipe.organization_id == self.organization_id,
                 Recipe.is_master.is_(True),
@@ -242,13 +264,22 @@ class OrganizationStats(db.Model):
             ).count()
 
             # Inventory statistics - already scoped by organization
-            self.total_inventory_items = InventoryItem.query.filter(InventoryItem.organization_id == self.organization_id).count()
-            total_value = db.session.query(func.sum(InventoryItem.quantity * InventoryItem.cost_per_unit))\
-                .filter(InventoryItem.organization_id == self.organization_id).scalar()
+            self.total_inventory_items = InventoryItem.query.filter(
+                InventoryItem.organization_id == self.organization_id
+            ).count()
+            total_value = (
+                db.session.query(
+                    func.sum(InventoryItem.quantity * InventoryItem.cost_per_unit)
+                )
+                .filter(InventoryItem.organization_id == self.organization_id)
+                .scalar()
+            )
             self.total_inventory_value = total_value or 0.0
 
             # Product statistics - already scoped by organization
-            self.total_products = Product.query.filter(Product.organization_id == self.organization_id).count()
+            self.total_products = Product.query.filter(
+                Product.organization_id == self.organization_id
+            ).count()
             # Note: ProductInventory calculation needs to be implemented when ProductInventory model is available
 
             self.last_updated = TimezoneUtils.utc_now()
@@ -257,6 +288,7 @@ class OrganizationStats(db.Model):
         except Exception as e:
             print(f"Error refreshing organization stats: {e}")
             import traceback
+
             print(f"Full traceback: {traceback.format_exc()}")
             # Set default values if refresh fails
             self.total_batches = 0
@@ -277,16 +309,17 @@ class OrganizationStats(db.Model):
 
         monthly_batches = Batch.query.filter(
             Batch.organization_id == self.organization_id,
-            extract('year', Batch.started_at) == year,
-            extract('month', Batch.started_at) == month
+            extract("year", Batch.started_at) == year,
+            extract("month", Batch.started_at) == month,
         ).count()
 
         return {
-            'year': year,
-            'month': month,
-            'batches': monthly_batches,
-            'organization_id': self.organization_id
+            "year": year,
+            "month": month,
+            "batches": monthly_batches,
+            "organization_id": self.organization_id,
         }
+
 
 # --- Leaderboard ---
 # Purpose: Provide leaderboard queries for user/org metrics.
@@ -294,7 +327,9 @@ class Leaderboard:
     """Service class for generating leaderboards and competitions"""
 
     @staticmethod
-    def get_top_users_by_batches(organization_id=None, time_period='all_time', limit=10):
+    def get_top_users_by_batches(
+        organization_id=None, time_period="all_time", limit=10
+    ):
         """Get top users by batch count"""
         from .models import User
 
@@ -303,13 +338,13 @@ class Leaderboard:
             User.username,
             User.first_name,
             User.last_name,
-            UserStats.total_batches
+            UserStats.total_batches,
         ).join(User, UserStats.user_id == User.id)
 
         if organization_id:
             query = query.filter(UserStats.organization_id == organization_id)
 
-        if time_period == 'monthly':
+        if time_period == "monthly":
             # For monthly, we'd need to calculate from actual batch data
             # This is a simplified version
             pass
@@ -317,14 +352,14 @@ class Leaderboard:
         return query.order_by(UserStats.total_batches.desc()).limit(limit).all()
 
     @staticmethod
-    def get_top_organizations_by_batches(time_period='all_time', limit=10):
+    def get_top_organizations_by_batches(time_period="all_time", limit=10):
         """Get top organizations by batch count"""
         from .models import Organization
 
         query = db.session.query(
             OrganizationStats.organization_id,
             Organization.name,
-            OrganizationStats.total_batches
+            OrganizationStats.total_batches,
         ).join(Organization, OrganizationStats.organization_id == Organization.id)
 
         return query.order_by(OrganizationStats.total_batches.desc()).limit(limit).all()
@@ -339,24 +374,35 @@ class Leaderboard:
             if not month:
                 month = now.month
 
-        from .models import Batch, User, Organization
+        from .models import Batch, Organization, User
 
         # Get monthly batch counts by user
-        monthly_stats = db.session.query(
-            Batch.created_by,
-            User.username,
-            User.first_name,
-            User.last_name,
-            Organization.name.label('organization_name'),
-            func.count(Batch.id).label('batch_count')
-        ).join(User, Batch.created_by == User.id)\
-         .join(Organization, Batch.organization_id == Organization.id)\
-         .filter(
-            extract('year', Batch.started_at) == year,
-            extract('month', Batch.started_at) == month
-        ).group_by(Batch.created_by, User.username, User.first_name, User.last_name, Organization.name)\
-         .order_by(func.count(Batch.id).desc())\
-         .limit(limit).all()
+        monthly_stats = (
+            db.session.query(
+                Batch.created_by,
+                User.username,
+                User.first_name,
+                User.last_name,
+                Organization.name.label("organization_name"),
+                func.count(Batch.id).label("batch_count"),
+            )
+            .join(User, Batch.created_by == User.id)
+            .join(Organization, Batch.organization_id == Organization.id)
+            .filter(
+                extract("year", Batch.started_at) == year,
+                extract("month", Batch.started_at) == month,
+            )
+            .group_by(
+                Batch.created_by,
+                User.username,
+                User.first_name,
+                User.last_name,
+                Organization.name,
+            )
+            .order_by(func.count(Batch.id).desc())
+            .limit(limit)
+            .all()
+        )
 
         return monthly_stats
 
@@ -365,18 +411,27 @@ class Leaderboard:
 # Purpose: Store batch statistics snapshots for reporting.
 class BatchStats(ScopedModelMixin, db.Model):
     """Track detailed statistics for each batch"""
-    __tablename__ = 'batch_stats'
+
+    __tablename__ = "batch_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False, unique=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    batch_id = db.Column(
+        db.Integer, db.ForeignKey("batch.id"), nullable=False, unique=True
+    )
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=False)
 
     # Planning vs Actual Efficiency
-    planned_fill_efficiency = db.Column(db.Float, default=0.0)  # From production planning
-    actual_fill_efficiency = db.Column(db.Float, default=0.0)   # From completed batch
-    efficiency_variance = db.Column(db.Float, default=0.0)      # Difference between planned/actual
+    planned_fill_efficiency = db.Column(
+        db.Float, default=0.0
+    )  # From production planning
+    actual_fill_efficiency = db.Column(db.Float, default=0.0)  # From completed batch
+    efficiency_variance = db.Column(
+        db.Float, default=0.0
+    )  # Difference between planned/actual
 
     # Yield Tracking
     planned_yield_amount = db.Column(db.Float, default=0.0)
@@ -411,15 +466,18 @@ class BatchStats(ScopedModelMixin, db.Model):
     last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    batch = db.relationship('Batch', backref='stats')
-    user = db.relationship('User')
-    recipe = db.relationship('Recipe')
+    batch = db.relationship("Batch", backref="stats")
+    user = db.relationship("User")
+    recipe = db.relationship("Recipe")
 
     @classmethod
-    def create_from_planned_batch(cls, batch_id, planned_efficiency, planned_yield, planned_costs):
+    def create_from_planned_batch(
+        cls, batch_id, planned_efficiency, planned_yield, planned_costs
+    ):
         """Create batch stats from production planning data"""
-        from ..models import Batch
         from ..extensions import db
+        from ..models import Batch
+
         batch = db.session.get(Batch, batch_id)
         if not batch:
             return None
@@ -430,12 +488,12 @@ class BatchStats(ScopedModelMixin, db.Model):
             user_id=batch.created_by,
             recipe_id=batch.recipe_id,
             planned_fill_efficiency=planned_efficiency,
-            planned_yield_amount=planned_yield.get('amount', 0),
-            planned_yield_unit=planned_yield.get('unit', ''),
-            planned_ingredient_cost=planned_costs.get('ingredient_cost', 0),
-            planned_container_cost=planned_costs.get('container_cost', 0),
-            total_planned_cost=planned_costs.get('total_cost', 0),
-            batch_status='planned'
+            planned_yield_amount=planned_yield.get("amount", 0),
+            planned_yield_unit=planned_yield.get("unit", ""),
+            planned_ingredient_cost=planned_costs.get("ingredient_cost", 0),
+            planned_container_cost=planned_costs.get("container_cost", 0),
+            total_planned_cost=planned_costs.get("total_cost", 0),
+            batch_status="planned",
         )
         db.session.add(stats)
         return stats
@@ -443,22 +501,30 @@ class BatchStats(ScopedModelMixin, db.Model):
     def update_actual_data(self, actual_efficiency, actual_yield, actual_costs):
         """Update with actual completion data"""
         self.actual_fill_efficiency = actual_efficiency
-        self.actual_yield_amount = actual_yield.get('amount', 0)
-        self.actual_yield_unit = actual_yield.get('unit', '')
-        self.actual_ingredient_cost = actual_costs.get('ingredient_cost', 0)
-        self.actual_container_cost = actual_costs.get('container_cost', 0)
-        self.total_actual_cost = actual_costs.get('total_cost', 0)
+        self.actual_yield_amount = actual_yield.get("amount", 0)
+        self.actual_yield_unit = actual_yield.get("unit", "")
+        self.actual_ingredient_cost = actual_costs.get("ingredient_cost", 0)
+        self.actual_container_cost = actual_costs.get("container_cost", 0)
+        self.total_actual_cost = actual_costs.get("total_cost", 0)
         self.completed_at = TimezoneUtils.utc_now()
 
         # Calculate variances
         if self.planned_fill_efficiency > 0:
-            self.efficiency_variance = self.actual_fill_efficiency - self.planned_fill_efficiency
-        
+            self.efficiency_variance = (
+                self.actual_fill_efficiency - self.planned_fill_efficiency
+            )
+
         if self.planned_yield_amount > 0:
-            self.yield_variance_percentage = ((self.actual_yield_amount - self.planned_yield_amount) / self.planned_yield_amount) * 100
-        
+            self.yield_variance_percentage = (
+                (self.actual_yield_amount - self.planned_yield_amount)
+                / self.planned_yield_amount
+            ) * 100
+
         if self.total_planned_cost > 0:
-            self.cost_variance_percentage = ((self.total_actual_cost - self.total_planned_cost) / self.total_planned_cost) * 100
+            self.cost_variance_percentage = (
+                (self.total_actual_cost - self.total_planned_cost)
+                / self.total_planned_cost
+            ) * 100
 
         self.last_updated = TimezoneUtils.utc_now()
 
@@ -467,11 +533,16 @@ class BatchStats(ScopedModelMixin, db.Model):
 # Purpose: Store recipe statistics snapshots for reporting.
 class RecipeStats(ScopedModelMixin, db.Model):
     """Track performance statistics for recipes across all batches"""
-    __tablename__ = 'recipe_stats'
+
+    __tablename__ = "recipe_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False, unique=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    recipe_id = db.Column(
+        db.Integer, db.ForeignKey("recipe.id"), nullable=False, unique=True
+    )
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False
+    )
 
     # Usage Statistics
     total_batches_planned = db.Column(db.Integer, default=0)
@@ -490,7 +561,7 @@ class RecipeStats(ScopedModelMixin, db.Model):
     total_spoilage_cost = db.Column(db.Float, default=0.0)
 
     # Container Usage
-    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'))
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey("inventory_item.id"))
     avg_containers_needed = db.Column(db.Float, default=0.0)
 
     # Timestamps
@@ -499,13 +570,17 @@ class RecipeStats(ScopedModelMixin, db.Model):
     last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    recipe = db.relationship('Recipe', backref='stats')
-    most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
+    recipe = db.relationship("Recipe", backref="stats")
+    most_used_container = db.relationship(
+        "InventoryItem", foreign_keys=[most_used_container_id]
+    )
 
     @classmethod
     def get_or_create(cls, recipe_id, organization_id):
         """Get existing stats or create new ones"""
-        stats = cls.query.filter_by(recipe_id=recipe_id, organization_id=organization_id).first()
+        stats = cls.query.filter_by(
+            recipe_id=recipe_id, organization_id=organization_id
+        ).first()
         if not stats:
             stats = cls(recipe_id=recipe_id, organization_id=organization_id)
             db.session.add(stats)
@@ -516,7 +591,7 @@ class RecipeStats(ScopedModelMixin, db.Model):
         completed_batches = BatchStats.query.filter(
             BatchStats.recipe_id == self.recipe_id,
             BatchStats.organization_id == self.organization_id,
-            BatchStats.batch_status == 'completed'
+            BatchStats.batch_status == "completed",
         ).all()
 
         if not completed_batches:
@@ -525,21 +600,31 @@ class RecipeStats(ScopedModelMixin, db.Model):
         # Usage stats
         self.total_batches_completed = len(completed_batches)
         failed_batches = BatchStats.query.filter(
-            BatchStats.recipe_id == self.recipe_id,
-            BatchStats.batch_status == 'failed'
+            BatchStats.recipe_id == self.recipe_id, BatchStats.batch_status == "failed"
         ).count()
-        
+
         total = self.total_batches_completed + failed_batches
         if total > 0:
             self.success_rate_percentage = (self.total_batches_completed / total) * 100
 
         # Averages
         if completed_batches:
-            self.avg_fill_efficiency = sum(b.actual_fill_efficiency for b in completed_batches) / len(completed_batches)
-            self.avg_yield_variance = sum(b.yield_variance_percentage for b in completed_batches) / len(completed_batches)
-            self.avg_cost_variance = sum(b.cost_variance_percentage for b in completed_batches) / len(completed_batches)
-            self.avg_cost_per_batch = sum(b.total_actual_cost for b in completed_batches) / len(completed_batches)
-            self.total_spoilage_cost = sum(b.ingredient_spoilage_cost + b.product_spoilage_cost for b in completed_batches)
+            self.avg_fill_efficiency = sum(
+                b.actual_fill_efficiency for b in completed_batches
+            ) / len(completed_batches)
+            self.avg_yield_variance = sum(
+                b.yield_variance_percentage for b in completed_batches
+            ) / len(completed_batches)
+            self.avg_cost_variance = sum(
+                b.cost_variance_percentage for b in completed_batches
+            ) / len(completed_batches)
+            self.avg_cost_per_batch = sum(
+                b.total_actual_cost for b in completed_batches
+            ) / len(completed_batches)
+            self.total_spoilage_cost = sum(
+                b.ingredient_spoilage_cost + b.product_spoilage_cost
+                for b in completed_batches
+            )
 
         self.last_updated = TimezoneUtils.utc_now()
 
@@ -548,11 +633,16 @@ class RecipeStats(ScopedModelMixin, db.Model):
 # Purpose: Track inventory efficiency and wastage metrics.
 class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
     """Track inventory usage efficiency and spoilage"""
-    __tablename__ = 'inventory_efficiency_stats'
+
+    __tablename__ = "inventory_efficiency_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, unique=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    inventory_item_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=False, unique=True
+    )
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False
+    )
 
     # Usage Statistics
     total_purchased_quantity = db.Column(db.Float, default=0.0)
@@ -562,38 +652,50 @@ class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
 
     # Efficiency Metrics
     utilization_percentage = db.Column(db.Float, default=0.0)  # used / purchased
-    spoilage_rate = db.Column(db.Float, default=0.0)          # spoiled / purchased
-    waste_rate = db.Column(db.Float, default=0.0)             # wasted / purchased
+    spoilage_rate = db.Column(db.Float, default=0.0)  # spoiled / purchased
+    waste_rate = db.Column(db.Float, default=0.0)  # wasted / purchased
 
     # Cost Impact
     total_purchase_cost = db.Column(db.Float, default=0.0)
     total_spoilage_cost = db.Column(db.Float, default=0.0)
     total_waste_cost = db.Column(db.Float, default=0.0)
-    effective_cost_per_unit = db.Column(db.Float, default=0.0)  # Adjusted for spoilage/waste
+    effective_cost_per_unit = db.Column(
+        db.Float, default=0.0
+    )  # Adjusted for spoilage/waste
 
     # Freshness Tracking
     avg_days_to_use = db.Column(db.Float, default=0.0)
     avg_days_to_spoil = db.Column(db.Float, default=0.0)
-    freshness_score = db.Column(db.Float, default=100.0)  # 0-100 based on usage patterns
+    freshness_score = db.Column(
+        db.Float, default=100.0
+    )  # 0-100 based on usage patterns
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    inventory_item = db.relationship('InventoryItem', backref='efficiency_stats')
+    inventory_item = db.relationship("InventoryItem", backref="efficiency_stats")
 
     def recalculate_efficiency(self):
         """Recalculate all efficiency metrics"""
         if self.total_purchased_quantity > 0:
-            self.utilization_percentage = (self.total_used_quantity / self.total_purchased_quantity) * 100
-            self.spoilage_rate = (self.total_spoiled_quantity / self.total_purchased_quantity) * 100
-            self.waste_rate = (self.total_wasted_quantity / self.total_purchased_quantity) * 100
-            
+            self.utilization_percentage = (
+                self.total_used_quantity / self.total_purchased_quantity
+            ) * 100
+            self.spoilage_rate = (
+                self.total_spoiled_quantity / self.total_purchased_quantity
+            ) * 100
+            self.waste_rate = (
+                self.total_wasted_quantity / self.total_purchased_quantity
+            ) * 100
+
             # Effective cost includes spoilage and waste impact
             if self.total_used_quantity > 0:
-                self.effective_cost_per_unit = self.total_purchase_cost / self.total_used_quantity
-        
+                self.effective_cost_per_unit = (
+                    self.total_purchase_cost / self.total_used_quantity
+                )
+
         self.last_updated = TimezoneUtils.utc_now()
 
 
@@ -601,15 +703,18 @@ class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
 # Purpose: Store leaderboard stats used for organization badges.
 class OrganizationLeaderboardStats(db.Model):
     """Track organization-level statistics for leaderboards"""
-    __tablename__ = 'organization_leaderboard_stats'
+
+    __tablename__ = "organization_leaderboard_stats"
 
     id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, unique=True)
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False, unique=True
+    )
 
     # Recipe Stats
     total_recipes = db.Column(db.Integer, default=0)
     active_recipes_count = db.Column(db.Integer, default=0)  # Used in last 30 days
-    most_popular_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
+    most_popular_recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"))
     avg_recipe_success_rate = db.Column(db.Float, default=0.0)
 
     # Production Stats
@@ -620,14 +725,14 @@ class OrganizationLeaderboardStats(db.Model):
 
     # Team Stats
     active_users_count = db.Column(db.Integer, default=0)
-    most_productive_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    most_productive_user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     avg_batches_per_user = db.Column(db.Float, default=0.0)
-    most_testing_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    most_testing_user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     most_tests_created = db.Column(db.Integer, default=0)
 
     # Container Usage
     most_used_container_size = db.Column(db.Float, default=0.0)
-    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'))
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey("inventory_item.id"))
 
     # Cost Efficiency
     avg_cost_per_batch = db.Column(db.Float, default=0.0)
@@ -648,11 +753,17 @@ class OrganizationLeaderboardStats(db.Model):
     last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    organization = db.relationship('Organization')
-    most_popular_recipe = db.relationship('Recipe', foreign_keys=[most_popular_recipe_id])
-    most_productive_user = db.relationship('User', foreign_keys=[most_productive_user_id])
-    most_testing_user = db.relationship('User', foreign_keys=[most_testing_user_id])
-    most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
+    organization = db.relationship("Organization")
+    most_popular_recipe = db.relationship(
+        "Recipe", foreign_keys=[most_popular_recipe_id]
+    )
+    most_productive_user = db.relationship(
+        "User", foreign_keys=[most_productive_user_id]
+    )
+    most_testing_user = db.relationship("User", foreign_keys=[most_testing_user_id])
+    most_used_container = db.relationship(
+        "InventoryItem", foreign_keys=[most_used_container_id]
+    )
 
     @classmethod
     def get_or_create(cls, organization_id):
@@ -668,23 +779,34 @@ class OrganizationLeaderboardStats(db.Model):
 # Purpose: Record inventory changes for analytics and audits.
 class InventoryChangeLog(ScopedModelMixin, db.Model):
     """Log all inventory changes with detailed categorization"""
-    __tablename__ = 'inventory_change_log'
+
+    __tablename__ = "inventory_change_log"
 
     id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey("organization.id"), nullable=False
+    )
+    inventory_item_id = db.Column(
+        db.Integer, db.ForeignKey("inventory_item.id"), nullable=False
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # Change Details
-    change_type = db.Column(db.String(50), nullable=False)  # purchase, use, spoilage, waste, damage, theft, etc.
-    change_category = db.Column(db.String(50), nullable=False)  # additive, deductive, correction, transfer
+    change_type = db.Column(
+        db.String(50), nullable=False
+    )  # purchase, use, spoilage, waste, damage, theft, etc.
+    change_category = db.Column(
+        db.String(50), nullable=False
+    )  # additive, deductive, correction, transfer
     quantity_change = db.Column(db.Float, nullable=False)
     cost_impact = db.Column(db.Float, default=0.0)
 
     # Context
-    related_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
-    related_lot_id = db.Column(db.Integer, db.ForeignKey('inventory_lot.id'))
-    reason_code = db.Column(db.String(100))  # expired, damaged, customer_complaint, etc.
+    related_batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"))
+    related_lot_id = db.Column(db.Integer, db.ForeignKey("inventory_lot.id"))
+    reason_code = db.Column(
+        db.String(100)
+    )  # expired, damaged, customer_complaint, etc.
     notes = db.Column(db.Text)
 
     # Freshness Context (if applicable)
@@ -697,20 +819,22 @@ class InventoryChangeLog(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Relationships
-    inventory_item = db.relationship('InventoryItem')
-    user = db.relationship('User')
-    related_batch = db.relationship('Batch')
-    related_lot = db.relationship('InventoryLot')
+    inventory_item = db.relationship("InventoryItem")
+    user = db.relationship("User")
+    related_batch = db.relationship("Batch")
+    related_lot = db.relationship("InventoryLot")
 
     @classmethod
-    def log_change(cls, inventory_item_id, organization_id, change_type, quantity_change, **kwargs):
+    def log_change(
+        cls, inventory_item_id, organization_id, change_type, quantity_change, **kwargs
+    ):
         """Log an inventory change with context"""
         log_entry = cls(
             inventory_item_id=inventory_item_id,
             organization_id=organization_id,
             change_type=change_type,
             quantity_change=quantity_change,
-            **kwargs
+            **kwargs,
         )
         db.session.add(log_entry)
         return log_entry

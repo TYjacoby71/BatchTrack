@@ -30,14 +30,14 @@ from ...models import (
     User,
 )
 from ...models.inventory_lot import InventoryLot
-from ...models.subscription_tier import SubscriptionTier
 from ...models.statistics import RecipeStats
+from ...models.subscription_tier import SubscriptionTier
+from ...utils.json_store import read_json_file
 from ...utils.settings import get_settings
 from ...utils.timezone_utils import TimezoneUtils
-from ...utils.json_store import read_json_file
 from ..dashboard_alerts import DashboardAlertService
-from .global_item_stats import GlobalItemStatsService
 from ._core import StatisticsService
+from .global_item_stats import GlobalItemStatsService
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,11 @@ class AnalyticsDataService:
     @classmethod
     def _waitlist_registry(cls) -> Dict[str, Dict[str, Any]]:
         settings = get_settings()
-        configured = settings.get("waitlists") if isinstance(settings.get("waitlists"), dict) else {}
+        configured = (
+            settings.get("waitlists")
+            if isinstance(settings.get("waitlists"), dict)
+            else {}
+        )
 
         registry: Dict[str, Dict[str, Any]] = {}
         for key, meta in _WAITLIST_DEFAULT_CHANNELS.items():
@@ -144,9 +148,21 @@ class AnalyticsDataService:
                 **registry.get(normalized_key, {}),
                 **meta,
             }
-            registry[normalized_key]["label"] = meta.get("label") or meta.get("name") or cls._humanize_waitlist_label(raw_key)
-            registry[normalized_key]["color"] = meta.get("color") or registry[normalized_key].get("color") or "secondary"
-            registry[normalized_key]["category"] = meta.get("category") or registry[normalized_key].get("category") or "Uncategorized"
+            registry[normalized_key]["label"] = (
+                meta.get("label")
+                or meta.get("name")
+                or cls._humanize_waitlist_label(raw_key)
+            )
+            registry[normalized_key]["color"] = (
+                meta.get("color")
+                or registry[normalized_key].get("color")
+                or "secondary"
+            )
+            registry[normalized_key]["category"] = (
+                meta.get("category")
+                or registry[normalized_key].get("category")
+                or "Uncategorized"
+            )
 
         return registry
 
@@ -155,7 +171,9 @@ class AnalyticsDataService:
     # --------------------------------------------------------------------- #
 
     @classmethod
-    def get_inventory_metrics(cls, *, force_refresh: bool = False) -> Dict[str, Optional[float]]:
+    def get_inventory_metrics(
+        cls, *, force_refresh: bool = False
+    ) -> Dict[str, Optional[float]]:
         """High-level global inventory metrics."""
 
         cache_key = cls._cache_key("metrics")
@@ -165,19 +183,17 @@ class AnalyticsDataService:
 
         try:
             total_items = GlobalItem.query.filter_by(is_archived=False).count()
-            linked_adoptions = (
-                InventoryItem.query.filter(InventoryItem.global_item_id.isnot(None)).count()
-            )
+            linked_adoptions = InventoryItem.query.filter(
+                InventoryItem.global_item_id.isnot(None)
+            ).count()
 
             thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
-            spoilage_events_30d = (
-                UnifiedInventoryHistory.query.filter(
-                    UnifiedInventoryHistory.change_type.in_(
-                        ["spoil", "expired", "damaged", "trash"]
-                    ),
-                    UnifiedInventoryHistory.timestamp >= thirty_days_ago,
-                ).count()
-            )
+            spoilage_events_30d = UnifiedInventoryHistory.query.filter(
+                UnifiedInventoryHistory.change_type.in_(
+                    ["spoil", "expired", "damaged", "trash"]
+                ),
+                UnifiedInventoryHistory.timestamp >= thirty_days_ago,
+            ).count()
 
             avg_cost = (
                 db.session.query(func.avg(InventoryLot.unit_cost))
@@ -203,7 +219,9 @@ class AnalyticsDataService:
             }
 
     @classmethod
-    def get_top_global_items(cls, *, limit: int = 10, force_refresh: bool = False) -> List[Dict]:
+    def get_top_global_items(
+        cls, *, limit: int = 10, force_refresh: bool = False
+    ) -> List[Dict]:
         """Top global items by adoption count."""
 
         cache_key = cls._cache_key(f"top_items:{limit}")
@@ -264,9 +282,9 @@ class AnalyticsDataService:
                     GlobalItem.name,
                     func.count(UnifiedInventoryHistory.id).label("event_count"),
                     func.sum(UnifiedInventoryHistory.cost_impact).label("cost_impact"),
-                    func.count(func.distinct(UnifiedInventoryHistory.organization_id)).label(
-                        "orgs_affected"
-                    ),
+                    func.count(
+                        func.distinct(UnifiedInventoryHistory.organization_id)
+                    ).label("orgs_affected"),
                 )
                 .join(InventoryItem, GlobalItem.id == InventoryItem.global_item_id)
                 .join(
@@ -297,7 +315,9 @@ class AnalyticsDataService:
                         "name": row.name,
                         "spoilage_count": event_count,
                         "spoilage_rate": spoilage_rate,
-                        "cost_impact": float(row.cost_impact) if row.cost_impact else 0.0,
+                        "cost_impact": (
+                            float(row.cost_impact) if row.cost_impact else 0.0
+                        ),
                         "orgs_affected": row.orgs_affected or 0,
                     }
                 )
@@ -309,7 +329,9 @@ class AnalyticsDataService:
             return []
 
     @classmethod
-    def get_data_quality_summary(cls, *, force_refresh: bool = False) -> Dict[str, float]:
+    def get_data_quality_summary(
+        cls, *, force_refresh: bool = False
+    ) -> Dict[str, float]:
         """Data coverage metrics for global item attributes."""
 
         cache_key = cls._cache_key("data_quality")
@@ -361,7 +383,9 @@ class AnalyticsDataService:
             cls._store_cache(cache_key, result)
             return result
         except SQLAlchemyError as exc:
-            logger.error("Failed to compute data quality summary: %s", exc, exc_info=True)
+            logger.error(
+                "Failed to compute data quality summary: %s", exc, exc_info=True
+            )
             return {
                 "density_coverage": 0.0,
                 "capacity_coverage": 0.0,
@@ -390,8 +414,14 @@ class AnalyticsDataService:
                     Organization.name.label("organization_name"),
                     InventoryItem.name.label("item_name"),
                 )
-                .join(Organization, UnifiedInventoryHistory.organization_id == Organization.id)
-                .join(InventoryItem, UnifiedInventoryHistory.inventory_item_id == InventoryItem.id)
+                .join(
+                    Organization,
+                    UnifiedInventoryHistory.organization_id == Organization.id,
+                )
+                .join(
+                    InventoryItem,
+                    UnifiedInventoryHistory.inventory_item_id == InventoryItem.id,
+                )
                 .order_by(UnifiedInventoryHistory.timestamp.desc())
                 .limit(limit)
                 .all()
@@ -403,9 +433,11 @@ class AnalyticsDataService:
                     "organization_name": row.organization_name,
                     "item_name": row.item_name,
                     "action": row.change_type,
-                    "quantity_change": float(row.quantity_change)
-                    if row.quantity_change is not None
-                    else None,
+                    "quantity_change": (
+                        float(row.quantity_change)
+                        if row.quantity_change is not None
+                        else None
+                    ),
                     "unit": row.unit,
                     "cost_impact": float(row.cost_impact) if row.cost_impact else None,
                 }
@@ -414,7 +446,9 @@ class AnalyticsDataService:
             cls._store_cache(cache_key, payload)
             return payload
         except SQLAlchemyError as exc:
-            logger.error("Failed to fetch recent inventory activity: %s", exc, exc_info=True)
+            logger.error(
+                "Failed to fetch recent inventory activity: %s", exc, exc_info=True
+            )
             return []
 
     @classmethod
@@ -441,7 +475,9 @@ class AnalyticsDataService:
             cls._store_cache(cache_key, payload)
             return payload
         except SQLAlchemyError as exc:
-            logger.error("Failed to load inventory item options: %s", exc, exc_info=True)
+            logger.error(
+                "Failed to load inventory item options: %s", exc, exc_info=True
+            )
             return []
 
     @classmethod
@@ -486,7 +522,10 @@ class AnalyticsDataService:
             return cached
 
         try:
-            payload = StatisticsService.get_organization_dashboard_stats(organization_id) or {}
+            payload = (
+                StatisticsService.get_organization_dashboard_stats(organization_id)
+                or {}
+            )
             cls._store_cache(cache_key, payload)
             return payload
         except Exception as exc:  # pragma: no cover - defensive
@@ -510,13 +549,11 @@ class AnalyticsDataService:
         try:
             total_organizations = Organization.query.count()
             active_organizations = Organization.query.filter_by(is_active=True).count()
-            total_users = User.query.filter(User.user_type != 'developer').count()
-            active_users = (
-                User.query.filter(
-                    User.user_type != 'developer',
-                    User.is_active.is_(True),
-                ).count()
-            )
+            total_users = User.query.filter(User.user_type != "developer").count()
+            active_users = User.query.filter(
+                User.user_type != "developer",
+                User.is_active.is_(True),
+            ).count()
             total_global_items = GlobalItem.query.filter_by(is_archived=False).count()
             total_permissions = Permission.query.count()
             total_roles = Role.query.count()
@@ -589,16 +626,20 @@ class AnalyticsDataService:
                     "id": org.id,
                     "name": org.name,
                     "subscription_tier": getattr(org.subscription_tier, "name", None),
-                    "created_at": org.created_at.isoformat() if org.created_at else None,
-                    "created_at_display": org.created_at.strftime("%m/%d")
-                    if org.created_at
-                    else None,
+                    "created_at": (
+                        org.created_at.isoformat() if org.created_at else None
+                    ),
+                    "created_at_display": (
+                        org.created_at.strftime("%m/%d") if org.created_at else None
+                    ),
                 }
                 for org in recent_org_rows
             ]
 
             attention_orgs = []
-            active_orgs = Organization.query.filter(Organization.is_active.is_(True)).all()
+            active_orgs = Organization.query.filter(
+                Organization.is_active.is_(True)
+            ).all()
             for org in active_orgs:
                 active_users_count = getattr(org, "active_users_count", 0)
                 if active_users_count == 0:
@@ -606,7 +647,9 @@ class AnalyticsDataService:
                         {
                             "id": org.id,
                             "name": org.name,
-                            "subscription_tier": getattr(org.subscription_tier, "name", None),
+                            "subscription_tier": getattr(
+                                org.subscription_tier, "name", None
+                            ),
                             "reason": "no_active_users",
                         }
                     )
@@ -636,24 +679,34 @@ class AnalyticsDataService:
                 "waitlist_count": 0,
                 "generated_at": None,
             }
+
     @classmethod
-    def get_recipe_library_metrics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_recipe_library_metrics(
+        cls, *, force_refresh: bool = False
+    ) -> Dict[str, Any]:
         cache_key = cls._cache_key("recipe_library")
         cached = cls._get_cached(cache_key, force_refresh)
         if cached is not None:
             return cached
 
         try:
-            base_filter = (
-                (Recipe.is_public.is_(True)) &
-                (Recipe.marketplace_status == "listed")
+            base_filter = (Recipe.is_public.is_(True)) & (
+                Recipe.marketplace_status == "listed"
             )
             total_public = Recipe.query.filter(base_filter).count()
-            total_for_sale = Recipe.query.filter(base_filter, Recipe.is_for_sale.is_(True)).count()
-            blocked_listings = Recipe.query.filter(Recipe.marketplace_status == "blocked").count()
+            total_for_sale = Recipe.query.filter(
+                base_filter, Recipe.is_for_sale.is_(True)
+            ).count()
+            blocked_listings = Recipe.query.filter(
+                Recipe.marketplace_status == "blocked"
+            ).count()
             avg_price = (
                 db.session.query(func.avg(Recipe.sale_price))
-                .filter(base_filter, Recipe.is_for_sale.is_(True), Recipe.sale_price.isnot(None))
+                .filter(
+                    base_filter,
+                    Recipe.is_for_sale.is_(True),
+                    Recipe.sale_price.isnot(None),
+                )
                 .scalar()
             ) or 0.0
 
@@ -681,7 +734,8 @@ class AnalyticsDataService:
             avg_yield_per_dollar = (
                 db.session.query(
                     func.avg(
-                        func.nullif(Recipe.predicted_yield, 0) / func.nullif(RecipeStats.avg_cost_per_batch, 0)
+                        func.nullif(Recipe.predicted_yield, 0)
+                        / func.nullif(RecipeStats.avg_cost_per_batch, 0)
                     )
                 )
                 .join(RecipeStats, RecipeStats.recipe_id == Recipe.id)
@@ -715,7 +769,9 @@ class AnalyticsDataService:
             cls._store_cache(cache_key, payload)
             return payload
         except SQLAlchemyError as exc:
-            logger.error("Failed to compute recipe library metrics: %s", exc, exc_info=True)
+            logger.error(
+                "Failed to compute recipe library metrics: %s", exc, exc_info=True
+            )
             return {
                 "total_public": 0,
                 "total_for_sale": 0,
@@ -727,7 +783,9 @@ class AnalyticsDataService:
                 "sale_percentage": 0,
             }
         except Exception as exc:  # pragma: no cover - defensive
-            logger.error("Failed to build developer dashboard analytics: %s", exc, exc_info=True)
+            logger.error(
+                "Failed to build developer dashboard analytics: %s", exc, exc_info=True
+            )
             return {
                 "overview": {},
                 "recent_organizations": [],
@@ -768,7 +826,8 @@ class AnalyticsDataService:
             if summary is None:
                 summary = {
                     "key": key,
-                    "label": channel_meta.get("label") or cls._humanize_waitlist_label(key),
+                    "label": channel_meta.get("label")
+                    or cls._humanize_waitlist_label(key),
                     "category": channel_meta.get("category") or "Uncategorized",
                     "color": channel_meta.get("color", "secondary"),
                     "description": channel_meta.get("description"),
@@ -805,11 +864,15 @@ class AnalyticsDataService:
             else:
                 full_name = "Not provided"
 
-            business_type = (entry.get("business_type") or "").strip() or "Not specified"
+            business_type = (
+                entry.get("business_type") or ""
+            ).strip() or "Not specified"
             if business_type.lower() in {"not_specified", "not specified"}:
                 business_type = "Not specified"
 
-            waitlist_key = cls._normalize_waitlist_key(entry.get("waitlist_key") or entry.get("source"))
+            waitlist_key = cls._normalize_waitlist_key(
+                entry.get("waitlist_key") or entry.get("source")
+            )
             channel_meta = registry.get(waitlist_key) or {
                 "label": cls._humanize_waitlist_label(waitlist_key),
                 "category": "Uncategorized",
@@ -834,7 +897,10 @@ class AnalyticsDataService:
 
             channel_summary = _ensure_summary(waitlist_key, channel_meta)
             channel_summary["count"] += 1
-            if iso_value and (channel_summary["latest_iso"] is None or iso_value > channel_summary["latest_iso"]):
+            if iso_value and (
+                channel_summary["latest_iso"] is None
+                or iso_value > channel_summary["latest_iso"]
+            ):
                 channel_summary["latest_iso"] = iso_value
                 channel_summary["latest_display"] = formatted
 
@@ -919,7 +985,8 @@ class AnalyticsDataService:
         scoped_entries = cls._get_cached(scoped_key, force_refresh)
         if scoped_entries is None:
             scoped_entries = [
-                fault for fault in raw_entries
+                fault
+                for fault in raw_entries
                 if fault.get("organization_id") == organization_id
             ]
             cls._store_cache(scoped_key, scoped_entries)
@@ -1016,21 +1083,28 @@ class AnalyticsDataService:
                     SubscriptionTier.name,
                     func.count(Organization.id).label("org_count"),
                 )
-                .outerjoin(Organization, Organization.subscription_tier_id == SubscriptionTier.id)
+                .outerjoin(
+                    Organization,
+                    Organization.subscription_tier_id == SubscriptionTier.id,
+                )
                 .group_by(SubscriptionTier.id, SubscriptionTier.name)
                 .all()
             )
             # Include explicit names even if zero to preserve known tiers
-            counts = {row.name.lower() if row.name else 'unknown': row.org_count for row in rows if row.name}
+            counts = {
+                row.name.lower() if row.name else "unknown": row.org_count
+                for row in rows
+                if row.name
+            }
 
             # Ensure standard tiers always present
             for key in ["exempt", "free", "solo", "team", "enterprise"]:
                 counts.setdefault(key, 0)
 
             # Count orgs without a mapped tier
-            unspecified = (
-                Organization.query.filter(Organization.subscription_tier_id.is_(None)).count()
-            )
+            unspecified = Organization.query.filter(
+                Organization.subscription_tier_id.is_(None)
+            ).count()
             if unspecified:
                 counts["unspecified"] = unspecified
             return counts
@@ -1040,4 +1114,3 @@ class AnalyticsDataService:
 
 
 __all__ = ["AnalyticsDataService"]
-

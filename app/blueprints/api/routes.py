@@ -9,25 +9,29 @@ Glossary:
 - Recipe prefix: Unique label prefix derived from a recipe name.
 """
 
-from flask import Blueprint, jsonify, request, current_app
-from flask_login import login_required, current_user
-from datetime import datetime, timezone
-from flask import session
 import logging
+from datetime import datetime, timezone
+
+from flask import Blueprint, current_app, jsonify, request, session, url_for
+from flask_login import current_user, login_required
 from sqlalchemy.orm import load_only
-from app.models import InventoryItem, Recipe, Product  # Added for get_ingredients endpoint
-from app.models.product import ProductSKU
+
 from app import db  # Assuming db is imported from app
-from app.utils.permissions import require_permission
+from app.extensions import cache
+from app.models import InventoryItem  # Added for get_ingredients endpoint
+from app.models import (
+    Product,
+    Recipe,
+)
+from app.models.product import ProductSKU
+from app.services.ai import GoogleAIClientError
+from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
 from app.services.batchbot_usage_service import (
-    BatchBotUsageService,
-    BatchBotLimitError,
     BatchBotChatLimitError,
+    BatchBotLimitError,
+    BatchBotUsageService,
 )
-from app.services.batchbot_credit_service import BatchBotCreditService
-from app.services.ai import GoogleAIClientError
-from app.extensions import cache
 from app.services.cache_invalidation import (
     ingredient_list_cache_key,
     product_bootstrap_cache_key,
@@ -35,17 +39,18 @@ from app.services.cache_invalidation import (
 )
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.code_generator import generate_recipe_prefix
+from app.utils.permissions import require_permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 # --- Batchbot flag ---
 # Purpose: Check if BatchBot features are enabled in config.
 def _is_batchbot_enabled() -> bool:
-    return bool(current_app.config.get('FEATURE_BATCHBOT', False))
+    return bool(current_app.config.get("FEATURE_BATCHBOT", False))
 
 
 # --- Resolve org scope ---
@@ -61,23 +66,27 @@ def _resolve_org_id():
             org_id = dev_selected
     return org_id
 
+
 # =========================================================
 # HEALTH & TIME
 # =========================================================
 # --- Health check ---
 # Purpose: Return API health status for monitoring.
-@api_bp.route('/', methods=['GET', 'HEAD'])
+@api_bp.route("/", methods=["GET", "HEAD"])
 def health_check():
     """Health check endpoint for monitoring services"""
-    if request.method == 'HEAD':
-        return '', 200
-    return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
+    if request.method == "HEAD":
+        return "", 200
+    return jsonify(
+        {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+    )
+
 
 # --- Server time ---
 # Purpose: Return server time in user's timezone.
-@api_bp.route('/server-time')
+@api_bp.route("/server-time")
 @login_required
-@require_permission('dashboard.view')
+@require_permission("dashboard.view")
 def server_time():
     """Get current server time in user's timezone"""
     from ...utils.timezone_utils import TimezoneUtils
@@ -85,149 +94,173 @@ def server_time():
     # Get current time in user's timezone
     user_time = TimezoneUtils.now()
 
-    return jsonify({
-        'current_time': user_time.isoformat(),
-        'timestamp': user_time.isoformat(),
-        'timezone': str(TimezoneUtils.get_user_timezone())
-    })
+    return jsonify(
+        {
+            "current_time": user_time.isoformat(),
+            "timestamp": user_time.isoformat(),
+            "timezone": str(TimezoneUtils.get_user_timezone()),
+        }
+    )
+
 
 # =========================================================
 # RECIPES
 # =========================================================
 # --- Recipe label prefix ---
 # Purpose: Generate a unique label prefix for a recipe name.
-@api_bp.route('/recipes/prefix', methods=['GET'])
+@api_bp.route("/recipes/prefix", methods=["GET"])
 @login_required
-@require_permission('recipes.create')
+@require_permission("recipes.create")
 def recipe_prefix():
-    name = (request.args.get('name') or '').strip()
+    name = (request.args.get("name") or "").strip()
     if not name:
-        return jsonify({'error': 'Recipe name is required'}), 400
+        return jsonify({"error": "Recipe name is required"}), 400
     org_id = _resolve_org_id()
     prefix = generate_recipe_prefix(name, org_id)
-    return jsonify({'prefix': prefix})
+    return jsonify({"prefix": prefix})
+
 
 # =========================================================
 # ALERTS
 # =========================================================
 # --- Dismiss alert ---
 # Purpose: Dismiss a dashboard alert for the session.
-@api_bp.route('/dismiss-alert', methods=['POST'])
+@api_bp.route("/dismiss-alert", methods=["POST"])
 @login_required
-@require_permission('alerts.dismiss')
+@require_permission("alerts.dismiss")
 def dismiss_alert():
     """Dismiss an alert for the current session"""
     from flask import request
+
     data = request.get_json()
-    alert_type = data.get('alert_type')
+    alert_type = data.get("alert_type")
 
     if not alert_type:
-        return jsonify({'error': 'Alert type required'}), 400
+        return jsonify({"error": "Alert type required"}), 400
 
     # Initialize dismissed alerts in session if not exists
-    if 'dismissed_alerts' not in session:
-        session['dismissed_alerts'] = []
+    if "dismissed_alerts" not in session:
+        session["dismissed_alerts"] = []
 
     # Add to dismissed alerts if not already there
-    if alert_type not in session['dismissed_alerts']:
-        session['dismissed_alerts'].append(alert_type)
+    if alert_type not in session["dismissed_alerts"]:
+        session["dismissed_alerts"].append(alert_type)
         session.permanent = True  # Make session persistent
 
-    return jsonify({'success': True})
+    return jsonify({"success": True})
+
 
 # --- Dashboard alerts ---
 # Purpose: Fetch dashboard alerts for the organization.
-@api_bp.route('/dashboard-alerts')
+@api_bp.route("/dashboard-alerts")
 @login_required
-@require_permission('alerts.view')
+@require_permission("alerts.view")
 def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""
     try:
-        from flask import session
-        from ...services.dashboard_alerts import DashboardAlertService
         import logging
 
+        from flask import session
+
+        from ...services.dashboard_alerts import DashboardAlertService
+
         # Get dismissed alerts from session
-        dismissed_alerts = session.get('dismissed_alerts', [])
+        dismissed_alerts = session.get("dismissed_alerts", [])
 
         # Get alerts from service
-        alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
+        alert_data = DashboardAlertService.get_dashboard_alerts(
+            dismissed_alerts=dismissed_alerts
+        )
 
         # Log for debugging
-        logging.info(f"Dashboard alerts requested - found {len(alert_data.get('alerts', []))} alerts")
+        logging.info(
+            f"Dashboard alerts requested - found {len(alert_data.get('alerts', []))} alerts"
+        )
 
-        return jsonify({
-            'success': True,
-            'alerts': alert_data['alerts'],
-            'total_alerts': alert_data['total_alerts'],
-            'hidden_count': alert_data['hidden_count']
-        })
+        return jsonify(
+            {
+                "success": True,
+                "alerts": alert_data["alerts"],
+                "total_alerts": alert_data["total_alerts"],
+                "hidden_count": alert_data["hidden_count"],
+            }
+        )
 
     except Exception as e:
         logging.error(f"Error getting dashboard alerts: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # Stock checking is now handled by the dedicated stock_routes.py blueprint
 # All stock check requests should use /api/check-stock endpoint
 
 # Import sub-blueprints to register their routes
 
-from .ingredient_routes import ingredient_api_bp
-from .container_routes import container_api_bp
-from .reservation_routes import reservation_api_bp
 from app.models.product_category import ProductCategory
 from app.models.unit import Unit
+
 from ...utils.unit_utils import get_global_unit_list
+from .container_routes import container_api_bp
+from .ingredient_routes import ingredient_api_bp
+from .reservation_routes import reservation_api_bp
 
 # Register sub-blueprints
 
-api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredients')
+api_bp.register_blueprint(ingredient_api_bp, url_prefix="/ingredients")
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(reservation_api_bp)
+
 
 # =========================================================
 # INVENTORY & PRODUCTS
 # =========================================================
 # --- Inventory item ---
 # Purpose: Return inventory item details for editing.
-@api_bp.route('/inventory/item/<int:item_id>', methods=['GET'])
+@api_bp.route("/inventory/item/<int:item_id>", methods=["GET"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def get_inventory_item(item_id):
     """Get inventory item details for editing"""
     from ...models import InventoryItem
 
     item = InventoryItem.query.filter_by(
-        id=item_id,
-        organization_id=current_user.organization_id
+        id=item_id, organization_id=current_user.organization_id
     ).first_or_404()
 
-    return jsonify({
-        'id': item.id,
-        'name': item.name,
-        'quantity': item.quantity,
-        'unit': item.unit,
-        'type': item.type,
-        'cost_per_unit': item.cost_per_unit,
-        'notes': getattr(item, 'notes', None),
-        'density': item.density,
-        'category_id': item.category_id,
-        'global_item_id': item.global_item_id,
-        'is_perishable': item.is_perishable,
-        'shelf_life_days': item.shelf_life_days,
-        'capacity': getattr(item, 'capacity', None),
-        'capacity_unit': getattr(item, 'capacity_unit', None)
-    })
+    return jsonify(
+        {
+            "id": item.id,
+            "name": item.name,
+            "quantity": item.quantity,
+            "unit": item.unit,
+            "type": item.type,
+            "cost_per_unit": item.cost_per_unit,
+            "notes": getattr(item, "notes", None),
+            "density": item.density,
+            "category_id": item.category_id,
+            "global_item_id": item.global_item_id,
+            "is_perishable": item.is_perishable,
+            "shelf_life_days": item.shelf_life_days,
+            "capacity": getattr(item, "capacity", None),
+            "capacity_unit": getattr(item, "capacity_unit", None),
+        }
+    )
 
 
 # --- Product category ---
 # Purpose: Return product category details by id.
-@api_bp.route('/categories/<int:cat_id>', methods=['GET'])
+@api_bp.route("/categories/<int:cat_id>", methods=["GET"])
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def get_category(cat_id):
     c = ProductCategory.query.get_or_404(cat_id)
-    return jsonify({'id': c.id, 'name': c.name, 'is_typically_portioned': bool(c.is_typically_portioned)})
+    return jsonify(
+        {
+            "id": c.id,
+            "name": c.name,
+            "is_typically_portioned": bool(c.is_typically_portioned),
+        }
+    )
 
 
 # =========================================================
@@ -235,72 +268,114 @@ def get_category(cat_id):
 # =========================================================
 # --- Unit search ---
 # Purpose: Search units for selection lists.
-@api_bp.route('/unit-search', methods=['GET'])
+@api_bp.route("/unit-search", methods=["GET"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def list_units():
     """Unified unit search using get_global_unit_list (standard + org custom)."""
-    unit_type = (request.args.get('type') or request.args.get('unit_type') or '').strip()
-    q = (request.args.get('q') or '').strip()
+    unit_type = (
+        request.args.get("type") or request.args.get("unit_type") or ""
+    ).strip()
+    q = (request.args.get("q") or "").strip()
     try:
         units = get_global_unit_list() or []
     except Exception:
         units = []
 
     if unit_type:
-        units = [u for u in units if getattr(u, 'unit_type', None) == unit_type]
+        units = [u for u in units if getattr(u, "unit_type", None) == unit_type]
     if q:
         q_lower = q.lower()
-        units = [u for u in units if (getattr(u, 'name', '') or '').lower().find(q_lower) != -1]
+        units = [
+            u
+            for u in units
+            if (getattr(u, "name", "") or "").lower().find(q_lower) != -1
+        ]
 
     try:
-        units.sort(key=lambda u: (str(getattr(u, 'unit_type', '') or ''), str(getattr(u, 'name', '') or '')))
+        units.sort(
+            key=lambda u: (
+                str(getattr(u, "unit_type", "") or ""),
+                str(getattr(u, "name", "") or ""),
+            )
+        )
     except Exception:
         pass
 
     results = units[:50]
-    return jsonify({'success': True, 'data': [
+    return jsonify(
         {
-            'id': getattr(u, 'id', None),
-            'name': getattr(u, 'name', ''),
-            'unit_type': getattr(u, 'unit_type', None),
-            'symbol': getattr(u, 'symbol', None),
-            'is_custom': getattr(u, 'is_custom', False)
-        } for u in results
-    ]})
+            "success": True,
+            "data": [
+                {
+                    "id": getattr(u, "id", None),
+                    "name": getattr(u, "name", ""),
+                    "unit_type": getattr(u, "unit_type", None),
+                    "symbol": getattr(u, "symbol", None),
+                    "is_custom": getattr(u, "is_custom", False),
+                }
+                for u in results
+            ],
+        }
+    )
+
 
 # --- Create unit ---
 # Purpose: Create a new unit for inventory usage.
-@api_bp.route('/units', methods=['POST'])
+@api_bp.route("/units", methods=["POST"])
 @login_required
-@require_permission('inventory.edit')
+@require_permission("inventory.edit")
 def create_unit():
     try:
         data = request.get_json() or {}
-        name = (data.get('name') or '').strip()
-        unit_type = (data.get('unit_type') or 'count').strip()
+        name = (data.get("name") or "").strip()
+        unit_type = (data.get("unit_type") or "count").strip()
         if not name:
-            return jsonify({'success': False, 'error': 'Name is required'}), 400
+            return jsonify({"success": False, "error": "Name is required"}), 400
         # Prevent duplicates within standard scope
         existing = Unit.query.filter(Unit.name.ilike(name)).first()
         if existing:
-            return jsonify({'success': True, 'data': {'id': existing.id, 'name': existing.name, 'unit_type': existing.unit_type}})
-        u = Unit(name=name, unit_type=unit_type, conversion_factor=1.0, base_unit='Piece', is_active=True, is_custom=False, is_mapped=True, organization_id=None)
+            return jsonify(
+                {
+                    "success": True,
+                    "data": {
+                        "id": existing.id,
+                        "name": existing.name,
+                        "unit_type": existing.unit_type,
+                    },
+                }
+            )
+        u = Unit(
+            name=name,
+            unit_type=unit_type,
+            conversion_factor=1.0,
+            base_unit="Piece",
+            is_active=True,
+            is_custom=False,
+            is_mapped=True,
+            organization_id=None,
+        )
         db.session.add(u)
         db.session.commit()
-        return jsonify({'success': True, 'data': {'id': u.id, 'name': u.name, 'unit_type': u.unit_type}})
+        return jsonify(
+            {
+                "success": True,
+                "data": {"id": u.id, "name": u.name, "unit_type": u.unit_type},
+            }
+        )
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # =========================================================
 # CONTAINERS
 # =========================================================
 # --- Container suggestions ---
 # Purpose: Return curated container field suggestions.
-@api_bp.route('/containers/suggestions', methods=['GET'])
+@api_bp.route("/containers/suggestions", methods=["GET"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def get_container_suggestions():
     """Return container field suggestions from curated master lists.
 
@@ -310,9 +385,9 @@ def get_container_suggestions():
       - limit: max suggestions per field (default 20)
     """
     try:
-        field = (request.args.get('field') or '').strip().lower()
-        q = (request.args.get('q') or '').strip().lower()
-        limit = max(1, min(int(request.args.get('limit', 20)), 100))
+        field = (request.args.get("field") or "").strip().lower()
+        q = (request.args.get("q") or "").strip().lower()
+        limit = max(1, min(int(request.args.get("limit", 20)), 100))
 
         # Load master lists from settings - single source of truth
         from app.services.developer.reference_data_service import ReferenceDataService
@@ -326,56 +401,59 @@ def get_container_suggestions():
                 filtered = items[:]
             return filtered[:limit]
 
-        if field in ['material', 'type', 'style', 'color']:
-            field_key = field + 's' if field != 'material' else 'materials'
+        if field in ["material", "type", "style", "color"]:
+            field_key = field + "s" if field != "material" else "materials"
             suggestions = filter_list(curated_lists.get(field_key, []))
-            return jsonify({
-                'success': True, 
-                'field': field, 
-                'suggestions': suggestions
-            })
+            return jsonify(
+                {"success": True, "field": field, "suggestions": suggestions}
+            )
 
         # Return all fields
         payload = {
-            'material': filter_list(curated_lists['materials']),
-            'type': filter_list(curated_lists['types']),
-            'style': filter_list(curated_lists['styles']),
-            'color': filter_list(curated_lists['colors'])
+            "material": filter_list(curated_lists["materials"]),
+            "type": filter_list(curated_lists["types"]),
+            "style": filter_list(curated_lists["styles"]),
+            "color": filter_list(curated_lists["colors"]),
         }
-        return jsonify({'success': True, 'suggestions': payload})
+        return jsonify({"success": True, "suggestions": payload})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # =========================================================
 # TIMEZONE
 # =========================================================
 # --- Timezone info ---
 # Purpose: Return server timezone metadata.
-@api_bp.route('/timezone', methods=['GET'])
+@api_bp.route("/timezone", methods=["GET"])
 @login_required
-@require_permission('settings.view')
+@require_permission("settings.view")
 def get_timezone():
     """Get server timezone info"""
     from datetime import datetime
+
     import pytz
 
-    server_tz = current_app.config.get('TIMEZONE', 'UTC')
+    server_tz = current_app.config.get("TIMEZONE", "UTC")
     now_utc = datetime.now(timezone.utc)
 
-    return jsonify({
-        'server_timezone': server_tz,
-        'utc_time': now_utc.isoformat(),
-        'available_timezones': pytz.all_timezones_set
-    })
+    return jsonify(
+        {
+            "server_timezone": server_tz,
+            "utc_time": now_utc.isoformat(),
+            "available_timezones": pytz.all_timezones_set,
+        }
+    )
+
 
 # =========================================================
 # INGREDIENTS
 # =========================================================
 # --- Ingredient list ---
 # Purpose: Return ingredient list for unit conversion.
-@api_bp.route('/ingredients', methods=['GET'])
+@api_bp.route("/ingredients", methods=["GET"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def get_ingredients():
     """Get user's ingredients for unit converter"""
     try:
@@ -390,18 +468,21 @@ def get_ingredients():
             if cached is not None:
                 return jsonify(cached)
 
-        query = InventoryItem.query.filter_by(type='ingredient')
+        query = InventoryItem.query.filter_by(type="ingredient")
         if current_user.organization_id:
             query = query.filter_by(organization_id=current_user.organization_id)
 
         ingredients = query.order_by(InventoryItem.name).all()
-        payload = [{
-            'id': ing.id,
-            'name': ing.name,
-            'density': ing.density,
-            'type': ing.type,
-            'unit': ing.unit
-        } for ing in ingredients]
+        payload = [
+            {
+                "id": ing.id,
+                "name": ing.name,
+                "density": ing.density,
+                "type": ing.type,
+                "unit": ing.unit,
+            }
+            for ing in ingredients
+        ]
 
         cache.set(
             cache_key,
@@ -410,7 +491,7 @@ def get_ingredients():
         )
         return jsonify(payload)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 # =========================================================
@@ -418,14 +499,14 @@ def get_ingredients():
 # =========================================================
 # --- Recipe bootstrap ---
 # Purpose: Return current master recipes + current variations.
-@api_bp.route('/bootstrap/recipes', methods=['GET'])
+@api_bp.route("/bootstrap/recipes", methods=["GET"])
 @login_required
-@require_permission('recipes.view')
+@require_permission("recipes.view")
 def bootstrap_recipes():
     """Lightweight recipe bootstrap payload for clients that only need IDs + variants."""
     org_id = _resolve_org_id()
     if not org_id:
-        return jsonify({'recipes': [], 'count': 0})
+        return jsonify({"recipes": [], "count": 0})
 
     cache_key = recipe_bootstrap_cache_key(org_id)
     bypass_cache = should_bypass_cache()
@@ -434,11 +515,19 @@ def bootstrap_recipes():
     if not bypass_cache:
         cached = cache.get(cache_key)
         if cached is not None:
-            return jsonify({'recipes': cached, 'count': len(cached), 'cache': 'hit', 'version': 1})
+            return jsonify(
+                {"recipes": cached, "count": len(cached), "cache": "hit", "version": 1}
+            )
 
     masters = (
         Recipe.query.options(
-            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id),
+            load_only(
+                Recipe.id,
+                Recipe.name,
+                Recipe.label_prefix,
+                Recipe.status,
+                Recipe.recipe_group_id,
+            ),
         )
         .filter(
             Recipe.organization_id == org_id,
@@ -451,33 +540,41 @@ def bootstrap_recipes():
         .order_by(Recipe.name.asc())
     )
 
-    variations_query = (
-        Recipe.query.options(
-            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status, Recipe.recipe_group_id, Recipe.parent_recipe_id),
-        )
-        .filter(
-            Recipe.organization_id == org_id,
-            Recipe.is_master.is_(False),
-            Recipe.test_sequence.is_(None),
-            Recipe.status == "published",
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-        )
+    variations_query = Recipe.query.options(
+        load_only(
+            Recipe.id,
+            Recipe.name,
+            Recipe.label_prefix,
+            Recipe.status,
+            Recipe.recipe_group_id,
+            Recipe.parent_recipe_id,
+        ),
+    ).filter(
+        Recipe.organization_id == org_id,
+        Recipe.is_master.is_(False),
+        Recipe.test_sequence.is_(None),
+        Recipe.status == "published",
+        Recipe.is_archived.is_(False),
+        Recipe.is_current.is_(True),
     )
 
     variations_by_group = {}
     variations_by_parent = {}
     for variation in variations_query.all():
         payload = {
-            'id': variation.id,
-            'name': variation.name,
-            'status': getattr(variation, 'status', None),
-            'label_prefix': getattr(variation, 'label_prefix', None),
+            "id": variation.id,
+            "name": variation.name,
+            "status": getattr(variation, "status", None),
+            "label_prefix": getattr(variation, "label_prefix", None),
         }
         if variation.recipe_group_id:
-            variations_by_group.setdefault(variation.recipe_group_id, []).append(payload)
+            variations_by_group.setdefault(variation.recipe_group_id, []).append(
+                payload
+            )
         elif variation.parent_recipe_id:
-            variations_by_parent.setdefault(variation.parent_recipe_id, []).append(payload)
+            variations_by_parent.setdefault(variation.parent_recipe_id, []).append(
+                payload
+            )
 
     recipes = []
     for recipe in masters.all():
@@ -486,31 +583,35 @@ def bootstrap_recipes():
             variations = variations_by_group.get(recipe.recipe_group_id, [])
         elif recipe.id in variations_by_parent:
             variations = variations_by_parent.get(recipe.id, [])
-        variations = sorted(variations, key=lambda item: (item.get('name') or '').lower())
+        variations = sorted(
+            variations, key=lambda item: (item.get("name") or "").lower()
+        )
         recipes.append(
             {
-                'id': recipe.id,
-                'name': recipe.name,
-                'label_prefix': getattr(recipe, 'label_prefix', None),
-                'status': getattr(recipe, 'status', None),
-                'variations': variations,
+                "id": recipe.id,
+                "name": recipe.name,
+                "label_prefix": getattr(recipe, "label_prefix", None),
+                "status": getattr(recipe, "status", None),
+                "variations": variations,
             }
         )
 
     cache.set(cache_key, recipes, timeout=cache_ttl)
-    return jsonify({'recipes': recipes, 'count': len(recipes), 'cache': 'miss', 'version': 1})
+    return jsonify(
+        {"recipes": recipes, "count": len(recipes), "cache": "miss", "version": 1}
+    )
 
 
 # --- Product bootstrap ---
 # Purpose: Return product list + SKU inventory ids.
-@api_bp.route('/bootstrap/products', methods=['GET'])
+@api_bp.route("/bootstrap/products", methods=["GET"])
 @login_required
-@require_permission('products.view')
+@require_permission("products.view")
 def bootstrap_products():
     """Return product + SKU inventory identifiers for fast client bootstrapping."""
     org_id = _resolve_org_id()
     if not org_id:
-        return jsonify({'products': [], 'sku_inventory_ids': []})
+        return jsonify({"products": [], "sku_inventory_ids": []})
 
     cache_key = product_bootstrap_cache_key(org_id)
     bypass_cache = should_bypass_cache()
@@ -519,7 +620,7 @@ def bootstrap_products():
     if not bypass_cache:
         cached = cache.get(cache_key)
         if cached is not None:
-            return jsonify({**cached, 'cache': 'hit', 'version': 1})
+            return jsonify({**cached, "cache": "hit", "version": 1})
 
     products = (
         Product.query.options(load_only(Product.id, Product.name))
@@ -542,34 +643,37 @@ def bootstrap_products():
     )
 
     payload = {
-        'products': [{'id': product.id, 'name': product.name} for product in products],
-        'sku_inventory_ids': [
-            row.inventory_item_id for row in sku_rows if getattr(row, 'inventory_item_id', None)
+        "products": [{"id": product.id, "name": product.name} for product in products],
+        "sku_inventory_ids": [
+            row.inventory_item_id
+            for row in sku_rows
+            if getattr(row, "inventory_item_id", None)
         ],
     }
 
     cache.set(cache_key, payload, timeout=cache_ttl)
-    return jsonify({**payload, 'cache': 'miss', 'version': 1})
+    return jsonify({**payload, "cache": "miss", "version": 1})
+
 
 # =========================================================
 # UNIT CONVERSION
 # =========================================================
 # --- Unit converter ---
 # Purpose: Convert between inventory units.
-@api_bp.route('/unit-converter', methods=['POST'])
+@api_bp.route("/unit-converter", methods=["POST"])
 @login_required
-@require_permission('inventory.view')
+@require_permission("inventory.view")
 def unit_converter():
     """Unit conversion endpoint for the modal."""
     try:
         data = request.get_json() or {}
-        from_amount = float(data.get('from_amount', 0))
-        from_unit = data.get('from_unit', '')
-        to_unit = data.get('to_unit', '')
-        ingredient_id = data.get('ingredient_id')
+        from_amount = float(data.get("from_amount", 0))
+        from_unit = data.get("from_unit", "")
+        to_unit = data.get("to_unit", "")
+        ingredient_id = data.get("ingredient_id")
 
         if not all([from_amount, from_unit, to_unit]):
-            return jsonify({'success': False, 'error': 'Missing required parameters'})
+            return jsonify({"success": False, "error": "Missing required parameters"})
 
         # Get ingredient for density if needed
         ingredient = None
@@ -578,37 +682,44 @@ def unit_converter():
 
         # Perform conversion using unit conversion engine
         from app.services.unit_conversion import ConversionEngine
+
         result = ConversionEngine.convert_units(
             from_amount,
             from_unit,
             to_unit,
             ingredient_id=ingredient_id,
-            density=ingredient.density if ingredient else None
+            density=ingredient.density if ingredient else None,
         )
 
-        if result.get('success'):
-            return jsonify({
-                'success': True,
-                'result': result.get('converted_value'),
-                'from_amount': from_amount,
-                'from_unit': from_unit,
-                'to_unit': to_unit,
-                'conversion_type': result.get('conversion_type'),
-                'requires_attention': result.get('requires_attention', False)
-            })
+        if result.get("success"):
+            return jsonify(
+                {
+                    "success": True,
+                    "result": result.get("converted_value"),
+                    "from_amount": from_amount,
+                    "from_unit": from_unit,
+                    "to_unit": to_unit,
+                    "conversion_type": result.get("conversion_type"),
+                    "requires_attention": result.get("requires_attention", False),
+                }
+            )
         else:
-            error_data = result.get('error_data') or {}
-            return jsonify({
-                'success': False,
-                'error': error_data.get('message') or result.get('error_code') or 'Conversion failed',
-                'error_code': result.get('error_code'),
-                'drawer_payload': result.get('drawer_payload'),
-                'requires_drawer': result.get('requires_drawer', False)
-            })
+            error_data = result.get("error_data") or {}
+            return jsonify(
+                {
+                    "success": False,
+                    "error": error_data.get("message")
+                    or result.get("error_code")
+                    or "Conversion failed",
+                    "error_code": result.get("error_code"),
+                    "drawer_payload": result.get("drawer_payload"),
+                    "requires_drawer": result.get("requires_drawer", False),
+                }
+            )
 
     except Exception as e:
         current_app.logger.error(f"Unit converter API error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({"success": False, "error": str(e)})
 
 
 # =========================================================
@@ -616,111 +727,146 @@ def unit_converter():
 # =========================================================
 # --- BatchBot chat ---
 # Purpose: Chat with BatchBot for recipe assistance.
-@api_bp.route('/batchbot/chat', methods=['POST'])
+@api_bp.route("/batchbot/chat", methods=["POST"])
 @login_required
-@require_permission('ai.batchbot')
+@require_permission("ai.batchbot")
 def batchbot_chat():
     if not _is_batchbot_enabled():
-        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
+        return (
+            jsonify(
+                {"success": False, "error": "BatchBot is disabled for this deployment."}
+            ),
+            404,
+        )
     data = request.get_json() or {}
-    prompt = (data.get('prompt') or '').strip()
-    history = data.get('history') or []
-    metadata = data.get('metadata') or {}
+    prompt = (data.get("prompt") or "").strip()
+    history = data.get("history") or []
+    metadata = data.get("metadata") or {}
 
     if not prompt:
-        return jsonify({'success': False, 'error': 'Prompt is required.'}), 400
+        return jsonify({"success": False, "error": "Prompt is required."}), 400
 
     try:
         service = BatchBotService(current_user)
         response = service.chat(prompt=prompt, history=history, metadata=metadata)
-        return jsonify({
-            'success': True,
-            'message': response.text,
-            'tool_results': response.tool_results,
-            'usage': response.usage,
-            'quota': _serialize_quota(response.quota, response.credits),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": response.text,
+                "tool_results": response.tool_results,
+                "usage": response.usage,
+                "quota": _serialize_quota(response.quota, response.credits),
+            }
+        )
     except BatchBotLimitError as exc:
-        return jsonify({
-            'success': False,
-            'error': str(exc),
-            'limit': {
-                'allowed': exc.allowed,
-                'used': exc.used,
-                'window_end': exc.window_end.isoformat(),
-            },
-            'refill_checkout_url': _generate_refill_checkout_url(),
-        }), 429
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "limit": {
+                        "allowed": exc.allowed,
+                        "used": exc.used,
+                        "window_end": exc.window_end.isoformat(),
+                    },
+                    "refill_checkout_url": _generate_refill_checkout_url(),
+                }
+            ),
+            429,
+        )
     except BatchBotChatLimitError as exc:
-        return jsonify({
-            'success': False,
-            'error': str(exc),
-            'chat_limit': {
-                'allowed': exc.limit,
-                'used': exc.used,
-                'window_end': exc.window_end.isoformat(),
-            },
-            'refill_checkout_url': _generate_refill_checkout_url(),
-        }), 429
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "chat_limit": {
+                        "allowed": exc.limit,
+                        "used": exc.used,
+                        "window_end": exc.window_end.isoformat(),
+                    },
+                    "refill_checkout_url": _generate_refill_checkout_url(),
+                }
+            ),
+            429,
+        )
     except BatchBotServiceError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        return jsonify({"success": False, "error": str(exc)}), 400
     except GoogleAIClientError as exc:
         current_app.logger.exception("BatchBot AI failure")
-        return jsonify({'success': False, 'error': str(exc)}), 502
+        return jsonify({"success": False, "error": str(exc)}), 502
     except Exception:
         current_app.logger.exception("Unexpected BatchBot failure")
-        return jsonify({'success': False, 'error': 'Unexpected BatchBot failure.'}), 500
+        return jsonify({"success": False, "error": "Unexpected BatchBot failure."}), 500
 
 
 # --- BatchBot usage ---
 # Purpose: Return BatchBot usage and quota snapshot.
-@api_bp.route('/batchbot/usage', methods=['GET'])
+@api_bp.route("/batchbot/usage", methods=["GET"])
 @login_required
-@require_permission('ai.batchbot')
+@require_permission("ai.batchbot")
 def batchbot_usage():
     if not _is_batchbot_enabled():
-        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
-    org = getattr(current_user, 'organization', None)
+        return (
+            jsonify(
+                {"success": False, "error": "BatchBot is disabled for this deployment."}
+            ),
+            404,
+        )
+    org = getattr(current_user, "organization", None)
     if not org:
-        return jsonify({'success': False, 'error': 'Organization is required.'}), 400
+        return jsonify({"success": False, "error": "Organization is required."}), 400
 
     snapshot = BatchBotUsageService.get_usage_snapshot(org)
     credit_snapshot = BatchBotCreditService.snapshot(org)
-    return jsonify({'success': True, 'quota': _serialize_quota(snapshot, credit_snapshot)})
+    return jsonify(
+        {"success": True, "quota": _serialize_quota(snapshot, credit_snapshot)}
+    )
 
 
 def _serialize_quota(snapshot, credits=None):
     return {
-        'allowed': snapshot.allowed,
-        'used': snapshot.used,
-        'remaining': snapshot.remaining,
-        'window_start': snapshot.window_start.isoformat(),
-        'window_end': snapshot.window_end.isoformat(),
-        'chat_limit': snapshot.chat_limit,
-        'chat_used': snapshot.chat_used,
-        'chat_remaining': snapshot.chat_remaining,
-        'credits': {
-            'total': getattr(credits, "total", None),
-            'remaining': getattr(credits, "remaining", None),
-            'next_expiration': getattr(credits, "expires_next", None).isoformat() if getattr(credits, "expires_next", None) else None,
-        } if credits else None,
+        "allowed": snapshot.allowed,
+        "used": snapshot.used,
+        "remaining": snapshot.remaining,
+        "window_start": snapshot.window_start.isoformat(),
+        "window_end": snapshot.window_end.isoformat(),
+        "chat_limit": snapshot.chat_limit,
+        "chat_used": snapshot.chat_used,
+        "chat_remaining": snapshot.chat_remaining,
+        "credits": (
+            {
+                "total": getattr(credits, "total", None),
+                "remaining": getattr(credits, "remaining", None),
+                "next_expiration": (
+                    getattr(credits, "expires_next", None).isoformat()
+                    if getattr(credits, "expires_next", None)
+                    else None
+                ),
+            }
+            if credits
+            else None
+        ),
     }
 
 
 def _generate_refill_checkout_url():
     try:
-        lookup_key = current_app.config.get('BATCHBOT_REFILL_LOOKUP_KEY')
+        lookup_key = current_app.config.get("BATCHBOT_REFILL_LOOKUP_KEY")
         if not lookup_key:
             return None
-        if not current_user or not getattr(current_user, 'email', None):
+        if not current_user or not getattr(current_user, "email", None):
             return None
         from app.services.billing_service import BillingService
-        success_url = url_for('app_routes.dashboard', _external=True) + "?refill=success"
-        cancel_url = url_for('app_routes.dashboard', _external=True) + "?refill=cancel"
+
+        success_url = (
+            url_for("app_routes.dashboard", _external=True) + "?refill=success"
+        )
+        cancel_url = url_for("app_routes.dashboard", _external=True) + "?refill=cancel"
         metadata = {
-            'organization_id': str(current_user.organization_id or ''),
-            'user_id': str(current_user.id),
-            'batchbot_refill_lookup_key': lookup_key,
+            "organization_id": str(current_user.organization_id or ""),
+            "user_id": str(current_user.id),
+            "batchbot_refill_lookup_key": lookup_key,
         }
         session = BillingService.create_one_time_checkout_by_lookup_key(
             lookup_key=lookup_key,
@@ -729,7 +875,9 @@ def _generate_refill_checkout_url():
             cancel_url=cancel_url,
             metadata=metadata,
         )
-        return getattr(session, 'url', None)
+        return getattr(session, "url", None)
     except Exception as exc:
-        current_app.logger.warning("Unable to generate BatchBot refill checkout: %s", exc)
+        current_app.logger.warning(
+            "Unable to generate BatchBot refill checkout: %s", exc
+        )
         return None

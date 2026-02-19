@@ -7,8 +7,10 @@ Glossary:
 - Fixture: Pytest helper for shared setup and teardown.
 - App context: Flask context used to access app resources.
 """
+
 import os
 import tempfile
+
 import pytest
 from sqlalchemy import inspect, text
 
@@ -17,29 +19,31 @@ os.environ.setdefault("SQLALCHEMY_TEST_DATABASE_URI", "sqlite:///:memory:")
 
 from app import create_app
 from app.extensions import db
-from app.models.models import User, Organization, SubscriptionTier, Permission, Role
+from app.models.models import Organization, Permission, Role, SubscriptionTier, User
 
 
-@pytest.fixture(scope='function')  # Changed to function scope for isolation
+@pytest.fixture(scope="function")  # Changed to function scope for isolation
 def app():
     """Create and configure a new app instance for each test."""
     # Create a temporary file to use as the database
     db_fd, db_path = tempfile.mkstemp()
     previous_test_db_uri = os.environ.get("SQLALCHEMY_TEST_DATABASE_URI")
-    os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = f'sqlite:///{db_path}'
+    os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = f"sqlite:///{db_path}"
 
-    app = create_app({
-        'TESTING': True,
-        'DATABASE_URL': f'sqlite:///{db_path}',
-        'WTF_CSRF_ENABLED': False,
-        'SECRET_KEY': 'test-secret-key',
-        'STRIPE_SECRET_KEY': 'sk_test_fake',
-        'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
-        'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
-        'TESTING_DISABLE_AUTH': False,  # Disable any test-specific auth bypass
-        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
-        # Don't disable login - we need to test permissions properly
-    })
+    app = create_app(
+        {
+            "TESTING": True,
+            "DATABASE_URL": f"sqlite:///{db_path}",
+            "WTF_CSRF_ENABLED": False,
+            "SECRET_KEY": "test-secret-key",
+            "STRIPE_SECRET_KEY": "sk_test_fake",
+            "STRIPE_WEBHOOK_SECRET": "whsec_test_fake",
+            "LOGIN_DISABLED": False,  # Ensure authentication is active in tests
+            "TESTING_DISABLE_AUTH": False,  # Disable any test-specific auth bypass
+            "SQLALCHEMY_SESSION_OPTIONS": {"expire_on_commit": False},
+            # Don't disable login - we need to test permissions properly
+        }
+    )
 
     try:
         with app.app_context():
@@ -89,43 +93,85 @@ def app_context(app):
 @pytest.fixture
 def auth_headers():
     """Headers for authenticated requests."""
-    return {'Content-Type': 'application/json'}
+    return {"Content-Type": "application/json"}
 
 
 def _create_test_data():
     """Create basic test data with correct object relationships"""
-    from app.models.subscription_tier import SubscriptionTier
+    from app.extensions import db
+    from app.models import Unit
     from app.models.models import Organization, User
     from app.models.product_category import ProductCategory
+    from app.models.subscription_tier import SubscriptionTier
     from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
     from app.seeders.unit_seeder import seed_units
-    from app.models import Unit
-    from app.extensions import db
 
     seed_consolidated_permissions()
     seed_units()
 
     required_units = [
-        dict(name='piece', symbol='pc', unit_type='count', base_unit='count', conversion_factor=1.0),
-        dict(name='scoops', symbol='scoops', unit_type='count', base_unit='count', conversion_factor=1.0),
-        dict(name='kg', symbol='kg', unit_type='weight', base_unit='gram', conversion_factor=1000.0),
-        dict(name='gram', symbol='g', unit_type='weight', base_unit='gram', conversion_factor=1.0),
-        dict(name='oz', symbol='oz', unit_type='weight', base_unit='gram', conversion_factor=28.3495),
-        dict(name='ml', symbol='ml', unit_type='volume', base_unit='ml', conversion_factor=1.0),
-        dict(name='count', symbol='ct', unit_type='count', base_unit='count', conversion_factor=1.0),
+        dict(
+            name="piece",
+            symbol="pc",
+            unit_type="count",
+            base_unit="count",
+            conversion_factor=1.0,
+        ),
+        dict(
+            name="scoops",
+            symbol="scoops",
+            unit_type="count",
+            base_unit="count",
+            conversion_factor=1.0,
+        ),
+        dict(
+            name="kg",
+            symbol="kg",
+            unit_type="weight",
+            base_unit="gram",
+            conversion_factor=1000.0,
+        ),
+        dict(
+            name="gram",
+            symbol="g",
+            unit_type="weight",
+            base_unit="gram",
+            conversion_factor=1.0,
+        ),
+        dict(
+            name="oz",
+            symbol="oz",
+            unit_type="weight",
+            base_unit="gram",
+            conversion_factor=28.3495,
+        ),
+        dict(
+            name="ml",
+            symbol="ml",
+            unit_type="volume",
+            base_unit="ml",
+            conversion_factor=1.0,
+        ),
+        dict(
+            name="count",
+            symbol="ct",
+            unit_type="count",
+            base_unit="count",
+            conversion_factor=1.0,
+        ),
     ]
     for unit in required_units:
-        if not Unit.query.filter_by(name=unit['name']).first():
+        if not Unit.query.filter_by(name=unit["name"]).first():
             db.session.add(Unit(**unit, is_custom=False, is_mapped=True))
     db.session.commit()
 
     # Create a test subscription tier
     tier = SubscriptionTier(
-        name='Test Tier',
-        description='Test tier for testing',
+        name="Test Tier",
+        description="Test tier for testing",
         user_limit=5,
         is_customer_facing=True,
-        billing_provider='exempt'
+        billing_provider="exempt",
     )
     db.session.add(tier)
     db.session.commit()
@@ -133,31 +179,33 @@ def _create_test_data():
     db.session.commit()
 
     # Ensure a default product category exists for tests
-    if not ProductCategory.query.filter_by(name='Uncategorized').first():
-        db.session.add(ProductCategory(name='Uncategorized'))
+    if not ProductCategory.query.filter_by(name="Uncategorized").first():
+        db.session.add(ProductCategory(name="Uncategorized"))
         db.session.commit()
 
     # Create a test organization - Pass the tier object, not tier.id
     org = Organization(
-        name='Test Organization',
-        subscription_tier=tier  # Pass the full object to the relationship
+        name="Test Organization",
+        subscription_tier=tier,  # Pass the full object to the relationship
     )
     db.session.add(org)
     db.session.commit()
 
     # Create a test user
     user = User(
-        email='test@example.com',
-        username='testuser',  # Added username for completeness
-        password_hash='test_hash',
+        email="test@example.com",
+        username="testuser",  # Added username for completeness
+        password_hash="test_hash",
         is_verified=True,
         organization_id=org.id,  # This is correct - organization_id is a foreign key
-        user_type='customer',
-        is_active=True
+        user_type="customer",
+        is_active=True,
     )
     db.session.add(user)
     db.session.commit()
-    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    org_owner_role = Role.query.filter_by(
+        name="organization_owner", is_system_role=True
+    ).first()
     if org_owner_role:
         user.assign_role(org_owner_role)
 
@@ -169,62 +217,71 @@ def _ensure_sqlite_schema_columns():
     def ensure_columns(table_name: str, column_defs: dict[str, str]):
         nonlocal inspector
         try:
-            existing = {col['name'] for col in inspector.get_columns(table_name)}
+            existing = {col["name"] for col in inspector.get_columns(table_name)}
         except Exception:
             return
-        missing = {name: ddl for name, ddl in column_defs.items() if name not in existing}
+        missing = {
+            name: ddl for name, ddl in column_defs.items() if name not in existing
+        }
         if not missing:
             return
         for column_name, ddl in missing.items():
-            db.session.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN {column_name} {ddl}'))
+            db.session.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN {column_name} {ddl}')
+            )
         db.session.commit()
         inspector = inspect(db.engine)
 
     from app.models.recipe import RecipeLineage
+
     RecipeLineage.__table__.create(db.engine, checkfirst=True)
 
-    ensure_columns('user', {
-        'active_session_token': 'VARCHAR(255)'
-    })
+    ensure_columns("user", {"active_session_token": "VARCHAR(255)"})
 
-    ensure_columns('recipe', {
-        'parent_recipe_id': 'INTEGER',
-        'cloned_from_id': 'INTEGER',
-        'root_recipe_id': 'INTEGER'
-    })
+    ensure_columns(
+        "recipe",
+        {
+            "parent_recipe_id": "INTEGER",
+            "cloned_from_id": "INTEGER",
+            "root_recipe_id": "INTEGER",
+        },
+    )
 
-    ensure_columns('global_item', {
-        'aliases': 'TEXT',
-        'recommended_shelf_life_days': 'INTEGER',
-        'recommended_fragrance_load_pct': 'VARCHAR(64)',
-        'is_active_ingredient': 'BOOLEAN',
-        'inci_name': 'VARCHAR(256)',
-        'certifications': 'TEXT',
-        'capacity': 'FLOAT',
-        'capacity_unit': 'VARCHAR(32)',
-        'container_material': 'VARCHAR(64)',
-        'container_type': 'VARCHAR(64)',
-        'container_style': 'VARCHAR(64)',
-        'container_color': 'VARCHAR(64)',
-        'saponification_value': 'FLOAT',
-        'iodine_value': 'FLOAT',
-        'melting_point_c': 'FLOAT',
-        'flash_point_c': 'FLOAT',
-        'ph_value': 'VARCHAR(32)',
-        'ph_min': 'FLOAT',
-        'ph_max': 'FLOAT',
-        'moisture_content_percent': 'FLOAT',
-        'comedogenic_rating': 'INTEGER',
-        'fatty_acid_profile': 'TEXT',
-        'protein_content_pct': 'FLOAT',
-        'brewing_color_srm': 'FLOAT',
-        'brewing_potential_sg': 'FLOAT',
-        'brewing_diastatic_power_lintner': 'FLOAT',
-        'metadata_json': 'TEXT',
-        'is_archived': 'BOOLEAN',
-        'archived_at': 'DATETIME',
-        'archived_by': 'INTEGER'
-    })
+    ensure_columns(
+        "global_item",
+        {
+            "aliases": "TEXT",
+            "recommended_shelf_life_days": "INTEGER",
+            "recommended_fragrance_load_pct": "VARCHAR(64)",
+            "is_active_ingredient": "BOOLEAN",
+            "inci_name": "VARCHAR(256)",
+            "certifications": "TEXT",
+            "capacity": "FLOAT",
+            "capacity_unit": "VARCHAR(32)",
+            "container_material": "VARCHAR(64)",
+            "container_type": "VARCHAR(64)",
+            "container_style": "VARCHAR(64)",
+            "container_color": "VARCHAR(64)",
+            "saponification_value": "FLOAT",
+            "iodine_value": "FLOAT",
+            "melting_point_c": "FLOAT",
+            "flash_point_c": "FLOAT",
+            "ph_value": "VARCHAR(32)",
+            "ph_min": "FLOAT",
+            "ph_max": "FLOAT",
+            "moisture_content_percent": "FLOAT",
+            "comedogenic_rating": "INTEGER",
+            "fatty_acid_profile": "TEXT",
+            "protein_content_pct": "FLOAT",
+            "brewing_color_srm": "FLOAT",
+            "brewing_potential_sg": "FLOAT",
+            "brewing_diastatic_power_lintner": "FLOAT",
+            "metadata_json": "TEXT",
+            "is_archived": "BOOLEAN",
+            "archived_at": "DATETIME",
+            "archived_by": "INTEGER",
+        },
+    )
 
 
 @pytest.fixture(name="test_org")
@@ -241,19 +298,16 @@ def customer_user_fixture(app):
     with app.app_context():
         # Use unique username per test to avoid conflicts
         import time
-        unique_username = f'testuser_{int(time.time() * 1000000)}'
+
+        unique_username = f"testuser_{int(time.time() * 1000000)}"
 
         # Create a test organization with no hardcoded billing_status (will use model default)
-        org = Organization(name='Test Organization')
+        org = Organization(name="Test Organization")
         db.session.add(org)
         db.session.flush()  # Get the ID
 
         # Create a basic tier
-        tier = SubscriptionTier(
-            name='Basic',
-            user_limit=5,
-            billing_provider='exempt'
-        )
+        tier = SubscriptionTier(name="Basic", user_limit=5, billing_provider="exempt")
         db.session.add(tier)
         db.session.flush()
         tier.permissions = Permission.query.filter_by(is_active=True).all()
@@ -263,14 +317,16 @@ def customer_user_fixture(app):
 
         user = User(
             username=unique_username,  # Use unique username
-            email=f'{unique_username}@example.com',  # Use unique email too
+            email=f"{unique_username}@example.com",  # Use unique email too
             organization_id=org.id,
-            user_type='customer',  # Explicitly set as customer
-            is_active=True
+            user_type="customer",  # Explicitly set as customer
+            is_active=True,
         )
         db.session.add(user)
         db.session.commit()
-        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        org_owner_role = Role.query.filter_by(
+            name="organization_owner", is_system_role=True
+        ).first()
         if org_owner_role:
             user.assign_role(org_owner_role)
 
@@ -285,29 +341,33 @@ def developer_user(app):
     with app.app_context():
         # Use unique username per test to avoid conflicts
         import time
-        unique_username = f'developer_{int(time.time() * 1000000)}'
+
+        unique_username = f"developer_{int(time.time() * 1000000)}"
 
         user = User(
             username=unique_username,
-            email=f'{unique_username}@batchtrack.com',
+            email=f"{unique_username}@batchtrack.com",
             organization_id=None,  # Developers have no organization
-            user_type='developer',
-            is_active=True
+            user_type="developer",
+            is_active=True,
         )
         db.session.add(user)
         db.session.commit()
 
         from app.models.developer_role import DeveloperRole
-        from app.seeders.consolidated_permission_seeder import seed_consolidated_permissions
+        from app.seeders.consolidated_permission_seeder import (
+            seed_consolidated_permissions,
+        )
 
-        role = DeveloperRole.query.filter_by(name='system_admin').first()
+        role = DeveloperRole.query.filter_by(name="system_admin").first()
         if role is None:
             seed_consolidated_permissions()
-            role = DeveloperRole.query.filter_by(name='system_admin').first()
+            role = DeveloperRole.query.filter_by(name="system_admin").first()
         if role:
             user.assign_role(role)
 
         from types import SimpleNamespace
+
         user_id = user.id
         yield SimpleNamespace(id=user_id)
 

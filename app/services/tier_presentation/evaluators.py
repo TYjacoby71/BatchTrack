@@ -36,7 +36,9 @@ def tier_matches_row_spec(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> 
     if permissions_all and not permissions_all.issubset(permission_set):
         return False
 
-    has_any_entitlement_rule = bool(permissions_any or addon_keys_any or addon_functions_any)
+    has_any_entitlement_rule = bool(
+        permissions_any or addon_keys_any or addon_functions_any
+    )
     entitlement_match = False
     if permissions_any and not permission_set.isdisjoint(permissions_any):
         entitlement_match = True
@@ -62,13 +64,18 @@ def tier_matches_row_spec(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> 
 # Purpose: Produce typed cell payloads used by table renderers.
 # Inputs: Tier fact dictionary and declarative row specification dictionary.
 # Outputs: Cell dictionary containing type/value/display fields for the row.
-def build_comparison_cell(*, tier: dict[str, Any], row_spec: dict[str, Any]) -> dict[str, Any]:
+def build_comparison_cell(
+    *, tier: dict[str, Any], row_spec: dict[str, Any]
+) -> dict[str, Any]:
     """Build one display cell payload for a row/tier pair."""
     kind = str(row_spec.get("kind") or "boolean").strip().lower()
     if kind == "text":
         return {"type": "text", "display": str(row_spec.get("text") or "")}
     if kind == "limit":
-        return {"type": "text", "display": format_limit_cell(tier=tier, row_spec=row_spec)}
+        return {
+            "type": "text",
+            "display": format_limit_cell(tier=tier, row_spec=row_spec),
+        }
     if kind == "batchbot_limit":
         return {"type": "text", "display": format_batchbot_limit_cell(tier)}
     if kind == "retention":
@@ -140,4 +147,3 @@ def format_batchbot_limit_cell(tier: dict[str, Any]) -> str:
     if raw_limit == 0:
         return "No included requests"
     return f"{raw_limit} / window"
-

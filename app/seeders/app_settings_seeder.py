@@ -8,7 +8,7 @@ import copy
 from app.extensions import db
 from app.models.app_setting import AppSetting
 from app.utils.settings import DEFAULT_SETTINGS_KEY
-from app.utils.settings_defaults import merge_settings_defaults, DEFAULT_APP_SETTINGS
+from app.utils.settings_defaults import DEFAULT_APP_SETTINGS, merge_settings_defaults
 
 
 def seed_app_settings() -> None:

@@ -12,36 +12,49 @@ from __future__ import annotations
 
 import logging
 
-
-from flask import flash, redirect, request, url_for, render_template, current_app
+from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
- 
-from app.extensions import db, cache
-from app.models import Recipe, RecipeIngredient, RecipeLineage, Batch
+
+from app.extensions import cache, db
+from app.models import Batch, Recipe, RecipeIngredient, RecipeLineage
+from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.services.lineage_service import format_label_prefix, generate_lineage_id
 from app.services.recipe_service import (
     archive_recipe,
     delete_recipe,
     get_recipe_details,
     is_marketplace_listed,
-    set_current_version as set_current_version_service,
     promote_test_to_current,
+)
+from app.services.recipe_service import (
     promote_variation_to_master as promote_variation_to_master_service,
+)
+from app.services.recipe_service import (
     promote_variation_to_new_group as promote_variation_to_new_group_service,
+)
+from app.services.recipe_service import (
     restore_recipe,
+)
+from app.services.recipe_service import (
+    set_current_version as set_current_version_service,
+)
+from app.services.recipe_service import (
     unlist_recipe,
 )
-from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.notes import append_timestamped_note
-from app.utils.permissions import _org_tier_includes_permission, has_permission, require_permission
-from app.utils.unit_utils import get_global_unit_list
+from app.utils.permissions import (
+    _org_tier_includes_permission,
+    has_permission,
+    require_permission,
+)
 from app.utils.settings import is_feature_enabled
-from ..lineage_utils import build_version_branches
+from app.utils.unit_utils import get_global_unit_list
 
 from .. import recipes_bp
+from ..lineage_utils import build_version_branches
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +63,9 @@ logger = logging.getLogger(__name__)
 # Purpose: Fetch group-scoped non-test variations for listed master rows.
 # Inputs: Master recipe rows and optional organization scope identifier.
 # Outputs: Mapping of recipe_group_id to variation Recipe rows.
-def _group_variations_for_masters(recipes, *, organization_id: int | None) -> dict[int, list[Recipe]]:
+def _group_variations_for_masters(
+    recipes, *, organization_id: int | None
+) -> dict[int, list[Recipe]]:
     """Return non-test, non-archived variations bucketed by recipe group."""
     group_ids = sorted(
         {
@@ -72,15 +87,14 @@ def _group_variations_for_masters(recipes, *, organization_id: int | None) -> di
         query = query.filter(Recipe.organization_id == organization_id)
 
     grouped: dict[int, list[Recipe]] = {}
-    for variation in (
-        query.order_by(
-            Recipe.recipe_group_id.asc(),
-            Recipe.variation_name.asc().nullsfirst(),
-            Recipe.version_number.desc(),
-        ).all()
-    ):
+    for variation in query.order_by(
+        Recipe.recipe_group_id.asc(),
+        Recipe.variation_name.asc().nullsfirst(),
+        Recipe.version_number.desc(),
+    ).all():
         grouped.setdefault(int(variation.recipe_group_id), []).append(variation)
     return grouped
+
 
 # =========================================================
 # LISTING & VIEW
@@ -89,9 +103,9 @@ def _group_variations_for_masters(recipes, *, organization_id: int | None) -> di
 # Purpose: List master recipes for the organization.
 # Inputs: Request query args for pagination plus authenticated organization scope.
 # Outputs: Rendered recipe list HTML response with group-aware variation payloads.
-@recipes_bp.route('/')
+@recipes_bp.route("/")
 @login_required
-@require_permission('recipes.view')
+@require_permission("recipes.view")
 def list_recipes():
     org_id = getattr(current_user, "organization_id", None) or 0
     bypass_cache = should_bypass_cache()
@@ -113,20 +127,14 @@ def list_recipes():
         if cached_page is not None:
             return cached_page
 
-    ingredient_counts_query = (
-        db.session.query(
-            RecipeIngredient.recipe_id.label("recipe_id"),
-            func.count(RecipeIngredient.id).label("ingredient_count"),
-        )
-        .group_by(RecipeIngredient.recipe_id)
-    )
-    batch_counts_query = (
-        db.session.query(
-            Batch.recipe_id.label("recipe_id"),
-            func.count(Batch.id).label("batch_count"),
-        )
-        .group_by(Batch.recipe_id)
-    )
+    ingredient_counts_query = db.session.query(
+        RecipeIngredient.recipe_id.label("recipe_id"),
+        func.count(RecipeIngredient.id).label("ingredient_count"),
+    ).group_by(RecipeIngredient.recipe_id)
+    batch_counts_query = db.session.query(
+        Batch.recipe_id.label("recipe_id"),
+        func.count(Batch.id).label("batch_count"),
+    ).group_by(Batch.recipe_id)
     if current_user.organization_id:
         ingredient_counts_query = ingredient_counts_query.filter(
             RecipeIngredient.organization_id == current_user.organization_id
@@ -165,7 +173,7 @@ def list_recipes():
         .paginate(page=page, per_page=per_page, error_out=False)
     )
     if pagination.pages and page > pagination.pages:
-        return redirect(url_for('recipes.list_recipes', page=pagination.pages))
+        return redirect(url_for("recipes.list_recipes", page=pagination.pages))
     recipes = []
     for recipe, ingredient_count, batch_count in pagination.items:
         recipe.ingredient_count = int(ingredient_count or 0)
@@ -182,15 +190,17 @@ def list_recipes():
             for variation in getattr(recipe, "variations", [])
             if variation.test_sequence is None and not variation.is_archived
         ]
-        recipe.group_variations = group_variations.get(recipe.recipe_group_id, fallback_variations)
+        recipe.group_variations = group_variations.get(
+            recipe.recipe_group_id, fallback_variations
+        )
 
     inventory_units = get_global_unit_list()
     rendered = render_template(
-        'pages/recipes/recipe_list.html',
+        "pages/recipes/recipe_list.html",
         recipes=recipes,
         inventory_units=inventory_units,
         pagination=pagination,
-        breadcrumb_items=[{'label': 'Recipes'}],
+        breadcrumb_items=[{"label": "Recipes"}],
     )
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
@@ -203,18 +213,20 @@ def list_recipes():
 # Purpose: View a recipe, its lineage context, and note history.
 # Inputs: Recipe id path parameter and authenticated user context.
 # Outputs: Rendered recipe detail page or redirect with flash messaging.
-@recipes_bp.route('/<int:recipe_id>/view')
+@recipes_bp.route("/<int:recipe_id>/view")
 @login_required
-@require_permission('recipes.view')
+@require_permission("recipes.view")
 def view_recipe(recipe_id):
     try:
         recipe = get_recipe_details(recipe_id)
         if not recipe:
-            flash('Recipe not found.', 'error')
-            return redirect(url_for('recipes.list_recipes'))
+            flash("Recipe not found.", "error")
+            return redirect(url_for("recipes.list_recipes"))
 
         inventory_units = get_global_unit_list()
-        can_create_variations = has_permission(current_user, "recipes.create_variations")
+        can_create_variations = has_permission(
+            current_user, "recipes.create_variations"
+        )
         lineage_id = generate_lineage_id(recipe)
         batch_count = Batch.query.filter_by(recipe_id=recipe.id).count()
         has_batches = batch_count > 0
@@ -234,7 +246,7 @@ def view_recipe(recipe_id):
                 Recipe.is_current.is_(True),
             ).count()
         is_test = recipe.test_sequence is not None
-        is_published_locked = recipe.status == 'published' and not is_test
+        is_published_locked = recipe.status == "published" and not is_test
         is_archived = bool(recipe.is_archived)
         can_edit = has_permission(current_user, "recipes.edit")
         lineage_enabled = can_edit
@@ -308,7 +320,7 @@ def view_recipe(recipe_id):
                 .first()
             )
         return render_template(
-            'pages/recipes/view_recipe.html',
+            "pages/recipes/view_recipe.html",
             recipe=recipe,
             inventory_units=inventory_units,
             lineage_enabled=lineage_enabled,
@@ -337,45 +349,49 @@ def view_recipe(recipe_id):
     except Exception as exc:
         flash(f"Error loading recipe: {exc}", "error")
         logger.exception("Error viewing recipe: %s", exc)
-        return redirect(url_for('recipes.list_recipes'))
+        return redirect(url_for("recipes.list_recipes"))
 
 
 # --- Add recipe note ---
 # Purpose: Store timestamped notes for a recipe.
 # Inputs: Recipe id path parameter and submitted note body from form data.
 # Outputs: Redirect response back to recipe view with success/error flash.
-@recipes_bp.route('/<int:recipe_id>/notes', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/notes", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def add_recipe_note(recipe_id):
     recipe = db.session.get(Recipe, recipe_id)
     if not recipe:
-        flash('Recipe not found.', 'error')
-        return redirect(url_for('recipes.list_recipes'))
+        flash("Recipe not found.", "error")
+        return redirect(url_for("recipes.list_recipes"))
 
-    note_text = (request.form.get('note') or '').strip()
+    note_text = (request.form.get("note") or "").strip()
     if not note_text:
-        flash('Note cannot be empty.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id) + "#recipeNotes")
+        flash("Note cannot be empty.", "error")
+        return redirect(
+            url_for("recipes.view_recipe", recipe_id=recipe_id) + "#recipeNotes"
+        )
 
     try:
         stamped = append_timestamped_note(None, note_text)
         lineage_entry = RecipeLineage(
             recipe_id=recipe.id,
-            event_type='NOTE',
+            event_type="NOTE",
             organization_id=recipe.organization_id,
-            user_id=getattr(current_user, 'id', None),
+            user_id=getattr(current_user, "id", None),
             notes=stamped,
         )
         db.session.add(lineage_entry)
         db.session.commit()
-        flash('Note added.', 'success')
+        flash("Note added.", "success")
     except Exception as exc:
         db.session.rollback()
         logger.error("Error adding recipe note %s: %s", recipe_id, exc)
-        flash('Unable to save note.', 'error')
+        flash("Unable to save note.", "error")
 
-    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id) + "#recipeNotes")
+    return redirect(
+        url_for("recipes.view_recipe", recipe_id=recipe_id) + "#recipeNotes"
+    )
 
 
 # =========================================================
@@ -385,40 +401,40 @@ def add_recipe_note(recipe_id):
 # Purpose: Legacy destructive delete for a recipe.
 # Inputs: Recipe id path parameter identifying recipe to delete.
 # Outputs: Redirect response to list page with deletion result flash.
-@recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/delete", methods=["POST"])
 @login_required
-@require_permission('recipes.delete')
+@require_permission("recipes.delete")
 def delete_recipe_route(recipe_id):
     try:
         success, message = delete_recipe(recipe_id)
         if success:
             flash(message)
         else:
-            flash(f'Error deleting recipe: {message}', 'error')
+            flash(f"Error deleting recipe: {message}", "error")
     except Exception as exc:
         logger.error("Error deleting recipe %s: %s", recipe_id, exc)
-        flash('An error occurred while deleting the recipe.', 'error')
+        flash("An error occurred while deleting the recipe.", "error")
 
-    return redirect(url_for('recipes.list_recipes'))
+    return redirect(url_for("recipes.list_recipes"))
 
 
 # --- Make parent (legacy) ---
 # Purpose: Legacy promote-to-parent flow (compatibility).
 # Inputs: Recipe id path parameter for variation being converted.
 # Outputs: Redirect response to recipe view with conversion status flash.
-@recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/make-parent", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def make_parent_recipe(recipe_id):
     try:
         recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
-            flash('Recipe not found.', 'error')
-            return redirect(url_for('recipes.list_recipes'))
+            flash("Recipe not found.", "error")
+            return redirect(url_for("recipes.list_recipes"))
 
         if not recipe.parent_recipe_id:
-            flash('Recipe is already a parent recipe.', 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+            flash("Recipe is already a parent recipe.", "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
         original_parent = recipe.parent
 
@@ -430,9 +446,9 @@ def make_parent_recipe(recipe_id):
         lineage_entry = RecipeLineage(
             recipe_id=recipe.id,
             source_recipe_id=original_parent.id if original_parent else None,
-            event_type='PROMOTE_TO_PARENT',
+            event_type="PROMOTE_TO_PARENT",
             organization_id=recipe.organization_id,
-            user_id=getattr(current_user, 'id', None),
+            user_id=getattr(current_user, "id", None),
         )
         db.session.add(lineage_entry)
 
@@ -441,17 +457,17 @@ def make_parent_recipe(recipe_id):
         flash(
             f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer '
             f'a variation of "{original_parent.name}".',
-            'success',
+            "success",
         )
         logger.info("Converted recipe %s from variation to parent recipe", recipe_id)
 
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
     except Exception as exc:
         db.session.rollback()
         logger.error("Error converting recipe %s to parent: %s", recipe_id, exc)
-        flash('An error occurred while converting the recipe to a parent.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("An error occurred while converting the recipe to a parent.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # =========================================================
@@ -461,36 +477,36 @@ def make_parent_recipe(recipe_id):
 # Purpose: Lock a recipe to prevent edits.
 # Inputs: Recipe id path parameter to lock.
 # Outputs: Redirect response to recipe view after lock persistence.
-@recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/lock", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def lock_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     recipe.is_locked = True
     db.session.commit()
-    flash('Recipe locked successfully.')
-    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    flash("Recipe locked successfully.")
+    return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Unlock recipe ---
 # Purpose: Unlock a recipe for edits.
 # Inputs: Recipe id path parameter plus unlock password form value.
 # Outputs: Redirect response to recipe view with unlock validation flash.
-@recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/unlock", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def unlock_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    unlock_password = request.form.get('unlock_password')
+    unlock_password = request.form.get("unlock_password")
 
     if current_user.check_password(unlock_password):
         recipe.is_locked = False
         db.session.commit()
-        flash('Recipe unlocked successfully.')
+        flash("Recipe unlocked successfully.")
     else:
-        flash('Incorrect password.', 'error')
+        flash("Incorrect password.", "error")
 
-    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # =========================================================
@@ -500,75 +516,75 @@ def unlock_recipe(recipe_id):
 # Purpose: Promote a test to current version.
 # Inputs: Test recipe id path parameter for promotion target.
 # Outputs: Redirect response to promoted version or source recipe on error.
-@recipes_bp.route('/<int:recipe_id>/publish-test', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/publish-test", methods=["POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def publish_test_version(recipe_id):
     try:
         success, result = promote_test_to_current(recipe_id)
         if not success:
-            flash(str(result), 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-        flash('Test promoted to current version.', 'success')
-        return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+            flash(str(result), "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+        flash("Test promoted to current version.", "success")
+        return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
         db.session.rollback()
         logger.error("Error publishing test version %s: %s", recipe_id, exc)
-        flash('An error occurred while publishing the test.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("An error occurred while publishing the test.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Set current version ---
 # Purpose: Make a published version the current recipe.
 # Inputs: Published recipe id path parameter for target branch.
 # Outputs: Redirect response to selected version with status flash.
-@recipes_bp.route('/<int:recipe_id>/set-current', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/set-current", methods=["POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def set_current_version_route(recipe_id):
     try:
         success, result = set_current_version_service(recipe_id)
         if not success:
-            flash(str(result), 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-        flash('Version set as current.', 'success')
-        return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+            flash(str(result), "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+        flash("Version set as current.", "success")
+        return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
         db.session.rollback()
         logger.error("Error setting current version %s: %s", recipe_id, exc)
-        flash('An error occurred while setting the current version.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("An error occurred while setting the current version.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Promote to master ---
 # Purpose: Promote a variation to master in the same group.
 # Inputs: Variation recipe id path parameter.
 # Outputs: Redirect response to created master or source recipe on failure.
-@recipes_bp.route('/<int:recipe_id>/promote-to-master', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/promote-to-master", methods=["POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def promote_variation_to_master(recipe_id):
     try:
         success, result = promote_variation_to_master_service(recipe_id)
         if not success:
-            flash(str(result), 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-        flash('Variation promoted to new master version.', 'success')
-        return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+            flash(str(result), "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+        flash("Variation promoted to new master version.", "success")
+        return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
         db.session.rollback()
         logger.error("Error promoting variation %s to master: %s", recipe_id, exc)
-        flash('An error occurred while promoting the variation.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("An error occurred while promoting the variation.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # --- Promote to new group ---
 # Purpose: Promote a variation to a new recipe group.
 # Inputs: Variation recipe id path parameter and optional group_name form value.
 # Outputs: Redirect response to newly created group master or source on error.
-@recipes_bp.route('/<int:recipe_id>/promote-to-new-group', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/promote-to-new-group", methods=["POST"])
 @login_required
-@require_permission('recipes.create_variations')
+@require_permission("recipes.create_variations")
 def promote_variation_to_new_group(recipe_id):
     try:
         group_name = (request.form.get("group_name") or "").strip() or None
@@ -578,18 +594,21 @@ def promote_variation_to_new_group(recipe_id):
         )
         if not success:
             if isinstance(result, dict):
-                flash(result.get('error') or 'Unable to create a new recipe group.', 'error')
+                flash(
+                    result.get("error") or "Unable to create a new recipe group.",
+                    "error",
+                )
             else:
-                flash(str(result), 'error')
-            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+                flash(str(result), "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
-        flash('Variation promoted into a new recipe group.', 'success')
-        return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
+        flash("Variation promoted into a new recipe group.", "success")
+        return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
         db.session.rollback()
         logger.error("Error promoting variation %s to new group: %s", recipe_id, exc)
-        flash('An error occurred while creating the new recipe group.', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("An error occurred while creating the new recipe group.", "error")
+        return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
 # =========================================================
@@ -599,48 +618,56 @@ def promote_variation_to_new_group(recipe_id):
 # Purpose: Archive a recipe (soft-hide + lock).
 # Inputs: Recipe id path parameter and optional next redirect URL query arg.
 # Outputs: Redirect response to provided next path or recipe detail page.
-@recipes_bp.route('/<int:recipe_id>/archive', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/archive", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def archive_recipe_route(recipe_id):
     try:
-        success, message = archive_recipe(recipe_id, user_id=getattr(current_user, 'id', None))
-        flash(message, 'success' if success else 'error')
+        success, message = archive_recipe(
+            recipe_id, user_id=getattr(current_user, "id", None)
+        )
+        flash(message, "success" if success else "error")
     except Exception as exc:
         logger.error("Error archiving recipe %s: %s", recipe_id, exc)
-        flash('Unable to archive recipe.', 'error')
-    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("Unable to archive recipe.", "error")
+    return redirect(
+        request.args.get("next") or url_for("recipes.view_recipe", recipe_id=recipe_id)
+    )
 
 
 # --- Restore recipe ---
 # Purpose: Restore an archived recipe.
 # Inputs: Recipe id path parameter and optional next redirect URL query arg.
 # Outputs: Redirect response to provided next path or recipe detail page.
-@recipes_bp.route('/<int:recipe_id>/restore', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/restore", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def restore_recipe_route(recipe_id):
     try:
         success, message = restore_recipe(recipe_id)
-        flash(message, 'success' if success else 'error')
+        flash(message, "success" if success else "error")
     except Exception as exc:
         logger.error("Error restoring recipe %s: %s", recipe_id, exc)
-        flash('Unable to restore recipe.', 'error')
-    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("Unable to restore recipe.", "error")
+    return redirect(
+        request.args.get("next") or url_for("recipes.view_recipe", recipe_id=recipe_id)
+    )
 
 
 # --- Deactivate listing ---
 # Purpose: Deactivate a marketplace listing for the recipe.
 # Inputs: Recipe id path parameter and optional next redirect URL query arg.
 # Outputs: Redirect response to provided next path or recipe detail page.
-@recipes_bp.route('/<int:recipe_id>/unlist', methods=['POST'])
+@recipes_bp.route("/<int:recipe_id>/unlist", methods=["POST"])
 @login_required
-@require_permission('recipes.edit')
+@require_permission("recipes.edit")
 def unlist_recipe_route(recipe_id):
     try:
         success, message = unlist_recipe(recipe_id)
-        flash(message, 'success' if success else 'error')
+        flash(message, "success" if success else "error")
     except Exception as exc:
         logger.error("Error unlisting recipe %s: %s", recipe_id, exc)
-        flash('Unable to remove listing.', 'error')
-    return redirect(request.args.get('next') or url_for('recipes.view_recipe', recipe_id=recipe_id))
+        flash("Unable to remove listing.", "error")
+    return redirect(
+        request.args.get("next") or url_for("recipes.view_recipe", recipe_id=recipe_id)
+    )

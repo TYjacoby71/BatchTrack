@@ -202,7 +202,7 @@ def _validate_pr_level_requirements(changed: list[ChangedFile], issues: list[str
 
 
 # --- Validate Python file schema ---
-# Purpose: Enforce module synopsis/glossary and per-unit functional headers.
+# Purpose: Enforce module synopsis/glossary and whole-file top-level functional headers.
 # Inputs: Changed Python path and mutable issues list.
 # Outputs: Appends violation strings to issues.
 def _validate_python_file_schema(path: str, issues: list[str]) -> None:
@@ -252,7 +252,8 @@ def _validate_python_file_schema(path: str, issues: list[str]) -> None:
 
         if missing_bits:
             issues.append(
-                f"{path}:{start_line} top-level unit '{node.name}' missing {', '.join(missing_bits)}."
+                f"{path}:{start_line} top-level unit '{node.name}' missing {', '.join(missing_bits)} "
+                "(entire touched file is validated, not only modified units)."
             )
 
 

@@ -61,8 +61,7 @@ INS_RANGE = (136.0, 170.0)
 INS_SCALE_MAX = 250.0
 
 QUALITY_BASE = {
-    key: (bounds[0] + bounds[1]) / 2.0
-    for key, bounds in QUALITY_RANGES.items()
+    key: (bounds[0] + bounds[1]) / 2.0 for key, bounds in QUALITY_RANGES.items()
 }
 
 QUALITY_PRESETS = {
@@ -221,8 +220,18 @@ STAGE_CONFIGS = (
     {"id": 1, "tab_id": "soapStage1Tab", "pane_id": "soapStage1Pane", "required": True},
     {"id": 2, "tab_id": "soapStage2Tab", "pane_id": "soapStage2Pane", "required": True},
     {"id": 3, "tab_id": "soapStage3Tab", "pane_id": "soapStage3Pane", "required": True},
-    {"id": 4, "tab_id": "soapStage4Tab", "pane_id": "soapStage4Pane", "required": False},
-    {"id": 5, "tab_id": "soapStage5Tab", "pane_id": "soapStage5Pane", "required": False},
+    {
+        "id": 4,
+        "tab_id": "soapStage4Tab",
+        "pane_id": "soapStage4Pane",
+        "required": False,
+    },
+    {
+        "id": 5,
+        "tab_id": "soapStage5Tab",
+        "pane_id": "soapStage5Pane",
+        "required": False,
+    },
 )
 
 INGREDIENT_CATEGORY_FILTERS = {
@@ -231,7 +240,11 @@ INGREDIENT_CATEGORY_FILTERS = {
     "lactate_additives": ("Aqueous Solutions & Blends", "Preservatives & Additives"),
     "sugar_additives": ("Sugars & Syrups",),
     "salt_additives": ("Salts & Minerals",),
-    "citric_additives": ("Preservatives & Additives", "Salts & Minerals", "Aqueous Solutions & Blends"),
+    "citric_additives": (
+        "Preservatives & Additives",
+        "Salts & Minerals",
+        "Aqueous Solutions & Blends",
+    ),
 }
 
 DEFAULT_INPUTS = {

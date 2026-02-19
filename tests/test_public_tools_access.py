@@ -1,15 +1,34 @@
 import json
+import re
 
 import pytest
+
+_HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
 
 
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
     """Helper to ensure a GET stays public and does not bounce to login."""
     response = client.get(path, follow_redirects=False, **kwargs)
-    assert response.status_code == 200, f"{label} should be public (got {response.status_code})"
+    assert (
+        response.status_code == 200
+    ), f"{label} should be public (got {response.status_code})"
     location = response.headers.get("Location", "")
     assert "/auth/login" not in location, f"{label} unexpectedly redirected to login"
     return response
+
+
+def _assert_no_heading_level_skips(html: str, *, label: str):
+    """Ensure heading levels do not jump by more than one level."""
+    levels = [int(match.group(1)) for match in _HEADING_LEVEL_PATTERN.finditer(html)]
+    if not levels:
+        return
+
+    previous = levels[0]
+    for current in levels[1:]:
+        assert current <= previous + 1, (
+            f"{label} has heading skip from h{previous} to h{current}"
+        )
+        previous = current
 
 
 @pytest.mark.usefixtures("app")
@@ -44,6 +63,19 @@ def test_public_soap_page_uses_marketing_header_without_center_overlay(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_tools_index_has_lang_and_ordered_category_headings(app):
+    """Tools index should expose lang metadata and avoid heading-level skips."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/", label="tools index")
+    html = response.get_data(as_text=True)
+
+    assert "<html lang=\"en\"" in html
+    assert '<h1 class="mb-1">Maker Tools</h1>' in html
+    assert '<h2 class="card-title h5 mb-1">Soap Tools</h2>' in html
+    assert '<h5 class="card-title mb-1">Soap Tools</h5>' not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_soap_page_uses_centralized_guidance_dock(app):
     """Soap page should render the single centralized guidance dock surface."""
     client = app.test_client()
@@ -68,6 +100,33 @@ def test_public_soap_page_uses_centralized_guidance_dock(app):
     assert 'id="qualityConditioningHint"' not in html
     assert 'id="qualityBubblyHint"' not in html
     assert 'id="qualityCreamyHint"' not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_marketing_pages_do_not_skip_heading_levels(app):
+    """Public pages should keep heading levels sequential for accessibility."""
+    client = app.test_client()
+    public_pages = [
+        ("/", "homepage"),
+        ("/tools/", "tools index"),
+        ("/tools/soap", "soap tool"),
+        ("/tools/candles", "candles tool"),
+        ("/tools/lotions", "lotions tool"),
+        ("/tools/herbal", "herbal tool"),
+        ("/tools/baker", "baker tool"),
+        ("/pricing", "pricing"),
+        ("/help/how-it-works", "how it works"),
+        ("/help/system-faq", "system faq"),
+        ("/legal/privacy", "privacy policy"),
+        ("/legal/terms", "terms of service"),
+        ("/legal/cookies", "cookie policy"),
+        ("/lp/hormozi", "hormozi landing"),
+        ("/lp/robbins", "robbins landing"),
+    ]
+
+    for path, label in public_pages:
+        response = _assert_public_get(client, path, label=label)
+        _assert_no_heading_level_skips(response.get_data(as_text=True), label=label)
 
 
 @pytest.mark.usefixtures("app")
@@ -140,12 +199,23 @@ def test_public_soap_quality_nudge_api_is_accessible(app):
                 {
                     "name": "Olive Oil",
                     "grams": 500,
-                    "fatty_profile": {"oleic": 69, "linoleic": 12, "palmitic": 14, "stearic": 3},
+                    "fatty_profile": {
+                        "oleic": 69,
+                        "linoleic": 12,
+                        "palmitic": 14,
+                        "stearic": 3,
+                    },
                 },
                 {
                     "name": "Coconut Oil 76",
                     "grams": 150,
-                    "fatty_profile": {"lauric": 48, "myristic": 19, "palmitic": 9, "stearic": 3, "oleic": 8},
+                    "fatty_profile": {
+                        "lauric": 48,
+                        "myristic": 19,
+                        "palmitic": 9,
+                        "stearic": 3,
+                        "oleic": 8,
+                    },
                 },
             ],
             "targets": {
@@ -177,11 +247,15 @@ def test_public_soap_page_injects_backend_policy_config(app):
 
 
 @pytest.mark.usefixtures("app")
-def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monkeypatch, tmp_path):
+def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
+    app, monkeypatch, tmp_path
+):
     """Feedback notes should persist into source/flow JSON buckets."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
     client = app.test_client()
 
     first_payload = {
@@ -214,10 +288,9 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     assert first_response.status_code == 200
     first_data = first_response.get_json() or {}
     assert first_data.get("success") is True
-    assert (
-        (first_data.get("result") or {}).get("bucket_path")
-        == "batches_view_batch_in_progress/glitch.json"
-    )
+    assert (first_data.get("result") or {}).get(
+        "bucket_path"
+    ) == "batches_view_batch_in_progress/glitch.json"
 
     second_response = client.post("/tools/api/feedback-notes", json=second_payload)
     assert second_response.status_code == 200
@@ -225,17 +298,25 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     assert third_response.status_code == 200
 
     batch_glitch_path = (
-        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "glitch.json"
+        tmp_path
+        / "tool_feedback_notes"
+        / "batches_view_batch_in_progress"
+        / "glitch.json"
     )
     assert batch_glitch_path.exists()
     batch_glitch_bucket = json.loads(batch_glitch_path.read_text(encoding="utf-8"))
     assert batch_glitch_bucket.get("source") == "batches_view_batch_in_progress"
     assert batch_glitch_bucket.get("flow") == "glitch"
     assert batch_glitch_bucket.get("count") == 1
-    assert (batch_glitch_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+    assert (batch_glitch_bucket.get("entries") or [])[0].get(
+        "message"
+    ) == first_payload["message"]
 
     batch_question_path = (
-        tmp_path / "tool_feedback_notes" / "batches_view_batch_in_progress" / "question.json"
+        tmp_path
+        / "tool_feedback_notes"
+        / "batches_view_batch_in_progress"
+        / "question.json"
     )
     assert batch_question_path.exists()
     batch_question_bucket = json.loads(batch_question_path.read_text(encoding="utf-8"))
@@ -251,7 +332,11 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(app, monk
     ]
 
     batch_index = next(
-        (source for source in sources if source.get("source") == "batches_view_batch_in_progress"),
+        (
+            source
+            for source in sources
+            if source.get("source") == "batches_view_batch_in_progress"
+        ),
         None,
     )
     assert batch_index is not None
@@ -267,7 +352,9 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
     from app.models.models import User
 
     with app.app_context():
-        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        flag = FeatureFlag.query.filter_by(
+            key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE"
+        ).first()
         if flag is None:
             flag = FeatureFlag(
                 key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
@@ -304,7 +391,9 @@ def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
     from app.models.feature_flag import FeatureFlag
 
     with app.app_context():
-        flag = FeatureFlag.query.filter_by(key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE").first()
+        flag = FeatureFlag.query.filter_by(
+            key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE"
+        ).first()
         if flag is None:
             flag = FeatureFlag(
                 key="FEATURE_CUSTOMER_FEEDBACK_BUBBLE",
@@ -332,7 +421,9 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
     """Unknown feedback flow values should fail validation."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
     client = app.test_client()
     response = client.post(
         "/tools/api/feedback-notes",
@@ -351,13 +442,19 @@ def test_public_feedback_note_api_rejects_unknown_flow(app, monkeypatch, tmp_pat
 @pytest.mark.usefixtures("app")
 def test_public_feedback_note_api_honeypot_skips_note_write(app, monkeypatch, tmp_path):
     """Honeypot-triggered submissions should not write feedback note files."""
-    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
     from app.services.public_bot_trap_service import PublicBotTrapService
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
-    monkeypatch.setattr(ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes")
-    monkeypatch.setattr(PublicBotTrapService, "record_hit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
+    )
+    monkeypatch.setattr(
+        PublicBotTrapService, "record_hit", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(PublicBotTrapService, "add_block", lambda *args, **kwargs: None)
-    monkeypatch.setattr(PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        PublicBotTrapService, "block_email_if_user_exists", lambda *args, **kwargs: None
+    )
 
     client = app.test_client()
     response = client.post(
@@ -396,8 +493,34 @@ def test_anonymous_workflow_can_browse_public_site(app):
     _assert_public_get(client, "/recipes/library", label="recipe library")
     _assert_public_get(client, "/help/how-it-works", label="how it works")
     _assert_public_get(client, "/lp/hormozi", label="landing page (results-first)")
-    _assert_public_get(client, "/lp/robbins", label="landing page (transformation-first)")
+    _assert_public_get(
+        client, "/lp/robbins", label="landing page (transformation-first)"
+    )
     _assert_public_get(client, "/auth/signup", label="signup page")
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_performance_and_accessibility_basics(app):
+    """Homepage should keep key Lighthouse-focused optimizations in place."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    assert '<main id="main-content"' in html
+    assert "cdnjs.cloudflare.com/ajax/libs/font-awesome" not in html
+    assert 'rel="preload"' in html
+    assert "bootstrap.min.css" in html
+    assert "this.onload=null;this.rel='stylesheet'" in html
+
+    # All "Start Free Trial" links should resolve to the same destination.
+    trial_links = re.findall(
+        r'href="(/auth/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        html,
+    )
+    assert len(trial_links) >= 3
+    assert len(set(trial_links)) == 1
 
 
 @pytest.mark.usefixtures("app")
@@ -415,6 +538,18 @@ def test_public_branding_assets_are_accessible(app):
         assert response.mimetype == "image/svg+xml"
         body = response.get_data(as_text=True)
         assert "<svg" in body
+
+
+@pytest.mark.usefixtures("app")
+def test_public_branding_assets_have_long_cache_lifetime(app):
+    """Public brand SVGs should use long-lived immutable caching."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client, "/branding/full-logo-header.svg", label="branding header logo"
+    )
+    cache_control = response.headers.get("Cache-Control", "")
+    assert "max-age=31536000" in cache_control
+    assert "immutable" in cache_control
 
 
 @pytest.mark.usefixtures("app")

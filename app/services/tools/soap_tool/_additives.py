@@ -28,7 +28,9 @@ def normalize_fragrance_rows(
         pct = _clamp(float(row.pct), 0.0, 100.0)
         default_unit = str(row.default_unit).strip() if row.default_unit else ""
         ingredient_category_name = (
-            str(row.ingredient_category_name).strip() if row.ingredient_category_name else ""
+            str(row.ingredient_category_name).strip()
+            if row.ingredient_category_name
+            else ""
         )
         if grams <= 0 and pct > 0 and total_oils_g > 0:
             grams = total_oils_g * (pct / 100.0)
@@ -74,7 +76,11 @@ def compute_additives(
     salt_g = base_oils * (salt_pct / 100.0)
     citric_g = base_oils * (citric_pct / 100.0)
     # Standard calculator multipliers for citric-acid neutralization.
-    citric_factor = CITRIC_LYE_FACTORS["KOH"] if str(lye_type).upper() == "KOH" else CITRIC_LYE_FACTORS["NaOH"]
+    citric_factor = (
+        CITRIC_LYE_FACTORS["KOH"]
+        if str(lye_type).upper() == "KOH"
+        else CITRIC_LYE_FACTORS["NaOH"]
+    )
     citric_lye_g = citric_g * citric_factor
 
     return {
@@ -113,4 +119,3 @@ __all__ = [
     "compute_additives",
     "normalize_fragrance_rows",
 ]
-

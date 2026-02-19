@@ -51,7 +51,9 @@ def _attach_search_filter(query, search_query: str):
     term = f"%{search_query}%"
     alias_table = None
     try:
-        alias_table = db.Table("global_item_alias", db.metadata, autoload_with=db.engine)
+        alias_table = db.Table(
+            "global_item_alias", db.metadata, autoload_with=db.engine
+        )
     except Exception:  # pragma: no cover - defensive
         alias_table = None
 
@@ -75,12 +77,14 @@ def _fetch_categories() -> List[str]:
     try:
         rows = (
             db.session.query(IngredientCategory.name)
-            .join(GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id)
+            .join(
+                GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id
+            )
             .filter(
                 IngredientCategory.organization_id.is_(None),
                 IngredientCategory.is_global_category.is_(True),
                 GlobalItem.item_type == "ingredient",
-                GlobalItem.is_archived != True,
+                not GlobalItem.is_archived,
             )
             .distinct()
             .order_by(IngredientCategory.name.asc())
@@ -134,13 +138,14 @@ def fetch_global_item_listing(
     safe_page, safe_per_page = _resolve_page_args(page, per_page, per_page_options)
 
     query = GlobalItem.query.filter(
-        GlobalItem.is_archived != True,
+        not GlobalItem.is_archived,
         GlobalItem.item_type == normalized_scope,
     )
 
     if normalized_scope == "ingredient" and category_filter:
         query = query.join(
-            IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id
+            IngredientCategory,
+            GlobalItem.ingredient_category_id == IngredientCategory.id,
         ).filter(IngredientCategory.name == category_filter)
 
     if search_query:
@@ -150,10 +155,12 @@ def fetch_global_item_listing(
         joinedload(GlobalItem.ingredient_category),
     ]
     if normalized_scope == "ingredient":
-        eager_options.extend([
-            joinedload(GlobalItem.ingredient),
-            joinedload(GlobalItem.variation),
-        ])
+        eager_options.extend(
+            [
+                joinedload(GlobalItem.ingredient),
+                joinedload(GlobalItem.variation),
+            ]
+        )
 
     query = query.options(*eager_options)
 
@@ -188,4 +195,3 @@ def fetch_global_item_listing(
         "per_page": safe_per_page,
         "per_page_options": per_page_options,
     }
-

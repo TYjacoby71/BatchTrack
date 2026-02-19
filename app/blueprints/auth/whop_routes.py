@@ -5,11 +5,11 @@ from __future__ import annotations
 from flask import flash, redirect, request, url_for
 from flask_login import login_user
 
-from . import auth_bp
 from ...extensions import db
 from ...models import User
 from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
+from . import auth_bp
 from .whop_auth import WhopAuth
 
 

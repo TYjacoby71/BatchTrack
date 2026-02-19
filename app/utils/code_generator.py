@@ -13,10 +13,10 @@ from __future__ import annotations
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.extensions import db
-from app.models.batch import BatchSequence
 from app.models import User
-from app.models.recipe import Recipe
+from app.models.batch import BatchSequence
 from app.models.db_dialect import is_postgres
+from app.models.recipe import Recipe
 from app.services.lineage_service import generate_batch_label, generate_label_prefix
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -47,6 +47,7 @@ def generate_batch_label_code(recipe: Recipe) -> str:
     if not org_id:
         try:
             from flask_login import current_user
+
             if current_user and current_user.is_authenticated:
                 org_id = current_user.organization_id
         except Exception:

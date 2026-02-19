@@ -66,11 +66,16 @@ def compute_fatty_acids(oils: tuple[SoapToolOilInput, ...]) -> dict:
 # Inputs: Fatty-acid percentage mapping.
 # Outputs: Quality metric dictionary.
 def compute_qualities(fatty_acids_pct: dict[str, float]) -> dict:
-    get = lambda key: _to_float(fatty_acids_pct.get(key), 0.0)
+    def get(key):
+        return _to_float(fatty_acids_pct.get(key), 0.0)
+
     return {
         "hardness": get("lauric") + get("myristic") + get("palmitic") + get("stearic"),
         "cleansing": get("lauric") + get("myristic"),
-        "conditioning": get("oleic") + get("linoleic") + get("linolenic") + get("ricinoleic"),
+        "conditioning": get("oleic")
+        + get("linoleic")
+        + get("linolenic")
+        + get("ricinoleic"),
         "bubbly": get("lauric") + get("myristic") + get("ricinoleic"),
         "creamy": get("palmitic") + get("stearic") + get("ricinoleic"),
     }
@@ -105,4 +110,3 @@ __all__ = [
     "compute_qualities",
     "compute_sat_unsat",
 ]
-
