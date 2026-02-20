@@ -51,6 +51,31 @@ def test_known_protected_route_still_redirects_to_login(app):
     assert "next=" in location
 
 
+def test_health_endpoint_is_public_without_auth(app):
+    client = app.test_client()
+
+    response = client.get("/health", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert response.is_json
+    assert response.get_json() == {"status": "ok"}
+    assert "/auth/login" not in (response.headers.get("Location") or "")
+
+
+def test_ping_and_head_health_probes_return_success(app):
+    client = app.test_client()
+
+    ping_response = client.get("/ping", follow_redirects=False)
+    health_head = client.head("/health", follow_redirects=False)
+    ping_head = client.head("/ping", follow_redirects=False)
+
+    assert ping_response.status_code == 200
+    assert ping_response.is_json
+    assert ping_response.get_json() == {"status": "ok"}
+    assert health_head.status_code == 200
+    assert ping_head.status_code == 200
+
+
 def test_marketing_context_skips_expensive_work_for_login(app, monkeypatch):
     client = app.test_client()
     from app import template_context
