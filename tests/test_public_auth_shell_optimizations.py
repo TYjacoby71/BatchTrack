@@ -29,6 +29,8 @@ def test_quick_signup_page_disables_analytics_and_fontawesome_payloads(app):
 
 def test_password_recovery_pages_disable_noncritical_public_payloads(app):
     client = app.test_client()
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
     for route in ("/auth/forgot-password", "/auth/resend-verification"):
         response = client.get(route)
         assert response.status_code == 200
