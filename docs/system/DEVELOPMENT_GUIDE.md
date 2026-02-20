@@ -54,7 +54,8 @@ This guide captures the current engineering workflow and guardrails for changing
    - Update APP_DICTIONARY coverage for touched app paths when applicable.
 
 5. **Run validation tooling**
-   - During iterative editing, only run targeted checks when needed for debugging.
+   - During iterative editing, do not run pytest/pip installs/docs guard unless explicitly requested.
+   - During iterative editing, only run targeted checks when needed for debugging and explicitly requested.
    - At finalization, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once.
    - At finalization, run relevant tests once (targeted or full based on scope).
    - For permission/add-on/tier updates, verify update scripts:
