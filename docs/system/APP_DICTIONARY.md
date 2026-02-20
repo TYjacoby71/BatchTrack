@@ -5,14 +5,14 @@ This is the living glossary for BatchTrack. It is organized by application layer
 
 ## Update Standard (Agent Instructions)
 - Treat this block as the canonical instruction source for PR documentation checklist items related to Synopsis/Glossary, functional headers, and dictionary updates.
-- For every file touched, add or update the **Synopsis** (max 5 sentences).
-- For every top-level functional unit in a touched file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
-- If a file is updated, **cover the entire file** (all top-level units), not just the modified ones.
+- For newly added or materially reworked files, add or update the **Synopsis** (max 5 sentences).
+- For every changed/new top-level functional unit in a touched Python file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
+- Do not expand to full-file metadata rewrites unless the PR intentionally refactors the full file.
 - Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
 - Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
 - Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
 - When files move or routes change, update dictionary path/location links in the same PR.
-- Run `python3 scripts/validate_pr_documentation.py` before push.
+- Run `python3 scripts/validate_pr_documentation.py` near finalization before push.
 
 ---
 
