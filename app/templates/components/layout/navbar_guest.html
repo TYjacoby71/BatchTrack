@@ -1,0 +1,26 @@
+{#
+Synopsis:
+Guest navigation with optional public marketing header component.
+#}
+{% if use_public_header %}
+{% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
+{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'public_header' %}
+{% include 'components/shared/public_marketing_header.html' %}
+{% else %}
+<div class="navbar-nav me-auto"></div>
+<div class="dropdown ms-auto">
+    <button class="btn btn-light dropdown-toggle" type="button" id="publicMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bars"></i> Menu
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="publicMenuDropdown">
+        <li><a class="dropdown-item" href="{{ url_for('auth.signup') }}">Sign up</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('auth.login') }}">Sign in</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+        {% if global_library_enabled %}
+        <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Library</a></li>
+        {% endif %}
+        <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+    </ul>
+</div>
+{% endif %}
