@@ -25,6 +25,29 @@ _FORBIDDEN_ENV_KEYS = ("APP_ENV", "BATCHTRACK_ENV", "ENVIRONMENT")
 _FORBIDDEN_FLAGS = ("ALLOW_LOADTEST_LOGIN_BYPASS", "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF")
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
+_BOT_TRAP_POLICY_PRESETS: dict[str, dict[str, int]] = {
+    "conservative": {
+        "BOT_TRAP_STRIKE_THRESHOLD": 5,
+        "BOT_TRAP_STRIKE_WINDOW_SECONDS": 900,
+        "BOT_TRAP_IP_BLOCK_SECONDS": 900,
+        "BOT_TRAP_IP_BLOCK_MAX_SECONDS": 21600,
+        "BOT_TRAP_PENALTY_RESET_SECONDS": 86400,
+    },
+    "balanced": {
+        "BOT_TRAP_STRIKE_THRESHOLD": 3,
+        "BOT_TRAP_STRIKE_WINDOW_SECONDS": 600,
+        "BOT_TRAP_IP_BLOCK_SECONDS": 1800,
+        "BOT_TRAP_IP_BLOCK_MAX_SECONDS": 86400,
+        "BOT_TRAP_PENALTY_RESET_SECONDS": 86400,
+    },
+    "aggressive": {
+        "BOT_TRAP_STRIKE_THRESHOLD": 2,
+        "BOT_TRAP_STRIKE_WINDOW_SECONDS": 600,
+        "BOT_TRAP_IP_BLOCK_SECONDS": 3600,
+        "BOT_TRAP_IP_BLOCK_MAX_SECONDS": 86400,
+        "BOT_TRAP_PENALTY_RESET_SECONDS": 172800,
+    },
+}
 
 
 # --- EnvironmentInfo ---
@@ -214,6 +237,88 @@ def _preferred_scheme(base_url: str, env_name: str) -> str:
     return "http" if env_name == "development" else "https"
 
 
+# --- Resolve optional int ---
+# Purpose: Read optional integer env values while preserving unset.
+# Inputs: EnvReader and env key.
+# Outputs: Parsed integer when present, otherwise None.
+def _resolve_optional_int(reader: EnvReader, key: str) -> int | None:
+    raw = reader.raw(key)
+    if raw in (None, ""):
+        return None
+    stripped = raw.strip()
+    if stripped == "":
+        return None
+    try:
+        return int(stripped)
+    except ValueError:
+        reader.warn(f"{key} expected integer but received {raw!r}; ignoring override.")
+        return None
+
+
+# --- Resolve bot trap policy ---
+# Purpose: Choose bot trap policy defaults from preset plus env overrides.
+# Inputs: EnvReader with raw environment values.
+# Outputs: Mapping of resolved bot trap policy settings.
+def _resolve_bot_trap_policy(reader: EnvReader) -> dict[str, Any]:
+    preset_raw = reader.str("BOT_TRAP_POLICY_PRESET", "balanced") or "balanced"
+    preset_name = preset_raw.strip().lower()
+    if preset_name not in _BOT_TRAP_POLICY_PRESETS:
+        reader.warn(
+            "BOT_TRAP_POLICY_PRESET expected one of {'conservative','balanced','aggressive'}; falling back to 'balanced'."
+        )
+        preset_name = "balanced"
+
+    preset = _BOT_TRAP_POLICY_PRESETS[preset_name]
+
+    threshold = _resolve_optional_int(reader, "BOT_TRAP_STRIKE_THRESHOLD")
+    window_seconds = _resolve_optional_int(reader, "BOT_TRAP_STRIKE_WINDOW_SECONDS")
+    block_seconds = _resolve_optional_int(reader, "BOT_TRAP_IP_BLOCK_SECONDS")
+    block_max_seconds = _resolve_optional_int(reader, "BOT_TRAP_IP_BLOCK_MAX_SECONDS")
+    penalty_reset_seconds = _resolve_optional_int(
+        reader, "BOT_TRAP_PENALTY_RESET_SECONDS"
+    )
+
+    resolved = {
+        "BOT_TRAP_POLICY_PRESET": preset_name,
+        "BOT_TRAP_STRIKE_THRESHOLD": (
+            threshold if threshold is not None else preset["BOT_TRAP_STRIKE_THRESHOLD"]
+        ),
+        "BOT_TRAP_STRIKE_WINDOW_SECONDS": (
+            window_seconds
+            if window_seconds is not None
+            else preset["BOT_TRAP_STRIKE_WINDOW_SECONDS"]
+        ),
+        "BOT_TRAP_IP_BLOCK_SECONDS": (
+            block_seconds
+            if block_seconds is not None
+            else preset["BOT_TRAP_IP_BLOCK_SECONDS"]
+        ),
+        "BOT_TRAP_IP_BLOCK_MAX_SECONDS": (
+            block_max_seconds
+            if block_max_seconds is not None
+            else preset["BOT_TRAP_IP_BLOCK_MAX_SECONDS"]
+        ),
+        "BOT_TRAP_PENALTY_RESET_SECONDS": (
+            penalty_reset_seconds
+            if penalty_reset_seconds is not None
+            else preset["BOT_TRAP_PENALTY_RESET_SECONDS"]
+        ),
+        "BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS": reader.bool(
+            "BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS", False
+        ),
+    }
+
+    if resolved["BOT_TRAP_IP_BLOCK_MAX_SECONDS"] < resolved["BOT_TRAP_IP_BLOCK_SECONDS"]:
+        reader.warn(
+            "BOT_TRAP_IP_BLOCK_MAX_SECONDS is less than BOT_TRAP_IP_BLOCK_SECONDS; raising max to base block duration."
+        )
+        resolved["BOT_TRAP_IP_BLOCK_MAX_SECONDS"] = resolved[
+            "BOT_TRAP_IP_BLOCK_SECONDS"
+        ]
+
+    return resolved
+
+
 env = EnvReader()
 ENV_INFO = _resolve_environment(env)
 SETTINGS, SETTINGS_META, SCHEMA_WARNINGS = resolve_settings(env._data, ENV_INFO.name)
@@ -238,6 +343,7 @@ if _AUTH_EMAIL_VERIFICATION_MODE not in {"off", "prompt", "required"}:
         "AUTH_EMAIL_VERIFICATION_MODE expected one of {'off','prompt','required'}; falling back to 'prompt'."
     )
     _AUTH_EMAIL_VERIFICATION_MODE = "prompt"
+_BOT_TRAP_POLICY = _resolve_bot_trap_policy(env)
 
 
 # --- BaseConfig ---
@@ -293,16 +399,19 @@ class BaseConfig:
     ANON_REQUEST_LOG_LEVEL = SETTINGS.get("ANON_REQUEST_LOG_LEVEL") or "DEBUG"
     LOG_REDACT_PII = SETTINGS.get("LOG_REDACT_PII", True)
     DISABLE_SECURITY_HEADERS = SETTINGS.get("DISABLE_SECURITY_HEADERS", False)
-    BOT_TRAP_STRIKE_THRESHOLD = env.int("BOT_TRAP_STRIKE_THRESHOLD", 3)
-    BOT_TRAP_STRIKE_WINDOW_SECONDS = env.int("BOT_TRAP_STRIKE_WINDOW_SECONDS", 600)
-    BOT_TRAP_IP_BLOCK_SECONDS = env.int("BOT_TRAP_IP_BLOCK_SECONDS", 1800)
-    BOT_TRAP_IP_BLOCK_MAX_SECONDS = env.int("BOT_TRAP_IP_BLOCK_MAX_SECONDS", 86400)
-    BOT_TRAP_PENALTY_RESET_SECONDS = env.int(
-        "BOT_TRAP_PENALTY_RESET_SECONDS", 86400
-    )
-    BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS = env.bool(
-        "BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS", False
-    )
+    BOT_TRAP_POLICY_PRESET = _BOT_TRAP_POLICY["BOT_TRAP_POLICY_PRESET"]
+    BOT_TRAP_STRIKE_THRESHOLD = _BOT_TRAP_POLICY["BOT_TRAP_STRIKE_THRESHOLD"]
+    BOT_TRAP_STRIKE_WINDOW_SECONDS = _BOT_TRAP_POLICY[
+        "BOT_TRAP_STRIKE_WINDOW_SECONDS"
+    ]
+    BOT_TRAP_IP_BLOCK_SECONDS = _BOT_TRAP_POLICY["BOT_TRAP_IP_BLOCK_SECONDS"]
+    BOT_TRAP_IP_BLOCK_MAX_SECONDS = _BOT_TRAP_POLICY["BOT_TRAP_IP_BLOCK_MAX_SECONDS"]
+    BOT_TRAP_PENALTY_RESET_SECONDS = _BOT_TRAP_POLICY[
+        "BOT_TRAP_PENALTY_RESET_SECONDS"
+    ]
+    BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS = _BOT_TRAP_POLICY[
+        "BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS"
+    ]
 
     EMAIL_PROVIDER = (SETTINGS.get("EMAIL_PROVIDER", "smtp") or "smtp").lower()
     MAIL_SERVER = SETTINGS.get("MAIL_SERVER", "smtp.gmail.com")
