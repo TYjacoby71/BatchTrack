@@ -15,9 +15,6 @@ Glossary:
 {% endif %}
 {% set active_env = (config.get('ENV') or config.get('FLASK_ENV') or '')|lower %}
 {% set show_staging_variant_switcher = active_env == 'staging' %}
-{% set features_href = '#features' if public_header_is_homepage else public_header_home_url ~ '#features' %}
-{% set about_href = '#about' if public_header_is_homepage else public_header_home_url ~ '#about' %}
-{% set contact_href = '#contact' if public_header_is_homepage else public_header_home_url ~ '#contact' %}
 {% set public_header_signup_href = url_for('core.signup_alias') %}
 {% if public_header_signup_source %}
 {% set public_header_signup_href = url_for('auth.signup', source=public_header_signup_source) %}
@@ -43,9 +40,6 @@ Glossary:
 
 <div class="collapse navbar-collapse" id="publicMarketingNav">
     <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-            <a class="nav-link" href="{{ features_href }}">Features</a>
-        </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('tools_bp.tools_index') }}">Tools</a>
         </li>
@@ -78,13 +72,7 @@ Glossary:
         </li>
         {% endif %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ about_href }}">About</a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{{ contact_href }}">Contact</a>
         </li>
     </ul>
     <ul class="navbar-nav">
