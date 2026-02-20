@@ -14,7 +14,11 @@ def pricing():
     return render_template(
         "pages/public/pricing.html",
         show_public_header=True,
+        public_header_signup_source="pricing_start_free_trial",
         lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
         page_title="BatchTrack.com | Pricing for Small-Batch Makers",
         page_description=(
             "Compare Hobbyist, Enthusiast, and Fanatic plans with monthly, yearly, "
