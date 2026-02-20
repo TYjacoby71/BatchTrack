@@ -11,6 +11,7 @@ Glossary:
 
 from __future__ import annotations
 
+import html
 from typing import Dict, List, Optional, Tuple
 
 from flask_login import current_user
@@ -488,6 +489,7 @@ class OrganizationService:
     ) -> Tuple[bool, str]:
         if not current_user.check_password(password or ""):
             return False, "Invalid developer password"
-        if confirm_text != expected_confirm:
+        normalized_confirm_text = html.unescape(confirm_text or "")
+        if normalized_confirm_text != expected_confirm:
             return False, f'Confirmation text must match exactly: "{expected_confirm}"'
         return True, ""
