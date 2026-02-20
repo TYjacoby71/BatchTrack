@@ -149,6 +149,7 @@ Glossary:
       });
     </script>
     {% endif %}
+    {% if load_analytics %}
     <script>
       (function() {
         var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
@@ -322,6 +323,7 @@ Glossary:
         });
       })();
     </script>
+    {% endif %}
     {% block head %}{% endblock %}
     <style>
         input[type="hidden"][name="csrf_token"],
@@ -409,6 +411,26 @@ Glossary:
         .public-marketing-nav .btn-cta:hover {
             filter: brightness(0.95);
             color: #ffffff !important;
+        }
+        .site-footer-legal {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .site-footer-legal-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+        }
+        .site-footer-legal-link:hover,
+        .site-footer-legal-link:focus-visible {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -977,12 +999,14 @@ Glossary:
             <div class="container">
                 <div class="row">
                     <div class="col-12">
-                        <small>
-                            &copy; {{ TimezoneUtils.utc_now().year }} BatchTrack. All rights reserved. |
-                            <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted">Privacy Policy</a> |
-                            <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted">Terms of Service</a> |
-                            <a href="{{ url_for('legal.cookie_policy') }}" class="text-muted">Cookie Policy</a>
+                        <small class="d-block site-footer-copy">
+                            &copy; {{ TimezoneUtils.utc_now().year }} BatchTrack. All rights reserved.
                         </small>
+                        <nav class="site-footer-legal mt-1" aria-label="Legal">
+                            <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted site-footer-legal-link">Privacy Policy</a>
+                            <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted site-footer-legal-link">Terms of Service</a>
+                            <a href="{{ url_for('legal.cookie_policy') }}" class="text-muted site-footer-legal-link">Cookie Policy</a>
+                        </nav>
                     </div>
                 </div>
             </div>

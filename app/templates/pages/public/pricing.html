@@ -266,6 +266,17 @@
       align-items: flex-start;
     }
   }
+
+  @supports (content-visibility: auto) {
+    .pricing-deferred-section {
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 900px;
+    }
+
+    .pricing-deferred-section.pricing-comparison-section {
+      contain-intrinsic-size: 1px 1200px;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -281,7 +292,7 @@
   </section>
 
   {% if lifetime_has_capacity %}
-  <section class="lifetime-shell mb-4 mb-lg-5">
+  <section class="lifetime-shell mb-4 mb-lg-5 pricing-deferred-section">
     <div class="section-heading">
       <div>
         <h2>Limited Lifetime Launch Seats</h2>
@@ -319,7 +330,7 @@
   </section>
   {% endif %}
 
-  <section class="mb-4 mb-lg-5" id="plans">
+  <section class="mb-4 mb-lg-5 pricing-deferred-section" id="plans">
     <div class="section-heading">
       <div>
         <h2>Monthly and yearly plans</h2>
@@ -376,7 +387,7 @@
     </div>
   </section>
 
-  <section id="plan-comparison" class="mb-4 mb-lg-5">
+  <section id="plan-comparison" class="mb-4 mb-lg-5 pricing-deferred-section pricing-comparison-section">
     <div class="section-heading">
       <div>
         <h2>Feature and limits comparison</h2>
@@ -423,7 +434,7 @@
     </div>
   </section>
 
-  <section class="pricing-bottom-cta">
+  <section class="pricing-bottom-cta pricing-deferred-section">
     <h2 class="h4 mb-2">Ready to simplify production and inventory?</h2>
     <p class="text-muted mb-3">
       Pick your tier and launch your first tracked batch in minutes.
@@ -435,6 +446,7 @@
     </div>
   </section>
 </div>
+{% if load_analytics %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
@@ -478,4 +490,5 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+{% endif %}
 {% endblock %}
