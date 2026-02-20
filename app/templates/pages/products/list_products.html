@@ -189,7 +189,7 @@
             <div class="d-flex align-items-center">
               <h6 class="mb-0 me-2">{{ product.name }}</h6>
               {% if product.variations|length > 0 %}
-              <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ loop.index }}">
+              <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ loop.index }}" aria-label="Toggle product variations">
                 <i class="fas fa-chevron-down"></i>
               </button>
               {% endif %}
@@ -236,7 +236,7 @@
                       {% else %}
                         <span class="badge bg-success small">In Stock</span>
                       {% endif %}
-                      <button class="btn btn-link btn-sm p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#card-variant-sizes-{{ loop.index0 }}-{{ loop.index }}">
+                      <button class="btn btn-link btn-sm p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#card-variant-sizes-{{ loop.index0 }}-{{ loop.index }}" aria-label="Toggle variant size details">
                         <i class="fas fa-chevron-down small"></i>
                       </button>
                     </div>
@@ -355,7 +355,7 @@
                 <td>
                   {{ product.variant_count }}
                   {% if product.variations|length > 0 %}
-                  <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ loop.index }}">
+                  <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ loop.index }}" aria-label="Toggle table variations">
                     <i class="fas fa-chevron-down"></i>
                   </button>
                   {% endif %}

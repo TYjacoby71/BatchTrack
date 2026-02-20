@@ -17,8 +17,13 @@ Glossary:
       {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
       {% set resolved_og_image = page_og_image or url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
-      {% set use_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else false) %}
+      {% set requested_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else none) %}
+      {% set use_public_header = requested_public_header if requested_public_header is not none else (not current_user.is_authenticated) %}
       {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
+      {% set requested_public_full_bleed = public_shell_full_bleed if public_shell_full_bleed is defined else false %}
+      {% set public_shell_full_bleed = requested_public_full_bleed and public_shell_mode %}
+      {% set shell_main_id = shell_main_id if shell_main_id is defined else none %}
+      {% set shell_main_extra_class = shell_main_extra_class if shell_main_extra_class is defined else '' %}
       {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and current_user.user_type == 'developer') %}
       {% set requested_lightweight_public_shell = lightweight_public_shell if lightweight_public_shell is defined else false %}
       {% set lightweight_public_shell = requested_lightweight_public_shell and public_shell_mode %}
@@ -50,7 +55,8 @@ Glossary:
     {% block head %}{% endblock %}
     {% include 'components/layout/shell_styles.html' %}
 </head>
-<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
+<body{% if public_shell_mode %} class="public-shell-body"{% endif %}
+      data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
       data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
       data-org-id="{{ get_effective_org_id() if current_user.is_authenticated else '' }}"
       data-page-endpoint="{{ request.endpoint or '' }}">
@@ -59,13 +65,20 @@ Glossary:
     </script>
     <div class="app-container{% if public_shell_mode %} public-shell{% endif %}">
     {% include 'components/layout/navbar.html' %}
-    <main class="container-xl mt-4">
-        <div class="section-spacing">
+    <main{% if shell_main_id %} id="{{ shell_main_id }}"{% endif %} class="{% if public_shell_mode %}{% if public_shell_full_bleed %}public-shell-main public-shell-main-bleed{% else %}container-xl public-shell-main{% endif %}{% else %}container-xl mt-4{% endif %}{% if shell_main_extra_class %} {{ shell_main_extra_class }}{% endif %}">
+        {% if public_shell_full_bleed %}
+            {% include 'components/layout/content_chrome.html' %}
+            {% set verification_required_modal = session.pop('verification_required_modal', None) %}
+            {% set TimezoneUtils = TimezoneUtils_global() %}
+            {% block content %}{% endblock %}
+        {% else %}
+        <div class="section-spacing{% if public_shell_mode %} public-shell-section{% endif %}">
             {% include 'components/layout/content_chrome.html' %}
             {% set verification_required_modal = session.pop('verification_required_modal', None) %}
             {% set TimezoneUtils = TimezoneUtils_global() %}
             {% block content %}{% endblock %}
         </div>
+        {% endif %}
     </main>
     {% include 'components/layout/overlay_modals.html' %}
     </div>

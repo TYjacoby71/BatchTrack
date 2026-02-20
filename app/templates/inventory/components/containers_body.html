@@ -44,6 +44,7 @@
         </div>
       </div>
       <div class="col-md-3">
+        <label class="visually-hidden" for="containersSortFilter">Sort containers</label>
         <select id="containersSortFilter" class="form-select">
           <option value="name_asc">Name (A-Z)</option>
           <option value="name_desc">Name (Z-A)</option>
@@ -56,6 +57,7 @@
         </select>
       </div>
       <div class="col-md-2">
+        <label class="visually-hidden" for="containersPerPage">Containers per page</label>
         <select id="containersPerPage" class="form-select">
           <option value="10">10 per page</option>
           <option value="20" selected>20 per page</option>
@@ -147,7 +149,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Cost Entry Type</label>
+        <label class="form-label" for="addContainerCostType">Cost Entry Type</label>
         <select name="cost_entry_type" class="form-select" id="addContainerCostType" onchange="updateAddContainerCostHelp()">
           <option value="per_unit">Per Unit Cost</option>
           <option value="total" selected>Total Cost</option>
@@ -276,7 +278,7 @@
         <input type="hidden" x-model="row.change_type" value="restock">
       </div>
       <div class="col-auto d-flex align-items-end">
-        <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+        <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1" aria-label="Remove container update row">
           <i class="fas fa-trash"></i>
         </button>
       </div>

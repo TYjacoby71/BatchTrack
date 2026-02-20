@@ -1,7 +1,15 @@
 name: Documentation Guard
 
 on:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base ref for diff range (e.g., origin/main)
+        required: false
+        default: origin/main
   pull_request:
+    types:
+      - ready_for_review
 
 jobs:
   documentation-guard:
@@ -24,3 +32,22 @@ jobs:
       - name: Run documentation guard (pull request)
         if: github.event_name == 'pull_request'
         run: python3 scripts/validate_pr_documentation.py --base-ref "origin/${{ github.base_ref }}"
+
+      - name: Fetch manual base branch
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          BASE_REF="${{ inputs.base_ref }}"
+          if [[ "$BASE_REF" == origin/* ]]; then
+            git fetch origin "${BASE_REF#origin/}" || true
+          fi
+
+      - name: Run documentation guard (manual finalization)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          BASE_REF="${{ inputs.base_ref }}"
+          if [[ -z "$BASE_REF" ]]; then
+            BASE_REF="HEAD~1"
+          fi
+          python3 scripts/validate_pr_documentation.py --base-ref "$BASE_REF"

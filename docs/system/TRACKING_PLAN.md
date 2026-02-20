@@ -19,6 +19,18 @@ This document defines the current domain-event tracking layer used for analytics
    - PostHog capture API (`POSTHOG_PROJECT_API_KEY` + `POSTHOG_HOST`)
 5. Downstream consumers read webhook payloads, PostHog events, or analytics tables.
 
+## Registry + Relay Pattern
+
+BatchTrack now keeps analytics contracts in a single registry and routes feature
+emits through a relay service:
+
+- Registry: `app/services/analytics_event_registry.py`
+- Relay: `app/services/analytics_tracking_service.py`
+
+Feature code should prefer the relay (`AnalyticsTrackingService.emit(...)` or
+event-specific helpers) instead of constructing direct `EventEmitter` calls in
+many files. This keeps event naming and required-property contracts centralized.
+
 ## Event Envelope (Current)
 Core fields on every event record:
 - `event_name`
@@ -74,10 +86,17 @@ Core fields on every event record:
 
 ### Auth, onboarding, and billing funnel
 - `user_login_succeeded`
+- `signup_completed`
 - `signup_checkout_started`
 - `signup_checkout_completed`
 - `purchase_completed`
 - `onboarding_completed`
+
+`signup_completed` and `purchase_completed` now include code attribution fields:
+- `used_promo_code` (boolean)
+- `promo_code` (string or `null`)
+- `used_referral_code` (boolean)
+- `referral_code` (string or `null`)
 
 ## Analytics Mapping Guidance
 - Keep `event_name` stable for downstream models.
@@ -163,6 +182,8 @@ Recommended baseline:
 
 ## Relevance Check (2026-02-18)
 Validated against:
+- `app/services/analytics_event_registry.py`
+- `app/services/analytics_tracking_service.py`
 - `app/models/domain_event.py`
 - `app/services/event_emitter.py`
 - `app/services/domain_event_dispatcher.py`

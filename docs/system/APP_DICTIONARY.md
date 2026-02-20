@@ -4,15 +4,15 @@
 This is the living glossary for BatchTrack. It is organized by application layers so new concepts can be placed where they belong and cross-linked to the source of truth.
 
 ## Update Standard (Agent Instructions)
-- Treat this block as the canonical instruction source for PR documentation checklist items related to Synopsis/Glossary, functional headers, and dictionary updates.
+- Treat this block as the canonical instruction source for PR documentation checklist items related to Synopsis/Glossary and dictionary updates.
 - For newly added or materially reworked files, add or update the **Synopsis** (max 5 sentences).
-- For every changed/new top-level functional unit in a touched Python file, add a header block with **Purpose**, **Inputs**, and **Outputs** (max 5 sentences per field).
+- Ensure newly added Python modules include both **Synopsis** and **Glossary** in module docstrings.
 - Do not expand to full-file metadata rewrites unless the PR intentionally refactors the full file.
 - Add dictionary entries for any new terms, routes, services, UI surfaces, or scripts touched.
 - Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
 - Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
 - When files move or routes change, update dictionary path/location links in the same PR.
-- Run `python3 scripts/validate_pr_documentation.py` near finalization before push.
+- Run `python3 scripts/validate_pr_documentation.py` once near finalization before push.
 
 ---
 
@@ -140,6 +140,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).
 - **SignupPlanCatalogService** → Builds signup-facing tier payloads with pricing displays, limits, entitlement sets, and single-tier presentation lists consumed by signup UI state (see `app/services/signup_plan_catalog_service.py`).
 - **Signup Checkout Orchestration Stack** → Signup checkout state/build/fulfillment services and domain event emission for purchase funnels (see `app/services/signup_checkout_service.py`, `app/services/signup_service.py`, and `app/services/event_emitter.py`)
+- **AnalyticsEventRegistry** → Canonical analytics event catalog (names, categories, required properties, and core-usage flags) used as the discoverable source of truth for product analytics emitters (see `app/services/analytics_event_registry.py`)
+- **AnalyticsTrackingService** → Thin analytics relay used by feature code to emit registry-backed events and normalized signup/purchase code-usage payloads before delegating to `EventEmitter` (see `app/services/analytics_tracking_service.py`)
 - **AnalyticsTiming Helper** → Reads first-landing timestamp hints and computes elapsed seconds for funnel timing enrichment (see `app/utils/analytics_timing.py`)
 - **TierPresentation Package** → Declarative tier-display engine that owns feature catalogs, evaluators, formatters, helper normalization, profile selectors, and orchestration for both comparison tables and single-tier summaries (see `app/services/tier_presentation/__init__.py`, `app/services/tier_presentation/catalog.py`, `app/services/tier_presentation/core.py`, `app/services/tier_presentation/evaluators.py`, `app/services/tier_presentation/formatters.py`, `app/services/tier_presentation/helpers.py`, `app/services/tier_presentation/profiles/__init__.py`, and `app/services/tier_presentation/profiles/public_pricing.py`).
 - **LineageService.generate_label_prefix** → Unique label prefix generation (see `app/services/lineage_service.py`)

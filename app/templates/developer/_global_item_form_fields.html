@@ -90,7 +90,7 @@
 {% set ingredient_properties_style = 'display:block;' if current_item_type == 'ingredient' else 'display:none;' %}
 
 <div class="mb-4">
-  <label class="form-label">Item Type</label>
+  <label class="form-label" for="itemType">Item Type</label>
   <select name="item_type" id="itemType" class="form-select">
     {% for t in ['ingredient', 'container', 'packaging', 'consumable'] %}
       {% set label = t.title() %}
@@ -313,7 +313,7 @@
     <div class="row g-3 mt-1" id="containerFields" style="{{ container_fields_style }}">
       <div class="col-12"><hr><h5 class="text-muted">Container Properties</h5></div>
       <div class="col-md-3">
-        <label class="form-label">Material</label>
+        <label class="form-label" for="containerMaterial">Material</label>
         <select name="container_material" id="containerMaterial" class="form-select" data-selected="{{ container_material_value }}">
           <option value="">Select Material</option>
         </select>
@@ -334,19 +334,19 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Container Type</label>
+        <label class="form-label" for="containerType">Container Type</label>
         <select name="container_type" id="containerType" class="form-select" data-selected="{{ container_type_value }}">
           <option value="">Select Type</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Container Style</label>
+        <label class="form-label" for="containerStyle">Container Style</label>
         <select name="container_style" id="containerStyle" class="form-select" data-selected="{{ container_style_value }}">
           <option value="">Select Style</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Container Color (optional)</label>
+        <label class="form-label" for="containerColor">Container Color (optional)</label>
         <select name="container_color" id="containerColor" class="form-select" data-selected="{{ container_color_value }}">
           <option value="">Select Color</option>
         </select>

@@ -78,7 +78,7 @@
                     {% if master_branches or variation_branches %}
                         {% set current_variation_name = recipe.variation_name or recipe.name %}
                         <div class="mb-3">
-                            <label class="form-label small text-muted">View history</label>
+                            <label class="form-label small text-muted" for="lineageHistorySelect">View history</label>
                             <select id="lineageHistorySelect" class="form-select">
                                 <option value="master" {% if recipe.is_master %}selected{% endif %}>Master history</option>
                                 <option value="variation" {% if not recipe.is_master %}selected{% endif %} {% if not variation_branches %}disabled{% endif %}>Variation history</option>
@@ -104,7 +104,7 @@
                             </ul>
                         </div>
                         <div id="variationHistory" style="display:none;">
-                            <label class="form-label small text-muted">Variation</label>
+                            <label class="form-label small text-muted" for="variationHistoryNameSelect">Variation</label>
                             <select id="variationHistoryNameSelect" class="form-select mb-2">
                                 {% for branch in variation_branches %}
                                     <option value="{{ branch.name }}" {% if branch.name == current_variation_name %}selected{% endif %}>{{ branch.name }}</option>

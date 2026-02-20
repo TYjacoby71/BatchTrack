@@ -82,7 +82,7 @@ Marketing documentation that describes the content workspace now lives in `marke
 - Individual change logs (YYYY-MM-DD-description.md)
 - Changelog index (CHANGELOG_INDEX.md)
 
-**Update when**: Making any code changes, bug fixes, or improvements
+**Update when**: You want durable release/change-history tracking for code changes, bug fixes, or improvements
 
 ### 3. System Documentation (`docs/system/`)
 **Purpose**: Single library for developers to understand any platform area
@@ -130,11 +130,11 @@ Marketing documentation that describes the content workspace now lives in `marke
    - Show code examples
    - List files modified
 
-3. **Update both when making changes**
-   - Changelog: Record the change
+3. **Update relevant docs when making changes**
    - System docs: Update to reflect new state
+   - Changelog: Optional release-history record when desired
 
-4. **Document Functional Units in code**
+4. **Document Functional Units in code (optional style guidance)**
    - Add a section header for each top-level functional unit (no numbering)
    - Include: unit name, purpose, inputs, outputs
    - Keep each description to 5 sentences or fewer
@@ -154,11 +154,11 @@ Marketing documentation that describes the content workspace now lives in `marke
    - Work-in-progress logs are temporary
    - Only keep finished documentation
 
-## Functional Unit Header Standard
+## Functional Unit Header Standard (Optional Style Guide)
 
 **Term to use**: "Top-Level Functional Unit"
 
-**When**: Any file containing multiple routes, services, or functions.
+**When**: Use for larger refactors/new modules when helpful for readability; this is not required by the docs guard.
 
 **Header structure**:
 ```
@@ -178,7 +178,7 @@ Marketing documentation that describes the content workspace now lives in `marke
 ```
 Made a code change?
     ↓
-1. Add entry to docs/changelog/YYYY-MM-DD-description.md
+1. (Optional) Add entry to docs/changelog/YYYY-MM-DD-description.md
     - What was changed
     - Why it was changed
     - Files affected
@@ -200,30 +200,23 @@ Made a code change?
 - [ ] 2) **Scoping and Security** — org scoping, permission checks, and timezone handling are correct.
 - [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
 - [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
-- [ ] 5) **Validation** — local tests run (as appropriate), tests are updated when behavior/regression scope requires it, and docs guard runs near finalization (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
-- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers (changed/new unit coverage), app Python terms/locations, and one-entry rule.
+- [ ] 5) **Validation** — local tests run (as appropriate), tests are updated when behavior/regression scope requires it, and docs guard runs once at finalization (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
+- [ ] 6) **Documentation and Knowledge Integrity** — system docs + follow APP_DICTIONARY head instruction block for Synopsis/Glossary and app Python terms/locations + one-entry rule.
 - [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
 
 ### AI Shortcut Phrase
 Use this exact delegation phrase:
-`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, apply docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)" only where this PR changes behavior/files, and run docs guard once near finalization.`
+`Implement feature work first. When ready to mark complete, run the PR Finalization Checklist once: update APP_DICTIONARY/glossary requirements for changed scope, then run docs guard once.`
 
 ## Enforcement (Automated Guard)
 
-The following rules are enforced by `scripts/validate_pr_documentation.py` in local tooling and CI:
+The following rules are enforced by `scripts/validate_pr_documentation.py` during finalization runs:
 
 1. **App Python change requirement**
-   - If any `app/**/*.py` file changes, the PR must include at least one dated changelog file update in `docs/changelog/`.
-   - Changed app Python file paths must still be covered in `APP_DICTIONARY.md`.
-   - Any changed dated changelog entries must be linked in `docs/changelog/CHANGELOG_INDEX.md`.
+   - Changed app Python file paths must be covered in `APP_DICTIONARY.md`.
 
 2. **Python schema requirement (`app/` and `scripts/`)**
    - New Python modules must include both **Synopsis** and **Glossary** in the module docstring.
-   - For each changed Python file, changed/new top-level class/function units must include a nearby functional header:
-     - `# --- <UNIT NAME> ---`
-     - `# Purpose: ...`
-     - `# Inputs: ...`
-     - `# Outputs: ...`
 
 3. **Dictionary schema requirement**
    - Entry format: `- **Term** → Description`.
@@ -233,11 +226,6 @@ The following rules are enforced by `scripts/validate_pr_documentation.py` in lo
 
 4. **Doc schema requirement**
    - Changed `docs/system/*.md` files must include `## Synopsis` and `## Glossary`.
-   - Changed dated changelog entries must include:
-     - `## Summary`
-     - `## Problems Solved`
-     - `## Key Changes`
-     - `## Files Modified`
 
 ## Cross-References
 

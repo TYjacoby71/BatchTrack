@@ -112,25 +112,21 @@ class BatchStatisticsService:
             db.session.commit()
 
             # Emit domain event for analytics pipeline
-            try:
-                from ...services.event_emitter import EventEmitter
+            from ...services.analytics_tracking_service import AnalyticsTrackingService
 
-                EventEmitter.emit(
-                    event_name="batch_metrics_computed",
-                    properties={
-                        "batch_id": batch_id,
-                        "actual_fill_efficiency": batch_stats.actual_fill_efficiency,
-                        "yield_variance_percentage": batch_stats.yield_variance_percentage,
-                        "cost_variance_percentage": batch_stats.cost_variance_percentage,
-                        "overall_freshness_percent": overall_freshness,
-                    },
-                    organization_id=batch.organization_id if batch else None,
-                    user_id=batch.created_by if batch else None,
-                    entity_type="batch",
-                    entity_id=batch_id,
-                )
-            except Exception:
-                pass
+            AnalyticsTrackingService.track_batch_lifecycle_event(
+                event_name="batch_metrics_computed",
+                organization_id=batch.organization_id if batch else None,
+                user_id=batch.created_by if batch else None,
+                batch_id=batch_id,
+                properties={
+                    "batch_id": batch_id,
+                    "actual_fill_efficiency": batch_stats.actual_fill_efficiency,
+                    "yield_variance_percentage": batch_stats.yield_variance_percentage,
+                    "cost_variance_percentage": batch_stats.cost_variance_percentage,
+                    "overall_freshness_percent": overall_freshness,
+                },
+            )
             logger.info(f"Updated batch stats for completed batch {batch_id}")
             return batch_stats
 

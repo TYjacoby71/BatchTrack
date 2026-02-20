@@ -101,7 +101,18 @@
     isExpanded = !!nextExpanded;
     dock.classList.toggle('is-expanded', isExpanded);
     if (overlay) {
-      overlay.setAttribute('aria-hidden', isExpanded ? 'false' : 'true');
+      const isHidden = !isExpanded;
+      overlay.setAttribute('aria-hidden', isHidden ? 'true' : 'false');
+      if (isHidden) {
+        overlay.setAttribute('inert', '');
+        if ('inert' in overlay) overlay.inert = true;
+        if (overlay.contains(document.activeElement)) {
+          toggle.focus();
+        }
+      } else {
+        overlay.removeAttribute('inert');
+        if ('inert' in overlay) overlay.inert = false;
+      }
     }
     toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     const label = isExpanded ? 'Collapse guidance panel' : 'Expand guidance panel';

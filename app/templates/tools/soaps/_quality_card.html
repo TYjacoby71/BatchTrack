@@ -6,6 +6,7 @@
       </div>
       <div class="d-flex flex-wrap gap-2 align-items-end">
         <div class="flex-grow-1">
+          <label class="visually-hidden" for="qualityPreset">Quality preset</label>
           <select class="form-select form-select-sm" id="qualityPreset">
             <option value="none" selected>Quality preset</option>
             <option value="balanced">Balanced All-Purpose</option>
@@ -45,15 +46,15 @@
           <div class="soap-quality-item" data-quality="hardness">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Hardness</span>
-                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="hardness">
+                <span class="soap-quality-name" id="qualityHardnessName">Hardness</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="hardness" aria-label="Hardness quality help">
                   <i class="fas fa-info-circle"></i>
                 </button>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityHardnessValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="qualityHardnessBar" role="progressbar">
+              <div class="soap-quality-bar" id="qualityHardnessBar" role="progressbar" aria-labelledby="qualityHardnessName">
                 <div class="soap-quality-safe" id="qualityHardnessSafe"></div>
                 <div class="soap-quality-fill" id="qualityHardnessFill"></div>
                 <span class="quality-target-marker d-none" id="qualityHardnessTarget"><span class="quality-target-label" id="qualityHardnessTargetLabel"></span></span>
@@ -77,15 +78,15 @@
           <div class="soap-quality-item" data-quality="cleansing">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Cleansing</span>
-                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="cleansing">
+                <span class="soap-quality-name" id="qualityCleansingName">Cleansing</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="cleansing" aria-label="Cleansing quality help">
                   <i class="fas fa-info-circle"></i>
                 </button>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCleansingValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="qualityCleansingBar" role="progressbar">
+              <div class="soap-quality-bar" id="qualityCleansingBar" role="progressbar" aria-labelledby="qualityCleansingName">
                 <div class="soap-quality-safe" id="qualityCleansingSafe"></div>
                 <div class="soap-quality-fill" id="qualityCleansingFill"></div>
                 <span class="quality-target-marker d-none" id="qualityCleansingTarget"><span class="quality-target-label" id="qualityCleansingTargetLabel"></span></span>
@@ -109,15 +110,15 @@
           <div class="soap-quality-item" data-quality="conditioning">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Conditioning</span>
-                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="conditioning">
+                <span class="soap-quality-name" id="qualityConditioningName">Conditioning</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="conditioning" aria-label="Conditioning quality help">
                   <i class="fas fa-info-circle"></i>
                 </button>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityConditioningValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="qualityConditioningBar" role="progressbar">
+              <div class="soap-quality-bar" id="qualityConditioningBar" role="progressbar" aria-labelledby="qualityConditioningName">
                 <div class="soap-quality-safe" id="qualityConditioningSafe"></div>
                 <div class="soap-quality-fill" id="qualityConditioningFill"></div>
                 <span class="quality-target-marker d-none" id="qualityConditioningTarget"><span class="quality-target-label" id="qualityConditioningTargetLabel"></span></span>
@@ -141,15 +142,15 @@
           <div class="soap-quality-item" data-quality="bubbly">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Bubbly</span>
-                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="bubbly">
+                <span class="soap-quality-name" id="qualityBubblyName">Bubbly</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="bubbly" aria-label="Bubbly quality help">
                   <i class="fas fa-info-circle"></i>
                 </button>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityBubblyValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="qualityBubblyBar" role="progressbar">
+              <div class="soap-quality-bar" id="qualityBubblyBar" role="progressbar" aria-labelledby="qualityBubblyName">
                 <div class="soap-quality-safe" id="qualityBubblySafe"></div>
                 <div class="soap-quality-fill" id="qualityBubblyFill"></div>
                 <span class="quality-target-marker d-none" id="qualityBubblyTarget"><span class="quality-target-label" id="qualityBubblyTargetLabel"></span></span>
@@ -173,15 +174,15 @@
           <div class="soap-quality-item" data-quality="creamy">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Creamy</span>
-                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="creamy">
+                <span class="soap-quality-name" id="qualityCreamyName">Creamy</span>
+                <button class="btn btn-sm btn-link p-0 text-muted soap-quality-help" type="button" data-bs-toggle="tooltip" data-quality="creamy" aria-label="Creamy quality help">
                   <i class="fas fa-info-circle"></i>
                 </button>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="qualityCreamyValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="qualityCreamyBar" role="progressbar">
+              <div class="soap-quality-bar" id="qualityCreamyBar" role="progressbar" aria-labelledby="qualityCreamyName">
                 <div class="soap-quality-safe" id="qualityCreamySafe"></div>
                 <div class="soap-quality-fill" id="qualityCreamyFill"></div>
                 <span class="quality-target-marker d-none" id="qualityCreamyTarget"><span class="quality-target-label" id="qualityCreamyTargetLabel"></span></span>
@@ -205,12 +206,12 @@
           <div class="soap-quality-item" data-quality="iodine">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">Iodine</span>
+                <span class="soap-quality-name" id="qualityIodineName">Iodine</span>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="iodineValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="iodineBar" role="progressbar">
+              <div class="soap-quality-bar" id="iodineBar" role="progressbar" aria-labelledby="qualityIodineName">
                 <div class="soap-quality-safe" id="qualityIodineSafe"></div>
                 <div class="soap-quality-fill" id="iodineFill"></div>
                 <span class="quality-target-marker d-none" id="iodineTarget"><span class="quality-target-label" id="iodineTargetLabel"></span></span>
@@ -234,12 +235,12 @@
           <div class="soap-quality-item" data-quality="ins">
             <div class="soap-quality-item-header">
               <div class="soap-quality-title">
-                <span class="soap-quality-name">INS</span>
+                <span class="soap-quality-name" id="qualityInsName">INS</span>
               </div>
               <span class="soap-quality-value fw-semibold soap-animate-number" id="insValue">--</span>
             </div>
             <div class="soap-quality-bar-wrap">
-              <div class="soap-quality-bar" id="insBar" role="progressbar">
+              <div class="soap-quality-bar" id="insBar" role="progressbar" aria-labelledby="qualityInsName">
                 <div class="soap-quality-safe" id="qualityInsSafe"></div>
                 <div class="soap-quality-fill" id="insFill"></div>
                 <span class="quality-target-marker d-none" id="insTarget"><span class="quality-target-label" id="insTargetLabel"></span></span>

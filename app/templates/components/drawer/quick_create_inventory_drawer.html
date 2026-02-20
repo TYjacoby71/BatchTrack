@@ -13,7 +13,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Name</label>
+                            <label class="form-label" for="qcInvName">Name</label>
                             <div class="position-relative">
                                 <input type="text" class="form-control" id="qcInvName" placeholder="Search global or enter custom..." autocomplete="off">
                                 <div id="qcInvSuggestions" class="list-group position-absolute w-100 d-none" data-empty-message="Start typing to search your inventory and the global library." style="z-index: 1050; max-height: 260px; overflow-y: auto;"></div>
@@ -21,7 +21,7 @@
                             <div class="form-text">Start typing to search your inventory and the global library. Selecting a global item will be added to your inventory.</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Type</label>
+                            <label class="form-label" for="qcInvType">Type</label>
                             <select class="form-select" id="qcInvType">
                                 <option value="ingredient">Ingredient</option>
                                 <option value="container">Container</option>
@@ -30,7 +30,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Unit</label>
+                            <label class="form-label" for="qcInvUnit">Unit</label>
                             <select class="form-select" id="qcInvUnit">
                                 {% for unit in inventory_units %}
                                 <option value="{{ unit.name }}">{{ unit.name }}</option>
@@ -40,11 +40,11 @@
                         <div class="col-md-6 d-none" id="qcContainerFields">
                             <div class="row g-2">
                                 <div class="col-6">
-                                    <label class="form-label">Capacity</label>
+                                    <label class="form-label" for="qcInvCapacity">Capacity</label>
                                     <input type="number" step="0.01" class="form-control" id="qcInvCapacity" placeholder="0.00">
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label">Capacity Unit</label>
+                                    <label class="form-label" for="qcInvCapacityUnit">Capacity Unit</label>
                                     <select class="form-select" id="qcInvCapacityUnit">
                                         {% for unit in inventory_units %}
                                         <option value="{{ unit.name }}">{{ unit.name }}</option>
@@ -54,19 +54,19 @@
                             </div>
                             <div class="row g-2 mt-1">
                                 <div class="col-4">
-                                    <label class="form-label">Material</label>
+                                    <label class="form-label" for="qcInvMaterial">Material</label>
                                     <input type="text" class="form-control" id="qcInvMaterial" placeholder="Glass / Plastic / Metal">
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label">Type</label>
+                                    <label class="form-label" for="qcInvTypeName">Type</label>
                                     <input type="text" class="form-control" id="qcInvTypeName" placeholder="Jar / Bottle / Tin">
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label">Style</label>
+                                    <label class="form-label" for="qcInvStyle">Style</label>
                                     <input type="text" class="form-control" id="qcInvStyle" placeholder="Boston Round / Straight Sided">
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label">Color</label>
+                                    <label class="form-label" for="qcInvColor">Color</label>
                                     <input type="text" class="form-control" id="qcInvColor" placeholder="Amber / Clear / White">
                                 </div>
                             </div>
@@ -79,7 +79,7 @@
                             <div class="collapse mt-2" id="qcAdvanced">
                                 <div class="row g-2">
                                     <div class="col-md-6">
-                                        <label class="form-label">Base Category</label>
+                                        <label class="form-label" for="qcInvCategory">Base Category</label>
                                         <select class="form-select" id="qcInvCategory">
                                             <option value="">None</option>
                                             {% for cat in categories %}
@@ -88,7 +88,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Density (g/ml)</label>
+                                        <label class="form-label" for="qcInvDensity">Density (g/ml)</label>
                                         <input type="number" step="0.001" min="0" class="form-control" id="qcInvDensity" placeholder="Auto from category or global">
                                     </div>
                                 </div>

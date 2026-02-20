@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-20: Analytics Registry, Relay, and Thin Emitters](2026-02-20-analytics-registry-relay-and-thin-emitters.md)**
+  - Added a centralized analytics event registry and relay service for discoverable contracts.
+  - Refactored funnel + activation emitters across auth/signup/onboarding/billing and core flows to thin relay calls.
+  - Updated tracking documentation and dictionary coverage for the new architecture.
 - **[2026-02-19: PostHog Funnel Instrumentation and Documentation Guard Remediation](2026-02-19-posthog-funnel-instrumentation-and-doc-guard-remediation.md)**
   - Added end-to-end PostHog funnel instrumentation across public, auth, onboarding, and core in-app lifecycle events.
   - Added first/second-use and time-from-first-login enrichment for core activation events.

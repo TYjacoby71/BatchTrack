@@ -1,129 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% set home_title = "BatchTrack.com | Batch-First Production & Inventory for Makers" %}
-    {% set home_description = "BatchTrack helps small-batch makers track recipes, FIFO lots, batch lifecycle, and output products. Free maker tools with calm, neurodivergent-friendly design." %}
-    {% set home_canonical = url_for('core.index', _external=True) %}
-    {% set home_og_image = url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
-    {% set posthog_api_key = (config.get('POSTHOG_PROJECT_API_KEY') or '').strip() %}
-    {% set posthog_host = (config.get('POSTHOG_HOST') or 'https://us.i.posthog.com').rstrip('/') %}
-    {% set posthog_capture_pageview = config.get('POSTHOG_CAPTURE_PAGEVIEW', true) %}
-    {% set posthog_capture_pageleave = config.get('POSTHOG_CAPTURE_PAGELEAVE', true) %}
-    <title>{{ home_title }}</title>
-    <meta name="description" content="{{ home_description }}">
-    <link rel="canonical" href="{{ home_canonical }}">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ home_title }}">
-    <meta property="og:description" content="{{ home_description }}">
-    <meta property="og:url" content="{{ home_canonical }}">
-    <meta property="og:image" content="{{ home_og_image }}">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ home_title }}">
-    <meta name="twitter:description" content="{{ home_description }}">
-    <meta name="twitter:image" content="{{ home_og_image }}">
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('core.branding_app_tile') }}">
-    <link rel="shortcut icon" href="{{ url_for('core.branding_app_tile') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('core.branding_app_tile') }}">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-    <link
-        rel="preload"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-        as="style"
-        crossorigin
-        onload="this.onload=null;this.rel='stylesheet'"
-    >
-    <noscript>
-        <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-            rel="stylesheet"
-            crossorigin
-        >
-    </noscript>
-    {% if posthog_api_key %}
-    <script>
-      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2===o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people"},o="capture identify alias group set_config reset register register_once unregister people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user pageleave".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-      posthog.init({{ posthog_api_key | tojson }}, {
-        api_host: {{ posthog_host | tojson }},
-        capture_pageview: {{ posthog_capture_pageview | tojson }},
-        capture_pageleave: {{ posthog_capture_pageleave | tojson }},
-        person_profiles: "identified_only"
-      });
-    </script>
-    {% endif %}
-    <script>
-      (function() {
-        var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
-        var FIRST_LANDING_COOKIE_KEY = 'bt_first_landing_at';
+{% extends 'layout.html' %}
+{% set page_title = "BatchTrack.com | Batch-First Production & Inventory for Makers" %}
+{% set page_description = "BatchTrack helps small-batch makers track recipes, FIFO lots, batch lifecycle, and output products. Free maker tools with calm, neurodivergent-friendly design." %}
+{% set canonical_url = url_for('core.index', _external=True) %}
+{% set page_og_image = url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
+{% set show_public_header = true %}
+{% set public_shell_full_bleed = true %}
+{% set lightweight_public_shell = true %}
+{% set load_fontawesome = false %}
+{% set load_feedback_widget = false %}
+{% set public_header_is_homepage = true %}
+{% set public_header_signup_source = 'homepage_start_free_trial' %}
+{% set shell_main_id = 'main-content' %}
+{% set shell_main_extra_class = 'homepage-main' %}
 
-        function nowMs() {
-          return Date.now ? Date.now() : new Date().getTime();
-        }
-
-        function parseInteger(value) {
-          if (value === null || value === undefined || value === '') {
-            return null;
-          }
-          var parsed = Number.parseInt(String(value), 10);
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-
-        function getCookie(name) {
-          var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          var match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
-          return match ? decodeURIComponent(match[1]) : null;
-        }
-
-        function setCookie(name, value) {
-          try {
-            document.cookie = name + '=' + encodeURIComponent(String(value)) + '; path=/; max-age=31536000; SameSite=Lax';
-          } catch (error) {}
-        }
-
-        var firstLandingAt = parseInteger(getCookie(FIRST_LANDING_COOKIE_KEY));
-        if (!firstLandingAt) {
-          try {
-            firstLandingAt = parseInteger(window.localStorage && window.localStorage.getItem(FIRST_LANDING_STORAGE_KEY));
-          } catch (error) {}
-        }
-        if (!firstLandingAt) {
-          firstLandingAt = nowMs();
-        }
-        try {
-          if (window.localStorage) {
-            window.localStorage.setItem(FIRST_LANDING_STORAGE_KEY, String(firstLandingAt));
-          }
-        } catch (error) {}
-        setCookie(FIRST_LANDING_COOKIE_KEY, String(firstLandingAt));
-
-        function canCapture() {
-          return Boolean(window.posthog && typeof window.posthog.capture === 'function');
-        }
-
-        window.BTAnalytics = window.BTAnalytics || {};
-        window.BTAnalytics.secondsSinceFirstLanding = function() {
-          return Math.max(0, Math.round((nowMs() - firstLandingAt) / 1000));
-        };
-        window.BTAnalytics.capture = function(eventName, properties) {
-          if (!eventName || !canCapture()) {
-            return;
-          }
-          var payload = Object.assign(
-            {
-              seconds_since_first_landing: window.BTAnalytics.secondsSinceFirstLanding(),
-              page_path: window.location.pathname,
-              page_url: window.location.href
-            },
-            properties || {}
-          );
-          try {
-            window.posthog.capture(eventName, payload);
-          } catch (error) {}
-        };
-      })();
-    </script>
+{% block head %}
     <style>
         html {
             scroll-behavior: smooth;
@@ -348,19 +238,9 @@
             }
         }
     </style>
-</head>
-<body>
-    <!-- Header with Navigation -->
-    {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
-    {% set public_header_is_homepage = true %}
-    {% set public_header_signup_source = 'homepage_start_free_trial' %}
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
-        <div class="container">
-            {% include 'components/shared/public_marketing_header.html' %}
-        </div>
-    </nav>
+{% endblock %}
 
-    <main id="main-content" class="homepage-main">
+{% block content %}
     <!-- Hero Banner -->
     <section class="hero-section bg-light py-5 border-bottom">
         <div class="container">
@@ -798,65 +678,9 @@
             </div>
         </div>
     </section>
-    </main>
+{% endblock %}
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-4 mb-4">
-                    <p class="fw-bold h5 mb-3">BatchTrack</p>
-                    <p>The complete solution for production and inventory management.</p>
-                    <div class="d-flex gap-3">
-                        <a href="mailto:support@batchtrack.com" class="footer-link-chip" aria-label="Email support">Email</a>
-                        <a href="{{ url_for('help_routes.help_overview') }}" class="footer-link-chip" aria-label="Help center">Help</a>
-                        <a href="{{ url_for('pricing_routes.pricing') }}" class="footer-link-chip" aria-label="View pricing">Pricing</a>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-6 mb-4">
-                    <p class="fw-bold mb-3">Product</p>
-                    <ul class="list-unstyled">
-                        <li><a href="#features" class="text-light text-decoration-none">Features</a></li>
-                        <li><a href="{{ url_for('pricing_routes.pricing') }}" class="text-light text-decoration-none">Pricing</a></li>
-                        <li><a href="/tools/" class="text-light text-decoration-none">Maker Tools</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-6 mb-4">
-                    <p class="fw-bold mb-3">Company</p>
-                    <ul class="list-unstyled">
-                        <li><a href="#about" class="text-light text-decoration-none">About</a></li>
-                        <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
-                        <li><a href="{{ url_for('help_routes.help_faq') }}" class="text-light text-decoration-none">FAQ</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-6 mb-4">
-                    <p class="fw-bold mb-3">Support</p>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('help_routes.help_overview') }}" class="text-light text-decoration-none">Help Center</a></li>
-                        <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
-                        <li><a href="{{ url_for('auth.login') }}" class="text-light text-decoration-none">Login</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-6 mb-4">
-                    <p class="fw-bold mb-3">Legal</p>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('legal.privacy_policy') }}" class="text-light text-decoration-none">Privacy</a></li>
-                        <li><a href="{{ url_for('legal.terms_of_service') }}" class="text-light text-decoration-none">Terms</a></li>
-                        <li><a href="{{ url_for('legal.cookie_policy') }}" class="text-light text-decoration-none">Security</a></li>
-                    </ul>
-                </div>
-            </div>
-            <hr class="my-4">
-            <div class="text-center">
-                <p>&copy; 2024 BatchTrack. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='homepage') }}" rel="nofollow" aria-hidden="true" tabindex="-1">More</a>
-
-    <!-- Bootstrap JS -->
-    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
     <script>
       document.addEventListener('DOMContentLoaded', function() {
         if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
@@ -914,5 +738,4 @@
         });
       });
     </script>
-</body>
-</html>
+{% endblock %}

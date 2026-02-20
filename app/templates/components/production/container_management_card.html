@@ -66,7 +66,7 @@
           </div>
           <div class="col-md-1">
             <label class="form-label small">&nbsp;</label>
-            <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn">
+            <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn" aria-label="Remove container row">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -76,7 +76,7 @@
 
     <!-- Container Fill Progress -->
     <div class="progress mb-3" style="display: none;" id="containerProgress">
-      <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+      <div class="progress-bar" role="progressbar" aria-label="Container fill progress" style="width: 0%">0%</div>
     </div>
 
     <div id="containerMessage" class="text-muted" style="display: none;"></div>
@@ -88,7 +88,7 @@
         <span class="badge bg-primary" id="containmentPercent">0%</span>
       </div>
       <div class="progress" style="height: 25px;">
-        <div class="progress-bar bg-warning" role="progressbar" 
+        <div class="progress-bar bg-warning" role="progressbar" aria-label="Containment progress"
           style="width: 0%"
           id="containmentProgressBar">0%</div>
       </div>

@@ -54,10 +54,10 @@
                     <strong>Users:</strong> {{ role.assigned_users|length }}
                 </p>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editRole({{ role.id }})">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editRole({{ role.id }})" aria-label="Edit role {{ role.name }}">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.id }})">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.id }})" aria-label="Delete role {{ role.name }}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>

@@ -14,7 +14,7 @@
           <div class="col-md-2"><input class="form-control" placeholder="Title" x-model="r.title"></div>
           <div class="col-md-5"><input class="form-control" placeholder="Quote" x-model="r.quote"></div>
           <div class="col-md-2"><input class="form-control" placeholder="Logo URL" x-model="r.logo"></div>
-          <div class="col-md-1 text-end"><button class="btn btn-sm btn-danger" @click="removeReview(idx)"><i class="fas fa-times"></i></button></div>
+          <div class="col-md-1 text-end"><button class="btn btn-sm btn-danger" @click="removeReview(idx)" aria-label="Remove review"><i class="fas fa-times"></i></button></div>
         </div>
       </template>
       <button class="btn btn-sm btn-outline-primary" @click="addReview()"><i class="fas fa-plus"></i> Add Review</button>
@@ -62,7 +62,7 @@
             <div class="col-md-4"><input class="form-control" placeholder="Code" x-model="p.code"></div>
             <div class="col-md-3"><input class="form-control" placeholder="Description" x-model="p.description"></div>
             <div class="col-md-3"><input class="form-control" placeholder="Stripe price/lookup" x-model="p.lookup"></div>
-            <div class="col-md-2 text-end"><button class="btn btn-sm btn-danger" @click="promo_codes.splice(idx,1)"><i class="fas fa-times"></i></button></div>
+            <div class="col-md-2 text-end"><button class="btn btn-sm btn-danger" @click="promo_codes.splice(idx,1)" aria-label="Remove promo code"><i class="fas fa-times"></i></button></div>
           </div>
         </template>
         <button class="btn btn-sm btn-outline-primary" @click="promo_codes.push({code:'',description:'',lookup:''})"><i class="fas fa-plus"></i> Add Promo</button>

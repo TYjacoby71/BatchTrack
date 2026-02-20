@@ -6,7 +6,10 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ static_asset('css/tools/soaps.css') }}">
+<link rel="preload" href="{{ static_asset('css/tools/soaps.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript>
+  <link rel="stylesheet" href="{{ static_asset('css/tools/soaps.css') }}">
+</noscript>
 {% endblock %}
 
 {% block content %}

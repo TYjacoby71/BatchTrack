@@ -6,6 +6,12 @@ import pytest
 _HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
 
 
+def _first_nav_classes(html: str) -> str:
+    match = re.search(r'<nav class="([^"]+)"', html)
+    assert match is not None, "Expected a navbar element in response HTML"
+    return match.group(1)
+
+
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
     """Helper to ensure a GET stays public and does not bounce to login."""
     response = client.get(path, follow_redirects=False, **kwargs)
@@ -100,6 +106,38 @@ def test_public_soap_page_uses_centralized_guidance_dock(app):
     assert 'id="qualityConditioningHint"' not in html
     assert 'id="qualityBubblyHint"' not in html
     assert 'id="qualityCreamyHint"' not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_page_has_accessible_quality_controls(app):
+    """Soap quality controls should expose explicit labels and named progressbars."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert '<label class="visually-hidden" for="qualityPreset">Quality preset</label>' in html
+    assert '<label class="form-label" for="moldShape">Mold shape</label>' in html
+    assert 'id="qualityHardnessBar" role="progressbar" aria-labelledby="qualityHardnessName"' in html
+    assert 'id="qualityCleansingBar" role="progressbar" aria-labelledby="qualityCleansingName"' in html
+    assert 'id="qualityConditioningBar" role="progressbar" aria-labelledby="qualityConditioningName"' in html
+    assert 'id="qualityBubblyBar" role="progressbar" aria-labelledby="qualityBubblyName"' in html
+    assert 'id="qualityCreamyBar" role="progressbar" aria-labelledby="qualityCreamyName"' in html
+    assert 'id="iodineBar" role="progressbar" aria-labelledby="qualityIodineName"' in html
+    assert 'id="insBar" role="progressbar" aria-labelledby="qualityInsName"' in html
+    assert 'id="soapGuidanceOverlay"' in html
+    assert 'aria-hidden="true"' in html
+    assert 'inert' in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_page_skips_heavy_analytics_payloads(app):
+    """Soap page should not inject GA/PostHog providers into lightweight public shell."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert "www.googletagmanager.com/gtag/js" not in html
+    assert "posthog.init(" not in html
 
 
 @pytest.mark.usefixtures("app")
@@ -497,6 +535,59 @@ def test_anonymous_workflow_can_browse_public_site(app):
         client, "/lp/robbins", label="landing page (transformation-first)"
     )
     _assert_public_get(client, "/auth/signup", label="signup page")
+    _assert_public_get(client, "/signup", label="signup short path")
+
+
+@pytest.mark.usefixtures("app")
+def test_signup_header_cta_uses_clean_short_path_by_default(app):
+    """Signup header CTA should avoid default source query parameters."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/signup", label="signup page")
+    html = response.get_data(as_text=True)
+
+    assert 'href="/signup"' in html
+    assert "/auth/signup?source=public_header" not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_unauthenticated_public_pages_use_fixed_public_header_system(app):
+    """Public pages should use the same fixed marketing header classes."""
+    client = app.test_client()
+    paths = [
+        ("/", "homepage"),
+        ("/tools/", "tools"),
+        ("/pricing", "pricing"),
+        ("/help/how-it-works", "help"),
+        ("/auth/signup", "signup"),
+    ]
+
+    for path, label in paths:
+        response = _assert_public_get(client, path, label=label)
+        nav_classes = _first_nav_classes(response.get_data(as_text=True))
+        assert "public-marketing-nav" in nav_classes
+        assert "fixed-top" in nav_classes
+
+
+@pytest.mark.usefixtures("app")
+def test_authenticated_views_use_app_header_system(app):
+    """Signed-in visitors should get the app-style navbar, not public shell nav."""
+    from app.models.models import User
+
+    with app.app_context():
+        user = User.query.filter_by(email="test@example.com").first()
+        assert user is not None
+        user_id = str(user.id)
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = user_id
+        session["_fresh"] = True
+
+    response = client.get("/tools/", follow_redirects=False)
+    assert response.status_code == 200
+    nav_classes = _first_nav_classes(response.get_data(as_text=True))
+    assert "public-marketing-nav" not in nav_classes
+    assert "fixed-top" not in nav_classes
 
 
 @pytest.mark.usefixtures("app")

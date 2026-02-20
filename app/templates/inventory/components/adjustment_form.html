@@ -23,7 +23,7 @@
             <div class="input-group">
               <input type="number" class="form-control" name="quantity" {% if item.type == 'container' %}step="1" min="1"{% else %}step="0.01" min="0.01"{% endif %} required>
               {% if item.type != 'container' %}
-              <select class="form-control" name="input_unit" required>
+              <select class="form-control" name="input_unit" required aria-label="Quantity input unit">
                 {% for unit in get_global_unit_list() %}
                   <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
                 {% endfor %}
@@ -36,7 +36,7 @@
         </div>
         <div class="col-md-4">
           <div class="form-group">
-            <label>Cost Entry Type</label>
+            <label for="costEntryType">Cost Entry Type</label>
             <select class="form-control" name="cost_entry_type" id="costEntryType">
               <option value="no_change">No Change</option>
               <option value="per_unit">Per Unit Cost</option>

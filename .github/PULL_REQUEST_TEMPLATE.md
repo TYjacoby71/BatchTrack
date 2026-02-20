@@ -14,7 +14,7 @@
 
 ## One-Line Instruction for AI Agents
 Use this exact instruction when delegating PR prep:
-`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, apply docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)" only where this PR changes behavior/files, and run docs guard once near finalization.`
+`Implement feature work first. When ready to mark complete, run the PR Finalization Checklist once: update APP_DICTIONARY/glossary requirements for changed scope, then run docs guard once.`
 
 ## PR Checklist Instructions (Cascade order — top to bottom)
 
@@ -38,15 +38,12 @@ Use this exact instruction when delegating PR prep:
 ### 5) Validation
 - [ ] Tested locally (as appropriate for scope)
 - [ ] Added/updated tests when behavior changed or a regression was fixed
-- [ ] Ran `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` near finalization and confirmed pass
+- [ ] Ran `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once at finalization and confirmed pass
 
 ### 6) Documentation and Knowledge Integrity
 - [ ] Updated system docs for feature changes (`docs/system/`)
-- [ ] Added/updated dated changelog entry when app Python behavior changed (`docs/changelog/YYYY-MM-DD-*.md`)
-- [ ] Confirmed changelog index contains links to changed dated entries (`docs/changelog/CHANGELOG_INDEX.md`)
 - [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for Synopsis + Glossary coverage on newly added or materially reworked files
-- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for top-level Functional Unit headers (Purpose/Inputs/Outputs) on changed/new units
-- [ ] Followed `docs/system/APP_DICTIONARY.md` -> **Update Standard (Agent Instructions)** for added/moved/updated app Python terms and locations
+- [ ] Updated APP_DICTIONARY locations for added/moved/updated app Python terms and paths
 - [ ] Verified APP_DICTIONARY one-entry rule (single canonical term entry, no duplicates)
 
 ### 7) PR Narrative and Review Readiness

@@ -84,6 +84,7 @@ class RouteAccessConfig:
         "core.robots_txt",
         "core.llms_txt",
         "core.dev_login_legacy",
+        "core.signup_alias",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
@@ -99,6 +100,7 @@ class RouteAccessConfig:
         "/auth/logout",
         "/auth/forgot-password",
         "/auth/reset-password",
+        "/signup",
         "/tools",
         "/tools/",
         "/exports/tool",
