@@ -74,10 +74,17 @@ Core fields on every event record:
 
 ### Auth, onboarding, and billing funnel
 - `user_login_succeeded`
+- `signup_completed`
 - `signup_checkout_started`
 - `signup_checkout_completed`
 - `purchase_completed`
 - `onboarding_completed`
+
+`signup_completed` and `purchase_completed` now include code attribution fields:
+- `used_promo_code` (boolean)
+- `promo_code` (string or `null`)
+- `used_referral_code` (boolean)
+- `referral_code` (string or `null`)
 
 ## Analytics Mapping Guidance
 - Keep `event_name` stable for downstream models.

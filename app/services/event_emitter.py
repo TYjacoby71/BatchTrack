@@ -33,6 +33,7 @@ class EventEmitter:
     _FIRST_LOGIN_EVENT = "user_login_succeeded"
     _CORE_USAGE_EVENTS = {
         "user_login_succeeded",
+        "signup_completed",
         "signup_checkout_started",
         "signup_checkout_completed",
         "purchase_completed",

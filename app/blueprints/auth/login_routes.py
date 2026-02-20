@@ -667,6 +667,29 @@ def quick_signup():
                         exc,
                     )
 
+            try:
+                EventEmitter.emit(
+                    event_name="signup_completed",
+                    properties={
+                        "signup_source": "global_library",
+                        "signup_flow": "quick_signup",
+                        "billing_provider": "none",
+                        "tier_id": getattr(tier, "id", None),
+                        "used_promo_code": False,
+                        "promo_code": None,
+                        "used_referral_code": False,
+                        "referral_code": None,
+                        "is_oauth_signup": False,
+                        "purchase_completed": False,
+                    },
+                    organization_id=org.id,
+                    user_id=user.id,
+                    entity_type="organization",
+                    entity_id=org.id,
+                )
+            except Exception:
+                pass
+
             login_user(user)
             SessionService.rotate_user_session(user)
             session["onboarding_welcome"] = True

@@ -305,6 +305,8 @@ class SignupService:
                 },
                 auto_commit=True,
             )
+            promo_code = (pending_signup.promo_code or "").strip() or None
+            referral_code = (pending_signup.referral_code or "").strip() or None
             completion_properties = {
                 "pending_signup_id": pending_signup.id,
                 "tier_id": subscription_tier.id,
@@ -312,6 +314,12 @@ class SignupService:
                 "checkout_session_id": pending_signup.stripe_checkout_session_id,
                 "stripe_customer_id": pending_signup.stripe_customer_id,
                 "billing_provider": "stripe",
+                "signup_flow": "checkout",
+                "is_oauth_signup": bool(pending_signup.oauth_provider),
+                "used_promo_code": bool(promo_code),
+                "promo_code": promo_code,
+                "used_referral_code": bool(referral_code),
+                "referral_code": referral_code,
             }
             try:
                 raw_first_landing = (
@@ -328,6 +336,15 @@ class SignupService:
                         )
             except (TypeError, ValueError):
                 pass
+            EventEmitter.emit(
+                "signup_completed",
+                organization_id=org.id,
+                user_id=owner_user.id,
+                properties=completion_properties,
+                entity_type="organization",
+                entity_id=org.id,
+                auto_commit=True,
+            )
             EventEmitter.emit(
                 "signup_checkout_completed",
                 organization_id=org.id,
