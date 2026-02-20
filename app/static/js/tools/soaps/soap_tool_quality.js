@@ -366,8 +366,14 @@
   function initQualityTooltips(){
     document.querySelectorAll('.soap-quality-help').forEach(btn => {
       const key = btn.dataset.quality;
+      const qualityName = (
+        btn.closest('.soap-quality-title')?.querySelector('.soap-quality-name')?.textContent || key || 'Quality'
+      ).trim();
       if (QUALITY_HINTS[key]) {
         btn.setAttribute('title', QUALITY_HINTS[key]);
+        btn.setAttribute('aria-label', `${qualityName} quality help. ${QUALITY_HINTS[key]}`);
+      } else {
+        btn.setAttribute('aria-label', `${qualityName} quality help`);
       }
     });
     if (window.bootstrap?.Tooltip) {

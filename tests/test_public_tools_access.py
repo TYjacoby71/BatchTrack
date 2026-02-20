@@ -103,6 +103,38 @@ def test_public_soap_page_uses_centralized_guidance_dock(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_public_soap_page_has_accessible_quality_controls(app):
+    """Soap quality controls should expose explicit labels and named progressbars."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert '<label class="visually-hidden" for="qualityPreset">Quality preset</label>' in html
+    assert '<label class="form-label" for="moldShape">Mold shape</label>' in html
+    assert 'id="qualityHardnessBar" role="progressbar" aria-labelledby="qualityHardnessName"' in html
+    assert 'id="qualityCleansingBar" role="progressbar" aria-labelledby="qualityCleansingName"' in html
+    assert 'id="qualityConditioningBar" role="progressbar" aria-labelledby="qualityConditioningName"' in html
+    assert 'id="qualityBubblyBar" role="progressbar" aria-labelledby="qualityBubblyName"' in html
+    assert 'id="qualityCreamyBar" role="progressbar" aria-labelledby="qualityCreamyName"' in html
+    assert 'id="iodineBar" role="progressbar" aria-labelledby="qualityIodineName"' in html
+    assert 'id="insBar" role="progressbar" aria-labelledby="qualityInsName"' in html
+    assert 'id="soapGuidanceOverlay"' in html
+    assert 'aria-hidden="true"' in html
+    assert 'inert' in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_soap_page_skips_heavy_analytics_payloads(app):
+    """Soap page should not inject GA/PostHog providers into lightweight public shell."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/tools/soap", label="soap calculator")
+    html = response.get_data(as_text=True)
+
+    assert "www.googletagmanager.com/gtag/js" not in html
+    assert "posthog.init(" not in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_marketing_pages_do_not_skip_heading_levels(app):
     """Public pages should keep heading levels sequential for accessibility."""
     client = app.test_client()
