@@ -827,6 +827,7 @@ def test_view_recipe_shows_lineage_display_names(app, client):
     assert variation_response.status_code == 200
     variation_body = variation_response.get_data(as_text=True)
     assert f"{group_name} - {variation_name}" in variation_body
+    assert f"/recipes/{variation_id}/test" in variation_body
 
     master_response = client.get(f"/recipes/{master_id}/view")
     assert master_response.status_code == 200
@@ -842,7 +843,7 @@ def test_view_recipe_shows_lineage_display_names(app, client):
     assert f"/recipes/{test_id}/test" not in test_body
 
 
-def test_create_test_route_blocks_non_master_bases(app, client):
+def test_create_test_route_allows_current_variations_and_blocks_others(app, client):
     with app.app_context():
         user_id = User.query.first().id
         category = _create_category("TestRouteGuard")
@@ -876,6 +877,19 @@ def test_create_test_route_blocks_non_master_bases(app, client):
         )
         assert variation_ok, variation
 
+        variation_test_ok, variation_test = create_test_version(
+            base=variation,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Guard variation test",
+            ),
+            target_status="published",
+        )
+        assert variation_test_ok, variation_test
+        promote_variation_ok, promoted_variation = promote_test_to_current(variation_test.id)
+        assert promote_variation_ok, promoted_variation
+
         test_ok, test_recipe = create_test_version(
             base=master,
             payload=_test_recipe_payload(
@@ -886,20 +900,30 @@ def test_create_test_route_blocks_non_master_bases(app, client):
             target_status="published",
         )
         assert test_ok, test_recipe
-        variation_id = variation.id
+        current_variation_id = promoted_variation.id
+        stale_variation_id = variation.id
         test_id = test_recipe.id
 
     with client.session_transaction() as session:
         session["_user_id"] = str(user_id)
         session["_fresh"] = True
 
-    variation_resp = client.get(
-        f"/recipes/{variation_id}/test",
+    current_variation_resp = client.get(f"/recipes/{current_variation_id}/test")
+    assert current_variation_resp.status_code == 200
+    current_variation_body = current_variation_resp.get_data(as_text=True)
+    assert "Tests can only be created from a published master or current variation." not in current_variation_body
+    assert f"/recipes/{current_variation_id}/test" in current_variation_body
+
+    stale_variation_resp = client.get(
+        f"/recipes/{stale_variation_id}/test",
         follow_redirects=True,
     )
-    assert variation_resp.status_code == 200
-    variation_body = variation_resp.get_data(as_text=True)
-    assert "Tests can only be created from a published master recipe." in variation_body
+    assert stale_variation_resp.status_code == 200
+    stale_variation_body = stale_variation_resp.get_data(as_text=True)
+    assert (
+        "Tests can only be created from a published master or current variation."
+        in stale_variation_body
+    )
 
     test_resp = client.get(
         f"/recipes/{test_id}/test",
@@ -907,4 +931,7 @@ def test_create_test_route_blocks_non_master_bases(app, client):
     )
     assert test_resp.status_code == 200
     test_body = test_resp.get_data(as_text=True)
-    assert "Tests can only be created from a published master recipe." in test_body
+    assert (
+        "Tests can only be created from a published master or current variation."
+        in test_body
+    )

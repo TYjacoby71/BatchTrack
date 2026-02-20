@@ -592,8 +592,8 @@
           </a>
           {% endif %}
           {% if can_create_variations %}
-          {% if recipe.is_master and not is_test %}
-          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' %}
+          {% if not is_test and recipe.status == 'published' and (recipe.is_master or recipe.is_current) %}
+          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test different versions of this current variation.' %}
           <div class="d-flex gap-2 align-items-stretch">
             <a href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}"
                class="btn btn-outline-primary flex-grow-1{% if version_disabled %} disabled{% endif %}"
@@ -609,6 +609,8 @@
               <i class="fas fa-info-circle"></i>
             </button>
           </div>
+          {% endif %}
+          {% if recipe.is_master and not is_test %}
           <div class="d-flex gap-2 align-items-stretch">
             <button type="button"
                     class="btn btn-outline-success flex-grow-1{% if version_disabled %} disabled{% endif %}"
