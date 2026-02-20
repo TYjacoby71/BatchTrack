@@ -812,6 +812,7 @@ def test_view_recipe_shows_lineage_display_names(app, client):
         )
         assert test_ok, test_recipe
 
+        master_id = master.id
         variation_id = variation.id
         variation_name = variation.variation_name
         test_id = test_recipe.id
@@ -827,9 +828,83 @@ def test_view_recipe_shows_lineage_display_names(app, client):
     variation_body = variation_response.get_data(as_text=True)
     assert f"{group_name} - {variation_name}" in variation_body
 
+    master_response = client.get(f"/recipes/{master_id}/view")
+    assert master_response.status_code == 200
+    master_body = master_response.get_data(as_text=True)
+    assert f"/recipes/{master_id}/test" in master_body
+
     test_response = client.get(f"/recipes/{test_id}/view")
     assert test_response.status_code == 200
     test_body = test_response.get_data(as_text=True)
     expected_test_name = f"{group_name} - Test {test_sequence}"
     assert expected_test_name in test_body
     assert f"{expected_test_name} - Test {test_sequence}" not in test_body
+    assert f"/recipes/{test_id}/test" not in test_body
+
+
+def test_create_test_route_blocks_non_master_bases(app, client):
+    with app.app_context():
+        user_id = User.query.first().id
+        category = _create_category("TestRouteGuard")
+        ingredient = _create_ingredient()
+        master_name = _unique_name("Guard Master")
+
+        create_ok, master = create_recipe(
+            name=master_name,
+            instructions="Guard base",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="GRD",
+            category_id=category.id,
+            status="published",
+        )
+        assert create_ok, master
+
+        variation_ok, variation = create_recipe(
+            name=f"{master_name} Citrus",
+            instructions="Guard variation",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="",
+            category_id=category.id,
+            parent_recipe_id=master.id,
+            status="published",
+        )
+        assert variation_ok, variation
+
+        test_ok, test_recipe = create_test_version(
+            base=master,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Guard master test",
+            ),
+            target_status="published",
+        )
+        assert test_ok, test_recipe
+        variation_id = variation.id
+        test_id = test_recipe.id
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    variation_resp = client.get(
+        f"/recipes/{variation_id}/test",
+        follow_redirects=True,
+    )
+    assert variation_resp.status_code == 200
+    variation_body = variation_resp.get_data(as_text=True)
+    assert "Tests can only be created from a published master recipe." in variation_body
+
+    test_resp = client.get(
+        f"/recipes/{test_id}/test",
+        follow_redirects=True,
+    )
+    assert test_resp.status_code == 200
+    test_body = test_resp.get_data(as_text=True)
+    assert "Tests can only be created from a published master recipe." in test_body
