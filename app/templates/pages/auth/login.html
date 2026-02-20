@@ -12,12 +12,11 @@ Glossary:
     <div class="row w-100 justify-content-center">
         <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
             <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white text-center py-4">
+                <div class="card-header text-white text-center py-4 login-card-header">
                     <h3 class="mb-0">
-                        <i class="fas fa-flask me-2"></i>
                         BatchTrack
                     </h3>
-                    <p class="mb-0 opacity-75">Production Management System</p>
+                    <p class="mb-0 login-card-subtitle">Production Management System</p>
                 </div>
                 <div class="card-body p-5">
                     <!-- Login Form -->
@@ -27,14 +26,14 @@ Glossary:
 
                         <div class="mb-3">
                             <label for="login_username" class="form-label">
-                                <i class="fas fa-user me-1"></i>Email or Username
+                                Email or Username
                             </label>
                             <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your email or username" required>
                         </div>
 
                         <div class="mb-4">
                             <label for="login_password" class="form-label">
-                                <i class="fas fa-lock me-1"></i>Password
+                                Password
                             </label>
                             <input type="password" id="login_password" name="password" class="form-control form-control-lg" placeholder="Enter your password" required>
                         </div>
@@ -51,12 +50,12 @@ Glossary:
                         </div>
                         {% if google_oauth_enabled %}
                         <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
-                            <i class="fab fa-google me-2"></i>Continue with Google
+                            Continue with Google
                         </a>
                         {% endif %}
                         {% if facebook_oauth_enabled %}
                         <a href="{{ url_for('auth.oauth_facebook') }}" class="btn btn-outline-primary w-100 mt-2">
-                            <i class="fab fa-facebook-f me-2"></i>Continue with Facebook
+                            Continue with Facebook
                         </a>
                         {% endif %}
                     </div>
@@ -72,8 +71,8 @@ Glossary:
 
                     <div class="text-center">
                         <p class="mb-2">
-                            <a href="{{ url_for('auth.signup') }}" class="btn btn-outline-success w-100">
-                                <i class="fas fa-rocket me-2"></i>Start Free Trial
+                            <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'login_start_free_trial') }}" class="btn btn-outline-success w-100">
+                                Start Free Trial
                             </a>
                         </p>
                         {% if show_forgot_password or show_resend_verification %}
@@ -92,7 +91,7 @@ Glossary:
                     <!-- Dev Login Button -->
                     <div class="text-center mt-3">
                         <a href="{{ url_for('auth.dev_login') }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-code me-1"></i>Developer Access
+                            Developer Access
                         </a>
                     </div>
                     {% endif %}
@@ -104,7 +103,7 @@ Glossary:
                         <div class="card-footer">
                             {% for message in messages %}
                                 <div class="alert alert-danger mb-0">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+                                    {{ message }}
                                 </div>
                             {% endfor %}
                         </div>
@@ -158,6 +157,14 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: var(--theme-ext-space-2c758fffcd);
     color: var(--color-muted);
     font-size: var(--theme-ext-size-31c120b42b);
+}
+
+.login-card-header {
+    background-color: #0b3f91;
+}
+
+.login-card-subtitle {
+    color: #eaf2ff;
 }
 </style>
 {% endblock %}
