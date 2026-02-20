@@ -1,3 +1,13 @@
+"""Onboarding routes.
+
+Synopsis:
+Serves the guided post-signup onboarding checklist and profile setup flow.
+Handles password setup, workspace profile updates, and checklist completion handoff.
+
+Glossary:
+- Checklist completion: Final onboarding action that sends users to dashboard.
+"""
+
 import re
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -14,6 +24,10 @@ from ...utils.timezone_utils import TimezoneUtils
 onboarding_bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
 
 
+# --- Welcome checklist route ---
+# Purpose: Render/process first-login onboarding checklist and setup details.
+# Inputs: Authenticated user/org context and optional POSTed profile/password fields.
+# Outputs: Rendered onboarding page or redirect to dashboard when setup completes.
 @onboarding_bp.route("/welcome", methods=["GET", "POST"])
 @login_required
 @require_permission("dashboard.view")

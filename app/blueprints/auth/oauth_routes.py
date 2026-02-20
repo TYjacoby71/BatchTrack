@@ -1,4 +1,13 @@
-"""OAuth-specific authentication routes."""
+"""OAuth-specific authentication routes.
+
+Synopsis:
+Handles Google/Facebook OAuth handshakes, callback validation, and account linking.
+Supports login for existing users and redirects new OAuth identities into signup.
+
+Glossary:
+- OAuth callback: Provider redirect endpoint carrying authorization result.
+- OAuth next: Safe, relative post-auth path preserved across OAuth redirects.
+"""
 
 from __future__ import annotations
 
@@ -28,6 +37,10 @@ from . import auth_bp
 logger = logging.getLogger(__name__)
 
 
+# --- Safe relative path ---
+# Purpose: Enforce local-only redirect targets from query/session state.
+# Inputs: Candidate redirect value string from user/session context.
+# Outputs: Sanitized relative path string or None when unsafe/invalid.
 def _safe_relative_path(value: str | None) -> str | None:
     """Allow only local relative redirects to prevent open redirect attacks."""
     if not value or not isinstance(value, str):
@@ -38,6 +51,10 @@ def _safe_relative_path(value: str | None) -> str | None:
     return None
 
 
+# --- OAuth success handler ---
+# Purpose: Finalize OAuth login for existing users or redirect new users to signup.
+# Inputs: Provider identity payload fields (email/oauth ids/name fragments).
+# Outputs: Flask redirect response to dashboard/login/signup destinations.
 def _oauth_success_or_signup_redirect(
     *,
     provider: str,
@@ -125,6 +142,10 @@ def _oauth_success_or_signup_redirect(
     return redirect(url_for("auth.signup", tier="free"))
 
 
+# --- Google OAuth start ---
+# Purpose: Start Google OAuth authorization flow and persist anti-forgery state.
+# Inputs: Optional safe `next` query parameter for post-auth redirect intent.
+# Outputs: Redirect response to Google authorization URL or login fallback.
 @auth_bp.route("/oauth/google")
 @limiter.limit("1200/minute")
 def oauth_google():
@@ -157,6 +178,10 @@ def oauth_google():
     return redirect(authorization_url)
 
 
+# --- Google OAuth callback ---
+# Purpose: Validate callback parameters and exchange OAuth code for user profile.
+# Inputs: Provider callback query args (`state`, `code`, and optional error fields).
+# Outputs: Redirect response from shared OAuth success/signup handling.
 @auth_bp.route("/oauth/callback")
 @limiter.limit("1200/minute")
 def oauth_callback():
@@ -227,6 +252,10 @@ def oauth_callback():
         return redirect(url_for("auth.login"))
 
 
+# --- Facebook OAuth start ---
+# Purpose: Start Facebook OAuth authorization flow and persist anti-forgery state.
+# Inputs: Optional safe `next` query parameter for post-auth redirect intent.
+# Outputs: Redirect response to Facebook authorization URL or login fallback.
 @auth_bp.route("/oauth/facebook")
 @limiter.limit("1200/minute")
 def oauth_facebook():
@@ -251,6 +280,10 @@ def oauth_facebook():
     return redirect(authorization_url)
 
 
+# --- Facebook OAuth callback ---
+# Purpose: Validate callback parameters and exchange code for Facebook profile data.
+# Inputs: Provider callback query args (`state`, `code`, and optional error fields).
+# Outputs: Redirect response from shared OAuth success/signup handling.
 @auth_bp.route("/oauth/facebook/callback")
 @limiter.limit("1200/minute")
 def oauth_facebook_callback():
@@ -322,6 +355,10 @@ def oauth_facebook_callback():
         return redirect(url_for("auth.login"))
 
 
+# --- OAuth callback compatibility alias ---
+# Purpose: Preserve compatibility for clients/tests expecting `/auth/callback`.
+# Inputs: None (delegates current request context to canonical callback handler).
+# Outputs: Redirect response from `oauth_callback`.
 @auth_bp.route("/callback")
 @limiter.limit("1200/minute")
 def oauth_callback_compat():
@@ -329,6 +366,10 @@ def oauth_callback_compat():
     return oauth_callback()
 
 
+# --- OAuth debug config ---
+# Purpose: Return debug-only OAuth configuration diagnostics for local troubleshooting.
+# Inputs: Active app config and OAuthService provider-readiness checks.
+# Outputs: JSON configuration payload or 404 when debug mode is disabled.
 @auth_bp.route("/debug/oauth-config")
 def debug_oauth_config():
     """Debug OAuth configuration - only in debug mode."""

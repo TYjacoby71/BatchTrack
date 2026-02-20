@@ -1,4 +1,13 @@
-"""Signup checkout orchestration for auth blueprint routes."""
+"""Signup checkout orchestration service.
+
+Synopsis:
+Builds signup page context, validates submitted plan selections, creates pending
+signup records, and opens provider checkout sessions.
+
+Glossary:
+- Signup request context: Read-only inputs used to render and validate signup flow.
+- Signup submission: Normalized POST payload for checkout creation.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +29,10 @@ from .signup_service import SignupService
 logger = logging.getLogger(__name__)
 
 
+# --- SignupRequestContext ---
+# Purpose: Carry request-scoped signup catalog/context data across helper calls.
+# Inputs: Tier catalog payloads, source/referral metadata, and prefill values.
+# Outputs: Immutable-ish dataclass record consumed by view/submission builders.
 @dataclass
 class SignupRequestContext:
     db_tiers: list[SubscriptionTier]
@@ -40,6 +53,10 @@ class SignupRequestContext:
     prefill_phone: str
 
 
+# --- SignupViewState ---
+# Purpose: Represent selected UI state values rendered back into signup templates.
+# Inputs: Tier/mode/cycle selections plus contact and promo display values.
+# Outputs: Dataclass payload used by template context construction.
 @dataclass
 class SignupViewState:
     selected_tier: str | None
@@ -51,6 +68,10 @@ class SignupViewState:
     promo: str | None
 
 
+# --- SignupSubmission ---
+# Purpose: Store normalized signup submission fields for checkout processing.
+# Inputs: Parsed POST selections, contact fields, promo metadata, and timezone hints.
+# Outputs: Dataclass consumed by validation and checkout session builders.
 @dataclass
 class SignupSubmission:
     selected_tier: str | None
@@ -69,6 +90,10 @@ class SignupSubmission:
     stripe_promotion_code_id: str | None = None
 
 
+# --- SignupFlowResult ---
+# Purpose: Return redirect/flash/view-state outcomes from signup processing steps.
+# Inputs: Optional redirect URL, flash payload, and fallback view state.
+# Outputs: Dataclass consumed by auth route handlers.
 @dataclass
 class SignupFlowResult:
     redirect_url: str | None = None
@@ -77,6 +102,10 @@ class SignupFlowResult:
     view_state: SignupViewState | None = None
 
 
+# --- SignupCheckoutService ---
+# Purpose: Orchestrate signup context assembly and checkout initiation decisions.
+# Inputs: Request context, parsed form payloads, and pricing/provider dependencies.
+# Outputs: SignupFlowResult values plus provider checkout redirect URLs.
 class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 

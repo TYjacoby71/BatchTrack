@@ -1,3 +1,14 @@
+"""Domain event emission helper.
+
+Synopsis:
+Wraps DomainEvent creation and persistence with optional usage-metric enrichment.
+Adds first/second-use indices and timing-from-first-login properties for core events.
+
+Glossary:
+- Core usage event: Event eligible for automatic use-index and timing enrichment.
+- Use index: 1-based counter of how many times a user/org emitted a specific event.
+"""
+
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -12,6 +23,10 @@ from app.models.domain_event import DomainEvent
 logger = logging.getLogger(__name__)
 
 
+# --- EventEmitter ---
+# Purpose: Persist domain events and enrich core-usage analytics properties.
+# Inputs: Event identity metadata, optional actor/entity context, and JSON properties.
+# Outputs: Saved DomainEvent row (or None on guarded failure).
 class EventEmitter:
     """Lightweight event emitter that writes to DomainEvent (outbox style)."""
 
