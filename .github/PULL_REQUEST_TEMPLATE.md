@@ -36,9 +36,9 @@ Use this exact instruction when delegating PR prep:
 - [ ] User-visible behavior and risk notes are captured in Description
 
 ### 5) Validation
-- [ ] Tested locally (as appropriate for scope)
-- [ ] Added/updated tests when behavior changed or a regression was fixed
-- [ ] Ran `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once at finalization and confirmed pass
+- [ ] During implementation, avoid running full validation loops unless explicitly requested (debug-only targeted checks are okay)
+- [ ] At finalization, run tests once (targeted or full, as appropriate) and add/update tests when behavior changed or a regression was fixed
+- [ ] At finalization, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once and confirm pass
 
 ### 6) Documentation and Knowledge Integrity
 - [ ] Updated system docs for feature changes (`docs/system/`)

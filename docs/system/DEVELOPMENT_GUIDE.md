@@ -54,8 +54,9 @@ This guide captures the current engineering workflow and guardrails for changing
    - Update APP_DICTIONARY coverage for touched app paths when applicable.
 
 5. **Run validation tooling**
-   - `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`
-   - Run relevant tests.
+   - During iterative editing, only run targeted checks when needed for debugging.
+   - At finalization, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once.
+   - At finalization, run relevant tests once (targeted or full based on scope).
    - For permission/add-on/tier updates, verify update scripts:
      - `flask update-permissions`
      - `flask update-addons`
