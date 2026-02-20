@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from app.utils.cache_manager import app_cache
@@ -84,18 +86,78 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
     assert calls
 
 
-def test_suspicious_unknown_probe_auto_blocks_request_ip(app):
+def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
     client = app.test_client()
     from app.services.public_bot_trap_service import PublicBotTrapService
 
-    response = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert response.status_code == 404
+    # Strike 1: suspicious probe should still return unknown-path status.
+    first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
+    assert first.status_code == 404
+    still_public = client.get("/tools/", follow_redirects=False)
+    assert still_public.status_code == 200
+
+    # Strike 2: still not blocked.
+    second = client.get("/xmlrpc2.php", follow_redirects=False)
+    assert second.status_code == 404
+    still_public = client.get("/tools/", follow_redirects=False)
+    assert still_public.status_code == 200
+
+    # Strike 3: now the IP should be temporarily blocked.
+    third = client.get(
+        "/wp-content/plugins/hellopress/wp_filemanager.php",
+        follow_redirects=False,
+    )
+    assert third.status_code == 404
 
     state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    assert "127.0.0.1" in (state.get("blocked_ips") or [])
+    ip_blocks = state.get("ip_temporary_blocks") or {}
+    assert "127.0.0.1" in ip_blocks
 
     blocked_response = client.get("/tools/", follow_redirects=False)
     assert blocked_response.status_code == 403
+
+
+def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 2
+    app.config["BOT_TRAP_STRIKE_WINDOW_SECONDS"] = 300
+    app.config["BOT_TRAP_IP_BLOCK_SECONDS"] = 60
+    app.config["BOT_TRAP_IP_BLOCK_MAX_SECONDS"] = 3600
+    app.config["BOT_TRAP_PENALTY_RESET_SECONDS"] = 86400
+
+    base_now = datetime(2026, 2, 20, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_utcnow",
+        staticmethod(lambda: base_now),
+    )
+
+    first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
+    assert first.status_code == 404
+    second = client.get(
+        "/wp-content/plugins/Cache/dropdown.php",
+        follow_redirects=False,
+    )
+    assert second.status_code == 404
+
+    blocked_response = client.get("/tools/", follow_redirects=False)
+    assert blocked_response.status_code == 403
+
+    later = base_now + timedelta(seconds=90)
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_utcnow",
+        staticmethod(lambda: later),
+    )
+
+    unblocked_response = client.get("/tools/", follow_redirects=False)
+    assert unblocked_response.status_code == 200
+
+    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
+    ip_blocks = state.get("ip_temporary_blocks") or {}
+    assert "127.0.0.1" not in ip_blocks
 
 
 def test_non_suspicious_unknown_path_does_not_auto_block(app):
@@ -107,6 +169,7 @@ def test_non_suspicious_unknown_path_does_not_auto_block(app):
 
     state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
     assert "127.0.0.1" not in (state.get("blocked_ips") or [])
+    assert "127.0.0.1" not in (state.get("ip_temporary_blocks") or {})
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
@@ -121,6 +184,7 @@ def test_robots_txt_unknown_path_does_not_auto_block(app):
 
     state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
     assert "127.0.0.1" not in (state.get("blocked_ips") or [])
+    assert "127.0.0.1" not in (state.get("ip_temporary_blocks") or {})
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
