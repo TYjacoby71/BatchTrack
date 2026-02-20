@@ -188,6 +188,8 @@ def login():
         "page_description": "Sign in to BatchTrack to manage production planning, inventory, recipes, and batches.",
         "canonical_url": url_for("auth.login", _external=True),
         "show_public_header": True,
+        "lightweight_public_shell": True,
+        "load_feedback_widget": False,
         "show_dev_login": show_dev_login,
     }
 
@@ -232,13 +234,7 @@ def login():
 
         if not login_identifier or not password:
             flash("Please provide both email/username and password")
-            return render_template(
-                "pages/auth/login.html",
-                form=form,
-                oauth_available=oauth_available,
-                show_forgot_password=show_forgot_password,
-                show_resend_verification=show_resend_verification,
-            )
+            return _render_login_page()
 
         try:
             normalized_identifier = login_identifier.lower()
@@ -443,13 +439,7 @@ def login():
                 "Load test login failed: invalid credentials for %s", login_identifier
             )
         flash("Invalid email/username or password")
-        return render_template(
-            "pages/auth/login.html",
-            form=form,
-            oauth_available=oauth_available,
-            show_forgot_password=show_forgot_password,
-            show_resend_verification=show_resend_verification,
-        )
+        return _render_login_page()
 
     return _render_login_page()
 
@@ -504,6 +494,10 @@ def quick_signup():
         "page_description": "Create your free BatchTrack account to save inventory items, recipes, and production workflows.",
         "canonical_url": url_for("auth.quick_signup", _external=True),
         "show_public_header": True,
+        "lightweight_public_shell": True,
+        "load_analytics": False,
+        "load_fontawesome": False,
+        "load_feedback_widget": False,
     }
 
     def _render_quick_signup_form(

@@ -149,6 +149,16 @@ def resend_verification():
     prefill_email = (request.args.get("email") or "").strip().lower() or (
         (current_user.email if current_user.is_authenticated else "") or ""
     ).strip().lower()
+    resend_page_context = {
+        "page_title": "Resend Email Verification | BatchTrack",
+        "page_description": "Request a new verification link to confirm your BatchTrack account email.",
+        "canonical_url": url_for("auth.resend_verification", _external=True),
+        "show_public_header": True,
+        "lightweight_public_shell": True,
+        "load_analytics": False,
+        "load_fontawesome": False,
+        "load_feedback_widget": False,
+    }
 
     if not EmailService.should_issue_verification_tokens():
         flash("Email verification is disabled for this environment.", "info")
@@ -198,5 +208,7 @@ def resend_verification():
         return redirect(_resolve_resend_redirect_target())
 
     return render_template(
-        "pages/auth/resend_verification.html", prefill_email=prefill_email
+        "pages/auth/resend_verification.html",
+        prefill_email=prefill_email,
+        **resend_page_context,
     )
