@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models import InventoryItem, Organization, ProductCategory, Recipe, User
 from app.models.recipe import RecipeLineage
 from app.services.billing_service import BillingService
+from app.services.developer import organization_service as organization_service_module
 from app.services.developer.organization_service import OrganizationService
 from app.services.developer.user_service import UserService
 
@@ -311,3 +312,47 @@ def test_hard_delete_user_aborts_when_final_customer_cancel_fails(app, monkeypat
         assert success is False
         assert "Failed to cancel Stripe subscription" in message
         assert db.session.get(User, user.id) is not None
+
+
+def test_validate_deletion_accepts_html_escaped_confirmation(monkeypatch):
+    class _FakeCurrentUser:
+        @staticmethod
+        def check_password(password: str) -> bool:
+            return password == "DevPass!123"
+
+    monkeypatch.setattr(
+        organization_service_module,
+        "current_user",
+        _FakeCurrentUser(),
+    )
+
+    success, message = OrganizationService.validate_deletion(
+        "DevPass!123",
+        "DELETE Tyson&#39;s Workspace",
+        "DELETE Tyson's Workspace",
+    )
+
+    assert success is True
+    assert message == ""
+
+
+def test_validate_deletion_rejects_mismatched_confirmation(monkeypatch):
+    class _FakeCurrentUser:
+        @staticmethod
+        def check_password(password: str) -> bool:
+            return password == "DevPass!123"
+
+    monkeypatch.setattr(
+        organization_service_module,
+        "current_user",
+        _FakeCurrentUser(),
+    )
+
+    success, message = OrganizationService.validate_deletion(
+        "DevPass!123",
+        "DELETE Other Workspace",
+        "DELETE Tyson's Workspace",
+    )
+
+    assert success is False
+    assert 'Confirmation text must match exactly: "DELETE Tyson\'s Workspace"' == message

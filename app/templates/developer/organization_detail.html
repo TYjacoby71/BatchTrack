@@ -337,12 +337,14 @@
 <script>
 // Global variable to store current organization user data
 let currentOrgUser = null;
+const organizationId = {{ organization.id }};
+const organizationName = {{ organization.name|tojson }};
 
 // Organization User Management Functions
 async function editOrgUser(userId) {
     const organizationData = {
-        id: {{ organization.id }},
-        name: "{{ organization.name }}"
+        id: organizationId,
+        name: organizationName
     };
     await openUserManagementModal(userId, 'organization', organizationData);
 }
@@ -379,7 +381,7 @@ function deleteOrganization() {
     const form = document.getElementById('deleteOrgForm');
     const password = document.getElementById('developerPassword').value;
     const confirmText = document.getElementById('confirmText').value;
-    const expectedText = `DELETE {{ organization.name }}`;
+    const expectedText = `DELETE ${organizationName}`;
     const understand = document.getElementById('confirmUnderstand').checked;
     const confirmUsers = document.getElementById('confirmUsers').checked;
 
