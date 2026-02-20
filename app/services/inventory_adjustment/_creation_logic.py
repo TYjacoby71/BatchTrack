@@ -565,10 +565,10 @@ def create_inventory_item(
             return False, "Item creation failed - not found after commit", None
 
         try:
-            from ..event_emitter import EventEmitter
+            from ..analytics_tracking_service import AnalyticsTrackingService
 
             creation_source = "global" if global_item else "custom"
-            EventEmitter.emit(
+            AnalyticsTrackingService.emit(
                 event_name="inventory_item_created",
                 properties={
                     "item_type": created_item.type,
@@ -593,7 +593,7 @@ def create_inventory_item(
                 if creation_source == "global"
                 else "inventory_item_custom_created"
             )
-            EventEmitter.emit(
+            AnalyticsTrackingService.emit(
                 event_name=source_event_name,
                 properties={
                     "item_type": created_item.type,

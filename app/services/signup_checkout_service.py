@@ -20,8 +20,8 @@ from flask import url_for
 
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
+from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
-from .event_emitter import EventEmitter
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_plan_catalog_service import SignupPlanCatalogService
 from .signup_service import SignupService
@@ -421,27 +421,24 @@ class SignupCheckoutService:
             )
 
         metadata["pending_signup_id"] = str(pending_signup.id)
-        try:
-            EventEmitter.emit(
-                event_name="signup_checkout_started",
-                properties={
-                    "pending_signup_id": pending_signup.id,
-                    "tier_id": str(submission.selected_tier or ""),
-                    "billing_mode": submission.selected_mode,
-                    "billing_cycle": (
-                        "lifetime"
-                        if submission.selected_mode == "lifetime"
-                        else submission.selected_standard_cycle
-                    ),
-                    "signup_source": context.signup_source,
-                    "is_oauth_signup": bool(submission.oauth_signup),
-                    "seconds_since_first_landing": cls._seconds_since_first_landing(
-                        submission.client_first_landing_at
-                    ),
-                },
-            )
-        except Exception:
-            pass
+        AnalyticsTrackingService.emit(
+            event_name="signup_checkout_started",
+            properties={
+                "pending_signup_id": pending_signup.id,
+                "tier_id": str(submission.selected_tier or ""),
+                "billing_mode": submission.selected_mode,
+                "billing_cycle": (
+                    "lifetime"
+                    if submission.selected_mode == "lifetime"
+                    else submission.selected_standard_cycle
+                ),
+                "signup_source": context.signup_source,
+                "is_oauth_signup": bool(submission.oauth_signup),
+                "seconds_since_first_landing": cls._seconds_since_first_landing(
+                    submission.client_first_landing_at
+                ),
+            },
+        )
         success_url = (
             url_for("billing.complete_signup_from_stripe", _external=True)
             + "?session_id={CHECKOUT_SESSION_ID}"

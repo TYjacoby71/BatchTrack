@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from ..models import ProductSKU, db
 from ..models.product import Product, ProductVariant
-from .event_emitter import EventEmitter
+from .analytics_tracking_service import AnalyticsTrackingService
 
 
 class ProductService:
@@ -67,17 +67,14 @@ class ProductService:
             db.session.add(product)
             db.session.flush()
             # Emit product_created
-            try:
-                EventEmitter.emit(
-                    event_name="product_created",
-                    properties={"product_name": product_name},
-                    organization_id=product.organization_id,
-                    user_id=product.created_by,
-                    entity_type="product",
-                    entity_id=product.id,
-                )
-            except Exception:
-                pass
+            AnalyticsTrackingService.emit(
+                event_name="product_created",
+                properties={"product_name": product_name},
+                organization_id=product.organization_id,
+                user_id=product.created_by,
+                entity_type="product",
+                entity_id=product.id,
+            )
 
         # Get or create ProductVariant
         variant = ProductVariant.query.filter_by(
@@ -100,17 +97,14 @@ class ProductService:
             db.session.add(variant)
             db.session.flush()
             # Emit product_variant_created
-            try:
-                EventEmitter.emit(
-                    event_name="product_variant_created",
-                    properties={"product_id": product.id, "variant_name": variant_name},
-                    organization_id=variant.organization_id,
-                    user_id=variant.created_by,
-                    entity_type="product_variant",
-                    entity_id=variant.id,
-                )
-            except Exception:
-                pass
+            AnalyticsTrackingService.emit(
+                event_name="product_variant_created",
+                properties={"product_id": product.id, "variant_name": variant_name},
+                organization_id=variant.organization_id,
+                user_id=variant.created_by,
+                entity_type="product_variant",
+                entity_id=variant.id,
+            )
 
         # Get existing ProductSKU candidates.
         # For Bulk, prefer exact unit match, then convertible-unit match.
@@ -269,22 +263,19 @@ class ProductService:
             db.session.add(product_sku)
             db.session.flush()
             # Emit sku_created
-            try:
-                EventEmitter.emit(
-                    event_name="sku_created",
-                    properties={
-                        "product_id": product.id,
-                        "variant_id": variant.id,
-                        "size_label": size_label,
-                        "sku_code": sku_code,
-                    },
-                    organization_id=product.organization_id,
-                    user_id=current_user.id,
-                    entity_type="product_sku",
-                    entity_id=product_sku.id,
-                )
-            except Exception:
-                pass
+            AnalyticsTrackingService.emit(
+                event_name="sku_created",
+                properties={
+                    "product_id": product.id,
+                    "variant_id": variant.id,
+                    "size_label": size_label,
+                    "sku_code": sku_code,
+                },
+                organization_id=product.organization_id,
+                user_id=current_user.id,
+                entity_type="product_sku",
+                entity_id=product_sku.id,
+            )
 
             return product_sku
 

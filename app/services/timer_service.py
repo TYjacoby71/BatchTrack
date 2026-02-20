@@ -6,7 +6,7 @@ from flask_login import current_user
 
 from ..models import Batch, BatchTimer, db
 from ..utils.timezone_utils import TimezoneUtils
-from .event_emitter import EventEmitter
+from .analytics_tracking_service import AnalyticsTrackingService
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class TimerService:
             db.session.commit()
             # Emit timer_started event
             try:
-                EventEmitter.emit(
+                AnalyticsTrackingService.emit(
                     event_name="timer_started",
                     properties={
                         "batch_id": batch_id,
@@ -167,7 +167,7 @@ class TimerService:
         db.session.commit()
         # Emit timer_stopped event
         try:
-            EventEmitter.emit(
+            AnalyticsTrackingService.emit(
                 event_name="timer_stopped",
                 properties={
                     "batch_id": timer.batch_id,

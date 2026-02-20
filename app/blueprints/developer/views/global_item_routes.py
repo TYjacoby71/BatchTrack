@@ -903,28 +903,23 @@ def create_global_item():
             db.session.add(new_item)
             db.session.commit()
 
-            try:
-                from app.services.event_emitter import EventEmitter
+            from app.services.analytics_tracking_service import AnalyticsTrackingService
 
-                category_name = None
-                if new_item.ingredient_category_id:
-                    cat_obj = db.session.get(
-                        IngredientCategory, new_item.ingredient_category_id
-                    )
-                    category_name = cat_obj.name if cat_obj else None
-                EventEmitter.emit(
-                    event_name="global_item_created",
-                    properties={
-                        "name": name,
-                        "item_type": item_type,
-                        "ingredient_category": category_name,
-                    },
-                    user_id=getattr(current_user, "id", None),
-                    entity_type="global_item",
-                    entity_id=new_item.id,
-                )
-            except Exception:
-                pass
+            category_name = None
+            if new_item.ingredient_category_id:
+                cat_obj = db.session.get(IngredientCategory, new_item.ingredient_category_id)
+                category_name = cat_obj.name if cat_obj else None
+            AnalyticsTrackingService.emit(
+                event_name="global_item_created",
+                properties={
+                    "name": name,
+                    "item_type": item_type,
+                    "ingredient_category": category_name,
+                },
+                user_id=getattr(current_user, "id", None),
+                entity_type="global_item",
+                entity_id=new_item.id,
+            )
 
             flash(f'Global item "{name}" created successfully', "success")
             return redirect(
@@ -1006,18 +1001,15 @@ def delete_global_item(item_id):
 
         db.session.commit()
 
-        try:
-            from app.services.event_emitter import EventEmitter
+        from app.services.analytics_tracking_service import AnalyticsTrackingService
 
-            EventEmitter.emit(
-                event_name="global_item_deleted",
-                properties={"force_delete": force_delete},
-                user_id=getattr(current_user, "id", None),
-                entity_type="global_item",
-                entity_id=item_id,
-            )
-        except Exception:
-            pass
+        AnalyticsTrackingService.emit(
+            event_name="global_item_deleted",
+            properties={"force_delete": force_delete},
+            user_id=getattr(current_user, "id", None),
+            entity_type="global_item",
+            entity_id=item_id,
+        )
 
         if not force_delete:
             return jsonify(

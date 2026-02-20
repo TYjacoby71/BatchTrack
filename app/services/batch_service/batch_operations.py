@@ -25,8 +25,8 @@ from app.models import (
     db,
 )
 from app.models.batch import BatchConsumable
+from app.services.analytics_tracking_service import AnalyticsTrackingService
 from app.services.base_service import BaseService
-from app.services.event_emitter import EventEmitter
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.lineage_service import generate_lineage_id
 from app.services.unit_conversion.unit_conversion import ConversionEngine
@@ -283,7 +283,7 @@ class BatchOperationsService(BaseService):
 
                 # Emit domain event for batch start (best-effort)
                 try:
-                    EventEmitter.emit(
+                    AnalyticsTrackingService.emit(
                         event_name="batch_started",
                         properties={
                             "recipe_id": snap_recipe_id,
@@ -731,7 +731,7 @@ class BatchOperationsService(BaseService):
 
             # Emit domain event (best-effort)
             try:
-                EventEmitter.emit(
+                AnalyticsTrackingService.emit(
                     event_name="batch_cancelled",
                     properties={
                         "label_code": batch.label_code,
@@ -824,7 +824,7 @@ class BatchOperationsService(BaseService):
                         )
                     except Exception:
                         overall_freshness = None
-                    EventEmitter.emit(
+                    AnalyticsTrackingService.emit(
                         event_name="batch_completed",
                         properties={
                             "label_code": refreshed.label_code,
@@ -883,7 +883,7 @@ class BatchOperationsService(BaseService):
 
             # Emit domain event (best-effort)
             try:
-                EventEmitter.emit(
+                AnalyticsTrackingService.emit(
                     event_name="batch_failed",
                     properties={"label_code": batch.label_code, "reason": reason},
                     organization_id=batch.organization_id,

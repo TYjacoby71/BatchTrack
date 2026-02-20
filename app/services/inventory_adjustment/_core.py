@@ -12,8 +12,8 @@ import logging
 from typing import Any, Dict, Optional
 
 from app.models import InventoryItem, UnifiedInventoryHistory, db
+from app.services.analytics_tracking_service import AnalyticsTrackingService
 from app.services.costing_engine import weighted_average_cost_for_item
-from app.services.event_emitter import EventEmitter
 from app.services.inventory_tracking_policy import (
     org_allows_inventory_quantity_tracking,
 )
@@ -388,10 +388,7 @@ def process_inventory_adjustment(
                 )
 
                 # Emit domain event (non-blocking best-effort; don't fail the operation on emitter errors)
-                try:
-                    EventEmitter.emit(**event_payload, auto_commit=False)
-                except Exception:
-                    pass
+                AnalyticsTrackingService.emit(**event_payload, auto_commit=False)
 
                 return _response(
                     True, message, event_payload if include_event_payload else None
