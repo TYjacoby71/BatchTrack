@@ -592,8 +592,8 @@
           </a>
           {% endif %}
           {% if can_create_variations %}
-          {% if not is_test and recipe.status == 'published' and (recipe.is_master or recipe.is_current) %}
-          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test different versions of this current variation.' %}
+          {% if not is_test and recipe.status == 'published' %}
+          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test this variation version without changing its published formula.' %}
           <div class="d-flex gap-2 align-items-stretch">
             <a href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}"
                class="btn btn-outline-primary flex-grow-1{% if version_disabled %} disabled{% endif %}"

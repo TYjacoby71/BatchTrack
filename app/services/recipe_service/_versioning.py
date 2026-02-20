@@ -108,6 +108,15 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
 def create_test_version(
     base: Recipe, payload: Dict[str, Any], target_status: str
 ) -> Tuple[bool, Any]:
+    if not base:
+        return False, "Recipe not found."
+    if getattr(base, "is_archived", False):
+        return False, "Archived recipes cannot be tested."
+    if getattr(base, "status", None) != "published":
+        return False, "Publish the recipe before creating tests."
+    if getattr(base, "test_sequence", None) is not None:
+        return False, "Tests cannot be created from test recipes."
+
     next_test_sequence = _next_test_sequence(
         base.recipe_group_id,
         is_master=base.is_master,

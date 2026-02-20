@@ -668,7 +668,7 @@ def test_master_test_sequences_reset_per_master_version():
 
 
 @pytest.mark.usefixtures("app_context")
-def test_create_test_from_test_does_not_duplicate_suffix():
+def test_create_test_from_test_is_blocked():
     category = _create_category("NestedTests")
     ingredient = _create_ingredient()
     master_name = _unique_name("Nested Master")
@@ -707,15 +707,12 @@ def test_create_test_from_test_does_not_duplicate_suffix():
         ),
         target_status="published",
     )
-    assert second_test_ok, second_test
-    assert second_test.test_sequence == 2
-    assert second_test.name.endswith(" - Test 2")
-    assert " - Test 1 - Test 2" not in second_test.name
-    assert second_test.name.count("Test") == 1
+    assert not second_test_ok
+    assert second_test == "Tests cannot be created from test recipes."
 
 
 @pytest.mark.usefixtures("app_context")
-def test_build_version_branches_groups_nested_tests_under_master_version():
+def test_build_version_branches_groups_tests_under_master_version():
     from app.blueprints.recipes.lineage_utils import build_version_branches
 
     category = _create_category("BranchGrouping")
@@ -747,7 +744,7 @@ def test_build_version_branches_groups_nested_tests_under_master_version():
     assert first_test_ok, first_test
 
     second_test_ok, second_test = create_test_version(
-        base=first_test,
+        base=master,
         payload=_test_recipe_payload(
             ingredient_id=ingredient.id,
             category_id=category.id,
@@ -765,6 +762,120 @@ def test_build_version_branches_groups_nested_tests_under_master_version():
         branch for branch in master_branches if branch["version"].id == master.id
     )
     assert [test.test_sequence for test in master_branch["tests"]] == [1, 2]
+
+
+@pytest.mark.usefixtures("app_context")
+def test_variation_tests_are_scoped_per_variation_version():
+    from app.blueprints.recipes.lineage_utils import build_version_branches
+
+    category = _create_category("VariationVersionScope")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Variation Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="VVS",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    variation_v1_ok, variation_v1 = create_recipe(
+        name=f"{master_name} Lavender",
+        instructions="Lavender v1",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=master.id,
+        status="published",
+    )
+    assert variation_v1_ok, variation_v1
+    variation_name = variation_v1.variation_name
+
+    variation_v2_ok, variation_v2 = create_recipe(
+        name=variation_v1.name,
+        instructions="Lavender v2",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=variation_v1.id,
+        variation_name=variation_name,
+        status="published",
+    )
+    assert variation_v2_ok, variation_v2
+
+    v1_test_1_ok, v1_test_1 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test one",
+        ),
+        target_status="published",
+    )
+    assert v1_test_1_ok, v1_test_1
+    v2_test_1_ok, v2_test_1 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test one",
+        ),
+        target_status="published",
+    )
+    assert v2_test_1_ok, v2_test_1
+    v1_test_2_ok, v1_test_2 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test two",
+        ),
+        target_status="published",
+    )
+    assert v1_test_2_ok, v1_test_2
+    v2_test_2_ok, v2_test_2 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test two",
+        ),
+        target_status="published",
+    )
+    assert v2_test_2_ok, v2_test_2
+
+    assert [v1_test_1.test_sequence, v1_test_2.test_sequence] == [1, 2]
+    assert [v2_test_1.test_sequence, v2_test_2.test_sequence] == [1, 2]
+    assert v1_test_1.version_number == variation_v1.version_number
+    assert v2_test_1.version_number == variation_v2.version_number
+
+    group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    _, variation_branches = build_version_branches(group_versions)
+    lavender_branch = next(
+        branch
+        for branch in variation_branches
+        if branch["name"].strip().lower() == (variation_name or "").strip().lower()
+    )
+    version_tests = {
+        entry["version"].version_number: [test.test_sequence for test in entry["tests"]]
+        for entry in lavender_branch["versions"]
+    }
+    assert version_tests[variation_v1.version_number] == [1, 2]
+    assert version_tests[variation_v2.version_number] == [1, 2]
 
 
 def test_view_recipe_shows_lineage_display_names(app, client):
@@ -843,7 +954,7 @@ def test_view_recipe_shows_lineage_display_names(app, client):
     assert f"/recipes/{test_id}/test" not in test_body
 
 
-def test_create_test_route_allows_current_variations_and_blocks_others(app, client):
+def test_create_test_route_allows_all_published_variations_and_blocks_tests(app, client):
     with app.app_context():
         user_id = User.query.first().id
         category = _create_category("TestRouteGuard")
@@ -901,7 +1012,7 @@ def test_create_test_route_allows_current_variations_and_blocks_others(app, clie
         )
         assert test_ok, test_recipe
         current_variation_id = promoted_variation.id
-        stale_variation_id = variation.id
+        older_variation_id = variation.id
         test_id = test_recipe.id
 
     with client.session_transaction() as session:
@@ -911,19 +1022,14 @@ def test_create_test_route_allows_current_variations_and_blocks_others(app, clie
     current_variation_resp = client.get(f"/recipes/{current_variation_id}/test")
     assert current_variation_resp.status_code == 200
     current_variation_body = current_variation_resp.get_data(as_text=True)
-    assert "Tests can only be created from a published master or current variation." not in current_variation_body
+    assert "Tests cannot be created from test recipes." not in current_variation_body
     assert f"/recipes/{current_variation_id}/test" in current_variation_body
 
-    stale_variation_resp = client.get(
-        f"/recipes/{stale_variation_id}/test",
-        follow_redirects=True,
-    )
-    assert stale_variation_resp.status_code == 200
-    stale_variation_body = stale_variation_resp.get_data(as_text=True)
-    assert (
-        "Tests can only be created from a published master or current variation."
-        in stale_variation_body
-    )
+    older_variation_resp = client.get(f"/recipes/{older_variation_id}/test")
+    assert older_variation_resp.status_code == 200
+    older_variation_body = older_variation_resp.get_data(as_text=True)
+    assert "Tests cannot be created from test recipes." not in older_variation_body
+    assert f"/recipes/{older_variation_id}/test" in older_variation_body
 
     test_resp = client.get(
         f"/recipes/{test_id}/test",
@@ -931,7 +1037,4 @@ def test_create_test_route_allows_current_variations_and_blocks_others(app, clie
     )
     assert test_resp.status_code == 200
     test_body = test_resp.get_data(as_text=True)
-    assert (
-        "Tests can only be created from a published master or current variation."
-        in test_body
-    )
+    assert "Tests cannot be created from test recipes." in test_body
