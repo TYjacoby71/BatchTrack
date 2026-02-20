@@ -122,26 +122,40 @@ class MiddlewareProbeService:
     def maybe_block_suspicious_unknown_probe(
         cls, *, request, path: str, status_code: int
     ) -> None:
-        """Persist a bot-trap block when an unknown path looks like a scanner probe."""
+        """Apply strike-based bot blocking for suspicious unknown probe paths."""
         if not cls.is_suspicious_unknown_path(path):
             return
         try:
             request_ip = PublicBotTrapService.resolve_request_ip(request)
             if not request_ip or PublicBotTrapService.is_blocked(ip=request_ip):
                 return
-            PublicBotTrapService.record_hit(
+            result = PublicBotTrapService.record_suspicious_probe(
                 request=request,
                 source="middleware_unknown_endpoint",
                 reason="suspicious_unknown_path",
                 extra={"status_code": status_code, "path": path},
-                block=True,
             )
-            logger.warning(
-                "Auto-blocked suspicious unknown-path probe: path=%s ip=%s status=%s",
-                path,
-                request_ip,
-                status_code,
-            )
+            if result.get("blocked"):
+                block_meta = result.get("block") or {}
+                logger.warning(
+                    "Auto-blocked suspicious unknown-path probe: path=%s ip=%s status=%s strikes=%s/%s ttl=%ss level=%s",
+                    path,
+                    request_ip,
+                    status_code,
+                    result.get("strike_count"),
+                    result.get("threshold"),
+                    block_meta.get("block_seconds"),
+                    block_meta.get("level"),
+                )
+            else:
+                logger.debug(
+                    "Recorded suspicious unknown-path probe strike: path=%s ip=%s status=%s strikes=%s/%s",
+                    path,
+                    request_ip,
+                    status_code,
+                    result.get("strike_count"),
+                    result.get("threshold"),
+                )
         except Exception as exc:
             logger.warning(
                 "Unable to auto-block suspicious unknown path %s: %s", path, exc
