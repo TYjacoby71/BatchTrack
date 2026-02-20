@@ -49,6 +49,8 @@ billing_bp = Blueprint("billing", __name__, url_prefix="/billing")
 # =========================================================
 # --- Upgrade page ---
 # Purpose: Show upgrade options and current tier context.
+# Inputs: Authenticated organization context and pricing service responses.
+# Outputs: Rendered upgrade template or redirect with flash on missing org.
 @billing_bp.route("/upgrade")
 @login_required
 @require_permission("organization.manage_billing")
@@ -115,6 +117,8 @@ def upgrade():
 
 # --- Storage add-on checkout ---
 # Purpose: Start the legacy storage add-on checkout if allowed.
+# Inputs: Authenticated organization/tier state and add-on lookup metadata.
+# Outputs: Redirect to checkout session URL or back to billing surfaces.
 @billing_bp.route("/storage")
 @login_required
 @require_permission("organization.manage_billing")
@@ -161,6 +165,8 @@ def storage_addon():
 
 # --- Add-on checkout ---
 # Purpose: Start checkout for an allowed add-on.
+# Inputs: Add-on key path parameter and authenticated org/tier context.
+# Outputs: Redirect to provider checkout URL or billing/settings fallback.
 @billing_bp.route("/addons/start/<addon_key>", methods=["POST"])
 @login_required
 @require_permission("organization.manage_billing")
@@ -216,6 +222,8 @@ def start_addon_checkout(addon_key):
 # =========================================================
 # --- Tier checkout ---
 # Purpose: Start tier checkout (optionally with billing cycle).
+# Inputs: Target tier identifier, optional billing cycle, and org billing state.
+# Outputs: Redirect to checkout URL, downgrade gating screen, or upgrade fallback.
 @billing_bp.route("/checkout/<tier>")
 @billing_bp.route("/checkout/<tier>/<billing_cycle>")
 @login_required
@@ -286,6 +294,8 @@ def checkout(tier, billing_cycle="month"):
 
 # --- Downgrade selection ---
 # Purpose: Collect recipe selections before downgrade checkout.
+# Inputs: Target tier + billing cycle params and optional recipe selection POST data.
+# Outputs: Rendered downgrade template or redirects into checkout/upgrade flow.
 @billing_bp.route("/downgrade/<tier>", methods=["GET", "POST"])
 @billing_bp.route("/downgrade/<tier>/<billing_cycle>", methods=["GET", "POST"])
 @login_required
@@ -341,6 +351,8 @@ def downgrade(tier, billing_cycle="month"):
 # =========================================================
 # --- Whop checkout ---
 # Purpose: Redirect to Whop checkout flow.
+# Inputs: Whop product id path parameter and authenticated org/user context.
+# Outputs: Redirect to Whop checkout URL or billing upgrade fallback.
 @billing_bp.route("/whop-checkout/<product_id>")
 @login_required
 @require_permission("organization.manage_billing")
@@ -371,6 +383,8 @@ def whop_checkout(product_id):
 
 # --- Stripe signup completion ---
 # Purpose: Finalize signup after Stripe checkout.
+# Inputs: Stripe `session_id` query parameter and checkout provisioning result.
+# Outputs: Redirect to login/onboarding/signup with context flash messages.
 @billing_bp.route("/complete-signup-from-stripe")
 def complete_signup_from_stripe():
     """Complete signup process after Stripe payment"""
@@ -437,6 +451,8 @@ def complete_signup_from_stripe():
 
 # --- Whop signup completion ---
 # Purpose: Finalize signup after Whop checkout.
+# Inputs: Whop `license_key` query parameter and authenticated org context.
+# Outputs: Redirect to dashboard/upgrade with activation status messaging.
 @billing_bp.route("/complete-signup-from-whop")
 @login_required
 def complete_signup_from_whop():
@@ -470,6 +486,8 @@ def complete_signup_from_whop():
 # =========================================================
 # --- Customer portal ---
 # Purpose: Redirect to the Stripe customer portal.
+# Inputs: Authenticated organization billing customer identifier.
+# Outputs: Redirect to Stripe customer portal URL or dashboard fallback.
 @billing_bp.route("/customer-portal")
 @login_required
 @require_permission("organization.manage_billing")
@@ -495,6 +513,8 @@ def customer_portal():
 
 # --- Cancel subscription ---
 # Purpose: Cancel the current subscription.
+# Inputs: Authenticated organization billing provider identifiers.
+# Outputs: Redirect to dashboard with success/failure flash messaging.
 @billing_bp.route("/cancel-subscription", methods=["POST"])
 @login_required
 @require_permission("organization.manage_billing")
@@ -533,6 +553,8 @@ def cancel_subscription():
 # =========================================================
 # --- Stripe webhooks ---
 # Purpose: Process Stripe webhooks for billing + add-ons.
+# Inputs: Raw webhook payload bytes and Stripe signature header.
+# Outputs: Empty-body HTTP status responses indicating processing result.
 @billing_bp.route("/webhooks/stripe", methods=["POST"])
 @csrf.exempt
 @limiter.limit("60/minute")
@@ -560,7 +582,10 @@ def stripe_webhook():
         logger.error(f"Webhook signature verification failed: {str(e)}")
         return "", 400
 
-
+# --- Handle subscription change ---
+# Purpose: Apply subscription created/updated webhook payload status to org records.
+# Inputs: Stripe subscription event dictionary with customer/status metadata.
+# Outputs: JSON status payload with HTTP status indicating processing outcome.
 def handle_subscription_change(event):
     """Handle subscription creation or update"""
     try:
@@ -597,7 +622,10 @@ def handle_subscription_change(event):
         logger.error(f"Error handling subscription change: {e}")
         return jsonify({"error": "Processing failed"}), 500
 
-
+# --- Handle subscription deletion ---
+# Purpose: Apply subscription deletion webhook payload status to org records.
+# Inputs: Stripe subscription event dictionary with customer metadata.
+# Outputs: JSON status payload with HTTP status indicating processing outcome.
 def handle_subscription_deleted(event):
     """Handle subscription deletion"""
     try:
@@ -627,6 +655,8 @@ def handle_subscription_deleted(event):
 
 # --- Billing debug ---
 # Purpose: Provide developer billing debug payload.
+# Inputs: Authenticated developer context and active organization billing state.
+# Outputs: Rendered billing debug template or redirect on authorization failure.
 @billing_bp.route("/debug")
 @login_required
 @require_permission("organization.manage_billing")

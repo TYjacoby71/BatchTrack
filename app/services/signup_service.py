@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 # --- Signup service ---
 # Purpose: Orchestrate pending signup records and post-checkout account provisioning.
+# Inputs: Tier/signup metadata, provider checkout artifacts, and organization defaults.
+# Outputs: PendingSignup records or provisioned Organization/User tuples.
 class SignupService:
     """Service for handling complete signup and organization creation"""
 

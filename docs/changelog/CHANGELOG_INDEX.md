@@ -14,6 +14,10 @@ This directory contains the complete history of all fixes, improvements, and cha
 ### 2026
 
 #### February
+- **[2026-02-19: PostHog Funnel Instrumentation and Documentation Guard Remediation](2026-02-19-posthog-funnel-instrumentation-and-doc-guard-remediation.md)**
+  - Added end-to-end PostHog funnel instrumentation across public, auth, onboarding, and core in-app lifecycle events.
+  - Added first/second-use and time-from-first-login enrichment for core activation events.
+  - Added first-landing timing propagation through signup/checkout completion and remediated documentation-guard schema coverage.
 - **[2026-02-18: Legacy Account Forced Verification Modal](2026-02-18-legacy-account-forced-verification-modal.md)**
   - Added 10-day age-based legacy-account flow that force-sends a new verification email and allows login.
   - Added immediate in-app modal guidance plus persistent resend actions in authenticated UI surfaces.

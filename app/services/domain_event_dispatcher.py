@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 # --- DomainEventDispatcher ---
 # Purpose: Deliver queued domain events to external webhooks.
+# Inputs: Runtime sink configuration plus dispatch loop sizing/retry controls.
+# Outputs: Batched delivery metrics and side-effected DomainEvent processing state.
 class DomainEventDispatcher:
     """Outbox dispatcher for processing DomainEvent records asynchronously."""
 
