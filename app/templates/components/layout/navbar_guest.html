@@ -4,7 +4,7 @@ Guest navigation with optional public marketing header component.
 #}
 {% if use_public_header %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
-{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'public_header' %}
+{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else none %}
 {% include 'components/shared/public_marketing_header.html' %}
 {% else %}
 <div class="navbar-nav me-auto"></div>

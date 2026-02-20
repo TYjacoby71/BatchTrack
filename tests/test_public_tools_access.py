@@ -497,6 +497,18 @@ def test_anonymous_workflow_can_browse_public_site(app):
         client, "/lp/robbins", label="landing page (transformation-first)"
     )
     _assert_public_get(client, "/auth/signup", label="signup page")
+    _assert_public_get(client, "/signup", label="signup short path")
+
+
+@pytest.mark.usefixtures("app")
+def test_signup_header_cta_uses_clean_short_path_by_default(app):
+    """Signup header CTA should avoid default source query parameters."""
+    client = app.test_client()
+    response = _assert_public_get(client, "/auth/signup", label="signup page")
+    html = response.get_data(as_text=True)
+
+    assert 'href="/signup"' in html
+    assert "/auth/signup?source=public_header" not in html
 
 
 @pytest.mark.usefixtures("app")

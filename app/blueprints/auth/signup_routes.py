@@ -170,6 +170,6 @@ def signup():
         view_state,
         oauth_available=bool(any(oauth_providers.values())),
         oauth_providers=oauth_providers,
-        canonical_url=url_for("auth.signup", _external=True),
+        canonical_url=url_for("core.signup_alias", _external=True),
     )
     return render_template("pages/auth/signup.html", **template_context)

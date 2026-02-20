@@ -168,6 +168,14 @@ def dev_login_legacy():
     return redirect(url_for("auth.dev_login"), code=301)
 
 
+@core_bp.route("/signup", methods=["GET", "POST"])
+def signup_alias():
+    """Public short-path alias that reuses the auth signup flow."""
+    from app.blueprints.auth.signup_routes import signup as auth_signup_view
+
+    return auth_signup_view()
+
+
 @core_bp.route("/")
 def index():
     """Main landing page with proper routing logic."""

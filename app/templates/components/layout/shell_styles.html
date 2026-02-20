@@ -3,6 +3,11 @@ Synopsis:
 Shared shell-level inline styles for nav, anti-bot fields, and footer links.
 #}
 <style>
+    /* Neutralize legacy global spacing so shell headers sit flush. */
+    body {
+        margin: 0;
+        padding: 0;
+    }
     input[type="hidden"][name="csrf_token"],
     input[type="hidden"][name="confirm_token"],
     .csrf-token,
@@ -52,6 +57,11 @@ Shared shell-level inline styles for nav, anti-bot fields, and footer links.
     }
     .public-marketing-nav {
         border-bottom: 1px solid #e9ecef;
+    }
+    .public-marketing-nav > .container {
+        margin-top: 0;
+        padding-left: var(--bs-gutter-x, 0.75rem);
+        padding-right: var(--bs-gutter-x, 0.75rem);
     }
     .public-marketing-nav .navbar-brand {
         padding-top: 0;

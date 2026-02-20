@@ -9,7 +9,7 @@ Glossary:
 #}
 {% set public_header_home_url = url_for('core.index') %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
-{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else 'homepage_start_free_trial' %}
+{% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else none %}
 {% if global_library_enabled is not defined %}
 {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') %}
 {% endif %}
@@ -18,6 +18,10 @@ Glossary:
 {% set features_href = '#features' if public_header_is_homepage else public_header_home_url ~ '#features' %}
 {% set about_href = '#about' if public_header_is_homepage else public_header_home_url ~ '#about' %}
 {% set contact_href = '#contact' if public_header_is_homepage else public_header_home_url ~ '#contact' %}
+{% set public_header_signup_href = url_for('core.signup_alias') %}
+{% if public_header_signup_source %}
+{% set public_header_signup_href = url_for('auth.signup', source=public_header_signup_source) %}
+{% endif %}
 
 <a class="navbar-brand text-primary" href="{{ public_header_home_url }}" aria-label="BatchTrack home">
     <img
@@ -90,7 +94,7 @@ Glossary:
             </a>
         </li>
         <li class="nav-item">
-            <a class="btn btn-cta text-white ms-2" href="{{ url_for('auth.signup', source=public_header_signup_source) }}">Start Free Trial</a>
+            <a class="btn btn-cta text-white ms-2" href="{{ public_header_signup_href }}">Start Free Trial</a>
         </li>
     </ul>
 </div>
