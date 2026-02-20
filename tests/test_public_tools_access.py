@@ -522,6 +522,7 @@ def test_unauthenticated_public_pages_use_fixed_public_header_system(app):
     """Public pages should use the same fixed marketing header classes."""
     client = app.test_client()
     paths = [
+        ("/", "homepage"),
         ("/tools/", "tools"),
         ("/pricing", "pricing"),
         ("/help/how-it-works", "help"),
