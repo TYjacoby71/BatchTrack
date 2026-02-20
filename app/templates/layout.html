@@ -66,17 +66,14 @@ Glossary:
     <div class="app-container{% if public_shell_mode %} public-shell{% endif %}">
     {% include 'components/layout/navbar.html' %}
     <main{% if shell_main_id %} id="{{ shell_main_id }}"{% endif %} class="{% if public_shell_mode %}{% if public_shell_full_bleed %}public-shell-main public-shell-main-bleed{% else %}container-xl public-shell-main{% endif %}{% else %}container-xl mt-4{% endif %}{% if shell_main_extra_class %} {{ shell_main_extra_class }}{% endif %}">
-        {% if public_shell_full_bleed %}
-            {% include 'components/layout/content_chrome.html' %}
-            {% set verification_required_modal = session.pop('verification_required_modal', None) %}
-            {% set TimezoneUtils = TimezoneUtils_global() %}
-            {% block content %}{% endblock %}
-        {% else %}
+        {% include 'components/layout/content_chrome.html' %}
+        {% set verification_required_modal = session.pop('verification_required_modal', None) %}
+        {% set TimezoneUtils = TimezoneUtils_global() %}
+        {% if not public_shell_full_bleed %}
         <div class="section-spacing{% if public_shell_mode %} public-shell-section{% endif %}">
-            {% include 'components/layout/content_chrome.html' %}
-            {% set verification_required_modal = session.pop('verification_required_modal', None) %}
-            {% set TimezoneUtils = TimezoneUtils_global() %}
+        {% endif %}
             {% block content %}{% endblock %}
+        {% if not public_shell_full_bleed %}
         </div>
         {% endif %}
     </main>
