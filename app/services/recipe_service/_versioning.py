@@ -17,7 +17,7 @@ from typing import Any, Dict, Tuple
 import sqlalchemy as sa
 
 from ...extensions import db
-from ...models import Recipe
+from ...models import Recipe, RecipeGroup
 from ._core import _next_test_sequence, create_recipe
 from ._current import apply_current_flag
 from ._lineage import _log_lineage_event
@@ -36,14 +36,28 @@ def _strip_test_suffix(value: str | None) -> str:
     return _TEST_SUFFIX_PATTERN.sub("", value).strip()
 
 
+# --- Resolve test base name ---
+# Purpose: Resolve a stable base name used for generated test names.
+# Inputs: Base recipe (master/variation/test).
+# Outputs: Canonical branch name with no trailing test suffixes.
+def _resolve_test_base_name(base: Recipe) -> str:
+    if base.is_master:
+        raw_name = (
+            (base.recipe_group.name if getattr(base, "recipe_group", None) else None)
+            or _strip_test_suffix(base.name)
+            or "Recipe"
+        )
+    else:
+        raw_name = base.variation_name or _strip_test_suffix(base.name) or "Variation"
+    return str(raw_name).strip().rstrip("-").strip()
+
+
 # --- Build test template ---
 # Purpose: Build a test recipe template from a base.
 # Inputs: Base recipe and optional explicit test sequence number.
 # Outputs: Unsaved Recipe model prefilled with branch/test metadata.
 def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Recipe:
-    test_name = base.name
-    if not base.is_master and base.variation_name:
-        test_name = base.variation_name
+    test_name = _resolve_test_base_name(base)
     if test_sequence:
         test_name = f"{test_name} - Test {test_sequence}"
     template = Recipe(
@@ -98,10 +112,9 @@ def create_test_version(
         base.recipe_group_id,
         is_master=base.is_master,
         variation_name=base.variation_name,
+        version_number=base.version_number,
     )
-    base_name = base.name
-    if not base.is_master and base.variation_name:
-        base_name = base.variation_name
+    base_name = _resolve_test_base_name(base)
     test_name = f"{base_name} - Test {next_test_sequence}"
     test_payload = dict(payload)
     test_payload.update(
@@ -135,6 +148,7 @@ def get_next_test_sequence(base: Recipe) -> int:
         base.recipe_group_id,
         is_master=base.is_master,
         variation_name=base.variation_name,
+        version_number=base.version_number,
     )
 
 
@@ -174,7 +188,7 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
     recipe.version_number = int(max_version) + 1
     recipe.test_sequence = None
     if recipe.is_master:
-        restored_master_name = (
+        restored_master_name = _strip_test_suffix(
             (recipe.recipe_group.name if recipe.recipe_group else None)
             or (
                 parent_recipe.recipe_group.name
@@ -186,6 +200,14 @@ def promote_test_to_current(recipe_id: int) -> Tuple[bool, Any]:
         )
         if restored_master_name:
             recipe.name = restored_master_name
+            if recipe.recipe_group and recipe.recipe_group.name != restored_master_name:
+                conflict = RecipeGroup.query.filter(
+                    RecipeGroup.organization_id == recipe.organization_id,
+                    RecipeGroup.name == restored_master_name,
+                    RecipeGroup.id != recipe.recipe_group_id,
+                ).first()
+                if not conflict:
+                    recipe.recipe_group.name = restored_master_name
     else:
         restored_variation_name = (
             recipe.variation_name

@@ -615,3 +615,221 @@ def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, cli
     body = response.get_data(as_text=True)
     assert variation_label in body
     assert f"/recipes/{promoted_master_id}/view" in body
+
+
+@pytest.mark.usefixtures("app_context")
+def test_master_test_sequences_reset_per_master_version():
+    category = _create_category("MasterSequence")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Sequence Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="SEQ",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+    assert first_test.test_sequence == 1
+
+    promote_ok, promoted_master = promote_test_to_current(first_test.id)
+    assert promote_ok, promoted_master
+    assert promoted_master.version_number == 2
+
+    second_test_ok, second_test = create_test_version(
+        base=promoted_master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second version first test",
+        ),
+        target_status="published",
+    )
+    assert second_test_ok, second_test
+    assert second_test.version_number == promoted_master.version_number
+    assert second_test.test_sequence == 1
+    assert second_test.name.endswith(" - Test 1")
+
+
+@pytest.mark.usefixtures("app_context")
+def test_create_test_from_test_does_not_duplicate_suffix():
+    category = _create_category("NestedTests")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Nested Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="NST",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First nested test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+    assert first_test.test_sequence == 1
+
+    second_test_ok, second_test = create_test_version(
+        base=first_test,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second nested test",
+        ),
+        target_status="published",
+    )
+    assert second_test_ok, second_test
+    assert second_test.test_sequence == 2
+    assert second_test.name.endswith(" - Test 2")
+    assert " - Test 1 - Test 2" not in second_test.name
+    assert second_test.name.count("Test") == 1
+
+
+@pytest.mark.usefixtures("app_context")
+def test_build_version_branches_groups_nested_tests_under_master_version():
+    from app.blueprints.recipes.lineage_utils import build_version_branches
+
+    category = _create_category("BranchGrouping")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Branch Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="BRN",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First grouped test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+
+    second_test_ok, second_test = create_test_version(
+        base=first_test,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second grouped test",
+        ),
+        target_status="published",
+    )
+    assert second_test_ok, second_test
+
+    group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    master_branches, _ = build_version_branches(group_versions)
+    master_branch = next(
+        branch for branch in master_branches if branch["version"].id == master.id
+    )
+    assert [test.test_sequence for test in master_branch["tests"]] == [1, 2]
+
+
+def test_view_recipe_shows_lineage_display_names(app, client):
+    with app.app_context():
+        user_id = User.query.first().id
+        category = _create_category("LineageDisplay")
+        ingredient = _create_ingredient()
+        master_name = _unique_name("Display Master")
+
+        create_ok, master = create_recipe(
+            name=master_name,
+            instructions="Display base",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="DSP",
+            category_id=category.id,
+            status="published",
+        )
+        assert create_ok, master
+
+        variation_ok, variation = create_recipe(
+            name=f"{master_name} Lavender",
+            instructions="Display variation",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="",
+            category_id=category.id,
+            parent_recipe_id=master.id,
+            status="published",
+        )
+        assert variation_ok, variation
+
+        test_ok, test_recipe = create_test_version(
+            base=master,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Display test",
+            ),
+            target_status="published",
+        )
+        assert test_ok, test_recipe
+
+        variation_id = variation.id
+        variation_name = variation.variation_name
+        test_id = test_recipe.id
+        test_sequence = test_recipe.test_sequence
+        group_name = master.recipe_group.name
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    variation_response = client.get(f"/recipes/{variation_id}/view")
+    assert variation_response.status_code == 200
+    variation_body = variation_response.get_data(as_text=True)
+    assert f"{group_name} - {variation_name}" in variation_body
+
+    test_response = client.get(f"/recipes/{test_id}/view")
+    assert test_response.status_code == 200
+    test_body = test_response.get_data(as_text=True)
+    expected_test_name = f"{group_name} - Test {test_sequence}"
+    assert expected_test_name in test_body
+    assert f"{expected_test_name} - Test {test_sequence}" not in test_body

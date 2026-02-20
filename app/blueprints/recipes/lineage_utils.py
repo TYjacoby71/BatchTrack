@@ -121,12 +121,28 @@ def build_lineage_path(
 # Inputs: Recipe collection for one lineage group.
 # Outputs: Tuple of master branch data and variation branch data.
 def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict]]:
+    def _sorted_unique_tests(values: List[Recipe]) -> List[Recipe]:
+        deduped: Dict[int, Recipe] = {}
+        for value in values:
+            if value and getattr(value, "id", None):
+                deduped[int(value.id)] = value
+        return sorted(
+            deduped.values(),
+            key=lambda r: (
+                int(getattr(r, "test_sequence", 0) or 0),
+                int(getattr(r, "id", 0) or 0),
+            ),
+        )
+
     masters = [
         r
         for r in recipes
         if getattr(r, "is_master", False) and getattr(r, "test_sequence", None) is None
     ]
     masters.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
+    master_version_ids: Dict[int, int] = {
+        int(getattr(master, "version_number", 0) or 0): int(master.id) for master in masters
+    }
 
     master_tests = [
         r
@@ -134,20 +150,31 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
         if getattr(r, "is_master", False)
         and getattr(r, "test_sequence", None) is not None
     ]
+    master_tests_by_version: Dict[int, List[Recipe]] = {}
     master_tests_by_parent: Dict[int, List[Recipe]] = {}
     for test in master_tests:
+        version_number = int(getattr(test, "version_number", 0) or 0)
+        if version_number in master_version_ids:
+            master_tests_by_version.setdefault(version_number, []).append(test)
         parent_id = getattr(test, "parent_recipe_id", None) or getattr(
             test, "parent_master_id", None
         )
         if parent_id:
             master_tests_by_parent.setdefault(int(parent_id), []).append(test)
     for tests in master_tests_by_parent.values():
-        tests.sort(key=lambda r: int(getattr(r, "test_sequence", 0) or 0))
+        tests[:] = _sorted_unique_tests(tests)
+    for tests in master_tests_by_version.values():
+        tests[:] = _sorted_unique_tests(tests)
 
     master_branches: List[dict] = [
         {
             "version": master,
-            "tests": master_tests_by_parent.get(master.id, []),
+            "tests": _sorted_unique_tests(
+                master_tests_by_version.get(
+                    int(getattr(master, "version_number", 0) or 0), []
+                )
+                + master_tests_by_parent.get(master.id, [])
+            ),
         }
         for master in masters
     ]
@@ -168,13 +195,41 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
         if not getattr(r, "is_master", False)
         and getattr(r, "test_sequence", None) is not None
     ]
+    variation_version_ids: Dict[Tuple[str, int], int] = {}
+    for version in variations:
+        version_key = (
+            (
+                getattr(version, "variation_name", None)
+                or getattr(version, "name", None)
+                or ""
+            )
+            .strip()
+            .lower(),
+            int(getattr(version, "version_number", 0) or 0),
+        )
+        if version_key[0] and version_key[1] > 0:
+            variation_version_ids[version_key] = int(version.id)
+
+    variation_tests_by_version: Dict[Tuple[str, int], List[Recipe]] = {}
     variation_tests_by_parent: Dict[int, List[Recipe]] = {}
     for test in variation_tests:
+        test_version_key = (
+            (
+                getattr(test, "variation_name", None) or getattr(test, "name", None) or ""
+            )
+            .strip()
+            .lower(),
+            int(getattr(test, "version_number", 0) or 0),
+        )
+        if test_version_key in variation_version_ids:
+            variation_tests_by_version.setdefault(test_version_key, []).append(test)
         parent_id = getattr(test, "parent_recipe_id", None)
         if parent_id:
             variation_tests_by_parent.setdefault(int(parent_id), []).append(test)
     for tests in variation_tests_by_parent.values():
-        tests.sort(key=lambda r: int(getattr(r, "test_sequence", 0) or 0))
+        tests[:] = _sorted_unique_tests(tests)
+    for tests in variation_tests_by_version.values():
+        tests[:] = _sorted_unique_tests(tests)
 
     variation_map: Dict[str, dict] = {}
     for version in variations:
@@ -192,7 +247,16 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
         branch["versions"].append(
             {
                 "version": version,
-                "tests": variation_tests_by_parent.get(version.id, []),
+                "tests": _sorted_unique_tests(
+                    variation_tests_by_version.get(
+                        (
+                            variation_key,
+                            int(getattr(version, "version_number", 0) or 0),
+                        ),
+                        [],
+                    )
+                    + variation_tests_by_parent.get(version.id, [])
+                ),
             }
         )
     variation_branches = sorted(variation_map.values(), key=lambda b: b["name"].lower())

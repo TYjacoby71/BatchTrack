@@ -6,17 +6,7 @@
 
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
-{% set display_recipe_name = recipe.name %}
-{% if not recipe.is_master %}
-  {% set base_name = recipe.variation_name or recipe.name %}
-  {% if is_test %}
-    {% set display_recipe_name = base_name ~ ' - Test ' ~ recipe.test_sequence %}
-  {% else %}
-    {% set display_recipe_name = base_name %}
-  {% endif %}
-{% elif is_test %}
-  {% set display_recipe_name = recipe.name ~ ' - Test ' ~ recipe.test_sequence %}
-{% endif %}
+{% set display_recipe_name = recipe|lineage_recipe_name(true) %}
 {% set breadcrumb_items = [
     {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
     {'label': display_recipe_name, 'url': None}
