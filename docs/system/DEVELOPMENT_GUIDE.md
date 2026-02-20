@@ -49,8 +49,8 @@ This guide captures the current engineering workflow and guardrails for changing
 
 4. **Complete required documentation**
    - Update relevant `docs/system/*.md` files for current-state behavior changes.
-   - Add dated changelog entry in `docs/changelog/` for app behavior changes.
-   - Keep `docs/changelog/CHANGELOG_INDEX.md` linked.
+   - Add dated changelog entry in `docs/changelog/` when you want release-history tracking for the change.
+   - If a changelog entry is added, keep `docs/changelog/CHANGELOG_INDEX.md` linked.
    - Update APP_DICTIONARY coverage for touched app paths when applicable.
 
 5. **Run validation tooling**
