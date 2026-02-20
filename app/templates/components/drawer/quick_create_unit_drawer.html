@@ -12,11 +12,11 @@
                 <form id="quickCreateUnitForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label class="form-label">Unit Name</label>
+                        <label class="form-label" for="qcUnitName">Unit Name</label>
                         <input type="text" class="form-control" id="qcUnitName" placeholder="e.g., pinch">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Type</label>
+                        <label class="form-label" for="qcUnitType">Type</label>
                         <select class="form-select" id="qcUnitType">
                             <option value="weight">Weight</option>
                             <option value="volume">Volume</option>

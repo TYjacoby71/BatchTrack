@@ -27,6 +27,7 @@
                      step="any" 
                      min="0">
             </div>
+            <label class="visually-hidden" for="fromUnit">From unit</label>
             <select id="fromUnit" class="form-select">
               <option value="">Select unit...</option>
               {% for unit in global_units %}
@@ -37,7 +38,7 @@
 
           <!-- Convert Arrow/Button -->
           <div class="col-md-2 text-center">
-            <button type="button" id="convertButton" class="btn btn-primary btn-lg rounded-circle" style="width: 60px; height: 60px;">
+            <button type="button" id="convertButton" class="btn btn-primary btn-lg rounded-circle" style="width: 60px; height: 60px;" aria-label="Convert units">
               <i class="fas fa-arrow-right"></i>
             </button>
           </div>
@@ -52,6 +53,7 @@
                      placeholder="Result" 
                      readonly>
             </div>
+            <label class="visually-hidden" for="toUnit">To unit</label>
             <select id="toUnit" class="form-select">
               <option value="">Select unit...</option>
               {% for unit in global_units %}

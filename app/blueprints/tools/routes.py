@@ -156,6 +156,7 @@ def tools_soap():
     return _render_tool(
         "tools/soaps/index.html",
         "TOOLS_SOAP",
+        load_analytics=False,
         calc_limit=calc_limit,
         calc_tier=calc_tier,
         soap_policy=get_soap_tool_policy(),

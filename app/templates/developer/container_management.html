@@ -67,7 +67,7 @@
                         {% for material in curated_materials %}
                         <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
                             <span class="fw-medium">{{ material }}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('materials', '{{ material }}')">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('materials', '{{ material }}')" aria-label="Remove material {{ material }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -96,7 +96,7 @@
                         {% for type in curated_types %}
                         <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
                             <span class="fw-medium">{{ type }}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('types', '{{ type }}')">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('types', '{{ type }}')" aria-label="Remove type {{ type }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -125,7 +125,7 @@
                         {% for style in curated_styles %}
                         <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
                             <span class="fw-medium">{{ style }}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('styles', '{{ style }}')">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('styles', '{{ style }}')" aria-label="Remove style {{ style }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -154,7 +154,7 @@
                         {% for color in curated_colors %}
                         <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
                             <span class="fw-medium">{{ color }}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('colors', '{{ color }}')">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('colors', '{{ color }}')" aria-label="Remove color {{ color }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -320,7 +320,7 @@ function renderList(listType) {
         div.className = 'd-flex align-items-center justify-content-between mb-2 p-2 border rounded';
         div.innerHTML = `
             <span class="fw-medium">${item}</span>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('${listType}', '${item}')">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('${listType}', '${item}')" aria-label="Remove ${item}">
                 <i class="fas fa-times"></i>
             </button>
         `;

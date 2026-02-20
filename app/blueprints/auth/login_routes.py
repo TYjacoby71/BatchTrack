@@ -189,7 +189,10 @@ def login():
         "canonical_url": url_for("auth.login", _external=True),
         "show_public_header": True,
         "lightweight_public_shell": True,
+        "load_analytics": False,
+        "load_fontawesome": False,
         "load_feedback_widget": False,
+        "public_header_signup_source": "login_start_free_trial",
         "show_dev_login": show_dev_login,
     }
 

@@ -3,16 +3,16 @@
     <div class="card-header soap-guidance-header">
       <div class="soap-guidance-header-meta">
         <div class="d-flex align-items-center gap-2">
-          <strong>Guidance</strong>
+          <strong id="soapGuidanceHeading">Guidance</strong>
           <span class="badge text-bg-secondary" id="soapGuidanceCount">0</span>
         </div>
         <div class="small text-muted text-truncate" id="soapGuidanceSummary">No active formula hints from your current configuration.</div>
       </div>
-      <button class="btn btn-sm btn-outline-secondary soap-guidance-toggle" type="button" id="soapGuidanceToggle" aria-expanded="false" aria-label="Expand guidance panel" title="Expand guidance panel">
+      <button class="btn btn-sm btn-outline-secondary soap-guidance-toggle" type="button" id="soapGuidanceToggle" aria-controls="soapGuidanceOverlay" aria-expanded="false" aria-label="Expand guidance panel" title="Expand guidance panel">
         <i class="fas fa-caret-up" aria-hidden="true"></i>
       </button>
     </div>
-    <div class="soap-guidance-overlay" id="soapGuidanceOverlay" aria-hidden="true">
+    <div class="soap-guidance-overlay" id="soapGuidanceOverlay" aria-hidden="true" role="region" aria-labelledby="soapGuidanceHeading" inert>
       <div class="card-body soap-guidance-body">
         <div class="small text-muted mb-2" id="soapGuidanceEmpty">No guidance sections are active yet.</div>
         <div class="soap-guidance-sections" id="soapGuidanceSections"></div>

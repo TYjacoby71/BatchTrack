@@ -177,13 +177,13 @@
                                     <td>{{ user.created_at.strftime('%m/%d/%y') if user.created_at else 'N/A' }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" onclick="editOrgUser({{ user.id }})">
+                                            <button class="btn btn-outline-primary" onclick="editOrgUser({{ user.id }})" aria-label="Edit user {{ user.username }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-outline-info" onclick="loginAsOrgUser({{ user.id }})">
+                                            <button class="btn btn-outline-info" onclick="loginAsOrgUser({{ user.id }})" aria-label="Impersonate user {{ user.username }}">
                                                 <i class="fas fa-sign-in-alt"></i>
                                             </button>
-                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleOrgUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleOrgUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})" aria-label="{{ 'Deactivate' if user.is_active else 'Activate' }} user {{ user.username }}">
                                                 <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i>
                                             </button>
                                         </div>
