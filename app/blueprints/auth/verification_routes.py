@@ -102,19 +102,44 @@ def _resolve_resend_redirect_target() -> str:
     return url_for("auth.login")
 
 
+# --- Resolve post-verify redirect target ---
+# Purpose: Return the most appropriate post-verification destination.
+# Inputs: Current auth context.
+# Outputs: Redirect path to dashboard/login.
+def _resolve_verify_redirect_target() -> str:
+    if current_user.is_authenticated:
+        if getattr(current_user, "user_type", None) == "developer":
+            return url_for("developer.dashboard")
+        return url_for("app_routes.dashboard")
+    return url_for("auth.login")
+
+
 # --- Verify email route ---
 # Purpose: Mark mailbox ownership as verified when token is valid and unexpired.
 # Inputs: Verification token path parameter from email link.
 # Outputs: Redirect response with success/error flash messaging.
-@auth_bp.route("/verify-email/<token>")
+@auth_bp.route("/verify-email/<token>", methods=["GET", "HEAD"])
 @limiter.limit("600/minute")
 def verify_email(token):
     """Verify email address."""
     try:
+        # Many email/link scanners preflight verification links with HEAD.
+        # Never consume one-time tokens on probe methods.
+        if request.method == "HEAD":
+            return "", 204
+
         user = User.query.filter_by(email_verification_token=token).first()
         if not user:
-            flash("Invalid verification link.", "error")
-            return redirect(url_for("auth.login"))
+            if current_user.is_authenticated and bool(
+                getattr(current_user, "email_verified", False)
+            ):
+                flash("Your email is already verified.", "info")
+                return redirect(_resolve_verify_redirect_target())
+            flash(
+                "This verification link is invalid or already used. Please request a new one.",
+                "warning",
+            )
+            return redirect(url_for("auth.resend_verification"))
 
         sent_at = TimezoneUtils.ensure_timezone_aware(user.email_verification_sent_at)
         if sent_at:
@@ -130,12 +155,15 @@ def verify_email(token):
         user.email_verification_sent_at = None
         db.session.commit()
 
-        flash("Email verified successfully! You can now log in.", "success")
-        return redirect(url_for("auth.login"))
+        if current_user.is_authenticated:
+            flash("Email verified successfully.", "success")
+        else:
+            flash("Email verified successfully! You can now log in.", "success")
+        return redirect(_resolve_verify_redirect_target())
     except Exception as exc:
         logger.error("Email verification error: %s", str(exc))
         flash("Email verification failed. Please try again.", "error")
-        return redirect(url_for("auth.login"))
+        return redirect(_resolve_verify_redirect_target())
 
 
 # --- Resend verification route ---

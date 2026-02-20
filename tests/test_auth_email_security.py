@@ -213,6 +213,69 @@ def test_authenticated_resend_verification_uses_specific_message(client, app, mo
         )
 
 
+# --- Verify-email HEAD safety ---
+# Purpose: Ensure HEAD probes do not consume one-time verification tokens.
+def test_verify_email_head_does_not_consume_token(client, app):
+    with app.app_context():
+        user = _create_user(
+            username=f"verify_head_{uuid.uuid4().hex[:6]}",
+            email=f"verify_head_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=False,
+        )
+        token = f"verify-{uuid.uuid4().hex}"
+        user.email_verification_token = token
+        user.email_verification_sent_at = TimezoneUtils.utc_now()
+        db.session.commit()
+        email = user.email
+
+    response = client.head(f"/auth/verify-email/{token}", follow_redirects=False)
+    assert response.status_code == 204
+
+    with app.app_context():
+        refreshed = User.query.filter_by(email=email).first()
+        assert refreshed is not None
+        assert refreshed.email_verified is False
+        assert refreshed.email_verification_token == token
+
+
+# --- Invalid token behavior for verified sessions ---
+# Purpose: Avoid scary invalid-link flashes for already-verified authenticated users.
+def test_verify_email_invalid_token_for_verified_session_redirects_to_dashboard(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"verify_done_{uuid.uuid4().hex[:6]}",
+            email=f"verify_done_{uuid.uuid4().hex[:6]}@example.com",
+            password="pass-12345",
+            verified=True,
+        )
+        username = user.username
+
+    login_response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "pass-12345"},
+        follow_redirects=False,
+    )
+    assert login_response.status_code == 302
+
+    response = client.get(
+        "/auth/verify-email/not-a-real-token",
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert (
+        "/dashboard" in response.headers["Location"]
+        or "/user_dashboard" in response.headers["Location"]
+    )
+
+    with client.session_transaction() as sess:
+        flashes = [message for _category, message in sess.get("_flashes", [])]
+        assert any("already verified" in msg.lower() for msg in flashes)
+
+
 # --- Email identifier login ---
 # Purpose: Verify login accepts email as credential identifier in addition to username.
 def test_login_accepts_email_identifier(client, app):
