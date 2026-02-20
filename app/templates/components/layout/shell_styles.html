@@ -4,9 +4,16 @@ Shared shell-level inline styles for nav, anti-bot fields, and footer links.
 #}
 <style>
     /* Neutralize legacy global spacing so shell headers sit flush. */
+    :root {
+        --public-navbar-height: 72px;
+    }
     body {
         margin: 0;
         padding: 0;
+    }
+    body.public-shell-body {
+        padding-top: var(--public-navbar-height);
+        scroll-padding-top: calc(var(--public-navbar-height) + 16px);
     }
     input[type="hidden"][name="csrf_token"],
     input[type="hidden"][name="confirm_token"],
@@ -56,12 +63,20 @@ Shared shell-level inline styles for nav, anti-bot fields, and footer links.
         min-height: auto;
     }
     .public-marketing-nav {
+        min-height: var(--public-navbar-height);
         border-bottom: 1px solid #e9ecef;
     }
     .public-marketing-nav > .container {
         margin-top: 0;
+        min-height: var(--public-navbar-height);
         padding-left: var(--bs-gutter-x, 0.75rem);
         padding-right: var(--bs-gutter-x, 0.75rem);
+    }
+    .public-shell-main {
+        margin-top: 0;
+    }
+    .public-shell-section {
+        margin-top: 1rem;
     }
     .public-marketing-nav .navbar-brand {
         padding-top: 0;

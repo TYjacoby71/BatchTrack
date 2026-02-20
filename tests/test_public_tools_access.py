@@ -6,6 +6,12 @@ import pytest
 _HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
 
 
+def _first_nav_classes(html: str) -> str:
+    match = re.search(r'<nav class="([^"]+)"', html)
+    assert match is not None, "Expected a navbar element in response HTML"
+    return match.group(1)
+
+
 def _assert_public_get(client, path: str, *, label: str, **kwargs):
     """Helper to ensure a GET stays public and does not bounce to login."""
     response = client.get(path, follow_redirects=False, **kwargs)
@@ -509,6 +515,46 @@ def test_signup_header_cta_uses_clean_short_path_by_default(app):
 
     assert 'href="/signup"' in html
     assert "/auth/signup?source=public_header" not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_unauthenticated_public_pages_use_fixed_public_header_system(app):
+    """Public pages should use the same fixed marketing header classes."""
+    client = app.test_client()
+    paths = [
+        ("/tools/", "tools"),
+        ("/pricing", "pricing"),
+        ("/help/how-it-works", "help"),
+        ("/auth/signup", "signup"),
+    ]
+
+    for path, label in paths:
+        response = _assert_public_get(client, path, label=label)
+        nav_classes = _first_nav_classes(response.get_data(as_text=True))
+        assert "public-marketing-nav" in nav_classes
+        assert "fixed-top" in nav_classes
+
+
+@pytest.mark.usefixtures("app")
+def test_authenticated_views_use_app_header_system(app):
+    """Signed-in visitors should get the app-style navbar, not public shell nav."""
+    from app.models.models import User
+
+    with app.app_context():
+        user = User.query.filter_by(email="test@example.com").first()
+        assert user is not None
+        user_id = str(user.id)
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = user_id
+        session["_fresh"] = True
+
+    response = client.get("/tools/", follow_redirects=False)
+    assert response.status_code == 200
+    nav_classes = _first_nav_classes(response.get_data(as_text=True))
+    assert "public-marketing-nav" not in nav_classes
+    assert "fixed-top" not in nav_classes
 
 
 @pytest.mark.usefixtures("app")
