@@ -676,32 +676,14 @@ def create_recipe(
                 "recipe_group_id": recipe.recipe_group_id,
                 "test_sequence": recipe.test_sequence,
             }
-            AnalyticsTrackingService.emit(
-                event_name="recipe_created",
-                properties=base_properties,
+            AnalyticsTrackingService.track_recipe_created_events(
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type="recipe",
-                entity_id=recipe.id,
+                recipe_id=recipe.id,
+                properties=base_properties,
+                is_test=bool(is_test_flag),
+                is_variation=bool(parent_recipe_id),
             )
-            if is_test_flag:
-                AnalyticsTrackingService.emit(
-                    event_name="recipe_test_created",
-                    properties=base_properties,
-                    organization_id=recipe.organization_id,
-                    user_id=current_user.id,
-                    entity_type="recipe",
-                    entity_id=recipe.id,
-                )
-            elif parent_recipe_id:
-                AnalyticsTrackingService.emit(
-                    event_name="recipe_variation_created",
-                    properties=base_properties,
-                    organization_id=recipe.organization_id,
-                    user_id=current_user.id,
-                    entity_type="recipe",
-                    entity_id=recipe.id,
-                )
         except Exception:
             pass
 
@@ -1124,13 +1106,12 @@ def update_recipe(
 
         # Emit recipe_updated
         try:
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_recipe_lifecycle_event(
                 event_name="recipe_updated",
-                properties={"recipe_id": recipe_id},
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type="recipe",
-                entity_id=recipe.id,
+                recipe_id=recipe.id,
+                properties={"recipe_id": recipe_id},
             )
         except Exception:
             pass
@@ -1188,13 +1169,12 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         logger.info(f"Deleted recipe {recipe_id}: {recipe_name}")
         # Emit recipe_deleted
         try:
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_recipe_lifecycle_event(
                 event_name="recipe_deleted",
-                properties={"name": recipe_name},
                 organization_id=recipe.organization_id,
                 user_id=current_user.id,
-                entity_type="recipe",
-                entity_id=recipe_id,
+                recipe_id=recipe_id,
+                properties={"name": recipe_name},
             )
         except Exception:
             pass

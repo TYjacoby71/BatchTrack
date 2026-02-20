@@ -86,25 +86,17 @@ def _oauth_success_or_signup_redirect(
         )
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
-        login_props = {
-            "is_first_login": previous_last_login is None,
-            "login_method": f"oauth_{provider}",
-            "destination_hint": (
+        AnalyticsTrackingService.track_user_login_succeeded(
+            organization_id=getattr(user, "organization_id", None),
+            user_id=user.id,
+            is_first_login=previous_last_login is None,
+            login_method=f"oauth_{provider}",
+            destination_hint=(
                 "developer_dashboard"
                 if user.user_type == "developer"
                 else "organization_dashboard"
             ),
-        }
-        landing_elapsed = seconds_since_first_landing(request)
-        if landing_elapsed is not None:
-            login_props["seconds_since_first_landing"] = landing_elapsed
-        AnalyticsTrackingService.emit(
-            event_name="user_login_succeeded",
-            properties=login_props,
-            organization_id=getattr(user, "organization_id", None),
-            user_id=user.id,
-            entity_type="user",
-            entity_id=user.id,
+            seconds_since_first_landing=seconds_since_first_landing(request),
         )
         flash(f"Welcome back, {user.first_name or user.username}!", "success")
 

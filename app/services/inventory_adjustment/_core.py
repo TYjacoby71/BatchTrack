@@ -388,7 +388,9 @@ def process_inventory_adjustment(
                 )
 
                 # Emit domain event (non-blocking best-effort; don't fail the operation on emitter errors)
-                AnalyticsTrackingService.emit(**event_payload, auto_commit=False)
+                AnalyticsTrackingService.emit_from_payload(
+                    event_payload, auto_commit=False
+                )
 
                 return _response(
                     True, message, event_payload if include_event_payload else None

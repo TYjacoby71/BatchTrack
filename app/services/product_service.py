@@ -67,13 +67,13 @@ class ProductService:
             db.session.add(product)
             db.session.flush()
             # Emit product_created
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_product_event(
                 event_name="product_created",
-                properties={"product_name": product_name},
                 organization_id=product.organization_id,
                 user_id=product.created_by,
                 entity_type="product",
                 entity_id=product.id,
+                properties={"product_name": product_name},
             )
 
         # Get or create ProductVariant
@@ -97,13 +97,13 @@ class ProductService:
             db.session.add(variant)
             db.session.flush()
             # Emit product_variant_created
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_product_event(
                 event_name="product_variant_created",
-                properties={"product_id": product.id, "variant_name": variant_name},
                 organization_id=variant.organization_id,
                 user_id=variant.created_by,
                 entity_type="product_variant",
                 entity_id=variant.id,
+                properties={"product_id": product.id, "variant_name": variant_name},
             )
 
         # Get existing ProductSKU candidates.
@@ -263,18 +263,18 @@ class ProductService:
             db.session.add(product_sku)
             db.session.flush()
             # Emit sku_created
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_product_event(
                 event_name="sku_created",
+                organization_id=product.organization_id,
+                user_id=current_user.id,
+                entity_type="product_sku",
+                entity_id=product_sku.id,
                 properties={
                     "product_id": product.id,
                     "variant_id": variant.id,
                     "size_label": size_label,
                     "sku_code": sku_code,
                 },
-                organization_id=product.organization_id,
-                user_id=current_user.id,
-                entity_type="product_sku",
-                entity_id=product_sku.id,
             )
 
             return product_sku

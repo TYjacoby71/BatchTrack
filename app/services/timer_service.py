@@ -136,17 +136,16 @@ class TimerService:
             db.session.commit()
             # Emit timer_started event
             try:
-                AnalyticsTrackingService.emit(
+                AnalyticsTrackingService.track_timer_event(
                     event_name="timer_started",
+                    organization_id=batch.organization_id,
+                    user_id=getattr(current_user, "id", None),
+                    timer_id=timer.id,
                     properties={
                         "batch_id": batch_id,
                         "duration_seconds": duration_seconds,
                         "description": description,
                     },
-                    organization_id=batch.organization_id,
-                    user_id=getattr(current_user, "id", None),
-                    entity_type="timer",
-                    entity_id=timer.id,
                 )
             except Exception:
                 pass
@@ -167,16 +166,15 @@ class TimerService:
         db.session.commit()
         # Emit timer_stopped event
         try:
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_timer_event(
                 event_name="timer_stopped",
+                organization_id=timer.batch.organization_id if timer.batch else None,
+                user_id=getattr(current_user, "id", None),
+                timer_id=timer.id,
                 properties={
                     "batch_id": timer.batch_id,
                     "duration_seconds": timer.duration_seconds,
                 },
-                organization_id=timer.batch.organization_id if timer.batch else None,
-                user_id=getattr(current_user, "id", None),
-                entity_type="timer",
-                entity_id=timer.id,
             )
         except Exception:
             pass

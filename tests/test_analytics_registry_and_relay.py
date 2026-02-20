@@ -1,5 +1,7 @@
 """Regression tests for analytics registry + relay service."""
 
+from pathlib import Path
+
 from app.models.domain_event import DomainEvent
 from app.models.models import Organization, User
 from app.services.analytics_event_registry import (
@@ -96,3 +98,16 @@ def test_relay_backfills_missing_required_properties(app):
         props = emitted.properties or {}
         assert "billing_mode" in props
         assert "billing_cycle" in props
+
+
+def test_feature_modules_do_not_use_generic_emit_call():
+    app_root = Path(__file__).resolve().parents[1] / "app"
+    violations: list[str] = []
+    for py_file in app_root.rglob("*.py"):
+        if py_file.name == "analytics_tracking_service.py":
+            continue
+        text = py_file.read_text(encoding="utf-8")
+        if "AnalyticsTrackingService.emit(" in text:
+            violations.append(str(py_file.relative_to(app_root)))
+
+    assert violations == []

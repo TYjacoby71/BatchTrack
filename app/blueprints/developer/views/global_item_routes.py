@@ -909,16 +909,15 @@ def create_global_item():
             if new_item.ingredient_category_id:
                 cat_obj = db.session.get(IngredientCategory, new_item.ingredient_category_id)
                 category_name = cat_obj.name if cat_obj else None
-            AnalyticsTrackingService.emit(
+            AnalyticsTrackingService.track_global_item_event(
                 event_name="global_item_created",
+                user_id=getattr(current_user, "id", None),
+                entity_id=new_item.id,
                 properties={
                     "name": name,
                     "item_type": item_type,
                     "ingredient_category": category_name,
                 },
-                user_id=getattr(current_user, "id", None),
-                entity_type="global_item",
-                entity_id=new_item.id,
             )
 
             flash(f'Global item "{name}" created successfully', "success")
@@ -1003,12 +1002,11 @@ def delete_global_item(item_id):
 
         from app.services.analytics_tracking_service import AnalyticsTrackingService
 
-        AnalyticsTrackingService.emit(
+        AnalyticsTrackingService.track_global_item_event(
             event_name="global_item_deleted",
-            properties={"force_delete": force_delete},
             user_id=getattr(current_user, "id", None),
-            entity_type="global_item",
             entity_id=item_id,
+            properties={"force_delete": force_delete},
         )
 
         if not force_delete:

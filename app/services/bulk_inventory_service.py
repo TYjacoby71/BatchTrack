@@ -278,7 +278,7 @@ class BulkInventoryService:
         for payload in entries:
             if not payload:
                 continue
-            AnalyticsTrackingService.emit(**payload, auto_commit=False)
+            AnalyticsTrackingService.emit_from_payload(payload, auto_commit=False)
 
     def _abort(
         self, line_number: int, line: Mapping[str, Any], change_type: str, reason: str

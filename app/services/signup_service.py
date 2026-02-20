@@ -293,17 +293,13 @@ class SignupService:
             except Exception as email_error:
                 logger.warning("Failed to send password setup email: %s", email_error)
 
-            AnalyticsTrackingService.emit(
-                event_name="billing.stripe_checkout_completed",
+            AnalyticsTrackingService.track_billing_stripe_checkout_completed(
                 organization_id=org.id,
                 user_id=owner_user.id,
-                properties={
-                    "pending_signup_id": pending_signup.id,
-                    "tier_id": subscription_tier.id,
-                    "checkout_session_id": pending_signup.stripe_checkout_session_id,
-                    "stripe_customer_id": pending_signup.stripe_customer_id,
-                },
-                auto_commit=True,
+                pending_signup_id=pending_signup.id,
+                tier_id=subscription_tier.id,
+                checkout_session_id=pending_signup.stripe_checkout_session_id,
+                stripe_customer_id=pending_signup.stripe_customer_id,
             )
             completion_properties = {
                 "pending_signup_id": pending_signup.id,

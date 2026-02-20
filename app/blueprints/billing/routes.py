@@ -262,21 +262,13 @@ def checkout(tier, billing_cycle="month"):
         )
 
         if checkout_session:
-            checkout_props = {
-                "tier": tier,
-                "billing_cycle": billing_cycle,
-                "checkout_provider": "stripe",
-            }
-            landing_elapsed = seconds_since_first_landing(request)
-            if landing_elapsed is not None:
-                checkout_props["seconds_since_first_landing"] = landing_elapsed
-            AnalyticsTrackingService.emit(
-                event_name="billing_checkout_started",
-                properties=checkout_props,
+            AnalyticsTrackingService.track_billing_checkout_started(
                 organization_id=getattr(organization, "id", None),
                 user_id=getattr(current_user, "id", None),
-                entity_type="organization",
-                entity_id=getattr(organization, "id", None),
+                tier=tier,
+                billing_cycle=billing_cycle,
+                checkout_provider="stripe",
+                seconds_since_first_landing=seconds_since_first_landing(request),
             )
             return redirect(checkout_session.url)
 
@@ -417,21 +409,13 @@ def complete_signup_from_stripe():
     )
     owner_user.last_login = TimezoneUtils.utc_now()
     db.session.commit()
-    login_props = {
-        "is_first_login": previous_last_login is None,
-        "login_method": "signup_checkout",
-        "destination_hint": "onboarding_welcome",
-    }
-    landing_elapsed = seconds_since_first_landing(request)
-    if landing_elapsed is not None:
-        login_props["seconds_since_first_landing"] = landing_elapsed
-    AnalyticsTrackingService.emit(
-        event_name="user_login_succeeded",
-        properties=login_props,
+    AnalyticsTrackingService.track_user_login_succeeded(
         organization_id=getattr(organization, "id", None),
         user_id=getattr(owner_user, "id", None),
-        entity_type="user",
-        entity_id=getattr(owner_user, "id", None),
+        is_first_login=previous_last_login is None,
+        login_method="signup_checkout",
+        destination_hint="onboarding_welcome",
+        seconds_since_first_landing=seconds_since_first_landing(request),
     )
 
     session["onboarding_welcome"] = True

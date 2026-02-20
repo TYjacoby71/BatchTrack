@@ -64,22 +64,17 @@ def plan_production_route(recipe_id):
             planning_result = plan_production_comprehensive(
                 recipe_id, scale, container_id
             )
-            AnalyticsTrackingService.emit(
-                event_name="plan_production_requested",
-                properties={
-                    "recipe_id": recipe_id,
-                    "scale": scale,
-                    "container_id": (
-                        int(container_id) if str(container_id or "").isdigit() else None
-                    ),
-                    "success": bool(planning_result.get("success")),
-                    "all_available": bool(planning_result.get("all_available")),
-                    "issue_count": len(planning_result.get("issues") or []),
-                },
+            AnalyticsTrackingService.track_plan_production_requested(
                 organization_id=getattr(current_user, "organization_id", None),
                 user_id=getattr(current_user, "id", None),
-                entity_type="recipe",
-                entity_id=recipe_id,
+                recipe_id=recipe_id,
+                scale=scale,
+                container_id=(
+                    int(container_id) if str(container_id or "").isdigit() else None
+                ),
+                success=bool(planning_result.get("success")),
+                all_available=bool(planning_result.get("all_available")),
+                issue_count=len(planning_result.get("issues") or []),
             )
 
             if planning_result.get("success", False):
@@ -355,18 +350,13 @@ def check_stock():
         uscs = UniversalStockCheckService()
 
         result = uscs.check_recipe_stock(recipe_id, scale)
-        AnalyticsTrackingService.emit(
-            event_name="stock_check_run",
-            properties={
-                "recipe_id": recipe_id,
-                "scale": scale,
-                "success": bool(result.get("success")),
-                "stock_item_count": len(result.get("stock_check") or []),
-            },
+        AnalyticsTrackingService.track_stock_check_run(
             organization_id=getattr(current_user, "organization_id", None),
             user_id=getattr(current_user, "id", None),
-            entity_type="recipe",
-            entity_id=recipe_id,
+            recipe_id=recipe_id,
+            scale=scale,
+            success=bool(result.get("success")),
+            stock_item_count=len(result.get("stock_check") or []),
         )
 
         # Process results for frontend

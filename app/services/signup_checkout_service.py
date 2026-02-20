@@ -421,23 +421,20 @@ class SignupCheckoutService:
             )
 
         metadata["pending_signup_id"] = str(pending_signup.id)
-        AnalyticsTrackingService.emit(
-            event_name="signup_checkout_started",
-            properties={
-                "pending_signup_id": pending_signup.id,
-                "tier_id": str(submission.selected_tier or ""),
-                "billing_mode": submission.selected_mode,
-                "billing_cycle": (
-                    "lifetime"
-                    if submission.selected_mode == "lifetime"
-                    else submission.selected_standard_cycle
-                ),
-                "signup_source": context.signup_source,
-                "is_oauth_signup": bool(submission.oauth_signup),
-                "seconds_since_first_landing": cls._seconds_since_first_landing(
-                    submission.client_first_landing_at
-                ),
-            },
+        AnalyticsTrackingService.track_signup_checkout_started(
+            pending_signup_id=pending_signup.id,
+            tier_id=submission.selected_tier,
+            billing_mode=submission.selected_mode,
+            billing_cycle=(
+                "lifetime"
+                if submission.selected_mode == "lifetime"
+                else submission.selected_standard_cycle
+            ),
+            signup_source=context.signup_source,
+            is_oauth_signup=bool(submission.oauth_signup),
+            seconds_since_first_landing=cls._seconds_since_first_landing(
+                submission.client_first_landing_at
+            ),
         )
         success_url = (
             url_for("billing.complete_signup_from_stripe", _external=True)

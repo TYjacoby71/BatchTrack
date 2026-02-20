@@ -144,23 +144,15 @@ def welcome():
                                 if member.is_active and member.user_type != "developer"
                             ]
                         )
-                        event_props = {
-                            "checklist_completed": True,
-                            "requires_password_setup": False,
-                            "team_size": active_team_size,
-                        }
-                        seconds_from_landing = seconds_since_first_landing(request)
-                        if seconds_from_landing is not None:
-                            event_props["seconds_since_first_landing"] = (
-                                seconds_from_landing
-                            )
-                        AnalyticsTrackingService.emit(
-                            event_name="onboarding_completed",
-                            properties=event_props,
+                        AnalyticsTrackingService.track_onboarding_completed(
                             organization_id=getattr(user, "organization_id", None),
                             user_id=getattr(user, "id", None),
-                            entity_type="organization",
-                            entity_id=getattr(organization, "id", None),
+                            team_size=active_team_size,
+                            requires_password_setup=False,
+                            checklist_completed=True,
+                            seconds_since_first_landing=seconds_since_first_landing(
+                                request
+                            ),
                         )
                         session.pop("onboarding_welcome", None)
                         return redirect(url_for("app_routes.dashboard"))
