@@ -200,26 +200,26 @@ Made a code change?
 - [ ] 2) **Scoping and Security** — org scoping, permission checks, and timezone handling are correct.
 - [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
 - [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
-- [ ] 5) **Validation** — local tests run, tests updated, and docs guard passes (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
-- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers (entire touched file coverage), terms/locations, and one-entry rule.
+- [ ] 5) **Validation** — local tests run (as appropriate), tests are updated when behavior/regression scope requires it, and docs guard runs near finalization (`python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>`).
+- [ ] 6) **Documentation and Knowledge Integrity** — system docs + dated changelog + changelog index links + follow APP_DICTIONARY head instruction block for Synopsis/Glossary, functional headers (changed/new unit coverage), app Python terms/locations, and one-entry rule.
 - [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
 
 ### AI Shortcut Phrase
 Use this exact delegation phrase:
-`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, read and implement docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)", and do not stop until docs guard passes.`
+`Follow PR checklist instructions in .github/PULL_REQUEST_TEMPLATE.md, apply docs/system/APP_DICTIONARY.md -> "Update Standard (Agent Instructions)" only where this PR changes behavior/files, and run docs guard once near finalization.`
 
 ## Enforcement (Automated Guard)
 
-The following rules are enforced by `scripts/validate_pr_documentation.py` in local pre-commit and CI:
+The following rules are enforced by `scripts/validate_pr_documentation.py` in local tooling and CI:
 
-1. **App-change requirement**
-   - If any `app/` file changes, the PR must include at least one dated changelog file update in `docs/changelog/`.
-   - Changed app file paths must still be covered in `APP_DICTIONARY.md`.
+1. **App Python change requirement**
+   - If any `app/**/*.py` file changes, the PR must include at least one dated changelog file update in `docs/changelog/`.
+   - Changed app Python file paths must still be covered in `APP_DICTIONARY.md`.
    - Any changed dated changelog entries must be linked in `docs/changelog/CHANGELOG_INDEX.md`.
 
 2. **Python schema requirement (`app/` and `scripts/`)**
-   - Module docstring must include both **Synopsis** and **Glossary**.
-   - For each changed Python file, every top-level class/function in that file (not only edited units) must include a nearby functional header:
+   - New Python modules must include both **Synopsis** and **Glossary** in the module docstring.
+   - For each changed Python file, changed/new top-level class/function units must include a nearby functional header:
      - `# --- <UNIT NAME> ---`
      - `# Purpose: ...`
      - `# Inputs: ...`
@@ -228,8 +228,8 @@ The following rules are enforced by `scripts/validate_pr_documentation.py` in lo
 3. **Dictionary schema requirement**
    - Entry format: `- **Term** → Description`.
    - One-entry rule: one canonical dictionary entry per unique term.
-   - Every changed `app/` file path must be referenced in `APP_DICTIONARY.md`.
-   - File links/locations in dictionary entries must resolve to valid targets.
+   - Every changed `app/**/*.py` file path must be referenced in `APP_DICTIONARY.md`.
+   - File links/locations in dictionary entries are validated when `APP_DICTIONARY.md` is edited.
 
 4. **Doc schema requirement**
    - Changed `docs/system/*.md` files must include `## Synopsis` and `## Glossary`.

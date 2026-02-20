@@ -1,0 +1,81 @@
+{#
+Synopsis:
+Modal overlays and anti-bot trap link shared across shell pages.
+#}
+{% if not lightweight_public_shell %}
+{% include 'components/shared/unit_converter_modal.html' %}
+<div class="modal fade" id="featureUpgradeModal" tabindex="-1" aria-labelledby="featureUpgradeModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="featureUpgradeModalTitle">Upgrade required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="featureUpgradeModalBody" class="mb-0">
+                    This feature is locked on your current plan.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">View upgrade options</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% if verification_required_modal %}
+<div class="modal fade" id="verificationRequiredModal" tabindex="-1" aria-labelledby="verificationRequiredModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verificationRequiredModalTitle">Please verify your email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if verification_required_modal.sent %}
+                <p class="mb-0">
+                    We sent a new verification email to <strong>{{ verification_required_modal.email }}</strong>.
+                    Your account is {{ verification_required_modal.age_days }} days old and has passed the
+                    {{ verification_required_modal.grace_days }}-day verification window. Please verify your email now.
+                </p>
+                {% else %}
+                <p class="mb-0">
+                    Your account is {{ verification_required_modal.age_days }} days old and must be verified.
+                    We could not send a verification email automatically. Click resend below after checking provider settings.
+                </p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary">Open settings</a>
+                <form method="post" action="{{ url_for('auth.resend_verification') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="email" value="{{ verification_required_modal.email }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="btn btn-primary">Resend verification email</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% if load_feedback_widget %}
+{{ render_feedback_note_widget(
+  modal_id='globalFeedbackNoteModal',
+  default_source=request.endpoint or request.path,
+  source_options=None,
+  lock_source_to_location=True,
+  location_label=request.path,
+  trigger_mode='floating',
+  trigger_text='Feedback',
+  title='Send feedback',
+  subtitle='Question, missing feature, glitch, or bad preset data.',
+  endpoint=url_for('tools_bp.tools_feedback_notes'),
+  context=request.endpoint or request.path,
+  default_flow='question',
+  floating_bottom_offset='1.25rem'
+) }}
+{% endif %}
+{% endif %}
+{% if not current_user.is_authenticated %}
+<a class="bot-trap-link" href="{{ url_for('public_api.public_bot_trap', source='layout') }}" rel="nofollow" aria-hidden="true" tabindex="-1">Continue</a>
+{% endif %}

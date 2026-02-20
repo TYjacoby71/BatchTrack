@@ -17,8 +17,10 @@ from flask import (
     Blueprint,
     abort,
     current_app,
+    jsonify,
     redirect,
     render_template,
+    request,
     send_file,
     url_for,
 )
@@ -192,3 +194,12 @@ def homepage():
 def public_page():
     """Alternative public page."""
     return _render_public_homepage_response()
+
+
+@core_bp.route("/health", methods=["GET", "HEAD"])
+@core_bp.route("/ping", methods=["GET", "HEAD"])
+def health_check():
+    """Lightweight probe endpoint for load balancers and uptime monitors."""
+    if request.method == "HEAD":
+        return "", 200
+    return jsonify({"status": "ok"})

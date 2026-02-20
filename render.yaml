@@ -4,3 +4,4 @@ services:
     env: python
     buildCommand: ./scripts/render-build.sh
     startCommand: gunicorn wsgi:app
+    healthCheckPath: /health

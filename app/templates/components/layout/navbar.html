@@ -1,0 +1,41 @@
+{#
+Synopsis:
+Primary navbar for authenticated app shell and guest public-header modes.
+#}
+<nav class="navbar navbar-expand-lg {% if public_shell_mode %}public-marketing-nav navbar-light bg-white shadow-sm{% else %}navbar-light bg-light{% endif %}">
+    <div class="{% if public_shell_mode %}container{% else %}container-fluid{% endif %} position-relative">
+        {% if not public_shell_mode %}
+        <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('core.index') }}{% endif %}" aria-label="BatchTrack home">
+            <img src="{{ url_for('core.branding_full_logo_header') }}" alt="BatchTrack" class="app-brand-logo">
+        </a>
+        {% endif %}
+        {% set marketplace_display_enabled = is_feature_enabled('FEATURE_RECIPE_MARKETPLACE_DISPLAY') %}
+        {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') and marketplace_display_enabled %}
+        {% set global_library_enabled = is_feature_enabled('FEATURE_GLOBAL_ITEM_LIBRARY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+        {% set bulk_stock_check_enabled = is_feature_enabled('FEATURE_BULK_STOCK_CHECK') %}
+        {% set bulk_inventory_updates_enabled = is_feature_enabled('FEATURE_BULK_INVENTORY_UPDATES') %}
+        {% set show_recipe_library_link = (recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer')) and marketplace_display_enabled %}
+        {% set customer_can_view_inventory = current_user.is_authenticated and has_permission(current_user, 'inventory.view') %}
+        {% set customer_can_view_recipes = current_user.is_authenticated and has_permission(current_user, 'recipes.view') %}
+        {% set customer_can_view_batches = current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
+        {% set customer_can_view_products = current_user.is_authenticated and has_permission(current_user, 'products.view') %}
+        {% set tier_can_view_products = current_user.is_authenticated and has_tier_permission('products.view') %}
+        {% set tier_can_adjust_inventory = current_user.is_authenticated and has_tier_permission('inventory.adjust') %}
+        {% set recipes_ingredients_tier_nav = current_user.is_authenticated and current_user.user_type != 'developer' and has_tier_permission('recipes.view') and has_tier_permission('batches.finish') and not tier_can_view_products %}
+        {% set has_nav_center = (navbar_center_title is defined and navbar_center_title) and not public_shell_mode %}
+        {% if has_nav_center %}
+        <div class="position-absolute top-50 start-50 translate-middle text-center">
+            <span class="navbar-text fw-semibold">{{ navbar_center_title }}</span>
+        </div>
+        {% endif %}
+        {% if current_user.is_authenticated %}
+        {% if current_user.user_type == 'developer' %}
+        {% include 'components/layout/navbar_authenticated_developer.html' %}
+        {% else %}
+        {% include 'components/layout/navbar_authenticated_customer.html' %}
+        {% endif %}
+        {% else %}
+        {% include 'components/layout/navbar_guest.html' %}
+        {% endif %}
+    </div>
+</nav>

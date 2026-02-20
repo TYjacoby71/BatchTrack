@@ -260,6 +260,9 @@ class SignupCheckoutService:
             "page_title": page_title,
             "page_description": page_description,
             "canonical_url": canonical_url,
+            "show_public_header": True,
+            "lightweight_public_shell": True,
+            "load_feedback_widget": False,
         }
 
     @classmethod

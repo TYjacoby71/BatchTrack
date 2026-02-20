@@ -1,0 +1,112 @@
+{#
+Synopsis:
+Shared shell-level inline styles for nav, anti-bot fields, and footer links.
+#}
+<style>
+    input[type="hidden"][name="csrf_token"],
+    input[type="hidden"][name="confirm_token"],
+    .csrf-token,
+    .confirm-token,
+    .token-field,
+    .csrf_token {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+        clip: rect(0,0,0,0) !important;
+        border: 0 !important;
+        margin: -1px !important;
+        padding: 0 !important;
+    }
+    .bot-trap-link,
+    .bot-trap-field {
+        display: block !important;
+        position: absolute !important;
+        left: -9999px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        clip: rect(0,0,0,0) !important;
+        border: 0 !important;
+        margin: -1px !important;
+        padding: 0 !important;
+    }
+    .app-container {
+        max-width: 1200px; /* Adjust as needed */
+        margin: 0 auto;
+    }
+    .app-container.public-shell {
+        max-width: none;
+        width: 100%;
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        min-height: auto;
+    }
+    .public-marketing-nav {
+        border-bottom: 1px solid #e9ecef;
+    }
+    .public-marketing-nav .navbar-brand {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    .public-marketing-nav .brand-full-logo {
+        height: 42px;
+        width: 210px;
+        aspect-ratio: 5 / 1;
+        display: block;
+    }
+    .app-brand-logo {
+        height: 42px;
+        width: auto;
+        display: block;
+    }
+    .public-marketing-nav .navbar-nav .nav-link {
+        color: #6c757d !important;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .public-marketing-nav .navbar-nav .nav-link:hover {
+        color: #0d6efd !important;
+    }
+    .public-marketing-nav .btn-cta {
+        background: linear-gradient(45deg, #ff6b6b, #ffa500);
+        border: none;
+        border-radius: 999px;
+        padding: 0.45rem 1.1rem;
+        font-weight: 700;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(255, 165, 0, 0.28);
+    }
+    .public-marketing-nav .btn-cta:hover {
+        filter: brightness(0.95);
+        color: #ffffff !important;
+    }
+    .site-footer-legal {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .site-footer-legal-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        text-decoration: none;
+    }
+    .site-footer-legal-link:hover,
+    .site-footer-legal-link:focus-visible {
+        text-decoration: underline;
+    }
+</style>
