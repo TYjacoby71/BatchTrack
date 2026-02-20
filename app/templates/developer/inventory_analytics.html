@@ -127,6 +127,7 @@
         </div>
         <div class="card-body">
           <div class="mb-3">
+            <label class="visually-hidden" for="itemSelector">Item selector for cost distribution</label>
             <select class="form-select form-select-sm" id="itemSelector" onchange="loadCostDistribution()">
               <option value="">Select an item to analyze...</option>
             </select>
@@ -151,7 +152,7 @@
               <span id="densityCoverage">-%</span>
             </div>
             <div class="progress mb-2">
-              <div class="progress-bar bg-primary" role="progressbar" id="densityProgress" style="width: 0%"></div>
+              <div class="progress-bar bg-primary" role="progressbar" aria-label="Density coverage percentage" id="densityProgress" style="width: 0%"></div>
             </div>
           </div>
           <div class="mb-3">
@@ -160,7 +161,7 @@
               <span id="capacityCoverage">-%</span>
             </div>
             <div class="progress mb-2">
-              <div class="progress-bar bg-success" role="progressbar" id="capacityProgress" style="width: 0%"></div>
+              <div class="progress-bar bg-success" role="progressbar" aria-label="Capacity coverage percentage" id="capacityProgress" style="width: 0%"></div>
             </div>
           </div>
           <div class="mb-3">
@@ -169,7 +170,7 @@
               <span id="shelfLifeCoverage">-%</span>
             </div>
             <div class="progress mb-2">
-              <div class="progress-bar bg-info" role="progressbar" id="shelfLifeProgress" style="width: 0%"></div>
+              <div class="progress-bar bg-info" role="progressbar" aria-label="Shelf life coverage percentage" id="shelfLifeProgress" style="width: 0%"></div>
             </div>
           </div>
           <hr>

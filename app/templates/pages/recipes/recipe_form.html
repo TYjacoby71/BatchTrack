@@ -507,7 +507,7 @@
                             </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
-                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100" aria-label="Remove ingredient row">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -543,7 +543,7 @@
                             </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
-                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100" aria-label="Remove ingredient row">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -561,7 +561,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div id="ingredientActionControlsBottom" class="ingredient-actions-floating d-none" aria-hidden="true">
+            <div id="ingredientActionControlsBottom" class="ingredient-actions-floating d-none" aria-hidden="true" inert>
                 <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 w-100">
                     <div class="flex-grow-1 text-muted small">
                         Keep adding ingredients without scrolling—quick actions stay docked here.
@@ -621,7 +621,7 @@
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100" aria-label="Remove consumable row">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -652,7 +652,7 @@
                           </select>
                       </div>
                       <div class="col-md-2 d-flex align-items-end">
-                          <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
+                          <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100" aria-label="Remove consumable row">
                               <i class="fas fa-trash"></i>
                           </button>
                       </div>
@@ -767,6 +767,8 @@ function showFloatingIngredientActions() {
     ingredientActionFloatVisible = true;
     ingredientActionBottom.classList.remove('d-none');
     ingredientActionBottom.setAttribute('aria-hidden', 'false');
+    ingredientActionBottom.removeAttribute('inert');
+    if ('inert' in ingredientActionBottom) ingredientActionBottom.inert = false;
     const trigger = window.requestAnimationFrame || function(cb){ return setTimeout(cb, 16); };
     trigger(() => ingredientActionBottom.classList.add('is-visible'));
 }
@@ -777,6 +779,8 @@ function hideFloatingIngredientActions() {
     ingredientActionFloatVisible = false;
     ingredientActionBottom.classList.remove('is-visible');
     ingredientActionBottom.setAttribute('aria-hidden', 'true');
+    ingredientActionBottom.setAttribute('inert', '');
+    if ('inert' in ingredientActionBottom) ingredientActionBottom.inert = true;
     let finished = false;
     function finish() {
         if (finished) return;
@@ -1063,7 +1067,7 @@ function addIngredient(preselectId = null, presetUnit = null) {
             </select>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100" aria-label="Remove ingredient row">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -1192,7 +1196,7 @@ function addConsumable(preselectId = null) {
             </select>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100" aria-label="Remove consumable row">
                 <i class="fas fa-trash"></i>
             </button>
         </div>

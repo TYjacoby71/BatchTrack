@@ -150,7 +150,7 @@
         </div>
         <div class="card-body">
           <div class="variants-carousel-wrapper position-relative">
-            <button class="carousel-nav carousel-nav-left" id="scrollLeft" onclick="scrollVariants('left')">
+            <button class="carousel-nav carousel-nav-left" id="scrollLeft" type="button" onclick="scrollVariants('left')" aria-label="Scroll variants left">
               <i class="fas fa-chevron-left"></i>
             </button>
             <div class="variants-carousel" id="variantsContainer">
@@ -249,7 +249,7 @@
         </div>
         {% endfor %}
             </div>
-            <button class="carousel-nav carousel-nav-right" id="scrollRight" onclick="scrollVariants('right')">
+            <button class="carousel-nav carousel-nav-right" id="scrollRight" type="button" onclick="scrollVariants('right')" aria-label="Scroll variants right">
               <i class="fas fa-chevron-right"></i>
             </button>
           </div>
