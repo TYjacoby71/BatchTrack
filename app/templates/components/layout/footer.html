@@ -1,0 +1,20 @@
+{#
+Synopsis:
+Shared marketing/legal footer for all shell-rendered pages.
+#}
+<footer class="bg-light text-center text-muted py-3 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <small class="d-block site-footer-copy">
+                    &copy; {{ TimezoneUtils.utc_now().year }} BatchTrack. All rights reserved.
+                </small>
+                <nav class="site-footer-legal mt-1" aria-label="Legal">
+                    <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted site-footer-legal-link">Privacy Policy</a>
+                    <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted site-footer-legal-link">Terms of Service</a>
+                    <a href="{{ url_for('legal.cookie_policy') }}" class="text-muted site-footer-legal-link">Cookie Policy</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,30 @@
+{#
+Synopsis:
+Primary script bundle selection for lightweight vs full app shell.
+#}
+{% if lightweight_public_shell %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% else %}
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Custom scripts - Load SessionGuard before other modules -->
+<script type="module" src="{{ static_asset('js/core/SessionGuard.js') }}"></script>
+<!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
+<script type="module" src="{{ static_asset('js/core/DrawerProtocol.js') }}"></script>
+<script type="module" src="{{ static_asset('js/core/DrawerInterceptor.js') }}"></script>
+<script type="module" src="{{ static_asset('js/main.js') }}"></script>
+<script src="{{ static_asset('js/utils/utils.js') }}"></script>
+<script src="{{ static_asset('js/list_preferences.js') }}"></script>
+<script src="{{ static_asset('js/inventory/inventory_adjust.js') }}"></script>
+<script src="{{ static_asset('js/conversion/unit_converter.js') }}"></script>
+<script type="module" src="{{ static_asset('js/drawers/drawer_cadence.js') }}"></script>
+<script src="{{ static_asset('js/drawers/container_unit_mismatch_drawer.js') }}"></script>
+{% if load_feedback_widget %}
+<script src="{{ static_asset('js/components/feedback_note_modal.js') }}"></script>
+{% endif %}
+{% endif %}
