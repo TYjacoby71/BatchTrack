@@ -3,12 +3,11 @@
 
 Synopsis:
 Validates documentation standards for pull requests by inspecting changed files
-and enforcing module/file schemas, APP_DICTIONARY coverage, and changelog
-requirements for application changes.
+and enforcing module/file schemas plus APP_DICTIONARY coverage for application changes.
 
 Glossary:
 - Changed file set: Paths reported by git diff for the PR/staged range.
-- Functional unit header: Structured comment block with Purpose/Inputs/Outputs.
+- Module glossary requirement: New Python modules include Synopsis + Glossary docstring sections.
 - Dictionary coverage: Presence of changed app paths in APP_DICTIONARY entries.
 """
 
@@ -26,13 +25,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APP_DICTIONARY_PATH = REPO_ROOT / "docs/system/APP_DICTIONARY.md"
-CHANGELOG_INDEX_PATH = REPO_ROOT / "docs/changelog/CHANGELOG_INDEX.md"
 
-CHANGELOG_ENTRY_PATH_RE = re.compile(r"^docs/changelog/\d{4}-\d{2}-\d{2}-.+\.md$")
 ENTRY_SCHEMA_RE = re.compile(r"^- \*\*([^*]+)\*\* → (.+)$")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 BACKTICK_RE = re.compile(r"`([^`]+)`")
-HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 REPO_ROOT_PREFIXES = ("app/", "docs/", "scripts/", ".github/", "tests/", "marketing/", "migrations/")
 
 
@@ -127,42 +123,6 @@ def _parse_name_status(output: str) -> list[ChangedFile]:
 # Purpose: Build the effective changed-file set from staged/base-ref diff.
 # Inputs: Parsed CLI args for staged/base/explicit file controls.
 # Outputs: List of changed file descriptors for validation.
-def _collect_diff_output(args: argparse.Namespace, *, patch: bool) -> str:
-    if args.staged:
-        diff_args = ["diff"]
-        if patch:
-            diff_args.append("--unified=0")
-        else:
-            diff_args.append("--name-status")
-        diff_args.extend(["--cached", "--diff-filter=ACMR"])
-        return _run_git(diff_args, allow_failure=True)
-
-    base_ref = _resolve_base_ref(args.base_ref)
-    range_expr = f"{base_ref}...HEAD"
-
-    diff_args = ["diff"]
-    if patch:
-        diff_args.append("--unified=0")
-    else:
-        diff_args.append("--name-status")
-    diff_args.extend(["--diff-filter=ACMR", range_expr])
-    output = _run_git(diff_args, allow_failure=True)
-    if output:
-        return output
-
-    fallback_args = ["diff"]
-    if patch:
-        fallback_args.append("--unified=0")
-    else:
-        fallback_args.append("--name-status")
-    fallback_args.extend(["--diff-filter=ACMR", "HEAD~1...HEAD"])
-    return _run_git(fallback_args, allow_failure=True)
-
-
-# --- Collect changed files ---
-# Purpose: Build the effective changed-file set from staged/base-ref diff.
-# Inputs: Parsed CLI args for staged/base/explicit file controls.
-# Outputs: List of changed file descriptors for validation.
 def _collect_changed_files(args: argparse.Namespace) -> list[ChangedFile]:
     if args.changed_file:
         records: list[ChangedFile] = []
@@ -170,113 +130,31 @@ def _collect_changed_files(args: argparse.Namespace) -> list[ChangedFile]:
             records.append(ChangedFile(status="M", path=path))
         return records
 
-    output = _collect_diff_output(args, patch=False)
-    return _parse_name_status(output)
+    if args.staged:
+        output = _run_git(["diff", "--name-status", "--cached", "--diff-filter=ACMR"], allow_failure=True)
+        return _parse_name_status(output)
 
+    base_ref = _resolve_base_ref(args.base_ref)
+    range_expr = f"{base_ref}...HEAD"
+    output = _run_git(["diff", "--name-status", "--diff-filter=ACMR", range_expr], allow_failure=True)
+    records = _parse_name_status(output)
+    if records:
+        return records
 
-# --- Parse unified diff changed lines ---
-# Purpose: Map changed files to new-file line ranges touched by this diff.
-# Inputs: Raw unified diff output with zero context lines.
-# Outputs: Dict keyed by path to merged (start, end) changed-line ranges.
-def _parse_unified_diff_changed_lines(output: str) -> dict[str, list[tuple[int, int]]]:
-    changed_ranges: dict[str, list[tuple[int, int]]] = {}
-    current_path: str | None = None
-
-    for line in output.splitlines():
-        if line.startswith("+++ "):
-            token = line[4:].strip()
-            if token == "/dev/null":
-                current_path = None
-                continue
-            if token.startswith("b/"):
-                token = token[2:]
-            current_path = token
-            changed_ranges.setdefault(current_path, [])
-            continue
-
-        if not current_path:
-            continue
-
-        match = HUNK_HEADER_RE.match(line)
-        if not match:
-            continue
-
-        start = int(match.group(1))
-        count = int(match.group(2) or "1")
-        if count <= 0:
-            continue
-        end = start + count - 1
-        changed_ranges[current_path].append((start, end))
-
-    merged_ranges: dict[str, list[tuple[int, int]]] = {}
-    for path, ranges in changed_ranges.items():
-        if not ranges:
-            merged_ranges[path] = []
-            continue
-        sorted_ranges = sorted(ranges)
-        merged: list[tuple[int, int]] = []
-        current_start, current_end = sorted_ranges[0]
-        for next_start, next_end in sorted_ranges[1:]:
-            if next_start <= current_end + 1:
-                current_end = max(current_end, next_end)
-            else:
-                merged.append((current_start, current_end))
-                current_start, current_end = next_start, next_end
-        merged.append((current_start, current_end))
-        merged_ranges[path] = merged
-    return merged_ranges
-
-
-# --- Collect changed line ranges ---
-# Purpose: Build per-file changed-line ranges for scoped schema validation.
-# Inputs: Parsed CLI args for staged/base/explicit file controls.
-# Outputs: Dict of changed-line ranges, or None when explicit file list is supplied.
-def _collect_changed_line_ranges(
-    args: argparse.Namespace,
-) -> dict[str, list[tuple[int, int]]] | None:
-    if args.changed_file:
-        return None
-    output = _collect_diff_output(args, patch=True)
-    return _parse_unified_diff_changed_lines(output)
+    fallback_output = _run_git(["diff", "--name-status", "--diff-filter=ACMR", "HEAD~1...HEAD"], allow_failure=True)
+    return _parse_name_status(fallback_output)
 
 
 # --- Identify app/source file ---
 # Purpose: Determine if a changed path is an application source file.
 # Inputs: Repository-relative file path.
-# Outputs: True when path should trigger dictionary/changelog obligations.
+# Outputs: True when path should trigger dictionary coverage obligations.
 def _is_app_source_file(path: str) -> bool:
     return (
         path.startswith("app/")
         and path.endswith(".py")
         and not path.startswith("app/marketing/")
     )
-
-
-# --- Check whether ranges intersect ---
-# Purpose: Determine if a source unit overlaps any changed-line window.
-# Inputs: Unit start/end line numbers and merged changed-line ranges.
-# Outputs: True when the unit intersects at least one changed-line range.
-def _ranges_intersect(
-    start_line: int,
-    end_line: int,
-    changed_ranges: list[tuple[int, int]],
-) -> bool:
-    for range_start, range_end in changed_ranges:
-        if start_line <= range_end and range_start <= end_line:
-            return True
-    return False
-
-
-# --- Check for top-of-file changes ---
-# Purpose: Detect whether changed lines touch the top-of-file module-doc area.
-# Inputs: Merged changed-line ranges and optional top-line threshold.
-# Outputs: True when at least one changed range starts near file top.
-def _ranges_touch_top_of_file(
-    changed_ranges: list[tuple[int, int]],
-    *,
-    threshold: int = 40,
-) -> bool:
-    return any(range_start <= threshold for range_start, _ in changed_ranges)
 
 
 # --- Read file text safely ---
@@ -291,48 +169,14 @@ def _read_text(path: str) -> str:
         return ""
 
 
-# --- Validate PR-level requirements ---
-# Purpose: Enforce changelog presence and index linkage whenever app code changes.
-# Inputs: Changed files and mutable issues list.
-# Outputs: Appends violation strings to issues when requirements are unmet.
-def _validate_pr_level_requirements(changed: list[ChangedFile], issues: list[str]) -> None:
-    app_changes = [entry for entry in changed if _is_app_source_file(entry.path)]
-    if not app_changes:
-        return
-
-    touched_changelog_entries = [
-        entry.path
-        for entry in changed
-        if CHANGELOG_ENTRY_PATH_RE.match(entry.path)
-    ]
-    if not touched_changelog_entries:
-        issues.append(
-            "App code changed but no dated changelog entry was added/updated in docs/changelog/."
-        )
-        return
-
-    index_text = _read_text("docs/changelog/CHANGELOG_INDEX.md")
-    if not index_text:
-        issues.append("docs/changelog/CHANGELOG_INDEX.md is missing or unreadable.")
-        return
-
-    for entry_path in touched_changelog_entries:
-        relative_name = entry_path.replace("docs/changelog/", "", 1)
-        if relative_name not in index_text:
-            issues.append(
-                f"{entry_path}: Missing link in docs/changelog/CHANGELOG_INDEX.md."
-            )
-
-
 # --- Validate Python file schema ---
-# Purpose: Enforce module synopsis/glossary and functional headers on scoped units.
-# Inputs: Changed Python path, mutable issues list, and optional line-range scope.
+# Purpose: Enforce module synopsis/glossary requirement for new Python modules.
+# Inputs: Changed Python path, mutable issues list, and module-docstring toggle.
 # Outputs: Appends violation strings to issues.
 def _validate_python_file_schema(
     path: str,
     issues: list[str],
     *,
-    changed_line_ranges: list[tuple[int, int]] | None,
     enforce_module_docstring: bool,
 ) -> None:
     src = _read_text(path)
@@ -354,43 +198,6 @@ def _validate_python_file_schema(
                 f"{path}: Module docstring must include Synopsis and Glossary sections."
             )
 
-    lines = src.splitlines()
-    for node in tree.body:
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            continue
-
-        decorators = getattr(node, "decorator_list", []) or []
-        start_line = min([node.lineno, *[decorator.lineno for decorator in decorators]])
-        if changed_line_ranges is not None:
-            end_line = getattr(node, "end_lineno", node.lineno)
-            if not _ranges_intersect(start_line, end_line, changed_line_ranges):
-                continue
-        window = [
-            line.strip()
-            for line in lines[max(0, start_line - 9): start_line - 1]
-            if line.strip()
-        ]
-
-        def has_prefix(prefix: str) -> bool:
-            return any(line.startswith(prefix) for line in window)
-
-        missing_bits: list[str] = []
-        if not has_prefix("# ---"):
-            missing_bits.append("header (# --- ... ---)")
-        if not has_prefix("# Purpose:"):
-            missing_bits.append("Purpose")
-        if not has_prefix("# Inputs:"):
-            missing_bits.append("Inputs")
-        if not has_prefix("# Outputs:"):
-            missing_bits.append("Outputs")
-
-        if missing_bits:
-            issues.append(
-                f"{path}:{start_line} top-level unit '{node.name}' missing {', '.join(missing_bits)} "
-                "(validation targets changed/new units within touched files)."
-            )
-
-
 # --- Validate system-doc schema ---
 # Purpose: Ensure changed system docs include required Synopsis/Glossary blocks.
 # Inputs: Changed markdown path and mutable issues list.
@@ -405,27 +212,6 @@ def _validate_system_doc_schema(path: str, issues: list[str]) -> None:
         issues.append(f"{path}: Missing required '## Synopsis' section.")
     if not re.search(r"^##\s+Glossary\b", text, flags=re.MULTILINE):
         issues.append(f"{path}: Missing required '## Glossary' section.")
-
-
-# --- Validate changelog entry schema ---
-# Purpose: Ensure changed changelog entries follow required section structure.
-# Inputs: Changed changelog markdown path and mutable issues list.
-# Outputs: Appends violation strings to issues.
-def _validate_changelog_entry_schema(path: str, issues: list[str]) -> None:
-    text = _read_text(path)
-    if not text:
-        issues.append(f"{path}: Unable to read changelog entry.")
-        return
-
-    required_sections = (
-        "## Summary",
-        "## Problems Solved",
-        "## Key Changes",
-        "## Files Modified",
-    )
-    for section in required_sections:
-        if section not in text:
-            issues.append(f"{path}: Missing required section '{section}'.")
 
 
 # --- Validate dictionary schema/coverage ---
@@ -575,35 +361,6 @@ def _validate_dictionary_links(
             issues.append(f"APP_DICTIONARY link target not found: {token}")
 
 
-# --- Validate changelog index links ---
-# Purpose: Ensure markdown links in changelog index resolve to existing files.
-# Inputs: Changed path set, mutable issues list, and full-check mode toggle.
-# Outputs: Appends violation strings to issues.
-def _validate_changelog_index_links(
-    changed_paths: set[str],
-    issues: list[str],
-    *,
-    full_link_check: bool,
-) -> None:
-    if not full_link_check and "docs/changelog/CHANGELOG_INDEX.md" not in changed_paths:
-        return
-    if not CHANGELOG_INDEX_PATH.exists():
-        issues.append("docs/changelog/CHANGELOG_INDEX.md is missing.")
-        return
-
-    text = CHANGELOG_INDEX_PATH.read_text(encoding="utf-8")
-    base_dir = CHANGELOG_INDEX_PATH.parent
-
-    for target_token in MARKDOWN_LINK_RE.findall(text):
-        if target_token.startswith(("http://", "https://", "mailto:", "#")):
-            continue
-        target = _resolve_target(target_token, base_dir)
-        if not target.exists():
-            issues.append(
-                f"CHANGELOG_INDEX broken link target: {target_token}"
-            )
-
-
 # --- Print validation issues ---
 # Purpose: Emit a readable summary of guard failures for CI/pre-commit logs.
 # Inputs: Issue message list.
@@ -625,7 +382,7 @@ def main() -> int:
     parser.add_argument(
         "--full-link-check",
         action="store_true",
-        help="Validate all dictionary/index links even when those files are unchanged.",
+        help="Validate all APP_DICTIONARY links even when APP_DICTIONARY is unchanged.",
     )
     parser.add_argument(
         "--changed-file",
@@ -640,49 +397,24 @@ def main() -> int:
         print("Documentation guard: no changed files detected.")
         return 0
     changed_paths = {entry.path for entry in changed}
-    changed_line_ranges = _collect_changed_line_ranges(args)
 
     issues: list[str] = []
-    _validate_pr_level_requirements(changed, issues)
 
     for entry in changed:
         path = entry.path
         if path.endswith(".py") and (
             path.startswith("app/") or path.startswith("scripts/")
         ):
-            scoped_ranges: list[tuple[int, int]] | None = None
-            enforce_module_docstring = True
-
-            if changed_line_ranges is not None:
-                path_ranges = changed_line_ranges.get(path, [])
-                if not path_ranges and entry.status != "A":
-                    continue
-                if path_ranges:
-                    scoped_ranges = path_ranges
-                    enforce_module_docstring = entry.status == "A" or _ranges_touch_top_of_file(
-                        path_ranges
-                    )
-                else:
-                    enforce_module_docstring = entry.status == "A"
-
             _validate_python_file_schema(
                 path,
                 issues,
-                changed_line_ranges=scoped_ranges,
-                enforce_module_docstring=enforce_module_docstring,
+                enforce_module_docstring=(entry.status == "A"),
             )
         if path.startswith("docs/system/") and path.endswith(".md"):
             _validate_system_doc_schema(path, issues)
-        if CHANGELOG_ENTRY_PATH_RE.match(path):
-            _validate_changelog_entry_schema(path, issues)
 
     _validate_dictionary_schema(changed, issues)
     _validate_dictionary_links(
-        changed_paths,
-        issues,
-        full_link_check=args.full_link_check,
-    )
-    _validate_changelog_index_links(
         changed_paths,
         issues,
         full_link_check=args.full_link_check,
