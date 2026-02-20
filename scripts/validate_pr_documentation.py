@@ -132,6 +132,8 @@ def _collect_diff_output(args: argparse.Namespace, *, patch: bool) -> str:
         diff_args = ["diff"]
         if patch:
             diff_args.append("--unified=0")
+        else:
+            diff_args.append("--name-status")
         diff_args.extend(["--cached", "--diff-filter=ACMR"])
         return _run_git(diff_args, allow_failure=True)
 
@@ -141,6 +143,8 @@ def _collect_diff_output(args: argparse.Namespace, *, patch: bool) -> str:
     diff_args = ["diff"]
     if patch:
         diff_args.append("--unified=0")
+    else:
+        diff_args.append("--name-status")
     diff_args.extend(["--diff-filter=ACMR", range_expr])
     output = _run_git(diff_args, allow_failure=True)
     if output:
@@ -149,6 +153,8 @@ def _collect_diff_output(args: argparse.Namespace, *, patch: bool) -> str:
     fallback_args = ["diff"]
     if patch:
         fallback_args.append("--unified=0")
+    else:
+        fallback_args.append("--name-status")
     fallback_args.extend(["--diff-filter=ACMR", "HEAD~1...HEAD"])
     return _run_git(fallback_args, allow_failure=True)
 
