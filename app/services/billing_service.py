@@ -56,7 +56,10 @@ class BillingService:
 
     _pricing_cache_ttl_seconds = 600  # 10 minutes
     _pricing_error_cache_ttl_seconds = 60
+    _pricing_cache_miss_sentinel = "__missing_price__"
     _related_price_cache_miss_sentinel = "__missing__"
+    _stripe_http_timeout_seconds = 12.0
+    _stripe_max_network_retries = 1
     _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
     _pricing_registry_lock = Lock()
 
@@ -363,7 +366,53 @@ class BillingService:
             logger.warning("Stripe secret key not configured")
             return False
         stripe.api_key = stripe_secret
+        BillingService._apply_stripe_network_guards()
         return True
+
+    # Purpose: Apply conservative Stripe network settings for web requests.
+    @classmethod
+    def _apply_stripe_network_guards(cls) -> None:
+        timeout_raw = current_app.config.get(
+            "STRIPE_HTTP_TIMEOUT_SECONDS", cls._stripe_http_timeout_seconds
+        )
+        retries_raw = current_app.config.get(
+            "STRIPE_MAX_NETWORK_RETRIES", cls._stripe_max_network_retries
+        )
+
+        try:
+            timeout_seconds = float(timeout_raw)
+        except (TypeError, ValueError):
+            timeout_seconds = cls._stripe_http_timeout_seconds
+        timeout_seconds = max(1.0, timeout_seconds)
+
+        try:
+            max_retries = int(retries_raw)
+        except (TypeError, ValueError):
+            max_retries = cls._stripe_max_network_retries
+        max_retries = max(0, max_retries)
+        stripe.max_network_retries = max_retries
+
+        connect_timeout_seconds = min(3.0, timeout_seconds)
+        desired_timeout = (connect_timeout_seconds, timeout_seconds)
+
+        current_client = getattr(stripe, "default_http_client", None)
+        current_timeout = getattr(current_client, "_timeout", None)
+        if current_timeout is None:
+            current_timeout = getattr(current_client, "timeout", None)
+
+        if current_timeout == desired_timeout or current_timeout == timeout_seconds:
+            return
+
+        try:
+            stripe.default_http_client = stripe.RequestsClient(timeout=desired_timeout)
+            return
+        except Exception:
+            pass
+
+        try:
+            stripe.default_http_client = stripe.HTTPXClient(timeout=timeout_seconds)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.debug("Unable to configure Stripe HTTP timeout client: %s", exc)
 
     # Purpose: Resolve Stripe secret from config/env.
     @staticmethod
@@ -709,13 +758,17 @@ class BillingService:
 
         cache_key = BillingService._pricing_cache_key(lookup_key)
         cached = app_cache.get(cache_key)
-        if cached:
+        if cached == BillingService._pricing_cache_miss_sentinel:
+            return None
+        if cached is not None:
             return cached
 
         lock = BillingService._get_pricing_lock(lookup_key)
         with lock:
             cached = app_cache.get(cache_key)
-            if cached:
+            if cached == BillingService._pricing_cache_miss_sentinel:
+                return None
+            if cached is not None:
                 return cached
 
             if not BillingService.ensure_stripe():
@@ -732,7 +785,7 @@ class BillingService:
                     )
                     app_cache.set(
                         cache_key,
-                        None,
+                        BillingService._pricing_cache_miss_sentinel,
                         ttl=BillingService._pricing_error_cache_ttl_seconds,
                     )
                     return None
@@ -747,7 +800,7 @@ class BillingService:
                     )
                     app_cache.set(
                         cache_key,
-                        None,
+                        BillingService._pricing_cache_miss_sentinel,
                         ttl=BillingService._pricing_error_cache_ttl_seconds,
                     )
                     return None
@@ -762,7 +815,7 @@ class BillingService:
                     )
                     app_cache.set(
                         cache_key,
-                        None,
+                        BillingService._pricing_cache_miss_sentinel,
                         ttl=BillingService._pricing_error_cache_ttl_seconds,
                     )
                     return None
@@ -795,7 +848,9 @@ class BillingService:
             except StripeError as e:
                 logger.error(f"Stripe error fetching price for {lookup_key}: {e}")
                 app_cache.set(
-                    cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds
+                    cache_key,
+                    BillingService._pricing_cache_miss_sentinel,
+                    ttl=BillingService._pricing_error_cache_ttl_seconds,
                 )
                 return None
 

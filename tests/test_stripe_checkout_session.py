@@ -5,6 +5,7 @@ import pytest
 
 from app.services.billing_service import BillingService
 from app.services.lifetime_pricing_service import LifetimePricingService
+from app.utils.cache_manager import app_cache
 
 
 def _pricing_stub(price_id="price_123"):
@@ -212,3 +213,48 @@ def test_resolve_lookup_variant_falls_back_to_related_product_price(app):
                 expected_cycle="yearly",
             )
             assert resolved == "price_yearly_123"
+
+
+def test_get_live_pricing_respects_cached_miss_sentinel(app):
+    lookup_key = "missing_lookup_key_cached"
+    cache_key = BillingService._pricing_cache_key(lookup_key)
+
+    with app.app_context():
+        app_cache.set(cache_key, BillingService._pricing_cache_miss_sentinel, ttl=60)
+        with patch(
+            "app.services.billing_service.BillingService.ensure_stripe"
+        ) as mock_ensure:
+            pricing = BillingService.get_live_pricing_for_lookup_key(lookup_key)
+
+    assert pricing is None
+    mock_ensure.assert_not_called()
+
+
+def test_ensure_stripe_applies_network_timeouts_and_retries(app, monkeypatch):
+    configured = {}
+
+    class _DummyRequestsClient:
+        def __init__(self, timeout, **_kwargs):
+            configured["timeout"] = timeout
+            self._timeout = timeout
+
+    with app.app_context():
+        app.config["STRIPE_SECRET_KEY"] = "sk_test_123"
+        app.config["STRIPE_HTTP_TIMEOUT_SECONDS"] = 7
+        app.config["STRIPE_MAX_NETWORK_RETRIES"] = 0
+
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.default_http_client", None, raising=False
+        )
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.max_network_retries", 2, raising=False
+        )
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.RequestsClient",
+            _DummyRequestsClient,
+            raising=False,
+        )
+
+        assert BillingService.ensure_stripe() is True
+
+    assert configured["timeout"] == (3.0, 7.0)

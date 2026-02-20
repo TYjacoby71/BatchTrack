@@ -78,6 +78,7 @@ class RouteAccessConfig:
         "help_routes.help_faq",
         "waitlist.join_waitlist",
         "api.health_check",
+        "core.health_check",
         "app_routes.vendor_signup",
         "core.sitemap_xml",
         "core.robots_txt",
@@ -104,6 +105,8 @@ class RouteAccessConfig:
         "/api/public",
         "/help",
         "/recipes/library",
+        "/health",
+        "/ping",
     )
 
     DEVELOPER_ONLY_PATH_PREFIXES: Tuple[str, ...] = ("/developer/",)
