@@ -25,8 +25,8 @@ from app.models import (
     db,
 )
 from app.models.batch import BatchConsumable
+from app.services.analytics_tracking_service import AnalyticsTrackingService
 from app.services.base_service import BaseService
-from app.services.event_emitter import EventEmitter
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.lineage_service import generate_lineage_id
 from app.services.unit_conversion.unit_conversion import ConversionEngine
@@ -283,8 +283,11 @@ class BatchOperationsService(BaseService):
 
                 # Emit domain event for batch start (best-effort)
                 try:
-                    EventEmitter.emit(
+                    AnalyticsTrackingService.track_batch_lifecycle_event(
                         event_name="batch_started",
+                        organization_id=batch.organization_id,
+                        user_id=batch.created_by,
+                        batch_id=batch.id,
                         properties={
                             "recipe_id": snap_recipe_id,
                             "scale": snap_scale,
@@ -295,10 +298,6 @@ class BatchOperationsService(BaseService):
                             "lineage_id": batch.lineage_id,
                             "portioning": portion_snap,
                         },
-                        organization_id=batch.organization_id,
-                        user_id=batch.created_by,
-                        entity_type="batch",
-                        entity_id=batch.id,
                     )
                 except Exception:
                     pass
@@ -731,16 +730,15 @@ class BatchOperationsService(BaseService):
 
             # Emit domain event (best-effort)
             try:
-                EventEmitter.emit(
+                AnalyticsTrackingService.track_batch_lifecycle_event(
                     event_name="batch_cancelled",
+                    organization_id=batch.organization_id,
+                    user_id=batch.created_by,
+                    batch_id=batch.id,
                     properties={
                         "label_code": batch.label_code,
                         "restoration_summary": restoration_summary,
                     },
-                    organization_id=batch.organization_id,
-                    user_id=batch.created_by,
-                    entity_type="batch",
-                    entity_id=batch.id,
                 )
             except Exception:
                 pass
@@ -824,8 +822,11 @@ class BatchOperationsService(BaseService):
                         )
                     except Exception:
                         overall_freshness = None
-                    EventEmitter.emit(
+                    AnalyticsTrackingService.track_batch_lifecycle_event(
                         event_name="batch_completed",
+                        organization_id=refreshed.organization_id,
+                        user_id=refreshed.created_by,
+                        batch_id=refreshed.id,
                         properties={
                             "label_code": refreshed.label_code,
                             "final_quantity": refreshed.final_quantity,
@@ -839,10 +840,6 @@ class BatchOperationsService(BaseService):
                             "yield_accuracy_variance_pct": accuracy_pct,
                             "overall_freshness_percent": overall_freshness,
                         },
-                        organization_id=refreshed.organization_id,
-                        user_id=refreshed.created_by,
-                        entity_type="batch",
-                        entity_id=refreshed.id,
                     )
                 except Exception:
                     pass
@@ -883,13 +880,12 @@ class BatchOperationsService(BaseService):
 
             # Emit domain event (best-effort)
             try:
-                EventEmitter.emit(
+                AnalyticsTrackingService.track_batch_lifecycle_event(
                     event_name="batch_failed",
-                    properties={"label_code": batch.label_code, "reason": reason},
                     organization_id=batch.organization_id,
                     user_id=batch.created_by,
-                    entity_type="batch",
-                    entity_id=batch.id,
+                    batch_id=batch.id,
+                    properties={"label_code": batch.label_code, "reason": reason},
                 )
             except Exception:
                 pass

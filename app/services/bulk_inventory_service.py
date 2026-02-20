@@ -7,7 +7,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import InventoryItem
-from app.services.event_emitter import EventEmitter
+from app.services.analytics_tracking_service import AnalyticsTrackingService
 from app.services.inventory_adjustment import (
     create_inventory_item,
     process_inventory_adjustment,
@@ -278,10 +278,7 @@ class BulkInventoryService:
         for payload in entries:
             if not payload:
                 continue
-            try:
-                EventEmitter.emit(**payload, auto_commit=False)
-            except Exception:
-                pass
+            AnalyticsTrackingService.emit_from_payload(payload, auto_commit=False)
 
     def _abort(
         self, line_number: int, line: Mapping[str, Any], change_type: str, reason: str

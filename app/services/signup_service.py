@@ -15,9 +15,9 @@ from typing import Optional, Tuple
 
 from ..models import Organization, PendingSignup, Role, SubscriptionTier, User, db
 from ..utils.timezone_utils import TimezoneUtils
+from .analytics_tracking_service import AnalyticsTrackingService
 from .batchbot_credit_service import BatchBotCreditService
 from .email_service import EmailService
-from .event_emitter import EventEmitter
 
 # Import moved to avoid circular dependency
 # from ..blueprints.developer.subscription_tiers import load_tiers_config
@@ -293,17 +293,13 @@ class SignupService:
             except Exception as email_error:
                 logger.warning("Failed to send password setup email: %s", email_error)
 
-            EventEmitter.emit(
-                "billing.stripe_checkout_completed",
+            AnalyticsTrackingService.track_billing_stripe_checkout_completed(
                 organization_id=org.id,
                 user_id=owner_user.id,
-                properties={
-                    "pending_signup_id": pending_signup.id,
-                    "tier_id": subscription_tier.id,
-                    "checkout_session_id": pending_signup.stripe_checkout_session_id,
-                    "stripe_customer_id": pending_signup.stripe_customer_id,
-                },
-                auto_commit=True,
+                pending_signup_id=pending_signup.id,
+                tier_id=subscription_tier.id,
+                checkout_session_id=pending_signup.stripe_checkout_session_id,
+                stripe_customer_id=pending_signup.stripe_customer_id,
             )
             completion_properties = {
                 "pending_signup_id": pending_signup.id,
@@ -312,6 +308,13 @@ class SignupService:
                 "checkout_session_id": pending_signup.stripe_checkout_session_id,
                 "stripe_customer_id": pending_signup.stripe_customer_id,
                 "billing_provider": "stripe",
+                "signup_flow": "checkout",
+                "is_oauth_signup": bool(pending_signup.oauth_provider),
+                "purchase_completed": True,
+                **AnalyticsTrackingService.build_code_usage_properties(
+                    promo_code=pending_signup.promo_code,
+                    referral_code=pending_signup.referral_code,
+                ),
             }
             try:
                 raw_first_landing = (
@@ -328,23 +331,11 @@ class SignupService:
                         )
             except (TypeError, ValueError):
                 pass
-            EventEmitter.emit(
-                "signup_checkout_completed",
+            AnalyticsTrackingService.emit_checkout_completion_bundle(
                 organization_id=org.id,
                 user_id=owner_user.id,
-                properties=completion_properties,
-                entity_type="organization",
                 entity_id=org.id,
-                auto_commit=True,
-            )
-            EventEmitter.emit(
-                "purchase_completed",
-                organization_id=org.id,
-                user_id=owner_user.id,
-                properties=completion_properties,
-                entity_type="organization",
-                entity_id=org.id,
-                auto_commit=True,
+                completion_properties=completion_properties,
             )
 
             return org, owner_user

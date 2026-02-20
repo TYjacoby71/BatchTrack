@@ -38,8 +38,8 @@ from ...services.billing_access_policy_service import (
     BillingAccessAction,
     BillingAccessPolicyService,
 )
+from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.email_service import EmailService
-from ...services.event_emitter import EventEmitter
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
@@ -394,29 +394,18 @@ def login():
                 flash("Login temporarily unavailable. Please try again.")
                 return _render_login_page(503)
 
-            try:
-                login_props = {
-                    "is_first_login": previous_last_login is None,
-                    "login_method": "password",
-                    "destination_hint": (
-                        "developer_dashboard"
-                        if user.user_type == "developer"
-                        else "app_dashboard"
-                    ),
-                }
-                seconds_from_landing = seconds_since_first_landing(request)
-                if seconds_from_landing is not None:
-                    login_props["seconds_since_first_landing"] = seconds_from_landing
-                EventEmitter.emit(
-                    event_name="user_login_succeeded",
-                    properties=login_props,
-                    organization_id=getattr(user, "organization_id", None),
-                    user_id=user.id,
-                    entity_type="user",
-                    entity_id=user.id,
-                )
-            except Exception:
-                pass
+            AnalyticsTrackingService.track_user_login_succeeded(
+                organization_id=getattr(user, "organization_id", None),
+                user_id=user.id,
+                is_first_login=previous_last_login is None,
+                login_method="password",
+                destination_hint=(
+                    "developer_dashboard"
+                    if user.user_type == "developer"
+                    else "app_dashboard"
+                ),
+                seconds_since_first_landing=seconds_since_first_landing(request),
+            )
 
             if user.user_type == "developer":
                 return redirect(url_for("developer.dashboard"))
@@ -670,6 +659,18 @@ def quick_signup():
                         exc,
                     )
 
+            AnalyticsTrackingService.track_signup_completed(
+                organization_id=org.id,
+                user_id=user.id,
+                entity_id=org.id,
+                signup_source="global_library",
+                signup_flow="quick_signup",
+                billing_provider="none",
+                tier_id=getattr(tier, "id", None),
+                is_oauth_signup=False,
+                purchase_completed=False,
+            )
+
             login_user(user)
             SessionService.rotate_user_session(user)
             session["onboarding_welcome"] = True
@@ -756,21 +757,13 @@ def dev_login():
         SessionService.rotate_user_session(dev_user)
         dev_user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
-        try:
-            EventEmitter.emit(
-                event_name="user_login_succeeded",
-                properties={
-                    "is_first_login": previous_last_login is None,
-                    "login_method": "dev_quick_login",
-                    "destination_hint": "developer_dashboard",
-                },
-                organization_id=getattr(dev_user, "organization_id", None),
-                user_id=dev_user.id,
-                entity_type="user",
-                entity_id=dev_user.id,
-            )
-        except Exception:
-            pass
+        AnalyticsTrackingService.track_user_login_succeeded(
+            organization_id=getattr(dev_user, "organization_id", None),
+            user_id=dev_user.id,
+            is_first_login=previous_last_login is None,
+            login_method="dev_quick_login",
+            destination_hint="developer_dashboard",
+        )
         flash("Developer access granted", "success")
         return redirect(url_for("developer.dashboard"))
 

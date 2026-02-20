@@ -5,3 +5,8 @@ services:
     buildCommand: ./scripts/render-build.sh
     startCommand: gunicorn wsgi:app
     healthCheckPath: /health
+  - type: worker
+    name: batchtrack-domain-events
+    env: python
+    buildCommand: ./scripts/render-build.sh
+    startCommand: flask --app wsgi:app dispatch-domain-events

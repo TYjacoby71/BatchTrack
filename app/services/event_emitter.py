@@ -19,6 +19,7 @@ from sqlalchemy import func
 
 from app.models import db
 from app.models.domain_event import DomainEvent
+from app.services.analytics_event_registry import CORE_USAGE_EVENT_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +32,7 @@ class EventEmitter:
     """Lightweight event emitter that writes to DomainEvent (outbox style)."""
 
     _FIRST_LOGIN_EVENT = "user_login_succeeded"
-    _CORE_USAGE_EVENTS = {
-        "user_login_succeeded",
-        "signup_checkout_started",
-        "signup_checkout_completed",
-        "purchase_completed",
-        "onboarding_completed",
-        "inventory_item_created",
-        "inventory_item_custom_created",
-        "inventory_item_global_created",
-        "recipe_created",
-        "recipe_variation_created",
-        "recipe_test_created",
-        "plan_production_requested",
-        "stock_check_run",
-        "batch_started",
-        "batch_completed",
-        "timer_started",
-    }
+    _CORE_USAGE_EVENTS = set(CORE_USAGE_EVENT_NAMES)
 
     @staticmethod
     def _safe_event_count(*, event_name: str, user_id: int | None, org_id: int | None) -> tuple[int | None, int | None]:

@@ -11,6 +11,7 @@ import os
 from types import SimpleNamespace
 
 from app.extensions import db
+from app.models.domain_event import DomainEvent
 from app.models.pending_signup import PendingSignup
 from app.models.subscription_tier import SubscriptionTier
 from app.services.billing_service import BillingService
@@ -267,3 +268,71 @@ def test_signup_provisioning_prefills_name_and_email_from_oauth_metadata(app):
         assert user.first_name == "Ada"
         assert user.last_name == "Lovelace"
         assert org.contact_email == "ada@example.com"
+
+
+def test_signup_completion_events_include_code_usage_flags(app):
+    with app.app_context():
+        tier = SubscriptionTier(
+            name="Code Tracking Tier",
+            user_limit=1,
+            billing_provider="stripe",
+            is_customer_facing=True,
+            stripe_lookup_key="price_code_tracking",
+        )
+        db.session.add(tier)
+        db.session.commit()
+
+        pending = SignupService.create_pending_signup_record(
+            tier=tier,
+            email="codeuser@example.com",
+            phone=None,
+            signup_source="pricing_test",
+            referral_code="REF-CODE-1",
+            promo_code="SAVE-20",
+            detected_timezone="UTC",
+            oauth_user_info=None,
+            extra_metadata={},
+        )
+
+        checkout_session = SimpleNamespace(
+            id="cs_test_codes",
+            metadata={"pending_signup_id": str(pending.id)},
+            customer_details={
+                "email": "codeuser@example.com",
+                "phone": "555-0101",
+                "name": "Casey Coded",
+            },
+            customer=SimpleNamespace(id="cus_test_codes", metadata={}),
+            custom_fields=[],
+            client_reference_id=str(pending.id),
+        )
+        customer = SimpleNamespace(
+            id="cus_test_codes",
+            email="codeuser@example.com",
+            phone="555-0101",
+            name="Casey Coded",
+            metadata={},
+        )
+
+        org, user = SignupService.complete_pending_signup_from_checkout(
+            pending, checkout_session, customer
+        )
+        assert org is not None
+        assert user is not None
+
+        for event_name in (
+            "signup_completed",
+            "signup_checkout_completed",
+            "purchase_completed",
+        ):
+            event = (
+                DomainEvent.query.filter_by(event_name=event_name)
+                .order_by(DomainEvent.id.desc())
+                .first()
+            )
+            assert event is not None
+            props = event.properties or {}
+            assert props.get("used_promo_code") is True
+            assert props.get("promo_code") == "SAVE-20"
+            assert props.get("used_referral_code") is True
+            assert props.get("referral_code") == "REF-CODE-1"
