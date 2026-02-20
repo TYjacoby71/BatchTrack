@@ -1,0 +1,70 @@
+{#
+Synopsis:
+Pre-content chrome for breadcrumbs, flash messages, and verification notices.
+#}
+{% if breadcrumb_items is defined and breadcrumb_items %}
+{% set breadcrumb_ns = namespace(last_url=None) %}
+{% for crumb in breadcrumb_items %}
+    {% if crumb.url %}
+        {% set breadcrumb_ns.last_url = crumb.url %}
+    {% endif %}
+{% endfor %}
+{% set resolved_breadcrumb_back_url = breadcrumb_back_url if breadcrumb_back_url is defined and breadcrumb_back_url else breadcrumb_ns.last_url %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <nav aria-label="breadcrumb" class="mb-0">
+        <ol class="breadcrumb mb-0">
+            {% for crumb in breadcrumb_items %}
+                {% if crumb.url %}
+                <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>
+                {% else %}
+                <li class="breadcrumb-item active">{{ crumb.label }}</li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+    {% if resolved_breadcrumb_back_url %}
+    <a href="{{ resolved_breadcrumb_back_url }}"
+       class="{{ breadcrumb_back_class if breadcrumb_back_class is defined and breadcrumb_back_class else 'btn btn-outline-secondary btn-sm' }}">
+        <i class="fas fa-arrow-left me-1"></i>{{ breadcrumb_back_label if breadcrumb_back_label is defined and breadcrumb_back_label else 'Back' }}
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            {% set hide_authenticated_generic_resend = current_user.is_authenticated and message == 'If an account with that email exists and is unverified, a verification email has been sent.' %}
+            {% if not hide_authenticated_generic_resend %}
+            {% set alert_class = 'info' %}
+            {% if category in ['error', 'danger'] %}
+                {% set alert_class = 'danger' %}
+            {% elif category == 'warning' %}
+                {% set alert_class = 'warning' %}
+            {% elif category == 'success' %}
+                {% set alert_class = 'success' %}
+            {% endif %}
+            <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% if current_user.is_authenticated and current_user.user_type != 'developer' and current_user.email and not current_user.email_verified %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
+    <div>
+        <strong>Email verification needed.</strong>
+        Request a fresh verification email now if you did not receive the original link.
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <form method="post" action="{{ url_for('auth.resend_verification') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="email" value="{{ current_user.email }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="btn btn-sm btn-warning">Resend verification email</button>
+        </form>
+        <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary py-1 px-2">Open settings</a>
+    </div>
+</div>
+{% endif %}

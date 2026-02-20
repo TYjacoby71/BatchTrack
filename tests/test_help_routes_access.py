@@ -28,6 +28,8 @@ def test_help_pages_use_lightweight_public_shell(app):
     assert "js/core/SessionGuard.js" not in html
     assert "css/filter_panels" not in html
     assert "font-awesome/5.15.4/css/all.min.css" not in html
+    assert "FIRST_LANDING_STORAGE_KEY" not in html
+    assert "page_context_viewed" not in html
     assert "bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" in html
 
 
@@ -42,3 +44,5 @@ def test_legal_pages_use_lightweight_public_shell(app):
     assert "jquery-3.6.0.min.js" not in html
     assert "js/core/SessionGuard.js" not in html
     assert "css/filter_panels" not in html
+    assert "FIRST_LANDING_STORAGE_KEY" not in html
+    assert "page_context_viewed" not in html

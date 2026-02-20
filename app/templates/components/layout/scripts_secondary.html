@@ -1,0 +1,54 @@
+{#
+Synopsis:
+Secondary app-only scripts for feature-upgrade modal and live header clock.
+#}
+{% if not lightweight_public_shell %}
+<script src="{{ static_asset('js/expiration_alerts.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const upgradeModal = document.getElementById('featureUpgradeModal');
+        if (!upgradeModal) {
+            const verificationRequiredModal = document.getElementById('verificationRequiredModal');
+            if (verificationRequiredModal && typeof bootstrap !== 'undefined') {
+                new bootstrap.Modal(verificationRequiredModal).show();
+            }
+            return;
+        }
+
+        upgradeModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            const featureName = trigger ? trigger.getAttribute('data-feature-name') : null;
+            const featureDescription = trigger ? trigger.getAttribute('data-feature-description') : null;
+
+            const modalTitle = document.getElementById('featureUpgradeModalTitle');
+            const modalBody = document.getElementById('featureUpgradeModalBody');
+
+            if (modalTitle) {
+                modalTitle.textContent = (featureName || 'Feature') + ' requires an upgrade';
+            }
+            if (modalBody) {
+                modalBody.textContent = featureDescription || 'This feature is locked on your current plan.';
+            }
+        });
+
+        const verificationRequiredModal = document.getElementById('verificationRequiredModal');
+        if (verificationRequiredModal && typeof bootstrap !== 'undefined') {
+            new bootstrap.Modal(verificationRequiredModal).show();
+        }
+    });
+</script>
+
+<!-- Simple browser clock script -->
+<script>
+    function updateClock() {
+        const clockElement = document.getElementById('header-clock');
+        if (clockElement) {
+            const now = new Date();
+            clockElement.textContent = `🕐 ${now.toLocaleTimeString()}`;
+        }
+    }
+    // Update clock every second and start immediately
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+{% endif %}

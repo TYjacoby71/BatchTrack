@@ -61,6 +61,16 @@ def _is_reset_token_expired(user: User) -> bool:
 @limiter.limit("120/minute")
 def forgot_password():
     """Request a password reset link. Response is intentionally generic."""
+    forgot_page_context = {
+        "page_title": "Forgot Password | BatchTrack",
+        "page_description": "Request a secure password reset link for your BatchTrack account.",
+        "canonical_url": url_for("auth.forgot_password", _external=True),
+        "show_public_header": True,
+        "lightweight_public_shell": True,
+        "load_analytics": False,
+        "load_fontawesome": False,
+        "load_feedback_widget": False,
+    }
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         generic_message = (
@@ -89,7 +99,7 @@ def forgot_password():
         flash(generic_message, "info")
         return redirect(url_for("auth.login"))
 
-    return render_template("pages/auth/forgot_password.html")
+    return render_template("pages/auth/forgot_password.html", **forgot_page_context)
 
 
 # --- Reset password route ---
@@ -100,6 +110,24 @@ def forgot_password():
 @limiter.limit("120/minute")
 def reset_password(token):
     """Reset password using a one-time token delivered via email."""
+    reset_page_context = {
+        "page_title": "Set New Password | BatchTrack",
+        "page_description": "Set a new password to regain secure access to your BatchTrack account.",
+        "canonical_url": url_for("auth.reset_password", token=token, _external=True),
+        "show_public_header": True,
+        "lightweight_public_shell": True,
+        "load_analytics": False,
+        "load_fontawesome": False,
+        "load_feedback_widget": False,
+    }
+
+    def _render_reset_password_form():
+        return render_template(
+            "pages/auth/reset_password.html",
+            token=token,
+            **reset_page_context,
+        )
+
     user = User.query.filter_by(password_reset_token=token).first()
     if not user or _is_reset_token_expired(user):
         if user and user.password_reset_token == token:
@@ -115,13 +143,13 @@ def reset_password(token):
 
         if not new_password or not confirm_password:
             flash("Please enter and confirm your new password.", "error")
-            return render_template("pages/auth/reset_password.html", token=token)
+            return _render_reset_password_form()
         if new_password != confirm_password:
             flash("Passwords do not match.", "error")
-            return render_template("pages/auth/reset_password.html", token=token)
+            return _render_reset_password_form()
         if len(new_password) < 8:
             flash("Password must be at least 8 characters long.", "error")
-            return render_template("pages/auth/reset_password.html", token=token)
+            return _render_reset_password_form()
 
         try:
             user.set_password(new_password)
@@ -143,9 +171,9 @@ def reset_password(token):
                 "Password reset failed for user %s: %s", getattr(user, "id", None), exc
             )
             flash("Unable to reset password right now. Please try again.", "error")
-            return render_template("pages/auth/reset_password.html", token=token)
+            return _render_reset_password_form()
 
         flash("Password updated successfully. Please log in.", "success")
         return redirect(url_for("auth.login"))
 
-    return render_template("pages/auth/reset_password.html", token=token)
+    return _render_reset_password_form()

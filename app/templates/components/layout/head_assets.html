@@ -1,0 +1,12 @@
+{#
+Synopsis:
+Shared head asset links and runtime bootstraps for app/public shells.
+
+Glossary:
+- Lightweight shell: Public route mode that avoids loading heavy app assets.
+- Analytics bootstrap: Shared client telemetry helpers for page events.
+#}
+{% include 'components/layout/head_assets_styles.html' %}
+{% include 'components/layout/head_theme_bootstrap.html' %}
+{% include 'components/layout/head_analytics_providers.html' %}
+{% include 'components/layout/head_analytics_runtime.html' %}

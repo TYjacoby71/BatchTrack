@@ -1,0 +1,45 @@
+{#
+Synopsis:
+Theme/bootstrap runtime initialization in document head.
+#}
+<script>
+  // Minimal theme bootstrap: scope localStorage per user + org.
+  (function() {
+    try {
+      var userId = {{ current_user.id if current_user.is_authenticated else 'null' }};
+      var orgId = {{ get_effective_org_id() if current_user.is_authenticated else 'null' }};
+      var userKey = userId ? String(userId) : 'guest';
+      var orgKey = orgId ? String(orgId) : 'public';
+      var prefix = 'bt:' + userKey + ':' + orgKey + ':';
+      window.BT_STORAGE = {
+        userId: userId,
+        orgId: orgId,
+        prefix: prefix,
+        key: function(baseKey) { return prefix + baseKey; }
+      };
+      window.BT_LIST_PREFERENCES = {{ (list_preferences_payload if list_preferences_payload is defined else {}) | tojson }};
+
+      var storageKey = window.BT_STORAGE.key('theme');
+      var hasServerTheme = {{ 'true' if theme_preference_scoped else 'false' }};
+      var serverTheme = {{ theme_preference | tojson if theme_preference_scoped else 'null' }};
+      var forcePublicLightTheme = {{ 'true' if public_shell_mode else 'false' }};
+      var theme = null;
+
+      if (forcePublicLightTheme) {
+        theme = 'light';
+        localStorage.setItem(storageKey, theme);
+      } else if (hasServerTheme && serverTheme) {
+        theme = serverTheme;
+        localStorage.setItem(storageKey, theme);
+      } else {
+        theme = localStorage.getItem(storageKey) || 'light';
+        localStorage.setItem(storageKey, theme);
+      }
+
+      document.documentElement.setAttribute('data-theme', theme || 'light');
+    } catch (e) {}
+  })();
+</script>
+{% if not lightweight_public_shell %}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{% endif %}
