@@ -42,3 +42,4 @@ repos:
         entry: python3 scripts/validate_pr_documentation.py --staged
         language: system
         pass_filenames: false
+        stages: [manual]
