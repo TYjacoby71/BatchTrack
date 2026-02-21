@@ -143,6 +143,9 @@ def tools_index():
         tool_flags=flags,
         show_public_header=True,
         lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
     )
 
 
