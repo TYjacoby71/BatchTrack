@@ -101,7 +101,7 @@ def _expired_quantity_map(item_ids):
         .filter(
             InventoryLot.inventory_item_id.in_(item_ids),
             InventoryLot.remaining_quantity_base > 0,
-            InventoryLot.expiration_date is not None,
+            InventoryLot.expiration_date.is_not(None),
             InventoryLot.expiration_date < today,
         )
         .group_by(InventoryLot.inventory_item_id)

@@ -61,7 +61,6 @@
           <select class="form-select" id="recipe_id" name="recipe_id" required disabled>
             <option value="">Choose a recipe...</option>
           </select>
-          <div class="form-text" id="recipeCacheMeta" hidden></div>
         </div>
 
         <!-- Variant Selection (hidden by default) -->
@@ -95,7 +94,6 @@
   const loadingState = document.getElementById('recipeLoadingState');
   const errorState = document.getElementById('recipeErrorState');
   const emptyState = document.getElementById('recipeEmptyState');
-  const recipeCacheMeta = document.getElementById('recipeCacheMeta');
   const startBatchBtn = document.getElementById('openStartBatchButton');
   const bootstrapRecipesUrl = "{{ url_for('api.bootstrap_recipes') }}";
   let recipesCache = null;
@@ -129,11 +127,6 @@
         recipesCache.forEach(recipe => {
           recipeVariantMap.set(String(recipe.id), recipe.variations || []);
         });
-        if (recipeCacheMeta) {
-          const fromCache = data.cache === 'hit' ? 'cache hit' : 'cache miss';
-          recipeCacheMeta.textContent = `Bootstrap source: ${fromCache}, ${recipesCache.length} recipes`;
-          recipeCacheMeta.hidden = false;
-        }
         return recipesCache;
       })
       .catch(error => {
