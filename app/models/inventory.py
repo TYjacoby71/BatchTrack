@@ -166,7 +166,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 and_(
                     InventoryLot.inventory_item_id == self.id,
                     InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date is not None,
+                    InventoryLot.expiration_date.is_not(None),
                     InventoryLot.expiration_date < today,
                 )
             )
@@ -202,7 +202,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 and_(
                     InventoryLot.inventory_item_id == self.id,
                     InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date is not None,
+                    InventoryLot.expiration_date.is_not(None),
                     InventoryLot.expiration_date < today,
                 )
             )

@@ -502,7 +502,7 @@ def deduct_fifo_inventory(
         if item.is_perishable and (str(change_type).lower() in consumption_ops):
             now_utc = TimezoneUtils.utc_now()
             query = query.filter(
-                (InventoryLot.expiration_date is None)
+                (InventoryLot.expiration_date.is_(None))
                 | (InventoryLot.expiration_date >= now_utc)
             )
 
@@ -680,7 +680,7 @@ def estimate_fifo_issue_unit_cost(
         ):
             now_utc = TimezoneUtils.utc_now()
             query = query.filter(
-                (InventoryLot.expiration_date is None)
+                (InventoryLot.expiration_date.is_(None))
                 | (InventoryLot.expiration_date >= now_utc)
             )
 
