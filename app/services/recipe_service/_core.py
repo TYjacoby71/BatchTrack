@@ -174,6 +174,7 @@ def _next_test_sequence(
     *,
     is_master: bool,
     variation_name: str | None,
+    version_number: int | None = None,
 ) -> int:
     if not recipe_group_id:
         return 1
@@ -187,6 +188,8 @@ def _next_test_sequence(
         query = query.filter(
             sa.func.lower(Recipe.variation_name) == normalized_variation_name
         )
+    if version_number is not None:
+        query = query.filter(Recipe.version_number == int(version_number))
     max_test = query.with_entities(sa.func.max(Recipe.test_sequence)).scalar()
     return int(max_test or 0) + 1
 
@@ -507,6 +510,7 @@ def create_recipe(
                 recipe_group.id if recipe_group else None,
                 is_master=is_master,
                 variation_name=resolved_variation_name,
+                version_number=version_number,
             )
 
         origin_context = _build_org_origin_context(
@@ -898,6 +902,7 @@ def update_recipe(
                     recipe.recipe_group_id,
                     is_master=recipe.is_master,
                     variation_name=recipe.variation_name,
+                    version_number=recipe.version_number,
                 )
         else:
             recipe.test_sequence = None

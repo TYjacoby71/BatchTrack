@@ -17,6 +17,7 @@ from ._archive import (
     restore_recipe,
     unlist_recipe,
 )
+from ._maintenance import repair_test_sequences
 
 # Import the public functions from our internal helper modules
 from ._core import (
@@ -70,6 +71,7 @@ __all__ = [
     "promote_test_to_current",
     "promote_variation_to_master",
     "promote_variation_to_new_group",
+    "repair_test_sequences",
 ]
 
 

@@ -6,17 +6,7 @@
 
 {% set can_create_variations = has_permission(current_user, 'recipes.create_variations') %}
 {% set base_master_name = recipe.recipe_group.name if recipe.recipe_group else recipe.name %}
-{% set display_recipe_name = recipe.name %}
-{% if not recipe.is_master %}
-  {% set base_name = recipe.variation_name or recipe.name %}
-  {% if is_test %}
-    {% set display_recipe_name = base_name ~ ' - Test ' ~ recipe.test_sequence %}
-  {% else %}
-    {% set display_recipe_name = base_name %}
-  {% endif %}
-{% elif is_test %}
-  {% set display_recipe_name = recipe.name ~ ' - Test ' ~ recipe.test_sequence %}
-{% endif %}
+{% set display_recipe_name = recipe|lineage_recipe_name(true) %}
 {% set breadcrumb_items = [
     {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
     {'label': display_recipe_name, 'url': None}
@@ -602,7 +592,8 @@
           </a>
           {% endif %}
           {% if can_create_variations %}
-          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test different versions of this recipe branch.' %}
+          {% if not is_test and recipe.status == 'published' %}
+          {% set test_tooltip = '"New Test" lets you test different versions of your master recipe.' if recipe.is_master else '"New Test" lets you test this variation version without changing its published formula.' %}
           <div class="d-flex gap-2 align-items-stretch">
             <a href="{{ url_for('recipes.create_test_version', recipe_id=recipe.id) }}"
                class="btn btn-outline-primary flex-grow-1{% if version_disabled %} disabled{% endif %}"
@@ -618,6 +609,7 @@
               <i class="fas fa-info-circle"></i>
             </button>
           </div>
+          {% endif %}
           {% if recipe.is_master and not is_test %}
           <div class="d-flex gap-2 align-items-stretch">
             <button type="button"

@@ -474,7 +474,7 @@ def create_variation(recipe_id):
 
 
 # --- Create test version ---
-# Purpose: Create a test version for master/variation.
+# Purpose: Create a test version for any published non-test recipe.
 @recipes_bp.route("/<int:recipe_id>/test", methods=["GET", "POST"])
 @login_required
 @require_permission("recipes.create_variations")
@@ -489,6 +489,12 @@ def create_test_version(recipe_id):
             return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
         if base.status != "published":
             flash("Publish the recipe before creating tests.", "error")
+            return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
+        if base.test_sequence is not None:
+            flash(
+                "Tests cannot be created from test recipes.",
+                "error",
+            )
             return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
         if request.method == "POST":
