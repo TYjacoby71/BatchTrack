@@ -615,3 +615,559 @@ def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, cli
     body = response.get_data(as_text=True)
     assert variation_label in body
     assert f"/recipes/{promoted_master_id}/view" in body
+
+
+@pytest.mark.usefixtures("app_context")
+def test_master_test_sequences_reset_per_master_version():
+    category = _create_category("MasterSequence")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Sequence Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="SEQ",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+    assert first_test.test_sequence == 1
+
+    promote_ok, promoted_master = promote_test_to_current(first_test.id)
+    assert promote_ok, promoted_master
+    assert promoted_master.version_number == 2
+
+    second_test_ok, second_test = create_test_version(
+        base=promoted_master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second version first test",
+        ),
+        target_status="published",
+    )
+    assert second_test_ok, second_test
+    assert second_test.version_number == promoted_master.version_number
+    assert second_test.test_sequence == 1
+    assert second_test.name.endswith(" - Test 1")
+
+
+@pytest.mark.usefixtures("app_context")
+def test_create_test_from_test_is_blocked():
+    category = _create_category("NestedTests")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Nested Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="NST",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First nested test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+    assert first_test.test_sequence == 1
+
+    second_test_ok, second_test = create_test_version(
+        base=first_test,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second nested test",
+        ),
+        target_status="published",
+    )
+    assert not second_test_ok
+    assert second_test == "Tests cannot be created from test recipes."
+
+
+@pytest.mark.usefixtures("app_context")
+def test_build_version_branches_groups_tests_under_master_version():
+    from app.blueprints.recipes.lineage_utils import build_version_branches
+
+    category = _create_category("BranchGrouping")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Branch Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="BRN",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    first_test_ok, first_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="First grouped test",
+        ),
+        target_status="published",
+    )
+    assert first_test_ok, first_test
+
+    second_test_ok, second_test = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Second grouped test",
+        ),
+        target_status="published",
+    )
+    assert second_test_ok, second_test
+
+    group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    master_branches, _ = build_version_branches(group_versions)
+    master_branch = next(
+        branch for branch in master_branches if branch["version"].id == master.id
+    )
+    assert [test.test_sequence for test in master_branch["tests"]] == [1, 2]
+
+
+@pytest.mark.usefixtures("app_context")
+def test_variation_tests_are_scoped_per_variation_version():
+    from app.blueprints.recipes.lineage_utils import build_version_branches
+
+    category = _create_category("VariationVersionScope")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Variation Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="VVS",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    variation_v1_ok, variation_v1 = create_recipe(
+        name=f"{master_name} Lavender",
+        instructions="Lavender v1",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=master.id,
+        status="published",
+    )
+    assert variation_v1_ok, variation_v1
+    variation_name = variation_v1.variation_name
+
+    variation_v2_ok, variation_v2 = create_recipe(
+        name=variation_v1.name,
+        instructions="Lavender v2",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=variation_v1.id,
+        variation_name=variation_name,
+        status="published",
+    )
+    assert variation_v2_ok, variation_v2
+
+    v1_test_1_ok, v1_test_1 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test one",
+        ),
+        target_status="published",
+    )
+    assert v1_test_1_ok, v1_test_1
+    v2_test_1_ok, v2_test_1 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test one",
+        ),
+        target_status="published",
+    )
+    assert v2_test_1_ok, v2_test_1
+    v1_test_2_ok, v1_test_2 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test two",
+        ),
+        target_status="published",
+    )
+    assert v1_test_2_ok, v1_test_2
+    v2_test_2_ok, v2_test_2 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test two",
+        ),
+        target_status="published",
+    )
+    assert v2_test_2_ok, v2_test_2
+
+    assert [v1_test_1.test_sequence, v1_test_2.test_sequence] == [1, 2]
+    assert [v2_test_1.test_sequence, v2_test_2.test_sequence] == [1, 2]
+    assert v1_test_1.version_number == variation_v1.version_number
+    assert v2_test_1.version_number == variation_v2.version_number
+
+    group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    _, variation_branches = build_version_branches(group_versions)
+    lavender_branch = next(
+        branch
+        for branch in variation_branches
+        if branch["name"].strip().lower() == (variation_name or "").strip().lower()
+    )
+    version_tests = {
+        entry["version"].version_number: [test.test_sequence for test in entry["tests"]]
+        for entry in lavender_branch["versions"]
+    }
+    assert version_tests[variation_v1.version_number] == [1, 2]
+    assert version_tests[variation_v2.version_number] == [1, 2]
+
+
+@pytest.mark.usefixtures("app_context")
+def test_repair_test_sequences_fixes_interleaved_variation_tests():
+    from app.services.recipe_service._maintenance import repair_test_sequences
+
+    category = _create_category("VariationRepair")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Repair Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="RPR",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    variation_v1_ok, variation_v1 = create_recipe(
+        name=f"{master_name} Lavender",
+        instructions="Lavender v1",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=master.id,
+        status="published",
+    )
+    assert variation_v1_ok, variation_v1
+    variation_name = variation_v1.variation_name
+
+    variation_v2_ok, variation_v2 = create_recipe(
+        name=variation_v1.name,
+        instructions="Lavender v2",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=variation_v1.id,
+        variation_name=variation_name,
+        status="published",
+    )
+    assert variation_v2_ok, variation_v2
+
+    v1_t1_ok, v1_t1 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test one",
+        ),
+        target_status="published",
+    )
+    assert v1_t1_ok, v1_t1
+    v2_t1_ok, v2_t1 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test one",
+        ),
+        target_status="published",
+    )
+    assert v2_t1_ok, v2_t1
+    v1_t2_ok, v1_t2 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test two",
+        ),
+        target_status="published",
+    )
+    assert v1_t2_ok, v1_t2
+    v2_t2_ok, v2_t2 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test two",
+        ),
+        target_status="published",
+    )
+    assert v2_t2_ok, v2_t2
+
+    # Simulate legacy interleaving data (v1: 1,3 and v2: 2,4).
+    v1_t2.test_sequence = 3
+    v1_t2.name = f"{variation_name} - Test 3"
+    v2_t1.test_sequence = 2
+    v2_t1.name = f"{variation_name} - Test 2"
+    v2_t2.test_sequence = 4
+    v2_t2.name = f"{variation_name} - Test 4"
+    db.session.commit()
+
+    dry_run = repair_test_sequences(
+        recipe_group_id=master.recipe_group_id,
+        apply_changes=False,
+    )
+    assert dry_run["sequence_updates"] >= 3
+
+    # Dry-run must not persist changes.
+    db.session.expire_all()
+    stale_v1_t2 = db.session.get(Recipe, v1_t2.id)
+    stale_v2_t1 = db.session.get(Recipe, v2_t1.id)
+    assert stale_v1_t2.test_sequence == 3
+    assert stale_v2_t1.test_sequence == 2
+
+    applied = repair_test_sequences(
+        recipe_group_id=master.recipe_group_id,
+        apply_changes=True,
+    )
+    assert applied["total_changes"] >= 3
+
+    db.session.expire_all()
+    repaired_group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    version_tests: dict[int, list[int]] = {}
+    for row in repaired_group_versions:
+        if row.test_sequence is None or row.is_master:
+            continue
+        version_tests.setdefault(int(row.version_number), []).append(int(row.test_sequence))
+    for seqs in version_tests.values():
+        assert sorted(seqs) == [1, 2]
+
+
+def test_view_recipe_shows_lineage_display_names(app, client):
+    with app.app_context():
+        user_id = User.query.first().id
+        category = _create_category("LineageDisplay")
+        ingredient = _create_ingredient()
+        master_name = _unique_name("Display Master")
+
+        create_ok, master = create_recipe(
+            name=master_name,
+            instructions="Display base",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="DSP",
+            category_id=category.id,
+            status="published",
+        )
+        assert create_ok, master
+
+        variation_ok, variation = create_recipe(
+            name=f"{master_name} Lavender",
+            instructions="Display variation",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="",
+            category_id=category.id,
+            parent_recipe_id=master.id,
+            status="published",
+        )
+        assert variation_ok, variation
+
+        test_ok, test_recipe = create_test_version(
+            base=master,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Display test",
+            ),
+            target_status="published",
+        )
+        assert test_ok, test_recipe
+
+        master_id = master.id
+        variation_id = variation.id
+        variation_name = variation.variation_name
+        test_id = test_recipe.id
+        test_sequence = test_recipe.test_sequence
+        group_name = master.recipe_group.name
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    variation_response = client.get(f"/recipes/{variation_id}/view")
+    assert variation_response.status_code == 200
+    variation_body = variation_response.get_data(as_text=True)
+    assert f"{group_name} - {variation_name}" in variation_body
+    assert f"/recipes/{variation_id}/test" in variation_body
+
+    master_response = client.get(f"/recipes/{master_id}/view")
+    assert master_response.status_code == 200
+    master_body = master_response.get_data(as_text=True)
+    assert f"/recipes/{master_id}/test" in master_body
+
+    test_response = client.get(f"/recipes/{test_id}/view")
+    assert test_response.status_code == 200
+    test_body = test_response.get_data(as_text=True)
+    expected_test_name = f"{group_name} - Test {test_sequence}"
+    assert expected_test_name in test_body
+    assert f"{expected_test_name} - Test {test_sequence}" not in test_body
+    assert f"/recipes/{test_id}/test" not in test_body
+
+
+def test_create_test_route_allows_all_published_variations_and_blocks_tests(app, client):
+    with app.app_context():
+        user_id = User.query.first().id
+        category = _create_category("TestRouteGuard")
+        ingredient = _create_ingredient()
+        master_name = _unique_name("Guard Master")
+
+        create_ok, master = create_recipe(
+            name=master_name,
+            instructions="Guard base",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="GRD",
+            category_id=category.id,
+            status="published",
+        )
+        assert create_ok, master
+
+        variation_ok, variation = create_recipe(
+            name=f"{master_name} Citrus",
+            instructions="Guard variation",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="",
+            category_id=category.id,
+            parent_recipe_id=master.id,
+            status="published",
+        )
+        assert variation_ok, variation
+
+        variation_test_ok, variation_test = create_test_version(
+            base=variation,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Guard variation test",
+            ),
+            target_status="published",
+        )
+        assert variation_test_ok, variation_test
+        promote_variation_ok, promoted_variation = promote_test_to_current(variation_test.id)
+        assert promote_variation_ok, promoted_variation
+
+        test_ok, test_recipe = create_test_version(
+            base=master,
+            payload=_test_recipe_payload(
+                ingredient_id=ingredient.id,
+                category_id=category.id,
+                instructions="Guard master test",
+            ),
+            target_status="published",
+        )
+        assert test_ok, test_recipe
+        current_variation_id = promoted_variation.id
+        older_variation_id = variation.id
+        test_id = test_recipe.id
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    current_variation_resp = client.get(f"/recipes/{current_variation_id}/test")
+    assert current_variation_resp.status_code == 200
+    current_variation_body = current_variation_resp.get_data(as_text=True)
+    assert "Tests cannot be created from test recipes." not in current_variation_body
+    assert f"/recipes/{current_variation_id}/test" in current_variation_body
+
+    older_variation_resp = client.get(f"/recipes/{older_variation_id}/test")
+    assert older_variation_resp.status_code == 200
+    older_variation_body = older_variation_resp.get_data(as_text=True)
+    assert "Tests cannot be created from test recipes." not in older_variation_body
+    assert f"/recipes/{older_variation_id}/test" in older_variation_body
+
+    test_resp = client.get(
+        f"/recipes/{test_id}/test",
+        follow_redirects=True,
+    )
+    assert test_resp.status_code == 200
+    test_body = test_resp.get_data(as_text=True)
+    assert "Tests cannot be created from test recipes." in test_body

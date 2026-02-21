@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.utils.cache_manager import app_cache
 from app.utils.json_store import read_json_file
 
 
