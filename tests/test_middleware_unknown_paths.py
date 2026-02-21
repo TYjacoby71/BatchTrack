@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import re
 
 import pytest
 
@@ -16,6 +17,14 @@ def _isolated_bot_trap_state(tmp_path):
         yield
     finally:
         PublicBotTrapService.BOT_TRAP_FILE = original_path
+
+
+def _extract_homepage_stat(html: str, label: str) -> str:
+    match = re.search(
+        rf'<div class="stat-number">([^<]+)</div>\s*<p>{re.escape(label)}</p>', html
+    )
+    assert match is not None, f"Expected homepage stat labeled '{label}'"
+    return match.group(1).strip()
 
 
 def test_unknown_unauthenticated_path_returns_404(app):
@@ -109,6 +118,47 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
 
     assert response.status_code == 200
     assert calls
+
+
+def test_homepage_active_user_stat_follows_lifetime_display_floor(app, monkeypatch):
+    client = app.test_client()
+    from app import template_context
+
+    monkeypatch.setattr(
+        template_context,
+        "read_json_file",
+        lambda _path, default=None: default if default is not None else [],
+    )
+    app_cache.clear_prefix("marketing:")
+    app_cache.clear_prefix("public:homepage")
+
+    # Keep these offers deterministic so seat display implies 16 seats taken.
+    app_cache.set(
+        "marketing:lifetime_offers:v1",
+        [
+            {"seat_total": 2000, "display_spots_left": 1997, "true_spots_left": 1997},
+            {"seat_total": 1000, "display_spots_left": 995, "true_spots_left": 995},
+            {"seat_total": 500, "display_spots_left": 492, "true_spots_left": 492},
+        ],
+        ttl=300,
+    )
+
+    app_cache.set("marketing:active_users", 5, ttl=600)
+    floor_response = client.get("/", query_string={"refresh": "1"}, follow_redirects=False)
+    assert floor_response.status_code == 200
+    assert (
+        _extract_homepage_stat(floor_response.get_data(as_text=True), "Active Users")
+        == "16"
+    )
+
+    app_cache.set("marketing:active_users", 24, ttl=600)
+    app_cache.clear_prefix("public:homepage")
+    real_response = client.get("/", query_string={"refresh": "1"}, follow_redirects=False)
+    assert real_response.status_code == 200
+    assert _extract_homepage_stat(real_response.get_data(as_text=True), "Active Users") == "24"
+
+    app_cache.clear_prefix("marketing:")
+    app_cache.clear_prefix("public:homepage")
 
 
 def test_suspicious_unknown_probe_blocks_after_three_strikes(app):

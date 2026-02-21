@@ -58,9 +58,11 @@ def _default_marketing_context() -> Dict[str, Any]:
         "marketing_spotlights": [],
         "marketing_stats": {
             "total_active_users": 0,
+            "total_active_users_true": 0,
             "lifetime_left": 0,
             "lifetime_true_left": 0,
             "lifetime_total": 0,
+            "lifetime_taken_display": 0,
         },
         "marketing_lifetime_offers": [],
         "marketing_messages": {"day_1": "", "day_3": "", "day_5": ""},
@@ -326,6 +328,10 @@ def register_template_context(app: Flask) -> None:
                 int(offer.get("display_spots_left", 0) or 0)
                 for offer in lifetime_offers
             )
+        lifetime_taken_display = max(0, lifetime_total - lifetime_display_left)
+        total_active_users_display = max(
+            int(total_active_users or 0), lifetime_taken_display
+        )
 
         cfg = get_settings()
         marketing_messages = {"day_1": "", "day_3": "", "day_5": ""}
@@ -340,10 +346,12 @@ def register_template_context(app: Flask) -> None:
             "marketing_reviews": reviews,
             "marketing_spotlights": spotlights,
             "marketing_stats": {
-                "total_active_users": total_active_users,
+                "total_active_users": total_active_users_display,
+                "total_active_users_true": int(total_active_users or 0),
                 "lifetime_left": lifetime_display_left,
                 "lifetime_true_left": lifetime_true_left,
                 "lifetime_total": lifetime_total,
+                "lifetime_taken_display": lifetime_taken_display,
             },
             "marketing_lifetime_offers": lifetime_offers,
             "marketing_messages": marketing_messages,
