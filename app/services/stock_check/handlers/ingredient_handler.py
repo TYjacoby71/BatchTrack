@@ -181,7 +181,7 @@ class IngredientHandler(BaseInventoryHandler):
             now_utc = TimezoneUtils.utc_now()
             # Ensure we compare like with like: store and compare as UTC-aware moments
             available_lots = available_lots.filter(
-                (InventoryLot.expiration_date is None)
+                (InventoryLot.expiration_date.is_(None))
                 | (InventoryLot.expiration_date >= now_utc)
             )
 

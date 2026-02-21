@@ -108,6 +108,10 @@ class EventEmitter:
 
         first_login_at = EventEmitter._first_login_at(user_id)
         if first_login_at:
+            # DomainEvent.occurred_at is stored as DateTime without timezone in some
+            # backends, so reads can come back naive even though values are UTC.
+            if first_login_at.tzinfo is None:
+                first_login_at = first_login_at.replace(tzinfo=timezone.utc)
             elapsed = (occurred_at - first_login_at).total_seconds()
             enriched["seconds_since_first_login"] = max(0, int(elapsed))
             enriched["first_login_observed_at"] = first_login_at.isoformat()
