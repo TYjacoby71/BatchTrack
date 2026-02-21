@@ -878,6 +878,139 @@ def test_variation_tests_are_scoped_per_variation_version():
     assert version_tests[variation_v2.version_number] == [1, 2]
 
 
+@pytest.mark.usefixtures("app_context")
+def test_repair_test_sequences_fixes_interleaved_variation_tests():
+    from app.services.recipe_service._maintenance import repair_test_sequences
+
+    category = _create_category("VariationRepair")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Repair Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base mix",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="RPR",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    variation_v1_ok, variation_v1 = create_recipe(
+        name=f"{master_name} Lavender",
+        instructions="Lavender v1",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=master.id,
+        status="published",
+    )
+    assert variation_v1_ok, variation_v1
+    variation_name = variation_v1.variation_name
+
+    variation_v2_ok, variation_v2 = create_recipe(
+        name=variation_v1.name,
+        instructions="Lavender v2",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="",
+        category_id=category.id,
+        parent_recipe_id=variation_v1.id,
+        variation_name=variation_name,
+        status="published",
+    )
+    assert variation_v2_ok, variation_v2
+
+    v1_t1_ok, v1_t1 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test one",
+        ),
+        target_status="published",
+    )
+    assert v1_t1_ok, v1_t1
+    v2_t1_ok, v2_t1 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test one",
+        ),
+        target_status="published",
+    )
+    assert v2_t1_ok, v2_t1
+    v1_t2_ok, v1_t2 = create_test_version(
+        base=variation_v1,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v1 test two",
+        ),
+        target_status="published",
+    )
+    assert v1_t2_ok, v1_t2
+    v2_t2_ok, v2_t2 = create_test_version(
+        base=variation_v2,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Variation v2 test two",
+        ),
+        target_status="published",
+    )
+    assert v2_t2_ok, v2_t2
+
+    # Simulate legacy interleaving data (v1: 1,3 and v2: 2,4).
+    v1_t2.test_sequence = 3
+    v1_t2.name = f"{variation_name} - Test 3"
+    v2_t1.test_sequence = 2
+    v2_t1.name = f"{variation_name} - Test 2"
+    v2_t2.test_sequence = 4
+    v2_t2.name = f"{variation_name} - Test 4"
+    db.session.commit()
+
+    dry_run = repair_test_sequences(
+        recipe_group_id=master.recipe_group_id,
+        apply_changes=False,
+    )
+    assert dry_run["sequence_updates"] >= 3
+
+    # Dry-run must not persist changes.
+    db.session.expire_all()
+    stale_v1_t2 = db.session.get(Recipe, v1_t2.id)
+    stale_v2_t1 = db.session.get(Recipe, v2_t1.id)
+    assert stale_v1_t2.test_sequence == 3
+    assert stale_v2_t1.test_sequence == 2
+
+    applied = repair_test_sequences(
+        recipe_group_id=master.recipe_group_id,
+        apply_changes=True,
+    )
+    assert applied["total_changes"] >= 3
+
+    db.session.expire_all()
+    repaired_group_versions = Recipe.query.filter(
+        Recipe.recipe_group_id == master.recipe_group_id
+    ).all()
+    version_tests: dict[int, list[int]] = {}
+    for row in repaired_group_versions:
+        if row.test_sequence is None or row.is_master:
+            continue
+        version_tests.setdefault(int(row.version_number), []).append(int(row.test_sequence))
+    for seqs in version_tests.values():
+        assert sorted(seqs) == [1, 2]
+
+
 def test_view_recipe_shows_lineage_display_names(app, client):
     with app.app_context():
         user_id = User.query.first().id
