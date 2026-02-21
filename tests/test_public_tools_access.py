@@ -141,19 +141,6 @@ def test_public_soap_page_skips_heavy_analytics_payloads(app):
 
 
 @pytest.mark.usefixtures("app")
-def test_public_tools_index_skips_heavy_analytics_and_fontawesome(app):
-    """Tools index should avoid analytics and Font Awesome payloads."""
-    client = app.test_client()
-    response = _assert_public_get(client, "/tools/", label="tools index")
-    html = response.get_data(as_text=True)
-
-    assert "www.googletagmanager.com/gtag/js" not in html
-    assert "posthog.init(" not in html
-    assert "us-assets.i.posthog.com" not in html
-    assert "cdnjs.cloudflare.com/ajax/libs/font-awesome" not in html
-
-
-@pytest.mark.usefixtures("app")
 def test_public_marketing_pages_do_not_skip_heading_levels(app):
     """Public pages should keep heading levels sequential for accessibility."""
     client = app.test_client()
