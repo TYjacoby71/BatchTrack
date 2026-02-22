@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -10,11 +12,20 @@ def _isolated_bot_trap_state(tmp_path):
     from app.services.public_bot_trap_service import PublicBotTrapService
 
     original_path = PublicBotTrapService.BOT_TRAP_FILE
+    original_cache = PublicBotTrapService._state_cache
+    original_cache_loaded_at = PublicBotTrapService._state_cache_loaded_at
+    original_oversize_warning = PublicBotTrapService._oversize_warning_emitted
     PublicBotTrapService.BOT_TRAP_FILE = str(tmp_path / "bot_traps.json")
+    PublicBotTrapService._state_cache = None
+    PublicBotTrapService._state_cache_loaded_at = None
+    PublicBotTrapService._oversize_warning_emitted = False
     try:
         yield
     finally:
         PublicBotTrapService.BOT_TRAP_FILE = original_path
+        PublicBotTrapService._state_cache = original_cache
+        PublicBotTrapService._state_cache_loaded_at = original_cache_loaded_at
+        PublicBotTrapService._oversize_warning_emitted = original_oversize_warning
 
 
 def test_unknown_unauthenticated_path_returns_404(app):
@@ -212,3 +223,60 @@ def test_robots_txt_unknown_path_does_not_auto_block(app):
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
+
+
+def test_bot_trap_hit_log_is_bounded(app):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    app.config["BOT_TRAP_MAX_HITS"] = 3
+    app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 999
+    app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
+
+    for idx in range(5):
+        response = client.get(
+            f"/wp-content/plugins/scanner-{idx}.php",
+            follow_redirects=False,
+        )
+        assert response.status_code == 404
+
+    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
+    hits = state.get("hits") or []
+    assert len(hits) == 3
+    assert [entry.get("path") for entry in hits] == [
+        "/wp-content/plugins/scanner-2.php",
+        "/wp-content/plugins/scanner-3.php",
+        "/wp-content/plugins/scanner-4.php",
+    ]
+
+
+def test_oversized_bot_trap_state_is_ignored(app):
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    blocked_ip = "203.0.113.42"
+    app.config["BOT_TRAP_MAX_STATE_BYTES"] = 256
+    app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
+
+    state_path = Path(PublicBotTrapService.BOT_TRAP_FILE)
+    oversized_payload = {
+        "hits": [{"payload": "x" * 2048}],
+        "blocked_ips": [],
+        "blocked_emails": [],
+        "blocked_users": [],
+        "ip_temporary_blocks": {
+            blocked_ip: {
+                "blocked_at": "2026-02-22T00:00:00+00:00",
+                "blocked_until": "2099-01-01T00:00:00+00:00",
+                "block_seconds": 86400,
+                "level": 1,
+                "reason": "test",
+                "source": "test",
+            }
+        },
+        "ip_strikes": {},
+        "ip_penalties": {},
+    }
+    state_path.write_text(json.dumps(oversized_payload), encoding="utf-8")
+    assert state_path.stat().st_size > app.config["BOT_TRAP_MAX_STATE_BYTES"]
+
+    assert PublicBotTrapService.is_blocked(ip=blocked_ip) is False

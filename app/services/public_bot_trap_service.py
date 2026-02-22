@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import copy
+import json
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from threading import Lock
 from typing import Any, Dict, Optional
 
 from flask import current_app, has_app_context
 
 from app.extensions import db
-from app.utils.json_store import read_json_file, write_json_file
+from app.utils.json_store import write_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,14 @@ class PublicBotTrapService:
     BLOCK_MAX_SECONDS_CONFIG_KEY = "BOT_TRAP_IP_BLOCK_MAX_SECONDS"
     PENALTY_RESET_SECONDS_CONFIG_KEY = "BOT_TRAP_PENALTY_RESET_SECONDS"
     ENABLE_PERMANENT_IP_BLOCKS_CONFIG_KEY = "BOT_TRAP_ENABLE_PERMANENT_IP_BLOCKS"
+    MAX_HITS_CONFIG_KEY = "BOT_TRAP_MAX_HITS"
+    STATE_CACHE_SECONDS_CONFIG_KEY = "BOT_TRAP_STATE_CACHE_SECONDS"
+    MAX_STATE_BYTES_CONFIG_KEY = "BOT_TRAP_MAX_STATE_BYTES"
+
+    _state_cache: Optional[Dict[str, Any]] = None
+    _state_cache_loaded_at: Optional[datetime] = None
+    _state_cache_lock = Lock()
+    _oversize_warning_emitted = False
 
     @classmethod
     def _default_state(cls) -> Dict[str, Any]:
@@ -34,8 +46,85 @@ class PublicBotTrapService:
         }
 
     @classmethod
-    def _load_state(cls) -> Dict[str, Any]:
-        state = read_json_file(cls.BOT_TRAP_FILE, default={})
+    def _state_file_path(cls) -> Path:
+        return Path(cls.BOT_TRAP_FILE)
+
+    @classmethod
+    def _state_cache_seconds(cls) -> int:
+        return cls._policy_int(cls.STATE_CACHE_SECONDS_CONFIG_KEY, 2, min_value=0)
+
+    @classmethod
+    def _max_hits(cls) -> int:
+        return cls._policy_int(cls.MAX_HITS_CONFIG_KEY, 2000, min_value=0)
+
+    @classmethod
+    def _max_state_bytes(cls) -> int:
+        return cls._policy_int(cls.MAX_STATE_BYTES_CONFIG_KEY, 2_000_000, min_value=0)
+
+    @classmethod
+    def _clone_state(cls, state: Dict[str, Any]) -> Dict[str, Any]:
+        return copy.deepcopy(state)
+
+    @classmethod
+    def _cache_state(cls, state: Dict[str, Any], *, loaded_at: Optional[datetime]) -> None:
+        with cls._state_cache_lock:
+            cls._state_cache = cls._clone_state(state)
+            cls._state_cache_loaded_at = loaded_at
+
+    @classmethod
+    def _cached_state(cls, *, now: datetime) -> Optional[Dict[str, Any]]:
+        cache_seconds = cls._state_cache_seconds()
+        if cache_seconds <= 0:
+            return None
+        with cls._state_cache_lock:
+            if cls._state_cache is None or cls._state_cache_loaded_at is None:
+                return None
+            age_seconds = (now - cls._state_cache_loaded_at).total_seconds()
+            if age_seconds > cache_seconds:
+                return None
+            return cls._clone_state(cls._state_cache)
+
+    @classmethod
+    def _read_state_without_lock(cls) -> Dict[str, Any]:
+        file_path = cls._state_file_path()
+        if not file_path.exists():
+            cls._oversize_warning_emitted = False
+            return {}
+
+        max_state_bytes = cls._max_state_bytes()
+        if max_state_bytes > 0:
+            try:
+                file_size = file_path.stat().st_size
+            except OSError:
+                file_size = None
+            if file_size is not None and file_size > max_state_bytes:
+                if not cls._oversize_warning_emitted:
+                    logger.warning(
+                        "Bot trap state file is oversized (%s bytes > %s bytes); "
+                        "ignoring persisted state to protect request latency.",
+                        file_size,
+                        max_state_bytes,
+                    )
+                    cls._oversize_warning_emitted = True
+                return {}
+
+        cls._oversize_warning_emitted = False
+        try:
+            with file_path.open("r", encoding="utf-8") as fh:
+                state = json.load(fh)
+                return state if isinstance(state, dict) else {}
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {}
+
+    @classmethod
+    def _load_state(cls, *, use_cache: bool = True) -> Dict[str, Any]:
+        now = cls._utcnow()
+        if use_cache:
+            cached_state = cls._cached_state(now=now)
+            if cached_state is not None:
+                return cached_state
+
+        state = cls._read_state_without_lock()
         if not isinstance(state, dict):
             state = {}
         defaults = cls._default_state()
@@ -49,7 +138,13 @@ class PublicBotTrapService:
                     state[key] = {}
             elif key not in state:
                 state[key] = default_value
-        return state
+        cls._cache_state(state, loaded_at=now)
+        return cls._clone_state(state)
+
+    @classmethod
+    def _persist_state(cls, state: Dict[str, Any]) -> None:
+        write_json_file(cls.BOT_TRAP_FILE, state)
+        cls._cache_state(state, loaded_at=cls._utcnow())
 
     @staticmethod
     def _append_unique(values: list, value: Any) -> None:
@@ -190,6 +285,21 @@ class PublicBotTrapService:
     def _cleanup_state(cls, state: Dict[str, Any], *, now: datetime) -> bool:
         changed = False
 
+        hits = state.get("hits")
+        if not isinstance(hits, list):
+            state["hits"] = []
+            hits = state["hits"]
+            changed = True
+        max_hits = cls._max_hits()
+        if max_hits == 0:
+            if hits:
+                state["hits"] = []
+                changed = True
+        elif len(hits) > max_hits:
+            # Keep only the most recent entries so state size stays bounded.
+            state["hits"] = hits[-max_hits:]
+            changed = True
+
         ip_blocks = state.get("ip_temporary_blocks")
         if not isinstance(ip_blocks, dict):
             state["ip_temporary_blocks"] = {}
@@ -283,10 +393,15 @@ class PublicBotTrapService:
     @classmethod
     def _append_hit(cls, state: Dict[str, Any], entry: Dict[str, Any]) -> None:
         hits = state.get("hits")
-        if isinstance(hits, list):
-            hits.append(entry)
-            return
-        state["hits"] = [entry]
+        if not isinstance(hits, list):
+            state["hits"] = []
+            hits = state["hits"]
+        hits.append(entry)
+        max_hits = cls._max_hits()
+        if max_hits == 0:
+            state["hits"] = []
+        elif len(hits) > max_hits:
+            del hits[:-max_hits]
 
     @classmethod
     def _apply_temporary_ip_block(
@@ -422,7 +537,7 @@ class PublicBotTrapService:
         email: Optional[str] = None,
         user_id: Optional[int] = None,
     ) -> bool:
-        state = cls._load_state()
+        state = cls._load_state(use_cache=True)
         now = cls._utcnow()
         changed = cls._cleanup_state(state, now=now)
         ip_value = cls._normalize_ip(ip)
@@ -430,7 +545,7 @@ class PublicBotTrapService:
         user_value = cls._normalize_user_id(user_id)
 
         if changed:
-            write_json_file(cls.BOT_TRAP_FILE, state)
+            cls._persist_state(state)
 
         if cls._is_temporarily_blocked(state, ip=ip_value, now=now):
             return True
@@ -468,7 +583,7 @@ class PublicBotTrapService:
         reason: str = "manual_block",
         source: str = "public_bot_trap_service",
     ) -> None:
-        state = cls._load_state()
+        state = cls._load_state(use_cache=False)
         now = cls._utcnow()
         cls._cleanup_state(state, now=now)
         ip_value = cls._normalize_ip(ip)
@@ -489,7 +604,7 @@ class PublicBotTrapService:
         cls._append_unique(
             state.setdefault("blocked_users", []), cls._normalize_user_id(user_id)
         )
-        write_json_file(cls.BOT_TRAP_FILE, state)
+        cls._persist_state(state)
 
     @classmethod
     def record_hit(
@@ -503,7 +618,7 @@ class PublicBotTrapService:
         extra: Optional[Dict[str, Any]] = None,
         block: bool = True,
     ) -> Dict[str, Any]:
-        state = cls._load_state()
+        state = cls._load_state(use_cache=False)
         now = cls._utcnow()
         cls._cleanup_state(state, now=now)
 
@@ -529,7 +644,7 @@ class PublicBotTrapService:
             cls._append_unique(state.setdefault("blocked_emails", []), entry.get("email"))
             cls._append_unique(state.setdefault("blocked_users", []), entry.get("user_id"))
 
-        write_json_file(cls.BOT_TRAP_FILE, state)
+        cls._persist_state(state)
         return entry
 
     @classmethod
@@ -542,7 +657,7 @@ class PublicBotTrapService:
         extra: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Record a suspicious hit and apply adaptive strike-based IP blocking."""
-        state = cls._load_state()
+        state = cls._load_state(use_cache=False)
         now = cls._utcnow()
         cls._cleanup_state(state, now=now)
 
@@ -582,7 +697,7 @@ class PublicBotTrapService:
             )
             blocked = block_payload is not None
 
-        write_json_file(cls.BOT_TRAP_FILE, state)
+        cls._persist_state(state)
         return {
             "entry": entry,
             "ip": ip_value,
