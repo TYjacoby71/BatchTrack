@@ -254,29 +254,30 @@ def test_oversized_bot_trap_state_is_ignored(app):
     from app.services.public_bot_trap_service import PublicBotTrapService
 
     blocked_ip = "203.0.113.42"
-    app.config["BOT_TRAP_MAX_STATE_BYTES"] = 256
-    app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
+    with app.app_context():
+        app.config["BOT_TRAP_MAX_STATE_BYTES"] = 256
+        app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
 
-    state_path = Path(PublicBotTrapService.BOT_TRAP_FILE)
-    oversized_payload = {
-        "hits": [{"payload": "x" * 2048}],
-        "blocked_ips": [],
-        "blocked_emails": [],
-        "blocked_users": [],
-        "ip_temporary_blocks": {
-            blocked_ip: {
-                "blocked_at": "2026-02-22T00:00:00+00:00",
-                "blocked_until": "2099-01-01T00:00:00+00:00",
-                "block_seconds": 86400,
-                "level": 1,
-                "reason": "test",
-                "source": "test",
-            }
-        },
-        "ip_strikes": {},
-        "ip_penalties": {},
-    }
-    state_path.write_text(json.dumps(oversized_payload), encoding="utf-8")
-    assert state_path.stat().st_size > app.config["BOT_TRAP_MAX_STATE_BYTES"]
+        state_path = Path(PublicBotTrapService.BOT_TRAP_FILE)
+        oversized_payload = {
+            "hits": [{"payload": "x" * 2048}],
+            "blocked_ips": [],
+            "blocked_emails": [],
+            "blocked_users": [],
+            "ip_temporary_blocks": {
+                blocked_ip: {
+                    "blocked_at": "2026-02-22T00:00:00+00:00",
+                    "blocked_until": "2099-01-01T00:00:00+00:00",
+                    "block_seconds": 86400,
+                    "level": 1,
+                    "reason": "test",
+                    "source": "test",
+                }
+            },
+            "ip_strikes": {},
+            "ip_penalties": {},
+        }
+        state_path.write_text(json.dumps(oversized_payload), encoding="utf-8")
+        assert state_path.stat().st_size > app.config["BOT_TRAP_MAX_STATE_BYTES"]
 
-    assert PublicBotTrapService.is_blocked(ip=blocked_ip) is False
+        assert PublicBotTrapService.is_blocked(ip=blocked_ip) is False
