@@ -73,6 +73,7 @@ FIELDS = [
         "default": "balanced",
         "description": "Bot trap preset: conservative, balanced, or aggressive.",
         "recommended": "balanced",
+        "options": ("conservative", "balanced", "aggressive"),
         "note": "Preset values are applied unless explicit BOT_TRAP_* numeric overrides are set.",
     },
     {

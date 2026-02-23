@@ -74,6 +74,15 @@ Glossary:
               </div>
               <div class="text-muted small">{{ item.description }}</div>
               {% if item.note %}<div class="small text-info">{{ item.note }}</div>{% endif %}
+              <div class="small text-muted">Default: <code>{{ item.default_value | tojson }}</code></div>
+              {% if item.options %}
+              <div class="small text-muted">
+                Options:
+                {% for option in item.options %}
+                  <code>{{ option }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
               {% if item.recommended %}<div class="small text-muted">Recommended: {{ item.recommended }}</div>{% endif %}
             </div>
             <div class="text-md-end">
