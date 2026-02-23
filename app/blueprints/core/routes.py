@@ -27,6 +27,12 @@ from flask import (
 from flask_login import current_user
 
 from app.extensions import cache
+from app.services.public_tools_service import (
+    build_public_tool_flag_signature,
+    get_enabled_public_tools,
+    get_homepage_public_tools,
+    get_public_tool_flags,
+)
 from app.utils.cache_utils import should_bypass_cache
 
 core_bp = Blueprint("core", __name__)
@@ -92,6 +98,12 @@ def _render_public_homepage_response():
     cache_key = current_app.config.get(
         "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v3"
     )
+    tool_flags = get_public_tool_flags()
+    enabled_public_tools = get_enabled_public_tools(tool_flags=tool_flags)
+    homepage_tool_cards = get_homepage_public_tools(
+        tool_flags=tool_flags,
+        max_cards=3,
+    )
     try:
         from app.utils.settings import is_feature_enabled
 
@@ -99,6 +111,11 @@ def _render_public_homepage_response():
         cache_key = (
             f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
         )
+    except Exception:
+        pass
+    try:
+        tool_flag_signature = build_public_tool_flag_signature(tool_flags=tool_flags)
+        cache_key = f"{cache_key}:tools:{tool_flag_signature}"
     except Exception:
         pass
     try:
@@ -112,7 +129,12 @@ def _render_public_homepage_response():
         if cached_page is not None:
             return cached_page
 
-    rendered = render_template("homepage.html")
+    rendered = render_template(
+        "homepage.html",
+        homepage_tool_cards=homepage_tool_cards,
+        homepage_has_more_tools=len(enabled_public_tools) > len(homepage_tool_cards),
+        homepage_enabled_tool_count=len(enabled_public_tools),
+    )
     if cache_ttl:
         try:
             cache.set(cache_key, rendered, timeout=cache_ttl)
