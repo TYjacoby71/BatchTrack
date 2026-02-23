@@ -12,7 +12,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
 - Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
 - When files move or routes change, update dictionary path/location links in the same PR.
-- Run `python3 scripts/validate_pr_documentation.py` once near finalization before push.
+- Use a single finalization pass: run docs guard once after implementation is complete and files are staged.
+- Prefer staged-scope validation for routine finalization: `python3 scripts/validate_pr_documentation.py --staged`.
+- Run `--full-link-check` only when APP_DICTIONARY links/paths changed or during release-level hardening.
+- Avoid repeated repo-wide docs-guard loops unless new commits change validated files.
 
 ---
 
