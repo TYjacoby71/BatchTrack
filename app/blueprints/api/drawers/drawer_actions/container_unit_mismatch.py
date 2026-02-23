@@ -1,3 +1,15 @@
+"""Container unit-mismatch drawer routes.
+
+Synopsis:
+Serve drawer UI and update actions that resolve recipe yield-unit mismatches
+against selected container units in production-planning workflows.
+
+Glossary:
+- Unit-mismatch drawer: Modal workflow for reconciling yield/container units.
+- Allowed containers: Recipe-linked container ids considered in the drawer.
+- Yield update action: POST handler that persists recipe yield/unit edits.
+"""
+
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
@@ -8,6 +20,10 @@ from app.utils.unit_utils import get_global_unit_list
 
 from .. import drawers_bp, register_drawer_action
 
+# --- Register drawer action ---
+# Purpose: Publish metadata for unit-mismatch drawer discovery.
+# Inputs: Drawer key, endpoint, and success event identifiers.
+# Outputs: Drawer action registered in the drawer action catalog.
 register_drawer_action(
     "containers.unit_mismatch",
     description="Resolve yield/container unit mismatches for production planning.",
@@ -16,6 +32,10 @@ register_drawer_action(
 )
 
 
+# --- Render container unit-mismatch drawer ---
+# Purpose: Build and return drawer HTML with scoped recipe/container context.
+# Inputs: Recipe id and optional yield unit query parameters.
+# Outputs: JSON payload containing rendered modal HTML or validation errors.
 @drawers_bp.route("/containers/unit-mismatch-modal", methods=["GET"])
 @login_required
 @require_permission("recipes.plan_production")
@@ -65,6 +85,10 @@ def container_unit_mismatch_modal():
     return jsonify({"success": True, "modal_html": modal_html})
 
 
+# --- Update recipe yield from drawer ---
+# Purpose: Persist predicted yield amount/unit edits submitted via drawer.
+# Inputs: Recipe id path parameter and CSRF-protected payload/form data.
+# Outputs: JSON success payload with normalized yield fields or error.
 @drawers_bp.route(
     "/containers/unit-mismatch-modal/<int:recipe_id>/yield", methods=["POST"]
 )

@@ -130,6 +130,16 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/tag-manager and /api/tags** → Authenticated tag-management UI and CRUD endpoints for organization-scoped tags (see `app/blueprints/tag_manager/routes.py`)
 - **/faults/** → Permission-gated fault-log surface used for operational alert workflows (see `app/blueprints/faults/routes.py`)
 - **Developer route decorator helpers** → Blueprint decorator utilities that combine login, permission, and developer-user guards for route handlers (see `app/blueprints/developer/decorators.py`)
+- **/debug/validate-fifo-sync and /debug/validate-fifo-sync/<item_id>** → Internal diagnostics that validate inventory/FIFO consistency at org or item scope (see `app/blueprints/admin/debug_routes.py`)
+- **Admin dev_routes relocation marker** → Legacy module documenting that developer admin routes moved into the developer blueprint namespace (see `app/blueprints/admin/dev_routes.py`)
+- **/batches/<batch_id>/containers (+ delete/adjust variants)** → Container summary/remove/adjust API surfaces that delegate operations to batch integration services (see `app/blueprints/api/container_routes.py`)
+- **/api/dashboard-alerts, /api/dismiss-alert, /api/clear-dismissed-alerts** → Dashboard alert fetch + session dismissal management APIs (see `app/blueprints/api/dashboard_routes.py`)
+- **containers.unit_mismatch drawer action** → Drawer endpoints for rendering and resolving recipe/container unit mismatches in production planning (see `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`)
+- **conversion.density_modal drawer action** → Drawer endpoint for fixing missing ingredient density before retrying conversions (see `app/blueprints/api/drawers/drawer_actions/conversion_density.py`)
+- **/api/drawers/retry-operation** → Generic drawer retry API that re-runs conversion operations after prerequisite fixes (see `app/blueprints/api/drawers/drawer_actions/conversion_retry.py`)
+- **conversion.unit_mapping_modal drawer action** → Drawer endpoints for creating/updating custom unit mappings used by conversion flows (see `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`)
+- **inventory.quick_create drawer action** → Drawer endpoint that renders inline inventory quick-create UX with units and categories (see `app/blueprints/api/drawers/drawer_actions/inventory_quick_create.py`)
+- **units.quick_create drawer action** → Drawer endpoint that renders custom-unit quick-create UX for interrupted workflows (see `app/blueprints/api/drawers/drawer_actions/units_quick_create.py`)
 
 ---
 

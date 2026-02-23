@@ -24,6 +24,10 @@ LOG = logging.getLogger(__name__)
 DEFAULT_FAULT_LOG = Path(os.environ.get("FAULT_LOG_PATH", "faults.json"))
 
 
+# --- Log fault entry ---
+# Purpose: Persist a structured fault record for later operational triage.
+# Inputs: Fault message, optional detail dictionary, source label, and log path.
+# Outputs: Boolean success indicator after write attempt.
 def log_fault(
     message: str,
     details: Optional[Dict[str, Any]] = None,

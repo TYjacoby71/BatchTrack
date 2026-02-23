@@ -30,6 +30,10 @@ PathType = Union[str, os.PathLike[str]]
 __all__ = ["read_json_file", "write_json_file"]
 
 
+# --- File lock context ---
+# Purpose: Apply advisory shared/exclusive file locks around file operations.
+# Inputs: Lock-file path and exclusivity flag.
+# Outputs: Guarded execution block with lock acquire/release semantics.
 @contextlib.contextmanager
 def _file_lock(lock_path: Path, exclusive: bool) -> Iterator[None]:
     """
@@ -53,10 +57,18 @@ def _file_lock(lock_path: Path, exclusive: bool) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
+# --- Clone default fallback ---
+# Purpose: Return isolated default values to avoid caller-side mutation leaks.
+# Inputs: Arbitrary fallback object.
+# Outputs: Deep-copied default when present, otherwise None.
 def _clone_default(default: Any) -> Any:
     return copy.deepcopy(default) if default is not None else default
 
 
+# --- Read JSON file ---
+# Purpose: Load JSON from disk with safe fallback behavior.
+# Inputs: File path and optional fallback value.
+# Outputs: Parsed JSON payload or cloned fallback value.
 def read_json_file(path: PathType, default: Any = None) -> Any:
     """
     Read a JSON file with shared locking and safe fallbacks.
@@ -79,6 +91,10 @@ def read_json_file(path: PathType, default: Any = None) -> Any:
             return _clone_default(default)
 
 
+# --- Write JSON file atomically ---
+# Purpose: Persist JSON safely using lock + temp-file replacement.
+# Inputs: Destination path, JSON-serializable data, and indentation width.
+# Outputs: Target file atomically replaced with serialized JSON content.
 def write_json_file(path: PathType, data: Any, *, indent: int = 2) -> None:
     """
     Atomically write JSON data to disk using a temp file + rename dance.

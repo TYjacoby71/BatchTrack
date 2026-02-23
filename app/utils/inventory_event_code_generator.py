@@ -53,6 +53,10 @@ class ParsedCode(TypedDict):
     code_type: Literal["lot", "event"] | None
 
 
+# --- Integer to base36 ---
+# Purpose: Encode positive integers using uppercase base36 characters.
+# Inputs: Non-negative integer.
+# Outputs: Base36 string representation.
 def int_to_base36(num: int) -> str:
     if num == 0:
         return "0"
@@ -65,6 +69,10 @@ def int_to_base36(num: int) -> str:
     return "".join(reversed(digits))
 
 
+# --- Generate code suffix ---
+# Purpose: Build compact suffix using timestamp, item id, and random entropy.
+# Inputs: Optional inventory item id for deterministic shard signal.
+# Outputs: Uppercase six-character-ish composite suffix segment.
 def _generate_suffix(item_id: int | None = None) -> str:
     timestamp_component = int_to_base36(int(time.time() * 1000)).rjust(6, "0")[-4:]
     item_component = int_to_base36(abs(item_id or 0)).rjust(3, "0")[-2:]
@@ -72,6 +80,10 @@ def _generate_suffix(item_id: int | None = None) -> str:
     return f"{timestamp_component}{item_component}{random_component}".upper()
 
 
+# --- Generate inventory event code ---
+# Purpose: Produce lot/event tracking identifiers for inventory history.
+# Inputs: Change type plus optional item id and requested code kind.
+# Outputs: Hyphenated code string with validated prefix + generated suffix.
 def generate_inventory_event_code(
     change_type: str,
     *,
@@ -90,6 +102,10 @@ def generate_inventory_event_code(
     return f"{prefix}-{_generate_suffix(item_id)}"
 
 
+# --- Parse inventory code ---
+# Purpose: Split and classify tracking codes into structured components.
+# Inputs: Candidate code string.
+# Outputs: ParsedCode dictionary with prefix/suffix and code kind metadata.
 def parse_inventory_code(code: str) -> ParsedCode:
     if not code or "-" not in code:
         return {"prefix": None, "suffix": None, "is_lot": False, "code_type": None}
@@ -104,6 +120,10 @@ def parse_inventory_code(code: str) -> ParsedCode:
     }
 
 
+# --- Validate inventory code ---
+# Purpose: Verify that code prefix belongs to supported lot/event prefixes.
+# Inputs: Candidate inventory tracking code string.
+# Outputs: Boolean validity indicator.
 def validate_inventory_code(code: str) -> bool:
     parsed = parse_inventory_code(code)
     if not parsed["prefix"]:

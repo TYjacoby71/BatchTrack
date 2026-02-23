@@ -15,9 +15,17 @@ from flask_login import login_required
 
 from app.utils.permissions import require_permission
 
+# --- Faults blueprint ---
+# Purpose: Group fault-log routes behind a dedicated namespace.
+# Inputs: None.
+# Outputs: Flask blueprint object for fault surfaces.
 faults_bp = Blueprint("faults", __name__)
 
 
+# --- View fault log ---
+# Purpose: Return the current fault-log landing placeholder.
+# Inputs: Authenticated request with alerts.view permission.
+# Outputs: Placeholder response body while UI is pending.
 @faults_bp.route("/")
 @login_required
 @require_permission("alerts.view")

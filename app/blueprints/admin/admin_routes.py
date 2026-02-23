@@ -16,9 +16,17 @@ from flask_login import login_required
 from ...models import Organization, User
 from ...utils.permissions import require_permission
 
+# --- Admin blueprint ---
+# Purpose: Group internal system-admin routes under /admin.
+# Inputs: None.
+# Outputs: Flask blueprint for organization administration views.
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
+# --- List organizations ---
+# Purpose: Render a system-admin list of all organizations.
+# Inputs: Authenticated user with dev.system_admin permission.
+# Outputs: Organization list template response.
 @admin_bp.route("/organizations")
 @login_required
 @require_permission("dev.system_admin")
@@ -28,6 +36,10 @@ def list_organizations():
     return render_template("admin/organizations.html", organizations=organizations)
 
 
+# --- View organization details ---
+# Purpose: Render one organization and its associated users.
+# Inputs: Organization id path parameter with admin authorization.
+# Outputs: Organization detail template response.
 @admin_bp.route("/organizations/<int:org_id>")
 @login_required
 @require_permission("dev.system_admin")

@@ -1,3 +1,15 @@
+"""Admin debug routes for FIFO consistency checks.
+
+Synopsis:
+Expose authenticated diagnostic endpoints that validate inventory/FIFO parity
+across an organization or for a specific inventory item.
+
+Glossary:
+- FIFO sync: Consistency between inventory on-hand totals and FIFO lot sums.
+- Sync issue: Per-item mismatch payload returned for troubleshooting.
+- Debug blueprint: Route namespace containing internal diagnostic handlers.
+"""
+
 import logging
 
 from flask import Blueprint, jsonify
@@ -6,10 +18,18 @@ from flask_login import current_user, login_required
 from app.models import InventoryItem
 from app.services.inventory_adjustment._validation import validate_inventory_fifo_sync
 
+# --- Debug blueprint ---
+# Purpose: Group internal FIFO validation diagnostics.
+# Inputs: None.
+# Outputs: Flask blueprint registered under /debug.
 debug_bp = Blueprint("debug", __name__, url_prefix="/debug")
 logger = logging.getLogger(__name__)
 
 
+# --- Validate FIFO sync for all items ---
+# Purpose: Scan all organization inventory items for FIFO sync mismatches.
+# Inputs: Authenticated user context for organization scoping.
+# Outputs: JSON summary with counts and per-item mismatch details.
 @debug_bp.route("/validate-fifo-sync")
 @login_required
 def validate_all_fifo_sync():
@@ -55,6 +75,10 @@ def validate_all_fifo_sync():
     return jsonify(result)
 
 
+# --- Validate FIFO sync for one item ---
+# Purpose: Run FIFO consistency check for a single scoped inventory item.
+# Inputs: Inventory item id path parameter.
+# Outputs: JSON payload describing validity and mismatch details.
 @debug_bp.route("/validate-fifo-sync/<int:item_id>")
 @login_required
 def validate_single_fifo_sync(item_id):

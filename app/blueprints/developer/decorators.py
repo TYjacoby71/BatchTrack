@@ -20,11 +20,19 @@ from flask_login import current_user, login_required
 from app.utils.permissions import permission_required as _permission_required
 
 
+# --- Permission decorator re-export ---
+# Purpose: Provide local alias for canonical permission decorator import path.
+# Inputs: Permission name string.
+# Outputs: Decorator enforcing the named permission.
 def permission_required(permission_name: str):
     """Re-export canonical permission decorator for convenience."""
     return _permission_required(permission_name)
 
 
+# --- Require developer permission ---
+# Purpose: Enforce login, permission, and developer user-type constraints.
+# Inputs: Required permission name and wrapped route function.
+# Outputs: Decorated view that redirects non-developers with flash feedback.
 def require_developer_permission(permission_name: str):
     """Ensure the caller is a developer and holds the given permission."""
 

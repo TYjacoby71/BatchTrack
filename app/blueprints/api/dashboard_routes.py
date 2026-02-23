@@ -1,12 +1,32 @@
+"""Dashboard alerts API routes.
+
+Synopsis:
+Expose authenticated endpoints for fetching, dismissing, and resetting
+session-scoped dashboard alert visibility state.
+
+Glossary:
+- Dashboard alert: Actionable message returned for the current organization.
+- Dismissed alert list: Session-stored alert identifiers hidden by the user.
+- Alert service: Service layer that builds alert payload collections.
+"""
+
 from flask import Blueprint, jsonify
 from flask_login import login_required
 
 from app.services.dashboard_alerts import DashboardAlertService
 from app.utils.permissions import require_permission
 
+# --- Dashboard API blueprint ---
+# Purpose: Group dashboard-alert API handlers under /api.
+# Inputs: None.
+# Outputs: Flask blueprint exposing alert endpoints.
 dashboard_api_bp = Blueprint("dashboard_api", __name__, url_prefix="/api")
 
 
+# --- Get dashboard alerts ---
+# Purpose: Return current alert payloads excluding dismissed session entries.
+# Inputs: Authenticated request context and session dismissal state.
+# Outputs: JSON success payload with alerts/counts or error.
 @dashboard_api_bp.route("/dashboard-alerts")
 @login_required
 @require_permission("alerts.view")
@@ -44,6 +64,10 @@ def get_dashboard_alerts():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Dismiss alert ---
+# Purpose: Add an alert type to session dismissal state.
+# Inputs: JSON payload containing alert_type.
+# Outputs: JSON success response or validation/error payload.
 @dashboard_api_bp.route("/dismiss-alert", methods=["POST"])
 @login_required
 @require_permission("alerts.dismiss")
@@ -72,6 +96,10 @@ def dismiss_alert():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Clear dismissed alerts ---
+# Purpose: Reset the dismissed-alert session list.
+# Inputs: Authenticated request with alerts.dismiss permission.
+# Outputs: JSON success response or error payload.
 @dashboard_api_bp.route("/clear-dismissed-alerts", methods=["POST"])
 @login_required
 @require_permission("alerts.dismiss")
