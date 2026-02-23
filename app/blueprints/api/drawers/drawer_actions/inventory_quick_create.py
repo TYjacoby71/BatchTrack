@@ -1,3 +1,15 @@
+"""Inventory quick-create drawer routes.
+
+Synopsis:
+Expose drawer endpoint that returns inventory quick-create modal HTML with
+unit lists and ingredient-category choices for inline workflow recovery.
+
+Glossary:
+- Quick-create drawer: Modal allowing lightweight inventory-item creation.
+- Category list: Ingredient categories used to populate drawer form options.
+- Drawer action registration: Metadata for drawer orchestration and events.
+"""
+
 from flask import jsonify, render_template
 from flask_login import login_required
 
@@ -7,6 +19,10 @@ from app.utils.unit_utils import get_global_unit_list
 
 from .. import drawers_bp, register_drawer_action
 
+# --- Register drawer action ---
+# Purpose: Publish inventory quick-create drawer metadata.
+# Inputs: Drawer key, endpoint, description, and success event token.
+# Outputs: Drawer action added to registry for client discovery.
 register_drawer_action(
     "inventory.quick_create",
     description="Quick-create an inventory item required by the current workflow.",
@@ -15,6 +31,10 @@ register_drawer_action(
 )
 
 
+# --- Render inventory quick-create drawer ---
+# Purpose: Build drawer HTML containing units and category options.
+# Inputs: Authenticated request with inventory.edit permission.
+# Outputs: JSON response containing rendered modal HTML.
 @drawers_bp.route("/inventory/quick-create-modal", methods=["GET"])
 @login_required
 @require_permission("inventory.edit")

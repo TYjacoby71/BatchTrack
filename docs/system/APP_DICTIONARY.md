@@ -12,7 +12,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - Use entry schema: `- **Term** → Description (see \`path/or/doc\`)`.
 - Enforce one-entry rule: each term appears once in the layer entries (no duplicates).
 - When files move or routes change, update dictionary path/location links in the same PR.
-- Run `python3 scripts/validate_pr_documentation.py` once near finalization before push.
+- Use a single finalization pass: run docs guard once after implementation is complete and files are staged.
+- Prefer staged-scope validation for routine finalization: `python3 scripts/validate_pr_documentation.py --staged`.
+- Run `--full-link-check` only when APP_DICTIONARY links/paths changed or during release-level hardening.
+- Avoid repeated repo-wide docs-guard loops unless new commits change validated files.
 
 ---
 
@@ -47,6 +50,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **UnifiedInventoryHistory.quantity_change_base** → Integer change recorded per event (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **InventoryItem** → Stocked ingredient, container, or product (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **Product** → Parent product record for variants and SKUs (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **AppSetting model** → Key/value application configuration entity used for runtime administrative settings and optional descriptions (see `app/models/app_setting.py`)
 
 ---
 
@@ -125,6 +129,30 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/sku/merge/configure** → SKU merge configuration (see `app/blueprints/products/sku.py`)
 - **/sku/merge/execute** → SKU merge execution (see `app/blueprints/products/sku.py`)
 - **/api/sku/<sku_id>/merge_preview** → SKU merge preview API (see `app/blueprints/products/sku.py`)
+- **/admin/organizations and /admin/organizations/<org_id>** → System-admin organization list/detail routes for internal tenant oversight (see `app/blueprints/admin/admin_routes.py`)
+- **/tag-manager and /api/tags** → Authenticated tag-management UI and CRUD endpoints for organization-scoped tags (see `app/blueprints/tag_manager/routes.py`)
+- **/faults/** → Permission-gated fault-log surface used for operational alert workflows (see `app/blueprints/faults/routes.py`)
+- **Developer route decorator helpers** → Blueprint decorator utilities that combine login, permission, and developer-user guards for route handlers (see `app/blueprints/developer/decorators.py`)
+- **/debug/validate-fifo-sync and /debug/validate-fifo-sync/<item_id>** → Internal diagnostics that validate inventory/FIFO consistency at org or item scope (see `app/blueprints/admin/debug_routes.py`)
+- **Admin dev_routes relocation marker** → Legacy module documenting that developer admin routes moved into the developer blueprint namespace (see `app/blueprints/admin/dev_routes.py`)
+- **/batches/<batch_id>/containers (+ delete/adjust variants)** → Container summary/remove/adjust API surfaces that delegate operations to batch integration services (see `app/blueprints/api/container_routes.py`)
+- **/api/dashboard-alerts, /api/dismiss-alert, /api/clear-dismissed-alerts** → Dashboard alert fetch + session dismissal management APIs (see `app/blueprints/api/dashboard_routes.py`)
+- **containers.unit_mismatch drawer action** → Drawer endpoints for rendering and resolving recipe/container unit mismatches in production planning (see `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`)
+- **conversion.density_modal drawer action** → Drawer endpoint for fixing missing ingredient density before retrying conversions (see `app/blueprints/api/drawers/drawer_actions/conversion_density.py`)
+- **/api/drawers/retry-operation** → Generic drawer retry API that re-runs conversion operations after prerequisite fixes (see `app/blueprints/api/drawers/drawer_actions/conversion_retry.py`)
+- **conversion.unit_mapping_modal drawer action** → Drawer endpoints for creating/updating custom unit mappings used by conversion flows (see `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`)
+- **inventory.quick_create drawer action** → Drawer endpoint that renders inline inventory quick-create UX with units and categories (see `app/blueprints/api/drawers/drawer_actions/inventory_quick_create.py`)
+- **units.quick_create drawer action** → Drawer endpoint that renders custom-unit quick-create UX for interrupted workflows (see `app/blueprints/api/drawers/drawer_actions/units_quick_create.py`)
+- **Ingredient API routes** → Authenticated category/density/search/create-or-link endpoints for ingredient and global-library flows (see `app/blueprints/api/ingredient_routes.py`)
+- **Public utility API routes** → Unauthenticated server-time, bot-trap, global-search, soapcalc, conversion, and help-bot endpoints (see `app/blueprints/api/public.py`)
+- **Reservation API routes** → Reservation create/release/convert/expire endpoints for SKU stock-hold lifecycle handling (see `app/blueprints/api/reservation_routes.py`)
+- **Unit API routes** → Authenticated unit list/search/conversion endpoints for inventory tooling (see `app/blueprints/api/unit_routes.py`)
+- **Auth permission matrix routes** → Permission catalog management, matrix updates, status toggles, and role helper handlers (see `app/blueprints/auth/permissions.py`)
+- **Whop authentication helper** → License validation and user/org sync helper used by Whop login flows (see `app/blueprints/auth/whop_auth.py`)
+- **/auth/whop-login** → Whop-backed login route that authenticates and rotates session state for licensed users (see `app/blueprints/auth/whop_routes.py`)
+- **Batch add-extra route** → Endpoint for adding supplemental ingredients/containers/consumables to existing batches (see `app/blueprints/batches/add_extra.py`)
+- **Batch cancellation route** → Endpoint for canceling batches with restoration summary messaging (see `app/blueprints/batches/cancel_batch.py`)
+- **Bulk stock-check routes** → Bulk recipe stock evaluation and CSV shopping-list export endpoints (see `app/blueprints/bulk_stock/routes.py`)
 
 ---
 
@@ -184,6 +212,11 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
 - **Extensions Registry** → Shared app extensions (see `app/extensions.py`)
 - **Security Middleware** → Request-layer enforcer for permission/bot checks and billing decision application (redirect/logout/JSON behavior) using service-provided policy decisions (see `app/middleware.py`)
+- **SessionService** → Centralized session-token lifecycle helper for rotation, retrieval, and context-safe clearing behavior (see `app/services/session_service.py`)
+- **JSON Store Utilities** → Atomic JSON read/write helpers with advisory file-lock support and safe default fallbacks (see `app/utils/json_store.py`)
+- **Inventory Event Code Generator** → Prefix-driven event/lot code generation and validation utilities using compact base36 suffixes (see `app/utils/inventory_event_code_generator.py`)
+- **Duration Humanization Utilities** → Day-count formatting helpers that convert numeric durations into friendly month/year display strings (see `app/utils/duration_utils.py`)
+- **Fault Log Utility** → JSON-backed operational fault recording helper that appends timestamped structured fault entries (see `app/utils/fault_log.py`)
 
 ---
 

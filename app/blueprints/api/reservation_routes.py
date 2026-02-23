@@ -1,3 +1,15 @@
+"""Reservation API routes for product stock holds.
+
+Synopsis:
+Provide authenticated endpoints to create, release, convert, and expire
+inventory reservations tied to SKU/order workflows.
+
+Glossary:
+- Reservation: Temporary inventory hold associated with an order intent.
+- Release: Operation that returns reserved quantity to available stock.
+- Conversion to sale: Transition from active reservation to completed sale state.
+"""
+
 import logging
 
 from flask import Blueprint, jsonify, request
@@ -12,6 +24,10 @@ from ...services.inventory_adjustment import process_inventory_adjustment
 from ...services.reservation_service import ReservationService
 
 
+# --- Test audit wrapper ---
+# Purpose: Preserve legacy test helper signature for unreserve audit calls.
+# Inputs: Reservation model instance.
+# Outputs: Boolean success placeholder.
 # This function is intended for test usage and has a different signature.
 # The API usage is handled by the second _write_unreserved_audit function below.
 def _write_unreserved_audit(reservation):
@@ -21,6 +37,10 @@ def _write_unreserved_audit(reservation):
     return True
 
 
+# --- API audit no-op helper ---
+# Purpose: Keep compatibility with historical API audit helper signature.
+# Inputs: Item id plus optional unit/notes metadata.
+# Outputs: None (audit now handled by FIFO operations).
 # This is the helper function for API audit entries and its signature is corrected.
 def _write_unreserved_audit(item_id, unit=None, notes=None):
     # Audit entries are now handled by FIFO operations automatically
@@ -30,11 +50,19 @@ def _write_unreserved_audit(item_id, unit=None, notes=None):
 
 logger = logging.getLogger(__name__)
 
+# --- Reservation API blueprint ---
+# Purpose: Group reservation lifecycle API routes.
+# Inputs: None.
+# Outputs: Blueprint namespace registered under /api/reservations.
 reservation_api_bp = Blueprint(
     "reservation_api", __name__, url_prefix="/api/reservations"
 )
 
 
+# --- Create reservation ---
+# Purpose: Reserve inventory quantity for a SKU/order payload.
+# Inputs: JSON payload containing sku_code, quantity, and order_id.
+# Outputs: JSON success payload with remaining quantity or error response.
 @reservation_api_bp.route("/create", methods=["POST"])
 @login_required
 @require_permission("inventory.reserve")
@@ -93,6 +121,10 @@ def create_reservation():
         return jsonify({"error": str(e)}), 500
 
 
+# --- Release reservation ---
+# Purpose: Release one active reservation and return inventory quantity.
+# Inputs: Reservation id path parameter.
+# Outputs: JSON success/error response after release attempt.
 @reservation_api_bp.route("/release/<int:reservation_id>", methods=["POST"])
 @login_required
 @require_permission("inventory.reserve")
@@ -122,6 +154,10 @@ def release_reservation(reservation_id):
         return jsonify({"error": str(e)}), 500
 
 
+# --- Convert reservation to sale ---
+# Purpose: Mark an active reservation as converted to sale.
+# Inputs: Reservation id path parameter.
+# Outputs: JSON success/error response after status transition.
 @reservation_api_bp.route("/convert-to-sale/<int:reservation_id>", methods=["POST"])
 @login_required
 @require_permission("inventory.reserve")
@@ -155,6 +191,10 @@ def convert_reservation_to_sale(reservation_id):
         return jsonify({"error": str(e)}), 500
 
 
+# --- Expire old reservations ---
+# Purpose: Expire active reservations past expiration and release stock.
+# Inputs: None (uses org-scoped active reservations).
+# Outputs: JSON summary with number of reservations expired.
 @reservation_api_bp.route("/expire-old", methods=["POST"])
 @login_required
 @require_permission("inventory.reserve")

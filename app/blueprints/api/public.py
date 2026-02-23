@@ -1,3 +1,15 @@
+"""Public API routes for unauthenticated tool and utility endpoints.
+
+Synopsis:
+Provide rate-limited public endpoints for server time, bot-trap handling,
+global-library search, soapcalc lookup, unit conversion, and help-bot access.
+
+Glossary:
+- Public API blueprint: Route namespace containing unauthenticated API handlers.
+- Bot trap: Endpoint that records and blocks suspicious automation traffic.
+- Group mode: Ingredient-centric payload mode for grouped global-item results.
+"""
+
 from collections import OrderedDict
 from datetime import datetime, timezone
 
@@ -19,9 +31,17 @@ from app.services.soapcalc_oils_service import (
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.utils.cache_utils import stable_cache_key
 
+# --- Public API blueprint ---
+# Purpose: Group unauthenticated API routes used by public tools/pages.
+# Inputs: None.
+# Outputs: Blueprint namespace for public endpoints.
 public_api_bp = Blueprint("public_api", __name__)
 
 
+# --- Resolve global library cache timeout ---
+# Purpose: Provide cache timeout fallback for public global-library responses.
+# Inputs: Flask app config.
+# Outputs: Timeout integer for cache writes.
 def _global_library_cache_timeout() -> int:
     return current_app.config.get(
         "GLOBAL_LIBRARY_CACHE_TIMEOUT",
@@ -29,6 +49,10 @@ def _global_library_cache_timeout() -> int:
     )
 
 
+# --- Return server time ---
+# Purpose: Expose current UTC server time for client synchronization checks.
+# Inputs: None.
+# Outputs: JSON response with ISO8601 UTC timestamp.
 @public_api_bp.route("/server-time", methods=["GET"])
 @limiter.exempt
 def server_time():
@@ -38,6 +62,10 @@ def server_time():
     return resp
 
 
+# --- Record bot-trap hit ---
+# Purpose: Capture and process suspected bot activity from public flows.
+# Inputs: Query/body payload with source/reason/email metadata.
+# Outputs: 204 response after trap record + optional user/email blocking.
 @public_api_bp.route("/bot-trap", methods=["GET", "POST"])
 @limiter.limit("60/minute")
 @csrf.exempt
@@ -80,6 +108,10 @@ def public_bot_trap():
     return resp
 
 
+# --- List public units ---
+# Purpose: Return active standard units for public conversion/tool usage.
+# Inputs: None.
+# Outputs: JSON payload containing unit metadata collection.
 @public_api_bp.route("/units", methods=["GET"])
 @limiter.exempt
 def public_units():
@@ -108,6 +140,10 @@ def public_units():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Search public global items ---
+# Purpose: Return public global-library matches by name/alias.
+# Inputs: Query string q plus optional type/group flags.
+# Outputs: JSON list (or grouped list) of global-item payloads.
 @public_api_bp.route("/global-items/search", methods=["GET"])
 @limiter.exempt
 def public_global_item_search():
@@ -401,6 +437,10 @@ def public_global_item_search():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Search soapcalc items ---
+# Purpose: Return soapcalc item matches for public tools.
+# Inputs: Query string q and optional group/limit flags.
+# Outputs: JSON result payload with soapcalc item matches.
 @public_api_bp.route("/soapcalc-items/search", methods=["GET"])
 @limiter.limit("60/minute")
 def public_soapcalc_items_search():
@@ -422,6 +462,10 @@ def public_soapcalc_items_search():
     return resp
 
 
+# --- Search soapcalc oils ---
+# Purpose: Return legacy soapcalc oil matches for compatibility clients.
+# Inputs: Query string q and optional group/limit flags.
+# Outputs: JSON result payload with soapcalc oil matches.
 @public_api_bp.route("/soapcalc-oils/search", methods=["GET"])
 @limiter.limit("60/minute")
 def public_soapcalc_oils_search():
@@ -443,6 +487,10 @@ def public_soapcalc_oils_search():
     return resp
 
 
+# --- Convert units publicly ---
+# Purpose: Convert quantities between units without authentication.
+# Inputs: JSON payload with quantity/from_unit/to_unit plus optional density data.
+# Outputs: JSON conversion result payload or error response.
 @public_api_bp.route("/convert-units", methods=["POST"])
 @limiter.exempt
 @csrf.exempt
@@ -464,6 +512,10 @@ def public_convert_units():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Answer public help bot prompt ---
+# Purpose: Return AI help-bot answer for public support prompts.
+# Inputs: JSON payload containing prompt/question and optional tone.
+# Outputs: JSON success payload with answer or error metadata.
 @public_api_bp.route("/help-bot", methods=["POST"])
 @limiter.limit("30/minute")
 @csrf.exempt

@@ -204,13 +204,71 @@
         .hero-media-box {
             border: 1px solid rgba(28, 51, 84, 0.12);
             border-radius: 1rem;
-            padding: 1.5rem;
+            overflow: hidden;
             background: #ffffff;
             box-shadow: 0 12px 30px rgba(12, 35, 74, 0.08);
         }
 
+        .hero-media-stage {
+            position: relative;
+        }
+
+        .hero-media-stage::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(9, 20, 40, 0.46);
+            z-index: 1;
+        }
+
         .hero-video-placeholder {
-            min-height: 260px;
+            min-height: clamp(300px, 45vw, 500px);
+            border: none;
+            margin: 0;
+            padding: 1rem;
+            justify-content: flex-end;
+            align-items: flex-end;
+            background: linear-gradient(140deg, #223454 0%, #3b527d 50%, #5d75a3 100%);
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+        }
+
+        .hero-video-label {
+            position: relative;
+            z-index: 2;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 999px;
+            padding: 0.28rem 0.7rem;
+            background: rgba(11, 26, 52, 0.45);
+            font-size: 0.9rem;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.5rem;
+            color: #ffffff;
+        }
+
+        .hero-overlay .hero-title {
+            color: #ffffff;
+            margin-bottom: 0.85rem;
+        }
+
+        .hero-overlay .hero-subtitle {
+            max-width: 52rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0;
+        }
+
+        .hero-media-meta {
+            padding: 1.2rem 1.4rem 1.4rem;
         }
 
         .integration-logo-tile {
@@ -240,6 +298,12 @@
                 transition: none;
             }
         }
+
+        @media (max-width: 767.98px) {
+            .hero-overlay .hero-title {
+                font-size: 2rem;
+            }
+        }
     </style>
 {% endblock %}
 
@@ -247,21 +311,21 @@
     <!-- Hero Banner -->
     <section class="hero-section bg-light py-5 border-bottom">
         <div class="container">
-            <h1 class="display-4 fw-bold mb-4 text-dark">BatchTrack: Master Your Craft</h1>
-            <p class="lead mb-4 text-muted">The only software out there for makers that want more about the batch and less about the business.</p>
-            <div class="row justify-content-center mt-4">
-                <div class="col-xl-10">
-                    <div class="hero-media-box">
-                        <div class="placeholder-img hero-video-placeholder mb-3">
-                            [Product Walkthrough Video]
-                        </div>
-                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                            <p class="text-muted mb-0">
-                                Use this section for your short product demo and walkthrough so visitors can see the workflow in action.
-                            </p>
-                            <a href="#about" class="btn btn-cta text-white fw-semibold">Learn More</a>
-                        </div>
+            <div class="hero-media-box">
+                <div class="hero-media-stage">
+                    <div class="placeholder-img hero-video-placeholder">
+                        <span class="hero-video-label">[Product Walkthrough Video]</span>
                     </div>
+                    <div class="hero-overlay">
+                        <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
+                        <p class="lead hero-subtitle">The only software out there for makers that want more about the batch and less about the business.</p>
+                    </div>
+                </div>
+                <div class="hero-media-meta d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <p class="text-muted mb-0">
+                        Use this section for your short product demo and walkthrough so visitors can see the workflow in action.
+                    </p>
+                    <a href="#about" class="btn btn-cta text-white fw-semibold">Learn More</a>
                 </div>
             </div>
         </div>

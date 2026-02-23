@@ -14,7 +14,7 @@
 
 ## One-Line Instruction for AI Agents
 Use this exact instruction when delegating PR prep:
-`Implement feature work first. Do not run pytest, pip install, or docs guard during implementation unless explicitly requested. When I say "finalize", run the PR Finalization Checklist once: update APP_DICTIONARY/glossary requirements for changed scope, run tests once, then run docs guard once.`
+`Implement feature work first. Do not run pytest, pip install, or docs guard during implementation unless explicitly requested. When I say "finalize", run one finalization pass only: update APP_DICTIONARY/glossary requirements for changed scope, run tests once, then run docs guard once (prefer --staged). Do not repeat full validations unless new commits change validated files.`
 
 ## PR Checklist Instructions (Cascade order — top to bottom)
 
@@ -37,8 +37,11 @@ Use this exact instruction when delegating PR prep:
 
 ### 5) Validation
 - [ ] During implementation, do not run pytest/pip install/docs-guard unless explicitly requested (targeted debug checks only when requested)
+- [ ] During implementation, avoid repeated repo-wide validation loops
 - [ ] At finalization, run tests once (targeted or full, as appropriate) and add/update tests when behavior changed or a regression was fixed
-- [ ] At finalization, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once and confirm pass
+- [ ] At finalization, run `python3 scripts/validate_pr_documentation.py --staged` once and confirm pass
+- [ ] If base-branch comparison is needed, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once (instead of repeating staged + base-ref in loops)
+- [ ] Run `--full-link-check` only when APP_DICTIONARY links/paths changed or for release-level hardening
 
 ### 6) Documentation and Knowledge Integrity
 - [ ] Updated system docs for feature changes (`docs/system/`)

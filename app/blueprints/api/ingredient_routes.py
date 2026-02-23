@@ -1,3 +1,16 @@
+"""Ingredient API routes for inventory and global-library workflows.
+
+Synopsis:
+Expose authenticated endpoints for ingredient category retrieval, inventory
+typeahead search, global-library lookup/grouping, and create-or-link helpers
+used by inventory and recipe planning surfaces.
+
+Glossary:
+- Global library: Canonical global item catalog used for linking org inventory.
+- Definition search: Ingredient-definition lookup for curated global items.
+- Group mode: Ingredient-centric payload mode that nests forms per ingredient.
+"""
+
 from collections import OrderedDict
 
 from flask import Blueprint, current_app, jsonify, request
@@ -15,9 +28,17 @@ from ...services.density_assignment_service import DensityAssignmentService
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...utils.cache_utils import stable_cache_key
 
+# --- Ingredient API blueprint ---
+# Purpose: Group authenticated ingredient and global-item API endpoints.
+# Inputs: None.
+# Outputs: Blueprint namespace for ingredient route registration.
 ingredient_api_bp = Blueprint("ingredient_api", __name__)
 
 
+# --- Resolve global library cache timeout ---
+# Purpose: Provide cache timeout fallback for global-library responses.
+# Inputs: Flask app config.
+# Outputs: Timeout integer for cache writes.
 def _global_library_cache_timeout() -> int:
     return current_app.config.get(
         "GLOBAL_LIBRARY_CACHE_TIMEOUT",
@@ -25,6 +46,10 @@ def _global_library_cache_timeout() -> int:
     )
 
 
+# --- List ingredient categories ---
+# Purpose: Return active global ingredient categories for selection UIs.
+# Inputs: Authenticated request context.
+# Outputs: JSON list of category id/name/default density.
 @ingredient_api_bp.route("/categories", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -48,6 +73,10 @@ def get_categories():
     )
 
 
+# --- List global-library density options ---
+# Purpose: Return density options derived from global-library metadata.
+# Inputs: Optional include_uncategorized query flag.
+# Outputs: JSON payload from density assignment service.
 @ingredient_api_bp.route("/global-library/density-options", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -64,6 +93,10 @@ def get_global_library_density_options():
     return jsonify(payload)
 
 
+# --- Get ingredient density ---
+# Purpose: Resolve effective density for an inventory ingredient item.
+# Inputs: Inventory item id path parameter.
+# Outputs: JSON density value from item/category/default fallback.
 @ingredient_api_bp.route("/ingredient/<int:id>/density", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -76,6 +109,10 @@ def get_ingredient_density(id):
     return jsonify({"density": 1.0})
 
 
+# --- Search inventory ingredients ---
+# Purpose: Return scoped ingredient inventory suggestions for typeahead UX.
+# Inputs: Query string parameter q.
+# Outputs: JSON list of matched inventory ingredient payloads.
 @ingredient_api_bp.route("/ingredients/search", methods=["GET"])
 @login_required
 @limiter.limit("3000/minute")
@@ -145,6 +182,10 @@ def search_ingredients():
     return jsonify({"results": payload})
 
 
+# --- Search ingredient definitions ---
+# Purpose: Return curated ingredient-definition matches for global item forms.
+# Inputs: Query string parameter q.
+# Outputs: JSON list of ingredient definition metadata.
 @ingredient_api_bp.route("/ingredients/definitions/search", methods=["GET"])
 @login_required
 @limiter.limit("3000/minute")
@@ -190,6 +231,10 @@ def search_ingredient_definitions():
     return jsonify({"results": results})
 
 
+# --- List forms for ingredient definition ---
+# Purpose: Return global items/forms linked to one ingredient definition.
+# Inputs: Ingredient definition id path parameter.
+# Outputs: JSON payload with ingredient metadata and linked item forms.
 @ingredient_api_bp.route(
     "/ingredients/definitions/<int:ingredient_id>/forms", methods=["GET"]
 )
@@ -265,6 +310,10 @@ def list_forms_for_ingredient_definition(ingredient_id: int):
     )
 
 
+# --- Search physical forms ---
+# Purpose: Return active physical-form suggestions for typeahead controls.
+# Inputs: Optional query string parameter q.
+# Outputs: JSON list of physical-form metadata payloads.
 @ingredient_api_bp.route("/physical-forms/search", methods=["GET"])
 @login_required
 @limiter.limit("3000/minute")
@@ -301,6 +350,10 @@ def search_physical_forms():
     )
 
 
+# --- Search variations ---
+# Purpose: Return active variation suggestions with physical-form metadata.
+# Inputs: Optional query string parameter q.
+# Outputs: JSON list of variation payloads.
 @ingredient_api_bp.route("/variations/search", methods=["GET"])
 @login_required
 @limiter.limit("3000/minute")
@@ -343,6 +396,10 @@ def search_variations():
     )
 
 
+# --- Create or link ingredient inventory item ---
+# Purpose: Create organization inventory items and optionally link global items.
+# Inputs: JSON payload with name/type/unit and optional global item id.
+# Outputs: JSON success payload with existing/created inventory item details.
 @ingredient_api_bp.route("/ingredients/create-or-link", methods=["POST"])
 @login_required
 @require_permission("inventory.edit")
@@ -441,6 +498,10 @@ def create_or_link_ingredient():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Search global items ---
+# Purpose: Return global-library item search results for authenticated users.
+# Inputs: Query string q plus optional type/group flags.
+# Outputs: JSON list (or grouped list) of global-item payloads.
 @ingredient_api_bp.route("/global-items/search", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -736,6 +797,10 @@ def search_global_items():
     return jsonify(payload)
 
 
+# --- Get global item stats ---
+# Purpose: Return rollup statistics for one global item.
+# Inputs: Global item id path parameter.
+# Outputs: JSON success payload with global item rollup stats.
 @ingredient_api_bp.route("/global-items/<int:global_item_id>/stats", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
