@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
@@ -10,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models.public_bot_trap import BotTrapHit, BotTrapIdentityBlock, BotTrapIpState
+from app.utils.redis_pool import get_redis_pool
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,9 @@ class PublicBotTrapService:
     DB_LOG_HITS_CONFIG_KEY = "BOT_TRAP_LOG_HITS_TO_DB"
     DB_MAX_HITS_CONFIG_KEY = "BOT_TRAP_DB_MAX_HIT_ROWS"
     DB_HIT_TRIM_BATCH_CONFIG_KEY = "BOT_TRAP_DB_HIT_TRIM_BATCH"
+    REDIS_ENABLED_CONFIG_KEY = "BOT_TRAP_REDIS_ENABLED"
+    REDIS_PREFIX_CONFIG_KEY = "BOT_TRAP_REDIS_PREFIX"
+    DEFAULT_REDIS_PREFIX = "bottrap:v1"
 
     @staticmethod
     def _normalize_ip(raw_ip: Optional[str]) -> Optional[str]:
@@ -155,6 +160,158 @@ class PublicBotTrapService:
     @classmethod
     def _db_hit_trim_batch(cls) -> int:
         return cls._policy_int(cls.DB_HIT_TRIM_BATCH_CONFIG_KEY, 500, min_value=1)
+
+    @classmethod
+    def _redis_enabled(cls) -> bool:
+        return cls._policy_bool(cls.REDIS_ENABLED_CONFIG_KEY, True)
+
+    @classmethod
+    def _redis_prefix(cls) -> str:
+        raw: Any = cls.DEFAULT_REDIS_PREFIX
+        if has_app_context():
+            raw = current_app.config.get(
+                cls.REDIS_PREFIX_CONFIG_KEY,
+                cls.DEFAULT_REDIS_PREFIX,
+            )
+        prefix = str(raw).strip() if raw is not None else cls.DEFAULT_REDIS_PREFIX
+        if not prefix:
+            return cls.DEFAULT_REDIS_PREFIX
+        return prefix.strip(":")
+
+    @classmethod
+    def _redis_client(cls):
+        if not cls._redis_enabled():
+            return None
+        try:
+            import redis
+        except Exception:  # pragma: no cover - optional dependency
+            return None
+
+        app_obj = None
+        redis_url = None
+        if has_app_context():
+            try:
+                app_obj = current_app._get_current_object()
+                redis_url = app_obj.config.get("REDIS_URL")
+            except RuntimeError:
+                app_obj = None
+        if not redis_url:
+            redis_url = os.environ.get("REDIS_URL")
+        if not redis_url:
+            return None
+
+        try:
+            pool = get_redis_pool(app_obj)
+            if pool is not None:
+                return redis.Redis(connection_pool=pool, decode_responses=True)
+            return redis.Redis.from_url(redis_url, decode_responses=True)
+        except Exception as exc:
+            logger.debug("Bot trap Redis unavailable; continuing with DB path: %s", exc)
+            return None
+
+    @classmethod
+    def _redis_key(cls, *parts: Any) -> str:
+        segments = [cls._redis_prefix()]
+        segments.extend(str(part) for part in parts if part not in (None, ""))
+        return ":".join(segments)
+
+    @classmethod
+    def _redis_temp_ip_block_key(cls, ip: str) -> str:
+        return cls._redis_key("block", "ip", ip)
+
+    @classmethod
+    def _redis_permanent_ip_block_key(cls, ip: str) -> str:
+        return cls._redis_key("block", "ip_permanent", ip)
+
+    @classmethod
+    def _redis_email_block_key(cls, email: str) -> str:
+        return cls._redis_key("block", "email", email)
+
+    @classmethod
+    def _redis_user_block_key(cls, user_id: int | str) -> str:
+        return cls._redis_key("block", "user", user_id)
+
+    @classmethod
+    def _redis_ip_strike_key(cls, ip: str) -> str:
+        return cls._redis_key("strike", ip)
+
+    @classmethod
+    def _redis_ip_penalty_key(cls, ip: str) -> str:
+        return cls._redis_key("penalty", ip)
+
+    @classmethod
+    def _redis_exists(cls, redis_client, key: Optional[str]) -> bool:
+        if redis_client is None or not key:
+            return False
+        try:
+            return bool(redis_client.exists(key))
+        except Exception:
+            return False
+
+    @classmethod
+    def _cache_temporary_ip_block(
+        cls,
+        redis_client,
+        *,
+        ip: Optional[str],
+        block_seconds: Optional[int],
+    ) -> None:
+        ip_value = cls._normalize_ip(ip)
+        ttl = cls._coerce_int(block_seconds, default=0, min_value=0)
+        if redis_client is None or not ip_value or ttl <= 0:
+            return
+        try:
+            redis_client.set(cls._redis_temp_ip_block_key(ip_value), "1", ex=ttl)
+        except Exception as exc:
+            logger.debug("Failed to cache temporary bot-trap IP block in Redis: %s", exc)
+
+    @classmethod
+    def _cache_penalty_level(
+        cls,
+        redis_client,
+        *,
+        ip: Optional[str],
+        level: Optional[int],
+    ) -> None:
+        ip_value = cls._normalize_ip(ip)
+        normalized_level = cls._coerce_int(level, default=0, min_value=0)
+        if redis_client is None or not ip_value or normalized_level <= 0:
+            return
+        try:
+            redis_client.set(
+                cls._redis_ip_penalty_key(ip_value),
+                str(normalized_level),
+                ex=cls._penalty_reset_seconds(),
+            )
+        except Exception as exc:
+            logger.debug("Failed to cache bot-trap penalty level in Redis: %s", exc)
+
+    @classmethod
+    def _cache_identity_block(
+        cls,
+        redis_client,
+        *,
+        block_type: str,
+        value: Optional[str],
+    ) -> None:
+        if redis_client is None or not value:
+            return
+        if block_type == "email":
+            key = cls._redis_email_block_key(value)
+        elif block_type == "user":
+            key = cls._redis_user_block_key(value)
+        elif block_type == "ip_permanent":
+            key = cls._redis_permanent_ip_block_key(value)
+        else:
+            return
+        try:
+            redis_client.set(key, "1")
+        except Exception as exc:
+            logger.debug("Failed to cache bot-trap identity block in Redis: %s", exc)
+
+    @staticmethod
+    def _session_has_changes() -> bool:
+        return bool(db.session.new or db.session.dirty or db.session.deleted)
 
     @classmethod
     def _coerce_int(cls, value: Any, *, default: int = 0, min_value: int = 0) -> int:
@@ -423,8 +580,34 @@ class PublicBotTrapService:
         ip_value = cls._normalize_ip(ip)
         email_value = cls._normalize_email(email)
         user_value = cls._normalize_user_id(user_id)
+        redis_client = cls._redis_client()
 
         try:
+            # Fast path: check Redis first to avoid DB work on hot blocked identities.
+            if redis_client is not None:
+                if ip_value and cls._redis_exists(
+                    redis_client, cls._redis_temp_ip_block_key(ip_value)
+                ):
+                    return True
+                if (
+                    cls._permanent_ip_blocks_enabled()
+                    and ip_value
+                    and cls._redis_exists(
+                        redis_client,
+                        cls._redis_permanent_ip_block_key(ip_value),
+                    )
+                ):
+                    return True
+                if email_value and cls._redis_exists(
+                    redis_client, cls._redis_email_block_key(email_value)
+                ):
+                    return True
+                if user_value is not None and cls._redis_exists(
+                    redis_client,
+                    cls._redis_user_block_key(str(user_value)),
+                ):
+                    return True
+
             if (
                 cls._permanent_ip_blocks_enabled()
                 and ip_value
@@ -433,15 +616,21 @@ class PublicBotTrapService:
                     value=ip_value,
                 )
             ):
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="ip_permanent",
+                    value=ip_value,
+                )
                 return True
 
             if ip_value:
                 ip_state = BotTrapIpState.query.filter_by(ip=ip_value).first()
                 if ip_state is not None:
                     changed = cls._cleanup_ip_state_row(ip_state, now=now)
+                    blocked_until = cls._as_utc(ip_state.blocked_until)
                     blocked = (
-                        cls._as_utc(ip_state.blocked_until) is not None
-                        and cls._as_utc(ip_state.blocked_until) > now
+                        blocked_until is not None
+                        and blocked_until > now
                     )
                     if not blocked and cls._row_is_redundant(ip_state, now=now):
                         db.session.delete(ip_state)
@@ -449,18 +638,42 @@ class PublicBotTrapService:
                     if changed:
                         db.session.commit()
                     if blocked:
+                        remaining_seconds = max(
+                            1,
+                            int((blocked_until - now).total_seconds()),
+                        )
+                        cls._cache_temporary_ip_block(
+                            redis_client,
+                            ip=ip_value,
+                            block_seconds=remaining_seconds,
+                        )
+                        cls._cache_penalty_level(
+                            redis_client,
+                            ip=ip_value,
+                            level=ip_state.penalty_level,
+                        )
                         return True
 
             if email_value and cls._identity_block_exists(
                 block_type="email",
                 value=email_value,
             ):
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="email",
+                    value=email_value,
+                )
                 return True
 
-            if user_value and cls._identity_block_exists(
+            if user_value is not None and cls._identity_block_exists(
                 block_type="user",
                 value=str(user_value),
             ):
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="user",
+                    value=str(user_value),
+                )
                 return True
 
             return False
@@ -498,6 +711,8 @@ class PublicBotTrapService:
         ip_value = cls._normalize_ip(ip)
         email_value = cls._normalize_email(email)
         user_value = cls._normalize_user_id(user_id)
+        redis_client = cls._redis_client()
+        temp_block_payload: Dict[str, Any] | None = None
 
         try:
             if permanent_ip and ip_value:
@@ -509,7 +724,7 @@ class PublicBotTrapService:
                 )
             elif ip_value:
                 ip_state = cls._get_or_create_ip_state(ip_value)
-                cls._apply_temporary_ip_block(
+                temp_block_payload = cls._apply_temporary_ip_block(
                     ip_state,
                     now=now,
                     reason=reason,
@@ -530,6 +745,35 @@ class PublicBotTrapService:
                 source=source,
             )
             db.session.commit()
+
+            if redis_client is not None:
+                if permanent_ip and ip_value:
+                    cls._cache_identity_block(
+                        redis_client,
+                        block_type="ip_permanent",
+                        value=ip_value,
+                    )
+                if temp_block_payload is not None:
+                    cls._cache_temporary_ip_block(
+                        redis_client,
+                        ip=ip_value,
+                        block_seconds=temp_block_payload.get("block_seconds"),
+                    )
+                    cls._cache_penalty_level(
+                        redis_client,
+                        ip=ip_value,
+                        level=temp_block_payload.get("level"),
+                    )
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="email",
+                    value=email_value,
+                )
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="user",
+                    value=str(user_value) if user_value is not None else None,
+                )
         except IntegrityError:
             db.session.rollback()
             logger.debug(
@@ -555,6 +799,7 @@ class PublicBotTrapService:
         block: bool = True,
     ) -> Dict[str, Any]:
         now = cls._utcnow()
+        redis_client = cls._redis_client()
         entry = cls._build_entry(
             now=now,
             request=request,
@@ -565,12 +810,15 @@ class PublicBotTrapService:
             extra=extra,
         )
 
+        block_payload: Dict[str, Any] | None = None
+        user_value = cls._normalize_user_id(entry.get("user_id"))
+
         try:
             cls._record_hit_row_if_enabled(entry)
 
             if block:
                 ip_state = cls._get_or_create_ip_state(entry.get("ip"))
-                cls._apply_temporary_ip_block(
+                block_payload = cls._apply_temporary_ip_block(
                     ip_state,
                     now=now,
                     reason=reason,
@@ -582,7 +830,6 @@ class PublicBotTrapService:
                     reason=reason,
                     source=source,
                 )
-                user_value = cls._normalize_user_id(entry.get("user_id"))
                 cls._upsert_identity_block(
                     block_type="user",
                     value=str(user_value) if user_value is not None else None,
@@ -591,6 +838,29 @@ class PublicBotTrapService:
                 )
 
             db.session.commit()
+
+            if redis_client is not None and block:
+                if block_payload is not None:
+                    cls._cache_temporary_ip_block(
+                        redis_client,
+                        ip=entry.get("ip"),
+                        block_seconds=block_payload.get("block_seconds"),
+                    )
+                    cls._cache_penalty_level(
+                        redis_client,
+                        ip=entry.get("ip"),
+                        level=block_payload.get("level"),
+                    )
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="email",
+                    value=entry.get("email"),
+                )
+                cls._cache_identity_block(
+                    redis_client,
+                    block_type="user",
+                    value=str(user_value) if user_value is not None else None,
+                )
         except IntegrityError:
             db.session.rollback()
             logger.debug(
@@ -631,6 +901,78 @@ class PublicBotTrapService:
         threshold = cls._strike_threshold()
         block_payload = None
         blocked = False
+        redis_client = cls._redis_client()
+
+        if redis_client is not None and ip_value:
+            try:
+                strike_key = cls._redis_ip_strike_key(ip_value)
+                penalty_key = cls._redis_ip_penalty_key(ip_value)
+                strike_count = cls._coerce_int(
+                    redis_client.incr(strike_key),
+                    default=0,
+                    min_value=0,
+                )
+                if strike_count == 1:
+                    redis_client.expire(strike_key, cls._strike_window_seconds())
+
+                if strike_count >= threshold:
+                    redis_client.delete(strike_key)
+                    penalty_level = cls._coerce_int(
+                        redis_client.incr(penalty_key),
+                        default=1,
+                        min_value=1,
+                    )
+                    redis_client.expire(penalty_key, cls._penalty_reset_seconds())
+
+                    block_seconds = cls._block_base_seconds() * (2 ** (penalty_level - 1))
+                    block_seconds = min(block_seconds, cls._block_max_seconds())
+                    blocked_until = now + timedelta(seconds=block_seconds)
+                    redis_client.set(
+                        cls._redis_temp_ip_block_key(ip_value),
+                        "1",
+                        ex=block_seconds,
+                    )
+                    block_payload = {
+                        "ip": ip_value,
+                        "block_seconds": block_seconds,
+                        "level": penalty_level,
+                        "blocked_until": blocked_until.isoformat(),
+                    }
+                    blocked = True
+
+                    # Persist compact block metadata for Redis-miss fallback and ops visibility.
+                    ip_state = cls._get_or_create_ip_state(ip_value)
+                    if ip_state is not None:
+                        ip_state.strike_count = 0
+                        ip_state.strike_window_started_at = None
+                        ip_state.blocked_until = blocked_until
+                        ip_state.penalty_level = penalty_level
+                        ip_state.last_blocked_at = now
+                        ip_state.last_source = cls._safe_value(source, max_len=80) or "unknown"
+                        ip_state.last_reason = cls._safe_value(reason, max_len=80) or "unknown"
+                        ip_state.last_hit_at = now
+
+                cls._record_hit_row_if_enabled(entry)
+                if cls._session_has_changes():
+                    db.session.commit()
+
+                return {
+                    "entry": entry,
+                    "ip": ip_value,
+                    "strike_count": strike_count,
+                    "threshold": threshold,
+                    "blocked": blocked,
+                    "block": block_payload,
+                }
+            except Exception as exc:
+                logger.warning(
+                    "Redis suspicious-probe path failed; falling back to DB path: %s",
+                    exc,
+                )
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
 
         try:
             ip_state = cls._get_or_create_ip_state(ip_value)
@@ -654,6 +996,18 @@ class PublicBotTrapService:
 
             cls._record_hit_row_if_enabled(entry)
             db.session.commit()
+
+            if blocked and block_payload is not None:
+                cls._cache_temporary_ip_block(
+                    redis_client,
+                    ip=ip_value,
+                    block_seconds=block_payload.get("block_seconds"),
+                )
+                cls._cache_penalty_level(
+                    redis_client,
+                    ip=ip_value,
+                    level=block_payload.get("level"),
+                )
         except IntegrityError:
             db.session.rollback()
             logger.debug(

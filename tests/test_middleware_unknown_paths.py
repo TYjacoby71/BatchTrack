@@ -5,6 +5,57 @@ import pytest
 from app.utils.cache_manager import app_cache
 
 
+class _FakeRedis:
+    def __init__(self, now_provider):
+        self._now = now_provider
+        self._values: dict[str, str] = {}
+        self._expires_at: dict[str, datetime] = {}
+
+    def _purge_if_expired(self, key: str) -> None:
+        expires_at = self._expires_at.get(key)
+        if expires_at is None:
+            return
+        if self._now() >= expires_at:
+            self._values.pop(key, None)
+            self._expires_at.pop(key, None)
+
+    def set(self, key: str, value: str, ex: int | None = None):
+        self._values[key] = str(value)
+        if ex is None:
+            self._expires_at.pop(key, None)
+        else:
+            self._expires_at[key] = self._now() + timedelta(seconds=int(ex))
+        return True
+
+    def exists(self, key: str) -> int:
+        self._purge_if_expired(key)
+        return 1 if key in self._values else 0
+
+    def incr(self, key: str) -> int:
+        self._purge_if_expired(key)
+        current = int(self._values.get(key, "0"))
+        current += 1
+        self._values[key] = str(current)
+        return current
+
+    def expire(self, key: str, ttl_seconds: int) -> bool:
+        self._purge_if_expired(key)
+        if key not in self._values:
+            return False
+        self._expires_at[key] = self._now() + timedelta(seconds=int(ttl_seconds))
+        return True
+
+    def delete(self, *keys: str) -> int:
+        deleted = 0
+        for key in keys:
+            self._purge_if_expired(key)
+            if key in self._values:
+                self._values.pop(key, None)
+                self._expires_at.pop(key, None)
+                deleted += 1
+        return deleted
+
+
 def test_unknown_unauthenticated_path_returns_404(app):
     client = app.test_client()
 
@@ -174,6 +225,82 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
 
         ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()
         assert ip_state is None or ip_state.blocked_until is None
+
+
+def test_redis_probe_hot_path_blocks_without_intermediate_db_rows(app, monkeypatch):
+    client = app.test_client()
+    from app.models.public_bot_trap import BotTrapIpState
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    now_ref = {"value": datetime(2026, 2, 20, 12, 0, tzinfo=timezone.utc)}
+    fake_redis = _FakeRedis(lambda: now_ref["value"])
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_redis_client",
+        classmethod(lambda cls: fake_redis),
+    )
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_utcnow",
+        staticmethod(lambda: now_ref["value"]),
+    )
+
+    app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 3
+    app.config["BOT_TRAP_STRIKE_WINDOW_SECONDS"] = 300
+    app.config["BOT_TRAP_IP_BLOCK_SECONDS"] = 60
+    app.config["BOT_TRAP_IP_BLOCK_MAX_SECONDS"] = 3600
+    app.config["BOT_TRAP_PENALTY_RESET_SECONDS"] = 86400
+
+    first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
+    assert first.status_code == 404
+    second = client.get("/xmlrpc2.php", follow_redirects=False)
+    assert second.status_code == 404
+
+    with app.app_context():
+        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
+
+    third = client.get(
+        "/wp-content/plugins/hellopress/wp_filemanager.php",
+        follow_redirects=False,
+    )
+    assert third.status_code == 404
+
+    with app.app_context():
+        ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()
+        assert ip_state is not None
+        assert ip_state.blocked_until is not None
+
+    blocked_response = client.get("/tools/", follow_redirects=False)
+    assert blocked_response.status_code == 403
+
+
+def test_redis_temporary_block_ttl_unblocks_even_if_db_row_is_missing(app, monkeypatch):
+    from app.extensions import db
+    from app.models.public_bot_trap import BotTrapIpState
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    now_ref = {"value": datetime(2026, 2, 21, 9, 0, tzinfo=timezone.utc)}
+    fake_redis = _FakeRedis(lambda: now_ref["value"])
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_redis_client",
+        classmethod(lambda cls: fake_redis),
+    )
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "_utcnow",
+        staticmethod(lambda: now_ref["value"]),
+    )
+
+    with app.app_context():
+        PublicBotTrapService.add_block(ip="198.51.100.25", ip_block_seconds=60)
+        BotTrapIpState.query.filter_by(ip="198.51.100.25").delete()
+        db.session.commit()
+
+        assert PublicBotTrapService.is_blocked(ip="198.51.100.25") is True
+
+        now_ref["value"] = now_ref["value"] + timedelta(seconds=90)
+        assert PublicBotTrapService.is_blocked(ip="198.51.100.25") is False
 
 
 def test_non_suspicious_unknown_path_does_not_auto_block(app):
