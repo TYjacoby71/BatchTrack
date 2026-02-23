@@ -143,6 +143,16 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **conversion.unit_mapping_modal drawer action** → Drawer endpoints for creating/updating custom unit mappings used by conversion flows (see `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`)
 - **inventory.quick_create drawer action** → Drawer endpoint that renders inline inventory quick-create UX with units and categories (see `app/blueprints/api/drawers/drawer_actions/inventory_quick_create.py`)
 - **units.quick_create drawer action** → Drawer endpoint that renders custom-unit quick-create UX for interrupted workflows (see `app/blueprints/api/drawers/drawer_actions/units_quick_create.py`)
+- **Ingredient API routes** → Authenticated category/density/search/create-or-link endpoints for ingredient and global-library flows (see `app/blueprints/api/ingredient_routes.py`)
+- **Public utility API routes** → Unauthenticated server-time, bot-trap, global-search, soapcalc, conversion, and help-bot endpoints (see `app/blueprints/api/public.py`)
+- **Reservation API routes** → Reservation create/release/convert/expire endpoints for SKU stock-hold lifecycle handling (see `app/blueprints/api/reservation_routes.py`)
+- **Unit API routes** → Authenticated unit list/search/conversion endpoints for inventory tooling (see `app/blueprints/api/unit_routes.py`)
+- **Auth permission matrix routes** → Permission catalog management, matrix updates, status toggles, and role helper handlers (see `app/blueprints/auth/permissions.py`)
+- **Whop authentication helper** → License validation and user/org sync helper used by Whop login flows (see `app/blueprints/auth/whop_auth.py`)
+- **/auth/whop-login** → Whop-backed login route that authenticates and rotates session state for licensed users (see `app/blueprints/auth/whop_routes.py`)
+- **Batch add-extra route** → Endpoint for adding supplemental ingredients/containers/consumables to existing batches (see `app/blueprints/batches/add_extra.py`)
+- **Batch cancellation route** → Endpoint for canceling batches with restoration summary messaging (see `app/blueprints/batches/cancel_batch.py`)
+- **Bulk stock-check routes** → Bulk recipe stock evaluation and CSV shopping-list export endpoints (see `app/blueprints/bulk_stock/routes.py`)
 
 ---
 

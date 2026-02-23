@@ -1,3 +1,15 @@
+"""Permission management routes and role helper handlers.
+
+Synopsis:
+Provide authorization management endpoints/helpers for permission matrix
+editing, permission status toggling, and role maintenance behavior.
+
+Glossary:
+- Permission matrix: Combined developer/customer permission availability map.
+- Catalog metadata: Consolidated permission descriptions/categories from seeder.
+- Role management: Creation/update helpers for organization/system roles.
+"""
+
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
@@ -9,6 +21,10 @@ from app.utils.permissions import clear_permission_scope_cache, require_permissi
 from . import auth_bp
 
 
+# --- Get tier permissions ---
+# Purpose: Resolve active permissions available for a subscription tier.
+# Inputs: Tier key (id-like token).
+# Outputs: List of active Permission rows for that tier.
 def get_tier_permissions(tier_key):
     """Get all permissions available to a subscription tier (DB only)."""
     try:
@@ -24,6 +40,10 @@ def get_tier_permissions(tier_key):
     ).all()
 
 
+# --- Load permission catalog ---
+# Purpose: Load consolidated permission metadata for descriptions/categories.
+# Inputs: None.
+# Outputs: Mapping of permission name to metadata attributes.
 def _load_permission_catalog():
     """Load permission metadata from the consolidated catalog."""
     try:
@@ -59,6 +79,10 @@ def _load_permission_catalog():
     return catalog
 
 
+# --- Resolve permission metadata ---
+# Purpose: Pick description/category values for a permission and scope.
+# Inputs: Permission name, catalog mapping, and org/dev category preference.
+# Outputs: Tuple of (description, category).
 def _resolve_permission_metadata(name, catalog, *, prefer_org: bool):
     meta = catalog.get(name, {})
     description = meta.get("description") or name
@@ -69,6 +93,10 @@ def _resolve_permission_metadata(name, catalog, *, prefer_org: bool):
     return description, category
 
 
+# --- Manage permissions page ---
+# Purpose: Render permission matrix management UI.
+# Inputs: Authenticated request with dev.assign_permissions.
+# Outputs: HTML response containing categorized permission registry.
 @auth_bp.route("/permissions")
 @require_permission("dev.assign_permissions")
 def manage_permissions():
@@ -156,6 +184,10 @@ def manage_permissions():
     )
 
 
+# --- Update permission matrix ---
+# Purpose: Create/update/remove permission availability across dev/customer scopes.
+# Inputs: JSON payload with permission name, scope flags, and active toggle.
+# Outputs: JSON success/error response after persistence operations.
 @auth_bp.route("/permissions/update", methods=["POST"])
 @require_permission("dev.assign_permissions")
 def update_permission_matrix():
@@ -274,6 +306,10 @@ def update_permission_matrix():
         )
 
 
+# --- Toggle permission status ---
+# Purpose: Flip active state for one developer or organization permission row.
+# Inputs: JSON payload with permission id, table name, and target status.
+# Outputs: JSON success/error response after update.
 @auth_bp.route("/permissions/toggle-status", methods=["POST"])
 @require_permission("dev.assign_permissions")
 def toggle_permission_status():
@@ -310,6 +346,10 @@ def toggle_permission_status():
         )
 
 
+# --- Manage roles page ---
+# Purpose: Render role-management page with allowed permission choices.
+# Inputs: Authenticated user context and role-management permission.
+# Outputs: HTML response containing scoped roles and permissions.
 @require_permission("organization.manage_roles")
 @login_required
 def manage_roles():
@@ -333,6 +373,10 @@ def manage_roles():
     )
 
 
+# --- Create role ---
+# Purpose: Persist a new role with scoped permission assignments.
+# Inputs: JSON payload with role data and permission ids.
+# Outputs: JSON success/error response after create attempt.
 @require_permission("organization.manage_roles")
 @login_required
 def create_role():
@@ -385,6 +429,10 @@ def create_role():
         return jsonify({"success": False, "error": str(e)})
 
 
+# --- Update role ---
+# Purpose: Update role identity fields and assigned permissions.
+# Inputs: Role id plus JSON payload with updated fields.
+# Outputs: JSON success/error response after update attempt.
 @require_permission("organization.manage_roles")
 @login_required
 def update_role(role_id):

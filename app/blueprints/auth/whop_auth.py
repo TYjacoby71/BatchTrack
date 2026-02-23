@@ -1,3 +1,15 @@
+"""Whop authentication helper class.
+
+Synopsis:
+Provide helper methods that validate Whop licenses, create/sync users and
+organizations, and stash URL-provided license context for login flows.
+
+Glossary:
+- Whop license: Access credential validated against Whop API/service.
+- Pending license session: Temporary session payload pre-filling login context.
+- Organization sync: Process that aligns local org data with Whop entitlements.
+"""
+
 import logging
 
 from flask import flash, session
@@ -8,9 +20,17 @@ from ...services.whop_service import WhopService
 logger = logging.getLogger(__name__)
 
 
+# --- Whop authentication helper ---
+# Purpose: Group Whop login and URL-license processing routines.
+# Inputs: License keys, email values, and Flask session context.
+# Outputs: User/license payloads after validation and sync operations.
 class WhopAuth:
     """Handle Whop-based authentication and signup"""
 
+    # --- Handle Whop login ---
+    # Purpose: Validate license/email and return or create matching user.
+    # Inputs: License key and email string.
+    # Outputs: User model instance or None on validation failure.
     @staticmethod
     def handle_whop_login(license_key, email):
         """Handle login with Whop license key"""
@@ -58,6 +78,10 @@ class WhopAuth:
 
         return user
 
+    # --- Handle license key from URL ---
+    # Purpose: Validate URL-provided key and stash pending session data.
+    # Inputs: License key string from query parameter.
+    # Outputs: License data dict on success, otherwise None.
     @staticmethod
     def handle_license_url(license_key):
         """Handle direct license key from URL parameter"""

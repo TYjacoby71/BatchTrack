@@ -1,4 +1,14 @@
-"""Whop license authentication routes."""
+"""Whop license authentication routes.
+
+Synopsis:
+Expose login endpoint that authenticates users through Whop license validation,
+creates missing local users when needed, and establishes authenticated sessions.
+
+Glossary:
+- Whop login route: Endpoint that processes Whop license login form submits.
+- Session rotation: Issuing a new active session token after login.
+- WhopAuth helper: Utility class handling Whop license verification workflows.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +23,10 @@ from . import auth_bp
 from .whop_auth import WhopAuth
 
 
+# --- Whop login route ---
+# Purpose: Authenticate user via Whop credentials and start local session.
+# Inputs: Form payload containing license_key and email.
+# Outputs: Redirect response with success/error flash messaging.
 @auth_bp.route("/whop-login", methods=["POST"])
 def whop_login():
     """Authenticate user with Whop license key."""
