@@ -46,6 +46,10 @@ EVENT_PREFIXES: Dict[str, str] = {
 }
 
 
+# --- Parsed inventory code shape ---
+# Purpose: Define structured keys returned by parse_inventory_code.
+# Inputs: None.
+# Outputs: Typed dictionary contract for parsed code payloads.
 class ParsedCode(TypedDict):
     prefix: str | None
     suffix: str | None
