@@ -1,32 +1,8 @@
-import json
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.utils.cache_manager import app_cache
-from app.utils.json_store import read_json_file
-
-
-@pytest.fixture(autouse=True)
-def _isolated_bot_trap_state(tmp_path):
-    from app.services.public_bot_trap_service import PublicBotTrapService
-
-    original_path = PublicBotTrapService.BOT_TRAP_FILE
-    original_cache = PublicBotTrapService._state_cache
-    original_cache_loaded_at = PublicBotTrapService._state_cache_loaded_at
-    original_oversize_warning = PublicBotTrapService._oversize_warning_emitted
-    PublicBotTrapService.BOT_TRAP_FILE = str(tmp_path / "bot_traps.json")
-    PublicBotTrapService._state_cache = None
-    PublicBotTrapService._state_cache_loaded_at = None
-    PublicBotTrapService._oversize_warning_emitted = False
-    try:
-        yield
-    finally:
-        PublicBotTrapService.BOT_TRAP_FILE = original_path
-        PublicBotTrapService._state_cache = original_cache
-        PublicBotTrapService._state_cache_loaded_at = original_cache_loaded_at
-        PublicBotTrapService._oversize_warning_emitted = original_oversize_warning
 
 
 def test_unknown_unauthenticated_path_returns_404(app):
@@ -124,7 +100,6 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
 
 def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
     client = app.test_client()
-    from app.services.public_bot_trap_service import PublicBotTrapService
 
     # Strike 1: suspicious probe should still return unknown-path status.
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
@@ -145,9 +120,12 @@ def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
     )
     assert third.status_code == 404
 
-    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    ip_blocks = state.get("ip_temporary_blocks") or {}
-    assert "127.0.0.1" in ip_blocks
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()
+        assert ip_state is not None
+        assert ip_state.blocked_until is not None
 
     blocked_response = client.get("/tools/", follow_redirects=False)
     assert blocked_response.status_code == 403
@@ -191,21 +169,23 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
     unblocked_response = client.get("/tools/", follow_redirects=False)
     assert unblocked_response.status_code == 200
 
-    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    ip_blocks = state.get("ip_temporary_blocks") or {}
-    assert "127.0.0.1" not in ip_blocks
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()
+        assert ip_state is None or ip_state.blocked_until is None
 
 
 def test_non_suspicious_unknown_path_does_not_auto_block(app):
     client = app.test_client()
-    from app.services.public_bot_trap_service import PublicBotTrapService
 
     response = client.get("/totally-made-up-page", follow_redirects=False)
     assert response.status_code == 404
 
-    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    assert "127.0.0.1" not in (state.get("blocked_ips") or [])
-    assert "127.0.0.1" not in (state.get("ip_temporary_blocks") or {})
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
@@ -213,72 +193,52 @@ def test_non_suspicious_unknown_path_does_not_auto_block(app):
 
 def test_robots_txt_unknown_path_does_not_auto_block(app):
     client = app.test_client()
-    from app.services.public_bot_trap_service import PublicBotTrapService
 
     response = client.get("/robots.txt", follow_redirects=False)
     assert response.status_code == 200
 
-    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    assert "127.0.0.1" not in (state.get("blocked_ips") or [])
-    assert "127.0.0.1" not in (state.get("ip_temporary_blocks") or {})
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
 
     still_public = client.get("/tools/", follow_redirects=False)
     assert still_public.status_code == 200
 
 
-def test_bot_trap_hit_log_is_bounded(app):
+def test_bot_trap_identity_blocks_are_db_backed(app):
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    with app.app_context():
+        PublicBotTrapService.add_block(email="spam@example.com", user_id=42)
+
+        assert PublicBotTrapService.is_blocked(email="spam@example.com")
+        assert PublicBotTrapService.is_blocked(user_id=42)
+
+        from app.models.public_bot_trap import BotTrapIdentityBlock
+
+        email_entry = BotTrapIdentityBlock.query.filter_by(
+            block_type="email",
+            value="spam@example.com",
+        ).first()
+        user_entry = BotTrapIdentityBlock.query.filter_by(
+            block_type="user",
+            value="42",
+        ).first()
+        assert email_entry is not None
+        assert user_entry is not None
+
+
+def test_bot_trap_hit_audit_logging_is_disabled_by_default(app):
     client = app.test_client()
     from app.services.public_bot_trap_service import PublicBotTrapService
+    from app.models.public_bot_trap import BotTrapHit
 
-    app.config["BOT_TRAP_MAX_HITS"] = 3
-    app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 999
-    app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
-
-    for idx in range(5):
-        response = client.get(
-            f"/wp-content/plugins/scanner-{idx}.php",
-            follow_redirects=False,
-        )
-        assert response.status_code == 404
-
-    state = read_json_file(PublicBotTrapService.BOT_TRAP_FILE, default={}) or {}
-    hits = state.get("hits") or []
-    assert len(hits) == 3
-    assert [entry.get("path") for entry in hits] == [
-        "/wp-content/plugins/scanner-2.php",
-        "/wp-content/plugins/scanner-3.php",
-        "/wp-content/plugins/scanner-4.php",
-    ]
-
-
-def test_oversized_bot_trap_state_is_ignored(app):
-    from app.services.public_bot_trap_service import PublicBotTrapService
-
-    blocked_ip = "203.0.113.42"
     with app.app_context():
-        app.config["BOT_TRAP_MAX_STATE_BYTES"] = 256
-        app.config["BOT_TRAP_STATE_CACHE_SECONDS"] = 0
+        app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 999
 
-        state_path = Path(PublicBotTrapService.BOT_TRAP_FILE)
-        oversized_payload = {
-            "hits": [{"payload": "x" * 2048}],
-            "blocked_ips": [],
-            "blocked_emails": [],
-            "blocked_users": [],
-            "ip_temporary_blocks": {
-                blocked_ip: {
-                    "blocked_at": "2026-02-22T00:00:00+00:00",
-                    "blocked_until": "2099-01-01T00:00:00+00:00",
-                    "block_seconds": 86400,
-                    "level": 1,
-                    "reason": "test",
-                    "source": "test",
-                }
-            },
-            "ip_strikes": {},
-            "ip_penalties": {},
-        }
-        state_path.write_text(json.dumps(oversized_payload), encoding="utf-8")
-        assert state_path.stat().st_size > app.config["BOT_TRAP_MAX_STATE_BYTES"]
+    response = client.get("/wp-admin/setup-config.php", follow_redirects=False)
+    assert response.status_code == 404
 
-        assert PublicBotTrapService.is_blocked(ip=blocked_ip) is False
+    with app.app_context():
+        assert BotTrapHit.query.count() == 0
