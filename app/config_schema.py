@@ -31,6 +31,7 @@ class ConfigField:
     recommended: str | None = None
     secret: bool = False
     note: str | None = None
+    options: tuple[str, ...] = ()
     include_in_docs: bool = True
     include_in_checklist: bool = True
     default_by_env: dict[str, Any] | None = None
@@ -205,6 +206,8 @@ def build_integration_sections(
                     "present": resolved_field.present,
                     "required": resolved_field.required,
                     "recommended": field.recommended,
+                    "default_value": field.default_for_env(env_name),
+                    "options": list(field.options),
                     "description": field.description,
                     "note": field.note,
                     "is_secret": field.secret,
@@ -230,6 +233,7 @@ def _field(
     recommended: str | None = None,
     secret: bool = False,
     note: str | None = None,
+    options: tuple[str, ...] | list[str] | None = None,
     include_in_docs: bool = True,
     include_in_checklist: bool = True,
     default_by_env: dict[str, Any] | None = None,
@@ -245,6 +249,7 @@ def _field(
         recommended=recommended,
         secret=secret,
         note=note,
+        options=tuple(options or ()),
         include_in_docs=include_in_docs,
         include_in_checklist=include_in_checklist,
         default_by_env=default_by_env,

@@ -74,6 +74,15 @@ Glossary:
               </div>
               <div class="text-muted small">{{ item.description }}</div>
               {% if item.note %}<div class="small text-info">{{ item.note }}</div>{% endif %}
+              <div class="small text-muted">Default: <code>{{ item.default_value | tojson }}</code></div>
+              {% if item.options %}
+              <div class="small text-muted">
+                Options:
+                {% for option in item.options %}
+                  <code>{{ option }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
               {% if item.recommended %}<div class="small text-muted">Recommended: {{ item.recommended }}</div>{% endif %}
             </div>
             <div class="text-md-end">
@@ -99,6 +108,7 @@ Glossary:
     <strong>Redis provisioning & presets:</strong>
     <ul class="mb-2">
       <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code> once. The app mirrors it into <code>RATELIMIT_STORAGE_URI</code> automatically unless you override it.</li>
+      <li>Bot-trap strike counters and temporary blocks also use Redis by default. Keep <code>BOT_TRAP_REDIS_ENABLED=true</code> and only change <code>BOT_TRAP_REDIS_PREFIX</code> when multiple environments share one Redis instance.</li>
       <li>Use <code>REDIS_POOL_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
       <li>Set <code>GUNICORN_WORKERS</code> only as high as the Redis/Postgres plans can handle. During testing, keep it at <code>1</code>–<code>2</code>; raise both concurrency and Redis limits together when upgrading.</li>
       <li>For high-usage tiers (10k+ active users), a single well-sized Redis node normally suffices—scale memory and <code>maxclients</code> before considering sharding.</li>

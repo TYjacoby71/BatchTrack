@@ -73,6 +73,7 @@ except ImportError:
     pass
 from .pending_signup import PendingSignup
 from .permission import Permission
+from .public_bot_trap import BotTrapHit, BotTrapIdentityBlock, BotTrapIpState
 from .role import Role
 from .subscription_tier import SubscriptionTier
 
