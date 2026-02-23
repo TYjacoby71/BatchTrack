@@ -1,3 +1,15 @@
+"""Application settings persistence model.
+
+Synopsis:
+Define the SQLAlchemy model used to store key/value application configuration
+entries and optional descriptions for administrative management workflows.
+
+Glossary:
+- Setting key: Unique identifier used to retrieve a configuration value.
+- JSON value: Serialized configuration payload stored for a setting key.
+- Timestamp mixin: Shared created/updated metadata columns for model records.
+"""
+
 from __future__ import annotations
 
 from ..extensions import db

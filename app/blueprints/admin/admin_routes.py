@@ -1,3 +1,15 @@
+"""System-admin organization management routes.
+
+Synopsis:
+Provide admin-only blueprint endpoints for listing organizations and viewing
+organization-level user details in the internal administration interface.
+
+Glossary:
+- System admin permission: Capability required for privileged admin access.
+- Organization detail view: Page showing one organization and related users.
+- Admin blueprint: Route namespace mounted under the ``/admin`` URL prefix.
+"""
+
 from flask import Blueprint, render_template
 from flask_login import login_required
 

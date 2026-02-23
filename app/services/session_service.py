@@ -1,5 +1,13 @@
-"""
-Utility helpers for issuing and validating server-side session tokens.
+"""Session token lifecycle helpers.
+
+Synopsis:
+Provide centralized helpers that rotate, store, and clear the active
+server-side session token associated with the current user context.
+
+Glossary:
+- Session token key: Flask-session key used to persist active token state.
+- Rotation: Issuing a new random token and persisting it to user + session.
+- Request context: Flask runtime scope where ``session`` storage is available.
 """
 
 from __future__ import annotations

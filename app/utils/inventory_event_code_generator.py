@@ -1,3 +1,15 @@
+"""Inventory lot/event code generation utilities.
+
+Synopsis:
+Generate and validate compact tracking identifiers for inventory events and
+lot records using deterministic prefixes plus randomized base36 suffixes.
+
+Glossary:
+- Event prefix: Short code indicating the inventory change category.
+- Lot code: Identifier prefixed with ``LOT`` for inventory lot tracking.
+- Base36 suffix: Alphanumeric fragment derived from time, item id, and entropy.
+"""
+
 from __future__ import annotations
 
 import secrets

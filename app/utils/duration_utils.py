@@ -1,3 +1,15 @@
+"""Human-friendly duration formatting helpers.
+
+Synopsis:
+Convert raw day counts into readable day/month/year display strings used by
+UI and reporting views, with optional inclusion of exact day totals.
+
+Glossary:
+- Day count: Integer source value representing elapsed or planned days.
+- Humanized duration: Readable label such as ``18 months (540 days)``.
+- Positive parse: Integer coercion that rejects non-positive or invalid input.
+"""
+
 from __future__ import annotations
 
 from typing import Optional

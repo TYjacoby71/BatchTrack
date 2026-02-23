@@ -1,4 +1,14 @@
-"""Tag management routes."""
+"""Tag-management blueprint routes.
+
+Synopsis:
+Expose authenticated UI and CRUD API endpoints for organization-scoped tags
+used by inventory and workflow categorization features.
+
+Glossary:
+- Tag manager: Web interface for creating and editing reusable tags.
+- Scoped query: Organization-filtered model query protecting tenant isolation.
+- Soft delete: Deactivation flow that marks tag records inactive.
+"""
 
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required

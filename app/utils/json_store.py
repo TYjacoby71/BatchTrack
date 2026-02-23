@@ -1,3 +1,15 @@
+"""Thread-safe JSON file persistence helpers.
+
+Synopsis:
+Expose shared helpers for reading and atomically writing JSON files with
+best-effort cross-process file locks and safe fallback defaults.
+
+Glossary:
+- Advisory lock: Cooperative file lock used to reduce concurrent write races.
+- Atomic write: Temp-file write followed by replace to avoid partial files.
+- Default clone: Deep-copied fallback returned when stored JSON is unavailable.
+"""
+
 from __future__ import annotations
 
 import contextlib

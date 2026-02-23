@@ -1,3 +1,15 @@
+"""Structured fault-log persistence helpers.
+
+Synopsis:
+Record operational faults to a JSON log file with timestamps, source metadata,
+and optional details so troubleshooting data survives request boundaries.
+
+Glossary:
+- Fault record: Structured dictionary describing one logged failure condition.
+- Fault log path: Filesystem destination for persisted fault history.
+- Triage status: Workflow state assigned to newly logged fault entries.
+"""
+
 from __future__ import annotations
 
 import logging

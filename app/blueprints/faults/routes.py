@@ -1,4 +1,14 @@
-"""Fault log routes."""
+"""Fault-log blueprint routes.
+
+Synopsis:
+Register authenticated fault-log endpoints and gate access behind permission
+checks while fault-log UI and API capabilities are expanded.
+
+Glossary:
+- Faults blueprint: Flask blueprint namespace for fault-related routes.
+- Alerts permission: Capability required to access operational fault views.
+- Placeholder route: Interim endpoint returning temporary response content.
+"""
 
 from flask import Blueprint
 from flask_login import login_required

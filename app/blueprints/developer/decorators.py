@@ -1,3 +1,15 @@
+"""Developer-route authorization decorators.
+
+Synopsis:
+Provide thin decorator helpers that enforce authentication, permission checks,
+and developer-only access constraints for blueprint view functions.
+
+Glossary:
+- Permission decorator: Wrapper enforcing a named capability on the request.
+- Developer guard: Check that current user belongs to developer user type.
+- Wrapped view: Original Flask route function executed after authorization.
+"""
+
 from __future__ import annotations
 
 from functools import wraps

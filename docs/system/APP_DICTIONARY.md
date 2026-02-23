@@ -47,6 +47,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **UnifiedInventoryHistory.quantity_change_base** → Integer change recorded per event (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **InventoryItem** → Stocked ingredient, container, or product (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
 - **Product** → Parent product record for variants and SKUs (see [DATABASE_MODELS.md](DATABASE_MODELS.md))
+- **AppSetting model** → Key/value application configuration entity used for runtime administrative settings and optional descriptions (see `app/models/app_setting.py`)
 
 ---
 
@@ -125,6 +126,10 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **/sku/merge/configure** → SKU merge configuration (see `app/blueprints/products/sku.py`)
 - **/sku/merge/execute** → SKU merge execution (see `app/blueprints/products/sku.py`)
 - **/api/sku/<sku_id>/merge_preview** → SKU merge preview API (see `app/blueprints/products/sku.py`)
+- **/admin/organizations and /admin/organizations/<org_id>** → System-admin organization list/detail routes for internal tenant oversight (see `app/blueprints/admin/admin_routes.py`)
+- **/tag-manager and /api/tags** → Authenticated tag-management UI and CRUD endpoints for organization-scoped tags (see `app/blueprints/tag_manager/routes.py`)
+- **/faults/** → Permission-gated fault-log surface used for operational alert workflows (see `app/blueprints/faults/routes.py`)
+- **Developer route decorator helpers** → Blueprint decorator utilities that combine login, permission, and developer-user guards for route handlers (see `app/blueprints/developer/decorators.py`)
 
 ---
 
@@ -184,6 +189,11 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Auth Login Manager** → Flask-Login user loader setup (see `app/authz.py`)
 - **Extensions Registry** → Shared app extensions (see `app/extensions.py`)
 - **Security Middleware** → Request-layer enforcer for permission/bot checks and billing decision application (redirect/logout/JSON behavior) using service-provided policy decisions (see `app/middleware.py`)
+- **SessionService** → Centralized session-token lifecycle helper for rotation, retrieval, and context-safe clearing behavior (see `app/services/session_service.py`)
+- **JSON Store Utilities** → Atomic JSON read/write helpers with advisory file-lock support and safe default fallbacks (see `app/utils/json_store.py`)
+- **Inventory Event Code Generator** → Prefix-driven event/lot code generation and validation utilities using compact base36 suffixes (see `app/utils/inventory_event_code_generator.py`)
+- **Duration Humanization Utilities** → Day-count formatting helpers that convert numeric durations into friendly month/year display strings (see `app/utils/duration_utils.py`)
+- **Fault Log Utility** → JSON-backed operational fault recording helper that appends timestamped structured fault entries (see `app/utils/fault_log.py`)
 
 ---
 
