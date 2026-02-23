@@ -31,6 +31,8 @@ fifo_api_bp = Blueprint("fifo_api", __name__)
 # =========================================================
 # --- FIFO details ---
 # Purpose: Return FIFO lot details for an inventory item.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @fifo_api_bp.route("/api/fifo-details/<int:inventory_id>")
 @login_required
 @require_permission("inventory.view")
@@ -108,6 +110,8 @@ def get_fifo_details(inventory_id):
 
 # --- Batch inventory summary ---
 # Purpose: Return FIFO usage summary for a batch.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @fifo_api_bp.route("/api/batch-inventory-summary/<int:batch_id>")
 @login_required
 @require_permission("batches.view")
@@ -185,6 +189,10 @@ def get_batch_inventory_summary(batch_id):
         return jsonify({"error": str(e)}), 500
 
 
+# --- Get Batch Fifo Usage ---
+# Purpose: Implement `get_batch_fifo_usage` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def get_batch_fifo_usage(inventory_id, batch_id):
     """Get lot-level usage data for a specific ingredient in a specific batch using unified events."""
     events = (
@@ -262,6 +270,10 @@ def get_batch_fifo_usage(inventory_id, batch_id):
     return usage_data
 
 
+# --- Build Merged Ingredient Summary ---
+# Purpose: Implement `build_merged_ingredient_summary` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def build_merged_ingredient_summary(batch: Batch):
     """Return merged ingredient summary across regular and extra usage, grouped by inventory item.
 

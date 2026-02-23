@@ -1,4 +1,12 @@
-"""Dashboard and shared app route handlers."""
+"""Dashboard and shared app route handlers.
+
+Synopsis:
+Provide documented top-level behavior for `app/blueprints/dashboard/routes.py` without altering runtime logic.
+
+Glossary:
+- Module path: Source file `app/blueprints/dashboard/routes.py`.
+- Unit heading block: Standardized comment metadata above each top-level function/class.
+"""
 
 import logging
 
@@ -28,6 +36,10 @@ app_routes_bp = Blueprint("app_routes", __name__)
 # Dashboard no longer performs stock checks - this is handled by production planning
 
 
+# --- Dashboard ---
+# Purpose: Implement `dashboard` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/dashboard")
 @app_routes_bp.route("/user_dashboard")
 @login_required
@@ -159,6 +171,10 @@ def dashboard():
     )
 
 
+# --- Unit Manager ---
+# Purpose: Implement `unit_manager` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/unit-manager")
 @login_required
 @permission_required("inventory.edit")
@@ -166,6 +182,10 @@ def unit_manager():
     return redirect(url_for("conversion.manage_units"))
 
 
+# --- Dismiss Alert ---
+# Purpose: Implement `dismiss_alert` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/api/dismiss-alert", methods=["POST"])
 @login_required
 @permission_required("alerts.dismiss")
@@ -190,6 +210,10 @@ def dismiss_alert():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Dashboard Alerts ---
+# Purpose: Implement `api_dashboard_alerts` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/api/dashboard-alerts")
 @login_required
 @permission_required("alerts.view")
@@ -213,6 +237,10 @@ def api_dashboard_alerts():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Auth Check ---
+# Purpose: Implement `auth_check` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/auth-check", methods=["GET"])
 @login_required
 @limiter.limit("500 per minute")
@@ -222,6 +250,10 @@ def auth_check():
     return jsonify({"status": "ok"})
 
 
+# --- View Fault Log ---
+# Purpose: Implement `view_fault_log` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/fault-log")
 @login_required
 @permission_required("alerts.view")
@@ -260,6 +292,10 @@ def view_fault_log():
         return render_template("fault_log.html", faults=[])
 
 
+# --- Vendor Signup ---
+# Purpose: Implement `vendor_signup` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/api/vendor-signup", methods=["POST"])
 @limiter.limit("10 per minute")
 def vendor_signup():
@@ -334,6 +370,10 @@ def vendor_signup():
         return jsonify({"success": False, "error": "Internal server error"}), 500
 
 
+# --- Get Server Time ---
+# Purpose: Implement `get_server_time` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @app_routes_bp.route("/api/server-time")
 @login_required
 @permission_required("dashboard.view")

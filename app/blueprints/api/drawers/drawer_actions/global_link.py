@@ -26,6 +26,10 @@ register_drawer_action(
 )
 
 
+# ---  Build Global Link Payload ---
+# Purpose: Implement `_build_global_link_payload` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _build_global_link_payload(global_item_id: int | None):
     if not global_item_id:
         return None
@@ -37,6 +41,10 @@ def _build_global_link_payload(global_item_id: int | None):
     )
 
 
+# ---  Global Link Drawer Payload ---
+# Purpose: Implement `_global_link_drawer_payload` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _global_link_drawer_payload():
     org_id = getattr(current_user, "organization_id", None)
     if not org_id:
@@ -58,6 +66,8 @@ def _global_link_drawer_payload():
 # =========================================================
 # --- Cadence check ---
 # Purpose: Provide drawer payload for cadence checks.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @register_cadence_check("global_link")
 def global_link_cadence_check():
     if not current_user.is_authenticated:
@@ -67,6 +77,8 @@ def global_link_cadence_check():
 
 # --- Drawer check ---
 # Purpose: Report whether the global link drawer should display.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/global-link/check", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -78,6 +90,8 @@ def global_link_check():
 
 # --- Drawer modal ---
 # Purpose: Render the global link modal for suggested items.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/global-link/modal", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -100,6 +114,8 @@ def global_link_modal():
 
 # --- Drawer confirm ---
 # Purpose: Link selected inventory items to a global item.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/global-link/confirm", methods=["POST"])
 @login_required
 @require_permission("inventory.edit")

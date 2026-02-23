@@ -27,6 +27,10 @@ register_drawer_action(
 )
 
 
+# ---  Build Retention Payload ---
+# Purpose: Implement `_build_retention_payload` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _build_retention_payload(count: int | None = None):
     payload = build_drawer_payload(
         modal_url=url_for("drawers.retention_modal"),
@@ -39,6 +43,10 @@ def _build_retention_payload(count: int | None = None):
     return payload
 
 
+# ---  Resolve Current Org ---
+# Purpose: Implement `_resolve_current_org` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _resolve_current_org():
     try:
         org_id = getattr(current_user, "organization_id", None)
@@ -52,6 +60,10 @@ def _resolve_current_org():
         return None
 
 
+# ---  Get Retention Items ---
+# Purpose: Implement `_get_retention_items` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _get_retention_items():
     org = _resolve_current_org()
     if not org:
@@ -64,6 +76,8 @@ def _get_retention_items():
 # =========================================================
 # --- Cadence check ---
 # Purpose: Provide drawer payload for retention cadence checks.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @register_cadence_check("retention")
 def retention_cadence_check():
     """Return a drawer payload if retention items need acknowledgement."""
@@ -80,6 +94,8 @@ def retention_cadence_check():
 
 # --- Drawer check ---
 # Purpose: Report whether the retention drawer should display.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/retention/check", methods=["GET"])
 @login_required
 @require_permission("recipes.delete")
@@ -94,6 +110,8 @@ def retention_check():
 
 # --- Drawer modal ---
 # Purpose: Render the retention modal with pending items.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/retention/modal", methods=["GET"])
 @login_required
 @require_permission("recipes.delete")
@@ -106,6 +124,8 @@ def retention_modal():
 
 # --- Drawer acknowledge ---
 # Purpose: Acknowledge retention items and queue deletions.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/retention/acknowledge", methods=["POST"])
 @login_required
 @require_permission("recipes.delete")
@@ -119,6 +139,8 @@ def retention_acknowledge():
 
 # --- Drawer export ---
 # Purpose: Export retention at-risk items in requested format.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @drawers_bp.route("/retention/export", methods=["GET"])
 @login_required
 @require_permission("recipes.delete")
