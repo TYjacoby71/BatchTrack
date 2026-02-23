@@ -22,6 +22,8 @@ from .services import ExpirationService
 # =========================================================
 # --- Expired items ---
 # Purpose: Return expired inventory items summary.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/expired-items")
 @login_required
 @require_permission("inventory.view")
@@ -33,6 +35,8 @@ def api_expired_items():
 
 # --- Expiring soon ---
 # Purpose: Return inventory items expiring within a window.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/expiring-soon")
 @login_required
 @require_permission("inventory.view")
@@ -45,6 +49,8 @@ def api_expiring_soon():
 
 # --- Expiration summary ---
 # Purpose: Return aggregated expiration counts.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/summary")
 @login_required
 @require_permission("inventory.view")
@@ -77,6 +83,8 @@ def api_summary():
 
 # --- Calculate expiration ---
 # Purpose: Calculate expiration date from entry data.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/calculate-expiration", methods=["POST"])
 @login_required
 @require_permission("inventory.view")
@@ -111,6 +119,10 @@ def api_calculate_expiration():
         return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
 
 
+# --- Api Life Remaining ---
+# Purpose: Define the top-level behavior of `api_life_remaining` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/life-remaining/<int:fifo_id>")
 @login_required
 @require_permission("inventory.view")
@@ -138,6 +150,10 @@ def api_life_remaining(fifo_id):
     )
 
 
+# --- Api Archive Expired ---
+# Purpose: Define the top-level behavior of `api_archive_expired` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/archive-expired", methods=["POST"])
 @login_required
 @require_permission("inventory.adjust")
@@ -147,6 +163,10 @@ def api_archive_expired():
     return jsonify({"archived_count": count})
 
 
+# --- Api Debug Expiration ---
+# Purpose: Define the top-level behavior of `api_debug_expiration` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/debug-expiration")
 @login_required
 @require_permission("inventory.view")
@@ -214,6 +234,10 @@ def api_debug_expiration():
     )
 
 
+# --- Api Mark Expired ---
+# Purpose: Define the top-level behavior of `api_mark_expired` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/mark-expired", methods=["POST"])
 @login_required
 @require_permission("inventory.adjust")
@@ -254,6 +278,10 @@ def api_mark_expired():
         return jsonify({"error": str(e)}), 500
 
 
+# --- Api Expiration Summary ---
+# Purpose: Define the top-level behavior of `api_expiration_summary` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/summary")
 @login_required
 @require_permission("inventory.view")
@@ -263,6 +291,10 @@ def api_expiration_summary():
     return jsonify(summary)
 
 
+# --- Api Inventory Status ---
+# Purpose: Define the top-level behavior of `api_inventory_status` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/inventory-status/<int:inventory_item_id>")
 @login_required
 @require_permission("inventory.view")
@@ -278,6 +310,10 @@ def api_inventory_status(inventory_item_id):
     )
 
 
+# --- Api Product Status ---
+# Purpose: Define the top-level behavior of `api_product_status` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/product-status/<int:product_id>")
 @login_required
 @require_permission("inventory.view")
@@ -293,6 +329,10 @@ def api_product_status(product_id):
     )
 
 
+# --- Api Product Inventory Expiration ---
+# Purpose: Define the top-level behavior of `api_product_inventory_expiration` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/product-inventory/<int:inventory_id>/expiration")
 @login_required
 @require_permission("inventory.view")
@@ -324,6 +364,10 @@ def api_product_inventory_expiration(inventory_id):
     )
 
 
+# --- Alerts ---
+# Purpose: Define the top-level behavior of `alerts` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/alerts")
 @login_required
 @require_permission("inventory.view")
@@ -372,6 +416,10 @@ def alerts():
     )
 
 
+# --- Expiration Summary ---
+# Purpose: Define the top-level behavior of `expiration_summary` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @expiration_bp.route("/api/expiration-summary")
 @login_required
 @require_permission("inventory.view")

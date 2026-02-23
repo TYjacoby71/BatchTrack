@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/reference_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
@@ -19,6 +29,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Generate Unique Slug ---
+# Purpose: Define the top-level behavior of `_generate_unique_slug` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 def _generate_unique_slug(model, seed: str) -> str:
     base_slug = slugify_value(seed or "item")
     candidate = base_slug
@@ -29,6 +43,10 @@ def _generate_unique_slug(model, seed: str) -> str:
     return candidate
 
 
+# --- Reference Categories ---
+# Purpose: Define the top-level behavior of `reference_categories` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/reference-categories")
 @require_developer_permission("dev.system_admin")
 def reference_categories():
@@ -65,6 +83,10 @@ def reference_categories():
     )
 
 
+# --- Add Reference Category ---
+# Purpose: Define the top-level behavior of `add_reference_category` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/reference-categories/add", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def add_reference_category():
@@ -112,6 +134,10 @@ def add_reference_category():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Delete Reference Category ---
+# Purpose: Define the top-level behavior of `delete_reference_category` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/reference-categories/delete", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def delete_reference_category():
@@ -159,6 +185,10 @@ def delete_reference_category():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Update Reference Category Density ---
+# Purpose: Define the top-level behavior of `update_reference_category_density` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/reference-categories/update-density", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def update_reference_category_density():
@@ -210,6 +240,10 @@ def update_reference_category_density():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Calculate Category Density ---
+# Purpose: Define the top-level behavior of `calculate_category_density` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/reference-categories/calculate-density", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def calculate_category_density():
@@ -259,6 +293,10 @@ def calculate_category_density():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Container Management ---
+# Purpose: Define the top-level behavior of `container_management` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/container-management")
 @require_developer_permission("dev.system_admin")
 def container_management():
@@ -273,6 +311,10 @@ def container_management():
     )
 
 
+# --- Save Curated Container Lists ---
+# Purpose: Define the top-level behavior of `save_curated_container_lists` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/container-management/save-curated", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def save_curated_container_lists():
@@ -294,6 +336,10 @@ def save_curated_container_lists():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Api Container Options ---
+# Purpose: Define the top-level behavior of `api_container_options` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/container-options")
 @require_developer_permission("dev.system_admin")
 def api_container_options():
@@ -305,6 +351,10 @@ def api_container_options():
         return jsonify({"success": False, "error": str(exc)})
 
 
+# --- Manage Ingredient Attributes ---
+# Purpose: Define the top-level behavior of `manage_ingredient_attributes` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes", methods=["GET"])
 @require_developer_permission("dev.system_admin")
 def manage_ingredient_attributes():
@@ -343,6 +393,10 @@ def manage_ingredient_attributes():
     )
 
 
+# --- Legacy Physical Forms Redirect ---
+# Purpose: Define the top-level behavior of `legacy_physical_forms_redirect` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/physical-forms", methods=["GET"])
 @require_developer_permission("dev.system_admin")
 def legacy_physical_forms_redirect():
@@ -350,6 +404,10 @@ def legacy_physical_forms_redirect():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Create Physical Form ---
+# Purpose: Define the top-level behavior of `create_physical_form` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes/physical-forms", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def create_physical_form():
@@ -379,6 +437,10 @@ def create_physical_form():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Toggle Physical Form ---
+# Purpose: Define the top-level behavior of `toggle_physical_form` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route(
     "/ingredient-attributes/physical-forms/<int:form_id>/toggle", methods=["POST"]
 )
@@ -393,6 +455,10 @@ def toggle_physical_form(form_id: int):
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Create Variation ---
+# Purpose: Define the top-level behavior of `create_variation` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes/variations", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def create_variation():
@@ -438,6 +504,10 @@ def create_variation():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Toggle Variation ---
+# Purpose: Define the top-level behavior of `toggle_variation` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route(
     "/ingredient-attributes/variations/<int:variation_id>/toggle", methods=["POST"]
 )
@@ -451,6 +521,10 @@ def toggle_variation(variation_id: int):
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Create Tag Entry ---
+# Purpose: Define the top-level behavior of `_create_tag_entry` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 def _create_tag_entry(model, name: str, description: str | None):
     existing = model.query.filter(func.lower(model.name) == func.lower(name)).first()
     if existing:
@@ -461,6 +535,10 @@ def _create_tag_entry(model, name: str, description: str | None):
     return tag, True
 
 
+# --- Create Function Tag ---
+# Purpose: Define the top-level behavior of `create_function_tag` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes/function-tags", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def create_function_tag():
@@ -475,6 +553,10 @@ def create_function_tag():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Create Application Tag ---
+# Purpose: Define the top-level behavior of `create_application_tag` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes/application-tags", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def create_application_tag():
@@ -489,6 +571,10 @@ def create_application_tag():
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
+# --- Create Category Tag ---
+# Purpose: Define the top-level behavior of `create_category_tag` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/ingredient-attributes/category-tags", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def create_category_tag():
