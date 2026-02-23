@@ -1,4 +1,14 @@
-"""Bulk stock check routes."""
+"""Bulk stock-check routes.
+
+Synopsis:
+Provide authenticated bulk stock-check and CSV export routes used to evaluate
+selected recipes at scale and generate restocking shopping lists.
+
+Glossary:
+- Bulk stock check: Aggregated stock evaluation across multiple recipe configs.
+- Shopping list export: CSV output of low/needed ingredients from summary data.
+- Feature gate: Plan/flag check controlling route availability.
+"""
 
 import csv
 import io
@@ -20,13 +30,25 @@ from app.models import Recipe
 from app.utils.permissions import require_permission
 from app.utils.settings import is_feature_enabled
 
+# --- Bulk stock blueprint ---
+# Purpose: Group bulk stock-check routes.
+# Inputs: None.
+# Outputs: Blueprint namespace for bulk stock endpoints.
 bulk_stock_bp = Blueprint("bulk_stock", __name__)
 
 
+# --- Bulk stock feature flag check ---
+# Purpose: Resolve whether bulk stock check is enabled for this environment.
+# Inputs: Feature flag configuration.
+# Outputs: Boolean enabled/disabled value.
 def _bulk_stock_check_enabled() -> bool:
     return is_feature_enabled("FEATURE_BULK_STOCK_CHECK")
 
 
+# --- Run bulk stock check ---
+# Purpose: Aggregate stock requirements for selected recipes and render summary.
+# Inputs: Optional POST form with recipe_ids and scale.
+# Outputs: Rendered bulk stock page and session-stored summary data.
 @bulk_stock_bp.route("/bulk-check", methods=["GET", "POST"])
 @login_required
 @require_permission("recipes.plan_production")
@@ -113,6 +135,10 @@ def bulk_stock_check():
         return redirect(url_for("bulk_stock.bulk_stock_check"))
 
 
+# --- Export shopping list CSV ---
+# Purpose: Export low/needed bulk stock items into downloadable CSV.
+# Inputs: Session-stored bulk summary.
+# Outputs: CSV file response or redirect with flash feedback.
 @bulk_stock_bp.route("/bulk-check/csv")
 @login_required
 @require_permission("recipes.plan_production")

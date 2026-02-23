@@ -1,12 +1,32 @@
+"""Batch-container API routes.
+
+Synopsis:
+Provide authenticated container-management endpoints for batch workflows,
+including listing, removal, and adjustment operations via service delegation.
+
+Glossary:
+- Container summary: Aggregated container payload attached to a batch.
+- Adjustment request: API payload describing container change intent/details.
+- Batch integration service: Service layer that executes container operations.
+"""
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 from app.services.batch_integration_service import BatchIntegrationService
 from app.utils.permissions import require_permission
 
+# --- Container API blueprint ---
+# Purpose: Group batch-container API handlers.
+# Inputs: None.
+# Outputs: Flask blueprint used by API routing.
 container_api_bp = Blueprint("container_api", __name__)
 
 
+# --- Get batch containers ---
+# Purpose: Return container summary data for a specific batch.
+# Inputs: Batch id path parameter.
+# Outputs: JSON response with container summary or error payload.
 @container_api_bp.route("/batches/<int:batch_id>/containers", methods=["GET"])
 @login_required
 @require_permission("batches.view")
@@ -28,6 +48,10 @@ def get_batch_containers(batch_id):
         return jsonify({"error": str(e)}), 500
 
 
+# --- Remove batch container ---
+# Purpose: Remove one container association from a batch.
+# Inputs: Batch id and container id path parameters.
+# Outputs: JSON success/error payload with status code.
 @container_api_bp.route(
     "/batches/<int:batch_id>/containers/<int:container_id>", methods=["DELETE"]
 )
@@ -58,6 +82,10 @@ def remove_batch_container(batch_id, container_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+# --- Adjust batch container ---
+# Purpose: Apply a container adjustment operation for a batch.
+# Inputs: Batch/container path ids plus JSON adjustment payload.
+# Outputs: JSON success/error payload from service result mapping.
 @container_api_bp.route(
     "/batches/<int:batch_id>/containers/<int:container_id>/adjust", methods=["POST"]
 )

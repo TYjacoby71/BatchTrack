@@ -1,3 +1,15 @@
+"""Conversion unit-mapping drawer routes.
+
+Synopsis:
+Provide drawer endpoints for rendering and persisting organization-scoped
+custom unit mappings required to complete blocked conversions.
+
+Glossary:
+- Unit-mapping drawer: Modal used to create/update conversion factors.
+- Custom unit mapping: Organization-specific conversion relationship record.
+- Mapping factor: Numeric multiplier translating from one unit to another.
+"""
+
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
@@ -6,6 +18,10 @@ from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_drawer_action
 
+# --- Register drawer action ---
+# Purpose: Advertise unit-mapping drawer metadata to drawer clients.
+# Inputs: Drawer action key, endpoint, and success-event descriptors.
+# Outputs: Drawer action registration in shared registry.
 register_drawer_action(
     "conversion.unit_mapping_modal",
     description="Create a custom unit mapping required to finish a conversion.",
@@ -14,6 +30,10 @@ register_drawer_action(
 )
 
 
+# --- Render unit-mapping drawer ---
+# Purpose: Return modal HTML populated with source/target unit hints.
+# Inputs: from_unit and to_unit query parameters.
+# Outputs: JSON payload containing rendered modal HTML.
 @drawers_bp.route("/conversion/unit-mapping-modal", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -30,6 +50,10 @@ def conversion_unit_mapping_modal_get():
     return jsonify({"success": True, "modal_html": modal_html})
 
 
+# --- Persist unit mapping ---
+# Purpose: Create or update custom conversion factor for scoped organization.
+# Inputs: JSON body with from_unit, to_unit, and conversion_factor.
+# Outputs: JSON success/error response after validation and commit attempt.
 @drawers_bp.route("/conversion/unit-mapping-modal", methods=["POST"])
 @login_required
 @require_permission("inventory.edit")

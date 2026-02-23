@@ -7,6 +7,7 @@ This guide captures the current engineering workflow and guardrails for changing
 - **Service authority**: The layer that owns domain behavior (routes orchestrate; services decide).
 - **Tenant scoping**: Enforcing organization isolation through `organization_id` and permission context.
 - **Docs guard**: `scripts/validate_pr_documentation.py` checks PR documentation/schema requirements.
+- **Finalization pass**: Single end-of-change validation run (docs guard + tests) after implementation is complete.
 
 ## Core Engineering Rules
 
@@ -55,9 +56,14 @@ This guide captures the current engineering workflow and guardrails for changing
 
 5. **Run validation tooling**
    - During iterative editing, do not run pytest/pip installs/docs guard unless explicitly requested.
-   - During iterative editing, only run targeted checks when needed for debugging and explicitly requested.
-   - At finalization, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once.
-   - At finalization, run relevant tests once (targeted or full based on scope).
+   - During iterative editing, avoid repeated repo-wide validation loops and only run targeted debug checks when explicitly requested.
+   - At finalization, run **one** validation pass for the change set:
+     1. Stage changes.
+     2. Run docs guard once on staged scope: `python3 scripts/validate_pr_documentation.py --staged`
+     3. Run relevant tests once (targeted or full based on scope).
+   - Only run `--full-link-check` when `docs/system/APP_DICTIONARY.md` changed or dictionary link targets moved.
+   - If base-branch comparison is required, run `python3 scripts/validate_pr_documentation.py --base-ref origin/<base-branch>` once near final push.
+   - Do not rerun successful full validations unless new commits materially change validated files.
    - For permission/add-on/tier updates, verify update scripts:
      - `flask update-permissions`
      - `flask update-addons`

@@ -1,3 +1,15 @@
+"""Unit API routes for list/search/conversion operations.
+
+Synopsis:
+Expose authenticated endpoints that provide available units, unit typeahead
+search, and unit-to-unit conversion through the conversion engine.
+
+Glossary:
+- Unit catalog: Active unit definitions used by inventory and forms.
+- Unit search: Filtered subset of units by type and free-text query.
+- Conversion engine: Service that performs quantity/unit transformations.
+"""
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
@@ -6,9 +18,17 @@ from app.services.unit_conversion import ConversionEngine
 from app.utils.permissions import require_permission
 from app.utils.unit_utils import get_global_unit_list
 
+# --- Unit API blueprint ---
+# Purpose: Group unit-related API routes under /api.
+# Inputs: None.
+# Outputs: Blueprint namespace for unit endpoints.
 unit_api_bp = Blueprint("unit_api", __name__, url_prefix="/api")
 
 
+# --- Get units ---
+# Purpose: Return available units for authenticated users.
+# Inputs: None.
+# Outputs: JSON payload containing unit metadata list.
 @unit_api_bp.route("/units")
 @login_required
 @require_permission("inventory.view")
@@ -37,6 +57,10 @@ def get_units():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Search units ---
+# Purpose: Return units filtered by type and optional query text.
+# Inputs: Query params type/unit_type and q.
+# Outputs: JSON payload with up to 25 matching unit records.
 @unit_api_bp.route("/unit-search")
 @login_required
 @require_permission("inventory.view")
@@ -97,6 +121,10 @@ def unit_search():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# --- Convert units ---
+# Purpose: Convert quantity between two unit ids through conversion service.
+# Inputs: JSON payload with from_unit_id, to_unit_id, quantity, ingredient_id.
+# Outputs: JSON payload with converted quantity and conversion factor.
 @unit_api_bp.route("/convert-units", methods=["POST"])
 @login_required
 @require_permission("inventory.view")
