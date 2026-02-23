@@ -78,6 +78,14 @@ class PublicBotTrapService:
     def _utcnow() -> datetime:
         return datetime.now(timezone.utc)
 
+    @staticmethod
+    def _as_utc(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
     @classmethod
     def _policy_int(cls, key: str, default: int, *, min_value: int = 1) -> int:
         raw = default
@@ -161,12 +169,14 @@ class PublicBotTrapService:
     @classmethod
     def _cleanup_ip_state_row(cls, row: BotTrapIpState, *, now: datetime) -> bool:
         changed = False
-        if row.blocked_until is not None and row.blocked_until <= now:
+        blocked_until = cls._as_utc(row.blocked_until)
+        if blocked_until is not None and blocked_until <= now:
             row.blocked_until = None
             changed = True
 
-        if row.strike_count and row.strike_window_started_at is not None:
-            age_seconds = (now - row.strike_window_started_at).total_seconds()
+        strike_window_started_at = cls._as_utc(row.strike_window_started_at)
+        if row.strike_count and strike_window_started_at is not None:
+            age_seconds = (now - strike_window_started_at).total_seconds()
             if age_seconds > cls._strike_window_seconds():
                 row.strike_count = 0
                 row.strike_window_started_at = None
@@ -175,8 +185,9 @@ class PublicBotTrapService:
             row.strike_count = 0
             changed = True
 
-        if row.penalty_level and row.last_blocked_at is not None:
-            penalty_age = (now - row.last_blocked_at).total_seconds()
+        last_blocked_at = cls._as_utc(row.last_blocked_at)
+        if row.penalty_level and last_blocked_at is not None:
+            penalty_age = (now - last_blocked_at).total_seconds()
             if penalty_age > cls._penalty_reset_seconds():
                 row.penalty_level = 0
                 changed = True
@@ -194,10 +205,11 @@ class PublicBotTrapService:
             return False
         if row.penalty_level:
             return False
-        if row.last_hit_at is None:
+        last_hit_at = cls._as_utc(row.last_hit_at)
+        if last_hit_at is None:
             return True
         retention_window = max(cls._strike_window_seconds(), cls._penalty_reset_seconds())
-        return (now - row.last_hit_at).total_seconds() > retention_window
+        return (now - last_hit_at).total_seconds() > retention_window
 
     @classmethod
     def _get_or_create_ip_state(cls, ip: Optional[str]) -> BotTrapIpState | None:
@@ -340,8 +352,10 @@ class PublicBotTrapService:
 
         level = cls._coerce_int(ip_state.penalty_level, default=0, min_value=0)
         if (
-            ip_state.last_blocked_at is None
-            or (now - ip_state.last_blocked_at).total_seconds()
+            cls._as_utc(ip_state.last_blocked_at) is None
+            or (
+                now - cls._as_utc(ip_state.last_blocked_at)
+            ).total_seconds()
             > cls._penalty_reset_seconds()
         ):
             level = 0
@@ -381,7 +395,7 @@ class PublicBotTrapService:
             return 0
 
         strike_count = cls._coerce_int(ip_state.strike_count, default=0, min_value=0)
-        window_start = ip_state.strike_window_started_at
+        window_start = cls._as_utc(ip_state.strike_window_started_at)
         if (
             window_start is None
             or (now - window_start).total_seconds() > cls._strike_window_seconds()
@@ -426,7 +440,8 @@ class PublicBotTrapService:
                 if ip_state is not None:
                     changed = cls._cleanup_ip_state_row(ip_state, now=now)
                     blocked = (
-                        ip_state.blocked_until is not None and ip_state.blocked_until > now
+                        cls._as_utc(ip_state.blocked_until) is not None
+                        and cls._as_utc(ip_state.blocked_until) > now
                     )
                     if not blocked and cls._row_is_redundant(ip_state, now=now):
                         db.session.delete(ip_state)
