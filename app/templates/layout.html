@@ -13,10 +13,11 @@ Glossary:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-      {% set resolved_title = page_title or "BatchTrack — Production & Inventory" %}
-      {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
+      {% set resolved_title = page_title or "BatchTrack | Batch Tracking for Makers" %}
+      {% set resolved_description = page_description or "BatchTrack helps makers track recipes, inventory lots, and every batch from plan to finish." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
       {% set resolved_og_image = page_og_image or url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
+      {% set resolved_robots = page_robots or "index, follow" %}
       {% set requested_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else none) %}
       {% set use_public_header = requested_public_header if requested_public_header is not none else (not current_user.is_authenticated) %}
       {% set public_shell_mode = use_public_header and not current_user.is_authenticated %}
@@ -41,8 +42,11 @@ Glossary:
       {% endif %}
       <title>{{ resolved_title }}</title>
       <meta name="description" content="{{ resolved_description }}">
+      <meta name="robots" content="{{ resolved_robots }}">
       <link rel="canonical" href="{{ resolved_canonical }}">
       <meta property="og:type" content="website">
+      <meta property="og:site_name" content="BatchTrack">
+      <meta property="og:locale" content="en_US">
       <meta property="og:title" content="{{ resolved_title }}">
       <meta property="og:description" content="{{ resolved_description }}">
       <meta property="og:url" content="{{ resolved_canonical }}">

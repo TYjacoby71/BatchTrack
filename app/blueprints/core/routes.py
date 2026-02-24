@@ -38,6 +38,35 @@ from app.utils.cache_utils import should_bypass_cache
 
 core_bp = Blueprint("core", __name__)
 _BRAND_ASSET_MAX_AGE_SECONDS = 31536000
+_MARKETING_IMAGE_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".svg",
+    ".avif",
+}
+_HOMEPAGE_FEATURE_CARD_CATALOG = (
+    {
+        "slug": "recipe-tracking",
+        "name": "Recipe Tracking",
+        "summary": "Track every recipe, variation, and test in one clear timeline.",
+        "icon": "BT",
+    },
+    {
+        "slug": "fifo-inventory",
+        "name": "Inventory Management",
+        "summary": "Keep FIFO inventory accurate with cost, lot, and expiration visibility.",
+        "icon": "FI",
+    },
+    {
+        "slug": "batch-in-progress",
+        "name": "Batch In Progress",
+        "summary": "Run each batch with timers, notes, and change tracking from start to finish.",
+        "icon": "AN",
+    },
+)
 
 
 def _serve_brand_asset(filename: str):
@@ -91,6 +120,55 @@ def _serve_cropped_full_logo():
     return response
 
 
+def _resolve_static_image_from_folder(*, static_root: Path, folder: str) -> str | None:
+    """Return first image file inside a static subfolder."""
+    relative_folder = str(folder or "").strip().lstrip("/")
+    if not relative_folder:
+        return None
+    folder_path = static_root / relative_folder
+    try:
+        if not folder_path.is_dir():
+            return None
+        image_files = [
+            item
+            for item in folder_path.iterdir()
+            if item.is_file()
+            and not item.name.startswith(".")
+            and item.suffix.lower() in _MARKETING_IMAGE_EXTENSIONS
+        ]
+    except OSError:
+        return None
+    if not image_files:
+        return None
+
+    selected = sorted(image_files, key=lambda path: path.name.lower())[0]
+    try:
+        return selected.relative_to(static_root).as_posix()
+    except ValueError:
+        return None
+
+
+def get_homepage_feature_cards() -> list[dict[str, str | None]]:
+    """Build homepage feature card metadata with optional resolved image paths."""
+    static_folder = getattr(current_app, "static_folder", None)
+    static_root = Path(static_folder) if static_folder else None
+    cards: list[dict[str, str | None]] = []
+
+    for card in _HOMEPAGE_FEATURE_CARD_CATALOG:
+        resolved = dict(card)
+        image_path: str | None = None
+        folder = f"images/homepage/features/{card['slug']}"
+        if static_root is not None:
+            image_path = _resolve_static_image_from_folder(
+                static_root=static_root,
+                folder=folder,
+            )
+        resolved["image_path"] = image_path
+        cards.append(resolved)
+
+    return cards
+
+
 def _render_public_homepage_response():
     """
     Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
@@ -109,6 +187,7 @@ def _render_public_homepage_response():
         tool_flags=tool_flags,
         max_cards=3,
     )
+    homepage_feature_cards = get_homepage_feature_cards()
     try:
         from app.utils.settings import is_feature_enabled
 
@@ -121,6 +200,22 @@ def _render_public_homepage_response():
     try:
         tool_flag_signature = build_public_tool_flag_signature(tool_flags=tool_flags)
         cache_key = f"{cache_key}:tools:{tool_flag_signature}"
+    except Exception:
+        pass
+    try:
+        tool_image_signature = "|".join(
+            f"{tool.get('slug')}:{tool.get('image_path') or 'none'}"
+            for tool in homepage_tool_cards_desktop
+        )
+        cache_key = f"{cache_key}:tool-images:{tool_image_signature or 'none'}"
+    except Exception:
+        pass
+    try:
+        feature_image_signature = "|".join(
+            f"{card.get('slug')}:{card.get('image_path') or 'none'}"
+            for card in homepage_feature_cards
+        )
+        cache_key = f"{cache_key}:feature-images:{feature_image_signature or 'none'}"
     except Exception:
         pass
     try:
@@ -138,6 +233,7 @@ def _render_public_homepage_response():
         "homepage.html",
         homepage_tool_cards=homepage_tool_cards,
         homepage_tool_cards_desktop=homepage_tool_cards_desktop,
+        homepage_feature_cards=homepage_feature_cards,
         homepage_mobile_swipe_enabled=len(homepage_tool_cards) > 1,
         homepage_has_more_tools=len(enabled_public_tools) > len(homepage_tool_cards),
         homepage_enabled_tool_count=len(enabled_public_tools),
