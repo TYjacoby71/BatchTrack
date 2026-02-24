@@ -664,7 +664,7 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
     soap_idx = html.index("Soap Maker Tool")
     lotion_idx = html.index("Lotion Maker Tool")
     baking_idx = html.index("Baking Calculator")
-    assert soap_idx < lotion_idx < baking_idx
+    assert lotion_idx < soap_idx < baking_idx
 
 
 @pytest.mark.usefixtures("app")
@@ -708,7 +708,9 @@ def test_homepage_tools_section_balances_desktop_cards_without_mobile_carousel_w
     assert "Soap Maker Tool" in html
     assert "Lotion Maker Tool" in html
     assert "Baking Calculator" in html
-    assert "View in More Tools" in html
+    assert "Join Waitlist" in html
+    assert "/waitlist?waitlist_key=tools.lotions" in html
+    assert "/waitlist?waitlist_key=tools.baker" in html
 
     # Mobile should not render swipe carousel when only one tool is enabled.
     assert 'id="homepageToolsCarousel"' not in html
@@ -752,6 +754,21 @@ def test_homepage_mobile_tool_carousel_shows_when_multiple_tools_enabled(app):
     assert 'id="homepageToolsCarousel"' in html
     assert 'data-bs-wrap="true"' in html
     assert 'data-bs-touch="true"' in html
+
+
+@pytest.mark.usefixtures("app")
+def test_public_waitlist_page_is_accessible(app):
+    """Anonymous visitors should be able to open the waitlist landing page."""
+    client = app.test_client()
+    response = _assert_public_get(
+        client,
+        "/waitlist",
+        label="public waitlist",
+        query_string={"waitlist_key": "tools.candles", "source": "homepage_tool_card"},
+    )
+    html = response.get_data(as_text=True)
+    assert "Join the Candle Maker Tool waitlist" in html
+    assert 'id="waitlistJoinForm"' in html
 
 
 @pytest.mark.usefixtures("app")
