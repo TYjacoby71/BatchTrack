@@ -668,6 +668,93 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_tools_section_balances_desktop_cards_without_mobile_carousel_when_single_enabled(
+    app,
+):
+    """Desktop should stay balanced while mobile avoids swipe controls for one enabled tool."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    client = app.test_client()
+
+    with app.app_context():
+        desired_flags = {
+            "TOOLS_SOAP": True,
+            "TOOLS_LOTIONS": False,
+            "TOOLS_BAKING": False,
+            "TOOLS_CANDLES": False,
+            "TOOLS_HERBAL": False,
+        }
+        for key, enabled in desired_flags.items():
+            flag = FeatureFlag.query.filter_by(key=key).first()
+            if flag is None:
+                db.session.add(
+                    FeatureFlag(
+                        key=key,
+                        enabled=enabled,
+                        description=f"{key} test toggle",
+                    )
+                )
+            else:
+                flag.enabled = enabled
+        db.session.commit()
+
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    # Desktop cards stay visually balanced with two fallback cards.
+    assert "Soap Maker Tool" in html
+    assert "Lotion Maker Tool" in html
+    assert "Baking Calculator" in html
+    assert "Coming Soon" in html
+
+    # Mobile should not render swipe carousel when only one tool is enabled.
+    assert 'id="homepageToolsCarousel"' not in html
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_mobile_tool_carousel_shows_when_multiple_tools_enabled(app):
+    """Mobile should render swipe carousel only when multiple enabled tools exist."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    client = app.test_client()
+
+    with app.app_context():
+        desired_flags = {
+            "TOOLS_SOAP": True,
+            "TOOLS_LOTIONS": True,
+            "TOOLS_BAKING": False,
+            "TOOLS_CANDLES": False,
+            "TOOLS_HERBAL": False,
+        }
+        for key, enabled in desired_flags.items():
+            flag = FeatureFlag.query.filter_by(key=key).first()
+            if flag is None:
+                db.session.add(
+                    FeatureFlag(
+                        key=key,
+                        enabled=enabled,
+                        description=f"{key} test toggle",
+                    )
+                )
+            else:
+                flag.enabled = enabled
+        db.session.commit()
+
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    assert 'id="homepageToolsCarousel"' in html
+    assert 'data-bs-wrap="true"' in html
+    assert 'data-bs-touch="true"' in html
+
+
+@pytest.mark.usefixtures("app")
 def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()

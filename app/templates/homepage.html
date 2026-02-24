@@ -78,10 +78,11 @@
             transform: translateY(-5px);
         }
 
-        .tool-feature-card-link {
+        .tool-feature-card-shell {
             display: block;
             color: inherit;
             text-decoration: none;
+            height: 100%;
         }
 
         .tool-feature-card-link:hover,
@@ -90,8 +91,18 @@
             text-decoration: none;
         }
 
-        .tool-feature-card-link .feature-card {
+        .tool-feature-card-shell .feature-card {
             margin-bottom: 0;
+        }
+
+        .tool-feature-card-shell.is-disabled {
+            cursor: default;
+        }
+
+        .tool-feature-card-shell.is-disabled .feature-card {
+            border: 1px dashed rgba(108, 117, 125, 0.35);
+            box-shadow: none;
+            transform: none;
         }
 
         .tool-feature-card-cta {
@@ -101,6 +112,35 @@
             color: #0d6efd;
             font-weight: 600;
             font-size: 0.95rem;
+        }
+
+        .tool-feature-card-shell.is-disabled .tool-feature-card-cta {
+            color: #6c757d;
+        }
+
+        .homepage-tools-carousel .carousel-item {
+            padding: 0 0.35rem 0.25rem;
+        }
+
+        .homepage-tools-carousel .carousel-control-prev,
+        .homepage-tools-carousel .carousel-control-next {
+            width: 2rem;
+            opacity: 0.85;
+        }
+
+        .homepage-tools-carousel .carousel-control-prev-icon,
+        .homepage-tools-carousel .carousel-control-next-icon {
+            background-color: rgba(13, 110, 253, 0.85);
+            border-radius: 999px;
+            background-size: 65% 65%;
+        }
+
+        .homepage-tools-carousel .carousel-indicators {
+            margin-bottom: -0.8rem;
+        }
+
+        .homepage-tools-carousel .carousel-indicators [data-bs-target] {
+            background-color: #0d6efd;
         }
 
         .cta-section {
@@ -369,26 +409,101 @@
             </div>
 
             {% if homepage_tool_cards and homepage_tool_cards|length > 0 %}
-            <div class="row justify-content-center">
-                {% for tool in homepage_tool_cards %}
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <a class="tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
-                        <div class="card feature-card h-100">
-                            <div class="card-body text-center">
-                                <div class="placeholder-img mb-3">
-                                    <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+            {% set desktop_cards = (homepage_tool_cards_desktop if homepage_tool_cards_desktop is defined and homepage_tool_cards_desktop else homepage_tool_cards) %}
+
+            <div class="d-none d-md-block">
+                <div class="row justify-content-center">
+                    {% for tool in desktop_cards %}
+                    {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        {% if tool_is_enabled %}
+                        <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
+                        {% else %}
+                        <div class="tool-feature-card-shell is-disabled" aria-disabled="true">
+                        {% endif %}
+                            <div class="card feature-card h-100">
+                                <div class="card-body text-center">
+                                    <div class="placeholder-img mb-3">
+                                        <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                    </div>
+                                    {% if tool.slug == 'soap' %}
+                                    <span class="badge bg-primary mb-2">Pinned</span>
+                                    {% elif not tool_is_enabled %}
+                                    <span class="badge bg-light text-dark border mb-2">Coming Soon</span>
+                                    {% endif %}
+                                    <h3 class="card-title h5">{{ tool.name }}</h3>
+                                    <p class="card-text">{{ tool.summary }}</p>
+                                    {% if tool_is_enabled %}
+                                    <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                                    {% else %}
+                                    <span class="tool-feature-card-cta">Enable this tool to open it</span>
+                                    {% endif %}
                                 </div>
-                                {% if tool.slug == 'soap' %}
-                                <span class="badge bg-primary mb-2">Pinned</span>
-                                {% endif %}
-                                <h3 class="card-title h5">{{ tool.name }}</h3>
-                                <p class="card-text">{{ tool.summary }}</p>
-                                <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                             </div>
+                        {% if tool_is_enabled %}
+                        </a>
+                        {% else %}
                         </div>
-                    </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+            </div>
+
+            <div class="d-md-none">
+                {% if homepage_mobile_swipe_enabled %}
+                <div id="homepageToolsCarousel" class="carousel slide homepage-tools-carousel" data-bs-touch="true" data-bs-interval="false" data-bs-wrap="true">
+                    <div class="carousel-indicators">
+                        {% for tool in homepage_tool_cards %}
+                        <button type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide-to="{{ loop.index0 }}" {% if loop.first %}class="active" aria-current="true"{% endif %} aria-label="Tool {{ loop.index }}"></button>
+                        {% endfor %}
+                    </div>
+                    <div class="carousel-inner">
+                        {% for tool in homepage_tool_cards %}
+                        <div class="carousel-item {% if loop.first %}active{% endif %}">
+                            <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="placeholder-img mb-3">
+                                            <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                        </div>
+                                        {% if tool.slug == 'soap' %}
+                                        <span class="badge bg-primary mb-2">Pinned</span>
+                                        {% endif %}
+                                        <h3 class="card-title h5">{{ tool.name }}</h3>
+                                        <p class="card-text">{{ tool.summary }}</p>
+                                        <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide="prev" aria-label="Previous tool">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide="next" aria-label="Next tool">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    </button>
+                </div>
+                {% else %}
+                {% set single_tool = homepage_tool_cards[0] %}
+                <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
+                    <div class="card feature-card h-100 mb-4">
+                        <div class="card-body text-center">
+                            <div class="placeholder-img mb-3">
+                                <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
+                            </div>
+                            {% if single_tool.slug == 'soap' %}
+                            <span class="badge bg-primary mb-2">Pinned</span>
+                            {% endif %}
+                            <h3 class="card-title h5">{{ single_tool.name }}</h3>
+                            <p class="card-text">{{ single_tool.summary }}</p>
+                            <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                        </div>
+                    </div>
+                </a>
+                {% endif %}
             </div>
             {% else %}
             <p class="text-center text-muted mb-4">
