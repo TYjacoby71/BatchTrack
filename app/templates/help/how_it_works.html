@@ -71,22 +71,28 @@
         {% if section.gallery %}
         <div class="card border-dashed">
           <div class="card-body">
-            <h3 class="h6 text-uppercase text-muted mb-2">Image Placeholders</h3>
-            <p class="small text-muted mb-3">Drop screenshots for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. The final onboarding tour can render them as a slideshow.</p>
+            <h3 class="h6 text-uppercase text-muted mb-2">Section Media</h3>
+            <p class="small text-muted mb-3">Drop image or video files for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. Items display in alphabetical order.</p>
             <div class="row g-3">
+              {% set section_media = (help_section_media.get(section.slug) if help_section_media is defined else []) %}
               {% for label in section.gallery %}
               <div class="col-md-6">
-                {% set image_name = section.slug ~ '-' ~ loop.index ~ '.png' %}
-                {% set image_path = 'images/help/' ~ section.slug ~ '/' ~ image_name %}
-                {% if image_path|static_file_exists %}
+                {% set media_item = (section_media[loop.index0] if section_media|length > loop.index0 else none) %}
+                {% if media_item %}
                 <div class="placeholder-image-slot h-100">
-                  <img src="{{ url_for('static', filename=image_path) }}" class="img-fluid rounded mb-2" alt="{{ label }}" loading="lazy" decoding="async">
+                  {% if media_item.kind == 'video' %}
+                  <video class="img-fluid rounded mb-2" autoplay muted loop playsinline preload="metadata" aria-label="{{ label }}">
+                    <source src="{{ url_for('static', filename=media_item.path) }}">
+                  </video>
+                  {% else %}
+                  <img src="{{ url_for('static', filename=media_item.path) }}" class="img-fluid rounded mb-2" alt="{{ label }}" loading="lazy" decoding="async">
+                  {% endif %}
                   <p class="small text-muted mb-0">{{ label }}</p>
                 </div>
                 {% else %}
                 <div class="border rounded p-3 h-100 placeholder-image-slot">
                   <strong>{{ label }}</strong>
-                  <p class="small text-muted mb-0">Add <code>{{ image_name }}</code> under <code>static/{{ image_path }}</code></p>
+                  <p class="small text-muted mb-0">Add media under <code>static/images/help/{{ section.slug }}/</code></p>
                 </div>
                 {% endif %}
               </div>
