@@ -95,6 +95,15 @@
             margin-bottom: 0;
         }
 
+        .homepage-card-col {
+            display: flex;
+        }
+
+        .homepage-card-col > .card,
+        .homepage-card-col > .tool-feature-card-shell {
+            width: 100%;
+        }
+
         .tool-feature-card-shell.is-fallback .feature-card {
             border: 1px solid rgba(108, 117, 125, 0.25);
         }
@@ -497,7 +506,7 @@
                     {% for tool in desktop_cards %}
                     {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
                     {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('waitlist.waitlist_landing', waitlist_key='tools.' ~ tool.slug, source='homepage_tool_card')) %}
-                    <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="col-lg-4 col-md-6 mb-4 homepage-card-col">
                         <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
                                 <div class="card-body text-center">
@@ -630,9 +639,9 @@
                 <p class="lead text-muted">Everything you need to run consistent, profitable batches.</p>
             </div>
 
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for feature in (homepage_feature_cards if homepage_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6 homepage-card-col">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
@@ -757,7 +766,7 @@
                 }
             ] %}
 
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for idx in range(3) %}
                 {% set fallback = fallback_reviews[idx] %}
                 {% set source = (marketing_reviews[idx] if marketing_reviews|length > idx else fallback) %}
@@ -768,7 +777,7 @@
                 {% set customer_media = (homepage_testimonial_media.get(customer_key) if homepage_testimonial_media is defined else none) %}
                 {% set logo_media = (customer_media.get('logo') if customer_media else none) %}
                 {% set photo_media = (customer_media.get('photo') if customer_media else none) %}
-                <div class="col-lg-4">
+                <div class="col-lg-4 homepage-card-col">
                     <div class="testimonial-card h-100">
                         <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
                             {% if logo_media %}
@@ -823,7 +832,7 @@
     <!-- Stats Section -->
     <section class="stats-section">
         <div class="container">
-            <div class="row">
+            <div class="row justify-content-center">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
                         <div class="stat-number">{{ marketing_stats.total_active_users or 0 }}</div>
@@ -855,9 +864,9 @@
     <!-- More Features -->
     <section class="py-5">
         <div class="container">
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for feature in (homepage_more_feature_cards if homepage_more_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6 homepage-card-col">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
