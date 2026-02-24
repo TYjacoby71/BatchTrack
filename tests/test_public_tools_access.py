@@ -664,7 +664,7 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
     soap_idx = html.index("Soap Maker Tool")
     lotion_idx = html.index("Lotion Maker Tool")
     baking_idx = html.index("Baking Calculator")
-    assert soap_idx < lotion_idx < baking_idx
+    assert lotion_idx < soap_idx < baking_idx
 
 
 @pytest.mark.usefixtures("app")
