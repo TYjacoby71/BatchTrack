@@ -520,7 +520,7 @@
                                 <span class="feature-icon" aria-hidden="true">BT</span>
                             </div>
                             <h3 class="card-title h5">Recipe Tracking</h3>
-                            <p class="card-text">Never lose track of a recipe again. Track every recipe, variation, and test in one place.</p>
+                            <p class="card-text">Track every recipe, variation, and test in one clear timeline.</p>
                         </div>
                     </div>
                 </div>
@@ -532,7 +532,7 @@
                                 <span class="feature-icon" aria-hidden="true">FI</span>
                             </div>
                             <h3 class="card-title h5">Inventory Management</h3>
-                            <p class="card-text">Never run out of ingredients again. Easy-to-use professional-grade inventory management with expiration tracking and automated alerts.</p>
+                            <p class="card-text">Keep FIFO inventory accurate with cost, lot, and expiration visibility.</p>
                         </div>
                     </div>
                 </div>
@@ -544,7 +544,7 @@
                                 <span class="feature-icon" aria-hidden="true">AN</span>
                             </div>
                             <h3 class="card-title h5">Batch In Progress</h3>
-                            <p class="card-text">Never miss a critical step again. Plan, scale, set timers, and track every change from start to finish.</p>
+                            <p class="card-text">Run each batch with timers, notes, and change tracking from start to finish.</p>
                         </div>
                     </div>
                 </div>
@@ -570,7 +570,7 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
                                     <h3 class="fw-bold h5 mb-2">Start Batch</h3>
-                                    <p class="text-muted mb-0 small">Start a batch in one click from your dashboard.</p>
+                                    <p class="text-muted mb-0 small">Launch a batch from the dashboard in one click.</p>
                                 </div>
                             </div>
                         </div>
@@ -578,7 +578,7 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
                                     <h3 class="fw-bold h5 mb-2">Expiration Alerts</h3>
-                                    <p class="text-muted mb-0 small">Keep ingredient freshness visible so spoilage does not surprise your next batch.</p>
+                                    <p class="text-muted mb-0 small">See upcoming expirations early and use ingredients before they are lost.</p>
                                 </div>
                             </div>
                         </div>
@@ -586,7 +586,7 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
                                     <h3 class="fw-bold h5 mb-2">Neurodivergent-Friendly Design</h3>
-                                    <p class="text-muted mb-0 small">No ads. No clutter. No overwhelming spreadsheets. A calm space to focus on your craft while we handle the tracking.</p>
+                                    <p class="text-muted mb-0 small">Calm, low-noise screens built for focus during production.</p>
                                 </div>
                             </div>
                         </div>
@@ -594,7 +594,7 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-body">
                                     <h3 class="fw-bold h5 mb-2">Team-ready</h3>
-                                    <p class="text-muted mb-0 small">Scale from one maker to multiple operators. Enthusiast and Fanatic tiers support 3+ users in your organization.</p>
+                                    <p class="text-muted mb-0 small">Add teammates and keep everyone aligned on the same batch workflow.</p>
                                 </div>
                             </div>
                         </div>
@@ -623,118 +623,77 @@
     <section class="social-proof">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">Trusted by Makers Just Like Yourself</h2>
+                <h2 class="fw-bold">Trusted by Makers Like You</h2>
                 <p class="text-muted">See what our customers are saying</p>
             </div>
 
+            {% set fallback_reviews = [
+                {
+                    'name': 'River & Pine Studio',
+                    'title': 'Small-batch soap maker',
+                    'quote': 'BatchTrack keeps our batches and inventory flow clear without adding extra overhead.',
+                    'logo': None,
+                    'photo': None
+                },
+                {
+                    'name': 'Northline Candle Co.',
+                    'title': 'Candle maker',
+                    'quote': 'Planning and running batches is faster now because everything is tracked in one place.',
+                    'logo': None,
+                    'photo': None
+                },
+                {
+                    'name': 'Hearth & Grain Kitchen',
+                    'title': 'Baker and maker',
+                    'quote': 'We finally have a clean process for formulas, lot usage, and finished output records.',
+                    'logo': None,
+                    'photo': None
+                }
+            ] %}
+
             <div class="row">
+                {% for idx in range(3) %}
+                {% set fallback = fallback_reviews[idx] %}
+                {% set source = (marketing_reviews[idx] if marketing_reviews|length > idx else fallback) %}
+                {% set review_name = source.name or fallback.name %}
+                {% set review_title = source.title or fallback.title %}
+                {% set review_quote = source.quote or fallback.quote %}
+                {% set show_logo = source.logo %}
+                {% set show_photo = source.photo %}
                 <div class="col-lg-4">
-                    <div class="testimonial-card">
-                        {% set r = (marketing_reviews[0] if marketing_reviews|length > 0 else None) %}
-                        {% if r %}
+                    <div class="testimonial-card h-100">
                         <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                            {% if r.logo %}
-                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-logo.png') }}" 
-                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                            {% if show_logo %}
+                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-' ~ (idx + 1) ~ '-logo.png') }}"
+                                 alt="{{ review_name }} Logo" class="img-fluid" style="max-height: 60px;"
                                  width="180" height="60" loading="lazy" decoding="async"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                            <div class="fw-semibold text-muted d-none">{{ review_name }}</div>
+                            {% else %}
+                            <div class="fw-semibold text-muted">{{ review_name }}</div>
                             {% endif %}
-                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
                         </div>
-                        <p class="fst-italic">"{{ r.quote }}"</p>
+                        <p class="fst-italic">"{{ review_quote }}"</p>
                         <div class="d-flex align-items-center">
                             <div class="me-3" style="width: 50px; height: 50px;">
-                                {% if r.photo %}
-                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-photo.jpg') }}" 
-                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                {% if show_photo %}
+                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-' ~ (idx + 1) ~ '-photo.jpg') }}"
+                                     alt="{{ review_name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
                                      width="50" height="50" loading="lazy" decoding="async"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                <div class="rounded-circle d-none align-items-center justify-content-center border bg-light text-muted fw-semibold" style="width: 50px; height: 50px;">{{ review_name[:1]|upper }}</div>
+                                {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center border bg-light text-muted fw-semibold" style="width: 50px; height: 50px;">{{ review_name[:1]|upper }}</div>
                                 {% endif %}
-                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
                             </div>
                             <div>
-                                <strong>{{ r.name }}</strong><br>
-                                <small class="text-muted">{{ r.title }}</small>
+                                <strong>{{ review_name }}</strong><br>
+                                <small class="text-muted">{{ review_title }}</small>
                             </div>
                         </div>
-                        {% else %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">"Your review could be featured here."</p>
-                        {% endif %}
                     </div>
                 </div>
-
-                <div class="col-lg-4">
-                    <div class="testimonial-card">
-                        {% set r = (marketing_reviews[1] if marketing_reviews|length > 1 else None) %}
-                        {% if r %}
-                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                            {% if r.logo %}
-                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-logo.png') }}" 
-                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
-                                 width="180" height="60" loading="lazy" decoding="async"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                            {% endif %}
-                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
-                        </div>
-                        <p class="fst-italic">"{{ r.quote }}"</p>
-                        <div class="d-flex align-items-center">
-                            <div class="me-3" style="width: 50px; height: 50px;">
-                                {% if r.photo %}
-                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-photo.jpg') }}" 
-                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
-                                     width="50" height="50" loading="lazy" decoding="async"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                                {% endif %}
-                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
-                            </div>
-                            <div>
-                                <strong>{{ r.name }}</strong><br>
-                                <small class="text-muted">{{ r.title }}</small>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">"Your review could be featured here."</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="testimonial-card">
-                        {% set r = (marketing_reviews[2] if marketing_reviews|length > 2 else None) %}
-                        {% if r %}
-                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                            {% if r.logo %}
-                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-logo.png') }}" 
-                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
-                                 width="180" height="60" loading="lazy" decoding="async"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                            {% endif %}
-                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
-                        </div>
-                        <p class="fst-italic">"{{ r.quote }}"</p>
-                        <div class="d-flex align-items-center">
-                            <div class="me-3" style="width: 50px; height: 50px;">
-                                {% if r.photo %}
-                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-photo.jpg') }}" 
-                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
-                                     width="50" height="50" loading="lazy" decoding="async"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                                {% endif %}
-                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
-                            </div>
-                            <div>
-                                <strong>{{ r.name }}</strong><br>
-                                <small class="text-muted">{{ r.title }}</small>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">"Your review could be featured here."</p>
-                        {% endif %}
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </section>
@@ -782,7 +741,7 @@
                                 <span class="feature-icon" aria-hidden="true">TM</span>
                             </div>
                             <h3 class="card-title h5">FIFO Inventory</h3>
-                            <p class="card-text">Track inventory and costs based on when materials are purchased and used, so nothing expires or gets miscounted.</p>
+                            <p class="card-text">FIFO-aware inventory keeps usage and costs tied to the right lots.</p>
                         </div>
                     </div>
                 </div>
@@ -794,7 +753,7 @@
                                 <span class="feature-icon" aria-hidden="true">QR</span>
                             </div>
                             <h3 class="card-title h5">QR Code Labels</h3>
-                            <p class="card-text">Know exactly which batch each product came from with QR code labels and linked batch history.</p>
+                            <p class="card-text">Generate QR-linked labels so every product traces back to its batch record.</p>
                         </div>
                     </div>
                 </div>
@@ -806,7 +765,7 @@
                                 <span class="feature-icon" aria-hidden="true">MB</span>
                             </div>
                             <h3 class="card-title h5">Timer Management</h3>
-                            <p class="card-text">Missed timers ruin batches. Tie every timer to its batch and get alerts before quality suffers.</p>
+                            <p class="card-text">Keep every timer attached to its batch and get alerts before quality slips.</p>
                         </div>
                     </div>
                 </div>
@@ -868,7 +827,6 @@
                             decoding="async"
                         >
                         <div class="fw-semibold mt-3">{{ integration.name }}</div>
-                        <small class="text-muted">Planned</small>
                     </div>
                 </div>
                 {% endfor %}
