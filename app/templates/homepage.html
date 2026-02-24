@@ -408,7 +408,7 @@
                 <div class="row justify-content-center">
                     {% for tool in desktop_cards %}
                     {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
-                    {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('tools_bp.tools_index')) %}
+                    {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('waitlist.waitlist_landing', waitlist_key='tools.' ~ tool.slug, source='homepage_tool_card')) %}
                     <div class="col-lg-4 col-md-6 mb-4">
                         <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
@@ -421,7 +421,7 @@
                                     {% if tool_is_enabled %}
                                     <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                                     {% else %}
-                                    <span class="tool-feature-card-cta">View in More Tools <span aria-hidden="true">&rarr;</span></span>
+                                    <span class="tool-feature-card-cta">Join Waitlist <span aria-hidden="true">&rarr;</span></span>
                                     {% endif %}
                                 </div>
                             </div>

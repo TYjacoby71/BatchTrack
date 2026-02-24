@@ -1,0 +1,112 @@
+{% extends 'layout.html' %}
+{% set page_title = "BatchTrack | Join the Waitlist" %}
+{% set page_description = "Join the BatchTrack waitlist to get notified when your selected tool is available." %}
+{% set canonical_url = url_for('waitlist.waitlist_landing', waitlist_key=waitlist_key, _external=True) %}
+
+{% block content %}
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4 p-md-5">
+            <h1 class="h3 fw-bold mb-2">Join the {{ waitlist_label }} waitlist</h1>
+            <p class="text-muted mb-4">
+              Get an email when this tool opens, plus occasional early-access invites.
+            </p>
+
+            <form id="waitlistJoinForm" novalidate>
+              <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+              <input type="hidden" name="waitlist_key" value="{{ waitlist_key }}">
+              <input type="hidden" name="source" value="{{ waitlist_source }}">
+
+              <div class="mb-3">
+                <label for="waitlistEmail" class="form-label">Email</label>
+                <input id="waitlistEmail" name="email" type="email" class="form-control form-control-lg" required placeholder="you@example.com">
+              </div>
+              <div class="mb-3">
+                <label for="waitlistFirstName" class="form-label">First name (optional)</label>
+                <input id="waitlistFirstName" name="first_name" type="text" class="form-control" maxlength="80">
+              </div>
+
+              <button id="waitlistSubmitBtn" class="btn btn-primary btn-lg w-100" type="submit">Join Waitlist</button>
+              <p id="waitlistHelper" class="small text-muted mt-3 mb-0">No spam. You can unsubscribe any time.</p>
+              <p id="waitlistSuccess" class="small text-success mt-3 mb-0 d-none">Thanks, you are on the waitlist.</p>
+              <p id="waitlistError" class="small text-danger mt-3 mb-0 d-none">Could not submit right now. Please try again.</p>
+            </form>
+
+            <div class="mt-4 text-center">
+              <a href="{{ url_for('tools_bp.tools_index') }}" class="btn btn-link">Browse all tools</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const form = document.getElementById('waitlistJoinForm');
+    if (!form) return;
+
+    const submitBtn = document.getElementById('waitlistSubmitBtn');
+    const helper = document.getElementById('waitlistHelper');
+    const success = document.getElementById('waitlistSuccess');
+    const error = document.getElementById('waitlistError');
+
+    function setState(state) {
+      if (state === 'loading') {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Joining...';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Join Waitlist';
+      }
+
+      success.classList.toggle('d-none', state !== 'success');
+      error.classList.toggle('d-none', state !== 'error');
+      helper.classList.toggle('d-none', state === 'success' || state === 'error');
+    }
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const email = (form.elements.email && form.elements.email.value || '').trim();
+      if (!email) return;
+
+      setState('loading');
+      const payload = {
+        email: email,
+        first_name: (form.elements.first_name && form.elements.first_name.value || '').trim(),
+        website: (form.elements.website && form.elements.website.value || '').trim(),
+        waitlist_key: (form.elements.waitlist_key && form.elements.waitlist_key.value || '').trim(),
+        source: (form.elements.source && form.elements.source.value || '').trim(),
+        context: 'public_waitlist_page',
+      };
+
+      try {
+        const response = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error('request_failed');
+        setState('success');
+        form.reset();
+      } catch (err) {
+        setState('error');
+      } finally {
+        setTimeout(function () {
+          if (!success.classList.contains('d-none')) {
+            setState('success');
+          } else {
+            setState('idle');
+          }
+        }, 1200);
+      }
+    });
+  })();
+</script>
+{% endblock %}
