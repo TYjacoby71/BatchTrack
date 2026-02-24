@@ -119,11 +119,6 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
         "title": "AI, team, and governance",
         "rows": (
             {
-                "label": "Billing management",
-                "kind": "boolean",
-                "permissions_any": ("organization.manage_billing",),
-            },
-            {
                 "label": "BatchBot assistant",
                 "kind": "boolean",
                 "permissions_any": ("ai.batchbot",),
