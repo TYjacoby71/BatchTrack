@@ -655,7 +655,7 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
     assert "Baking Calculator" in html
     assert "Candle Maker Tool" not in html
     assert "Herbalist Calculator" not in html
-    assert "Pinned" in html
+    assert "Pinned" not in html
     assert 'href="/tools/soap"' in html
     assert 'href="/tools/lotions"' in html
     assert 'href="/tools/baker"' in html
@@ -708,7 +708,7 @@ def test_homepage_tools_section_balances_desktop_cards_without_mobile_carousel_w
     assert "Soap Maker Tool" in html
     assert "Lotion Maker Tool" in html
     assert "Baking Calculator" in html
-    assert "Coming Soon" in html
+    assert "View in More Tools" in html
 
     # Mobile should not render swipe carousel when only one tool is enabled.
     assert 'id="homepageToolsCarousel"' not in html

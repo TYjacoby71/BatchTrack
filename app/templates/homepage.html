@@ -95,14 +95,8 @@
             margin-bottom: 0;
         }
 
-        .tool-feature-card-shell.is-disabled {
-            cursor: default;
-        }
-
-        .tool-feature-card-shell.is-disabled .feature-card {
-            border: 1px dashed rgba(108, 117, 125, 0.35);
-            box-shadow: none;
-            transform: none;
+        .tool-feature-card-shell.is-fallback .feature-card {
+            border: 1px solid rgba(108, 117, 125, 0.25);
         }
 
         .tool-feature-card-cta {
@@ -114,8 +108,8 @@
             font-size: 0.95rem;
         }
 
-        .tool-feature-card-shell.is-disabled .tool-feature-card-cta {
-            color: #6c757d;
+        .tool-feature-card-shell.is-fallback .tool-feature-card-cta {
+            color: #495057;
         }
 
         .homepage-tools-carousel .carousel-item {
@@ -383,7 +377,6 @@
             <div class="hero-media-box">
                 <div class="hero-media-stage">
                     <div class="placeholder-img hero-video-placeholder">
-                        <span class="hero-video-label">[Product Walkthrough Video]</span>
                     </div>
                     <div class="hero-overlay">
                         <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
@@ -405,7 +398,7 @@
         <div class="container">
             <div class="text-center mb-5">
                 <h2 class="display-5 fw-bold">FREE TOOLS &amp; CALCULATORS</h2>
-                <p class="lead text-muted mb-0">Most-used tools appear first, with the soap maker tool pinned for quick access.</p>
+                <p class="lead text-muted mb-0">Most-used tools appear first, with the soap maker tool always shown first for quick access.</p>
             </div>
 
             {% if homepage_tool_cards and homepage_tool_cards|length > 0 %}
@@ -415,36 +408,24 @@
                 <div class="row justify-content-center">
                     {% for tool in desktop_cards %}
                     {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
+                    {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('tools_bp.tools_index')) %}
                     <div class="col-lg-4 col-md-6 mb-4">
-                        {% if tool_is_enabled %}
-                        <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
-                        {% else %}
-                        <div class="tool-feature-card-shell is-disabled" aria-disabled="true">
-                        {% endif %}
+                        <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
                                 <div class="card-body text-center">
                                     <div class="placeholder-img mb-3">
                                         <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                     </div>
-                                    {% if tool.slug == 'soap' %}
-                                    <span class="badge bg-primary mb-2">Pinned</span>
-                                    {% elif not tool_is_enabled %}
-                                    <span class="badge bg-light text-dark border mb-2">Coming Soon</span>
-                                    {% endif %}
                                     <h3 class="card-title h5">{{ tool.name }}</h3>
                                     <p class="card-text">{{ tool.summary }}</p>
                                     {% if tool_is_enabled %}
                                     <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                                     {% else %}
-                                    <span class="tool-feature-card-cta">Enable this tool to open it</span>
+                                    <span class="tool-feature-card-cta">View in More Tools <span aria-hidden="true">&rarr;</span></span>
                                     {% endif %}
                                 </div>
                             </div>
-                        {% if tool_is_enabled %}
                         </a>
-                        {% else %}
-                        </div>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -467,9 +448,6 @@
                                         <div class="placeholder-img mb-3">
                                             <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                         </div>
-                                        {% if tool.slug == 'soap' %}
-                                        <span class="badge bg-primary mb-2">Pinned</span>
-                                        {% endif %}
                                         <h3 class="card-title h5">{{ tool.name }}</h3>
                                         <p class="card-text">{{ tool.summary }}</p>
                                         <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
@@ -494,9 +472,6 @@
                             <div class="placeholder-img mb-3">
                                 <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
                             </div>
-                            {% if single_tool.slug == 'soap' %}
-                            <span class="badge bg-primary mb-2">Pinned</span>
-                            {% endif %}
                             <h3 class="card-title h5">{{ single_tool.name }}</h3>
                             <p class="card-text">{{ single_tool.summary }}</p>
                             <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
@@ -777,7 +752,7 @@
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
                         <div class="stat-number">5+</div>
-                        <p>Future Integrations</p>
+                        <p>Integrations</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
@@ -856,7 +831,7 @@
         <div class="scrolling-content">
             {% for s in marketing_spotlights %}
             <span class="me-5">
-                <span aria-hidden="true" class="me-1">[Spotlight]</span>
+                <span aria-hidden="true" class="me-1">★</span>
                 <a href="{{ s.url }}" target="_blank">{{ s.business_name }}</a>
             </span>
             {% endfor %}
@@ -868,8 +843,8 @@
     <section class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">Future Integrations</h2>
-                <p class="text-muted">Integrations coming soon for Shopify, Etsy, QuickBooks, Zapier, Slack, and more.</p>
+                <h2 class="fw-bold">Integrations</h2>
+                <p class="text-muted">BatchTrack is building integrations for Shopify, Etsy, QuickBooks, Zapier, Slack, and more.</p>
             </div>
 
             {% set future_integrations = [
@@ -893,7 +868,7 @@
                             decoding="async"
                         >
                         <div class="fw-semibold mt-3">{{ integration.name }}</div>
-                        <small class="text-muted">Coming soon</small>
+                        <small class="text-muted">Planned</small>
                     </div>
                 </div>
                 {% endfor %}
@@ -906,9 +881,7 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6">
-                    <div class="placeholder-img">
-                        [App Screenshot/Demo Video]
-                    </div>
+                    <div class="placeholder-img"></div>
                 </div>
                 <div class="col-lg-6">
                     <h2 class="fw-bold mb-4">Follow every batch from plan to finished product</h2>
