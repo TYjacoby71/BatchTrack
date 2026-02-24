@@ -701,6 +701,44 @@ def test_homepage_tool_cards_render_uploaded_soap_image(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_tool_cards_render_uploaded_soap_image_without_strict_filename(app):
+    """Homepage soap card should render a custom upload filename from tool folder."""
+    from pathlib import Path
+
+    client = app.test_client()
+
+    with app.app_context():
+        soap_folder = Path(app.static_folder) / "images/homepage/tools/soap"
+        soap_folder.mkdir(parents=True, exist_ok=True)
+        canonical_name = soap_folder / "soap-tool-card.png"
+        canonical_backup: Path | None = None
+        if canonical_name.exists():
+            canonical_backup = soap_folder / "soap-tool-card.png.bak-test"
+            canonical_name.rename(canonical_backup)
+
+        custom_name = soap_folder / "Screenshot 2026-02-23 173907.png"
+        created_for_test = False
+        if not custom_name.exists():
+            custom_name.write_bytes(_ONE_PIXEL_PNG)
+            created_for_test = True
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/tools/soap/Screenshot%202026-02-23%20173707.png"'
+            in html
+        )
+    finally:
+        if created_for_test:
+            custom_name.unlink(missing_ok=True)
+        if canonical_backup is not None and canonical_backup.exists():
+            canonical_backup.rename(canonical_name)
+
+
+@pytest.mark.usefixtures("app")
 def test_homepage_tools_section_balances_desktop_cards_without_mobile_carousel_when_single_enabled(
     app,
 ):

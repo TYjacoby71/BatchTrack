@@ -18,6 +18,8 @@ from flask import current_app, has_app_context
 
 from app.models import FeatureFlag
 
+_TOOL_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"}
+
 PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
     {
         "slug": "soap",
@@ -105,12 +107,12 @@ PINNED_HOMEPAGE_TOOL_SLUG = "soap"
 
 
 def _resolve_tool_image_path(tool: Dict[str, Any]) -> str | None:
-    """Resolve the first existing static image candidate for a tool card."""
+    """Resolve a tool card image from preferred names, then folder fallback."""
     candidates = tool.get("image_candidates") or ()
     if isinstance(candidates, str):
         candidates = (candidates,)
     if not isinstance(candidates, (tuple, list)):
-        return None
+        candidates = ()
     if not has_app_context():
         return None
 
@@ -128,6 +130,33 @@ def _resolve_tool_image_path(tool: Dict[str, Any]) -> str | None:
                 return relative_path
         except OSError:
             continue
+
+    # Fallback: accept any image file in the tool's folder so uploads do not
+    # require strict renaming before they render on the homepage.
+    slug = str(tool.get("slug") or "").strip()
+    if not slug:
+        return None
+    tool_folder = static_root / "images" / "homepage" / "tools" / slug
+    try:
+        if not tool_folder.is_dir():
+            return None
+        image_files = [
+            item
+            for item in tool_folder.iterdir()
+            if item.is_file()
+            and not item.name.startswith(".")
+            and item.suffix.lower() in _TOOL_IMAGE_EXTENSIONS
+        ]
+    except OSError:
+        return None
+    if not image_files:
+        return None
+
+    selected = sorted(image_files, key=lambda path: path.name.lower())[0]
+    try:
+        return selected.relative_to(static_root).as_posix()
+    except ValueError:
+        return None
     return None
 
 
