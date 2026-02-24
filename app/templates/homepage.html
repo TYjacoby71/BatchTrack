@@ -266,6 +266,24 @@
             margin: 0 auto;
         }
 
+        .tool-slot-media {
+            min-height: 200px;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .tool-slot-image,
+        .tool-slot-video {
+            width: 100%;
+            height: 100%;
+            min-height: 200px;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
+            margin: 0;
+            border-radius: 0;
+        }
+
         .btn-cta {
             background: linear-gradient(45deg, #ff6b6b, #ffa500);
             border: none;
@@ -510,20 +528,20 @@
                         <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
                                 <div class="card-body text-center">
-                                    <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
+                                    <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                    <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
                                         {% if tool.media %}
                                             {% if tool.media.kind == 'video' %}
-                                        <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                        <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                             <source src="{{ url_for('static', filename=tool.media.path) }}">
                                         </video>
                                             {% else %}
-                                        <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                        <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                             {% endif %}
                                         {% else %}
                                         <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                         {% endif %}
                                     </div>
-                                    <h3 class="card-title h5">{{ tool.name }}</h3>
                                     <p class="card-text">{{ tool.summary }}</p>
                                     {% if tool_is_enabled %}
                                     <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
@@ -552,20 +570,20 @@
                             <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
                                 <div class="card feature-card h-100">
                                     <div class="card-body text-center">
-                                        <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
+                                        <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                        <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
                                             {% if tool.media %}
                                                 {% if tool.media.kind == 'video' %}
-                                            <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                            <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                                 <source src="{{ url_for('static', filename=tool.media.path) }}">
                                             </video>
                                                 {% else %}
-                                            <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                            <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                                 {% endif %}
                                             {% else %}
                                             <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                             {% endif %}
                                         </div>
-                                        <h3 class="card-title h5">{{ tool.name }}</h3>
                                         <p class="card-text">{{ tool.summary }}</p>
                                         <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                                     </div>
@@ -586,20 +604,20 @@
                 <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
                     <div class="card feature-card h-100 mb-4">
                         <div class="card-body text-center">
-                            <div class="placeholder-img mb-3{% if single_tool.media %} has-media{% endif %}">
+                            <h3 class="card-title h5 mb-3">{{ single_tool.name }}</h3>
+                            <div class="placeholder-img tool-slot-media mb-3{% if single_tool.media %} has-media{% endif %}">
                                 {% if single_tool.media %}
                                     {% if single_tool.media.kind == 'video' %}
-                                <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
+                                <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
                                     <source src="{{ url_for('static', filename=single_tool.media.path) }}">
                                 </video>
                                     {% else %}
-                                <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-card-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
+                                <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-slot-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
                                     {% endif %}
                                 {% else %}
                                 <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
                                 {% endif %}
                             </div>
-                            <h3 class="card-title h5">{{ single_tool.name }}</h3>
                             <p class="card-text">{{ single_tool.summary }}</p>
                             <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                         </div>
