@@ -11,7 +11,10 @@ Glossary:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List
+
+from flask import current_app, has_app_context
 
 from app.models import FeatureFlag
 
@@ -23,6 +26,12 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Soap Maker Tool",
         "summary": "Build soap formulas, tune lye/water, and export recipe-ready drafts.",
         "icon": "SO",
+        "image_candidates": (
+            "images/homepage/tools/soap/soap-tool-card.png",
+            "images/homepage/tools/soap/soap-card.png",
+            "images/homepage/tools/soap/soap.png",
+            "images/homepage/tools/soap-tool-card.png",
+        ),
         "homepage_rank": 0,
         "default_enabled": True,
     },
@@ -33,6 +42,12 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Lotion Maker Tool",
         "summary": "Plan lotion phases, preservative targets, and temperature ranges.",
         "icon": "LO",
+        "image_candidates": (
+            "images/homepage/tools/lotions/lotion-tool-card.png",
+            "images/homepage/tools/lotions/lotions-tool-card.png",
+            "images/homepage/tools/lotions/lotion.png",
+            "images/homepage/tools/lotion-tool-card.png",
+        ),
         "homepage_rank": 1,
         "default_enabled": True,
     },
@@ -43,6 +58,12 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Baking Calculator",
         "summary": "Scale recipes with baker percentages, hydration, and preferments.",
         "icon": "BK",
+        "image_candidates": (
+            "images/homepage/tools/baker/baker-tool-card.png",
+            "images/homepage/tools/baker/baking-tool-card.png",
+            "images/homepage/tools/baker/baker.png",
+            "images/homepage/tools/baker-tool-card.png",
+        ),
         "homepage_rank": 2,
         "default_enabled": True,
     },
@@ -53,6 +74,12 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Candle Maker Tool",
         "summary": "Dial in wax blends, fragrance load, and vessel sizing math.",
         "icon": "CA",
+        "image_candidates": (
+            "images/homepage/tools/candles/candle-tool-card.png",
+            "images/homepage/tools/candles/candles-tool-card.png",
+            "images/homepage/tools/candles/candle.png",
+            "images/homepage/tools/candle-tool-card.png",
+        ),
         "homepage_rank": 3,
         "default_enabled": True,
     },
@@ -63,12 +90,52 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Herbalist Calculator",
         "summary": "Work through tincture ratios, infusions, and dilution helpers.",
         "icon": "HB",
+        "image_candidates": (
+            "images/homepage/tools/herbal/herbal-tool-card.png",
+            "images/homepage/tools/herbal/herbalist-tool-card.png",
+            "images/homepage/tools/herbal/herbal.png",
+            "images/homepage/tools/herbal-tool-card.png",
+        ),
         "homepage_rank": 4,
         "default_enabled": True,
     },
 )
 
 PINNED_HOMEPAGE_TOOL_SLUG = "soap"
+
+
+def _resolve_tool_image_path(tool: Dict[str, Any]) -> str | None:
+    """Resolve the first existing static image candidate for a tool card."""
+    candidates = tool.get("image_candidates") or ()
+    if isinstance(candidates, str):
+        candidates = (candidates,)
+    if not isinstance(candidates, (tuple, list)):
+        return None
+    if not has_app_context():
+        return None
+
+    static_folder = getattr(current_app, "static_folder", None)
+    if not static_folder:
+        return None
+    static_root = Path(static_folder)
+
+    for candidate in candidates:
+        relative_path = str(candidate or "").strip().lstrip("/")
+        if not relative_path:
+            continue
+        try:
+            if (static_root / relative_path).is_file():
+                return relative_path
+        except OSError:
+            continue
+    return None
+
+
+def _with_tool_image(tool: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy tool metadata and annotate it with a resolved image_path."""
+    resolved = dict(tool)
+    resolved["image_path"] = _resolve_tool_image_path(resolved)
+    return resolved
 
 
 def _tool_sort_key(tool: Dict[str, Any]) -> tuple[int, int, str]:
@@ -145,7 +212,7 @@ def get_enabled_public_tools(
         slug = str(tool.get("slug") or "")
         default_enabled = bool(tool.get("default_enabled", True))
         if bool(resolved_flags.get(slug, default_enabled)):
-            enabled.append(dict(tool))
+            enabled.append(_with_tool_image(tool))
 
     enabled.sort(key=_tool_sort_key)
     return enabled
@@ -191,7 +258,7 @@ def get_homepage_balanced_display_tools(
     if len(display_cards) >= max_cards:
         return display_cards[:max_cards]
 
-    ranked_all: List[Dict[str, Any]] = [dict(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all: List[Dict[str, Any]] = [_with_tool_image(tool) for tool in PUBLIC_TOOL_CATALOG]
     ranked_all.sort(key=_tool_sort_key)
     for tool in ranked_all:
         if len(display_cards) >= max_cards:

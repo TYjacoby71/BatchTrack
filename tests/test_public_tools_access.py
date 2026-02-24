@@ -4,6 +4,11 @@ import re
 import pytest
 
 _HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
+_ONE_PIXEL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDATx\x9cc\xf8\xff"
+    b"\xff?\x00\x05\xfe\x02\xfeA\xdd\x8d\xb1\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 def _first_nav_classes(html: str) -> str:
@@ -665,6 +670,34 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
     lotion_idx = html.index("Lotion Maker Tool")
     baking_idx = html.index("Baking Calculator")
     assert lotion_idx < soap_idx < baking_idx
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_tool_cards_render_uploaded_soap_image(app):
+    """Homepage soap tool card should switch to uploaded card art when present."""
+    from pathlib import Path
+
+    client = app.test_client()
+
+    with app.app_context():
+        soap_image_path = (
+            Path(app.static_folder) / "images/homepage/tools/soap/soap-tool-card.png"
+        )
+        soap_image_path.parent.mkdir(parents=True, exist_ok=True)
+        created_for_test = False
+        if not soap_image_path.exists():
+            soap_image_path.write_bytes(_ONE_PIXEL_PNG)
+            created_for_test = True
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert 'src="/static/images/homepage/tools/soap/soap-tool-card.png"' in html
+    finally:
+        if created_for_test:
+            soap_image_path.unlink(missing_ok=True)
 
 
 @pytest.mark.usefixtures("app")

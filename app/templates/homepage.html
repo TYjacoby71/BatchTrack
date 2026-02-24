@@ -225,6 +225,20 @@
             min-height: 200px;
         }
 
+        .placeholder-img.has-image {
+            border: 1px solid rgba(22, 32, 61, 0.12);
+            background: #ffffff;
+            padding: 0.5rem;
+        }
+
+        .tool-card-image {
+            width: 100%;
+            max-height: 186px;
+            object-fit: contain;
+            display: block;
+            border-radius: 0.35rem;
+        }
+
         .btn-cta {
             background: linear-gradient(45deg, #ff6b6b, #ffa500);
             border: none;
@@ -413,8 +427,12 @@
                         <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
                                 <div class="card-body text-center">
-                                    <div class="placeholder-img mb-3">
+                                    <div class="placeholder-img mb-3{% if tool.image_path %} has-image{% endif %}">
+                                        {% if tool.image_path %}
+                                        <img src="{{ url_for('static', filename=tool.image_path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                        {% else %}
                                         <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                        {% endif %}
                                     </div>
                                     <h3 class="card-title h5">{{ tool.name }}</h3>
                                     <p class="card-text">{{ tool.summary }}</p>
@@ -445,8 +463,12 @@
                             <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
                                 <div class="card feature-card h-100">
                                     <div class="card-body text-center">
-                                        <div class="placeholder-img mb-3">
+                                        <div class="placeholder-img mb-3{% if tool.image_path %} has-image{% endif %}">
+                                            {% if tool.image_path %}
+                                            <img src="{{ url_for('static', filename=tool.image_path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                            {% else %}
                                             <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                            {% endif %}
                                         </div>
                                         <h3 class="card-title h5">{{ tool.name }}</h3>
                                         <p class="card-text">{{ tool.summary }}</p>
@@ -469,8 +491,12 @@
                 <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
                     <div class="card feature-card h-100 mb-4">
                         <div class="card-body text-center">
-                            <div class="placeholder-img mb-3">
+                            <div class="placeholder-img mb-3{% if single_tool.image_path %} has-image{% endif %}">
+                                {% if single_tool.image_path %}
+                                <img src="{{ url_for('static', filename=single_tool.image_path) }}" class="tool-card-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
+                                {% else %}
                                 <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
+                                {% endif %}
                             </div>
                             <h3 class="card-title h5">{{ single_tool.name }}</h3>
                             <p class="card-text">{{ single_tool.summary }}</p>

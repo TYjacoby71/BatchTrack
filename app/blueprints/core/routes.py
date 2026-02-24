@@ -124,6 +124,14 @@ def _render_public_homepage_response():
     except Exception:
         pass
     try:
+        tool_image_signature = "|".join(
+            f"{tool.get('slug')}:{tool.get('image_path') or 'none'}"
+            for tool in homepage_tool_cards_desktop
+        )
+        cache_key = f"{cache_key}:tool-images:{tool_image_signature or 'none'}"
+    except Exception:
+        pass
+    try:
         cache_ttl = int(current_app.config.get("PUBLIC_HOMEPAGE_CACHE_TTL", 600))
     except (TypeError, ValueError):
         cache_ttl = 600
