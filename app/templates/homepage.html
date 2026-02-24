@@ -539,41 +539,23 @@
             </div>
 
             <div class="row">
+                {% for feature in (homepage_feature_cards if homepage_feature_cards is defined else []) %}
                 <div class="col-lg-4 col-md-6">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
-                            <div class="placeholder-img mb-3">
-                                <span class="feature-icon" aria-hidden="true">BT</span>
+                            <div class="placeholder-img mb-3{% if feature.image_path %} has-image{% endif %}">
+                                {% if feature.image_path %}
+                                <img src="{{ url_for('static', filename=feature.image_path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
+                                {% else %}
+                                <span class="feature-icon" aria-hidden="true">{{ feature.icon }}</span>
+                                {% endif %}
                             </div>
-                            <h3 class="card-title h5">Recipe Tracking</h3>
-                            <p class="card-text">Track every recipe, variation, and test in one clear timeline.</p>
+                            <h3 class="card-title h5">{{ feature.name }}</h3>
+                            <p class="card-text">{{ feature.summary }}</p>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card h-100">
-                        <div class="card-body text-center">
-                            <div class="placeholder-img mb-3">
-                                <span class="feature-icon" aria-hidden="true">FI</span>
-                            </div>
-                            <h3 class="card-title h5">Inventory Management</h3>
-                            <p class="card-text">Keep FIFO inventory accurate with cost, lot, and expiration visibility.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card h-100">
-                        <div class="card-body text-center">
-                            <div class="placeholder-img mb-3">
-                                <span class="feature-icon" aria-hidden="true">AN</span>
-                            </div>
-                            <h3 class="card-title h5">Batch In Progress</h3>
-                            <p class="card-text">Run each batch with timers, notes, and change tracking from start to finish.</p>
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </section>

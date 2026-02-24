@@ -46,12 +46,21 @@ Placeholder policy:
 
 ### 2.2 Features
 
-- [ ] `app/static/images/homepage/features/batch-tracking.png`
-- [ ] `app/static/images/homepage/features/fifo-inventory.png`
-- [ ] `app/static/images/homepage/features/analytics-dashboard.png`
-- [ ] `app/static/images/homepage/features/timer-management.png`
-- [ ] `app/static/images/homepage/features/qr-codes.png`
-- [ ] `app/static/images/homepage/features/mobile-friendly.png`
+The homepage feature cards now support folder-based uploads (no strict filename required).
+Drop one image into each folder below; the page will pick it up automatically.
+
+Primary homepage feature cards (auto-rendered):
+
+- [ ] `app/static/images/homepage/features/recipe-tracking/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/fifo-inventory/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/batch-in-progress/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+
+Additional planned feature artwork folders:
+
+- [ ] `app/static/images/homepage/features/analytics-dashboard/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/timer-management/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/qr-codes/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/mobile-friendly/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
 
 ### 2.3 Integrations
 

@@ -739,6 +739,50 @@ def test_homepage_tool_cards_render_uploaded_soap_image_without_strict_filename(
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(app):
+    """Homepage feature cards should render image from folder regardless of filename."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    feature_folder: Path | None = None
+    custom_name: Path | None = None
+
+    with app.app_context():
+        feature_folder = Path(app.static_folder) / "images/homepage/features/fifo-inventory"
+        feature_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in feature_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower()
+                in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"}
+            ):
+                backup = feature_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_name = feature_folder / "000 Inventory Snapshot.png"
+        custom_name.write_bytes(_ONE_PIXEL_PNG)
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/features/fifo-inventory/000%20Inventory%20Snapshot.png"'
+            in html
+        )
+    finally:
+        if custom_name is not None and custom_name.exists():
+            custom_name.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
 def test_homepage_tools_section_balances_desktop_cards_without_mobile_carousel_when_single_enabled(
     app,
 ):
