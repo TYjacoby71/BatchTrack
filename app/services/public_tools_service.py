@@ -71,6 +71,14 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
 PINNED_HOMEPAGE_TOOL_SLUG = "soap"
 
 
+def _tool_sort_key(tool: Dict[str, Any]) -> tuple[int, int, str]:
+    return (
+        0 if tool.get("slug") == PINNED_HOMEPAGE_TOOL_SLUG else 1,
+        int(tool.get("homepage_rank", 999)),
+        str(tool.get("name") or ""),
+    )
+
+
 def is_tool_flag_enabled(flag_key: str, default: bool = True) -> bool:
     """Resolve one tool feature flag with a safe fallback."""
     try:
@@ -120,13 +128,7 @@ def get_enabled_public_tools(
         if bool(resolved_flags.get(slug, default_enabled)):
             enabled.append(dict(tool))
 
-    enabled.sort(
-        key=lambda tool: (
-            0 if tool.get("slug") == PINNED_HOMEPAGE_TOOL_SLUG else 1,
-            int(tool.get("homepage_rank", 999)),
-            str(tool.get("name") or ""),
-        )
-    )
+    enabled.sort(key=_tool_sort_key)
     return enabled
 
 
@@ -138,6 +140,55 @@ def get_homepage_public_tools(
     if max_cards <= 0:
         return []
     return tools[:max_cards]
+
+
+def get_homepage_balanced_display_tools(
+    *, tool_flags: Dict[str, bool] | None = None, max_cards: int = 3
+) -> List[Dict[str, Any]]:
+    """Return homepage cards padded to a stable count with disabled fallbacks.
+
+    Enabled tools always render first (soap pinned via rank). If fewer than
+    ``max_cards`` are enabled, this pads with the next-ranked tools as disabled
+    cards so desktop layouts stay visually balanced.
+    """
+    if max_cards <= 0:
+        return []
+
+    resolved_flags = tool_flags if tool_flags is not None else get_public_tool_flags()
+    enabled_cards = get_homepage_public_tools(
+        tool_flags=resolved_flags,
+        max_cards=max_cards,
+    )
+    display_cards: List[Dict[str, Any]] = []
+    seen_slugs: set[str] = set()
+
+    for tool in enabled_cards:
+        slug = str(tool.get("slug") or "")
+        seen_slugs.add(slug)
+        with_state = dict(tool)
+        with_state["is_enabled"] = True
+        display_cards.append(with_state)
+
+    if len(display_cards) >= max_cards:
+        return display_cards[:max_cards]
+
+    ranked_all: List[Dict[str, Any]] = [dict(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all.sort(key=_tool_sort_key)
+    for tool in ranked_all:
+        if len(display_cards) >= max_cards:
+            break
+        slug = str(tool.get("slug") or "")
+        if slug in seen_slugs:
+            continue
+        default_enabled = bool(tool.get("default_enabled", True))
+        enabled = bool(resolved_flags.get(slug, default_enabled))
+        fallback = dict(tool)
+        fallback["is_enabled"] = enabled
+        fallback["is_fallback"] = True
+        display_cards.append(fallback)
+        seen_slugs.add(slug)
+
+    return display_cards[:max_cards]
 
 
 def build_public_tool_flag_signature(tool_flags: Dict[str, bool] | None = None) -> str:

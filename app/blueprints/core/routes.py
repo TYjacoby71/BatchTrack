@@ -30,6 +30,7 @@ from app.extensions import cache
 from app.services.public_tools_service import (
     build_public_tool_flag_signature,
     get_enabled_public_tools,
+    get_homepage_balanced_display_tools,
     get_homepage_public_tools,
     get_public_tool_flags,
 )
@@ -104,6 +105,10 @@ def _render_public_homepage_response():
         tool_flags=tool_flags,
         max_cards=3,
     )
+    homepage_tool_cards_desktop = get_homepage_balanced_display_tools(
+        tool_flags=tool_flags,
+        max_cards=3,
+    )
     try:
         from app.utils.settings import is_feature_enabled
 
@@ -132,6 +137,8 @@ def _render_public_homepage_response():
     rendered = render_template(
         "homepage.html",
         homepage_tool_cards=homepage_tool_cards,
+        homepage_tool_cards_desktop=homepage_tool_cards_desktop,
+        homepage_mobile_swipe_enabled=len(homepage_tool_cards) > 1,
         homepage_has_more_tools=len(enabled_public_tools) > len(homepage_tool_cards),
         homepage_enabled_tool_count=len(enabled_public_tools),
     )
