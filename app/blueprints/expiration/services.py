@@ -36,6 +36,8 @@ logger.setLevel(logging.INFO)
 
 # --- Expiration service ---
 # Purpose: Provide expiration calculations and inventory queries.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 class ExpirationService:
     """Centralized service for expiration calculations and data fetching using InventoryLot objects where possible"""
 
