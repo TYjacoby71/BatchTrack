@@ -1,3 +1,13 @@
+"""Debug Routes module utilities.
+
+Synopsis:
+Provide documented top-level behavior for `app/blueprints/developer/debug_routes.py` without altering runtime logic.
+
+Glossary:
+- Module path: Source file `app/blueprints/developer/debug_routes.py`.
+- Unit heading block: Standardized comment metadata above each top-level function/class.
+"""
+
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
@@ -11,6 +21,10 @@ from .decorators import require_developer_permission
 debug_bp = Blueprint("debug", __name__, url_prefix="/debug")
 
 
+# --- Debug Permissions ---
+# Purpose: Implement `debug_permissions` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @debug_bp.route("/permissions")
 @require_developer_permission("dev.debug_mode")
 def debug_permissions():
@@ -59,6 +73,10 @@ def debug_permissions():
     )
 
 
+# --- Debug Tiers ---
+# Purpose: Implement `debug_tiers` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @debug_bp.route("/tiers")
 @require_developer_permission("dev.debug_mode")
 def debug_tiers():

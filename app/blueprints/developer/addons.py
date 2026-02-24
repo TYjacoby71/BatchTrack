@@ -23,6 +23,8 @@ addons_bp = Blueprint("addons", __name__, url_prefix="/addons")
 # =========================================================
 # --- List add-ons ---
 # Purpose: Show all add-ons for entitlement configuration.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @addons_bp.route("/")
 @login_required
 @require_permission("dev.manage_tiers")
@@ -33,6 +35,8 @@ def list_addons():
 
 # --- Create add-on ---
 # Purpose: Create a new add-on record.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @addons_bp.route("/create", methods=["GET", "POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -81,6 +85,8 @@ def create_addon():
 
 # --- Edit add-on ---
 # Purpose: Update add-on metadata and entitlements.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @addons_bp.route("/edit/<int:addon_id>", methods=["GET", "POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -115,6 +121,8 @@ def edit_addon(addon_id):
 
 # --- Delete add-on ---
 # Purpose: Remove an add-on from the catalog.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @addons_bp.route("/delete/<int:addon_id>", methods=["POST"])
 @login_required
 @require_permission("dev.manage_tiers")

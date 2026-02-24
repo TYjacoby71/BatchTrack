@@ -49,12 +49,16 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 # --- Batchbot flag ---
 # Purpose: Check if BatchBot features are enabled in config.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _is_batchbot_enabled() -> bool:
     return bool(current_app.config.get("FEATURE_BATCHBOT", False))
 
 
 # --- Resolve org scope ---
 # Purpose: Determine the request organization scope (supports developer masquerade).
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.
@@ -72,6 +76,8 @@ def _resolve_org_id():
 # =========================================================
 # --- Health check ---
 # Purpose: Return API health status for monitoring.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/", methods=["GET", "HEAD"])
 def health_check():
     """Health check endpoint for monitoring services"""
@@ -84,6 +90,8 @@ def health_check():
 
 # --- Server time ---
 # Purpose: Return server time in user's timezone.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/server-time")
 @login_required
 @require_permission("dashboard.view")
@@ -108,6 +116,8 @@ def server_time():
 # =========================================================
 # --- Recipe label prefix ---
 # Purpose: Generate a unique label prefix for a recipe name.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/recipes/prefix", methods=["GET"])
 @login_required
 @require_permission("recipes.create")
@@ -125,6 +135,8 @@ def recipe_prefix():
 # =========================================================
 # --- Dismiss alert ---
 # Purpose: Dismiss a dashboard alert for the session.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/dismiss-alert", methods=["POST"])
 @login_required
 @require_permission("alerts.dismiss")
@@ -152,6 +164,8 @@ def dismiss_alert():
 
 # --- Dashboard alerts ---
 # Purpose: Fetch dashboard alerts for the organization.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/dashboard-alerts")
 @login_required
 @require_permission("alerts.view")
@@ -216,6 +230,8 @@ api_bp.register_blueprint(reservation_api_bp)
 # =========================================================
 # --- Inventory item ---
 # Purpose: Return inventory item details for editing.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/inventory/item/<int:item_id>", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -249,6 +265,8 @@ def get_inventory_item(item_id):
 
 # --- Product category ---
 # Purpose: Return product category details by id.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/categories/<int:cat_id>", methods=["GET"])
 @login_required
 @require_permission("products.view")
@@ -268,6 +286,8 @@ def get_category(cat_id):
 # =========================================================
 # --- Unit search ---
 # Purpose: Search units for selection lists.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/unit-search", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -322,6 +342,8 @@ def list_units():
 
 # --- Create unit ---
 # Purpose: Create a new unit for inventory usage.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/units", methods=["POST"])
 @login_required
 @require_permission("inventory.edit")
@@ -373,6 +395,8 @@ def create_unit():
 # =========================================================
 # --- Container suggestions ---
 # Purpose: Return curated container field suggestions.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/containers/suggestions", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -425,6 +449,8 @@ def get_container_suggestions():
 # =========================================================
 # --- Timezone info ---
 # Purpose: Return server timezone metadata.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/timezone", methods=["GET"])
 @login_required
 @require_permission("settings.view")
@@ -451,6 +477,8 @@ def get_timezone():
 # =========================================================
 # --- Ingredient list ---
 # Purpose: Return ingredient list for unit conversion.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/ingredients", methods=["GET"])
 @login_required
 @require_permission("inventory.view")
@@ -499,6 +527,8 @@ def get_ingredients():
 # =========================================================
 # --- Recipe bootstrap ---
 # Purpose: Return current master recipes + current variations.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/bootstrap/recipes", methods=["GET"])
 @login_required
 @require_permission("recipes.view")
@@ -604,6 +634,8 @@ def bootstrap_recipes():
 
 # --- Product bootstrap ---
 # Purpose: Return product list + SKU inventory ids.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/bootstrap/products", methods=["GET"])
 @login_required
 @require_permission("products.view")
@@ -660,6 +692,8 @@ def bootstrap_products():
 # =========================================================
 # --- Unit converter ---
 # Purpose: Convert between inventory units.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/unit-converter", methods=["POST"])
 @login_required
 @require_permission("inventory.view")
@@ -727,6 +761,8 @@ def unit_converter():
 # =========================================================
 # --- BatchBot chat ---
 # Purpose: Chat with BatchBot for recipe assistance.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/batchbot/chat", methods=["POST"])
 @login_required
 @require_permission("ai.batchbot")
@@ -802,6 +838,8 @@ def batchbot_chat():
 
 # --- BatchBot usage ---
 # Purpose: Return BatchBot usage and quota snapshot.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @api_bp.route("/batchbot/usage", methods=["GET"])
 @login_required
 @require_permission("ai.batchbot")
@@ -824,6 +862,10 @@ def batchbot_usage():
     )
 
 
+# ---  Serialize Quota ---
+# Purpose: Implement `_serialize_quota` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _serialize_quota(snapshot, credits=None):
     return {
         "allowed": snapshot.allowed,
@@ -850,6 +892,10 @@ def _serialize_quota(snapshot, credits=None):
     }
 
 
+# ---  Generate Refill Checkout Url ---
+# Purpose: Implement `_generate_refill_checkout_url` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _generate_refill_checkout_url():
     try:
         lookup_key = current_app.config.get("BATCHBOT_REFILL_LOOKUP_KEY")
