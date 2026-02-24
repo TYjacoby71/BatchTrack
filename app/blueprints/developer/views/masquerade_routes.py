@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/masquerade_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import flash, redirect, session, url_for
@@ -10,6 +20,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Select Organization ---
+# Purpose: Define the top-level behavior of `select_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/select-org/<int:org_id>")
 @require_developer_permission("dev.all_organizations")
 def select_organization(org_id):
@@ -20,6 +34,10 @@ def select_organization(org_id):
     return redirect(url_for("app_routes.dashboard"))
 
 
+# --- View As Organization ---
+# Purpose: Define the top-level behavior of `view_as_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/view-as-organization/<int:org_id>")
 @require_developer_permission("dev.all_organizations")
 def view_as_organization(org_id):
@@ -43,6 +61,10 @@ def view_as_organization(org_id):
     return redirect(url_for("app_routes.dashboard"))
 
 
+# --- Clear Organization Filter ---
+# Purpose: Define the top-level behavior of `clear_organization_filter` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/clear-organization-filter")
 @require_developer_permission("dev.all_organizations")
 def clear_organization_filter():

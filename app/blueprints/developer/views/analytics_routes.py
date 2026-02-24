@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/analytics_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import flash, jsonify, render_template, request, url_for
@@ -12,6 +22,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Inventory Analytics Stub ---
+# Purpose: Define the top-level behavior of `inventory_analytics_stub` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/inventory-analytics")
 @require_developer_permission("dev.access_logs")
 def inventory_analytics_stub():
@@ -25,6 +39,10 @@ def inventory_analytics_stub():
     )
 
 
+# --- Api Inventory Analytics Metrics ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_metrics` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/metrics")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_metrics():
@@ -42,6 +60,10 @@ def api_inventory_analytics_metrics():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Top Items ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_top_items` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/top-items")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_top_items():
@@ -58,6 +80,10 @@ def api_inventory_analytics_top_items():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Spoilage ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_spoilage` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/spoilage")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_spoilage():
@@ -74,6 +100,10 @@ def api_inventory_analytics_spoilage():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Data Quality ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_data_quality` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/data-quality")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_data_quality():
@@ -91,6 +121,10 @@ def api_inventory_analytics_data_quality():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Recent Activity ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_recent_activity` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/recent-activity")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_recent_activity():
@@ -109,6 +143,10 @@ def api_inventory_analytics_recent_activity():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Items List ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_items_list` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/items-list")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_items_list():
@@ -127,6 +165,10 @@ def api_inventory_analytics_items_list():
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Api Inventory Analytics Cost Distribution ---
+# Purpose: Define the top-level behavior of `api_inventory_analytics_cost_distribution` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/inventory-analytics/cost-distribution/<int:item_id>")
 @require_developer_permission("dev.access_logs")
 def api_inventory_analytics_cost_distribution(item_id):
@@ -145,6 +187,10 @@ def api_inventory_analytics_cost_distribution(item_id):
         return jsonify({"error": str(exc)}), 500
 
 
+# --- Analytics Catalog ---
+# Purpose: Define the top-level behavior of `analytics_catalog` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/analytics-catalog")
 @require_developer_permission("dev.access_logs")
 def analytics_catalog():

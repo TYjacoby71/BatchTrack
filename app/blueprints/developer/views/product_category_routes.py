@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/product_category_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
@@ -9,6 +19,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Product Categories ---
+# Purpose: Define the top-level behavior of `product_categories` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/product-categories")
 @require_developer_permission("dev.system_admin")
 def product_categories():
@@ -16,6 +30,10 @@ def product_categories():
     return render_template("developer/categories/list.html", categories=categories)
 
 
+# --- Create Product Category ---
+# Purpose: Define the top-level behavior of `create_product_category` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/product-categories/new", methods=["GET", "POST"])
 @require_developer_permission("dev.system_admin")
 def create_product_category():
@@ -44,6 +62,10 @@ def create_product_category():
     return render_template("developer/categories/new.html")
 
 
+# --- Edit Product Category ---
+# Purpose: Define the top-level behavior of `edit_product_category` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/product-categories/<int:cat_id>/edit", methods=["GET", "POST"])
 @require_developer_permission("dev.system_admin")
 def edit_product_category(cat_id):
@@ -74,6 +96,10 @@ def edit_product_category(cat_id):
     return render_template("developer/categories/edit.html", category=cat)
 
 
+# --- Delete Product Category ---
+# Purpose: Define the top-level behavior of `delete_product_category` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/product-categories/<int:cat_id>/delete", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def delete_product_category(cat_id):

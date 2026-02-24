@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/dashboard_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import jsonify, render_template, request, url_for
@@ -10,6 +20,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Dashboard ---
+# Purpose: Define the top-level behavior of `dashboard` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/dashboard")
 @require_developer_permission("dev.dashboard")
 def dashboard():
@@ -27,6 +41,10 @@ def dashboard():
     return render_template("developer/dashboard.html", **context)
 
 
+# --- Marketing Admin ---
+# Purpose: Define the top-level behavior of `marketing_admin` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/marketing-admin")
 @require_developer_permission("dev.system_admin")
 def marketing_admin():
@@ -35,6 +53,10 @@ def marketing_admin():
     return render_template("developer/marketing_admin.html", **context)
 
 
+# --- Marketing Admin Save ---
+# Purpose: Define the top-level behavior of `marketing_admin_save` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/marketing-admin/save", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def marketing_admin_save():
@@ -47,6 +69,10 @@ def marketing_admin_save():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+# --- Batchley Overview ---
+# Purpose: Define the top-level behavior of `batchley_overview` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/batchley")
 @require_developer_permission("dev.dashboard")
 def batchley_overview():
@@ -65,6 +91,10 @@ def batchley_overview():
     )
 
 
+# --- System Settings ---
+# Purpose: Define the top-level behavior of `system_settings` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/system-settings")
 @require_developer_permission("dev.system_settings")
 def system_settings():
@@ -106,6 +136,10 @@ def system_settings():
     )
 
 
+# --- Update System Settings ---
+# Purpose: Define the top-level behavior of `update_system_settings` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/system-settings/update", methods=["POST"])
 @require_developer_permission("dev.system_settings")
 def update_system_settings():
@@ -134,6 +168,10 @@ def update_system_settings():
     return jsonify({"success": True})
 
 
+# --- Feature Flags ---
+# Purpose: Define the top-level behavior of `feature_flags` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/feature-flags")
 @require_developer_permission("dev.system_admin")
 def feature_flags():
@@ -153,6 +191,10 @@ def feature_flags():
     )
 
 
+# --- System Statistics ---
+# Purpose: Define the top-level behavior of `system_statistics` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/system-statistics")
 @require_developer_permission("dev.access_logs")
 def system_statistics():
@@ -162,6 +204,10 @@ def system_statistics():
     return render_template("developer/system_statistics.html", stats=stats)
 
 
+# --- Billing Integration ---
+# Purpose: Define the top-level behavior of `billing_integration` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/billing-integration")
 @require_developer_permission("dev.view_all_billing")
 def billing_integration():
@@ -169,6 +215,10 @@ def billing_integration():
     return render_template("developer/billing_integration.html")
 
 
+# --- Waitlist Statistics ---
+# Purpose: Define the top-level behavior of `waitlist_statistics` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/waitlist-statistics")
 @require_developer_permission("dev.system_admin")
 def waitlist_statistics():
