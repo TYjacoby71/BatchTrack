@@ -53,28 +53,18 @@ _HOMEPAGE_FEATURE_CARD_CATALOG = (
         "name": "Recipe Tracking",
         "summary": "Track every recipe, variation, and test in one clear timeline.",
         "icon": "BT",
-        "legacy_candidates": (
-            "images/homepage/features/recipe-tracking.png",
-            "images/homepage/features/batch-tracking.png",
-        ),
     },
     {
         "slug": "fifo-inventory",
         "name": "Inventory Management",
         "summary": "Keep FIFO inventory accurate with cost, lot, and expiration visibility.",
         "icon": "FI",
-        "legacy_candidates": ("images/homepage/features/fifo-inventory.png",),
     },
     {
         "slug": "batch-in-progress",
         "name": "Batch In Progress",
         "summary": "Run each batch with timers, notes, and change tracking from start to finish.",
         "icon": "AN",
-        "legacy_candidates": (
-            "images/homepage/features/batch-in-progress.png",
-            "images/homepage/features/analytics-dashboard.png",
-            "images/homepage/features/timer-management.png",
-        ),
     },
 )
 
@@ -130,22 +120,6 @@ def _serve_cropped_full_logo():
     return response
 
 
-def _resolve_static_image_from_candidates(
-    *, static_root: Path, candidates: tuple[str, ...]
-) -> str | None:
-    """Return first existing static path from preferred candidates."""
-    for candidate in candidates:
-        relative_path = str(candidate or "").strip().lstrip("/")
-        if not relative_path:
-            continue
-        try:
-            if (static_root / relative_path).is_file():
-                return relative_path
-        except OSError:
-            continue
-    return None
-
-
 def _resolve_static_image_from_folder(*, static_root: Path, folder: str) -> str | None:
     """Return first image file inside a static subfolder."""
     relative_folder = str(folder or "").strip().lstrip("/")
@@ -189,11 +163,6 @@ def get_homepage_feature_cards() -> list[dict[str, str | None]]:
                 static_root=static_root,
                 folder=folder,
             )
-            if image_path is None:
-                image_path = _resolve_static_image_from_candidates(
-                    static_root=static_root,
-                    candidates=tuple(card.get("legacy_candidates") or ()),
-                )
         resolved["image_path"] = image_path
         cards.append(resolved)
 

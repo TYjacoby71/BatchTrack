@@ -21,6 +21,14 @@ Placeholder policy:
 
 ## 1) Homepage images (actively referenced in templates)
 
+### Quick rule for homepage
+
+For homepage cards, use **one image per object folder**:
+
+- Tools: one image per tool folder
+- Features: one image per feature folder
+- Testimonials: fixed filenames (listed below)
+
 ### 1.1 Testimonial logos/photos (`app/templates/homepage.html`)
 
 - [ ] `app/static/images/homepage/testimonials/customer-1-logo.png`
@@ -79,22 +87,14 @@ Additional planned feature artwork folders:
 
 ### 2.5 Tool card image folders (homepage tools row)
 
-Use these folders for any tool-specific card artwork:
+The homepage tools row is folder-based. Put exactly **one** image in each folder:
 
 - `app/static/images/homepage/tools/`
-- `app/static/images/homepage/tools/soap/`
-- `app/static/images/homepage/tools/lotions/`
-- `app/static/images/homepage/tools/baker/`
-- `app/static/images/homepage/tools/candles/`
-- `app/static/images/homepage/tools/herbal/`
-
-Suggested file checklist:
-
-- [ ] `app/static/images/homepage/tools/soap/soap-tool-card.png`
-- [ ] `app/static/images/homepage/tools/lotions/lotion-tool-card.png`
-- [ ] `app/static/images/homepage/tools/baker/baker-tool-card.png`
-- [ ] `app/static/images/homepage/tools/candles/candle-tool-card.png`
-- [ ] `app/static/images/homepage/tools/herbal/herbal-tool-card.png`
+- [ ] `app/static/images/homepage/tools/soap/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/tools/lotions/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/tools/baker/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/tools/candles/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/tools/herbal/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
 
 ---
 

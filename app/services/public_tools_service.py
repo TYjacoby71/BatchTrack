@@ -28,12 +28,6 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Soap Maker Tool",
         "summary": "Build soap formulas, tune lye/water, and export recipe-ready drafts.",
         "icon": "SO",
-        "image_candidates": (
-            "images/homepage/tools/soap/soap-tool-card.png",
-            "images/homepage/tools/soap/soap-card.png",
-            "images/homepage/tools/soap/soap.png",
-            "images/homepage/tools/soap-tool-card.png",
-        ),
         "homepage_rank": 0,
         "default_enabled": True,
     },
@@ -44,12 +38,6 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Lotion Maker Tool",
         "summary": "Plan lotion phases, preservative targets, and temperature ranges.",
         "icon": "LO",
-        "image_candidates": (
-            "images/homepage/tools/lotions/lotion-tool-card.png",
-            "images/homepage/tools/lotions/lotions-tool-card.png",
-            "images/homepage/tools/lotions/lotion.png",
-            "images/homepage/tools/lotion-tool-card.png",
-        ),
         "homepage_rank": 1,
         "default_enabled": True,
     },
@@ -60,12 +48,6 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Baking Calculator",
         "summary": "Scale recipes with baker percentages, hydration, and preferments.",
         "icon": "BK",
-        "image_candidates": (
-            "images/homepage/tools/baker/baker-tool-card.png",
-            "images/homepage/tools/baker/baking-tool-card.png",
-            "images/homepage/tools/baker/baker.png",
-            "images/homepage/tools/baker-tool-card.png",
-        ),
         "homepage_rank": 2,
         "default_enabled": True,
     },
@@ -76,12 +58,6 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Candle Maker Tool",
         "summary": "Dial in wax blends, fragrance load, and vessel sizing math.",
         "icon": "CA",
-        "image_candidates": (
-            "images/homepage/tools/candles/candle-tool-card.png",
-            "images/homepage/tools/candles/candles-tool-card.png",
-            "images/homepage/tools/candles/candle.png",
-            "images/homepage/tools/candle-tool-card.png",
-        ),
         "homepage_rank": 3,
         "default_enabled": True,
     },
@@ -92,12 +68,6 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
         "name": "Herbalist Calculator",
         "summary": "Work through tincture ratios, infusions, and dilution helpers.",
         "icon": "HB",
-        "image_candidates": (
-            "images/homepage/tools/herbal/herbal-tool-card.png",
-            "images/homepage/tools/herbal/herbalist-tool-card.png",
-            "images/homepage/tools/herbal/herbal.png",
-            "images/homepage/tools/herbal-tool-card.png",
-        ),
         "homepage_rank": 4,
         "default_enabled": True,
     },
@@ -107,12 +77,7 @@ PINNED_HOMEPAGE_TOOL_SLUG = "soap"
 
 
 def _resolve_tool_image_path(tool: Dict[str, Any]) -> str | None:
-    """Resolve a tool card image from preferred names, then folder fallback."""
-    candidates = tool.get("image_candidates") or ()
-    if isinstance(candidates, str):
-        candidates = (candidates,)
-    if not isinstance(candidates, (tuple, list)):
-        candidates = ()
+    """Resolve first image file inside the tool's folder."""
     if not has_app_context():
         return None
 
@@ -120,19 +85,6 @@ def _resolve_tool_image_path(tool: Dict[str, Any]) -> str | None:
     if not static_folder:
         return None
     static_root = Path(static_folder)
-
-    for candidate in candidates:
-        relative_path = str(candidate or "").strip().lstrip("/")
-        if not relative_path:
-            continue
-        try:
-            if (static_root / relative_path).is_file():
-                return relative_path
-        except OSError:
-            continue
-
-    # Fallback: accept any image file in the tool's folder so uploads do not
-    # require strict renaming before they render on the homepage.
     slug = str(tool.get("slug") or "").strip()
     if not slug:
         return None
