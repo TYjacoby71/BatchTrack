@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from app.models import FeatureFlag
+from app.services.public_media_service import resolve_first_media_from_folder
 
 PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
     {
@@ -69,6 +70,28 @@ PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
 )
 
 PINNED_HOMEPAGE_TOOL_SLUG = "soap"
+
+
+def _with_tool_media(tool: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy tool metadata and annotate it with resolved image/video media."""
+    resolved = dict(tool)
+    slug = str(resolved.get("slug") or "").strip()
+    media = (
+        resolve_first_media_from_folder(
+            f"images/homepage/tools/{slug}",
+            allow_images=True,
+            allow_videos=True,
+        )
+        if slug
+        else None
+    )
+    resolved["media"] = media
+    resolved["image_path"] = (
+        str(media.get("path"))
+        if media is not None and media.get("kind") == "image" and media.get("path")
+        else None
+    )
+    return resolved
 
 
 def _tool_sort_key(tool: Dict[str, Any]) -> tuple[int, int, str]:
@@ -145,7 +168,7 @@ def get_enabled_public_tools(
         slug = str(tool.get("slug") or "")
         default_enabled = bool(tool.get("default_enabled", True))
         if bool(resolved_flags.get(slug, default_enabled)):
-            enabled.append(dict(tool))
+            enabled.append(_with_tool_media(tool))
 
     enabled.sort(key=_tool_sort_key)
     return enabled
@@ -191,7 +214,7 @@ def get_homepage_balanced_display_tools(
     if len(display_cards) >= max_cards:
         return display_cards[:max_cards]
 
-    ranked_all: List[Dict[str, Any]] = [dict(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all: List[Dict[str, Any]] = [_with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG]
     ranked_all.sort(key=_tool_sort_key)
     for tool in ranked_all:
         if len(display_cards) >= max_cards:

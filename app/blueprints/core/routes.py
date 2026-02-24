@@ -27,6 +27,14 @@ from flask import (
 from flask_login import current_user
 
 from app.extensions import cache
+from app.services.public_media_service import (
+    build_media_signature,
+    get_homepage_feature_cards,
+    get_homepage_integration_tiles,
+    get_homepage_media_slots,
+    get_homepage_more_feature_cards,
+    get_homepage_testimonial_media,
+)
 from app.services.public_tools_service import (
     build_public_tool_flag_signature,
     get_enabled_public_tools,
@@ -109,6 +117,11 @@ def _render_public_homepage_response():
         tool_flags=tool_flags,
         max_cards=3,
     )
+    homepage_feature_cards = get_homepage_feature_cards()
+    homepage_more_feature_cards = get_homepage_more_feature_cards()
+    homepage_integration_tiles = get_homepage_integration_tiles()
+    homepage_media_slots = get_homepage_media_slots()
+    homepage_testimonial_media = get_homepage_testimonial_media()
     try:
         from app.utils.settings import is_feature_enabled
 
@@ -121,6 +134,80 @@ def _render_public_homepage_response():
     try:
         tool_flag_signature = build_public_tool_flag_signature(tool_flags=tool_flags)
         cache_key = f"{cache_key}:tools:{tool_flag_signature}"
+    except Exception:
+        pass
+    try:
+        tool_media_signature = build_media_signature(
+            (
+                str(tool.get("slug") or ""),
+                tool.get("media"),
+            )
+            for tool in homepage_tool_cards_desktop
+        )
+        cache_key = f"{cache_key}:tool-media:{tool_media_signature or 'none'}"
+    except Exception:
+        pass
+    try:
+        feature_media_signature = build_media_signature(
+            (
+                str(card.get("slug") or ""),
+                card.get("media"),
+            )
+            for card in homepage_feature_cards
+        )
+        cache_key = f"{cache_key}:feature-media:{feature_media_signature or 'none'}"
+    except Exception:
+        pass
+    try:
+        more_feature_media_signature = build_media_signature(
+            (
+                str(card.get("slug") or ""),
+                card.get("media"),
+            )
+            for card in homepage_more_feature_cards
+        )
+        cache_key = (
+            f"{cache_key}:more-feature-media:{more_feature_media_signature or 'none'}"
+        )
+    except Exception:
+        pass
+    try:
+        integration_media_signature = build_media_signature(
+            (
+                str(tile.get("slug") or ""),
+                tile.get("media"),
+            )
+            for tile in homepage_integration_tiles
+        )
+        cache_key = f"{cache_key}:integration-media:{integration_media_signature or 'none'}"
+    except Exception:
+        pass
+    try:
+        testimonial_media_signature = build_media_signature(
+            (
+                f"{customer_key}:logo",
+                (slots.get("logo") if isinstance(slots, dict) else None),
+            )
+            for customer_key, slots in sorted(homepage_testimonial_media.items())
+        )
+        testimonial_photo_signature = build_media_signature(
+            (
+                f"{customer_key}:photo",
+                (slots.get("photo") if isinstance(slots, dict) else None),
+            )
+            for customer_key, slots in sorted(homepage_testimonial_media.items())
+        )
+        cache_key = (
+            f"{cache_key}:testimonial-media:{testimonial_media_signature or 'none'}"
+            f":testimonial-photo:{testimonial_photo_signature or 'none'}"
+        )
+    except Exception:
+        pass
+    try:
+        slot_media_signature = build_media_signature(
+            (slot_key, media) for slot_key, media in sorted(homepage_media_slots.items())
+        )
+        cache_key = f"{cache_key}:page-slots:{slot_media_signature or 'none'}"
     except Exception:
         pass
     try:
@@ -138,6 +225,11 @@ def _render_public_homepage_response():
         "homepage.html",
         homepage_tool_cards=homepage_tool_cards,
         homepage_tool_cards_desktop=homepage_tool_cards_desktop,
+        homepage_feature_cards=homepage_feature_cards,
+        homepage_more_feature_cards=homepage_more_feature_cards,
+        homepage_integration_tiles=homepage_integration_tiles,
+        homepage_media_slots=homepage_media_slots,
+        homepage_testimonial_media=homepage_testimonial_media,
         homepage_mobile_swipe_enabled=len(homepage_tool_cards) > 1,
         homepage_has_more_tools=len(enabled_public_tools) > len(homepage_tool_cards),
         homepage_enabled_tool_count=len(enabled_public_tools),

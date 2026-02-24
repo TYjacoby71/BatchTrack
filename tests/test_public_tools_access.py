@@ -4,6 +4,26 @@ import re
 import pytest
 
 _HEADING_LEVEL_PATTERN = re.compile(r"<h([1-6])\b", re.IGNORECASE)
+_ONE_PIXEL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDATx\x9cc\xf8\xff"
+    b"\xff?\x00\x05\xfe\x02\xfeA\xdd\x8d\xb1\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+_DUMMY_VIDEO_BYTES = b"batchtrack-demo-video-placeholder"
+_SUPPORTED_MEDIA_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".svg",
+    ".avif",
+    ".mp4",
+    ".webm",
+    ".ogg",
+    ".mov",
+    ".m4v",
+}
 
 
 def _first_nav_classes(html: str) -> str:
@@ -665,6 +685,199 @@ def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
     lotion_idx = html.index("Lotion Maker Tool")
     baking_idx = html.index("Baking Calculator")
     assert lotion_idx < soap_idx < baking_idx
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_tool_cards_render_uploaded_soap_image(app):
+    """Homepage soap tool card should switch to uploaded card art when present."""
+    from pathlib import Path
+
+    client = app.test_client()
+
+    with app.app_context():
+        soap_image_path = (
+            Path(app.static_folder) / "images/homepage/tools/soap/soap-tool-card.png"
+        )
+        soap_image_path.parent.mkdir(parents=True, exist_ok=True)
+        created_for_test = False
+        if not soap_image_path.exists():
+            soap_image_path.write_bytes(_ONE_PIXEL_PNG)
+            created_for_test = True
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert 'src="/static/images/homepage/tools/soap/soap-tool-card.png"' in html
+    finally:
+        if created_for_test:
+            soap_image_path.unlink(missing_ok=True)
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_tool_cards_render_uploaded_soap_image_without_strict_filename(app):
+    """Homepage soap card should render a custom upload filename from tool folder."""
+    from pathlib import Path
+
+    client = app.test_client()
+
+    with app.app_context():
+        soap_folder = Path(app.static_folder) / "images/homepage/tools/soap"
+        soap_folder.mkdir(parents=True, exist_ok=True)
+        canonical_name = soap_folder / "soap-tool-card.png"
+        canonical_backup: Path | None = None
+        if canonical_name.exists():
+            canonical_backup = soap_folder / "soap-tool-card.png.bak-test"
+            canonical_name.rename(canonical_backup)
+
+        custom_name = soap_folder / "Screenshot 2026-02-23 173907.png"
+        created_for_test = False
+        if not custom_name.exists():
+            custom_name.write_bytes(_ONE_PIXEL_PNG)
+            created_for_test = True
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/tools/soap/Screenshot%202026-02-23%20173707.png"'
+            in html
+        )
+    finally:
+        if created_for_test:
+            custom_name.unlink(missing_ok=True)
+        if canonical_backup is not None and canonical_backup.exists():
+            canonical_backup.rename(canonical_name)
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(app):
+    """Homepage feature cards should render image from folder regardless of filename."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    feature_folder: Path | None = None
+    custom_name: Path | None = None
+
+    with app.app_context():
+        feature_folder = Path(app.static_folder) / "images/homepage/features/fifo-inventory"
+        feature_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in feature_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower()
+                in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"}
+            ):
+                backup = feature_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_name = feature_folder / "000 Inventory Snapshot.png"
+        custom_name.write_bytes(_ONE_PIXEL_PNG)
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/features/fifo-inventory/000%20Inventory%20Snapshot.png"'
+            in html
+        )
+    finally:
+        if custom_name is not None and custom_name.exists():
+            custom_name.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
+    """Homepage hero slot should render media from folder with arbitrary filename."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    hero_folder: Path | None = None
+    custom_video: Path | None = None
+
+    with app.app_context():
+        hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
+        hero_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in hero_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = hero_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_video = hero_folder / "000 hero clip.mp4"
+        custom_video.write_bytes(_DUMMY_VIDEO_BYTES)
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/hero/primary/000%20hero%20clip.mp4"' in html
+        )
+        assert 'class="hero-slot-media"' in html
+    finally:
+        if custom_video is not None and custom_video.exists():
+            custom_video.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
+def test_help_gallery_renders_uploaded_media_without_strict_filename(app):
+    """Help gallery should render media files from section folder by sorted order."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    section_folder: Path | None = None
+    custom_image: Path | None = None
+
+    with app.app_context():
+        section_folder = Path(app.static_folder) / "images/help/getting-started"
+        section_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in section_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = section_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_image = section_folder / "A-first-help-shot.png"
+        custom_image.write_bytes(_ONE_PIXEL_PNG)
+
+    try:
+        response = _assert_public_get(
+            client, "/help/how-it-works", label="help overview"
+        )
+        html = response.get_data(as_text=True)
+        assert 'src="/static/images/help/getting-started/A-first-help-shot.png"' in html
+    finally:
+        if custom_image is not None and custom_image.exists():
+            custom_image.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
 
 
 @pytest.mark.usefixtures("app")
