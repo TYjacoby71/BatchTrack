@@ -14,8 +14,11 @@ from flask import Blueprint, jsonify, render_template, request, url_for
 from flask_login import current_user
 
 from app.extensions import limiter
-from app.models import FeatureFlag
 from app.services.public_bot_trap_service import PublicBotTrapService
+from app.services.public_tools_service import (
+    get_public_tool_flags,
+    is_tool_flag_enabled,
+)
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 from app.services.tools.soap_tool import (
     SoapToolComputationService,
@@ -37,13 +40,7 @@ tools_bp = Blueprint("tools_bp", __name__)
 # Inputs: Feature key and optional default boolean.
 # Outputs: Boolean flag value used by route rendering.
 def _is_enabled(key: str, default: bool = True) -> bool:
-    try:
-        flag = FeatureFlag.query.filter_by(key=key).first()
-        if flag is not None:
-            return bool(flag.enabled)
-        return default
-    except Exception:
-        return default
+    return is_tool_flag_enabled(key, default)
 
 
 # --- Tool page renderer ---
@@ -131,13 +128,7 @@ def tools_index():
     Includes: Unit Converter, Fragrance Load Calculator, Lye Calculator (view-only),
     and quick draft Recipe Tool (category-aware) with Save CTA that invites sign-in.
     """
-    flags = {
-        "soap": _is_enabled("TOOLS_SOAP", True),
-        "candles": _is_enabled("TOOLS_CANDLES", True),
-        "lotions": _is_enabled("TOOLS_LOTIONS", True),
-        "herbal": _is_enabled("TOOLS_HERBAL", True),
-        "baker": _is_enabled("TOOLS_BAKING", True),
-    }
+    flags = get_public_tool_flags()
     return render_template(
         "tools/index.html",
         tool_flags=flags,

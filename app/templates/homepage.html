@@ -74,6 +74,31 @@
             transform: translateY(-5px);
         }
 
+        .tool-feature-card-link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .tool-feature-card-link:hover,
+        .tool-feature-card-link:focus {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .tool-feature-card-link .feature-card {
+            margin-bottom: 0;
+        }
+
+        .tool-feature-card-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: #0d6efd;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
         .cta-section {
             background: linear-gradient(45deg, #ff6b6b, #ffa500);
             color: white;
@@ -327,6 +352,48 @@
                     </p>
                     <a href="#about" class="btn btn-cta text-white fw-semibold">Learn More</a>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Free Tools Section -->
+    <section id="free-tools" class="py-5 border-bottom">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">FREE TOOLS &amp; CALCULATORS</h2>
+                <p class="lead text-muted mb-0">Most-used tools appear first, with the soap maker tool pinned for quick access.</p>
+            </div>
+
+            {% if homepage_tool_cards and homepage_tool_cards|length > 0 %}
+            <div class="row justify-content-center">
+                {% for tool in homepage_tool_cards %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <a class="tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
+                        <div class="card feature-card h-100">
+                            <div class="card-body text-center">
+                                <div class="placeholder-img mb-3">
+                                    <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                </div>
+                                {% if tool.slug == 'soap' %}
+                                <span class="badge bg-primary mb-2">Pinned</span>
+                                {% endif %}
+                                <h3 class="card-title h5">{{ tool.name }}</h3>
+                                <p class="card-text">{{ tool.summary }}</p>
+                                <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-center text-muted mb-4">
+                Free tools are not enabled right now. Check back soon.
+            </p>
+            {% endif %}
+
+            <div class="text-center">
+                <a href="{{ url_for('tools_bp.tools_index') }}" class="btn btn-outline-primary btn-lg">More Tools</a>
             </div>
         </div>
     </section>

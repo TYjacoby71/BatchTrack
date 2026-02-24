@@ -615,6 +615,59 @@ def test_homepage_performance_and_accessibility_basics(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_free_tools_cards_follow_feature_flag_toggles(app):
+    """Homepage should show pinned soap plus enabled highest-priority tool cards."""
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    client = app.test_client()
+
+    with app.app_context():
+        desired_flags = {
+            "TOOLS_SOAP": True,
+            "TOOLS_LOTIONS": True,
+            "TOOLS_BAKING": True,
+            "TOOLS_CANDLES": False,
+            "TOOLS_HERBAL": False,
+        }
+        for key, enabled in desired_flags.items():
+            flag = FeatureFlag.query.filter_by(key=key).first()
+            if flag is None:
+                db.session.add(
+                    FeatureFlag(
+                        key=key,
+                        enabled=enabled,
+                        description=f"{key} test toggle",
+                    )
+                )
+            else:
+                flag.enabled = enabled
+        db.session.commit()
+
+    response = _assert_public_get(
+        client, "/", label="homepage", query_string={"refresh": "1"}
+    )
+    html = response.get_data(as_text=True)
+
+    assert "FREE TOOLS &amp; CALCULATORS" in html
+    assert "Soap Maker Tool" in html
+    assert "Lotion Maker Tool" in html
+    assert "Baking Calculator" in html
+    assert "Candle Maker Tool" not in html
+    assert "Herbalist Calculator" not in html
+    assert "Pinned" in html
+    assert 'href="/tools/soap"' in html
+    assert 'href="/tools/lotions"' in html
+    assert 'href="/tools/baker"' in html
+    assert 'href="/tools/"' in html
+
+    soap_idx = html.index("Soap Maker Tool")
+    lotion_idx = html.index("Lotion Maker Tool")
+    baking_idx = html.index("Baking Calculator")
+    assert soap_idx < lotion_idx < baking_idx
+
+
+@pytest.mark.usefixtures("app")
 def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()
