@@ -13,8 +13,8 @@ Glossary:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-      {% set resolved_title = page_title or "BatchTrack — Production & Inventory" %}
-      {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
+      {% set resolved_title = page_title or "BatchTrack | Batch Tracking for Makers" %}
+      {% set resolved_description = page_description or "BatchTrack helps makers track recipes, inventory lots, and every batch from plan to finish." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
       {% set resolved_og_image = page_og_image or url_for('static', filename='images/og/batchtrack-default-og.svg', _external=True) %}
       {% set requested_public_header = use_public_header if use_public_header is defined else (show_public_header if show_public_header is defined else none) %}
