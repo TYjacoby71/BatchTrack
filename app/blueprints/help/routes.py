@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, url_for
 
+from app.services.public_media_service import get_help_media_for_sections
+
 help_bp = Blueprint("help_routes", __name__)
 
 
@@ -439,9 +441,11 @@ def help_overview():
             ],
         },
     ]
+    help_section_media = get_help_media_for_sections(sections)
     return render_template(
         "help/how_it_works.html",
         sections=sections,
+        help_section_media=help_section_media,
         show_public_header=True,
         public_header_signup_source="help_overview_start_free_trial",
         lightweight_public_shell=True,

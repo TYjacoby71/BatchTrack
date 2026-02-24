@@ -9,6 +9,21 @@ _ONE_PIXEL_PNG = (
     b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDATx\x9cc\xf8\xff"
     b"\xff?\x00\x05\xfe\x02\xfeA\xdd\x8d\xb1\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+_DUMMY_VIDEO_BYTES = b"batchtrack-demo-video-placeholder"
+_SUPPORTED_MEDIA_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".svg",
+    ".avif",
+    ".mp4",
+    ".webm",
+    ".ogg",
+    ".mov",
+    ".m4v",
+}
 
 
 def _first_nav_classes(html: str) -> str:
@@ -777,6 +792,89 @@ def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(ap
     finally:
         if custom_name is not None and custom_name.exists():
             custom_name.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
+def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
+    """Homepage hero slot should render media from folder with arbitrary filename."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    hero_folder: Path | None = None
+    custom_video: Path | None = None
+
+    with app.app_context():
+        hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
+        hero_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in hero_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = hero_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_video = hero_folder / "000 hero clip.mp4"
+        custom_video.write_bytes(_DUMMY_VIDEO_BYTES)
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            'src="/static/images/homepage/hero/primary/000%20hero%20clip.mp4"' in html
+        )
+        assert 'class="hero-slot-media"' in html
+    finally:
+        if custom_video is not None and custom_video.exists():
+            custom_video.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
+def test_help_gallery_renders_uploaded_media_without_strict_filename(app):
+    """Help gallery should render media files from section folder by sorted order."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    section_folder: Path | None = None
+    custom_image: Path | None = None
+
+    with app.app_context():
+        section_folder = Path(app.static_folder) / "images/help/getting-started"
+        section_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in section_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = section_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        custom_image = section_folder / "A-first-help-shot.png"
+        custom_image.write_bytes(_ONE_PIXEL_PNG)
+
+    try:
+        response = _assert_public_get(
+            client, "/help/how-it-works", label="help overview"
+        )
+        html = response.get_data(as_text=True)
+        assert 'src="/static/images/help/getting-started/A-first-help-shot.png"' in html
+    finally:
+        if custom_image is not None and custom_image.exists():
+            custom_image.unlink(missing_ok=True)
         for backup, original in backups:
             if backup.exists():
                 backup.rename(original)

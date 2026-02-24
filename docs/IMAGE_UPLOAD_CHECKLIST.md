@@ -1,6 +1,6 @@
 # Image Upload Checklist
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 This is the single checklist to track image uploads across the repo.
 
@@ -9,7 +9,9 @@ This is the single checklist to track image uploads across the repo.
 Only mark an item as `[x]` when all of the following are true:
 
 1. The file exists at the exact path shown below.
-2. The file has a real image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, `.avif`).
+2. The file has a supported media extension:
+   - Images: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, `.avif`
+   - Videos: `.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`
 3. The file is not empty (size > 0 bytes).
 4. The file is not a placeholder/sample/temp image.
 
@@ -23,20 +25,22 @@ Placeholder policy:
 
 ### Quick rule for homepage
 
-For homepage cards, use **one image per object folder**:
+For homepage media slots, use **one file per object folder**:
 
-- Tools: one image per tool folder
-- Features: one image per feature folder
-- Testimonials: fixed filenames (listed below)
+- Tools: one file per tool folder
+- Features: one file per feature folder
+- Hero / CTA / Integrations / Testimonials: one file per named folder
 
 ### 1.1 Testimonial logos/photos (`app/templates/homepage.html`)
 
-- [ ] `app/static/images/homepage/testimonials/customer-1-logo.png`
-- [ ] `app/static/images/homepage/testimonials/customer-1-photo.jpg`
-- [ ] `app/static/images/homepage/testimonials/customer-2-logo.png`
-- [ ] `app/static/images/homepage/testimonials/customer-2-photo.jpg`
-- [ ] `app/static/images/homepage/testimonials/customer-3-logo.png`
-- [ ] `app/static/images/homepage/testimonials/customer-3-photo.jpg`
+Put one file in each folder:
+
+- [ ] `app/static/images/homepage/testimonials/customer-1/logo/<one-media-file>`
+- [ ] `app/static/images/homepage/testimonials/customer-1/photo/<one-media-file>`
+- [ ] `app/static/images/homepage/testimonials/customer-2/logo/<one-media-file>`
+- [ ] `app/static/images/homepage/testimonials/customer-2/photo/<one-media-file>`
+- [ ] `app/static/images/homepage/testimonials/customer-3/logo/<one-media-file>`
+- [ ] `app/static/images/homepage/testimonials/customer-3/photo/<one-media-file>`
 
 ### 1.2 Open Graph images (already present)
 
@@ -49,108 +53,103 @@ For homepage cards, use **one image per object folder**:
 
 ### 2.1 Hero
 
-- [ ] `app/static/images/homepage/hero/hero-background.jpg`
-- [ ] `app/static/images/homepage/hero/hero-overlay.png`
+Put one file in:
+
+- [ ] `app/static/images/homepage/hero/primary/<one-media-file>`
 
 ### 2.2 Features
 
 The homepage feature cards now support folder-based uploads (no strict filename required).
-Drop one image into each folder below; the page will pick it up automatically.
+Drop one media file into each folder below; the page will pick it up automatically.
 
 Primary homepage feature cards (auto-rendered):
 
-- [ ] `app/static/images/homepage/features/recipe-tracking/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/features/fifo-inventory/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/features/batch-in-progress/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/recipe-tracking/<one-media-file>`
+- [ ] `app/static/images/homepage/features/fifo-inventory/<one-media-file>`
+- [ ] `app/static/images/homepage/features/batch-in-progress/<one-media-file>`
+
+Secondary "More Features" cards (auto-rendered):
+
+- [ ] `app/static/images/homepage/features/more-fifo-inventory/<one-media-file>`
+- [ ] `app/static/images/homepage/features/more-qr-code-labels/<one-media-file>`
+- [ ] `app/static/images/homepage/features/more-timer-management/<one-media-file>`
 
 Additional planned feature artwork folders:
 
-- [ ] `app/static/images/homepage/features/analytics-dashboard/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/features/timer-management/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/features/qr-codes/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/features/mobile-friendly/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/features/analytics-dashboard/<one-media-file>`
+- [ ] `app/static/images/homepage/features/timer-management/<one-media-file>`
+- [ ] `app/static/images/homepage/features/qr-codes/<one-media-file>`
+- [ ] `app/static/images/homepage/features/mobile-friendly/<one-media-file>`
 
 ### 2.3 Integrations
 
-- [ ] `app/static/images/homepage/integrations/shopify-logo.png`
-- [ ] `app/static/images/homepage/integrations/etsy-logo.png`
-- [ ] `app/static/images/homepage/integrations/quickbooks-logo.png`
-- [ ] `app/static/images/homepage/integrations/zapier-logo.png`
-- [ ] `app/static/images/homepage/integrations/slack-logo.png`
+Put one file in each:
+
+- [ ] `app/static/images/homepage/integrations/shopify/<one-media-file>`
+- [ ] `app/static/images/homepage/integrations/etsy/<one-media-file>`
+- [ ] `app/static/images/homepage/integrations/quickbooks/<one-media-file>`
+- [ ] `app/static/images/homepage/integrations/zapier/<one-media-file>`
+- [ ] `app/static/images/homepage/integrations/slack/<one-media-file>`
 
 ### 2.4 App screenshots/demo
 
-- [ ] `app/static/images/homepage/app-screenshots/dashboard-screenshot.png`
-- [ ] `app/static/images/homepage/app-screenshots/mobile-app-screenshot.png`
-- [ ] `app/static/images/homepage/app-screenshots/batch-view-screenshot.png`
-- [ ] `app/static/images/homepage/app-screenshots/demo-video-thumbnail.jpg`
+Homepage final CTA media slot:
+
+- [ ] `app/static/images/homepage/app-screenshots/final-cta/<one-media-file>`
 
 ### 2.5 Tool card image folders (homepage tools row)
 
-The homepage tools row is folder-based. Put exactly **one** image in each folder:
+The homepage tools row is folder-based. Put exactly **one** media file in each folder:
 
 - `app/static/images/homepage/tools/`
-- [ ] `app/static/images/homepage/tools/soap/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/tools/lotions/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/tools/baker/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/tools/candles/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
-- [ ] `app/static/images/homepage/tools/herbal/<any-image>.png|jpg|jpeg|webp|gif|svg|avif`
+- [ ] `app/static/images/homepage/tools/soap/<one-media-file>`
+- [ ] `app/static/images/homepage/tools/lotions/<one-media-file>`
+- [ ] `app/static/images/homepage/tools/baker/<one-media-file>`
+- [ ] `app/static/images/homepage/tools/candles/<one-media-file>`
+- [ ] `app/static/images/homepage/tools/herbal/<one-media-file>`
 
 ---
 
 ## 3) Help Center gallery images (`/help/how-it-works`)
 
-Template expects this naming pattern:
-`app/static/images/help/<section-slug>/<section-slug>-<index>.png`
+Help gallery is now folder-based and supports image/video.
+Drop files into each section folder; files are displayed in alphabetical order.
 
 ### 3.1 getting-started
 
-- [ ] `app/static/images/help/getting-started/getting-started-1.png`
-- [ ] `app/static/images/help/getting-started/getting-started-2.png`
+- [ ] `app/static/images/help/getting-started/` (first 2 media files used)
 
 ### 3.2 inventory
 
-- [ ] `app/static/images/help/inventory/inventory-1.png`
-- [ ] `app/static/images/help/inventory/inventory-2.png`
-- [ ] `app/static/images/help/inventory/inventory-3.png`
+- [ ] `app/static/images/help/inventory/` (first 3 media files used)
 
 ### 3.3 inventory-adjustments
 
-- [ ] `app/static/images/help/inventory-adjustments/inventory-adjustments-1.png`
-- [ ] `app/static/images/help/inventory-adjustments/inventory-adjustments-2.png`
+- [ ] `app/static/images/help/inventory-adjustments/` (first 2 media files used)
 
 ### 3.4 recipes
 
-- [ ] `app/static/images/help/recipes/recipes-1.png`
-- [ ] `app/static/images/help/recipes/recipes-2.png`
+- [ ] `app/static/images/help/recipes/` (first 2 media files used)
 
 ### 3.5 planning
 
-- [ ] `app/static/images/help/planning/planning-1.png`
-- [ ] `app/static/images/help/planning/planning-2.png`
-- [ ] `app/static/images/help/planning/planning-3.png`
-- [ ] `app/static/images/help/planning/planning-4.png`
+- [ ] `app/static/images/help/planning/` (first 4 media files used)
 
 ### 3.6 costing
 
-- [ ] `app/static/images/help/costing/costing-1.png`
-- [ ] `app/static/images/help/costing/costing-2.png`
+- [ ] `app/static/images/help/costing/` (first 2 media files used)
 
 ### 3.7 products
 
-- [ ] `app/static/images/help/products/products-1.png`
-- [ ] `app/static/images/help/products/products-2.png`
-- [ ] `app/static/images/help/products/products-3.png`
+- [ ] `app/static/images/help/products/` (first 3 media files used)
 
 ### 3.8 labels-exports
 
-- [ ] `app/static/images/help/labels-exports/labels-exports-1.png`
-- [ ] `app/static/images/help/labels-exports/labels-exports-2.png`
+- [ ] `app/static/images/help/labels-exports/` (first 2 media files used)
 
 ### 3.9 public-tools
 
-- [ ] `app/static/images/help/public-tools/public-tools-1.png`
-- [ ] `app/static/images/help/public-tools/public-tools-2.png`
+- [ ] `app/static/images/help/public-tools/` (first 2 media files used)
 
 ---
 
