@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/organization_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -15,6 +25,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Organizations ---
+# Purpose: Define the top-level behavior of `organizations` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations")
 @developer_bp.route("/customer-support")
 @require_developer_permission("dev.all_organizations")
@@ -59,6 +73,10 @@ def organizations():
     )
 
 
+# --- Create Organization ---
+# Purpose: Define the top-level behavior of `create_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations/create", methods=["GET", "POST"])
 @require_developer_permission("dev.create_organizations")
 def create_organization():
@@ -86,6 +104,10 @@ def create_organization():
     return render_form()
 
 
+# --- Organization Detail ---
+# Purpose: Define the top-level behavior of `organization_detail` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations/<int:org_id>")
 @require_developer_permission("dev.all_organizations")
 def organization_detail(org_id):
@@ -139,6 +161,10 @@ def organization_detail(org_id):
     )
 
 
+# --- Edit Organization ---
+# Purpose: Define the top-level behavior of `edit_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations/<int:org_id>/edit", methods=["POST"])
 @require_developer_permission("dev.modify_any_organization")
 def edit_organization(org_id):
@@ -149,6 +175,10 @@ def edit_organization(org_id):
     return redirect(url_for("developer.organization_detail", org_id=org_id))
 
 
+# --- Upgrade Organization ---
+# Purpose: Define the top-level behavior of `upgrade_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations/<int:org_id>/upgrade", methods=["POST"])
 @require_developer_permission("dev.billing_override")
 def upgrade_organization(org_id):
@@ -161,6 +191,10 @@ def upgrade_organization(org_id):
     return redirect(url_for("developer.organization_detail", org_id=org_id))
 
 
+# --- Delete Organization ---
+# Purpose: Define the top-level behavior of `delete_organization` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/organizations/<int:org_id>/delete", methods=["POST"])
 @require_developer_permission("dev.delete_organizations")
 def delete_organization(org_id):

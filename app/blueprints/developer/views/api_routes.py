@@ -1,3 +1,13 @@
+"""Module documentation.
+
+Synopsis:
+This module defines route handlers and helpers for `app/blueprints/developer/views/api_routes.py`.
+
+Glossary:
+- Route handler: A Flask view function bound to an endpoint.
+- Helper unit: A module-level function or class supporting route/service flow.
+"""
+
 from __future__ import annotations
 
 from flask import jsonify, request
@@ -8,6 +18,10 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 
+# --- Api Stats ---
+# Purpose: Define the top-level behavior of `api_stats` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
 @developer_bp.route("/api/stats")
 @require_developer_permission("dev.access_logs")
 def api_stats():
