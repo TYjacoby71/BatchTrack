@@ -26,11 +26,6 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 ),
             },
             {
-                "label": "Inventory quantity tracking from deductions",
-                "kind": "boolean",
-                "permissions_any": ("inventory.track_quantities",),
-            },
-            {
                 "label": "FIFO lot tracking and traceability",
                 "kind": "boolean",
                 "permissions_any": ("inventory.view",),
@@ -49,6 +44,11 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 "label": "Batch production workflow",
                 "kind": "boolean",
                 "permissions_any": ("batches.create", "batches.finish"),
+            },
+            {
+                "label": "Inventory quantity tracking from deductions",
+                "kind": "boolean",
+                "permissions_any": ("inventory.track_quantities",),
             },
             {
                 "label": "Batch output posting to inventory",
@@ -80,28 +80,9 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 ),
             },
             {
-                "label": "Paid recipe purchase controls",
-                "kind": "boolean",
-                "permissions_any": ("recipes.purchase_options",),
-            },
-            {
                 "label": "Global Inventory Library import",
                 "kind": "boolean",
                 "permissions_any": ("inventory.edit",),
-            },
-            {
-                "label": "Public maker tools (soap, candle, lotion, herbal, baking)",
-                "kind": "text",
-                "text": "Included for all visitors",
-            },
-            {
-                "label": "Shopify / marketplace / API integrations",
-                "kind": "boolean",
-                "permissions_any": (
-                    "integrations.shopify",
-                    "integrations.marketplace",
-                    "integrations.api_access",
-                ),
             },
             {
                 "label": "Bulk inventory updates",
@@ -113,11 +94,35 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 "kind": "boolean",
                 "permissions_any": ("recipes.plan_production",),
             },
+            {
+                "label": "Paid recipe purchase controls",
+                "kind": "boolean",
+                "permissions_any": ("recipes.purchase_options",),
+            },
+            {
+                "label": "Shopify / marketplace / API integrations",
+                "kind": "boolean",
+                "permissions_any": (
+                    "integrations.shopify",
+                    "integrations.marketplace",
+                    "integrations.api_access",
+                ),
+            },
+            {
+                "label": "Public maker tools (soap, candle, lotion, herbal, baking)",
+                "kind": "text",
+                "text": "Included for all visitors",
+            },
         ),
     },
     {
         "title": "AI, team, and governance",
         "rows": (
+            {
+                "label": "Billing management",
+                "kind": "boolean",
+                "permissions_any": ("organization.manage_billing",),
+            },
             {
                 "label": "BatchBot assistant",
                 "kind": "boolean",
@@ -150,11 +155,6 @@ FEATURE_COMPARISON_SECTIONS: tuple[dict[str, Any], ...] = (
                 "kind": "boolean",
                 "permissions_any": ("organization.manage_roles",),
                 "min_user_limit": 2,
-            },
-            {
-                "label": "Billing management",
-                "kind": "boolean",
-                "permissions_any": ("organization.manage_billing",),
             },
         ),
     },
