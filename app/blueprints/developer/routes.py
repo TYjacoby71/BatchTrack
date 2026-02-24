@@ -1,3 +1,13 @@
+"""Routes module utilities.
+
+Synopsis:
+Provide documented top-level behavior for `app/blueprints/developer/routes.py` without altering runtime logic.
+
+Glossary:
+- Module path: Source file `app/blueprints/developer/routes.py`.
+- Unit heading block: Standardized comment metadata above each top-level function/class.
+"""
+
 import os
 
 from flask import Blueprint, jsonify, render_template, request
@@ -28,6 +38,10 @@ developer_bp.register_blueprint(addons_bp)
 from . import views  # noqa: F401,E402
 
 
+# --- Vendor Signups ---
+# Purpose: Implement `vendor_signups` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @developer_bp.route("/vendor-signups")
 @limiter.limit("100 per minute")
 @permission_required("dev.dashboard")
@@ -44,6 +58,10 @@ def vendor_signups():
     return render_template("developer/vendor_signups.html", signups=signups)
 
 
+# --- Waitlist Signups View ---
+# Purpose: Implement `waitlist_signups_view` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @developer_bp.route("/waitlist-signups")
 @limiter.limit("100 per minute")
 @permission_required("dev.dashboard")
@@ -58,6 +76,9 @@ def waitlist_signups_view():
 
 
 # --- Vendor Signup Functionality ---
+# Purpose: Implement `api_vendor_signup` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 
 
 @developer_bp.route("/api/vendor/signup", methods=["POST"])

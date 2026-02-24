@@ -19,6 +19,8 @@ from .services.session_service import SessionService
 
 # --- Configure login manager ---
 # Purpose: Attach Flask-Login handlers and user loader.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def configure_login_manager(app):
     """Attach Flask-Login handlers with API-aware responses and session validation."""
     login_manager.init_app(app)
@@ -64,6 +66,8 @@ def configure_login_manager(app):
 
 # --- JSON expectation ---
 # Purpose: Determine whether a request expects JSON output.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _expects_json() -> bool:
     accepts = request.headers.get("Accept", "")
     content_type = request.headers.get("Content-Type", "")
@@ -77,6 +81,8 @@ def _expects_json() -> bool:
 
 # --- Safe rollback ---
 # Purpose: Roll back session without raising during auth handling.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _rollback_safely() -> None:
     try:
         db.session.rollback()

@@ -22,6 +22,10 @@ from app.utils.permissions import (  # Assuming this is the correct import
 logger = logging.getLogger(__name__)
 
 
+# --- Load Tiers Config ---
+# Purpose: Implement `load_tiers_config` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def load_tiers_config():
     raise RuntimeError(
         "Deprecated: load_tiers_config removed. Query SubscriptionTier directly."
@@ -33,6 +37,10 @@ subscription_tiers_bp = Blueprint(
 )
 
 
+# ---  Addon Permission Map ---
+# Purpose: Implement `_addon_permission_map` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _addon_permission_map(addons):
     addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
     if not addon_perm_names:
@@ -49,6 +57,10 @@ def _addon_permission_map(addons):
     }
 
 
+# ---  Base Permissions ---
+# Purpose: Implement `_base_permissions` behavior for this module.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 def _base_permissions(addons):
     addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
     query = Permission.query.filter(Permission.is_active.is_(True))
@@ -62,6 +74,8 @@ def _base_permissions(addons):
 # =========================================================
 # --- List tiers ---
 # Purpose: Show tiers with permission and add-on snapshots.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/")
 @login_required
 @require_permission("dev.manage_tiers")
@@ -139,6 +153,8 @@ def manage_tiers():
 
 # --- Create tier ---
 # Purpose: Create a new tier with limits and entitlements.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/create", methods=["GET", "POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -304,6 +320,8 @@ def create_tier():
 
 # --- Edit tier ---
 # Purpose: Edit tier limits, permissions, and add-on entitlements.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/edit/<int:tier_id>", methods=["GET", "POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -501,6 +519,8 @@ def edit_tier(tier_id):
 
 # --- Delete tier ---
 # Purpose: Delete an unused tier.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/delete/<int:tier_id>", methods=["POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -545,6 +565,8 @@ def delete_tier(tier_id):
 # =========================================================
 # --- Sync Stripe pricing ---
 # Purpose: Pull Stripe pricing metadata for a tier.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/sync/<int:tier_id>", methods=["POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -602,6 +624,8 @@ def sync_tier_with_stripe(tier_id):
 
 # --- Sync Whop pricing ---
 # Purpose: Pull Whop pricing metadata for a tier.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/sync-whop/<int:tier_id>", methods=["POST"])
 @login_required
 @require_permission("dev.manage_tiers")
@@ -634,6 +658,8 @@ def sync_tier_with_whop(tier_id):
 # =========================================================
 # --- Tier metadata API ---
 # Purpose: Return tier metadata for developer UI.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
 @subscription_tiers_bp.route("/api/tiers")
 @login_required
 @require_permission("dev.manage_tiers")
