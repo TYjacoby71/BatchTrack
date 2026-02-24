@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, render_template, request
 
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.utils.json_store import read_json_file, write_json_file
@@ -12,6 +12,14 @@ from app.utils.json_store import read_json_file, write_json_file
 waitlist_bp = Blueprint("waitlist", __name__)
 
 _DEFAULT_WAITLIST_KEY = "public_homepage"
+_WAITLIST_LABELS = {
+    "public_homepage": "BatchTrack",
+    "tools.soap": "Soap Maker Tool",
+    "tools.lotions": "Lotion Maker Tool",
+    "tools.baker": "Baking Calculator",
+    "tools.candles": "Candle Maker Tool",
+    "tools.herbal": "Herbalist Calculator",
+}
 
 
 def _normalize_waitlist_key(raw_value: Optional[str]) -> str:
@@ -38,6 +46,25 @@ def _extract_waitlist_metadata(data: Dict[str, Any]) -> Dict[str, Any]:
         "source": source,
         "context": context,
     }
+
+
+@waitlist_bp.route("/waitlist", methods=["GET"])
+def waitlist_landing():
+    """Render a public waitlist capture page for tool and homepage flows."""
+    waitlist_key = _normalize_waitlist_key(request.args.get("waitlist_key"))
+    waitlist_label = _WAITLIST_LABELS.get(waitlist_key, "BatchTrack")
+    waitlist_source = request.args.get("source") or waitlist_key
+    return render_template(
+        "waitlist/index.html",
+        waitlist_key=waitlist_key,
+        waitlist_label=waitlist_label,
+        waitlist_source=waitlist_source,
+        show_public_header=True,
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
+    )
 
 
 @waitlist_bp.route("/api/waitlist", methods=["POST"])

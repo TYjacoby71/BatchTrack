@@ -79,6 +79,25 @@ def _tool_sort_key(tool: Dict[str, Any]) -> tuple[int, int, str]:
     )
 
 
+def _center_pinned_tool(cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Place pinned tool in middle when there are 3+ cards."""
+    if len(cards) < 3:
+        return cards
+    pinned_index = next(
+        (idx for idx, tool in enumerate(cards) if tool.get("slug") == PINNED_HOMEPAGE_TOOL_SLUG),
+        None,
+    )
+    if pinned_index is None:
+        return cards
+    middle_index = len(cards) // 2
+    if pinned_index == middle_index:
+        return cards
+    reordered = [dict(tool) for tool in cards]
+    pinned_tool = reordered.pop(pinned_index)
+    reordered.insert(middle_index, pinned_tool)
+    return reordered
+
+
 def is_tool_flag_enabled(flag_key: str, default: bool = True) -> bool:
     """Resolve one tool feature flag with a safe fallback."""
     try:
@@ -139,7 +158,7 @@ def get_homepage_public_tools(
     tools = get_enabled_public_tools(tool_flags=tool_flags)
     if max_cards <= 0:
         return []
-    return tools[:max_cards]
+    return _center_pinned_tool(tools[:max_cards])
 
 
 def get_homepage_balanced_display_tools(
@@ -188,7 +207,7 @@ def get_homepage_balanced_display_tools(
         display_cards.append(fallback)
         seen_slugs.add(slug)
 
-    return display_cards[:max_cards]
+    return _center_pinned_tool(display_cards[:max_cards])
 
 
 def build_public_tool_flag_signature(tool_flags: Dict[str, bool] | None = None) -> str:

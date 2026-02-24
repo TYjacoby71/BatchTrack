@@ -68,6 +68,25 @@ Placeholder policy:
 - [ ] `app/static/images/homepage/app-screenshots/batch-view-screenshot.png`
 - [ ] `app/static/images/homepage/app-screenshots/demo-video-thumbnail.jpg`
 
+### 2.5 Tool card image folders (homepage tools row)
+
+Use these folders for any tool-specific card artwork:
+
+- `app/static/images/homepage/tools/`
+- `app/static/images/homepage/tools/soap/`
+- `app/static/images/homepage/tools/lotions/`
+- `app/static/images/homepage/tools/baker/`
+- `app/static/images/homepage/tools/candles/`
+- `app/static/images/homepage/tools/herbal/`
+
+Suggested file checklist:
+
+- [ ] `app/static/images/homepage/tools/soap/soap-tool-card.png`
+- [ ] `app/static/images/homepage/tools/lotions/lotion-tool-card.png`
+- [ ] `app/static/images/homepage/tools/baker/baker-tool-card.png`
+- [ ] `app/static/images/homepage/tools/candles/candle-tool-card.png`
+- [ ] `app/static/images/homepage/tools/herbal/herbal-tool-card.png`
+
 ---
 
 ## 3) Help Center gallery images (`/help/how-it-works`)
