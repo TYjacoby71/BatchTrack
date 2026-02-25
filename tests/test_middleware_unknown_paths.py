@@ -166,6 +166,59 @@ def test_high_confidence_probe_blocks_immediately(app):
     assert blocked_response.status_code == 403
 
 
+def test_google_ads_bot_trap_route_does_not_block_ads_verification_fetches(app):
+    client = app.test_client()
+
+    ads_headers = {
+        "User-Agent": "Google-Adwords-Instant (+http://www.google.com/adsbot.html)",
+        "Referer": "https://ads.google.com/",
+    }
+    trap_response = client.get(
+        "/api/public/bot-trap?source=layout",
+        headers=ads_headers,
+        follow_redirects=False,
+    )
+    assert trap_response.status_code == 204
+
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
+
+    public_response = client.get("/tools/", headers=ads_headers, follow_redirects=False)
+    assert public_response.status_code == 200
+
+
+def test_ads_google_referrer_bypasses_existing_bot_trap_ip_block(app):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    with app.app_context():
+        PublicBotTrapService.add_block(
+            ip="127.0.0.1",
+            ip_block_seconds=600,
+            reason="test_setup",
+            source="test",
+        )
+
+    blocked_response = client.get("/homepage", follow_redirects=False)
+    assert blocked_response.status_code == 403
+
+    ads_preview_headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+        ),
+        "Referer": "https://ads.google.com/home/",
+    }
+    allowed_response = client.get(
+        "/homepage",
+        headers=ads_preview_headers,
+        follow_redirects=False,
+    )
+    assert allowed_response.status_code == 200
+
+
 def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch):
     client = app.test_client()
     from app.services.public_bot_trap_service import PublicBotTrapService
