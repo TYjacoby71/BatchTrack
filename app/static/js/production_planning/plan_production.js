@@ -151,8 +151,22 @@ class PlanProductionApp {
 
         const batchTypeSelect = document.getElementById('batchType');
         if (batchTypeSelect) {
+            if (this.batchType) {
+                if (batchTypeSelect.tagName === 'SELECT') {
+                    const hasDefaultOption = Array.from(batchTypeSelect.options || []).some(
+                        (option) => option.value === this.batchType
+                    );
+                    if (hasDefaultOption) {
+                        batchTypeSelect.value = this.batchType;
+                    }
+                } else {
+                    batchTypeSelect.value = this.batchType;
+                }
+            }
             if (!this.batchType) {
                 this.batchType = batchTypeSelect.value || '';
+            } else if (!batchTypeSelect.value && batchTypeSelect.tagName === 'SELECT') {
+                this.batchType = '';
             }
             batchTypeSelect.addEventListener('change', (e) => {
                 this.batchType = e.target.value;

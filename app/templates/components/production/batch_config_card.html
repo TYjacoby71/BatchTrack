@@ -40,9 +40,17 @@
                             class="form-select" 
                             required>
                         <option value="">Select Type</option>
+                        {% if recipe.test_sequence is not none %}
+                        <option value="untracked">Test Run (Discard Output)</option>
+                        {% endif %}
                         <option value="ingredient">Intermediate Ingredient</option>
                         <option value="product">Final Product</option>
                     </select>
+                    {% if recipe.test_sequence is not none %}
+                    <div class="form-text">
+                        Test recipes can start as untracked so output is recorded without creating inventory.
+                    </div>
+                    {% endif %}
                     {% else %}
                     <input type="hidden" id="batchType" value="untracked">
                     <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;">
