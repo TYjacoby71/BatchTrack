@@ -335,7 +335,7 @@ def test_bot_trap_hit_audit_logging_is_disabled_by_default(app):
         app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 999
 
     response = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert response.status_code == 404
+    assert response.status_code == 403
 
     with app.app_context():
         assert BotTrapHit.query.count() == 0

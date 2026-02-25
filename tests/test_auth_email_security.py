@@ -41,9 +41,13 @@ def _create_user(*, username: str, email: str, password: str, verified: bool) ->
 
 # --- Prompt mode login ---
 # Purpose: Verify unverified accounts can log in and receive verification prompts in prompt mode.
-def test_login_prompts_unverified_email_without_blocking(client, app):
+def test_login_prompts_unverified_email_without_blocking(client, app, monkeypatch):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+    monkeypatch.setattr(
+        "app.blueprints.auth.login_routes.EmailService.send_verification_email",
+        lambda *args, **kwargs: True,
+    )
 
     with app.app_context():
         user = _create_user(
