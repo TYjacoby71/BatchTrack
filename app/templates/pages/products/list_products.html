@@ -96,7 +96,7 @@
             {% set ns_all.total_value = ns_all.total_value + (inv.retail_price * inv.quantity) %}
           {% endif %}
           {% set size_label = inv.size_label if inv.size_label else 'Bulk' %}
-          {% if size_label == 'Bulk' or not inv.size_label %}
+          {% if not inv.size_label or (size_label and size_label.lower().startswith('bulk')) %}
             {% set ns_all.total_bulk = ns_all.total_bulk + inv.quantity %}
           {% else %}
             {% set ns_all.total_packaged = ns_all.total_packaged + inv.quantity %}

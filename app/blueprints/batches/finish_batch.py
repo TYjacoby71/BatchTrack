@@ -940,10 +940,11 @@ def _create_bulk_sku(
         # Use ProductService to get or create the bulk SKU
         from ...services.product_service import ProductService
 
+        bulk_size_label = ProductService.resolve_bulk_size_label(unit)
         bulk_sku = ProductService.get_or_create_sku(
             product_name=product.name,
             variant_name=variant.name,
-            size_label="Bulk",
+            size_label=bulk_size_label,
             unit=unit,  # Use the batch output unit
         )
 
@@ -972,7 +973,7 @@ def _create_bulk_sku(
             )
 
         logger.info(
-            f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}"
+            f"Created/updated {bulk_size_label} SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}"
         )
         bulk_lot = (
             InventoryLot.query.filter_by(

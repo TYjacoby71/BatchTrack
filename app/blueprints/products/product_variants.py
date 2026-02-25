@@ -75,6 +75,7 @@ def add_variant(product_id):
             )
 
         unit = ""
+        default_bulk_label = "Bulk"
         if auto_create_bulk_sku:
             unit = (unit_override or "").strip() if unit_override else ""
             if not unit:
@@ -86,6 +87,7 @@ def add_variant(product_id):
                     ),
                     400,
                 )
+            default_bulk_label = ProductService.resolve_bulk_size_label(unit)
 
         # Create the ProductVariant
         new_variant = ProductVariant(
@@ -101,12 +103,12 @@ def add_variant(product_id):
         if auto_create_bulk_sku:
             db.session.flush()  # Ensure new_variant has an ID
             sku_code = ProductService.generate_sku_code(
-                product.name, variant_name, "Bulk"
+                product.name, variant_name, default_bulk_label
             )
-            sku_name = f"{variant_name} {product.name} (Bulk)"
+            sku_name = f"{variant_name} {product.name} ({default_bulk_label})"
 
             inventory_item = InventoryItem(
-                name=f"{product.name} - {variant_name} - Bulk",
+                name=f"{product.name} - {variant_name} - {default_bulk_label}",
                 type="product",
                 unit=unit,
                 quantity=0.0,
@@ -120,7 +122,7 @@ def add_variant(product_id):
                 inventory_item_id=inventory_item.id,
                 product_id=product.id,
                 variant_id=new_variant.id,
-                size_label="Bulk",
+                size_label=default_bulk_label,
                 sku_code=sku_code,
                 sku=sku_code,
                 sku_name=sku_name,
@@ -242,9 +244,8 @@ def view_variant(product_id, variant_name):
     base_sku = ProductSKU.query.filter_by(
         product_id=product.id,
         variant_id=product.base_variant.id if product.base_variant else variant.id,
-        size_label="Bulk",
         organization_id=current_user.organization_id,
-    ).first()
+    ).filter(ProductSKU.size_label.ilike("Bulk%")).first()
 
     product_breadcrumb_id = (
         base_sku.inventory_item_id
