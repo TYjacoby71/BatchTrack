@@ -12,6 +12,7 @@ from app.filters.product_filters import (
     register_product_filters,
     safe_float,
 )
+from app.services.recipe_cost_service import calculate_recipe_line_item_cost
 from app.utils.recipe_display import format_recipe_lineage_name
 
 from ..extensions import db
@@ -320,6 +321,16 @@ def _can_access_route_global(_route: str) -> bool:
     return True
 
 
+def _recipe_line_item_cost_global(
+    quantity: Any, recipe_unit: str | None, inventory_item: Any
+) -> float | None:
+    return calculate_recipe_line_item_cost(
+        quantity=quantity,
+        recipe_unit=recipe_unit,
+        inventory_item=inventory_item,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
@@ -371,5 +382,6 @@ def register_template_filters(app) -> None:
             "has_subscription_feature": _has_subscription_feature_global,
             "is_developer": _is_developer_global,
             "can_access_route": _can_access_route_global,
+            "recipe_line_item_cost": _recipe_line_item_cost_global,
         }
     )
