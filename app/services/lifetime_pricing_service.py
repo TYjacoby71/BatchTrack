@@ -58,7 +58,10 @@ class LifetimePricingService:
 
     @classmethod
     def build_lifetime_offers(
-        cls, paid_tiers: Sequence[SubscriptionTier] | None = None
+        cls,
+        paid_tiers: Sequence[SubscriptionTier] | None = None,
+        *,
+        include_live_pricing: bool = True,
     ) -> list[dict]:
         """Return normalized lifetime offers mapped to existing paid tiers."""
         tiers = cls._sort_paid_tiers(paid_tiers or cls._load_paid_tiers())
@@ -87,22 +90,41 @@ class LifetimePricingService:
             yearly_lookup_key = cls.resolve_standard_yearly_lookup_key(tier)
             lifetime_lookup_key = cls.resolve_standard_lifetime_lookup_key(tier)
 
-            monthly_pricing = cls._get_lookup_key_pricing(monthly_lookup_key)
-            yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
-            lifetime_pricing = cls._get_lookup_key_pricing(lifetime_lookup_key)
-
-            lifetime_price_is_valid = bool(
-                lifetime_pricing and lifetime_pricing.get("billing_cycle") == "one-time"
+            monthly_pricing = (
+                cls._get_lookup_key_pricing(monthly_lookup_key)
+                if include_live_pricing
+                else None
             )
+            yearly_pricing = (
+                cls._get_lookup_key_pricing(yearly_lookup_key)
+                if include_live_pricing
+                else None
+            )
+            lifetime_pricing = (
+                cls._get_lookup_key_pricing(lifetime_lookup_key)
+                if include_live_pricing
+                else None
+            )
+            has_lifetime_lookup = bool(lifetime_lookup_key)
+
+            if include_live_pricing:
+                lifetime_price_is_valid = bool(
+                    lifetime_pricing
+                    and lifetime_pricing.get("billing_cycle") == "one-time"
+                )
+            else:
+                lifetime_price_is_valid = has_lifetime_lookup
             has_remaining = bool(
                 tier and lifetime_price_is_valid and true_spots_left > 0
             )
 
             lifetime_price_copy = "Configure lifetime Stripe price"
-            if lifetime_price_is_valid and lifetime_pricing:
+            if include_live_pricing and lifetime_price_is_valid and lifetime_pricing:
                 lifetime_price_copy = (
                     f"{lifetime_pricing.get('formatted_price')} one-time"
                 )
+            elif not include_live_pricing and has_lifetime_lookup:
+                lifetime_price_copy = "One-time pricing at secure checkout"
             elif yearly_pricing:
                 lifetime_price_copy = (
                     f"{yearly_pricing.get('formatted_price')} yearly available"

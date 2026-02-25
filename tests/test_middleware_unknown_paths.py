@@ -149,27 +149,11 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
     assert calls
 
 
-def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
+def test_high_confidence_probe_blocks_immediately(app):
     client = app.test_client()
 
-    # Strike 1: suspicious probe should still return unknown-path status.
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    still_public = client.get("/tools/", follow_redirects=False)
-    assert still_public.status_code == 200
-
-    # Strike 2: still not blocked.
-    second = client.get("/xmlrpc2.php", follow_redirects=False)
-    assert second.status_code == 404
-    still_public = client.get("/tools/", follow_redirects=False)
-    assert still_public.status_code == 200
-
-    # Strike 3: now the IP should be temporarily blocked.
-    third = client.get(
-        "/wp-content/plugins/hellopress/wp_filemanager.php",
-        follow_redirects=False,
-    )
-    assert third.status_code == 404
+    assert first.status_code == 403
 
     with app.app_context():
         from app.models.public_bot_trap import BotTrapIpState
@@ -200,12 +184,7 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
     )
 
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    second = client.get(
-        "/wp-content/plugins/Cache/dropdown.php",
-        follow_redirects=False,
-    )
-    assert second.status_code == 404
+    assert first.status_code == 403
 
     blocked_response = client.get("/tools/", follow_redirects=False)
     assert blocked_response.status_code == 403
@@ -227,7 +206,9 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
         assert ip_state is None or ip_state.blocked_until is None
 
 
-def test_redis_probe_hot_path_blocks_without_intermediate_db_rows(app, monkeypatch):
+def test_redis_probe_hot_path_blocks_high_confidence_probe_immediately(
+    app, monkeypatch
+):
     client = app.test_client()
     from app.models.public_bot_trap import BotTrapIpState
     from app.services.public_bot_trap_service import PublicBotTrapService
@@ -252,18 +233,7 @@ def test_redis_probe_hot_path_blocks_without_intermediate_db_rows(app, monkeypat
     app.config["BOT_TRAP_PENALTY_RESET_SECONDS"] = 86400
 
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    second = client.get("/xmlrpc2.php", follow_redirects=False)
-    assert second.status_code == 404
-
-    with app.app_context():
-        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
-
-    third = client.get(
-        "/wp-content/plugins/hellopress/wp_filemanager.php",
-        follow_redirects=False,
-    )
-    assert third.status_code == 404
+    assert first.status_code == 403
 
     with app.app_context():
         ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()

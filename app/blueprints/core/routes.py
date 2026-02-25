@@ -283,12 +283,6 @@ def llms_txt():
     )
 
 
-@core_bp.route("/dev-login")
-def dev_login_legacy():
-    """Legacy developer-login path kept for backward compatibility."""
-    return redirect(url_for("auth.dev_login"), code=301)
-
-
 @core_bp.route("/signup", methods=["GET", "POST"])
 def signup_alias():
     """Public short-path alias that reuses the auth signup flow."""

@@ -76,6 +76,16 @@ def test_login_prompts_unverified_email_without_blocking(client, app):
         assert sess.get("_user_id") is not None
 
 
+def test_template_context_hides_verification_prompts_when_mode_off(app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "off"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.test_request_context("/"):
+        context = {}
+        app.update_template_context(context)
+        assert context.get("email_verification_prompts_enabled") is False
+
+
 # --- Prompt mode age reminder modal ---
 # Purpose: Verify old unverified accounts can log in and receive forced-send modal context.
 def test_prompt_mode_old_unverified_accounts_queue_post_login_modal(

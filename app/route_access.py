@@ -45,7 +45,6 @@ class RouteAccessConfig:
         "auth.reset_password",
         "auth.resend_verification",
         "auth.verify_email",
-        "auth.dev_login",
         "auth.debug_oauth_config",
         "auth.whop_login",
         "auth.signup_data",
@@ -83,7 +82,6 @@ class RouteAccessConfig:
         "core.sitemap_xml",
         "core.robots_txt",
         "core.llms_txt",
-        "core.dev_login_legacy",
         "core.signup_alias",
     )
 
