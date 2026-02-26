@@ -50,7 +50,7 @@ from app.utils.permissions import (
     has_permission,
     require_permission,
 )
-from app.utils.recipe_batch_counts import count_batches_for_recipe_lineage
+from app.utils.recipe_batch_counts import count_batches_for_recipe_version
 from app.utils.settings import is_feature_enabled
 from app.utils.unit_utils import get_global_unit_list
 
@@ -169,7 +169,7 @@ def list_recipes():
     org_id = getattr(current_user, "organization_id", None)
     for recipe, ingredient_count in pagination.items:
         recipe.ingredient_count = int(ingredient_count or 0)
-        recipe.batch_count = count_batches_for_recipe_lineage(
+        recipe.batch_count = count_batches_for_recipe_version(
             recipe,
             organization_id=org_id,
         )
@@ -223,7 +223,7 @@ def view_recipe(recipe_id):
             current_user, "recipes.create_variations"
         )
         lineage_id = generate_lineage_id(recipe)
-        batch_count = count_batches_for_recipe_lineage(
+        batch_count = count_batches_for_recipe_version(
             recipe,
             organization_id=getattr(current_user, "organization_id", None),
         )

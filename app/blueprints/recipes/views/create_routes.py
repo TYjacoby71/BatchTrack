@@ -43,7 +43,7 @@ from app.utils.permissions import (
     has_permission,
     require_permission,
 )
-from app.utils.recipe_batch_counts import count_batches_for_recipe_lineage
+from app.utils.recipe_batch_counts import count_batches_for_recipe_version
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -617,7 +617,7 @@ def edit_recipe(recipe_id):
         flash("Recipe not found.", "error")
         return redirect(url_for("recipes.list_recipes"))
 
-    existing_batches = count_batches_for_recipe_lineage(
+    existing_batches = count_batches_for_recipe_version(
         recipe,
         organization_id=getattr(current_user, "organization_id", None),
     )

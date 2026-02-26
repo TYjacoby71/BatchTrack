@@ -24,7 +24,7 @@ from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.lineage_service import generate_group_prefix, generate_variation_prefix
 from ...utils.code_generator import generate_recipe_prefix
 from ...utils.notes import append_timestamped_note
-from ...utils.recipe_batch_counts import count_batches_for_recipe_lineage
+from ...utils.recipe_batch_counts import count_batches_for_recipe_version
 from ._constants import _UNSET
 from ._current import apply_current_flag
 from ._helpers import (
@@ -837,7 +837,7 @@ def update_recipe(
         if recipe.is_archived:
             return False, "Archived recipes cannot be modified"
 
-        has_batches = count_batches_for_recipe_lineage(
+        has_batches = count_batches_for_recipe_version(
             recipe,
             organization_id=recipe.organization_id,
         )

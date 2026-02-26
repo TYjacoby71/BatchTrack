@@ -7,6 +7,7 @@ one authoritative recipe version via batch.recipe_id.
 
 from __future__ import annotations
 
+from alembic import op
 import sqlalchemy as sa
 
 from migrations.postgres_helpers import (
@@ -27,10 +28,36 @@ branch_labels = None
 depends_on = None
 
 
+def _backfill_recipe_id_from_target_version() -> None:
+    """Ensure every batch points to its concrete recipe row before column drop."""
+    if not column_exists("batch", "recipe_id") or not column_exists(
+        "batch", "target_version_id"
+    ):
+        return
+
+    bind = op.get_bind()
+    bind.execute(
+        sa.text(
+            """
+            UPDATE batch
+            SET recipe_id = target_version_id
+            WHERE target_version_id IS NOT NULL
+              AND (recipe_id IS NULL OR recipe_id <> target_version_id)
+              AND EXISTS (
+                    SELECT 1
+                    FROM recipe
+                    WHERE recipe.id = batch.target_version_id
+                )
+            """
+        )
+    )
+
+
 def upgrade():
     if not table_exists("batch") or not column_exists("batch", "target_version_id"):
         return
 
+    _backfill_recipe_id_from_target_version()
     safe_drop_index("ix_batch_target_version_id", table_name="batch", verbose=False)
     safe_drop_foreign_key("fk_batch_target_version_id", "batch", verbose=False)
     with safe_batch_alter_table("batch") as batch_op:
@@ -48,6 +75,16 @@ def downgrade():
     )
     if not added and not column_exists("batch", "target_version_id"):
         return
+
+    op.get_bind().execute(
+        sa.text(
+            """
+            UPDATE batch
+            SET target_version_id = recipe_id
+            WHERE recipe_id IS NOT NULL
+            """
+        )
+    )
 
     safe_create_foreign_key(
         "fk_batch_target_version_id",

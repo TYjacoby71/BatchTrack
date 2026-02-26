@@ -12,7 +12,7 @@ from __future__ import annotations
 from app.models import Batch, Recipe
 
 
-def count_batches_for_recipe_lineage(
+def count_batches_for_recipe_version(
     recipe: Recipe, *, organization_id: int | None = None
 ) -> int:
     """Count batches for one specific recipe version/test row."""
@@ -33,4 +33,11 @@ def count_batches_for_recipe_lineage(
     return int(query.count() or 0)
 
 
-__all__ = ["count_batches_for_recipe_lineage"]
+def count_batches_for_recipe_lineage(
+    recipe: Recipe, *, organization_id: int | None = None
+) -> int:
+    """Backward-compatible alias for renamed recipe-version counter."""
+    return count_batches_for_recipe_version(recipe, organization_id=organization_id)
+
+
+__all__ = ["count_batches_for_recipe_version", "count_batches_for_recipe_lineage"]
