@@ -126,9 +126,11 @@ def _oauth_success_or_signup_redirect(
     flash(
         "Please complete your account setup by selecting a subscription plan.", "info"
     )
-    if oauth_next and oauth_next.startswith("/auth/signup"):
+    if oauth_next and (
+        oauth_next.startswith("/signup") or oauth_next.startswith("/auth/signup")
+    ):
         return redirect(oauth_next)
-    return redirect(url_for("auth.signup", tier="free"))
+    return redirect(url_for("core.signup_alias", tier="free"))
 
 
 # --- Google OAuth start ---

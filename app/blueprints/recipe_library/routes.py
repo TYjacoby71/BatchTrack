@@ -10,10 +10,13 @@ Glossary:
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from flask import (
     Blueprint,
     abort,
     current_app,
+    flash,
     redirect,
     render_template,
     request,
@@ -39,6 +42,9 @@ recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 RECIPE_PURCHASE_PERMISSION = "recipes.purchase_options"
 RECIPE_MARKETPLACE_PERMISSION = "recipes.marketplace_dashboard"
 RECIPE_MARKETPLACE_DISPLAY_FLAG = "FEATURE_RECIPE_MARKETPLACE_DISPLAY"
+PUBLIC_RECIPE_SEARCH_LIMIT = 10
+PUBLIC_RECIPE_DETAIL_LIMIT = 10
+PUBLIC_RECIPE_WINDOW_HOURS = 24
 
 
 def _org_allows_permission(org: Organization | None, permission_name: str) -> bool:
@@ -52,6 +58,45 @@ def _org_allows_permission(org: Organization | None, permission_name: str) -> bo
 
 def _marketplace_display_enabled() -> bool:
     return is_feature_enabled(RECIPE_MARKETPLACE_DISPLAY_FLAG)
+
+
+def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
+    """Advance an anonymous preview counter and return (allowed, remaining)."""
+    record = session.get(key) or {}
+    now = datetime.now(timezone.utc)
+    try:
+        last_ts = record.get("timestamp")
+        if last_ts:
+            last_dt = datetime.fromisoformat(last_ts)
+            if now - last_dt > timedelta(hours=PUBLIC_RECIPE_WINDOW_HOURS):
+                record = {}
+    except Exception:
+        record = {}
+    count = int(record.get("count") or 0)
+    if count >= limit:
+        return False, 0
+    count += 1
+    record["count"] = count
+    record["timestamp"] = now.isoformat()
+    session[key] = record
+    return True, max(0, limit - count)
+
+
+def _remaining_public_counter(key: str, limit: int) -> int:
+    """Return remaining anonymous preview allowance for the active window."""
+    record = session.get(key) or {}
+    try:
+        last_ts = record.get("timestamp")
+        if last_ts:
+            last_dt = datetime.fromisoformat(last_ts)
+            if datetime.now(timezone.utc) - last_dt > timedelta(
+                hours=PUBLIC_RECIPE_WINDOW_HOURS
+            ):
+                return limit
+    except Exception:
+        return limit
+    count = int(record.get("count") or 0)
+    return max(0, limit - count)
 
 
 # =========================================================
@@ -70,6 +115,32 @@ def recipe_library():
     org_filter = _safe_int(request.args.get("organization"))
     origin_filter = (request.args.get("origin") or "any").lower()
     sort_mode = (request.args.get("sort") or "newest").lower()
+    preview_remaining = None
+    search_remaining = None
+
+    if not current_user.is_authenticated:
+        preview_remaining = _remaining_public_counter(
+            "recipe_library_detail_views", PUBLIC_RECIPE_DETAIL_LIMIT
+        )
+        search_remaining = _remaining_public_counter(
+            "recipe_library_search_views", PUBLIC_RECIPE_SEARCH_LIMIT
+        )
+        if search_query:
+            allowed, remaining = _advance_public_counter(
+                "recipe_library_search_views", PUBLIC_RECIPE_SEARCH_LIMIT
+            )
+            if not allowed:
+                flash(
+                    "Create a free account to keep searching the recipe library. You've reached the preview limit."
+                )
+                return redirect(
+                    url_for(
+                        "auth.quick_signup",
+                        next=request.full_path,
+                        source="recipe_library_rate_limit_cta",
+                    )
+                )
+            search_remaining = remaining
 
     cache_payload = {
         "search": search_query or "",
@@ -201,6 +272,8 @@ def recipe_library():
         org_filter=org_filter,
         origin_filter=origin_filter,
         sort_mode=sort_mode,
+        preview_remaining=preview_remaining,
+        search_remaining=search_remaining,
         show_public_header=True,
         lightweight_public_shell=True,
     )
@@ -218,6 +291,23 @@ def recipe_library():
 def recipe_library_detail(recipe_id: int, slug: str):
     if not _marketplace_display_enabled():
         abort(404)
+    preview_remaining = None
+    if not current_user.is_authenticated:
+        allowed, preview_remaining = _advance_public_counter(
+            "recipe_library_detail_views", PUBLIC_RECIPE_DETAIL_LIMIT
+        )
+        if not allowed:
+            flash(
+                "Create a free account to keep exploring recipes. You've reached the preview limit."
+            )
+            return redirect(
+                url_for(
+                    "auth.quick_signup",
+                    next=request.path,
+                    source="recipe_library_rate_limit_cta",
+                )
+            )
+
     recipe = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
@@ -269,6 +359,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
         purchase_enabled=purchase_enabled,
         reveal_details=reveal_details,
         org_marketplace_enabled=org_marketplace_enabled,
+        preview_remaining=preview_remaining,
         show_public_header=True,
         lightweight_public_shell=True,
     )

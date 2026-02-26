@@ -36,7 +36,7 @@ def test_login_page_start_free_trial_links_share_same_destination(app):
     html = response.get_data(as_text=True)
 
     trial_links = re.findall(
-        r'href="(/auth/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        r'href="(/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
         html,
     )
     assert len(trial_links) >= 2
