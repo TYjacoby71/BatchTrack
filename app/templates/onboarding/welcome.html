@@ -165,6 +165,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         window.gtag('event', 'purchase', purchasePayload);
+        // Compatibility alias for existing GA4/Ads mappings that were built
+        // around the legacy custom purchase event name.
+        window.gtag('event', 'conversion_event_purchase', purchasePayload);
 
         const completionPayload = {
             transaction_id: transactionId,
