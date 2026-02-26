@@ -561,6 +561,15 @@ def test_promote_test_to_current_restores_master_name():
 def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions():
     category = _create_category("EditNameCollision")
     ingredient = _create_ingredient()
+    container = InventoryItem(
+        name=_unique_name("Allowed Container"),
+        unit="count",
+        type="container",
+        quantity=0.0,
+        organization_id=ingredient.organization_id,
+    )
+    db.session.add(container)
+    db.session.commit()
     master_name = _unique_name("Edit Collision Master")
 
     create_ok, master = create_recipe(
@@ -594,6 +603,8 @@ def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions(
     update_ok, updated = update_recipe(
         recipe_id=promoted.id,
         name=promoted.name,
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[container.id],
         instructions="Edited instructions after promotion",
         allow_published_edit=True,
     )
@@ -602,6 +613,7 @@ def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions(
     refreshed = db.session.get(Recipe, promoted.id)
     assert refreshed is not None
     assert refreshed.name == master_name
+    assert refreshed.allowed_containers == [container.id]
     assert "Edited instructions after promotion" in (refreshed.instructions or "")
 
 
