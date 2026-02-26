@@ -1,0 +1,13 @@
+<!-- Business Spotlights Banner -->
+{% if marketing_spotlights and marketing_spotlights|length > 0 %}
+<div class="scrolling-banner">
+    <div class="scrolling-content">
+        {% for s in marketing_spotlights %}
+        <span class="me-5">
+            <span aria-hidden="true" class="me-1">★</span>
+            <a href="{{ s.url }}" target="_blank">{{ s.business_name }}</a>
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
