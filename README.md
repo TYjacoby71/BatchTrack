@@ -70,19 +70,23 @@ Start with the curated system library, then drill into checklists and change his
 
 ### System Documentation (`docs/system/`)
 - **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** — master table of contents for every platform area
+- **[App Dictionary](docs/system/APP_DICTIONARY.md)** — layered glossary with cross-links to source files
 
 | Topic | Key Docs |
 | --- | --- |
 | Architecture & service authority | [ARCHITECTURE.md](docs/system/ARCHITECTURE.md), [SERVICES.md](docs/system/SERVICES.md), [DATABASE_MODELS.md](docs/system/DATABASE_MODELS.md) |
 | Production planning & manufacturing | [PLAN_SNAPSHOT.md](docs/system/PLAN_SNAPSHOT.md), [GLOBAL_ITEM_LIBRARY.md](docs/system/GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](docs/system/CONTAINERS_CURATION.md) |
-| Developer workflow & operations | [DEVELOPMENT_GUIDE.md](docs/system/DEVELOPMENT_GUIDE.md), [deploy_migration_guide.md](docs/system/deploy_migration_guide.md), [WALL_OF_DRAWERS_PROTOCOL.md](docs/system/WALL_OF_DRAWERS_PROTOCOL.md) |
+| Inventory & event terminology | [INVENTORY_EVENTS_TERMINOLOGY.md](docs/system/INVENTORY_EVENTS_TERMINOLOGY.md), [CONTAINER_NAMING.md](docs/system/CONTAINER_NAMING.md) |
+| Developer workflow & operations | [DEVELOPMENT_GUIDE.md](docs/system/DEVELOPMENT_GUIDE.md), [deploy_migration_guide.md](docs/system/deploy_migration_guide.md), [OPERATIONS_AND_FAQ.md](docs/system/OPERATIONS_AND_FAQ.md) |
 | APIs & external interfaces | [API_REFERENCE.md](docs/system/API_REFERENCE.md), [PUBLIC_TOOLS.md](docs/system/PUBLIC_TOOLS.md), [EXPORTS.md](docs/system/EXPORTS.md) |
-| Product programs & analytics | [FREE_TIER.md](docs/system/FREE_TIER.md), [TRACKING_PLAN.md](docs/system/TRACKING_PLAN.md) |
-| Platform status & lifecycle | [CURRENTLY_STUBBED.md](docs/system/CURRENTLY_STUBBED.md), [DEPRECATED_FEATURES.md](docs/system/DEPRECATED_FEATURES.md) |
+| Product programs & billing | [FREE_TIER.md](docs/system/FREE_TIER.md), [TIER_FEATURE_CATALOG.md](docs/system/TIER_FEATURE_CATALOG.md), [ADDONS_AND_ENTITLEMENTS.md](docs/system/ADDONS_AND_ENTITLEMENTS.md), [BILLING.md](docs/system/BILLING.md) |
+| Analytics & statistics | [TRACKING_PLAN.md](docs/system/TRACKING_PLAN.md), [STATS.md](docs/system/STATS.md) |
 | Time & permissions | [TIMEZONE_SYSTEM.md](docs/system/TIMEZONE_SYSTEM.md), [STORAGE_VS_DISPLAY.md](docs/system/STORAGE_VS_DISPLAY.md), [USERS_AND_PERMISSIONS.md](docs/system/USERS_AND_PERMISSIONS.md) |
+| UX patterns | [WALL_OF_DRAWERS_PROTOCOL.md](docs/system/WALL_OF_DRAWERS_PROTOCOL.md) |
+| Platform status & lifecycle | [CURRENTLY_STUBBED.md](docs/system/CURRENTLY_STUBBED.md), [DEPRECATED_FEATURES.md](docs/system/DEPRECATED_FEATURES.md) |
 
 ### Operational Checklists (`docs/todo/`)
-- Launch runbooks, QA plans, and urgent fix queues — see [docs/todo/](docs/todo/) for the latest actionable workstreams
+- **[Consolidated Backlog](docs/todo/CONSOLIDATED_BACKLOG.md)** — launch blockers, bugs, and feature backlog
 
 ### Change History (`docs/changelog/`)
 - **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** — full record of shipped changes with links to detailed entries
@@ -91,7 +95,7 @@ Start with the curated system library, then drill into checklists and change his
 - Progress trackers and technical debt initiatives, starting with [00_repo_map.md](docs/refactor/00_repo_map.md)
 
 ### Marketing
-- **[Marketing Workspace](marketing/README.md)** — Overview of site content, structure, and tooling
+- **[Marketing Workspace](app/marketing/README.md)** — Overview of site content, structure, and tooling
 
 ## 🔒 Development Guardrails
 
@@ -109,13 +113,14 @@ Start with the curated system library, then drill into checklists and change his
 Run with the app environment active:
 
 ```bash
-python scripts/clear_inventory_history.py
 python scripts/dev_test_runner.py
+python scripts/audit_route_permissions.py
+python scripts/refresh_global_item_metadata.py
 ```
 
 ## 🐛 Current Issues
 
-See [docs/todo/FIX_IMMEDIATE.md](docs/todo/FIX_IMMEDIATE.md) for the active fix list and [docs/todo/CRITICAL_PRELAUNCH.md](docs/todo/CRITICAL_PRELAUNCH.md) for launch-blocking tasks and QA gate checks.
+See [docs/todo/CONSOLIDATED_BACKLOG.md](docs/todo/CONSOLIDATED_BACKLOG.md) for launch blockers, bugs, and the full feature backlog.
 
 ## 🔮 Future Features
 

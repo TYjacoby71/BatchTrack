@@ -26,6 +26,7 @@ This directory is the curated reference library for every master document that e
 ## Developer Workflow & Operations
 
 - **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** – How to build and extend features safely
+- **[OPERATIONS_AND_FAQ.md](OPERATIONS_AND_FAQ.md)** – Operations companion and commonly asked questions
 - **[deploy_migration_guide.md](deploy_migration_guide.md)** – Production deployment and migration checklist
 - **[WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md)** – Error handling UX pattern for recoverable issues
 
@@ -35,12 +36,20 @@ This directory is the curated reference library for every master document that e
 - **[PUBLIC_TOOLS.md](PUBLIC_TOOLS.md)** – External utilities and integrations shipped with the platform
 - **[EXPORTS.md](EXPORTS.md)** – File export architecture, formats, and delivery flows
 
-## Product Programs & Feature Toggles
+## Billing & Product Programs
 
+- **[BILLING.md](BILLING.md)** – Stripe integration, webhook handling, and subscription lifecycle
 - **[FREE_TIER.md](FREE_TIER.md)** – Subscription tier allowances and gating rules
 - **[TIER_FEATURE_CATALOG.md](TIER_FEATURE_CATALOG.md)** – Customer-facing feature taxonomy, permission/add-on mapping, and tier rule guidance
 - **[ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md)** – Add-on catalog, entitlements, and update scripts
+
+## Analytics & Statistics
+
 - **[TRACKING_PLAN.md](TRACKING_PLAN.md)** – Analytics instrumentation map and event taxonomy
+- **[STATS.md](STATS.md)** – Statistics services and metrics
+
+## Feature Toggles & Lifecycle
+
 - **[recipe_library_marketplace.md](recipe_library_marketplace.md)** – Global recipe library, marketplace toggles, sharing controls, moderation policy, and purchase options
 - **[CURRENTLY_STUBBED.md](CURRENTLY_STUBBED.md)** – Feature stubs with implementation status
 - **[DEPRECATED_FEATURES.md](DEPRECATED_FEATURES.md)** – Functionality scheduled for sunset and migration notes

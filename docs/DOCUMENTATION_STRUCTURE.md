@@ -37,13 +37,7 @@ docs/
 │   └── USERS_AND_PERMISSIONS.md
 │
 ├── todo/                Launch readiness, QA, and immediate action lists
-│   ├── CRITICAL_PRELAUNCH.md
-│   ├── LAUNCH_RUNBOOK.md
-│   ├── FIX_IMMEDIATE.md
-│   ├── RETENTION_CANCELLATION_QA.md
-│   ├── INVENTORY_UPGRADE_QA.md
-│   ├── INVENTORY_COST_QA.md
-│   └── UNIT_MAPPING_QA.md
+│   └── CONSOLIDATED_BACKLOG.md
 │
 ├── changelog/           Complete history of changes
 │   ├── CHANGELOG_INDEX.md
