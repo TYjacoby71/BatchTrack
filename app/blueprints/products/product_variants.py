@@ -19,14 +19,14 @@ def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
         # First try to get the Product record
-        product = Product.query.filter_by(
+        product = Product.scoped().filter_by(
             id=product_id, organization_id=current_user.organization_id
         ).first()
 
         # If no Product record exists, try to find it via ProductSKU and create Product
         if not product:
             # Look for existing SKU with this product_id
-            base_sku = ProductSKU.query.filter_by(
+            base_sku = ProductSKU.scoped().filter_by(
                 id=product_id, organization_id=current_user.organization_id
             ).first()
 
@@ -60,7 +60,7 @@ def add_variant(product_id):
         variant_name = variant_name.strip()
 
         # Check if variant already exists for this product
-        existing_variant = ProductVariant.query.filter_by(
+        existing_variant = ProductVariant.scoped().filter_by(
             product_id=product.id, name=variant_name
         ).first()
 
@@ -179,7 +179,7 @@ def view_variant(product_id, variant_name):
     # Get the product using the new Product model
     from ...models.product import Product, ProductVariant
 
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
@@ -188,7 +188,7 @@ def view_variant(product_id, variant_name):
         return redirect(url_for("products.list_products"))
 
     # Get the variant by name
-    variant = ProductVariant.query.filter_by(
+    variant = ProductVariant.scoped().filter_by(
         product_id=product.id, name=variant_name
     ).first()
 
@@ -197,7 +197,7 @@ def view_variant(product_id, variant_name):
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Get all SKUs for this product/variant combination
-    skus = ProductSKU.query.filter_by(
+    skus = ProductSKU.scoped().filter_by(
         product_id=product.id,
         variant_id=variant.id,
         is_active=True,
@@ -235,13 +235,13 @@ def view_variant(product_id, variant_name):
 
     # Get available containers for manual stock addition
     available_containers = (
-        InventoryItem.query.filter_by(type="container", is_archived=False)
+        InventoryItem.scoped().filter_by(type="container", is_archived=False)
         .filter(InventoryItem.quantity > 0)
         .all()
     )
 
     # Get the base SKU inventory item ID for breadcrumb navigation
-    base_sku = ProductSKU.query.filter_by(
+    base_sku = ProductSKU.scoped().filter_by(
         product_id=product.id,
         variant_id=product.base_variant.id if product.base_variant else variant.id,
         organization_id=current_user.organization_id,
@@ -286,7 +286,7 @@ def view_variant(product_id, variant_name):
 @require_permission("products.manage_variants")
 def create_sku_for_variant(product_id, variant_name):
     """Create a new SKU for an existing variant."""
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
@@ -294,7 +294,7 @@ def create_sku_for_variant(product_id, variant_name):
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    variant = ProductVariant.query.filter_by(
+    variant = ProductVariant.scoped().filter_by(
         product_id=product.id, name=variant_name
     ).first()
 
@@ -326,7 +326,7 @@ def create_sku_for_variant(product_id, variant_name):
             )
         )
 
-    existing_sku = ProductSKU.query.filter_by(
+    existing_sku = ProductSKU.scoped().filter_by(
         product_id=product.id,
         variant_id=variant.id,
         size_label=size_label,
@@ -403,7 +403,7 @@ def edit_variant(product_id, variant_name):
     from ...models.product import Product, ProductVariant
 
     # Get the product using the new Product model
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
@@ -412,7 +412,7 @@ def edit_variant(product_id, variant_name):
         return redirect(url_for("products.list_products"))
 
     # Get the variant
-    variant = ProductVariant.query.filter_by(
+    variant = ProductVariant.scoped().filter_by(
         product_id=product.id, name=variant_name
     ).first()
 
@@ -434,7 +434,7 @@ def edit_variant(product_id, variant_name):
         )
 
     # Check if another variant has this name for the same product
-    existing = ProductVariant.query.filter(
+    existing = ProductVariant.scoped().filter(
         ProductVariant.product_id == product.id,
         ProductVariant.name == name,
         ProductVariant.id != variant.id,
@@ -472,7 +472,7 @@ def delete_variant(product_id, variant_name):
     from ...models.product import Product, ProductVariant
 
     # Get the product using the new Product model
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
@@ -481,7 +481,7 @@ def delete_variant(product_id, variant_name):
         return redirect(url_for("products.list_products"))
 
     # Get the variant
-    variant = ProductVariant.query.filter_by(
+    variant = ProductVariant.scoped().filter_by(
         product_id=product.id, name=variant_name
     ).first()
 
@@ -490,7 +490,7 @@ def delete_variant(product_id, variant_name):
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Get all SKUs for this variant
-    skus = ProductSKU.query.filter_by(
+    skus = ProductSKU.scoped().filter_by(
         product_id=product.id,
         variant_id=variant.id,
         organization_id=current_user.organization_id,
@@ -520,7 +520,7 @@ def delete_variant(product_id, variant_name):
     db.session.commit()
 
     # Check if this was the last variant for the product
-    remaining_variants = ProductVariant.query.filter_by(
+    remaining_variants = ProductVariant.scoped().filter_by(
         product_id=product.id, is_active=True
     ).count()
 

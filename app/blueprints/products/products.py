@@ -304,14 +304,14 @@ def list_products():
             if self.id:
                 from ...models.product import Product, ProductSKU, ProductVariant
 
-                product = Product.query.filter_by(
+                product = Product.scoped().filter_by(
                     name=self.name, organization_id=current_user.organization_id
                 ).first()
 
                 if product:
                     self.id = product.id
 
-                    actual_variants = ProductVariant.query.filter_by(
+                    actual_variants = ProductVariant.scoped().filter_by(
                         product_id=product.id, is_active=True
                     ).all()
 
@@ -334,7 +334,7 @@ def list_products():
 
                     self.variant_count = len(actual_variants)
 
-                    product_skus = ProductSKU.query.filter_by(
+                    product_skus = ProductSKU.scoped().filter_by(
                         product_id=product.id,
                         organization_id=current_user.organization_id,
                         is_active=True,
@@ -412,7 +412,7 @@ def list_products():
     for data in product_data:
         # Get the actual product ID instead of SKU inventory_item_id
         first_sku = (
-            ProductSKU.query.filter_by(
+            ProductSKU.scoped().filter_by(
                 organization_id=current_user.organization_id, is_active=True
             )
             .join(ProductSKU.product)
@@ -474,12 +474,12 @@ def new_product():
         # Check if product already exists (check both new Product model and legacy ProductSKU)
         from ...models.product import Product
 
-        existing_product = Product.query.filter_by(
+        existing_product = Product.scoped().filter_by(
             name=name, organization_id=current_user.organization_id
         ).first()
 
         # Also check legacy ProductSKU table
-        existing_sku = ProductSKU.query.filter_by(
+        existing_sku = ProductSKU.scoped().filter_by(
             product_name=name, organization_id=current_user.organization_id
         ).first()
 
@@ -541,13 +541,13 @@ def view_product(product_id):
     from ...models.product import Product
 
     # First try to find the product directly by ID
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
     if not product:
         # If not found by product ID, try to find by inventory_item_id (legacy support)
-        base_sku = ProductSKU.query.filter_by(
+        base_sku = ProductSKU.scoped().filter_by(
             inventory_item_id=product_id, organization_id=current_user.organization_id
         ).first()
 
@@ -558,7 +558,7 @@ def view_product(product_id):
         product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
-    skus = ProductSKU.query.filter_by(
+    skus = ProductSKU.scoped().filter_by(
         product_id=product.id,
         is_active=True,
         organization_id=current_user.organization_id,
@@ -587,7 +587,7 @@ def view_product(product_id):
 
     # Get available containers for manual stock addition
     available_containers = (
-        InventoryItem.query.filter_by(type="container", is_archived=False)
+        InventoryItem.scoped().filter_by(type="container", is_archived=False)
         .filter(InventoryItem.quantity > 0)
         .all()
     )
@@ -654,7 +654,7 @@ def view_product(product_id):
 def view_product_by_name(product_name):
     """Redirect to product by ID for backward compatibility"""
     # Find the first SKU for this product to get the ID
-    sku = ProductSKU.query.filter_by(product_name=product_name, is_active=True).first()
+    sku = ProductSKU.scoped().filter_by(product_name=product_name, is_active=True).first()
 
     if not sku:
         flash("Product not found", "error")
@@ -671,7 +671,7 @@ def edit_product(product_id):
     from ...models.product import Product
 
     # First try to find the product directly by ID
-    product = Product.query.filter_by(
+    product = Product.scoped().filter_by(
         id=product_id, organization_id=current_user.organization_id
     ).first()
 
@@ -688,7 +688,7 @@ def edit_product(product_id):
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Check if another product has this name
-    existing = Product.query.filter(
+    existing = Product.scoped().filter(
         Product.name == name,
         Product.id != product.id,
         Product.organization_id == current_user.organization_id,
@@ -720,7 +720,7 @@ def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
         # Get the base SKU to find the product - with org scoping
-        base_sku = ProductSKU.query.filter_by(
+        base_sku = ProductSKU.scoped().filter_by(
             inventory_item_id=product_id, organization_id=current_user.organization_id
         ).first()
 
@@ -731,7 +731,7 @@ def delete_product(product_id):
         product = base_sku.product
 
         # Get all SKUs for this product - with org scoping
-        skus = ProductSKU.query.filter_by(
+        skus = ProductSKU.scoped().filter_by(
             product_id=product.id, organization_id=current_user.organization_id
         ).all()
 
@@ -749,21 +749,21 @@ def delete_product(product_id):
 
         # Delete unified history and lot records first
         for sku in skus:
-            UnifiedInventoryHistory.query.filter_by(
+            UnifiedInventoryHistory.scoped().filter_by(
                 inventory_item_id=sku.inventory_item_id
             ).delete(synchronize_session=False)
-            InventoryLot.query.filter_by(
+            InventoryLot.scoped().filter_by(
                 inventory_item_id=sku.inventory_item_id
             ).delete(synchronize_session=False)
 
         # Delete the SKUs
-        ProductSKU.query.filter_by(product_id=product.id).delete()
+        ProductSKU.scoped().filter_by(product_id=product.id).delete()
 
         # Delete the product and its variants
         from ...models.product import Product, ProductVariant
 
-        ProductVariant.query.filter_by(product_id=product.id).delete()
-        Product.query.filter_by(id=product.id).delete()
+        ProductVariant.scoped().filter_by(product_id=product.id).delete()
+        Product.scoped().filter_by(id=product.id).delete()
 
         db.session.commit()
 
