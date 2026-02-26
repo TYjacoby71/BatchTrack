@@ -61,7 +61,7 @@
 {% if force_edit_mode %}
 <div class="alert alert-warning mb-4">
     <i class="fas fa-exclamation-triangle"></i>
-    You are editing a published recipe. Changes will be recorded in recipe notes with a timestamp.
+    You are editing a published recipe. Use this for corrections (for example, adding newly available allowed containers to an older master recipe). Changes will be recorded in recipe notes with a timestamp.
 </div>
 {% endif %}
 
@@ -132,6 +132,9 @@
                                value="{{ name_value }}"
                                {% if lock_name %}readonly{% endif %}
                                required>
+                        {% if is_edit_mode and not lock_name %}
+                        <div class="form-text">Editing keeps lineage context. Leaving the name unchanged updates this recipe; it does not create a duplicate group.</div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -695,19 +698,36 @@
     <!-- Form Actions -->
     <div class="card">
         <div class="card-body">
-            {% set publish_label = 'Save Recipe' %}
-            {% if recipe and (recipe.parent_recipe_id or is_variation) %}
-                {% set publish_label = 'Save Variation' %}
+            {% if is_edit_mode %}
+                {% if is_test_mode %}
+                    {% set publish_label = 'Save Test Changes' %}
+                    {% set draft_label = 'Save Test Draft' %}
+                {% elif is_variation_mode %}
+                    {% set publish_label = 'Save Variation Changes' %}
+                    {% set draft_label = 'Save Variation Draft' %}
+                {% else %}
+                    {% set publish_label = 'Save Recipe Changes' %}
+                    {% set draft_label = 'Save Recipe Draft' %}
+                {% endif %}
+                {% if recipe and recipe.status == 'draft' %}
+                    {% if is_test_mode %}
+                        {% set publish_label = 'Publish Test' %}
+                    {% elif is_variation_mode %}
+                        {% set publish_label = 'Publish Variation' %}
+                    {% else %}
+                        {% set publish_label = 'Publish Recipe' %}
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                {% if is_test_mode %}
+                    {% set publish_label = 'Create Test' %}
+                {% elif is_variation %}
+                    {% set publish_label = 'Create Variation' %}
+                {% else %}
+                    {% set publish_label = 'Create Recipe' %}
+                {% endif %}
+                {% set draft_label = 'Save Draft' %}
             {% endif %}
-            {% if not recipe and is_variation %}
-                {% set publish_label = 'Create Variation' %}
-            {% elif not recipe and not is_variation %}
-                {% set publish_label = 'Create Recipe' %}
-            {% endif %}
-            {% if recipe and recipe.status == 'draft' %}
-                {% set publish_label = 'Publish Recipe' %}
-            {% endif %}
-            {% set draft_label = 'Save Draft' %}
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                   <div class="d-flex flex-wrap gap-2">
                       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary" data-nav-warning="true">

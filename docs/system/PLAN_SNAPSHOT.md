@@ -12,7 +12,6 @@
 
 Core fields in `PlanSnapshot` include:
 - `recipe_id`
-- `target_version_id`
 - `lineage_snapshot`
 - `scale`
 - `batch_type`

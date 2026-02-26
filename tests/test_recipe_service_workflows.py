@@ -17,10 +17,12 @@ from flask_login import login_user
 
 from app.extensions import db
 from app.models import Recipe
+from app.models.batch import Batch
 from app.models.global_item import GlobalItem
 from app.models.inventory import InventoryItem
 from app.models.models import Organization, User
 from app.models.product_category import ProductCategory
+from app.services.lineage_service import generate_lineage_id
 from app.services.recipe_service import (
     create_recipe,
     create_test_version,
@@ -28,6 +30,7 @@ from app.services.recipe_service import (
     promote_test_to_current,
     update_recipe,
 )
+from app.utils.recipe_batch_counts import count_batches_for_recipe
 
 
 def _unique_name(prefix: str) -> str:
@@ -555,6 +558,205 @@ def test_promote_test_to_current_restores_master_name():
     assert promoted.is_current is True
     assert promoted.name == master.recipe_group.name
     assert "test" not in promoted.name.lower()
+
+
+@pytest.mark.usefixtures("app_context")
+def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions():
+    category = _create_category("EditNameCollision")
+    ingredient = _create_ingredient()
+    container = InventoryItem(
+        name=_unique_name("Allowed Container"),
+        unit="count",
+        type="container",
+        quantity=0.0,
+        organization_id=ingredient.organization_id,
+    )
+    db.session.add(container)
+    db.session.commit()
+    master_name = _unique_name("Edit Collision Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="ECM",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Promotion prep edits",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+
+    promote_ok, promoted = promote_test_to_current(test_recipe.id)
+    assert promote_ok, promoted
+    assert promoted.name == master_name
+
+    update_ok, updated = update_recipe(
+        recipe_id=promoted.id,
+        name=promoted.name,
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[container.id],
+        instructions="Edited instructions after promotion",
+        allow_published_edit=True,
+    )
+    assert update_ok, updated
+
+    refreshed = db.session.get(Recipe, promoted.id)
+    assert refreshed is not None
+    assert refreshed.name == master_name
+    assert refreshed.allowed_containers == [container.id]
+    assert "Edited instructions after promotion" in (refreshed.instructions or "")
+
+
+@pytest.mark.usefixtures("app_context")
+def test_batch_counts_are_recipe_scoped_per_version_and_test():
+    category = _create_category("LineageBatchCounts")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Batch Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="BSC",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Master test",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+
+    master_lineage = generate_lineage_id(master)
+    test_lineage = generate_lineage_id(test_recipe)
+    assert master_lineage != test_lineage
+
+    # Master batch tracks the master recipe row directly.
+    master_batch = Batch(
+        recipe_id=master.id,
+        lineage_id=master_lineage,
+        label_code=_unique_name("MASTER-BATCH"),
+        batch_type="ingredient",
+        organization_id=master.organization_id,
+        status="completed",
+    )
+
+    # Test batch tracks the test recipe row directly.
+    test_batch = Batch(
+        recipe_id=test_recipe.id,
+        lineage_id=test_lineage,
+        label_code=_unique_name("TEST-BATCH"),
+        batch_type="ingredient",
+        organization_id=master.organization_id,
+        status="completed",
+    )
+    db.session.add_all([master_batch, test_batch])
+    db.session.commit()
+
+    assert (
+        count_batches_for_recipe(master, organization_id=master.organization_id)
+        == 1
+    )
+    assert (
+        count_batches_for_recipe(
+            test_recipe, organization_id=test_recipe.organization_id
+        )
+        == 1
+    )
+
+
+@pytest.mark.usefixtures("app_context")
+def test_promoting_test_to_current_preserves_batch_history_links():
+    category = _create_category("PromotionBatchHistory")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Promotion History Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="PHM",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Promotable test instructions",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+    assert test_recipe.test_sequence == 1
+
+    original_test_lineage = generate_lineage_id(test_recipe)
+
+    # Persist a batch against the test before promotion.
+    pre_promotion_batch = Batch(
+        recipe_id=test_recipe.id,
+        lineage_id=original_test_lineage,
+        label_code=_unique_name("PROMO-TEST-BATCH"),
+        batch_type="ingredient",
+        organization_id=test_recipe.organization_id,
+        status="completed",
+    )
+    db.session.add(pre_promotion_batch)
+    db.session.commit()
+
+    # Sanity check before promotion.
+    assert (
+        count_batches_for_recipe(
+            test_recipe, organization_id=test_recipe.organization_id
+        )
+        == 1
+    )
+
+    promote_ok, promoted = promote_test_to_current(test_recipe.id)
+    assert promote_ok, promoted
+    assert promoted.id == test_recipe.id
+    assert promoted.test_sequence is None
+
+    # History row remains attached to the same promoted recipe row.
+    refreshed_batch = db.session.get(Batch, pre_promotion_batch.id)
+    assert refreshed_batch is not None
+    assert refreshed_batch.recipe_id == promoted.id
+    assert refreshed_batch.lineage_id == original_test_lineage
+
+    # Count remains intact after promotion.
+    assert (
+        count_batches_for_recipe(promoted, organization_id=promoted.organization_id)
+        == 1
+    )
 
 
 def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, client):

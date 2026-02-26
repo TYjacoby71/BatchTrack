@@ -24,6 +24,7 @@ from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.lineage_service import generate_group_prefix, generate_variation_prefix
 from ...utils.code_generator import generate_recipe_prefix
 from ...utils.notes import append_timestamped_note
+from ...utils.recipe_batch_counts import count_batches_for_recipe
 from ._constants import _UNSET
 from ._current import apply_current_flag
 from ._helpers import (
@@ -44,6 +45,29 @@ _IS_POSTGRES = is_postgres()
 _RECIPE_GROUP_MAX_INSERT_ATTEMPTS = 4
 _RECIPE_GROUP_INSERT_LOCK_TIMEOUT_MS = 1200
 _RETRYABLE_PG_CODES = {"55P03", "40P01", "40001"}
+
+
+def _allow_duplicate_name_for_creation(
+    *,
+    allow_duplicate_name_override: bool,
+    is_test_flag: bool,
+    parent_recipe_id: int | None,
+    parent_master_id: int | None,
+    is_master_override: bool | None,
+) -> bool:
+    """Whether create flow should skip master-name uniqueness checks."""
+    return bool(
+        allow_duplicate_name_override
+        or is_test_flag
+        or parent_recipe_id
+        or parent_master_id
+        or (is_master_override is False)
+    )
+
+
+def _allow_duplicate_name_for_existing_recipe(recipe: Recipe) -> bool:
+    """Variations/tests reuse branch names by design."""
+    return bool(recipe.test_sequence) or (not recipe.is_master)
 
 
 # --- Normalize group name ---
@@ -335,12 +359,12 @@ def create_recipe(
         current_org_id = _resolve_current_org_id()
         recipe_org_id = current_org_id if current_org_id else (1)
 
-        allow_duplicate_name = bool(
-            allow_duplicate_name_override
-            or is_test_flag
-            or parent_recipe_id
-            or parent_master_id
-            or (is_master_override is False)
+        allow_duplicate_name = _allow_duplicate_name_for_creation(
+            allow_duplicate_name_override=allow_duplicate_name_override,
+            is_test_flag=is_test_flag,
+            parent_recipe_id=(parent_recipe_id or parent_id),
+            parent_master_id=parent_master_id,
+            is_master_override=is_master_override,
         )
         validation_result = validate_recipe_data(
             name=name,
@@ -348,7 +372,7 @@ def create_recipe(
             yield_amount=yield_amount,
             portioning_data=portioning_data,
             allow_partial=allow_partial,
-            organization_id=current_org_id,
+            organization_id=recipe_org_id,
             allow_duplicate_name=allow_duplicate_name,
         )
 
@@ -813,7 +837,10 @@ def update_recipe(
         if recipe.is_archived:
             return False, "Archived recipes cannot be modified"
 
-        has_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
+        has_batches = count_batches_for_recipe(
+            recipe,
+            organization_id=recipe.organization_id,
+        )
         if (
             recipe.status == "published"
             and recipe.test_sequence is None
@@ -909,24 +936,32 @@ def update_recipe(
 
         # Update basic fields
         if name is not None:
-            # Validate name uniqueness for updates
-            validation_result = validate_recipe_data(
-                name=name,
-                recipe_id=recipe_id,
-                allow_partial=True,
-                organization_id=recipe.organization_id,
-                allow_duplicate_name=bool(recipe.test_sequence)
-                or (not recipe.is_master),
-            )
-            if not validation_result["valid"]:
-                return False, validation_result
-            recipe.name = name
+            submitted_name = (name or "").strip()
+            existing_name = (recipe.name or "").strip()
+            name_changed = submitted_name != existing_name
+            allow_duplicate_name = _allow_duplicate_name_for_existing_recipe(recipe)
+
+            # Only run duplicate-name validation on true renames.
+            # This keeps edits unblocked for legacy lineages that already
+            # contain multiple historical versions with the same name.
+            if name_changed:
+                validation_result = validate_recipe_data(
+                    name=submitted_name,
+                    recipe_id=recipe_id,
+                    allow_partial=True,
+                    organization_id=recipe.organization_id,
+                    allow_duplicate_name=allow_duplicate_name,
+                )
+                if not validation_result["valid"]:
+                    return False, validation_result
+
+            recipe.name = submitted_name
             if (
                 recipe.is_master
                 and recipe.test_sequence is None
                 and recipe.recipe_group_id
             ):
-                group_name = name.strip() if name else ""
+                group_name = submitted_name
                 if (
                     group_name
                     and recipe.recipe_group
@@ -974,6 +1009,8 @@ def update_recipe(
 
         # Update ingredients if provided
         if ingredients is not None:
+            # Name uniqueness is handled separately in the explicit name-update path.
+            # This validation call focuses on ingredients/yield integrity only.
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
@@ -984,6 +1021,7 @@ def update_recipe(
                 portioning_data=portioning_data,
                 allow_partial=allow_partial,
                 organization_id=recipe.organization_id,
+                allow_duplicate_name=True,
             )
 
             if not validation_result["valid"]:
