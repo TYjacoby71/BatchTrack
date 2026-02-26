@@ -1,5 +1,12 @@
 # Route Access Control Standard
 
+## Synopsis
+Defines the permission-based access control standard for all routes, including the developer route-to-permission mapping and the checklist for adding new routes.
+
+## Glossary
+- **Route permission**: A `@require_permission(...)` decorator binding a route to its access gate.
+- **Developer permission**: A `dev.*` permission scoped to developer-only routes.
+
 ## Single source of truth
 Permissions are the source of truth for access control:
 

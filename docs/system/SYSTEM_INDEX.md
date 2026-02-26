@@ -22,6 +22,7 @@ This directory is the curated reference library for every master document that e
 - **[SERVICES.md](SERVICES.md)** – Service responsibilities and interaction rules
 - **[DATABASE_MODELS.md](DATABASE_MODELS.md)** – Database schema and model relationships
 - **[PLAN_SNAPSHOT.md](PLAN_SNAPSHOT.md)** – Immutable production planning contract and lifecycle
+- **[RECIPE_SERVICE.md](RECIPE_SERVICE.md)** – Recipe service package architecture and lifecycle
 
 ## Developer Workflow & Operations
 
@@ -29,6 +30,8 @@ This directory is the curated reference library for every master document that e
 - **[OPERATIONS_AND_FAQ.md](OPERATIONS_AND_FAQ.md)** – Operations companion and commonly asked questions
 - **[deploy_migration_guide.md](deploy_migration_guide.md)** – Production deployment and migration checklist
 - **[WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md)** – Error handling UX pattern for recoverable issues
+- **[TEST_SUITE.md](TEST_SUITE.md)** – Test module index and purpose reference
+- **[PATCHES.md](PATCHES.md)** – Temporary patches and workaround tracker
 
 ## APIs, Integrations, and External Interfaces
 
@@ -38,7 +41,8 @@ This directory is the curated reference library for every master document that e
 
 ## Billing & Product Programs
 
-- **[BILLING.md](BILLING.md)** – Stripe integration, webhook handling, and subscription lifecycle
+- **[BILLING.md](BILLING.md)** – Billing system overview and subscription lifecycle
+- **[STRIPE_INTEGRATION.md](STRIPE_INTEGRATION.md)** – Stripe checkout flow, price resolution, webhooks, and failure modes
 - **[FREE_TIER.md](FREE_TIER.md)** – Subscription tier allowances and gating rules
 - **[TIER_FEATURE_CATALOG.md](TIER_FEATURE_CATALOG.md)** – Customer-facing feature taxonomy, permission/add-on mapping, and tier rule guidance
 - **[ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md)** – Add-on catalog, entitlements, and update scripts
@@ -67,6 +71,16 @@ This directory is the curated reference library for every master document that e
 - **[TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md)** – Complete timezone handling guide
 - **[STORAGE_VS_DISPLAY.md](STORAGE_VS_DISPLAY.md)** – DateTime storage vs display best practices
 - **[USERS_AND_PERMISSIONS.md](USERS_AND_PERMISSIONS.md)** – User management and permission system
+- **[ROUTE_ACCESS_CONTROL.md](ROUTE_ACCESS_CONTROL.md)** – Route permission standard and developer route mapping
+
+## Production & Scaling
+
+- **[SCALING_RUNBOOK.md](SCALING_RUNBOOK.md)** – Scaling guidance for 5k–10k concurrent users
+- **[EDGE_BOT_DEFENSE.md](EDGE_BOT_DEFENSE.md)** – Edge-layer bot protection playbook
+
+## Assets & Media
+
+- **[IMAGE_UPLOAD_CHECKLIST.md](IMAGE_UPLOAD_CHECKLIST.md)** – Media asset slot reference for homepage, help center, and marketplace
 
 ## Dictionary & Glossary
 

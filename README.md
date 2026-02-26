@@ -124,6 +124,6 @@ See [docs/todo/CONSOLIDATED_BACKLOG.md](docs/todo/CONSOLIDATED_BACKLOG.md) for l
 
 ## 🔮 Future Features
 
-See [docs/FUTURE_ROADMAP.md](docs/FUTURE_ROADMAP.md) for planned enhancements.
+See the "Future Features & Growth" section in [docs/todo/CONSOLIDATED_BACKLOG.md](docs/todo/CONSOLIDATED_BACKLOG.md).
 
 ---

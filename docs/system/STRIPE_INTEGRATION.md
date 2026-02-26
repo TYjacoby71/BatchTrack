@@ -1,13 +1,18 @@
-# Stripe Service Billing Flow
+# Stripe Integration
 
-_Last updated: 2025-11-19_
+## Synopsis
+How BatchTrack integrates with Stripe for subscription billing: checkout session construction, price resolution, webhook handling, and common failure modes.
+
+## Glossary
+- **Lookup key**: Stripe price identifier stored on `SubscriptionTier.stripe_lookup_key`.
+- **Checkout session**: Stripe-hosted payment form created by `BillingService`.
 
 This document is the point of truth for how BatchTrack integrates with Stripe. Use it before touching billing code so fixes stay consistent.
 
 ## High-Level Flow
 
 1. **Signup form** (`/auth/signup`) collects tier choice and optional referral / OAuth data.
-2. **`StripeService.create_checkout_session_for_tier`** is called with the chosen tier and whatever customer info we already have (OAuth email, etc.).
+2. **`BillingService.create_checkout_session_for_tier`** is called with the chosen tier and whatever customer info we already have (OAuth email, etc.).
 3. The service fetches live pricing for the tier, builds a Checkout Session payload, and redirects the browser to Stripe Checkout.
 4. Stripe hosts the payment form, collecting card details and any missing customer fields.
 5. Stripe redirects back to `/billing/complete-signup-from-stripe` with `session_id`.
@@ -24,7 +29,7 @@ Results are cached in-process for 10 minutes to cut down on API calls. Make sure
 
 ## Checkout Session Construction
 
-Key behaviors in `StripeService.create_checkout_session_for_tier`:
+Key behaviors in `BillingService.create_checkout_session_for_tier`:
 
 - Always request `mode='subscription'` with the single resolved price.
 - Metadata automatically includes `tier_id`, `tier_name`, and the stored lookup key; caller metadata is merged in.
@@ -65,8 +70,7 @@ Do not attach both `customer_update` and `customer_creation`; Stripe will reject
 ## Touchpoints in Code
 
 - `app/blueprints/auth/routes.py` – entry point creating checkout sessions.
-- `app/services/stripe_service.py` – Stripe API adapter, pricing cache, session creation, webhook handlers.
-- `app/services/billing_service.py` – higher-level orchestration and provider routing.
+- `app/services/billing_service.py` – Stripe API adapter, pricing cache, session creation, webhook handlers, and higher-level orchestration.
 - `app/models/subscription_tier.py` – source of lookup keys and tier metadata.
 
 Keep all future billing changes consistent with this flow to avoid the “circular fixes” we’ve seen in past incidents.

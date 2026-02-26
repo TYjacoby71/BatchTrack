@@ -1,4 +1,13 @@
-## Recipe Service Overview
+# Recipe Service
+
+## Synopsis
+Architecture guide for the `app/services/recipe_service` package covering module responsibilities, the controller-to-service contract, and the recipe creation/update lifecycle.
+
+## Glossary
+- **Recipe service package**: `app/services/recipe_service/` — authoritative for all recipe CRUD, validation, scaling, and lineage.
+- **RecipeFormSubmission**: Controller-side parser that normalizes form data into service kwargs.
+
+## Overview
 
 The recipe domain is split between a thin blueprint (`app/blueprints/recipes/routes.py`) and the `app/services/recipe_service` package.  All external callers, including the blueprint, must import from `app.services.recipe_service` so that `_core`, `_validation`, `_scaling`, and `_batch_integration` remain internal implementation details.
 

@@ -1,5 +1,12 @@
 # Image Upload Checklist
 
+## Synopsis
+Maps every media asset slot in the app to its expected file path. Use this to know where homepage, help-center, and marketplace images belong.
+
+## Glossary
+- **Media slot**: A folder-based upload location that the template auto-discovers.
+- **Asset**: An image, video, or `.url` (YouTube link) file placed in a slot.
+
 Last updated: 2026-02-24
 
 This is the single checklist to track image uploads across the repo.
