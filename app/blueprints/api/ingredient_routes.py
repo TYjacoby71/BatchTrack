@@ -58,7 +58,7 @@ def get_categories():
 
     # Get only global ingredient categories (no user-owned categories)
     all_categories = (
-        IngredientCategory.query.filter_by(
+        IngredientCategory.scoped().filter_by(
             organization_id=None, is_active=True, is_global_category=True
         )
         .order_by(IngredientCategory.name.asc())
@@ -101,7 +101,7 @@ def get_global_library_density_options():
 @login_required
 @require_permission("inventory.view")
 def get_ingredient_density(id):
-    ingredient = InventoryItem.query.get_or_404(id)
+    ingredient = InventoryItem.scoped().filter_by(id=id).first_or_404()
     if ingredient.density:
         return jsonify({"density": ingredient.density})
     elif ingredient.category:
@@ -125,7 +125,7 @@ def search_ingredients():
     if not q:
         return jsonify({"results": []})
 
-    query = InventoryItem.query.options(
+    query = InventoryItem.scoped().options(
         joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
         joinedload(InventoryItem.global_item)
         .joinedload(GlobalItem.variation)
@@ -420,7 +420,7 @@ def create_or_link_ingredient():
 
         # Try existing org item exact match
         existing = (
-            InventoryItem.query.filter_by(
+            InventoryItem.scoped().filter_by(
                 organization_id=current_user.organization_id, name=name, type=inv_type
             )
             .order_by(InventoryItem.id.asc())
