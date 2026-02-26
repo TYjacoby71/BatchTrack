@@ -51,7 +51,7 @@ Pre-content chrome for breadcrumbs, flash messages, and verification notices.
         {% endfor %}
     {% endif %}
 {% endwith %}
-{% if current_user.is_authenticated and current_user.user_type != 'developer' and current_user.email and not current_user.email_verified %}
+{% if email_verification_prompts_enabled and current_user.is_authenticated and current_user.user_type != 'developer' and current_user.email and not current_user.email_verified %}
 <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
     <div>
         <strong>Email verification needed.</strong>

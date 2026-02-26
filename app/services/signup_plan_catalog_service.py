@@ -39,7 +39,13 @@ class SignupPlanCatalogService:
         )
 
     @classmethod
-    def build_available_tiers_payload(cls, db_tiers) -> dict[str, dict]:
+    def build_available_tiers_payload(
+        cls,
+        db_tiers,
+        *,
+        include_live_pricing: bool = True,
+        allow_live_pricing_network: bool = True,
+    ) -> dict[str, dict]:
         available_tiers: dict[str, dict] = {}
         for tier_obj in db_tiers:
             raw_features = [p.name for p in getattr(tier_obj, "permissions", [])]
@@ -131,39 +137,59 @@ class SignupPlanCatalogService:
             ]
             presentation_feature_total = len(all_presentation_features)
 
+            monthly_lookup_key = (getattr(tier_obj, "stripe_lookup_key", None) or "").strip()
             monthly_pricing = None
-            if tier_obj.stripe_lookup_key:
+            if include_live_pricing and monthly_lookup_key:
                 try:
-                    monthly_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
+                    monthly_pricing = BillingService.get_live_pricing_for_tier(
+                        tier_obj,
+                        allow_network=allow_live_pricing_network,
+                    )
                 except Exception:
                     monthly_pricing = None
 
             yearly_lookup_key = (
-                LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
+                LifetimePricingService.resolve_standard_yearly_lookup_key(
+                    tier_obj,
+                    allow_network=allow_live_pricing_network,
+                )
             )
             yearly_pricing = None
-            if yearly_lookup_key:
+            if include_live_pricing and yearly_lookup_key:
                 try:
                     yearly_pricing = BillingService.get_live_pricing_for_lookup_key(
-                        yearly_lookup_key
+                        yearly_lookup_key,
+                        allow_network=allow_live_pricing_network,
                     )
                 except Exception:
                     yearly_pricing = None
             if yearly_pricing and yearly_pricing.get("billing_cycle") != "yearly":
                 yearly_pricing = None
 
-            price_display = (
+            monthly_price_display = (
                 monthly_pricing["formatted_price"]
                 if monthly_pricing
-                else "Contact Sales"
+                else (
+                    "Monthly pricing at secure checkout"
+                    if monthly_lookup_key
+                    else "Contact Sales"
+                )
             )
+            yearly_price_display = (
+                yearly_pricing["formatted_price"]
+                if yearly_pricing
+                else (
+                    "Yearly pricing at secure checkout"
+                    if yearly_lookup_key
+                    else None
+                )
+            )
+            price_display = monthly_price_display or "Contact Sales"
             available_tiers[str(tier_obj.id)] = {
                 "name": tier_obj.name,
                 "price_display": price_display,
-                "monthly_price_display": price_display,
-                "yearly_price_display": (
-                    yearly_pricing["formatted_price"] if yearly_pricing else None
-                ),
+                "monthly_price_display": monthly_price_display,
+                "yearly_price_display": yearly_price_display,
                 "yearly_lookup_key": yearly_lookup_key,
                 "features": feature_highlights,
                 "feature_total": feature_total,

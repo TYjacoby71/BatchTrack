@@ -126,7 +126,8 @@ window.recipeData = {
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
     tracks_batch_outputs: {{ 'true' if org_tracks_batch_outputs else 'false' }},
-    default_batch_type: "{{ 'ingredient' if org_tracks_batch_outputs else 'untracked' }}",
+    is_test_recipe: {{ 'true' if recipe.test_sequence is not none else 'false' }},
+    default_batch_type: "{{ 'untracked' if ((not org_tracks_batch_outputs) or (recipe.test_sequence is not none)) else 'ingredient' }}",
     is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
     portioning: {
         is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},

@@ -77,6 +77,37 @@ class MiddlewareProbeService:
         ".sh",
     )
 
+    HIGH_CONFIDENCE_PATH_PREFIXES = (
+        "/.git",
+        "/.env",
+        "/wp-admin",
+        "/wp-content",
+        "/wp-includes",
+        "/xmlrpc.php",
+        "/phpmyadmin",
+        "/cgi-bin",
+        "/vendor/phpunit",
+        "/_profiler",
+    )
+
+    HIGH_CONFIDENCE_PATH_TOKENS = (
+        "wp-login.php",
+        "wp-config.php",
+        "wp_filemanager.php",
+        "autoload_classmap.php",
+        "phpinfo",
+        ".git/config",
+    )
+
+    HIGH_CONFIDENCE_PATH_SUFFIXES = (
+        ".php",
+        ".asp",
+        ".aspx",
+        ".jsp",
+        ".cgi",
+        ".pl",
+    )
+
     @classmethod
     def derive_unknown_endpoint_status(cls, request) -> int | None:
         """Return status code for an unmatched route, preserving canonical redirects."""
@@ -114,6 +145,27 @@ class MiddlewareProbeService:
         if any(
             last_segment.endswith(suffix)
             for suffix in cls.SUSPICIOUS_UNKNOWN_PATH_SUFFIXES
+        ):
+            return True
+        return False
+
+    @classmethod
+    def is_high_confidence_probe_path(cls, path: str) -> bool:
+        """Classify aggressive exploit probe paths for immediate short-circuit blocking."""
+        normalized_path = (path or "").strip().lower()
+        if not normalized_path or normalized_path == "/":
+            return False
+        if any(
+            normalized_path.startswith(prefix)
+            for prefix in cls.HIGH_CONFIDENCE_PATH_PREFIXES
+        ):
+            return True
+        if any(token in normalized_path for token in cls.HIGH_CONFIDENCE_PATH_TOKENS):
+            return True
+        last_segment = normalized_path.rsplit("/", 1)[-1]
+        if any(
+            last_segment.endswith(suffix)
+            for suffix in cls.HIGH_CONFIDENCE_PATH_SUFFIXES
         ):
             return True
         return False

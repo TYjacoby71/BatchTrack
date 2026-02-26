@@ -18,6 +18,17 @@ def test_login_page_uses_lightweight_public_shell_without_heavy_app_assets(app):
     assert "bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" in html
 
 
+def test_login_page_does_not_expose_developer_quick_login(app):
+    client = app.test_client()
+    response = client.get("/auth/login")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert "Developer Access" not in html
+    assert "/auth/dev-login" not in html
+    assert "/dev-login" not in html
+
+
 def test_login_page_start_free_trial_links_share_same_destination(app):
     client = app.test_client()
     response = client.get("/auth/login")

@@ -70,6 +70,18 @@ def server_time():
 @limiter.limit("60/minute")
 @csrf.exempt
 def public_bot_trap():
+    if PublicBotTrapService.is_google_ads_verification_request(request):
+        current_app.logger.info(
+            "Skipping bot trap for Google Ads verification request: ip=%s path=%s user_agent=%s referer=%s",
+            PublicBotTrapService.resolve_request_ip(request),
+            request.path,
+            (request.headers.get("User-Agent") or "")[:160],
+            (request.headers.get("Referer") or "")[:160],
+        )
+        resp = make_response("", 204)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
     payload = {}
     if request.is_json:
         payload = request.get_json(silent=True) or {}

@@ -39,7 +39,9 @@ class PublicPricingPageService:
     def build_context(cls, *, request) -> dict[str, Any]:
         """Return render-ready context for the `/pricing` page."""
         signup_context = SignupCheckoutService.build_request_context(
-            request=request, oauth_user_info=None
+            request=request,
+            oauth_user_info=None,
+            allow_live_pricing_network=False,
         )
         available_tiers = signup_context.available_tiers
         lifetime_offers = signup_context.lifetime_offers
@@ -163,7 +165,7 @@ class PublicPricingPageService:
 
         monthly_url = (
             url_for(
-                "auth.signup_checkout",
+                "auth.signup",
                 tier=tier_id,
                 billing_mode="standard",
                 billing_cycle="monthly",
@@ -174,7 +176,7 @@ class PublicPricingPageService:
         )
         yearly_url = (
             url_for(
-                "auth.signup_checkout",
+                "auth.signup",
                 tier=tier_id,
                 billing_mode="standard",
                 billing_cycle="yearly",
@@ -185,7 +187,7 @@ class PublicPricingPageService:
         )
         lifetime_url = (
             url_for(
-                "auth.signup_checkout",
+                "auth.signup",
                 billing_mode="lifetime",
                 lifetime_tier=resolved_offer.get("key"),
                 tier=tier_id,

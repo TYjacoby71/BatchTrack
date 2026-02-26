@@ -989,6 +989,7 @@ def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()
     brand_asset_paths = [
+        "/favicon.ico",
         "/branding/full-logo.svg",
         "/branding/full-logo-header.svg",
         "/branding/app-tile.svg",
@@ -1038,12 +1039,11 @@ def test_public_crawler_assets_are_accessible(app):
 
 
 @pytest.mark.usefixtures("app")
-def test_legacy_dev_login_path_redirects_to_auth_namespace(app):
-    """Legacy /dev-login URL should redirect to the canonical auth route."""
+def test_legacy_dev_login_path_is_not_exposed(app):
+    """Legacy /dev-login URL should not expose an alternate auth path."""
     client = app.test_client()
     response = client.get("/dev-login", follow_redirects=False)
-    assert response.status_code in {301, 302}
-    assert response.headers.get("Location", "").endswith("/auth/dev-login")
+    assert response.status_code == 404
 
 
 @pytest.mark.usefixtures("app")

@@ -9,6 +9,7 @@ import logging
 from typing import List
 
 from ...models import Recipe
+from ..recipe_cost_service import calculate_recipe_line_item_cost_or_zero
 from ..stock_check import UniversalStockCheckService
 from .types import IngredientRequirement
 
@@ -52,17 +53,23 @@ def validate_ingredients_with_uscs(
 
             # Convert USCS status to production planning status
             status = _convert_uscs_status(stock_item.get("status", "unknown"))
+            inventory_item = recipe_ingredient.inventory_item
             cost_per_unit = (
-                getattr(recipe_ingredient.inventory_item, "cost_per_unit", 0) or 0
+                getattr(inventory_item, "cost_per_unit", 0) or 0
             )
             scaled_quantity = stock_item["needed_quantity"]
+            line_total_cost = calculate_recipe_line_item_cost_or_zero(
+                quantity=scaled_quantity,
+                recipe_unit=stock_item.get("needed_unit"),
+                inventory_item=inventory_item,
+            )
 
             requirement = IngredientRequirement(
                 ingredient_id=stock_item["item_id"],
                 ingredient_name=stock_item["item_name"],
                 scale=scale,
                 unit=stock_item["needed_unit"],
-                total_cost=scaled_quantity * cost_per_unit,
+                total_cost=line_total_cost,
                 status=status,
                 base_quantity=recipe_ingredient.quantity,
                 scaled_quantity=scaled_quantity,

@@ -95,6 +95,15 @@
             margin-bottom: 0;
         }
 
+        .homepage-card-col {
+            display: flex;
+        }
+
+        .homepage-card-col > .card,
+        .homepage-card-col > .tool-feature-card-shell {
+            width: 100%;
+        }
+
         .tool-feature-card-shell.is-fallback .feature-card {
             border: 1px solid rgba(108, 117, 125, 0.25);
         }
@@ -233,20 +242,51 @@
         }
 
         .tool-card-image {
-            width: 100%;
+            width: auto;
+            max-width: 100%;
+            height: auto;
             max-height: 186px;
             object-fit: contain;
+            object-position: center center;
             display: block;
             border-radius: 0.35rem;
+            margin: 0 auto;
         }
 
         .tool-card-video {
-            width: 100%;
+            width: auto;
+            max-width: 100%;
+            height: auto;
             max-height: 186px;
             object-fit: contain;
+            object-position: center center;
             display: block;
             border-radius: 0.35rem;
             background: #0d1b34;
+            margin: 0 auto;
+        }
+
+        .media-embed-frame {
+            border: 0;
+            display: block;
+        }
+
+        .tool-slot-media {
+            min-height: 200px;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .tool-slot-image,
+        .tool-slot-video {
+            width: 100%;
+            height: 100%;
+            min-height: 200px;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
+            margin: 0;
+            border-radius: 0;
         }
 
         .btn-cta {
@@ -306,6 +346,13 @@
             inset: 0;
             background: rgba(9, 20, 40, 0.46);
             z-index: 1;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.32s ease;
+        }
+
+        .hero-media-stage.is-overlay-dismissed::before {
+            opacity: 0;
         }
 
         .hero-video-placeholder {
@@ -352,6 +399,24 @@
             text-align: center;
             padding: 1.5rem;
             color: #ffffff;
+            pointer-events: none;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
+        }
+
+        .hero-overlay.is-fading {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+        }
+
+        .hero-overlay.is-hidden {
+            display: none;
+        }
+
+        .hero-overlay .hero-copy {
+            pointer-events: none;
         }
 
         .hero-overlay .hero-title {
@@ -363,6 +428,11 @@
             max-width: 52rem;
             color: rgba(255, 255, 255, 0.9);
             margin-bottom: 0;
+        }
+
+        .hero-watch-btn {
+            margin-top: 1.1rem;
+            pointer-events: auto;
         }
 
         .hero-media-meta {
@@ -441,561 +511,102 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Hero Banner -->
-    <section class="hero-section bg-light py-5 border-bottom">
-        <div class="container">
-            <div class="hero-media-box">
-                <div class="hero-media-stage">
-                    {% set hero_slot_media = (homepage_media_slots.get('hero-primary') if homepage_media_slots is defined else none) %}
-                    <div class="placeholder-img hero-video-placeholder{% if hero_slot_media %} has-media{% endif %}">
-                        {% if hero_slot_media %}
-                            {% if hero_slot_media.kind == 'video' %}
-                            <video class="hero-slot-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack demo media">
-                                <source src="{{ url_for('static', filename=hero_slot_media.path) }}">
-                            </video>
-                            {% else %}
-                            <img src="{{ url_for('static', filename=hero_slot_media.path) }}" class="hero-slot-media" alt="BatchTrack workflow preview" loading="lazy" decoding="async">
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    <div class="hero-overlay">
-                        <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
-                        <p class="lead hero-subtitle">Precision for every batch you make.</p>
-                    </div>
-                </div>
-                <div class="hero-media-meta d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                    <p class="text-muted mb-0">
-                        Use this section for your short product demo and walkthrough so visitors can see the workflow in action.
-                    </p>
-                    <a href="#about" class="btn btn-cta text-white fw-semibold">Learn More</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Free Tools Section -->
-    <section id="free-tools" class="py-5 border-bottom">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">FREE TOOLS &amp; CALCULATORS</h2>
-                <p class="lead text-muted mb-0">Most-used tools are highlighted here, with the soap maker tool centered for quick access.</p>
-            </div>
-
-            {% if homepage_tool_cards and homepage_tool_cards|length > 0 %}
-            {% set desktop_cards = (homepage_tool_cards_desktop if homepage_tool_cards_desktop is defined and homepage_tool_cards_desktop else homepage_tool_cards) %}
-
-            <div class="d-none d-md-block">
-                <div class="row justify-content-center">
-                    {% for tool in desktop_cards %}
-                    {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
-                    {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('waitlist.waitlist_landing', waitlist_key='tools.' ~ tool.slug, source='homepage_tool_card')) %}
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
-                            <div class="card feature-card h-100">
-                                <div class="card-body text-center">
-                                    <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
-                                        {% if tool.media %}
-                                            {% if tool.media.kind == 'video' %}
-                                        <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
-                                            <source src="{{ url_for('static', filename=tool.media.path) }}">
-                                        </video>
-                                            {% else %}
-                                        <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
-                                            {% endif %}
-                                        {% else %}
-                                        <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <h3 class="card-title h5">{{ tool.name }}</h3>
-                                    <p class="card-text">{{ tool.summary }}</p>
-                                    {% if tool_is_enabled %}
-                                    <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
-                                    {% else %}
-                                    <span class="tool-feature-card-cta">Join Waitlist <span aria-hidden="true">&rarr;</span></span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="d-md-none">
-                {% if homepage_mobile_swipe_enabled %}
-                <div id="homepageToolsCarousel" class="carousel slide homepage-tools-carousel" data-bs-touch="true" data-bs-interval="false" data-bs-wrap="true">
-                    <div class="carousel-indicators">
-                        {% for tool in homepage_tool_cards %}
-                        <button type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide-to="{{ loop.index0 }}" {% if loop.first %}class="active" aria-current="true"{% endif %} aria-label="Tool {{ loop.index }}"></button>
-                        {% endfor %}
-                    </div>
-                    <div class="carousel-inner">
-                        {% for tool in homepage_tool_cards %}
-                        <div class="carousel-item {% if loop.first %}active{% endif %}">
-                            <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
-                                <div class="card feature-card h-100">
-                                    <div class="card-body text-center">
-                                        <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
-                                            {% if tool.media %}
-                                                {% if tool.media.kind == 'video' %}
-                                            <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
-                                                <source src="{{ url_for('static', filename=tool.media.path) }}">
-                                            </video>
-                                                {% else %}
-                                            <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
-                                                {% endif %}
-                                            {% else %}
-                                            <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <h3 class="card-title h5">{{ tool.name }}</h3>
-                                        <p class="card-text">{{ tool.summary }}</p>
-                                        <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide="prev" aria-label="Previous tool">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#homepageToolsCarousel" data-bs-slide="next" aria-label="Next tool">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    </button>
-                </div>
-                {% else %}
-                {% set single_tool = homepage_tool_cards[0] %}
-                <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
-                    <div class="card feature-card h-100 mb-4">
-                        <div class="card-body text-center">
-                            <div class="placeholder-img mb-3{% if single_tool.media %} has-media{% endif %}">
-                                {% if single_tool.media %}
-                                    {% if single_tool.media.kind == 'video' %}
-                                <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
-                                    <source src="{{ url_for('static', filename=single_tool.media.path) }}">
-                                </video>
-                                    {% else %}
-                                <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-card-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
-                                    {% endif %}
-                                {% else %}
-                                <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
-                                {% endif %}
-                            </div>
-                            <h3 class="card-title h5">{{ single_tool.name }}</h3>
-                            <p class="card-text">{{ single_tool.summary }}</p>
-                            <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
-                        </div>
-                    </div>
-                </a>
-                {% endif %}
-            </div>
-            {% else %}
-            <p class="text-center text-muted mb-4">
-                Free tools are not enabled right now. Check back soon.
-            </p>
-            {% endif %}
-
-            <div class="text-center">
-                <a href="{{ url_for('tools_bp.tools_index') }}" class="btn btn-outline-primary btn-lg">More Tools</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Scrolling Banner -->
-    <div class="scrolling-banner">
-        <div class="scrolling-content">
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>FIFO Inventory Tracking</span>
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Batch Production Management</span>
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Real-time Stock Alerts</span>
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Cost Tracking & Analytics</span>
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Container Management</span>
-            <span class="me-5"><span class="check-symbol" aria-hidden="true">+</span>Recipe Scaling</span>
-        </div>
-    </div>
-
-    <!-- Features Section -->
-    <section id="features" class="py-5">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">Professional Features Without the Price Tag</h2>
-                <p class="lead text-muted">Everything you need to run consistent, profitable batches.</p>
-            </div>
-
-            <div class="row">
-                {% for feature in (homepage_feature_cards if homepage_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card h-100">
-                        <div class="card-body text-center">
-                            <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
-                                {% if feature.media %}
-                                    {% if feature.media.kind == 'video' %}
-                                <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ feature.name }} preview">
-                                    <source src="{{ url_for('static', filename=feature.media.path) }}">
-                                </video>
-                                    {% else %}
-                                <img src="{{ url_for('static', filename=feature.media.path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
-                                    {% endif %}
-                                {% else %}
-                                <span class="feature-icon" aria-hidden="true">{{ feature.icon }}</span>
-                                {% endif %}
-                            </div>
-                            <h3 class="card-title h5">{{ feature.name }}</h3>
-                            <p class="card-text">{{ feature.summary }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-
-    <section id="about" class="py-5 bg-light border-top border-bottom">
-        <div class="container">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-6">
-                    <h2 class="fw-bold mb-3">Professional results for artisans, without the headache.</h2>
-                    <p class="lead text-muted mb-3">
-                        BatchTrack focuses on real production workflows: inventory, recipes, planning, batch execution, output tracking, and products.
-                    </p>
-                    <p class="text-muted mb-0">
-                        From hobbyist makers to growing teams, the platform is designed to stay calm, simple, and easy to use without industrial bloat.
-                    </p>
-                </div>
-                <div class="col-lg-6">
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body">
-                                    <h3 class="fw-bold h5 mb-2">Start Batch</h3>
-                                    <p class="text-muted mb-0 small">Launch a batch from the dashboard in one click.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body">
-                                    <h3 class="fw-bold h5 mb-2">Expiration Alerts</h3>
-                                    <p class="text-muted mb-0 small">See upcoming expirations early and use ingredients before they are lost.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body">
-                                    <h3 class="fw-bold h5 mb-2">Neurodivergent-Friendly Design</h3>
-                                    <p class="text-muted mb-0 small">Calm, low-noise screens built for focus during production.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body">
-                                    <h3 class="fw-bold h5 mb-2">Team-ready</h3>
-                                    <p class="text-muted mb-0 small">Add teammates and keep everyone aligned on the same batch workflow.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- First CTA Section -->
-    <section class="cta-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h3 class="fw-bold mb-3">Ready to keep every batch on track?</h3>
-                    <p class="mb-0">Start with a 7-day free trial and run your recipes, inventory, and batch flow in one place.</p>
-                </div>
-                <div class="col-lg-4 text-lg-end">
-                    <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-light btn-lg">Start Free Trial</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Social Proof Section -->
-    <section class="social-proof">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold">Trusted by Makers Like You</h2>
-                <p class="text-muted">See what our customers are saying</p>
-            </div>
-
-            {% set fallback_reviews = [
-                {
-                    'name': 'River & Pine Studio',
-                    'title': 'Small-batch soap maker',
-                    'quote': 'BatchTrack keeps our batches and inventory flow clear without adding extra overhead.',
-                    'logo': None,
-                    'photo': None
-                },
-                {
-                    'name': 'Northline Candle Co.',
-                    'title': 'Candle maker',
-                    'quote': 'Planning and running batches is faster now because everything is tracked in one place.',
-                    'logo': None,
-                    'photo': None
-                },
-                {
-                    'name': 'Hearth & Grain Kitchen',
-                    'title': 'Baker and maker',
-                    'quote': 'We finally have a clean process for formulas, lot usage, and finished output records.',
-                    'logo': None,
-                    'photo': None
-                }
-            ] %}
-
-            <div class="row">
-                {% for idx in range(3) %}
-                {% set fallback = fallback_reviews[idx] %}
-                {% set source = (marketing_reviews[idx] if marketing_reviews|length > idx else fallback) %}
-                {% set review_name = source.name or fallback.name %}
-                {% set review_title = source.title or fallback.title %}
-                {% set review_quote = source.quote or fallback.quote %}
-                {% set customer_key = 'customer-' ~ (idx + 1) %}
-                {% set customer_media = (homepage_testimonial_media.get(customer_key) if homepage_testimonial_media is defined else none) %}
-                {% set logo_media = (customer_media.get('logo') if customer_media else none) %}
-                {% set photo_media = (customer_media.get('photo') if customer_media else none) %}
-                <div class="col-lg-4">
-                    <div class="testimonial-card h-100">
-                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                            {% if logo_media %}
-                                {% if logo_media.kind == 'video' %}
-                            <video class="testimonial-logo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} logo media">
-                                <source src="{{ url_for('static', filename=logo_media.path) }}">
-                            </video>
-                                {% else %}
-                            <img src="{{ url_for('static', filename=logo_media.path) }}"
-                                 alt="{{ review_name }} logo"
-                                 class="testimonial-logo-media"
-                                 loading="lazy"
-                                 decoding="async">
-                                {% endif %}
-                            {% else %}
-                            <div class="fw-semibold text-muted">{{ review_name }}</div>
-                            {% endif %}
-                        </div>
-                        <p class="fst-italic">"{{ review_quote }}"</p>
-                        <div class="d-flex align-items-center">
-                            <div class="me-3" style="width: 50px; height: 50px;">
-                                {% if photo_media %}
-                                    {% if photo_media.kind == 'video' %}
-                                <video class="testimonial-photo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} profile media">
-                                    <source src="{{ url_for('static', filename=photo_media.path) }}">
-                                </video>
-                                    {% else %}
-                                <img src="{{ url_for('static', filename=photo_media.path) }}"
-                                     alt="{{ review_name }}"
-                                     class="testimonial-photo-media"
-                                     width="50"
-                                     height="50"
-                                     loading="lazy"
-                                     decoding="async">
-                                    {% endif %}
-                                {% else %}
-                                <div class="rounded-circle d-flex align-items-center justify-content-center border bg-light text-muted fw-semibold" style="width: 50px; height: 50px;">{{ review_name[:1]|upper }}</div>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <strong>{{ review_name }}</strong><br>
-                                <small class="text-muted">{{ review_title }}</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-
-    <!-- Stats Section -->
-    <section class="stats-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-item">
-                        <div class="stat-number">{{ marketing_stats.total_active_users or 0 }}</div>
-                        <p>Active Users</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-item">
-                        <div class="stat-number">5+</div>
-                        <p>Integrations</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-item">
-                        <div class="stat-number">30%</div>
-                        <p>Waste Reduction</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-item">
-                        <div class="stat-number">99.9%</div>
-                        <p>Uptime</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- More Features -->
-    <section class="py-5">
-        <div class="container">
-            <div class="row">
-                {% for feature in (homepage_more_feature_cards if homepage_more_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card h-100">
-                        <div class="card-body text-center">
-                            <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
-                                {% if feature.media %}
-                                    {% if feature.media.kind == 'video' %}
-                                <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ feature.name }} preview">
-                                    <source src="{{ url_for('static', filename=feature.media.path) }}">
-                                </video>
-                                    {% else %}
-                                <img src="{{ url_for('static', filename=feature.media.path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
-                                    {% endif %}
-                                {% else %}
-                                <span class="feature-icon" aria-hidden="true">{{ feature.icon }}</span>
-                                {% endif %}
-                            </div>
-                            <h3 class="card-title h5">{{ feature.name }}</h3>
-                            <p class="card-text">{{ feature.summary }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-
-    <!-- Second CTA Section -->
-    <section class="cta-section">
-        <div class="container text-center">
-            <h2 class="fw-bold mb-4">Keep every batch on track, from start to finish.</h2>
-            <p class="lead mb-4">Join the growing community of makers who have streamlined their operations with BatchTrack</p>
-            <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-light btn-lg px-4">Start Free Trial</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Business Spotlights Banner -->
-    {% if marketing_spotlights and marketing_spotlights|length > 0 %}
-    <div class="scrolling-banner">
-        <div class="scrolling-content">
-            {% for s in marketing_spotlights %}
-            <span class="me-5">
-                <span aria-hidden="true" class="me-1">★</span>
-                <a href="{{ s.url }}" target="_blank">{{ s.business_name }}</a>
-            </span>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Integration Section -->
-    <section class="py-5 bg-light">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold">Integrations</h2>
-                <p class="text-muted">BatchTrack is building integrations for Shopify, Etsy, QuickBooks, Zapier, Slack, and more.</p>
-            </div>
-
-            <div class="row justify-content-center">
-                {% for integration in (homepage_integration_tiles if homepage_integration_tiles is defined else []) %}
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-4">
-                    <div class="integration-logo-tile text-center h-100">
-                        {% if integration.media %}
-                            {% if integration.media.kind == 'video' %}
-                        <video
-                            class="integration-logo-media"
-                            autoplay
-                            muted
-                            loop
-                            playsinline
-                            preload="metadata"
-                            aria-label="{{ integration.name }} integration media"
-                        >
-                            <source src="{{ url_for('static', filename=integration.media.path) }}">
-                        </video>
-                            {% else %}
-                        <img
-                            src="{{ url_for('static', filename=integration.media.path) }}"
-                            alt="{{ integration.name }} logo"
-                            class="integration-logo-media"
-                            width="52"
-                            height="52"
-                            loading="lazy"
-                            decoding="async"
-                        >
-                            {% endif %}
-                        {% else %}
-                        <img
-                            src="{{ integration.fallback_logo }}"
-                            alt="{{ integration.name }} logo"
-                            class="integration-logo-icon"
-                            width="52"
-                            height="52"
-                            loading="lazy"
-                            decoding="async"
-                        >
-                        {% endif %}
-                        <div class="fw-semibold mt-3">{{ integration.name }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-
-    <!-- Final CTA Section -->
-    <section class="py-5">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    {% set final_cta_media = (homepage_media_slots.get('final-cta-primary') if homepage_media_slots is defined else none) %}
-                    <div class="placeholder-img final-cta-media-slot{% if final_cta_media %} has-media{% endif %}">
-                        {% if final_cta_media %}
-                            {% if final_cta_media.kind == 'video' %}
-                        <video class="final-cta-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app workflow media">
-                            <source src="{{ url_for('static', filename=final_cta_media.path) }}">
-                        </video>
-                            {% else %}
-                        <img src="{{ url_for('static', filename=final_cta_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <h2 class="fw-bold mb-4">Follow every batch from plan to finished product</h2>
-                    <p class="lead mb-4">Use one workflow for recipe setup, stock checks, in-progress tracking, and finished output records.</p>
-                    <ul class="list-unstyled mb-4">
-                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Plan and launch batches in minutes</li>
-                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Keep timers, notes, and changes tied to each run</li>
-                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Restock products and update costs when batches finish</li>
-                        <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Start free and scale as your team grows</li>
-                    </ul>
-                    <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-cta btn-lg text-white">Start Free Trial</a>
-                </div>
-            </div>
-        </div>
-    </section>
+    {% include 'components/homepage/_hero_banner.html' %}
+    {% include 'components/homepage/_free_tools.html' %}
+    {% include 'components/homepage/_scrolling_banner.html' %}
+    {% include 'components/homepage/_features.html' %}
+    {% include 'components/homepage/_about.html' %}
+    {% include 'components/homepage/_first_cta.html' %}
+    {% include 'components/homepage/_social_proof.html' %}
+    {% include 'components/homepage/_stats.html' %}
+    {% include 'components/homepage/_more_features.html' %}
+    {% include 'components/homepage/_second_cta.html' %}
+    {% include 'components/homepage/_business_spotlights_banner.html' %}
+    {% include 'components/homepage/_integrations.html' %}
+    {% include 'components/homepage/_final_cta.html' %}
 
 {% endblock %}
 
 {% block scripts %}
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+        var hasAnalytics = !!(window.BTAnalytics && typeof window.BTAnalytics.capture === 'function');
+
+        var heroSection = document.querySelector('.hero-section');
+        var heroMediaStage = document.querySelector('.hero-media-stage');
+        var heroOverlay = document.querySelector('.hero-overlay');
+        var heroWatchButton = document.querySelector('[data-hero-watch]');
+
+        if (heroSection && heroOverlay) {
+          var heroOverlayDismissed = false;
+          var heroOverlayTimer = null;
+          var heroOverlayObserver = null;
+
+          var clearHeroOverlayTimer = function() {
+            if (heroOverlayTimer !== null) {
+              window.clearTimeout(heroOverlayTimer);
+              heroOverlayTimer = null;
+            }
+          };
+
+          var dismissHeroOverlay = function(source) {
+            if (heroOverlayDismissed) {
+              return;
+            }
+            heroOverlayDismissed = true;
+            clearHeroOverlayTimer();
+            if (heroOverlayObserver && typeof heroOverlayObserver.disconnect === 'function') {
+              heroOverlayObserver.disconnect();
+            }
+            if (heroMediaStage) {
+              heroMediaStage.classList.add('is-overlay-dismissed');
+            }
+            heroOverlay.classList.add('is-fading');
+            window.setTimeout(function() {
+              heroOverlay.classList.add('is-hidden');
+              heroOverlay.setAttribute('aria-hidden', 'true');
+            }, 320);
+          };
+
+          var startHeroOverlayTimer = function() {
+            if (heroOverlayDismissed || heroOverlayTimer !== null) {
+              return;
+            }
+            heroOverlayTimer = window.setTimeout(function() {
+              dismissHeroOverlay('dwell_3s');
+            }, 3000);
+          };
+
+          var observedTarget = heroMediaStage || heroSection;
+          if ('IntersectionObserver' in window) {
+            heroOverlayObserver = new IntersectionObserver(function(entries) {
+              entries.forEach(function(entry) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
+                  startHeroOverlayTimer();
+                } else {
+                  clearHeroOverlayTimer();
+                }
+              });
+            }, {
+              threshold: [0, 0.55, 1]
+            });
+            heroOverlayObserver.observe(observedTarget);
+          } else {
+            startHeroOverlayTimer();
+          }
+
+          if (heroWatchButton) {
+            heroWatchButton.addEventListener('click', function(event) {
+              event.preventDefault();
+              dismissHeroOverlay('watch_button');
+            });
+          }
+        }
+
+        if (!hasAnalytics) {
           return;
         }
+
         window.BTAnalytics.capture('homepage_viewed', {
           landing_variant: 'homepage',
           authenticated: false

@@ -1,0 +1,40 @@
+<!-- More Features -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            {% for feature in (homepage_more_feature_cards if homepage_more_feature_cards is defined else []) %}
+            <div class="col-lg-4 col-md-6 homepage-card-col">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
+                            {% if feature.media %}
+                                {% if feature.media.kind == 'video' %}
+                            <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ feature.name }} preview">
+                                <source src="{{ url_for('static', filename=feature.media.path) }}">
+                            </video>
+                                {% elif feature.media.kind == 'youtube' and feature.media.embed_url %}
+                            <iframe
+                                class="tool-card-video media-embed-frame"
+                                src="{{ feature.media.embed_url }}"
+                                title="{{ feature.name }} preview video"
+                                loading="lazy"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen
+                            ></iframe>
+                                {% else %}
+                            <img src="{{ url_for('static', filename=feature.media.path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
+                                {% endif %}
+                            {% else %}
+                            <span class="feature-icon" aria-hidden="true">{{ feature.icon }}</span>
+                            {% endif %}
+                        </div>
+                        <h3 class="card-title h5">{{ feature.name }}</h3>
+                        <p class="card-text">{{ feature.summary }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>

@@ -86,7 +86,7 @@
               {% set ns_product.total_value = ns_product.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
             {% endif %}
             {% set size_label = sku.size_label if sku.size_label else 'Bulk' %}
-            {% if size_label == 'Bulk' or not sku.size_label %}
+            {% if not sku.size_label or (size_label and size_label.lower().startswith('bulk')) %}
               {% set ns_product.total_bulk = ns_product.total_bulk + sku.inventory_item.quantity %}
             {% else %}
               {% set ns_product.total_packaged = ns_product.total_packaged + sku.inventory_item.quantity %}
@@ -191,7 +191,7 @@
             {% if size_label not in unique_size_labels %}
               {% set _ = unique_size_labels.append(size_label) %}
             {% endif %}
-            {% if size_label == 'Bulk' or not sku.size_label %}
+            {% if not sku.size_label or (size_label and size_label.lower().startswith('bulk')) %}
               {% set ns_variant.total_bulk = ns_variant.total_bulk + sku_quantity %}
             {% else %}
               {% set ns_variant.total_packaged = ns_variant.total_packaged + sku_quantity %}

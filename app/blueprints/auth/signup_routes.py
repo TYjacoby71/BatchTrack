@@ -52,8 +52,16 @@ def _build_signup_fallback_url(
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
     db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
-    available_tiers = SignupPlanCatalogService.build_available_tiers_payload(db_tiers)
-    lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
+    available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
+        db_tiers,
+        include_live_pricing=False,
+        allow_live_pricing_network=False,
+    )
+    lifetime_offers = LifetimePricingService.build_lifetime_offers(
+        db_tiers,
+        include_live_pricing=False,
+        allow_live_pricing_network=False,
+    )
     oauth_providers = OAuthService.get_enabled_providers()
 
     return jsonify(
@@ -69,59 +77,23 @@ def signup_data():
 @auth_bp.route("/signup/checkout")
 @limiter.limit("600/minute")
 def signup_checkout():
-    """Start checkout directly from a selected pricing option."""
+    """Legacy direct-checkout route that now redirects into signup selection flow."""
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
 
-    oauth_user_info = session.get("oauth_user_info")
-    signup_context = SignupCheckoutService.build_request_context(
-        request=request,
-        oauth_user_info=oauth_user_info,
-    )
-
-    selected_tier = request.args.get("tier") or signup_context.preselected_tier or ""
-    selected_mode = (
-        request.args.get("billing_mode") or signup_context.billing_mode or "standard"
-    )
+    selected_tier = request.args.get("tier") or ""
+    selected_mode = request.args.get("billing_mode") or "standard"
     if selected_mode not in {"standard", "lifetime"}:
         selected_mode = "standard"
 
-    selected_cycle = (
-        request.args.get("billing_cycle") or signup_context.standard_billing_cycle
-    )
+    selected_cycle = request.args.get("billing_cycle") or "monthly"
     if selected_cycle not in {"monthly", "yearly"}:
-        selected_cycle = signup_context.standard_billing_cycle
+        selected_cycle = "monthly"
 
-    selected_lifetime_tier = (
-        request.args.get("lifetime_tier") or signup_context.selected_lifetime_tier or ""
-    )
-    selected_promo = request.args.get("promo") or signup_context.promo_code or ""
-    signup_source = (
-        request.args.get("source")
-        or signup_context.signup_source
-        or "pricing_direct_checkout"
-    )
-
-    submission_payload = {
-        "selected_tier": selected_tier,
-        "billing_mode": selected_mode,
-        "billing_cycle": selected_cycle if selected_mode == "standard" else "",
-        "lifetime_tier": selected_lifetime_tier if selected_mode == "lifetime" else "",
-        "promo": selected_promo,
-        "oauth_signup": "true" if oauth_user_info else "false",
-        "contact_email": (oauth_user_info or {}).get("email", ""),
-        "contact_phone": "",
-    }
-
-    result = SignupCheckoutService.process_submission(
-        context=signup_context,
-        form_data=submission_payload,
-    )
-    if result.redirect_url:
-        return redirect(result.redirect_url)
-
-    if result.flash_message:
-        flash(result.flash_message, result.flash_category)
+    selected_lifetime_tier = request.args.get("lifetime_tier") or ""
+    selected_promo = request.args.get("promo") or ""
+    signup_source = request.args.get("source") or "pricing_direct_checkout"
+    referral_code = request.args.get("ref")
 
     fallback_url = _build_signup_fallback_url(
         tier=selected_tier,
@@ -130,7 +102,7 @@ def signup_checkout():
         lifetime_tier=selected_lifetime_tier,
         promo=selected_promo,
         source=signup_source,
-        referral_code=signup_context.referral_code,
+        referral_code=referral_code,
     )
     return redirect(fallback_url)
 
@@ -145,6 +117,7 @@ def signup():
     signup_context = SignupCheckoutService.build_request_context(
         request=request,
         oauth_user_info=session.get("oauth_user_info"),
+        allow_live_pricing_network=request.method == "POST",
     )
 
     if request.method == "POST":

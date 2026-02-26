@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 from flask import current_app, has_app_context
 from sqlalchemy import func
@@ -34,6 +35,18 @@ class PublicBotTrapService:
     REDIS_ENABLED_CONFIG_KEY = "BOT_TRAP_REDIS_ENABLED"
     REDIS_PREFIX_CONFIG_KEY = "BOT_TRAP_REDIS_PREFIX"
     DEFAULT_REDIS_PREFIX = "bottrap:v1"
+    GOOGLE_ADS_USER_AGENT_TOKENS = (
+        "adsbot-google",
+        "adsbot-google-mobile",
+        "google-adwords-instant",
+        "google-adwords-instant-mobile",
+        "google-adwords-express",
+    )
+    GOOGLE_ADS_REFERER_HOSTS = (
+        "ads.google.com",
+        "googleads.g.doubleclick.net",
+        "googleadservices.com",
+    )
 
     @staticmethod
     def _normalize_ip(raw_ip: Optional[str]) -> Optional[str]:
@@ -78,6 +91,73 @@ class PublicBotTrapService:
         if real_ip:
             return cls._normalize_ip(real_ip)
         return cls._normalize_ip(getattr(request, "remote_addr", None))
+
+    @staticmethod
+    def _normalize_host(raw_url: Optional[str]) -> Optional[str]:
+        if not raw_url or not isinstance(raw_url, str):
+            return None
+        candidate = raw_url.strip()
+        if not candidate:
+            return None
+        parsed = urlparse(candidate)
+        host = parsed.hostname or None
+        if host:
+            return host.strip().lower()
+        if "://" not in candidate:
+            parsed = urlparse(f"https://{candidate}")
+            host = parsed.hostname or None
+            if host:
+                return host.strip().lower()
+        return None
+
+    @staticmethod
+    def _host_matches(host: Optional[str], allowed_hosts: tuple[str, ...]) -> bool:
+        if not host:
+            return False
+        normalized_host = host.strip().lower()
+        for allowed in allowed_hosts:
+            normalized_allowed = allowed.strip().lower()
+            if (
+                normalized_host == normalized_allowed
+                or normalized_host.endswith(f".{normalized_allowed}")
+            ):
+                return True
+        return False
+
+    @classmethod
+    def is_google_ads_verification_request(cls, request) -> bool:
+        """Return True for known Google Ads verification crawlers/checkers."""
+        if request is None:
+            return False
+
+        method = str(getattr(request, "method", "") or "").upper()
+        if method not in {"GET", "HEAD"}:
+            return False
+
+        user_agent = (
+            str(request.headers.get("User-Agent", "") or "").strip().lower()
+            if hasattr(request, "headers")
+            else ""
+        )
+        if not user_agent:
+            return False
+
+        if user_agent == "google":
+            return True
+
+        if any(token in user_agent for token in cls.GOOGLE_ADS_USER_AGENT_TOKENS):
+            return True
+
+        referer_host = cls._normalize_host(
+            request.headers.get("Referer") if hasattr(request, "headers") else None
+        )
+        if (
+            cls._host_matches(referer_host, cls.GOOGLE_ADS_REFERER_HOSTS)
+            and "chrome/" in user_agent
+        ):
+            return True
+
+        return False
 
     @staticmethod
     def _utcnow() -> datetime:
@@ -687,6 +767,8 @@ class PublicBotTrapService:
 
     @classmethod
     def should_block_request(cls, request, user=None) -> bool:
+        if cls.is_google_ads_verification_request(request):
+            return False
         ip_value = cls.resolve_request_ip(request)
         user_id = None
         email = None

@@ -177,12 +177,6 @@ def login():
     oauth_available = OAuthService.is_oauth_configured()
     show_forgot_password = EmailService.password_reset_enabled()
     show_resend_verification = EmailService.should_issue_verification_tokens()
-    env_name = (
-        current_app.config.get("ENV") or current_app.config.get("FLASK_ENV") or ""
-    ).lower()
-    show_dev_login = env_name in {"development", "staging", "testing"} or bool(
-        current_app.config.get("DEBUG")
-    )
     login_page_context = {
         "page_title": "BatchTrack Login | Production & Inventory",
         "page_description": "Sign in to BatchTrack to manage production planning, inventory, recipes, and batches.",
@@ -193,7 +187,6 @@ def login():
         "load_fontawesome": False,
         "load_feedback_widget": False,
         "public_header_signup_source": "login_start_free_trial",
-        "show_dev_login": show_dev_login,
     }
 
     def _render_login_page(status_code: int | None = None):
@@ -741,31 +734,3 @@ def logout():
     return redirect(url_for("core.homepage"))
 
 
-# --- Developer quick login ---
-# Purpose: Internal convenience login route for developer account access.
-# Inputs: Request context for developer quick-login invocation.
-# Outputs: Developer session login redirect or auth error flash + login redirect.
-@auth_bp.route("/dev-login")
-def dev_login():
-    """Quick developer login for system access."""
-    dev_user = User.query.filter_by(username="dev").first()
-    if dev_user:
-        previous_last_login = TimezoneUtils.ensure_timezone_aware(
-            getattr(dev_user, "last_login", None)
-        )
-        login_user(dev_user)
-        SessionService.rotate_user_session(dev_user)
-        dev_user.last_login = TimezoneUtils.utc_now()
-        db.session.commit()
-        AnalyticsTrackingService.track_user_login_succeeded(
-            organization_id=getattr(dev_user, "organization_id", None),
-            user_id=dev_user.id,
-            is_first_login=previous_last_login is None,
-            login_method="dev_quick_login",
-            destination_hint="developer_dashboard",
-        )
-        flash("Developer access granted", "success")
-        return redirect(url_for("developer.dashboard"))
-
-    flash("Developer account not found. Please contact system administrator.", "error")
-    return redirect(url_for("auth.login"))

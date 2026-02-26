@@ -249,6 +249,12 @@ def branding_full_logo():
     return _serve_brand_asset("Full Logo.svg")
 
 
+@core_bp.route("/favicon.ico")
+def favicon():
+    """Browser/bot favicon endpoint backed by the square app tile."""
+    return _serve_brand_asset("App card logo.svg")
+
+
 @core_bp.route("/branding/full-logo-header.svg")
 def branding_full_logo_header():
     """Cropped full logo for compact header branding."""
@@ -281,12 +287,6 @@ def llms_txt():
     return _serve_marketing_public_asset(
         "llms.txt", mimetype="text/plain; charset=utf-8"
     )
-
-
-@core_bp.route("/dev-login")
-def dev_login_legacy():
-    """Legacy developer-login path kept for backward compatibility."""
-    return redirect(url_for("auth.dev_login"), code=301)
 
 
 @core_bp.route("/signup", methods=["GET", "POST"])

@@ -149,27 +149,11 @@ def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
     assert calls
 
 
-def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
+def test_high_confidence_probe_blocks_immediately(app):
     client = app.test_client()
 
-    # Strike 1: suspicious probe should still return unknown-path status.
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    still_public = client.get("/tools/", follow_redirects=False)
-    assert still_public.status_code == 200
-
-    # Strike 2: still not blocked.
-    second = client.get("/xmlrpc2.php", follow_redirects=False)
-    assert second.status_code == 404
-    still_public = client.get("/tools/", follow_redirects=False)
-    assert still_public.status_code == 200
-
-    # Strike 3: now the IP should be temporarily blocked.
-    third = client.get(
-        "/wp-content/plugins/hellopress/wp_filemanager.php",
-        follow_redirects=False,
-    )
-    assert third.status_code == 404
+    assert first.status_code == 403
 
     with app.app_context():
         from app.models.public_bot_trap import BotTrapIpState
@@ -180,6 +164,59 @@ def test_suspicious_unknown_probe_blocks_after_three_strikes(app):
 
     blocked_response = client.get("/tools/", follow_redirects=False)
     assert blocked_response.status_code == 403
+
+
+def test_google_ads_bot_trap_route_does_not_block_ads_verification_fetches(app):
+    client = app.test_client()
+
+    ads_headers = {
+        "User-Agent": "Google-Adwords-Instant (+http://www.google.com/adsbot.html)",
+        "Referer": "https://ads.google.com/",
+    }
+    trap_response = client.get(
+        "/api/public/bot-trap?source=layout",
+        headers=ads_headers,
+        follow_redirects=False,
+    )
+    assert trap_response.status_code == 204
+
+    with app.app_context():
+        from app.models.public_bot_trap import BotTrapIpState
+
+        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
+
+    public_response = client.get("/tools/", headers=ads_headers, follow_redirects=False)
+    assert public_response.status_code == 200
+
+
+def test_ads_google_referrer_bypasses_existing_bot_trap_ip_block(app):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    with app.app_context():
+        PublicBotTrapService.add_block(
+            ip="127.0.0.1",
+            ip_block_seconds=600,
+            reason="test_setup",
+            source="test",
+        )
+
+    blocked_response = client.get("/homepage", follow_redirects=False)
+    assert blocked_response.status_code == 403
+
+    ads_preview_headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+        ),
+        "Referer": "https://ads.google.com/home/",
+    }
+    allowed_response = client.get(
+        "/homepage",
+        headers=ads_preview_headers,
+        follow_redirects=False,
+    )
+    assert allowed_response.status_code == 200
 
 
 def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch):
@@ -200,12 +237,7 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
     )
 
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    second = client.get(
-        "/wp-content/plugins/Cache/dropdown.php",
-        follow_redirects=False,
-    )
-    assert second.status_code == 404
+    assert first.status_code == 403
 
     blocked_response = client.get("/tools/", follow_redirects=False)
     assert blocked_response.status_code == 403
@@ -227,7 +259,9 @@ def test_temporary_ip_block_expires_and_unblocks_public_routes(app, monkeypatch)
         assert ip_state is None or ip_state.blocked_until is None
 
 
-def test_redis_probe_hot_path_blocks_without_intermediate_db_rows(app, monkeypatch):
+def test_redis_probe_hot_path_blocks_high_confidence_probe_immediately(
+    app, monkeypatch
+):
     client = app.test_client()
     from app.models.public_bot_trap import BotTrapIpState
     from app.services.public_bot_trap_service import PublicBotTrapService
@@ -252,18 +286,7 @@ def test_redis_probe_hot_path_blocks_without_intermediate_db_rows(app, monkeypat
     app.config["BOT_TRAP_PENALTY_RESET_SECONDS"] = 86400
 
     first = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert first.status_code == 404
-    second = client.get("/xmlrpc2.php", follow_redirects=False)
-    assert second.status_code == 404
-
-    with app.app_context():
-        assert BotTrapIpState.query.filter_by(ip="127.0.0.1").first() is None
-
-    third = client.get(
-        "/wp-content/plugins/hellopress/wp_filemanager.php",
-        follow_redirects=False,
-    )
-    assert third.status_code == 404
+    assert first.status_code == 403
 
     with app.app_context():
         ip_state = BotTrapIpState.query.filter_by(ip="127.0.0.1").first()
@@ -333,6 +356,32 @@ def test_robots_txt_unknown_path_does_not_auto_block(app):
     assert still_public.status_code == 200
 
 
+def test_passive_public_assets_skip_bot_trap_checks(app, monkeypatch):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    observed_paths: list[str] = []
+
+    def _record_should_block_request(_cls, request, user=None):
+        observed_paths.append(request.path)
+        return False
+
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "should_block_request",
+        classmethod(_record_should_block_request),
+    )
+
+    favicon_response = client.get("/favicon.ico", follow_redirects=False)
+    robots_response = client.get("/robots.txt", follow_redirects=False)
+    branding_response = client.get("/branding/app-tile.svg", follow_redirects=False)
+
+    assert favicon_response.status_code == 200
+    assert robots_response.status_code == 200
+    assert branding_response.status_code == 200
+    assert observed_paths == []
+
+
 def test_bot_trap_identity_blocks_are_db_backed(app):
     from app.services.public_bot_trap_service import PublicBotTrapService
 
@@ -365,7 +414,7 @@ def test_bot_trap_hit_audit_logging_is_disabled_by_default(app):
         app.config["BOT_TRAP_STRIKE_THRESHOLD"] = 999
 
     response = client.get("/wp-admin/setup-config.php", follow_redirects=False)
-    assert response.status_code == 404
+    assert response.status_code == 403
 
     with app.app_context():
         assert BotTrapHit.query.count() == 0

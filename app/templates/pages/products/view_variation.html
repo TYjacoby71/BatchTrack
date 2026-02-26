@@ -51,7 +51,7 @@
           {% set size_count = size_groups|length %}
 
           {% for group_key, group in size_groups.items() %}
-            {% if group.size_label == 'Bulk' %}
+            {% if group.size_label and group.size_label.lower().startswith('bulk') %}
               {% set ns.bulk_quantity = ns.bulk_quantity + group.total_quantity %}
             {% else %}
               {% set ns.packaged_quantity = ns.packaged_quantity + group.total_quantity %}

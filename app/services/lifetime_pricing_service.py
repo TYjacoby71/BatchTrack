@@ -58,7 +58,11 @@ class LifetimePricingService:
 
     @classmethod
     def build_lifetime_offers(
-        cls, paid_tiers: Sequence[SubscriptionTier] | None = None
+        cls,
+        paid_tiers: Sequence[SubscriptionTier] | None = None,
+        *,
+        include_live_pricing: bool = True,
+        allow_live_pricing_network: bool = True,
     ) -> list[dict]:
         """Return normalized lifetime offers mapped to existing paid tiers."""
         tiers = cls._sort_paid_tiers(paid_tiers or cls._load_paid_tiers())
@@ -84,25 +88,58 @@ class LifetimePricingService:
             monthly_lookup_key = (
                 (getattr(tier, "stripe_lookup_key", None) or "").strip() if tier else ""
             )
-            yearly_lookup_key = cls.resolve_standard_yearly_lookup_key(tier)
-            lifetime_lookup_key = cls.resolve_standard_lifetime_lookup_key(tier)
-
-            monthly_pricing = cls._get_lookup_key_pricing(monthly_lookup_key)
-            yearly_pricing = cls._get_lookup_key_pricing(yearly_lookup_key)
-            lifetime_pricing = cls._get_lookup_key_pricing(lifetime_lookup_key)
-
-            lifetime_price_is_valid = bool(
-                lifetime_pricing and lifetime_pricing.get("billing_cycle") == "one-time"
+            yearly_lookup_key = cls.resolve_standard_yearly_lookup_key(
+                tier,
+                allow_network=allow_live_pricing_network,
             )
+            lifetime_lookup_key = cls.resolve_standard_lifetime_lookup_key(
+                tier,
+                allow_network=allow_live_pricing_network,
+            )
+
+            monthly_pricing = (
+                cls._get_lookup_key_pricing(
+                    monthly_lookup_key, allow_network=allow_live_pricing_network
+                )
+                if include_live_pricing
+                else None
+            )
+            yearly_pricing = (
+                cls._get_lookup_key_pricing(
+                    yearly_lookup_key, allow_network=allow_live_pricing_network
+                )
+                if include_live_pricing
+                else None
+            )
+            lifetime_pricing = (
+                cls._get_lookup_key_pricing(
+                    lifetime_lookup_key, allow_network=allow_live_pricing_network
+                )
+                if include_live_pricing
+                else None
+            )
+            has_lifetime_lookup = bool(lifetime_lookup_key)
+
+            if include_live_pricing:
+                lifetime_price_is_valid = bool(
+                    lifetime_pricing
+                    and lifetime_pricing.get("billing_cycle") == "one-time"
+                )
+            else:
+                lifetime_price_is_valid = has_lifetime_lookup
             has_remaining = bool(
                 tier and lifetime_price_is_valid and true_spots_left > 0
             )
 
             lifetime_price_copy = "Configure lifetime Stripe price"
-            if lifetime_price_is_valid and lifetime_pricing:
+            if include_live_pricing and lifetime_price_is_valid and lifetime_pricing:
                 lifetime_price_copy = (
                     f"{lifetime_pricing.get('formatted_price')} one-time"
                 )
+            elif (
+                not include_live_pricing or not allow_live_pricing_network
+            ) and has_lifetime_lookup:
+                lifetime_price_copy = "One-time pricing at secure checkout"
             elif yearly_pricing:
                 lifetime_price_copy = (
                     f"{yearly_pricing.get('formatted_price')} yearly available"
@@ -202,7 +239,7 @@ class LifetimePricingService:
 
     @classmethod
     def resolve_standard_yearly_lookup_key(
-        cls, tier: SubscriptionTier | None
+        cls, tier: SubscriptionTier | None, *, allow_network: bool = True
     ) -> str | None:
         """Resolve yearly lookup key from a tier's single configured lookup key."""
         if not tier:
@@ -211,11 +248,12 @@ class LifetimePricingService:
             base_lookup_key=getattr(tier, "stripe_lookup_key", None),
             target_variant="yearly",
             expected_cycle="yearly",
+            allow_network=allow_network,
         )
 
     @classmethod
     def resolve_standard_lifetime_lookup_key(
-        cls, tier: SubscriptionTier | None
+        cls, tier: SubscriptionTier | None, *, allow_network: bool = True
     ) -> str | None:
         """Resolve lifetime lookup key from a tier's single configured lookup key."""
         if not tier:
@@ -224,6 +262,7 @@ class LifetimePricingService:
             base_lookup_key=getattr(tier, "stripe_lookup_key", None),
             target_variant="lifetime",
             expected_cycle="one-time",
+            allow_network=allow_network,
         )
 
     @classmethod
@@ -288,6 +327,7 @@ class LifetimePricingService:
         base_lookup_key: str | None,
         target_variant: str,
         expected_cycle: str | None = None,
+        allow_network: bool = True,
     ) -> str | None:
         """Resolve the first existing Stripe lookup variant.
 
@@ -296,8 +336,18 @@ class LifetimePricingService:
         functional instead of breaking card rendering.
         """
         candidates = cls._lookup_variant_candidates(base_lookup_key, target_variant)
+        if not allow_network:
+            for candidate in candidates:
+                pricing = cls._get_lookup_key_pricing(candidate, allow_network=False)
+                if not pricing:
+                    continue
+                if expected_cycle and pricing.get("billing_cycle") != expected_cycle:
+                    continue
+                return candidate
+            return candidates[0] if candidates else None
+
         for candidate in candidates:
-            pricing = cls._get_lookup_key_pricing(candidate)
+            pricing = cls._get_lookup_key_pricing(candidate, allow_network=True)
             if not pricing:
                 continue
             if expected_cycle and pricing.get("billing_cycle") != expected_cycle:
@@ -309,9 +359,13 @@ class LifetimePricingService:
             product_related_key = cls._resolve_variant_by_product(
                 base_lookup_key=base_lookup_key,
                 expected_cycle=expected_cycle,
+                allow_network=allow_network,
             )
             if product_related_key:
-                pricing = cls._get_lookup_key_pricing(product_related_key)
+                pricing = cls._get_lookup_key_pricing(
+                    product_related_key,
+                    allow_network=allow_network,
+                )
                 if pricing and pricing.get("billing_cycle") == expected_cycle:
                     return product_related_key
         return None
@@ -387,7 +441,10 @@ class LifetimePricingService:
 
     @staticmethod
     def _resolve_variant_by_product(
-        *, base_lookup_key: str | None, expected_cycle: str
+        *,
+        base_lookup_key: str | None,
+        expected_cycle: str,
+        allow_network: bool = True,
     ) -> str | None:
         base_key = (base_lookup_key or "").strip()
         if not base_key or not expected_cycle:
@@ -396,7 +453,9 @@ class LifetimePricingService:
             from .billing_service import BillingService
 
             return BillingService.find_related_price_lookup_key(
-                base_key, billing_cycle=expected_cycle
+                base_key,
+                billing_cycle=expected_cycle,
+                allow_network=allow_network,
             )
         except Exception:
             return None
@@ -440,12 +499,16 @@ class LifetimePricingService:
         }
 
     @staticmethod
-    def _get_lookup_key_pricing(lookup_key: str | None) -> dict | None:
+    def _get_lookup_key_pricing(
+        lookup_key: str | None, *, allow_network: bool = True
+    ) -> dict | None:
         if not lookup_key:
             return None
         try:
             from .billing_service import BillingService
 
-            return BillingService.get_live_pricing_for_lookup_key(lookup_key)
+            return BillingService.get_live_pricing_for_lookup_key(
+                lookup_key, allow_network=allow_network
+            )
         except Exception:
             return None

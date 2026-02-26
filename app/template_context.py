@@ -210,6 +210,16 @@ def register_template_context(app: Flask) -> None:
         }
 
     @app.context_processor
+    def _inject_auth_email_flags() -> Dict[str, Any]:
+        try:
+            from .services.email_service import EmailService
+
+            prompts_enabled = EmailService.should_issue_verification_tokens()
+        except Exception:
+            prompts_enabled = False
+        return {"email_verification_prompts_enabled": bool(prompts_enabled)}
+
+    @app.context_processor
     def _inject_list_preferences() -> Dict[str, Any]:
         if not current_user.is_authenticated:
             return {"list_preferences_payload": {}}
@@ -309,7 +319,9 @@ def register_template_context(app: Flask) -> None:
                         .all()
                     )
                     lifetime_offers = LifetimePricingService.build_lifetime_offers(
-                        paid_tiers
+                        paid_tiers,
+                        include_live_pricing=False,
+                        allow_live_pricing_network=False,
                     )
                     app_cache.set(lifetime_tiers_cache_key, lifetime_offers, ttl=300)
                 else:

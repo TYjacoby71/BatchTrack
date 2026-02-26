@@ -258,3 +258,33 @@ def test_ensure_stripe_applies_network_timeouts_and_retries(app, monkeypatch):
         assert BillingService.ensure_stripe() is True
 
     assert configured["timeout"] == (3.0, 7.0)
+
+
+def test_signup_checkout_route_redirects_to_signup_without_session_creation(
+    app, monkeypatch
+):
+    client = app.test_client()
+
+    called = {"value": False}
+
+    def _mark_called(*_args, **_kwargs):
+        called["value"] = True
+        return None
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.signup_routes.SignupCheckoutService.process_submission",
+        _mark_called,
+    )
+
+    response = client.get(
+        "/auth/signup/checkout?tier=3&billing_mode=standard&billing_cycle=monthly&source=pricing_hobbyist_monthly",
+        follow_redirects=False,
+    )
+
+    assert response.status_code in {301, 302}
+    location = response.headers.get("Location") or ""
+    assert location.startswith("/auth/signup")
+    assert "tier=3" in location
+    assert "billing_mode=standard" in location
+    assert "billing_cycle=monthly" in location
+    assert called["value"] is False
