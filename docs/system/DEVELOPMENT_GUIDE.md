@@ -69,6 +69,15 @@ This guide captures the current engineering workflow and guardrails for changing
      - `flask update-addons`
      - `flask update-subscription-tiers`
 
+## Cloud / CI Environment Notes
+
+When running locally without PostgreSQL or Redis (e.g. ephemeral CI runners, cloud dev VMs):
+- Unset `DATABASE_URL` so the app falls back to SQLite (`instance/batchtrack.db`).
+- Unset `REDIS_URL` so the app falls back to SimpleCache and filesystem sessions.
+- Alembic migrations include PostgreSQL-specific steps that error on SQLite (migration 0012 ALTER constraint). Use `SQLALCHEMY_CREATE_ALL=true` to create tables from models instead, then seed with `flask init-production`.
+- Dev lint tools (`ruff`, `black`, `isort`) are not in `requirements.txt`. Install separately or via `make install`.
+- The `Makefile` uses `python` (not `python3`). If only `python3` exists on the system, create a symlink: `ln -sf /usr/bin/python3 ~/.local/bin/python`.
+
 ## Common Anti-Patterns (Avoid)
 - Directly mutating inventory/batch state in routes without service orchestration.
 - Querying/scoping without organization context in customer-facing code.
