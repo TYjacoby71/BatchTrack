@@ -4,11 +4,11 @@
 
 BatchTrack uses a service-oriented architecture where each service has complete authority over its domain. **Never bypass these services** - always use the proper service for any operation in its domain.
 
-For in-context user-fixable errors, services should return a `drawer_payload` (see `docs/WALL_OF_DRAWERS_PROTOCOL.md`).
+For in-context user-fixable errors, services should return a `drawer_payload` (see `docs/system/WALL_OF_DRAWERS_PROTOCOL.md`).
 
 ## Core Services
 
-### 1. FIFO Service (`app/blueprints/fifo/services.py`)
+### 1. FIFO Service (`app/services/inventory_adjustment/_fifo_ops.py`)
 
 **Authority:** All inventory deduction order and batch lot management
 
@@ -37,28 +37,28 @@ process_inventory_adjustment({
 - Maintains inventory history with batch references
 - Handles partial deductions across multiple lots
 
-### 2. Inventory Adjustment Service (`app/services/inventory_adjustment.py`)
+### 2. Inventory Adjustment Service (package: `app/services/inventory_adjustment/`)
 
 **Authority:** All inventory changes and history logging
 
 **Key Functions:**
-- `adjust_inventory(inventory_id, amount, unit_id, reason, cost_per_unit=None, **kwargs)`
-- `restock_inventory(inventory_id, amount, unit_id, cost_per_unit, supplier=None)`
-- `record_spoilage(inventory_id, amount, unit_id, reason=None)`
+- `process_inventory_adjustment(params)` — canonical entry point for all inventory changes
+- `create_inventory_item(...)` — item creation with container deduplication
+- `update_inventory_item(...)` — item editing with identity enforcement
 
 **Usage Examples:**
 ```python
-# Restock ingredients
-from app.services.inventory_adjustment import adjust_inventory
+from app.services.inventory_adjustment import process_inventory_adjustment
 
-adjust_inventory(
-    inventory_id=ingredient.id,
-    amount=50,
-    unit_id=unit.id,
-    reason="restock",
-    cost_per_unit=2.50,
-    supplier="Supplier Name"
-)
+process_inventory_adjustment({
+    "inventory_item_id": ingredient.id,
+    "change_type": "restock",
+    "quantity": 50,
+    "unit": unit.name,
+    "reason": "restock",
+    "cost_per_unit": 2.50,
+    "supplier": "Supplier Name"
+})
 ```
 
 **Rules:**
@@ -82,16 +82,13 @@ Handles all unit conversions with support for:
 - Compound conversion paths
 
 **Key Functions:**
-- `convert_units(amount, from_unit_id, to_unit_id, ingredient_id=None)`
-- `get_base_unit_amount(amount, unit_id)`
-- `create_custom_mapping(from_unit_id, to_unit_id, multiplier, ingredient_id)`
+- `ConversionEngine.convert_units(amount, from_unit_id, to_unit_id, ingredient_id=None)` — static method, canonical conversion entry point
 
 **Usage Examples:**
 ```python
-# Convert between units
-from app.services.unit_conversion import convert_units
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 
-converted = convert_units(
+converted = ConversionEngine.convert_units(
     amount=100,
     from_unit_id=grams_unit.id,
     to_unit_id=kilograms_unit.id,
@@ -114,18 +111,16 @@ converted = convert_units(
 - Handlers: `app/services/stock_check/handlers/*.py`
 
 **Common Calls:**
-- `check_recipe_availability(recipe_id, scale_factor=1.0)`
-- `check_ingredient_availability(ingredient_id, required_amount, unit_id)`
-- `get_available_inventory_summary()`
+- `UniversalStockCheckService.check_recipe_stock(recipe, scale, ...)`
+- `UniversalStockCheckService.check_single_item(item, required_amount, unit)`
 
 **Usage Examples:**
 ```python
-# Check if recipe can be made
-from app.services.stock_check.core import check_recipe_availability
+from app.services.stock_check.core import UniversalStockCheckService
 
-availability = check_recipe_availability(
-    recipe_id=recipe.id,
-    scale_factor=2.0
+result = UniversalStockCheckService.check_recipe_stock(
+    recipe=recipe,
+    scale=2.0
 )
 ```
 
@@ -198,25 +193,6 @@ alerts = DashboardAlertService.get_dashboard_alerts(max_alerts=3)
 
 **Authority:** Product lifecycle and variant management
 
-**Key Functions:**
-- `calculate_batch_expiration(batch_id)`
-- `get_expiring_inventory(days_ahead=7)`
-- `mark_inventory_expired(inventory_id)`
-
-**Usage Examples:**
-```python
-# Check expiring inventory
-from app.blueprints.expiration.services import get_expiring_inventory
-
-expiring = get_expiring_inventory(days_ahead=14)
-```
-
-**Rules:**
-- Calculates earliest expiration from ingredients
-- Generates proactive expiration alerts
-- Handles batch-level shelf-life inheritance
-- Supports custom expiration overrides
-
 ## Supporting Services
 
 ### 6. Statistics Service (modular)
@@ -241,16 +217,15 @@ stats = StatisticsService.get_organization_dashboard_stats(org_id)
 **Authority:** Inventory reservations for pending orders
 
 **Key Functions:**
-- `create_reservation(product_sku_id, quantity, customer_info)`
-- `release_reservation(reservation_id)`
-- `convert_to_sale(reservation_id)`
+- `ReservationService.create_reservation(product_sku_id, quantity, customer_info)`
+- `ReservationService.release_reservation(reservation_id)`
+- `ReservationService.fulfill_reservation(reservation_id)`
 
 **Usage Examples:**
 ```python
-# Reserve product for customer
-from app.services.reservation_service import create_reservation
+from app.services.reservation_service import ReservationService
 
-reservation = create_reservation(
+reservation = ReservationService.create_reservation(
     product_sku_id=sku.id,
     quantity=5,
     customer_info={"name": "John Doe"}

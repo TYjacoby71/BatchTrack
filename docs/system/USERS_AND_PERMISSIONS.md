@@ -15,17 +15,19 @@ BatchTrack uses a **clear, hierarchical user and permission system** designed fo
 
 ## 1. User Types (Immutable)
 
-User types are **hard-coded classifications**. They are NOT roles and should never be stored in the same table as roles.
+User types are **hard-coded classifications** stored in `user_type`. They are NOT roles and should never be stored in the same table as roles.
 
-| User Type | Scope | Organization ID | Permissions | Purpose |
-|-----------|-------|------------------|------------|---------|
-| **Developer** | System-wide | **None** | All permissions globally | BatchTrack staff/admin only |
-| **Organization Owner** | Single organization | Required | All permissions available to their subscription tier | Business owner |
-| **Team Member** | Single organization | Required | Based on assigned roles | Staff invited by org owner |
+| `user_type` value | Scope | Organization ID | Permissions | Purpose |
+|-------------------|-------|------------------|------------|---------|
+| **`developer`** | System-wide | **None** | All permissions globally | BatchTrack staff/admin only |
+| **`customer`** (owner) | Single organization | Required | All permissions available to their subscription tier | Business owner (`is_organization_owner=True`) |
+| **`customer`** (team member) | Single organization | Required | Based on assigned roles | Staff invited by org owner |
 
 ✅ **Rules:**
+- Only two `user_type` values exist: `developer` and `customer`.
+- Organization owners are customers with `is_organization_owner=True` and the `organization_owner` role.
 - Developers exist **outside the SaaS customer side**.  
-- Org Owners & Team Members always belong to an organization (`organization_id` required).  
+- Customers always belong to an organization (`organization_id` required).  
 - Developers should never receive `organization_id`.  
 
 ---
@@ -36,16 +38,17 @@ Roles are **permission groupings** and are the bridge between users and permissi
 
 | Role Type | Created By | Editable By | Notes |
 |-----------|------------|-------------|-------|
-| **System Roles** | Developers | No | Predefined defaults (e.g., "Production Manager") |
+| **System Roles** | Platform seed | No | `organization_owner` (org-level), plus developer roles |
 | **Custom Roles** | Organization Owners | Yes | Scoped to their organization |
 
-### Default System Roles
+### System Roles
 
-| Role | Permissions |
-|------|-------------|
-| **Production Manager** | `batch.start`, `batch.finish`, `inventory.adjust` |
-| **Inventory Specialist** | `inventory.restock`, `inventory.adjust`, `reports.view` |
-| **Viewer** | `reports.view` only |
+| Role | Scope | Permissions |
+|------|-------|-------------|
+| **`organization_owner`** | Organization | All permissions allowed by the org's subscription tier |
+| **`system_admin`** | Developer | Full system administration across all organizations |
+| **`developer`** | Developer | Basic developer access for debugging |
+| **`support`** | Developer | Read-only access for customer support |
 
 ✅ **Organization owners automatically have ALL permissions available for their subscription tier.**
 
@@ -58,12 +61,13 @@ Example categories:
 
 | Category | Example Permissions |
 |----------|---------------------|
-| **batches** | `batch.start`, `batch.finish`, `batch.cancel` |
-| **inventory** | `inventory.adjust`, `inventory.restock`, `inventory.view` |
-| **products** | `product.create`, `product.archive` |
-| **users** | `user.invite`, `user.assign_roles` |
-| **reports** | `reports.view`, `reports.export` |
-| **settings** | `settings.update`, `settings.manage_roles` |
+| **batches** | `batches.create`, `batches.finish`, `batches.cancel`, `batches.view` |
+| **inventory** | `inventory.adjust`, `inventory.view`, `inventory.edit`, `inventory.track_quantities` |
+| **products** | `products.create`, `products.edit`, `products.manage_variants` |
+| **organization** | `organization.manage_users`, `organization.manage_roles`, `organization.manage_billing` |
+| **recipes** | `recipes.create`, `recipes.edit`, `recipes.plan_production`, `recipes.scale` |
+| **reports** | `reports.view`, `reports.export`, `reports.advanced` |
+| **settings** | `settings.edit`, `settings.view` |
 
 ✅ **Never hardcode permissions** in routes — always check via:
 
@@ -80,9 +84,11 @@ Subscription tiers determine which permissions can even be granted to users in t
 
 | Tier | Max Users | Features / Permission Categories |
 |------|-----------|----------------------------------|
-| **Free** | 1 active user | Basic production tracking, limited inventory |
-| **Team** | 10 active users | Full batch & inventory features, custom roles |
-| **Enterprise** | Unlimited | All features, API integration |
+| **Exempt Plan** | Unlimited | All permissions (internal/developer use) |
+| **Free Tools** | 1 | Basic recipes and inventory view |
+| **Solo Maker** | 1 | Full batch, inventory, and production features |
+| **Team Plan** | 10 | All features including custom roles and team management |
+| **Enterprise Plan** | Unlimited | All features, API integration |
 
 ✅ **Inactive users do NOT count toward subscription limits.**
 

@@ -26,8 +26,8 @@ BatchTrack is a multi-tenant SaaS application built on a service-oriented archit
 
 ### 1. Service Authority
 Each service is the **single source of truth** for its domain:
-- **FIFO Service** (`app/blueprints/fifo/services.py`) - Controls inventory deduction order
-- **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - All inventory changes
+- **FIFO Service** (`app/services/inventory_adjustment/_fifo_ops.py`) - Controls inventory deduction order
+- **Inventory Adjustment Service** (package: `app/services/inventory_adjustment/`) - All inventory changes
 - **Unit Conversion Service** (`app/services/unit_conversion/unit_conversion.py`) - All unit conversions
 - **Stock Check Service** (package: `app/services/stock_check/`) - Availability validation
 - **Expiration Service** (`app/blueprints/expiration/services.py`) - Shelf-life management
@@ -183,10 +183,10 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ### Core Services (Never Bypass)
 
-- **FIFO Service** (`app/blueprints/fifo/services.py`) - Manages first-in-first-out inventory deduction
-- **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - Handles all inventory modifications
-- **Unit Conversion Service** (`app/services/unit_conversion.py`) - Manages unit conversions and mappings
-- **Stock Check Service** (`app/services/stock_check.py`) - Validates ingredient availability
+- **FIFO Service** (`app/services/inventory_adjustment/_fifo_ops.py`) - Manages first-in-first-out inventory deduction
+- **Inventory Adjustment Service** (package: `app/services/inventory_adjustment/`) - Handles all inventory modifications
+- **Unit Conversion Service** (`app/services/unit_conversion/unit_conversion.py`) - Manages unit conversions and mappings
+- **Stock Check Service** (package: `app/services/stock_check/`) - Validates ingredient availability
 - **Timezone Utils** (`app/utils/timezone_utils.py`) - All datetime/timezone operations (see TIMEZONE_SYSTEM.md)
 
 ### Supporting Services
