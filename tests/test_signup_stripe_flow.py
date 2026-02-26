@@ -321,8 +321,8 @@ def test_signup_completion_events_include_code_usage_flags(app):
         assert user is not None
 
         for event_name in (
+            "account_created",
             "signup_completed",
-            "signup_checkout_completed",
             "purchase_completed",
         ):
             event = (

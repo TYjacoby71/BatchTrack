@@ -14,30 +14,32 @@ from app.services.analytics_tracking_service import AnalyticsTrackingService
 
 def test_registry_exposes_core_signup_purchase_events():
     for event_name in (
+        "account_created",
+        "free_account_created",
         "signup_completed",
         "signup_checkout_started",
-        "signup_checkout_completed",
         "purchase_completed",
     ):
         assert event_name in ANALYTICS_EVENT_REGISTRY
 
-    assert "signup_completed" in CORE_USAGE_EVENT_NAMES
+    assert "account_created" in CORE_USAGE_EVENT_NAMES
     assert "purchase_completed" in CORE_USAGE_EVENT_NAMES
-    assert required_properties_for("signup_completed") == (
+    assert required_properties_for("account_created") == (
         "signup_source",
         "signup_flow",
         "billing_provider",
+        "purchase_completed",
     )
 
 
-def test_signup_relay_normalizes_code_usage_payload(app):
+def test_account_created_relay_normalizes_code_usage_payload(app):
     with app.app_context():
         org = Organization.query.first()
         user = User.query.filter_by(organization_id=org.id).first()
         assert org is not None
         assert user is not None
 
-        AnalyticsTrackingService.emit_signup_completed(
+        AnalyticsTrackingService.emit_account_created(
             organization_id=org.id,
             user_id=user.id,
             entity_id=org.id,
@@ -53,7 +55,7 @@ def test_signup_relay_normalizes_code_usage_payload(app):
 
         emitted = (
             DomainEvent.query.filter_by(
-                event_name="signup_completed",
+                event_name="account_created",
                 organization_id=org.id,
                 user_id=user.id,
             )

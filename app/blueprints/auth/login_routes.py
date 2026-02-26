@@ -652,16 +652,21 @@ def quick_signup():
                         exc,
                     )
 
-            AnalyticsTrackingService.track_signup_completed(
+            quick_signup_completion_properties = {
+                "signup_source": "global_library",
+                "signup_flow": "quick_signup",
+                "billing_provider": "none",
+                "tier_id": getattr(tier, "id", None),
+                "is_oauth_signup": False,
+                "purchase_completed": False,
+                "account_origin": "free_quick_signup",
+                **AnalyticsTrackingService.build_code_usage_properties(),
+            }
+            AnalyticsTrackingService.emit_quick_signup_completion_bundle(
                 organization_id=org.id,
                 user_id=user.id,
                 entity_id=org.id,
-                signup_source="global_library",
-                signup_flow="quick_signup",
-                billing_provider="none",
-                tier_id=getattr(tier, "id", None),
-                is_oauth_signup=False,
-                purchase_completed=False,
+                completion_properties=quick_signup_completion_properties,
             )
 
             login_user(user)
