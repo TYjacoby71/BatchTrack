@@ -132,6 +132,69 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const ga4CheckoutConversion = {{ ga4_checkout_conversion|tojson }};
+    if (ga4CheckoutConversion && typeof window.gtag === 'function') {
+        const normalizedValue = Number(ga4CheckoutConversion.value);
+        const hasValue = Number.isFinite(normalizedValue);
+        const normalizedCurrency = String(ga4CheckoutConversion.currency || 'USD').toUpperCase();
+        const transactionId = String(ga4CheckoutConversion.transaction_id || '');
+        const couponCode = ga4CheckoutConversion.coupon || null;
+        const tierId = ga4CheckoutConversion.tier_id || null;
+        const tierName = ga4CheckoutConversion.tier_name || null;
+
+        const purchasePayload = {
+            transaction_id: transactionId,
+            currency: normalizedCurrency
+        };
+        if (hasValue) {
+            purchasePayload.value = normalizedValue;
+        }
+        if (couponCode) {
+            purchasePayload.coupon = couponCode;
+        }
+        if (tierId || tierName) {
+            const itemPayload = {
+                item_id: tierId || 'unknown_tier',
+                item_name: tierName || tierId || 'Subscription Tier',
+                quantity: 1
+            };
+            if (hasValue) {
+                itemPayload.price = normalizedValue;
+            }
+            purchasePayload.items = [itemPayload];
+        }
+
+        window.gtag('event', 'purchase', purchasePayload);
+
+        const completionPayload = {
+            transaction_id: transactionId,
+            currency: normalizedCurrency,
+            purchase_completed: true,
+            billing_provider: 'stripe',
+            signup_flow: 'checkout'
+        };
+        if (hasValue) {
+            completionPayload.value = normalizedValue;
+        }
+        if (couponCode) {
+            completionPayload.coupon = couponCode;
+            completionPayload.used_promo_code = true;
+        } else {
+            completionPayload.used_promo_code = false;
+        }
+        if (tierId) {
+            completionPayload.tier_id = tierId;
+        }
+
+        window.gtag('event', 'purchase_completed', completionPayload);
+        window.gtag('event', 'account_created', {
+            signup_flow: 'checkout',
+            billing_provider: 'stripe',
+            purchase_completed: true,
+            tier_id: tierId
+        });
+    }
+
     if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
         return;
     }

@@ -119,6 +119,10 @@ BatchTrack supports optional client-side analytics snippets in the shared layout
 - **GA4** via `GOOGLE_ANALYTICS_MEASUREMENT_ID`
   - Best for acquisition/SEO/marketing attribution.
   - Captures website traffic trends and campaign performance.
+  - Stripe signup success now emits one-time GA4 events on first onboarding load:
+    - `purchase` (GA4 ecommerce standard)
+    - `purchase_completed`
+    - `account_created`
 - **PostHog** via `POSTHOG_PROJECT_API_KEY`
   - Best for product analytics and behavioral funnels.
   - Captures pageviews/pageleave events and now includes:
