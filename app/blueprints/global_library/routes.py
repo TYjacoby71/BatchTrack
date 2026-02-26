@@ -76,7 +76,10 @@ def _global_library_disabled_response():
     """Gracefully route visitors when the public library feature is disabled."""
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
-    return redirect(url_for("core.signup_alias", source="global_library"), code=302)
+    return redirect(
+        url_for("core.signup_alias", source="global_inventory_library_cta"),
+        code=302,
+    )
 
 
 def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
@@ -167,7 +170,13 @@ def global_library():
                 flash(
                     "Create a free account to keep searching the global library. You've reached the preview limit."
                 )
-                return redirect(url_for("auth.quick_signup", next=request.full_path))
+                return redirect(
+                    url_for(
+                        "auth.quick_signup",
+                        next=request.full_path,
+                        source="global_inventory_library_rate_limit_cta",
+                    )
+                )
             search_remaining = remaining
 
     cache_payload = {
@@ -310,7 +319,12 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
                 "Create a free account to keep exploring the global library. You've reached the 10-item preview limit."
             )
             return redirect(
-                url_for("auth.quick_signup", next=request.path, global_item_id=item_id)
+                url_for(
+                    "auth.quick_signup",
+                    next=request.path,
+                    global_item_id=item_id,
+                    source="global_inventory_library_rate_limit_cta",
+                )
             )
 
     canonical_slug = slugify_value(gi.name)
@@ -443,7 +457,12 @@ def save_global_item_to_inventory(item_id: int):
             "global_library_bp.save_global_item_to_inventory", item_id=item_id
         )
         return redirect(
-            url_for("auth.quick_signup", next=next_path, global_item_id=item_id)
+            url_for(
+                "auth.quick_signup",
+                next=next_path,
+                global_item_id=item_id,
+                source="global_inventory_library_cta",
+            )
         )
 
     if not has_permission(current_user, "inventory.edit"):

@@ -16,6 +16,7 @@ def test_quick_signup_emits_signup_completed_event(app, monkeypatch):
     )
 
     email = f"quick-{uuid.uuid4().hex[:10]}@example.com"
+    signup_source = "recipe_library_cta"
     response = client.post(
         "/auth/quick-signup",
         data={
@@ -23,6 +24,7 @@ def test_quick_signup_emits_signup_completed_event(app, monkeypatch):
             "email": email,
             "password": "quickpass123",
             "next": "/inventory",
+            "source": signup_source,
         },
         follow_redirects=False,
     )
@@ -44,5 +46,6 @@ def test_quick_signup_emits_signup_completed_event(app, monkeypatch):
         assert event is not None
         props = event.properties or {}
         assert props.get("signup_flow") == "quick_signup"
+        assert props.get("signup_source") == signup_source
         assert props.get("purchase_completed") is False
         assert props.get("used_promo_code") is False
