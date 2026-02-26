@@ -654,10 +654,9 @@ def test_batch_counts_are_lineage_scoped_per_version_and_test():
     test_lineage = generate_lineage_id(test_recipe)
     assert master_lineage != test_lineage
 
-    # Master batch (explicit target version + lineage).
+    # Master batch tracks the master recipe row directly.
     master_batch = Batch(
         recipe_id=master.id,
-        target_version_id=master.id,
         lineage_id=master_lineage,
         label_code=_unique_name("MASTER-BATCH"),
         batch_type="ingredient",
@@ -665,11 +664,9 @@ def test_batch_counts_are_lineage_scoped_per_version_and_test():
         status="completed",
     )
 
-    # Test batch emulating legacy rows that reused master recipe_id while still
-    # carrying the test lineage/target version snapshot.
+    # Test batch tracks the test recipe row directly.
     test_batch = Batch(
-        recipe_id=master.id,
-        target_version_id=test_recipe.id,
+        recipe_id=test_recipe.id,
         lineage_id=test_lineage,
         label_code=_unique_name("TEST-BATCH"),
         batch_type="ingredient",
@@ -727,7 +724,6 @@ def test_promoting_test_to_current_preserves_batch_history_links():
     # Persist a batch against the test before promotion.
     pre_promotion_batch = Batch(
         recipe_id=test_recipe.id,
-        target_version_id=test_recipe.id,
         lineage_id=original_test_lineage,
         label_code=_unique_name("PROMO-TEST-BATCH"),
         batch_type="ingredient",
@@ -753,7 +749,7 @@ def test_promoting_test_to_current_preserves_batch_history_links():
     # History row remains attached to the same promoted recipe row.
     refreshed_batch = db.session.get(Batch, pre_promotion_batch.id)
     assert refreshed_batch is not None
-    assert refreshed_batch.target_version_id == promoted.id
+    assert refreshed_batch.recipe_id == promoted.id
     assert refreshed_batch.lineage_id == original_test_lineage
 
     # Count remains intact after promotion.
