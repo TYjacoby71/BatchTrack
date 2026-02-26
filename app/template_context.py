@@ -321,6 +321,7 @@ def register_template_context(app: Flask) -> None:
                     lifetime_offers = LifetimePricingService.build_lifetime_offers(
                         paid_tiers,
                         include_live_pricing=False,
+                        allow_live_pricing_network=False,
                     )
                     app_cache.set(lifetime_tiers_cache_key, lifetime_offers, ttl=300)
                 else:

@@ -111,13 +111,24 @@ class SignupCheckoutService:
 
     @classmethod
     def build_request_context(
-        cls, *, request, oauth_user_info: dict | None
+        cls,
+        *,
+        request,
+        oauth_user_info: dict | None,
+        allow_live_pricing_network: bool = True,
     ) -> SignupRequestContext:
+        include_live_pricing = bool(allow_live_pricing_network)
         db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
         available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
-            db_tiers
+            db_tiers,
+            include_live_pricing=include_live_pricing,
+            allow_live_pricing_network=allow_live_pricing_network,
         )
-        lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
+        lifetime_offers = LifetimePricingService.build_lifetime_offers(
+            db_tiers,
+            include_live_pricing=include_live_pricing,
+            allow_live_pricing_network=allow_live_pricing_network,
+        )
         lifetime_by_key = LifetimePricingService.map_by_key(lifetime_offers)
         lifetime_by_tier_id = LifetimePricingService.map_by_tier_id(lifetime_offers)
 
