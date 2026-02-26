@@ -29,6 +29,30 @@ class AnalyticsEventSpec:
 
 ANALYTICS_EVENT_REGISTRY: dict[str, AnalyticsEventSpec] = {
     # Auth + onboarding + billing funnel
+    "account_created": AnalyticsEventSpec(
+        name="account_created",
+        category="funnel_signup",
+        description="Canonical account creation milestone (paid or free).",
+        required_properties=(
+            "signup_source",
+            "signup_flow",
+            "billing_provider",
+            "purchase_completed",
+        ),
+        core_usage_event=True,
+    ),
+    "free_account_created": AnalyticsEventSpec(
+        name="free_account_created",
+        category="funnel_signup",
+        description="Free-path account creation completed without paid checkout.",
+        required_properties=(
+            "signup_source",
+            "signup_flow",
+            "billing_provider",
+            "purchase_completed",
+        ),
+        core_usage_event=True,
+    ),
     "user_login_succeeded": AnalyticsEventSpec(
         name="user_login_succeeded",
         category="funnel_auth",
@@ -39,7 +63,7 @@ ANALYTICS_EVENT_REGISTRY: dict[str, AnalyticsEventSpec] = {
     "signup_completed": AnalyticsEventSpec(
         name="signup_completed",
         category="funnel_signup",
-        description="A signup flow created an account (paid or free).",
+        description="Legacy alias for account_created (kept for compatibility).",
         required_properties=("signup_source", "signup_flow", "billing_provider"),
         core_usage_event=True,
     ),
@@ -53,9 +77,8 @@ ANALYTICS_EVENT_REGISTRY: dict[str, AnalyticsEventSpec] = {
     "signup_checkout_completed": AnalyticsEventSpec(
         name="signup_checkout_completed",
         category="funnel_signup",
-        description="Hosted checkout completed and signup provisioning succeeded.",
+        description="Legacy checkout completion marker (deprecated).",
         required_properties=("tier_id", "billing_provider"),
-        core_usage_event=True,
     ),
     "purchase_completed": AnalyticsEventSpec(
         name="purchase_completed",

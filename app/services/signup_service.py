@@ -309,6 +309,7 @@ class SignupService:
                 "stripe_customer_id": pending_signup.stripe_customer_id,
                 "billing_provider": "stripe",
                 "signup_flow": "checkout",
+                "account_origin": "paid_checkout",
                 "is_oauth_signup": bool(pending_signup.oauth_provider),
                 "purchase_completed": True,
                 **AnalyticsTrackingService.build_code_usage_properties(
