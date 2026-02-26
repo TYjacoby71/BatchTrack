@@ -9,7 +9,7 @@ from app.models.models import User
 from app.services.email_service import EmailService
 
 
-def test_quick_signup_emits_signup_completed_event(app, monkeypatch):
+def test_quick_signup_emits_free_and_account_created_events(app, monkeypatch):
     client = app.test_client()
     monkeypatch.setattr(
         EmailService, "should_issue_verification_tokens", lambda: False
@@ -33,16 +33,21 @@ def test_quick_signup_emits_signup_completed_event(app, monkeypatch):
         created_user = User.query.filter_by(email=email).first()
         assert created_user is not None
 
-        event = (
-            DomainEvent.query.filter_by(
-                event_name="signup_completed",
-                user_id=created_user.id,
+        for event_name in (
+            "free_account_created",
+            "account_created",
+            "signup_completed",
+        ):
+            event = (
+                DomainEvent.query.filter_by(
+                    event_name=event_name,
+                    user_id=created_user.id,
+                )
+                .order_by(DomainEvent.id.desc())
+                .first()
             )
-            .order_by(DomainEvent.id.desc())
-            .first()
-        )
-        assert event is not None
-        props = event.properties or {}
-        assert props.get("signup_flow") == "quick_signup"
-        assert props.get("purchase_completed") is False
-        assert props.get("used_promo_code") is False
+            assert event is not None
+            props = event.properties or {}
+            assert props.get("signup_flow") == "quick_signup"
+            assert props.get("purchase_completed") is False
+            assert props.get("used_promo_code") is False

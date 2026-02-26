@@ -35,10 +35,16 @@ def welcome():
     """Guided landing checklist right after signup."""
     user = current_user
     organization = getattr(user, "organization", None)
+    ga4_checkout_conversion = None
 
     if not organization:
         flash("No organization found for your account.", "error")
         return redirect(url_for("app_routes.dashboard"))
+
+    if request.method == "GET":
+        candidate = session.pop("ga4_checkout_conversion", None)
+        if isinstance(candidate, dict):
+            ga4_checkout_conversion = candidate
 
     requires_password_setup = bool(getattr(user, "password_reset_token", None))
     password_errors = []
@@ -220,4 +226,5 @@ def welcome():
         team_size=team_size,
         requires_password_setup=requires_password_setup,
         password_errors=password_errors,
+        ga4_checkout_conversion=ga4_checkout_conversion,
     )

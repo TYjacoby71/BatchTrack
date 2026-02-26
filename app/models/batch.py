@@ -45,7 +45,6 @@ class Batch(ScopedModelMixin, db.Model):
     __tablename__ = "batch"
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=False)
-    target_version_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
     label_code = db.Column(db.String(32))
     lineage_id = db.Column(db.String(64), nullable=True)
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
@@ -92,7 +91,6 @@ class Batch(ScopedModelMixin, db.Model):
     cost_method_locked_at = db.Column(db.DateTime, nullable=True)
 
     recipe = db.relationship("Recipe", foreign_keys=[recipe_id], backref="batches")
-    target_version = db.relationship("Recipe", foreign_keys=[target_version_id])
     sku = db.relationship("ProductSKU", foreign_keys=[sku_id], backref="batches")
 
     __table_args__ = (
@@ -101,7 +99,6 @@ class Batch(ScopedModelMixin, db.Model):
         db.Index(
             "ix_batch_org_status_started_at", "organization_id", "status", "started_at"
         ),
-        db.Index("ix_batch_target_version_id", "target_version_id"),
         db.Index("ix_batch_lineage_id", "lineage_id"),
         db.Index("ix_batch_vessel_fill_pct", "vessel_fill_pct"),
         db.Index("ix_batch_candle_fragrance_pct", "candle_fragrance_pct"),

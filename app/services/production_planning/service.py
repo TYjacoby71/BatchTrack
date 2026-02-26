@@ -110,7 +110,6 @@ class PlanProductionService:
 
         return PlanSnapshot(
             recipe_id=recipe.id,
-            target_version_id=recipe.id,
             lineage_snapshot=generate_lineage_id(recipe),
             scale=float(scale or 1.0),
             batch_type=batch_type or "ingredient",

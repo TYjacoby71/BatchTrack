@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from app.extensions import cache, db
-from app.models import Batch, Recipe, RecipeIngredient, RecipeLineage
+from app.models import Recipe, RecipeIngredient, RecipeLineage
 from app.services.cache_invalidation import recipe_list_page_cache_key
 from app.services.lineage_service import format_label_prefix, generate_lineage_id
 from app.services.recipe_service import (
@@ -50,6 +50,7 @@ from app.utils.permissions import (
     has_permission,
     require_permission,
 )
+from app.utils.recipe_batch_counts import count_batches_for_recipe
 from app.utils.settings import is_feature_enabled
 from app.utils.unit_utils import get_global_unit_list
 
@@ -131,20 +132,12 @@ def list_recipes():
         RecipeIngredient.recipe_id.label("recipe_id"),
         func.count(RecipeIngredient.id).label("ingredient_count"),
     ).group_by(RecipeIngredient.recipe_id)
-    batch_counts_query = db.session.query(
-        Batch.recipe_id.label("recipe_id"),
-        func.count(Batch.id).label("batch_count"),
-    ).group_by(Batch.recipe_id)
     if current_user.organization_id:
         ingredient_counts_query = ingredient_counts_query.filter(
             RecipeIngredient.organization_id == current_user.organization_id
         )
-        batch_counts_query = batch_counts_query.filter(
-            Batch.organization_id == current_user.organization_id
-        )
 
     ingredient_counts = ingredient_counts_query.subquery()
-    batch_counts = batch_counts_query.subquery()
 
     base_filters = [
         Recipe.parent_recipe_id.is_(None),
@@ -158,10 +151,8 @@ def list_recipes():
     query = (
         Recipe.query.filter(*base_filters)
         .outerjoin(ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id)
-        .outerjoin(batch_counts, batch_counts.c.recipe_id == Recipe.id)
         .add_columns(
             ingredient_counts.c.ingredient_count,
-            batch_counts.c.batch_count,
         )
     )
 
@@ -175,9 +166,13 @@ def list_recipes():
     if pagination.pages and page > pagination.pages:
         return redirect(url_for("recipes.list_recipes", page=pagination.pages))
     recipes = []
-    for recipe, ingredient_count, batch_count in pagination.items:
+    org_id = getattr(current_user, "organization_id", None)
+    for recipe, ingredient_count in pagination.items:
         recipe.ingredient_count = int(ingredient_count or 0)
-        recipe.batch_count = int(batch_count or 0)
+        recipe.batch_count = count_batches_for_recipe(
+            recipe,
+            organization_id=org_id,
+        )
         recipes.append(recipe)
 
     group_variations = _group_variations_for_masters(
@@ -228,7 +223,10 @@ def view_recipe(recipe_id):
             current_user, "recipes.create_variations"
         )
         lineage_id = generate_lineage_id(recipe)
-        batch_count = Batch.query.filter_by(recipe_id=recipe.id).count()
+        batch_count = count_batches_for_recipe(
+            recipe,
+            organization_id=getattr(current_user, "organization_id", None),
+        )
         has_batches = batch_count > 0
         if recipe.recipe_group_id:
             variation_count = Recipe.query.filter(

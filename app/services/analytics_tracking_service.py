@@ -222,6 +222,112 @@ class AnalyticsTrackingService:
         )
 
     @classmethod
+    def build_account_creation_properties(
+        cls,
+        *,
+        signup_source: str,
+        signup_flow: str,
+        billing_provider: str,
+        tier_id: int | str | None,
+        is_oauth_signup: bool,
+        purchase_completed: bool,
+        promo_code: Any = None,
+        referral_code: Any = None,
+        properties: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload = {
+            "signup_source": str(signup_source or "direct"),
+            "signup_flow": str(signup_flow or "unknown"),
+            "billing_provider": str(billing_provider or "unknown"),
+            "tier_id": tier_id,
+            "is_oauth_signup": bool(is_oauth_signup),
+            "purchase_completed": bool(purchase_completed),
+            **cls.build_code_usage_properties(
+                promo_code=promo_code,
+                referral_code=referral_code,
+            ),
+        }
+        return cls._merge_properties(payload, properties)
+
+    @classmethod
+    def emit_account_created(
+        cls,
+        *,
+        organization_id: int | None,
+        user_id: int | None,
+        entity_id: int | None,
+        signup_source: str,
+        signup_flow: str,
+        billing_provider: str,
+        tier_id: int | str | None,
+        is_oauth_signup: bool,
+        purchase_completed: bool,
+        promo_code: Any = None,
+        referral_code: Any = None,
+        properties: Mapping[str, Any] | None = None,
+        auto_commit: bool = True,
+    ):
+        payload = cls.build_account_creation_properties(
+            signup_source=signup_source,
+            signup_flow=signup_flow,
+            billing_provider=billing_provider,
+            tier_id=tier_id,
+            is_oauth_signup=is_oauth_signup,
+            purchase_completed=purchase_completed,
+            promo_code=promo_code,
+            referral_code=referral_code,
+            properties=properties,
+        )
+        return cls.emit(
+            event_name="account_created",
+            properties=payload,
+            organization_id=organization_id,
+            user_id=user_id,
+            entity_type="organization",
+            entity_id=entity_id,
+            auto_commit=auto_commit,
+        )
+
+    @classmethod
+    def emit_free_account_created(
+        cls,
+        *,
+        organization_id: int | None,
+        user_id: int | None,
+        entity_id: int | None,
+        signup_source: str,
+        signup_flow: str,
+        billing_provider: str = "none",
+        tier_id: int | str | None = None,
+        is_oauth_signup: bool = False,
+        purchase_completed: bool = False,
+        promo_code: Any = None,
+        referral_code: Any = None,
+        properties: Mapping[str, Any] | None = None,
+        auto_commit: bool = True,
+    ):
+        payload = cls.build_account_creation_properties(
+            signup_source=signup_source,
+            signup_flow=signup_flow,
+            billing_provider=billing_provider,
+            tier_id=tier_id,
+            is_oauth_signup=is_oauth_signup,
+            purchase_completed=purchase_completed,
+            promo_code=promo_code,
+            referral_code=referral_code,
+            properties=properties,
+        )
+        return cls.emit(
+            event_name="free_account_created",
+            properties=payload,
+            organization_id=organization_id,
+            user_id=user_id,
+            entity_type="organization",
+            entity_id=entity_id,
+            auto_commit=auto_commit,
+        )
+
+    @classmethod
     def emit_signup_completed(
         cls,
         *,
@@ -239,19 +345,17 @@ class AnalyticsTrackingService:
         properties: dict[str, Any] | None = None,
         auto_commit: bool = True,
     ):
-        payload = {
-            "signup_source": str(signup_source or "direct"),
-            "signup_flow": str(signup_flow or "unknown"),
-            "billing_provider": str(billing_provider or "unknown"),
-            "tier_id": tier_id,
-            "is_oauth_signup": bool(is_oauth_signup),
-            "purchase_completed": bool(purchase_completed),
-            **cls.build_code_usage_properties(
-                promo_code=promo_code,
-                referral_code=referral_code,
-            ),
-        }
-        payload = cls._merge_properties(payload, properties)
+        payload = cls.build_account_creation_properties(
+            signup_source=signup_source,
+            signup_flow=signup_flow,
+            billing_provider=billing_provider,
+            tier_id=tier_id,
+            is_oauth_signup=is_oauth_signup,
+            purchase_completed=purchase_completed,
+            promo_code=promo_code,
+            referral_code=referral_code,
+            properties=properties,
+        )
         return cls.emit(
             event_name="signup_completed",
             properties=payload,
@@ -593,9 +697,33 @@ class AnalyticsTrackingService:
         completion_properties: dict[str, Any],
     ) -> None:
         for event_name in (
-            "signup_completed",
-            "signup_checkout_completed",
+            "account_created",
             "purchase_completed",
+            "signup_completed",
+        ):
+            cls.emit(
+                event_name=event_name,
+                properties=completion_properties,
+                organization_id=organization_id,
+                user_id=user_id,
+                entity_type="organization",
+                entity_id=entity_id,
+                auto_commit=True,
+            )
+
+    @classmethod
+    def emit_quick_signup_completion_bundle(
+        cls,
+        *,
+        organization_id: int | None,
+        user_id: int | None,
+        entity_id: int | None,
+        completion_properties: dict[str, Any],
+    ) -> None:
+        for event_name in (
+            "free_account_created",
+            "account_created",
+            "signup_completed",
         ):
             cls.emit(
                 event_name=event_name,

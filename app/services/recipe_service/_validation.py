@@ -8,9 +8,40 @@ import logging
 from typing import Any, Dict, List, Tuple
 
 from ...extensions import db
-from ...models import InventoryItem, Recipe
+from ...models import InventoryItem, Recipe, RecipeGroup
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_scoped_org_context(
+    organization_id: int | None, recipe_id: int | None
+) -> tuple[int | None, Recipe | None]:
+    """Resolve organization scope and existing recipe for validation checks."""
+    from flask import session
+    from flask_login import current_user
+
+    scoped_org_id = organization_id
+    existing_recipe = None
+
+    if recipe_id:
+        try:
+            existing_recipe = db.session.get(Recipe, recipe_id)
+            if existing_recipe and scoped_org_id is None:
+                scoped_org_id = existing_recipe.organization_id
+        except Exception:
+            existing_recipe = None
+
+    if scoped_org_id is None:
+        try:
+            if getattr(current_user, "is_authenticated", False):
+                if getattr(current_user, "user_type", None) == "developer":
+                    scoped_org_id = session.get("dev_selected_org_id")
+                else:
+                    scoped_org_id = getattr(current_user, "organization_id", None)
+        except Exception:
+            scoped_org_id = None
+
+    return scoped_org_id, existing_recipe
 
 
 def validate_recipe_data(
@@ -49,7 +80,7 @@ def validate_recipe_data(
             name,
             recipe_id,
             organization_id=organization_id,
-            allow_duplicate=allow_duplicate_name,
+            allow_duplicate_name=allow_duplicate_name,
         )
         if not is_valid:
             return {"valid": False, "error": error, "missing_fields": []}
@@ -144,7 +175,7 @@ def validate_recipe_name(
     recipe_id: int = None,
     organization_id: int | None = None,
     *,
-    allow_duplicate: bool = False,
+    allow_duplicate_name: bool = False,
 ) -> Tuple[bool, str]:
     """
     Validate recipe name for uniqueness and format.
@@ -169,41 +200,25 @@ def validate_recipe_name(
             return False, "Recipe name must be less than 100 characters"
 
         # Check for uniqueness - exclude current recipe if editing
-        if allow_duplicate:
+        if allow_duplicate_name:
             return True, ""
 
-        from flask import session
-        from flask_login import current_user
+        scoped_org_id, existing_recipe = _resolve_scoped_org_context(
+            organization_id, recipe_id
+        )
+        current_group_id = (
+            getattr(existing_recipe, "recipe_group_id", None) if existing_recipe else None
+        )
 
-        scoped_org_id = organization_id
-        if scoped_org_id is None and recipe_id:
-            try:
-                existing_recipe = db.session.get(Recipe, recipe_id)
-                if existing_recipe:
-                    scoped_org_id = existing_recipe.organization_id
-            except Exception:
-                scoped_org_id = scoped_org_id or None
+        # Master recipe names are unique at the recipe-group level.
+        query = RecipeGroup.query.filter(RecipeGroup.name == name)
+        if scoped_org_id is not None:
+            query = query.filter(RecipeGroup.organization_id == scoped_org_id)
+        if current_group_id:
+            query = query.filter(RecipeGroup.id != current_group_id)
 
-        if scoped_org_id is None:
-            try:
-                if getattr(current_user, "is_authenticated", False):
-                    if getattr(current_user, "user_type", None) == "developer":
-                        scoped_org_id = session.get("dev_selected_org_id")
-                    else:
-                        scoped_org_id = getattr(current_user, "organization_id", None)
-            except Exception:
-                scoped_org_id = scoped_org_id or None
-
-        query = Recipe.query.filter_by(name=name)
-        if scoped_org_id:
-            query = query.filter(Recipe.organization_id == scoped_org_id)
-
-        # Exclude current recipe when editing
-        if recipe_id:
-            query = query.filter(Recipe.id != recipe_id)
-
-        existing = query.first()
-        if existing:
+        existing_group = query.first()
+        if existing_group:
             return False, "Recipe name already exists"
 
         return True, ""

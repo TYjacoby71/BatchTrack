@@ -1,6 +1,6 @@
 {# File: pages/batches/view_batch.html
    Synopsis: Completed batch record with print report.
-   Glossary: Lineage ID = recipe version identifier; Target version = recipe used for batch. #}
+   Glossary: Lineage ID = recipe version identifier stored on the batch. #}
 {% extends 'layout.html' %}
 {% block head %}
 <link rel="stylesheet" href="{{ static_asset('css/print.css') }}">
@@ -43,7 +43,7 @@
         <div class="batch-info">
             <div class="batch-info-left">
                 <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                {% set batch_recipe = batch.target_version or batch.recipe %}
+                {% set batch_recipe = batch.recipe %}
                 <p><strong>Recipe:</strong> {{ batch_recipe|lineage_recipe_name }}</p>
                 {% if batch.lineage_id %}
                 <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>
@@ -80,7 +80,7 @@
         <div class="collapse show" id="batchDetailsCollapse">
             <div class="card-body">
                 <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                {% set batch_recipe = batch.target_version or batch.recipe %}
+                {% set batch_recipe = batch.recipe %}
                 <p><strong>Recipe:</strong> {{ batch_recipe|lineage_recipe_name }}</p>
                 {% if batch.lineage_id %}
                 <p><strong>Lineage ID:</strong> {{ batch.lineage_id }}</p>

@@ -47,12 +47,13 @@ class BatchOperationsService(BaseService):
 
         try:
             # Trust the plan snapshot exclusively
-            snap_recipe_id = int(
-                plan_snapshot.get("recipe_id") or plan_snapshot.get("target_version_id")
-            )
-            snap_target_version_id = int(
-                plan_snapshot.get("target_version_id") or snap_recipe_id
-            )
+            raw_recipe_id = plan_snapshot.get("recipe_id")
+            if not raw_recipe_id:
+                return None, ["Missing required plan field: recipe_id"]
+            try:
+                snap_recipe_id = int(raw_recipe_id)
+            except (TypeError, ValueError):
+                return None, ["Invalid recipe_id in plan snapshot"]
             snap_scale = float(plan_snapshot.get("scale", 1.0))
             snap_batch_type = (
                 (plan_snapshot.get("batch_type") or "ingredient").strip().lower()
@@ -111,9 +112,7 @@ class BatchOperationsService(BaseService):
             batch = None
             for attempt in range(3):
                 recipe = (
-                    Recipe.query.filter_by(id=snap_target_version_id)
-                    .with_for_update()
-                    .first()
+                    Recipe.query.filter_by(id=snap_recipe_id).with_for_update().first()
                 )
                 if not recipe:
                     return None, "Recipe not found"
@@ -140,7 +139,6 @@ class BatchOperationsService(BaseService):
                 lineage_id = snap_lineage or generate_lineage_id(recipe)
                 batch = Batch(
                     recipe_id=snap_recipe_id,
-                    target_version_id=snap_target_version_id,
                     lineage_id=lineage_id,
                     label_code=label_code,
                     batch_type=snap_batch_type,
