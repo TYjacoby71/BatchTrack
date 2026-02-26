@@ -86,13 +86,18 @@ Core fields on every event record:
 
 ### Auth, onboarding, and billing funnel
 - `user_login_succeeded`
+- `account_created` (canonical)
+- `free_account_created` (quick-signup/free path)
 - `signup_completed`
 - `signup_checkout_started`
-- `signup_checkout_completed`
 - `purchase_completed`
 - `onboarding_completed`
 
-`signup_completed` and `purchase_completed` now include code attribution fields:
+Legacy compatibility notes:
+- `signup_completed` is retained as a legacy alias for account creation.
+- `signup_checkout_completed` remains registered for backward compatibility but is deprecated.
+
+`account_created`, `signup_completed`, and `purchase_completed` include code attribution fields:
 - `used_promo_code` (boolean)
 - `promo_code` (string or `null`)
 - `used_referral_code` (boolean)
@@ -127,10 +132,11 @@ Recommended baseline:
 
 ## Recommended PostHog Funnels (Launch)
 
-1. **Visit → Signup → Checkout Start → Purchase Complete**
+1. **Visit → Signup Start → Account Created → Purchase Complete**
    - `first_landing_recorded`
    - `signup_page_viewed`
    - `signup_checkout_started` (server)
+   - `account_created` (server)
    - `purchase_completed` (server)
 
 2. **First Login → Setup Complete**
