@@ -30,7 +30,7 @@ from app.services.recipe_service import (
     promote_test_to_current,
     update_recipe,
 )
-from app.utils.recipe_batch_counts import count_batches_for_recipe_version
+from app.utils.recipe_batch_counts import count_batches_for_recipe
 
 
 def _unique_name(prefix: str) -> str:
@@ -621,7 +621,7 @@ def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions(
 
 
 @pytest.mark.usefixtures("app_context")
-def test_batch_counts_are_recipe_version_scoped_per_version_and_test():
+def test_batch_counts_are_recipe_scoped_per_version_and_test():
     category = _create_category("LineageBatchCounts")
     ingredient = _create_ingredient()
     master_name = _unique_name("Batch Scope Master")
@@ -677,11 +677,11 @@ def test_batch_counts_are_recipe_version_scoped_per_version_and_test():
     db.session.commit()
 
     assert (
-        count_batches_for_recipe_version(master, organization_id=master.organization_id)
+        count_batches_for_recipe(master, organization_id=master.organization_id)
         == 1
     )
     assert (
-        count_batches_for_recipe_version(
+        count_batches_for_recipe(
             test_recipe, organization_id=test_recipe.organization_id
         )
         == 1
@@ -735,7 +735,7 @@ def test_promoting_test_to_current_preserves_batch_history_links():
 
     # Sanity check before promotion.
     assert (
-        count_batches_for_recipe_version(
+        count_batches_for_recipe(
             test_recipe, organization_id=test_recipe.organization_id
         )
         == 1
@@ -754,7 +754,7 @@ def test_promoting_test_to_current_preserves_batch_history_links():
 
     # Count remains intact after promotion.
     assert (
-        count_batches_for_recipe_version(promoted, organization_id=promoted.organization_id)
+        count_batches_for_recipe(promoted, organization_id=promoted.organization_id)
         == 1
     )
 

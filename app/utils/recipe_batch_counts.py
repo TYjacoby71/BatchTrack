@@ -1,4 +1,4 @@
-"""Recipe-version batch counting utilities.
+"""Batch counting utilities.
 
 Synopsis:
 Provides helpers to count batches for an exact recipe row.
@@ -12,10 +12,10 @@ from __future__ import annotations
 from app.models import Batch, Recipe
 
 
-def count_batches_for_recipe_version(
+def count_batches_for_recipe(
     recipe: Recipe, *, organization_id: int | None = None
 ) -> int:
-    """Count batches for one specific recipe version/test row."""
+    """Count batches for one specific recipe row."""
     if not recipe or not getattr(recipe, "id", None):
         return 0
 
@@ -33,11 +33,4 @@ def count_batches_for_recipe_version(
     return int(query.count() or 0)
 
 
-def count_batches_for_recipe_lineage(
-    recipe: Recipe, *, organization_id: int | None = None
-) -> int:
-    """Backward-compatible alias for renamed recipe-version counter."""
-    return count_batches_for_recipe_version(recipe, organization_id=organization_id)
-
-
-__all__ = ["count_batches_for_recipe_version", "count_batches_for_recipe_lineage"]
+__all__ = ["count_batches_for_recipe"]
