@@ -1203,11 +1203,6 @@
               heroOverlay.classList.add('is-hidden');
               heroOverlay.setAttribute('aria-hidden', 'true');
             }, 320);
-            if (hasAnalytics) {
-              window.BTAnalytics.capture('homepage_hero_overlay_dismissed', {
-                dismiss_source: source || 'unknown'
-              });
-            }
           };
 
           var startHeroOverlayTimer = function() {
