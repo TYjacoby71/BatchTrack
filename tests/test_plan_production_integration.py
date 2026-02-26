@@ -1,7 +1,10 @@
 import json
+from uuid import uuid4
 
 from app.extensions import db
-from app.models.models import User
+from app.models.models import Organization, User
+from app.models.product_category import ProductCategory
+from app.models.recipe import Recipe
 
 
 def _api(client, app, path, payload):
@@ -60,6 +63,109 @@ def _api(client, app, path, payload):
         content_type="application/json",
         headers={"Accept": "application/json"},
     )
+
+
+def _login_client_as_user(client, user_id):
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user_id)
+        sess["_fresh"] = True
+
+
+def _build_recipe_for_plan_page(*, organization_id: int, is_test: bool) -> int:
+    category = ProductCategory(name=f"Plan Test Category {uuid4().hex[:8]}")
+    db.session.add(category)
+    db.session.flush()
+
+    recipe = Recipe(
+        name=f"{'Test' if is_test else 'Master'} Plan Recipe {uuid4().hex[:8]}",
+        predicted_yield=5.0,
+        predicted_yield_unit="oz",
+        category_id=category.id,
+        organization_id=organization_id,
+        test_sequence=1 if is_test else None,
+        is_master=not is_test,
+    )
+    db.session.add(recipe)
+    db.session.commit()
+    return recipe.id
+
+
+def test_plan_production_test_recipe_exposes_discard_output_batch_type(
+    app, client, monkeypatch
+):
+    app.config["SKIP_PERMISSIONS"] = True
+    monkeypatch.setattr(
+        "app.blueprints.production_planning.routes.has_tier_permission",
+        lambda *args, **kwargs: True,
+    )
+
+    with app.app_context():
+        user = User.query.first()
+        if not user:
+            org = Organization(name=f"Plan Test Org {uuid4().hex[:8]}")
+            db.session.add(org)
+            db.session.flush()
+            user = User(
+                username=f"planuser-{uuid4().hex[:6]}",
+                email=f"planuser-{uuid4().hex[:6]}@example.com",
+                is_active=True,
+                is_verified=True,
+                organization_id=org.id,
+            )
+            db.session.add(user)
+            db.session.commit()
+        recipe_id = _build_recipe_for_plan_page(
+            organization_id=user.organization_id,
+            is_test=True,
+        )
+        user_id = user.id
+
+    _login_client_as_user(client, user_id)
+    response = client.get(f"/production-planning/recipe/{recipe_id}/plan")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'option value="untracked">Test Run (Discard Output)</option>' in body
+    assert 'default_batch_type: "untracked"' in body
+
+
+def test_plan_production_non_test_recipe_defaults_to_tracked_type(
+    app, client, monkeypatch
+):
+    app.config["SKIP_PERMISSIONS"] = True
+    monkeypatch.setattr(
+        "app.blueprints.production_planning.routes.has_tier_permission",
+        lambda *args, **kwargs: True,
+    )
+
+    with app.app_context():
+        user = User.query.first()
+        if not user:
+            org = Organization(name=f"Plan Non-Test Org {uuid4().hex[:8]}")
+            db.session.add(org)
+            db.session.flush()
+            user = User(
+                username=f"plannon-{uuid4().hex[:6]}",
+                email=f"plannon-{uuid4().hex[:6]}@example.com",
+                is_active=True,
+                is_verified=True,
+                organization_id=org.id,
+            )
+            db.session.add(user)
+            db.session.commit()
+        recipe_id = _build_recipe_for_plan_page(
+            organization_id=user.organization_id,
+            is_test=False,
+        )
+        user_id = user.id
+
+    _login_client_as_user(client, user_id)
+    response = client.get(f"/production-planning/recipe/{recipe_id}/plan")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'option value="untracked">Test Run (Discard Output)</option>' not in body
+    assert 'default_batch_type: "ingredient"' in body
 
 
 def test_plan_start_finish_non_portioned(app, client):

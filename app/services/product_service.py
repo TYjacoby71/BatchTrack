@@ -9,6 +9,39 @@ from .analytics_tracking_service import AnalyticsTrackingService
 
 
 class ProductService:
+    BULK_SIZE_LABEL_BY_UNIT_TYPE = {
+        "weight": "Bulk Weight",
+        "volume": "Bulk Volume",
+        "length": "Bulk Length",
+        "area": "Bulk Area",
+        "count": "Bulk Count",
+        "time": "Bulk Time",
+    }
+
+    @staticmethod
+    def is_bulk_size_label(size_label: str | None) -> bool:
+        return str(size_label or "").strip().lower().startswith("bulk")
+
+    @staticmethod
+    def resolve_bulk_size_label(unit: str | None) -> str:
+        """Map a unit to a canonical Bulk size label."""
+        unit_key = str(unit or "").strip().lower()
+        if not unit_key:
+            return "Bulk"
+
+        try:
+            from ..models import Unit
+
+            unit_row = Unit.query.filter(
+                (func.lower(Unit.name) == unit_key) | (func.lower(Unit.symbol) == unit_key)
+            ).first()
+            if not unit_row:
+                return "Bulk"
+            unit_type = str(unit_row.unit_type or "").strip().lower()
+            return ProductService.BULK_SIZE_LABEL_BY_UNIT_TYPE.get(unit_type, "Bulk")
+        except Exception:
+            return "Bulk"
+
     @staticmethod
     def generate_sku_code(product_name: str, variant_name: str, size_label: str):
         """Generate a unique SKU code"""
@@ -23,6 +56,8 @@ class ProductService:
         naming_context: dict | None = None,
     ):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
+        desired_unit = (str(unit or "")).strip()
+
         # Normalize inputs early
         try:
             normalized_size_label = (
@@ -34,6 +69,10 @@ class ProductService:
             normalized_size_label = " ".join(normalized_size_label.split())[:64]
         except Exception:
             normalized_size_label = "Bulk"
+
+        if ProductService.is_bulk_size_label(normalized_size_label):
+            # Keep bulk size labels canonical and unit-family aware.
+            normalized_size_label = ProductService.resolve_bulk_size_label(desired_unit)
 
         size_label = normalized_size_label
 
@@ -113,66 +152,105 @@ class ProductService:
             or product.organization_id
             or 1
         )
-        sku_candidates = ProductSKU.query.filter_by(
-            product_id=product.id,
-            variant_id=variant.id,
-            size_label=size_label,
-            organization_id=org_id,
-        ).all()
-        desired_unit = (str(unit or "")).strip()
-        is_bulk_label = str(size_label or "").strip().lower() == "bulk"
+        is_bulk_label = ProductService.is_bulk_size_label(size_label)
+        if is_bulk_label:
+            all_variant_skus = ProductSKU.query.filter_by(
+                product_id=product.id,
+                variant_id=variant.id,
+                organization_id=org_id,
+            ).all()
+            desired_label_key = str(size_label or "").strip().lower()
+            bulk_candidates = [
+                sku_candidate
+                for sku_candidate in all_variant_skus
+                if ProductService.is_bulk_size_label(getattr(sku_candidate, "size_label", None))
+            ]
+            sku_candidate_pools = [
+                [
+                    sku_candidate
+                    for sku_candidate in bulk_candidates
+                    if str(getattr(sku_candidate, "size_label", "") or "")
+                    .strip()
+                    .lower()
+                    == desired_label_key
+                ],
+                bulk_candidates,
+            ]
+        else:
+            sku_candidate_pools = [
+                ProductSKU.query.filter_by(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    size_label=size_label,
+                    organization_id=org_id,
+                ).all()
+            ]
 
         sku = None
-        if sku_candidates:
+        has_candidates = any(sku_candidate_pools)
+        if has_candidates:
             if is_bulk_label and desired_unit:
                 # 1) Exact unit match first
-                for candidate in sku_candidates:
-                    candidate_unit = (
-                        getattr(candidate.inventory_item, "unit", None)
-                        or candidate.unit
-                        or ""
-                    ).strip()
-                    if candidate_unit == desired_unit:
-                        sku = candidate
+                for candidate_pool in sku_candidate_pools:
+                    if sku:
                         break
+                    for candidate in candidate_pool:
+                        candidate_unit = (
+                            getattr(candidate.inventory_item, "unit", None)
+                            or candidate.unit
+                            or ""
+                        ).strip()
+                        if candidate_unit == desired_unit:
+                            sku = candidate
+                            break
 
                 # 2) Any unit-convertible bulk SKU can be reused
                 if not sku:
                     from ..services.unit_conversion import ConversionEngine
 
-                    for candidate in sku_candidates:
-                        candidate_item = getattr(candidate, "inventory_item", None)
-                        candidate_unit = (
-                            getattr(candidate_item, "unit", None)
-                            or candidate.unit
-                            or ""
-                        ).strip()
-                        if not candidate_unit or candidate_unit == desired_unit:
-                            continue
-                        try:
-                            conversion = ConversionEngine.convert_units(
-                                amount=1.0,
-                                from_unit=desired_unit,
-                                to_unit=candidate_unit,
-                                ingredient_id=(
-                                    getattr(candidate_item, "id", None)
-                                    or candidate.inventory_item_id
-                                ),
-                                density=getattr(candidate_item, "density", None),
-                                rounding_decimals=None,
-                            )
-                            if (
-                                conversion
-                                and conversion.get("success")
-                                and conversion.get("converted_value") is not None
-                            ):
-                                sku = candidate
-                                break
-                        except Exception:
-                            continue
+                    for candidate_pool in sku_candidate_pools:
+                        if sku:
+                            break
+                        for candidate in candidate_pool:
+                            candidate_item = getattr(candidate, "inventory_item", None)
+                            candidate_unit = (
+                                getattr(candidate_item, "unit", None)
+                                or candidate.unit
+                                or ""
+                            ).strip()
+                            if not candidate_unit or candidate_unit == desired_unit:
+                                continue
+                            try:
+                                conversion = ConversionEngine.convert_units(
+                                    amount=1.0,
+                                    from_unit=desired_unit,
+                                    to_unit=candidate_unit,
+                                    ingredient_id=(
+                                        getattr(candidate_item, "id", None)
+                                        or candidate.inventory_item_id
+                                    ),
+                                    density=getattr(candidate_item, "density", None),
+                                    rounding_decimals=None,
+                                )
+                                if (
+                                    conversion
+                                    and conversion.get("success")
+                                    and conversion.get("converted_value") is not None
+                                ):
+                                    sku = candidate
+                                    break
+                            except Exception:
+                                continue
             else:
                 # Preserve existing behavior for non-bulk labels
-                sku = sku_candidates[0]
+                sku = next(
+                    (
+                        candidate
+                        for candidate_pool in sku_candidate_pools
+                        for candidate in candidate_pool
+                    ),
+                    None,
+                )
 
         if not sku:
             # Create inventory item for this SKU
@@ -513,10 +591,11 @@ class ProductService:
     ):
         """Quick add product and variant, return structured response"""
         # Get or create the SKU with organization scoping
+        bulk_size_label = ProductService.resolve_bulk_size_label(product_base_unit)
         sku = ProductService.get_or_create_sku(
             product_name=product_name,
             variant_name=variant_name,
-            size_label="Bulk",
+            size_label=bulk_size_label,
             unit=product_base_unit,
         )
 

@@ -33,7 +33,7 @@
                         </div>
                         {% if can_start_checkout %}
                         <a
-                            href="{{ url_for('auth.signup_checkout', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, source='homepage_lifetime_' ~ offer.key) }}"
+                            href="{{ url_for('auth.signup', billing_mode='lifetime', lifetime_tier=offer.key, tier=offer.tier_id, source='homepage_lifetime_' ~ offer.key) }}"
                             class="btn btn-primary w-100"
                         >
                             Claim {{ offer.name }} Lifetime

@@ -123,8 +123,11 @@ class ProductVariant(ScopedModelMixin, db.Model):
 
     @property
     def bulk_sku(self):
-        """Get the bulk SKU for this variant"""
-        return self.skus.filter_by(size_label="Bulk").first()
+        """Get the primary bulk-family SKU for this variant."""
+        legacy_bulk = self.skus.filter_by(size_label="Bulk").first()
+        if legacy_bulk:
+            return legacy_bulk
+        return self.skus.filter(ProductSKU.size_label.ilike("Bulk%")).first()
 
     # Unique constraint on product + variant name
     __table_args__ = (

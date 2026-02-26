@@ -694,20 +694,22 @@
         <h5 class="card-title mb-0"><i class="fas fa-dollar-sign"></i> Recipe Cost</h5>
       </div>
       <div class="card-body">
-        {% set cost_ns = namespace(total=0, has_costs=false) %}
+        {% set cost_ns = namespace(total_cost=0.0, has_costs=false) %}
 
         {% if recipe.recipe_ingredients %}
           <div class="cost-breakdown mb-3">
             <h6 class="text-muted mb-2">Ingredients</h6>
             {% for assoc in recipe.recipe_ingredients %}
               {% if assoc.inventory_item and assoc.inventory_item.cost_per_unit %}
-                {% set item_cost = (assoc.quantity * assoc.inventory_item.cost_per_unit) %}
-                {% set cost_ns.total = cost_ns.total + item_cost %}
-                {% set cost_ns.has_costs = true %}
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
-                  <small class="text-success fw-medium">${{ "%.2f"|format(item_cost) }}</small>
-                </div>
+                {% set item_cost = recipe_line_item_cost(assoc.quantity, assoc.unit, assoc.inventory_item) %}
+                {% if item_cost is not none %}
+                  {% set cost_ns.total_cost = cost_ns.total_cost + item_cost %}
+                  {% set cost_ns.has_costs = true %}
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
+                    <small class="text-success fw-medium">${{ "%.2f"|format(item_cost) }}</small>
+                  </div>
+                {% endif %}
               {% endif %}
             {% endfor %}
           </div>
@@ -718,13 +720,15 @@
             <h6 class="text-muted mb-2">Consumables</h6>
             {% for assoc in recipe.recipe_consumables %}
               {% if assoc.inventory_item and assoc.inventory_item.cost_per_unit %}
-                {% set item_cost = (assoc.quantity * assoc.inventory_item.cost_per_unit) %}
-                {% set cost_ns.total = cost_ns.total + item_cost %}
-                {% set cost_ns.has_costs = true %}
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
-                  <small class="text-info fw-medium">${{ "%.2f"|format(item_cost) }}</small>
-                </div>
+                {% set item_cost = recipe_line_item_cost(assoc.quantity, assoc.unit, assoc.inventory_item) %}
+                {% if item_cost is not none %}
+                  {% set cost_ns.total_cost = cost_ns.total_cost + item_cost %}
+                  {% set cost_ns.has_costs = true %}
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
+                    <small class="text-info fw-medium">${{ "%.2f"|format(item_cost) }}</small>
+                  </div>
+                {% endif %}
               {% endif %}
             {% endfor %}
           </div>
@@ -734,7 +738,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <strong>Total Recipe Cost:</strong>
           {% if cost_ns.has_costs %}
-            <h5 class="text-success mb-0">${{ "%.2f"|format(cost_ns.total) }}</h5>
+            <h5 class="text-success mb-0">${{ "%.2f"|format(cost_ns.total_cost) }}</h5>
           {% else %}
             <span class="text-muted">Not available</span>
           {% endif %}
@@ -744,7 +748,7 @@
           <div class="mt-3 pt-3 border-top">
             <div class="d-flex justify-content-between align-items-center">
               <small class="text-muted">Cost per {{ recipe.predicted_yield_unit }}:</small>
-              <small class="text-success fw-medium">${{ "%.3f"|format(cost_ns.total / recipe.predicted_yield) }}</small>
+              <small class="text-success fw-medium">${{ "%.3f"|format(cost_ns.total_cost / recipe.predicted_yield) }}</small>
             </div>
           </div>
         {% endif %}

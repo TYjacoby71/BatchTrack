@@ -491,10 +491,11 @@ def new_product():
             # Use ProductService to create the entire hierarchy
             from ...services.product_service import ProductService
 
+            bulk_size_label = ProductService.resolve_bulk_size_label("oz")
             base_sku = ProductService.get_or_create_sku(
                 product_name=name,
                 variant_name="Base",
-                size_label="Bulk",
+                size_label=bulk_size_label,
                 unit="oz",  # Default unit
             )
 

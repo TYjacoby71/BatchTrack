@@ -244,6 +244,34 @@ def register_middleware(app: Flask) -> None:
         ):
             return None
 
+        if MiddlewareProbeService.is_high_confidence_probe_path(path):
+            request_ip = PublicBotTrapService.resolve_request_ip(request)
+            try:
+                PublicBotTrapService.record_hit(
+                    request=request,
+                    source="middleware_early_path_block",
+                    reason="high_confidence_probe_path",
+                    extra={"path": path},
+                    block=True,
+                )
+            except Exception as exc:
+                logger.debug("Failed to record early path block hit for %s: %s", path, exc)
+
+            logger.warning(
+                "Early-blocked high-confidence probe path: path=%s ip=%s user_id=%s",
+                path,
+                request_ip,
+                getattr(current_user, "id", None),
+            )
+            if current_user.is_authenticated:
+                try:
+                    logout_user()
+                except Exception:
+                    pass
+            if _wants_json_response():
+                return jsonify({"error": "Access blocked"}), 403
+            return ("Forbidden", 403)
+
         try:
             if PublicBotTrapService.should_block_request(request, current_user):
                 logger.warning(

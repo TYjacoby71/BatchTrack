@@ -14,6 +14,7 @@ from typing import List, Optional
 
 from ...extensions import db
 from ...models import Recipe
+from ..recipe_cost_service import calculate_recipe_line_item_cost_or_zero
 from .types import ContainerStrategy, CostBreakdown, IngredientRequirement
 
 logger = logging.getLogger(__name__)
@@ -106,19 +107,26 @@ def calculate_production_costs(recipe_id: int, scale: float = 1.0) -> dict:
         ingredient_costs = []
 
         for recipe_ingredient in recipe.recipe_ingredients:
+            inventory_item = recipe_ingredient.inventory_item
             cost_per_unit = (
-                getattr(recipe_ingredient.inventory_item, "cost_per_unit", 0) or 0
+                getattr(inventory_item, "cost_per_unit", 0) or 0
             )
             scaled_quantity = recipe_ingredient.quantity * scale
-            ingredient_cost = Decimal(str(cost_per_unit)) * Decimal(
-                str(scaled_quantity)
+            ingredient_cost = Decimal(
+                str(
+                    calculate_recipe_line_item_cost_or_zero(
+                        quantity=scaled_quantity,
+                        recipe_unit=recipe_ingredient.unit,
+                        inventory_item=inventory_item,
+                    )
+                )
             )
 
             total_cost += ingredient_cost
 
             ingredient_costs.append(
                 {
-                    "ingredient_name": recipe_ingredient.inventory_item.name,
+                    "ingredient_name": inventory_item.name,
                     "quantity": scaled_quantity,
                     "unit": recipe_ingredient.unit,
                     "cost_per_unit": float(cost_per_unit),
