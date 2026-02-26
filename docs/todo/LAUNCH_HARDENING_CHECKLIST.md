@@ -12,10 +12,10 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 ## Priority 1: Launch Blockers
 
 ### 1.1 Clean requirements.txt
-- [ ] Remove duplicate entries (`Flask-WTF`, `flask-mail`/`Flask-Mail`, `Flask-Limiter`, `Flask-Migrate`, `redis`, `openai`, `xlrd`)
-- [ ] Pin all 34 unpinned packages to current installed versions
-- [ ] Remove conflicting version specs (`redis>=5.0.0` vs `redis==5.1.1`, `Flask-WTF>=1.1.0` vs `Flask-WTF==1.2.1`)
-- [ ] Verify clean install: `pip install -r requirements.txt` on a fresh venv with zero warnings
+- [x] Remove duplicate entries (`Flask-WTF`, `flask-mail`/`Flask-Mail`, `Flask-Limiter`, `Flask-Migrate`, `redis`, `openai`, `xlrd`)
+- [x] Pin all 34 unpinned packages to current installed versions
+- [x] Remove conflicting version specs (`redis>=5.0.0` vs `redis==5.1.1`, `Flask-WTF>=1.1.0` vs `Flask-WTF==1.2.1`)
+- [x] Verify clean install: `pip install -r requirements.txt` on a fresh venv with zero warnings
 
 ### 1.2 Audit and fix unscoped queries
 - [ ] Inventory blueprint (`app/blueprints/inventory/routes.py`): replace all `InventoryItem.query.get_or_404(id)` and `InventoryItem.query.filter(...)` with org-scoped equivalents
