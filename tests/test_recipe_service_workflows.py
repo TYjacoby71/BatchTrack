@@ -1087,6 +1087,46 @@ def test_view_recipe_shows_lineage_display_names(app, client):
     assert f"/recipes/{test_id}/test" not in test_body
 
 
+@pytest.mark.usefixtures("app")
+def test_view_recipe_cost_card_shows_total_when_item_cost_exists(app, client):
+    with app.app_context():
+        user = User.query.first()
+        assert user is not None
+        category = _create_category("CostCard")
+        ingredient = _create_ingredient()
+        ingredient.cost_per_unit = 0.01
+        db.session.commit()
+
+        create_ok, recipe_or_err = create_recipe(
+            name=_unique_name("Costed Recipe"),
+            instructions="Costed recipe instructions",
+            yield_amount=6,
+            yield_unit="oz",
+            ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+            allowed_containers=[],
+            label_prefix="CST",
+            category_id=category.id,
+            status="published",
+        )
+        assert create_ok, recipe_or_err
+        recipe_id = recipe_or_err.id
+        user_id = user.id
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    response = client.get(f"/recipes/{recipe_id}/view")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Total Recipe Cost:" in body
+    assert '<h5 class="text-success mb-0">$0.06</h5>' in body
+    assert (
+        "Total Recipe Cost:</strong>\n          <span class=\"text-muted\">Not available</span>"
+        not in body
+    )
+
+
 def test_create_test_route_allows_all_published_variations_and_blocks_tests(app, client):
     with app.app_context():
         user_id = User.query.first().id

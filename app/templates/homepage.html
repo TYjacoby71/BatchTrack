@@ -95,6 +95,15 @@
             margin-bottom: 0;
         }
 
+        .homepage-card-col {
+            display: flex;
+        }
+
+        .homepage-card-col > .card,
+        .homepage-card-col > .tool-feature-card-shell {
+            width: 100%;
+        }
+
         .tool-feature-card-shell.is-fallback .feature-card {
             border: 1px solid rgba(108, 117, 125, 0.25);
         }
@@ -233,20 +242,46 @@
         }
 
         .tool-card-image {
-            width: 100%;
+            width: auto;
+            max-width: 100%;
+            height: auto;
             max-height: 186px;
             object-fit: contain;
+            object-position: center center;
             display: block;
             border-radius: 0.35rem;
+            margin: 0 auto;
         }
 
         .tool-card-video {
-            width: 100%;
+            width: auto;
+            max-width: 100%;
+            height: auto;
             max-height: 186px;
             object-fit: contain;
+            object-position: center center;
             display: block;
             border-radius: 0.35rem;
             background: #0d1b34;
+            margin: 0 auto;
+        }
+
+        .tool-slot-media {
+            min-height: 200px;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .tool-slot-image,
+        .tool-slot-video {
+            width: 100%;
+            height: 100%;
+            min-height: 200px;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
+            margin: 0;
+            border-radius: 0;
         }
 
         .btn-cta {
@@ -489,24 +524,24 @@
                     {% for tool in desktop_cards %}
                     {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
                     {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('waitlist.waitlist_landing', waitlist_key='tools.' ~ tool.slug, source='homepage_tool_card')) %}
-                    <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="col-lg-4 col-md-6 mb-4 homepage-card-col">
                         <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
                             <div class="card feature-card h-100">
                                 <div class="card-body text-center">
-                                    <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
+                                    <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                    <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
                                         {% if tool.media %}
                                             {% if tool.media.kind == 'video' %}
-                                        <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                        <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                             <source src="{{ url_for('static', filename=tool.media.path) }}">
                                         </video>
                                             {% else %}
-                                        <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                        <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                             {% endif %}
                                         {% else %}
                                         <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                         {% endif %}
                                     </div>
-                                    <h3 class="card-title h5">{{ tool.name }}</h3>
                                     <p class="card-text">{{ tool.summary }}</p>
                                     {% if tool_is_enabled %}
                                     <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
@@ -535,20 +570,20 @@
                             <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
                                 <div class="card feature-card h-100">
                                     <div class="card-body text-center">
-                                        <div class="placeholder-img mb-3{% if tool.media %} has-media{% endif %}">
+                                        <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                        <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
                                             {% if tool.media %}
                                                 {% if tool.media.kind == 'video' %}
-                                            <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                            <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                                 <source src="{{ url_for('static', filename=tool.media.path) }}">
                                             </video>
                                                 {% else %}
-                                            <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-card-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                            <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                                 {% endif %}
                                             {% else %}
                                             <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
                                             {% endif %}
                                         </div>
-                                        <h3 class="card-title h5">{{ tool.name }}</h3>
                                         <p class="card-text">{{ tool.summary }}</p>
                                         <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                                     </div>
@@ -569,20 +604,20 @@
                 <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
                     <div class="card feature-card h-100 mb-4">
                         <div class="card-body text-center">
-                            <div class="placeholder-img mb-3{% if single_tool.media %} has-media{% endif %}">
+                            <h3 class="card-title h5 mb-3">{{ single_tool.name }}</h3>
+                            <div class="placeholder-img tool-slot-media mb-3{% if single_tool.media %} has-media{% endif %}">
                                 {% if single_tool.media %}
                                     {% if single_tool.media.kind == 'video' %}
-                                <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
+                                <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
                                     <source src="{{ url_for('static', filename=single_tool.media.path) }}">
                                 </video>
                                     {% else %}
-                                <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-card-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
+                                <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-slot-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
                                     {% endif %}
                                 {% else %}
                                 <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
                                 {% endif %}
                             </div>
-                            <h3 class="card-title h5">{{ single_tool.name }}</h3>
                             <p class="card-text">{{ single_tool.summary }}</p>
                             <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
                         </div>
@@ -622,9 +657,9 @@
                 <p class="lead text-muted">Everything you need to run consistent, profitable batches.</p>
             </div>
 
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for feature in (homepage_feature_cards if homepage_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6 homepage-card-col">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
@@ -749,7 +784,7 @@
                 }
             ] %}
 
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for idx in range(3) %}
                 {% set fallback = fallback_reviews[idx] %}
                 {% set source = (marketing_reviews[idx] if marketing_reviews|length > idx else fallback) %}
@@ -760,7 +795,7 @@
                 {% set customer_media = (homepage_testimonial_media.get(customer_key) if homepage_testimonial_media is defined else none) %}
                 {% set logo_media = (customer_media.get('logo') if customer_media else none) %}
                 {% set photo_media = (customer_media.get('photo') if customer_media else none) %}
-                <div class="col-lg-4">
+                <div class="col-lg-4 homepage-card-col">
                     <div class="testimonial-card h-100">
                         <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
                             {% if logo_media %}
@@ -815,7 +850,7 @@
     <!-- Stats Section -->
     <section class="stats-section">
         <div class="container">
-            <div class="row">
+            <div class="row justify-content-center">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
                         <div class="stat-number">{{ marketing_stats.total_active_users or 0 }}</div>
@@ -847,9 +882,9 @@
     <!-- More Features -->
     <section class="py-5">
         <div class="container">
-            <div class="row">
+            <div class="row justify-content-center">
                 {% for feature in (homepage_more_feature_cards if homepage_more_feature_cards is defined else []) %}
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6 homepage-card-col">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
                             <div class="placeholder-img mb-3{% if feature.media %} has-media{% endif %}">
