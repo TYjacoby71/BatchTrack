@@ -164,7 +164,6 @@ document.addEventListener('DOMContentLoaded', function() {
             purchasePayload.items = [itemPayload];
         }
 
-        window.gtag('event', 'purchase', purchasePayload);
         window.gtag('event', 'conversion_event_purchase', purchasePayload);
 
         const completionPayload = {
