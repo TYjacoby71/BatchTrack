@@ -346,6 +346,13 @@
             inset: 0;
             background: rgba(9, 20, 40, 0.46);
             z-index: 1;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.32s ease;
+        }
+
+        .hero-media-stage.is-overlay-dismissed::before {
+            opacity: 0;
         }
 
         .hero-video-placeholder {
@@ -392,6 +399,24 @@
             text-align: center;
             padding: 1.5rem;
             color: #ffffff;
+            pointer-events: none;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
+        }
+
+        .hero-overlay.is-fading {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+        }
+
+        .hero-overlay.is-hidden {
+            display: none;
+        }
+
+        .hero-overlay .hero-copy {
+            pointer-events: none;
         }
 
         .hero-overlay .hero-title {
@@ -403,6 +428,11 @@
             max-width: 52rem;
             color: rgba(255, 255, 255, 0.9);
             margin-bottom: 0;
+        }
+
+        .hero-watch-btn {
+            margin-top: 1.1rem;
+            pointer-events: auto;
         }
 
         .hero-media-meta {
@@ -508,8 +538,13 @@
                         {% endif %}
                     </div>
                     <div class="hero-overlay">
-                        <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
-                        <p class="lead hero-subtitle">Precision for every batch you make.</p>
+                        <div class="hero-copy">
+                            <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
+                            <p class="lead hero-subtitle">Precision for every batch you make.</p>
+                        </div>
+                        <button type="button" class="btn btn-cta text-white fw-semibold hero-watch-btn" data-hero-watch>
+                            Watch Video
+                        </button>
                     </div>
                 </div>
                 <div class="hero-media-meta d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
@@ -1132,9 +1167,88 @@
 {% block scripts %}
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+        var hasAnalytics = !!(window.BTAnalytics && typeof window.BTAnalytics.capture === 'function');
+
+        var heroSection = document.querySelector('.hero-section');
+        var heroMediaStage = document.querySelector('.hero-media-stage');
+        var heroOverlay = document.querySelector('.hero-overlay');
+        var heroWatchButton = document.querySelector('[data-hero-watch]');
+
+        if (heroSection && heroOverlay) {
+          var heroOverlayDismissed = false;
+          var heroOverlayTimer = null;
+          var heroOverlayObserver = null;
+
+          var clearHeroOverlayTimer = function() {
+            if (heroOverlayTimer !== null) {
+              window.clearTimeout(heroOverlayTimer);
+              heroOverlayTimer = null;
+            }
+          };
+
+          var dismissHeroOverlay = function(source) {
+            if (heroOverlayDismissed) {
+              return;
+            }
+            heroOverlayDismissed = true;
+            clearHeroOverlayTimer();
+            if (heroOverlayObserver && typeof heroOverlayObserver.disconnect === 'function') {
+              heroOverlayObserver.disconnect();
+            }
+            if (heroMediaStage) {
+              heroMediaStage.classList.add('is-overlay-dismissed');
+            }
+            heroOverlay.classList.add('is-fading');
+            window.setTimeout(function() {
+              heroOverlay.classList.add('is-hidden');
+              heroOverlay.setAttribute('aria-hidden', 'true');
+            }, 320);
+            if (hasAnalytics) {
+              window.BTAnalytics.capture('homepage_hero_overlay_dismissed', {
+                dismiss_source: source || 'unknown'
+              });
+            }
+          };
+
+          var startHeroOverlayTimer = function() {
+            if (heroOverlayDismissed || heroOverlayTimer !== null) {
+              return;
+            }
+            heroOverlayTimer = window.setTimeout(function() {
+              dismissHeroOverlay('dwell_3s');
+            }, 3000);
+          };
+
+          var observedTarget = heroMediaStage || heroSection;
+          if ('IntersectionObserver' in window) {
+            heroOverlayObserver = new IntersectionObserver(function(entries) {
+              entries.forEach(function(entry) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
+                  startHeroOverlayTimer();
+                } else {
+                  clearHeroOverlayTimer();
+                }
+              });
+            }, {
+              threshold: [0, 0.55, 1]
+            });
+            heroOverlayObserver.observe(observedTarget);
+          } else {
+            startHeroOverlayTimer();
+          }
+
+          if (heroWatchButton) {
+            heroWatchButton.addEventListener('click', function(event) {
+              event.preventDefault();
+              dismissHeroOverlay('watch_button');
+            });
+          }
+        }
+
+        if (!hasAnalytics) {
           return;
         }
+
         window.BTAnalytics.capture('homepage_viewed', {
           landing_variant: 'homepage',
           authenticated: false
