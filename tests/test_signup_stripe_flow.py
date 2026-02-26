@@ -101,6 +101,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         )
         db.session.add(solo)
         db.session.commit()
+        solo_id = int(solo.id)
 
         if not live_mode:
 
@@ -116,10 +117,10 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
                 allow_promo=True,
                 existing_customer_id=None,
             ):
-                assert tier_obj.id == solo.id
+                assert tier_obj.id == solo_id
                 assert customer_email == "solo@applicant.com"
                 assert success_url.endswith("{CHECKOUT_SESSION_ID}")
-                assert metadata["tier_id"] == str(solo.id)
+                assert metadata["tier_id"] == str(solo_id)
                 assert phone_required is False
                 return _DummySession(f"cs_test_{tier_obj.id}")
 
@@ -130,7 +131,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         response = client.post(
             "/auth/signup",
             data={
-                "selected_tier": str(solo.id),
+                    "selected_tier": str(solo_id),
                 "contact_email": "solo@applicant.com",
                 "contact_phone": "555-0100",
             },
@@ -181,7 +182,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
             conversion_payload = sess.get("ga4_checkout_conversion")
             assert isinstance(conversion_payload, dict)
             assert conversion_payload.get("transaction_id") == "cs_live"
-            assert conversion_payload.get("tier_id") == str(solo.id)
+            assert conversion_payload.get("tier_id") == str(solo_id)
 
 
 def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
