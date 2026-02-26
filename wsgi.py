@@ -9,6 +9,19 @@ _TRUTHY = {"1", "true", "on", "yes"}
 _FALSY = {"0", "false", "off", "no"}
 
 
+def _running_under_gunicorn() -> bool:
+    """Best-effort detection to avoid duplicate monkey patching under Gunicorn."""
+    server_software = (os.environ.get("SERVER_SOFTWARE") or "").strip().lower()
+    if "gunicorn" in server_software:
+        return True
+
+    if os.environ.get("GUNICORN_CMD_ARGS"):
+        return True
+
+    argv0 = (sys.argv[0] if sys.argv else "").strip().lower()
+    return "gunicorn" in argv0
+
+
 def _gevent_patch_kwargs() -> dict[str, bool]:
     """Skip gevent's thread patching on Python 3.13+ unless explicitly enabled."""
     env_value = os.environ.get("GEVENT_PATCH_THREADS")
@@ -27,7 +40,8 @@ def _gevent_patch_kwargs() -> dict[str, bool]:
 try:
     from gevent import monkey  # type: ignore
 
-    monkey.patch_all(**_gevent_patch_kwargs())
+    if not _running_under_gunicorn():
+        monkey.patch_all(**_gevent_patch_kwargs())
 except Exception as err:  # pragma: no cover - best effort import
     LOG.debug("gevent monkey patching skipped: %s", err)
 

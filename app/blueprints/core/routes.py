@@ -249,6 +249,12 @@ def branding_full_logo():
     return _serve_brand_asset("Full Logo.svg")
 
 
+@core_bp.route("/favicon.ico")
+def favicon():
+    """Browser/bot favicon endpoint backed by the square app tile."""
+    return _serve_brand_asset("App card logo.svg")
+
+
 @core_bp.route("/branding/full-logo-header.svg")
 def branding_full_logo_header():
     """Cropped full logo for compact header branding."""

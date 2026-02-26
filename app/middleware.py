@@ -236,7 +236,7 @@ def register_middleware(app: Flask) -> None:
         if RouteAccessConfig.is_monitoring_request(request):
             return None
 
-        if path.startswith("/static/"):
+        if RouteAccessConfig.is_passive_public_asset_path(path):
             return None
 
         if current_app.config.get("SKIP_PERMISSIONS") or current_app.config.get(
