@@ -160,7 +160,9 @@ Shared analytics runtime helpers and page-level event capture wiring.
         var normalizedCtaText = ctaText.toLowerCase().replace(/\s+/g, ' ').trim();
         if (path.includes('/signup')) {
           var signupSource = url.searchParams.get('source') || null;
-          var isFreeTrialCta = normalizedCtaText.indexOf('14 day free trial') >= 0 || normalizedCtaText.indexOf('14day free trial') >= 0;
+          var sourceLooksFreeTrial = typeof signupSource === 'string' && signupSource.indexOf('start_free_trial') >= 0;
+          var textLooksFreeTrial = normalizedCtaText.indexOf('14 day free trial') >= 0 || normalizedCtaText.indexOf('14day free trial') >= 0;
+          var isFreeTrialCta = sourceLooksFreeTrial || textLooksFreeTrial;
           window.BTAnalytics.capture('public_signup_cta_clicked', {
             cta_text: ctaText,
             cta_intent: isFreeTrialCta ? 'free_trial' : 'signup',
