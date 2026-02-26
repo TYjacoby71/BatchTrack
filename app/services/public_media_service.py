@@ -12,8 +12,10 @@ Glossary:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from flask import current_app, has_app_context
 
@@ -33,6 +35,15 @@ VIDEO_EXTENSIONS = {
     ".mov",
     ".m4v",
 }
+YOUTUBE_LINK_EXTENSIONS = {
+    ".url",
+}
+_YOUTUBE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+_YOUTUBE_IFRAME_SRC_RE = re.compile(r'src=["\']([^"\']+)["\']', re.IGNORECASE)
+_YOUTUBE_TIMESTAMP_RE = re.compile(
+    r"^(?:(?P<hours>\d+)h)?(?:(?P<minutes>\d+)m)?(?:(?P<seconds>\d+)s)?$",
+    re.IGNORECASE,
+)
 
 HOMEPAGE_FEATURE_CARD_CATALOG: tuple[Dict[str, str], ...] = (
     {
@@ -127,6 +138,7 @@ def _allowed_extensions(*, allow_images: bool, allow_videos: bool) -> set[str]:
         extensions |= IMAGE_EXTENSIONS
     if allow_videos:
         extensions |= VIDEO_EXTENSIONS
+        extensions |= YOUTUBE_LINK_EXTENSIONS
     return extensions
 
 
@@ -164,12 +176,157 @@ def _list_media_files(
         ]
     except OSError:
         return []
-    return sorted(files, key=lambda path: path.name.lower())
+    return sorted(
+        files,
+        key=lambda path: (
+            0 if path.suffix.lower() in YOUTUBE_LINK_EXTENSIONS else 1,
+            path.name.lower(),
+        ),
+    )
+
+
+def _parse_timestamp_to_seconds(value: str) -> int | None:
+    candidate = str(value or "").strip().lower()
+    if not candidate:
+        return None
+    if candidate.isdigit():
+        return int(candidate)
+    if candidate.endswith("s") and candidate[:-1].isdigit():
+        return int(candidate[:-1])
+    match = _YOUTUBE_TIMESTAMP_RE.fullmatch(candidate)
+    if not match:
+        return None
+    total = (
+        int(match.group("hours") or 0) * 3600
+        + int(match.group("minutes") or 0) * 60
+        + int(match.group("seconds") or 0)
+    )
+    return total if total > 0 else None
+
+
+def _extract_url_candidate(raw_text: str) -> str | None:
+    text = str(raw_text or "").strip()
+    if not text:
+        return None
+
+    iframe_match = _YOUTUBE_IFRAME_SRC_RE.search(text)
+    if iframe_match:
+        src_value = str(iframe_match.group(1) or "").strip()
+        if src_value:
+            return src_value
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.upper().startswith("URL="):
+            parsed = line.split("=", 1)[1].strip()
+            if parsed:
+                return parsed
+            continue
+        if line.startswith(("https://", "http://", "//")):
+            return line
+        lowered = line.lower()
+        if "youtube.com" in lowered or "youtu.be" in lowered:
+            return line
+        if _YOUTUBE_VIDEO_ID_RE.fullmatch(line):
+            return line
+    return None
+
+
+def _normalize_youtube_candidate(raw_value: str) -> str:
+    candidate = str(raw_value or "").strip()
+    if not candidate:
+        return ""
+    if candidate.startswith("//"):
+        return f"https:{candidate}"
+    lowered = candidate.lower()
+    if "://" not in candidate and lowered.startswith(
+        (
+            "youtube.com/",
+            "www.youtube.com/",
+            "m.youtube.com/",
+            "youtube-nocookie.com/",
+            "www.youtube-nocookie.com/",
+            "youtu.be/",
+            "www.youtu.be/",
+        )
+    ):
+        return f"https://{candidate}"
+    return candidate
+
+
+def _extract_youtube_video_id(raw_value: str) -> tuple[str | None, int | None]:
+    candidate = _normalize_youtube_candidate(raw_value)
+    if not candidate:
+        return None, None
+    if _YOUTUBE_VIDEO_ID_RE.fullmatch(candidate):
+        return candidate, None
+
+    parsed = urlparse(candidate)
+    host = str(parsed.netloc or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if host.startswith("m."):
+        host = host[2:]
+
+    query = parse_qs(parsed.query or "")
+    start_seconds = _parse_timestamp_to_seconds(
+        str(query.get("start", [None])[0] or query.get("t", [None])[0] or "")
+    )
+    video_id: str | None = None
+
+    if host == "youtu.be":
+        segments = [segment for segment in parsed.path.split("/") if segment]
+        if segments:
+            video_id = segments[0]
+    elif host in {"youtube.com", "youtube-nocookie.com"}:
+        segments = [segment for segment in parsed.path.split("/") if segment]
+        if segments:
+            if segments[0] in {"embed", "shorts", "live"} and len(segments) > 1:
+                video_id = segments[1]
+            elif segments[0] == "watch":
+                video_id = str(query.get("v", [None])[0] or "")
+        if not video_id:
+            video_id = str(query.get("v", [None])[0] or "")
+
+    if not video_id or not _YOUTUBE_VIDEO_ID_RE.fullmatch(video_id):
+        return None, None
+    return video_id, start_seconds
+
+
+def _build_youtube_embed_url(raw_value: str) -> tuple[str | None, str | None]:
+    video_id, start_seconds = _extract_youtube_video_id(raw_value)
+    if not video_id:
+        return None, None
+    params = {
+        "rel": "0",
+        "modestbranding": "1",
+        "playsinline": "1",
+    }
+    if start_seconds:
+        params["start"] = str(start_seconds)
+    return video_id, f"https://www.youtube.com/embed/{video_id}?{urlencode(params)}"
+
+
+def _read_link_file_target(path: Path) -> str | None:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    target = _extract_url_candidate(content)
+    return _normalize_youtube_candidate(target) if target else None
 
 
 def _media_from_path(static_root: Path, path: Path) -> Dict[str, str] | None:
     ext = path.suffix.lower()
-    if ext in IMAGE_EXTENSIONS:
+    if ext in YOUTUBE_LINK_EXTENSIONS:
+        link_target = _read_link_file_target(path)
+        video_id, embed_url = _build_youtube_embed_url(link_target or "")
+        if not embed_url:
+            return None
+        kind = "youtube"
+    elif ext in IMAGE_EXTENSIONS:
         kind = "image"
     elif ext in VIDEO_EXTENSIONS:
         kind = "video"
@@ -179,6 +336,14 @@ def _media_from_path(static_root: Path, path: Path) -> Dict[str, str] | None:
         relative_path = path.relative_to(static_root).as_posix()
     except ValueError:
         return None
+    if kind == "youtube":
+        return {
+            "path": relative_path,
+            "kind": kind,
+            "url": link_target or "",
+            "video_id": video_id or "",
+            "embed_url": embed_url,
+        }
     return {"path": relative_path, "kind": kind}
 
 
@@ -196,7 +361,11 @@ def resolve_first_media_from_folder(
     )
     if not files:
         return None
-    return _media_from_path(static_root, files[0])
+    for file_path in files:
+        resolved = _media_from_path(static_root, file_path)
+        if resolved is not None:
+            return resolved
+    return None
 
 
 def resolve_media_list_from_folder(
@@ -215,10 +384,10 @@ def resolve_media_list_from_folder(
         allow_images=allow_images,
         allow_videos=allow_videos,
     )
-    if limit is not None and limit >= 0:
-        files = files[:limit]
     media: List[Dict[str, str]] = []
     for file_path in files:
+        if limit is not None and limit >= 0 and len(media) >= limit:
+            break
         resolved = _media_from_path(static_root, file_path)
         if resolved is not None:
             media.append(resolved)
@@ -319,12 +488,21 @@ def build_media_signature(entries: Iterable[tuple[str, Dict[str, str] | None]]) 
     parts: List[str] = []
     for key, media in entries:
         safe_key = str(key or "")
-        if media and media.get("path"):
-            parts.append(
-                f"{safe_key}:{media.get('kind') or 'unknown'}:{media.get('path')}"
+        if not media:
+            parts.append(f"{safe_key}:none")
+            continue
+
+        media_kind = str(media.get("kind") or "unknown")
+        if media_kind == "youtube":
+            value = str(
+                media.get("embed_url") or media.get("url") or media.get("path") or ""
             )
         else:
+            value = str(media.get("path") or "")
+        if not value:
             parts.append(f"{safe_key}:none")
+            continue
+        parts.append(f"{safe_key}:{media_kind}:{value}")
     if not parts:
         return "none"
     return "|".join(parts)

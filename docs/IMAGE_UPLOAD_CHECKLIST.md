@@ -12,6 +12,7 @@ Only mark an item as `[x]` when all of the following are true:
 2. The file has a supported media extension:
    - Images: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, `.avif`
    - Videos: `.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`
+   - YouTube link file: `.url` (contains a YouTube URL or embed link)
 3. The file is not empty (size > 0 bytes).
 4. The file is not a placeholder/sample/temp image.
 
@@ -30,6 +31,10 @@ For homepage media slots, use **one file per object folder**:
 - Tools: one file per tool folder
 - Features: one file per feature folder
 - Hero / CTA / Integrations / Testimonials: one file per named folder
+
+Each folder can contain either:
+- one local image/video asset (for example `preview.mp4`)
+- or one `.url` file (for example `youtube.url`) that contains a YouTube link
 
 ### 1.1 Testimonial logos/photos (`app/templates/homepage.html`)
 
@@ -112,8 +117,8 @@ The homepage tools row is folder-based. Put exactly **one** media file in each f
 
 ## 3) Help Center gallery images (`/help/how-it-works`)
 
-Help gallery is now folder-based and supports image/video.
-Drop files into each section folder; files are displayed in alphabetical order.
+Help gallery is now folder-based and supports image/video plus YouTube `.url` files.
+Drop files into each section folder; files are displayed in alphabetical order, with `.url` files first.
 
 ### 3.1 getting-started
 
