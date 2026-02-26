@@ -30,7 +30,8 @@ This document maps the current BatchTrack model layer and highlights how tenant 
 
 ### 3. Recipes and Production Execution
 - `RecipeGroup`, `Recipe`, `RecipeIngredient`, `RecipeConsumable`, `RecipeLineage` (`app/models/recipe.py`)
-- `Batch`, `BatchSequence`, `BatchIngredient`, `BatchContainer`, `BatchConsumable`, `BatchTimer` (`app/models/batch.py`)
+- `RecipeModerationEvent` (`app/models/recipe_marketplace.py`)
+- `Batch`, `BatchSequence`, `BatchLabelCounter`, `BatchIngredient`, `BatchContainer`, `BatchConsumable`, `BatchTimer` (`app/models/batch.py`)
 - Extra batch adjustment rows (`ExtraBatchIngredient`, `ExtraBatchContainer`, `ExtraBatchConsumable`) (`app/models/batch.py`)
 
 ### 4. Inventory and Global Library
@@ -38,7 +39,8 @@ This document maps the current BatchTrack model layer and highlights how tenant 
 - `InventoryLot` (`app/models/inventory_lot.py`)
 - `UnifiedInventoryHistory` (`app/models/unified_inventory_history.py`)
 - `GlobalItem`, `GlobalItemAlias` (`app/models/global_item.py`, `app/models/global_item_alias.py`)
-- Ingredient reference taxonomy models (`IngredientDefinition`, `PhysicalForm`, `Variation`, tag bridge tables) (`app/models/ingredient_reference.py`)
+- Ingredient reference taxonomy models (`IngredientDefinition`, `PhysicalForm`, `Variation`, `FunctionTag`, `ApplicationTag`, `IngredientCategoryTag`) (`app/models/ingredient_reference.py`)
+- Tag bridge tables (`GlobalItemFunctionTag`, `GlobalItemApplicationTag`, `GlobalItemCategoryTag`) (`app/models/ingredient_reference.py`)
 - Categories/taxonomy: `IngredientCategory`, `InventoryCategory`, `Tag` (`app/models/category.py`)
 
 ### 5. Products and Commerce
@@ -53,12 +55,19 @@ This document maps the current BatchTrack model layer and highlights how tenant 
 - `Reservation` (`app/models/reservation.py`)
 
 ### 7. Telemetry, Statistics, and Operations
-- `UserStats`, `OrganizationStats`, `OrganizationLeaderboardStats`, and related stats models (`app/models/statistics.py`)
+- `UserStats`, `OrganizationStats`, `OrganizationLeaderboardStats` (`app/models/statistics.py`)
+- `BatchStats`, `RecipeStats`, `InventoryEfficiencyStats`, `InventoryChangeLog` (`app/models/statistics.py`)
 - `DomainEvent` (`app/models/domain_event.py`)
 - `PricingSnapshot` (`app/models/pricing_snapshot.py`)
 - `FeatureFlag` (`app/models/feature_flag.py`)
 - `AppSetting` (`app/models/app_setting.py`)
 - `BatchBotUsage`, `BatchBotCreditBundle`, `FreshnessSnapshot` (`app/models/batchbot_usage.py`, `app/models/batchbot_credit.py`, `app/models/freshness_snapshot.py`)
+
+### 8. Units and Conversion
+- `Unit`, `CustomUnitMapping`, `ConversionLog` (`app/models/unit.py`)
+
+### 9. Security and Bot Protection
+- `BotTrapIpState`, `BotTrapIdentityBlock`, `BotTrapHit` (`app/models/public_bot_trap.py`)
 
 ## Relationship Highlights
 
@@ -103,5 +112,5 @@ GlobalItem (platform-owned)
 - `app/models/models.py` remains part of the supported import surface for app and test call sites.
 - `Ingredient` remains an active compatibility alias to `InventoryItem`; new development should prefer importing `InventoryItem` directly.
 
-## Relevance Check (2026-02-17)
+## Relevance Check (2026-02-26)
 This document was refreshed against active model modules in `app/models/` and current export wiring in `app/models/__init__.py`.
