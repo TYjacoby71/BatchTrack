@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         window.gtag('event', 'purchase', purchasePayload);
+        window.gtag('event', 'conversion_event_purchase', purchasePayload);
 
         const completionPayload = {
             transaction_id: transactionId,
