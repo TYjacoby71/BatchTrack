@@ -202,7 +202,7 @@ def test_resolve_lookup_variant_falls_back_to_related_product_price(app):
         with patch.object(
             LifetimePricingService,
             "_get_lookup_key_pricing",
-            side_effect=lambda lookup_key: (
+            side_effect=lambda lookup_key, **_kwargs: (
                 {"billing_cycle": "yearly"}
                 if lookup_key == "price_yearly_123"
                 else None
