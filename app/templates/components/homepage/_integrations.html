@@ -1,0 +1,64 @@
+<!-- Integration Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Integrations</h2>
+            <p class="text-muted">BatchTrack is building integrations for Shopify, Etsy, QuickBooks, Zapier, Slack, and more.</p>
+        </div>
+
+        <div class="row justify-content-center">
+            {% for integration in (homepage_integration_tiles if homepage_integration_tiles is defined else []) %}
+            <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-4">
+                <div class="integration-logo-tile text-center h-100">
+                    {% if integration.media %}
+                        {% if integration.media.kind == 'video' %}
+                    <video
+                        class="integration-logo-media"
+                        autoplay
+                        muted
+                        loop
+                        playsinline
+                        preload="metadata"
+                        aria-label="{{ integration.name }} integration media"
+                    >
+                        <source src="{{ url_for('static', filename=integration.media.path) }}">
+                    </video>
+                        {% elif integration.media.kind == 'youtube' and integration.media.embed_url %}
+                    <iframe
+                        class="integration-logo-media media-embed-frame"
+                        src="{{ integration.media.embed_url }}"
+                        title="{{ integration.name }} integration media"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen
+                    ></iframe>
+                        {% else %}
+                    <img
+                        src="{{ url_for('static', filename=integration.media.path) }}"
+                        alt="{{ integration.name }} logo"
+                        class="integration-logo-media"
+                        width="52"
+                        height="52"
+                        loading="lazy"
+                        decoding="async"
+                    >
+                        {% endif %}
+                    {% else %}
+                    <img
+                        src="{{ integration.fallback_logo }}"
+                        alt="{{ integration.name }} logo"
+                        class="integration-logo-icon"
+                        width="52"
+                        height="52"
+                        loading="lazy"
+                        decoding="async"
+                    >
+                    {% endif %}
+                    <div class="fw-semibold mt-3">{{ integration.name }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>

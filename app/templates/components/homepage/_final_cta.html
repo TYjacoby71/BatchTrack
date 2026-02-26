@@ -1,0 +1,42 @@
+<!-- Final CTA Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                {% set final_cta_media = (homepage_media_slots.get('final-cta-primary') if homepage_media_slots is defined else none) %}
+                <div class="placeholder-img final-cta-media-slot{% if final_cta_media %} has-media{% endif %}">
+                    {% if final_cta_media %}
+                        {% if final_cta_media.kind == 'video' %}
+                    <video class="final-cta-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app workflow media">
+                        <source src="{{ url_for('static', filename=final_cta_media.path) }}">
+                    </video>
+                        {% elif final_cta_media.kind == 'youtube' and final_cta_media.embed_url %}
+                    <iframe
+                        class="final-cta-media media-embed-frame"
+                        src="{{ final_cta_media.embed_url }}"
+                        title="BatchTrack app workflow media"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen
+                    ></iframe>
+                        {% else %}
+                    <img src="{{ url_for('static', filename=final_cta_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <h2 class="fw-bold mb-4">Follow every batch from plan to finished product</h2>
+                <p class="lead mb-4">Use one workflow for recipe setup, stock checks, in-progress tracking, and finished output records.</p>
+                <ul class="list-unstyled mb-4">
+                    <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Plan and launch batches in minutes</li>
+                    <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Keep timers, notes, and changes tied to each run</li>
+                    <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Restock products and update costs when batches finish</li>
+                    <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Start free and scale as your team grows</li>
+                </ul>
+                <a href="{{ url_for('auth.signup', source='homepage_start_free_trial') }}" class="btn btn-cta btn-lg text-white">Start Free Trial</a>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,45 @@
+<!-- Hero Banner -->
+<section class="hero-section bg-light py-5 border-bottom">
+    <div class="container">
+        <div class="hero-media-box">
+            <div class="hero-media-stage">
+                {% set hero_slot_media = (homepage_media_slots.get('hero-primary') if homepage_media_slots is defined else none) %}
+                <div class="placeholder-img hero-video-placeholder{% if hero_slot_media %} has-media{% endif %}">
+                    {% if hero_slot_media %}
+                        {% if hero_slot_media.kind == 'video' %}
+                        <video class="hero-slot-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack demo media">
+                            <source src="{{ url_for('static', filename=hero_slot_media.path) }}">
+                        </video>
+                        {% elif hero_slot_media.kind == 'youtube' and hero_slot_media.embed_url %}
+                        <iframe
+                            class="hero-slot-media media-embed-frame"
+                            src="{{ hero_slot_media.embed_url }}"
+                            title="BatchTrack demo media"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
+                        {% else %}
+                        <img src="{{ url_for('static', filename=hero_slot_media.path) }}" class="hero-slot-media" alt="BatchTrack workflow preview" loading="lazy" decoding="async">
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="hero-overlay">
+                    <div class="hero-copy">
+                        <h1 class="display-4 fw-bold hero-title">BatchTrack: Master Your Craft</h1>
+                        <p class="lead hero-subtitle">Precision for every batch you make.</p>
+                    </div>
+                    <button type="button" class="btn btn-cta text-white fw-semibold hero-watch-btn" data-hero-watch>
+                        Watch Video
+                    </button>
+                </div>
+            </div>
+            <div class="hero-media-meta d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <p class="text-muted mb-0">
+                    Use this section for your short product demo and walkthrough so visitors can see the workflow in action.
+                </p>
+                <a href="#about" class="btn btn-cta text-white fw-semibold">Learn More</a>
+            </div>
+        </div>
+    </div>
+</section>
