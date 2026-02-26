@@ -691,6 +691,78 @@ def test_batch_counts_are_lineage_scoped_per_version_and_test():
     )
 
 
+@pytest.mark.usefixtures("app_context")
+def test_promoting_test_to_current_preserves_batch_history_links():
+    category = _create_category("PromotionBatchHistory")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Promotion History Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="PHM",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Promotable test instructions",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+    assert test_recipe.test_sequence == 1
+
+    original_test_lineage = generate_lineage_id(test_recipe)
+
+    # Persist a batch against the test before promotion.
+    pre_promotion_batch = Batch(
+        recipe_id=test_recipe.id,
+        target_version_id=test_recipe.id,
+        lineage_id=original_test_lineage,
+        label_code=_unique_name("PROMO-TEST-BATCH"),
+        batch_type="ingredient",
+        organization_id=test_recipe.organization_id,
+        status="completed",
+    )
+    db.session.add(pre_promotion_batch)
+    db.session.commit()
+
+    # Sanity check before promotion.
+    assert (
+        count_batches_for_recipe_lineage(
+            test_recipe, organization_id=test_recipe.organization_id
+        )
+        == 1
+    )
+
+    promote_ok, promoted = promote_test_to_current(test_recipe.id)
+    assert promote_ok, promoted
+    assert promoted.id == test_recipe.id
+    assert promoted.test_sequence is None
+
+    # History row remains attached to the same promoted recipe row.
+    refreshed_batch = db.session.get(Batch, pre_promotion_batch.id)
+    assert refreshed_batch is not None
+    assert refreshed_batch.target_version_id == promoted.id
+    assert refreshed_batch.lineage_id == original_test_lineage
+
+    # Count remains intact after promotion.
+    assert (
+        count_batches_for_recipe_lineage(promoted, organization_id=promoted.organization_id)
+        == 1
+    )
+
+
 def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, client):
     with app.app_context():
         user_id = User.query.first().id
