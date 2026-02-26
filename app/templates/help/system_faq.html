@@ -4,7 +4,7 @@
   <div class="text-center mb-4">
     <h1 class="mb-2">Commonly Asked Questions</h1>
     <p class="text-muted">Every answer links back to the detailed instructions so you can go deeper without leaving the app.</p>
-    <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'help_faq_start_free_trial') }}" class="btn btn-primary btn-lg mt-2">Try BatchTrack Free</a>
+    <a href="{{ url_for('core.signup_alias', source=public_header_signup_source if public_header_signup_source is defined else 'help_faq_start_free_trial') }}" class="btn btn-primary btn-lg mt-2">Try BatchTrack Free</a>
   </div>
 
   <div class="accordion" id="faqAccordion">
@@ -30,7 +30,7 @@
 
   <div class="text-center mt-4">
     <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-primary">Back to How-It-Works Guide</a>
-    <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'help_faq_start_free_trial') }}" class="btn btn-outline-secondary ms-2">Sign Up Now</a>
+    <a href="{{ url_for('core.signup_alias', source=public_header_signup_source if public_header_signup_source is defined else 'help_faq_start_free_trial') }}" class="btn btn-outline-secondary ms-2">Sign Up Now</a>
   </div>
 </div>
 {% endblock %}

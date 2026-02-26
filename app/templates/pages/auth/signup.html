@@ -496,7 +496,7 @@ function proceedToPayment() {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '{{ url_for("auth.signup") }}';
+    form.action = '{{ url_for("core.signup_alias") }}';
 
     const entries = [
         ['csrf_token', '{{ csrf_token() }}'],

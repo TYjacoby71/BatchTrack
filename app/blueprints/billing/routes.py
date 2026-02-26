@@ -380,7 +380,7 @@ def complete_signup_from_stripe():
     session_id = request.args.get("session_id")
     if not session_id:
         flash("Invalid checkout session", "error")
-        return redirect(url_for("auth.signup"))
+        return redirect(url_for("core.signup_alias"))
 
     logger.info("Completing signup for checkout session %s", session_id)
 
@@ -389,7 +389,7 @@ def complete_signup_from_stripe():
     except Exception as exc:
         logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
         flash("Account setup failed. Please contact support.", "error")
-        return redirect(url_for("auth.signup"))
+        return redirect(url_for("core.signup_alias"))
 
     organization = None
     owner_user = None

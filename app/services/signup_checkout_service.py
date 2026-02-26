@@ -452,7 +452,7 @@ class SignupCheckoutService:
             + "?session_id={CHECKOUT_SESSION_ID}"
         )
         cancel_url = url_for(
-            "auth.signup",
+            "core.signup_alias",
             _external=True,
             billing_mode=submission.selected_mode,
             billing_cycle=(

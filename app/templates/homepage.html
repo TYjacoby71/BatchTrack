@@ -632,31 +632,6 @@
           }
         });
 
-        document.addEventListener('click', function(event) {
-          var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
-          if (!anchor) {
-            return;
-          }
-          var href = anchor.getAttribute('href') || '';
-          if (!href) {
-            return;
-          }
-          if (href.indexOf('/auth/signup') >= 0) {
-            var signupSource = null;
-            try {
-              var parsed = new URL(href, window.location.origin);
-              signupSource = parsed.searchParams.get('source');
-            } catch (error) {}
-            window.BTAnalytics.capture('homepage_signup_cta_clicked', {
-              cta_text: (anchor.textContent || '').trim().slice(0, 120),
-              signup_source: signupSource
-            });
-          } else if (href.indexOf('/pricing') >= 0) {
-            window.BTAnalytics.capture('homepage_pricing_cta_clicked', {
-              cta_text: (anchor.textContent || '').trim().slice(0, 120)
-            });
-          }
-        });
       });
     </script>
 {% endblock %}

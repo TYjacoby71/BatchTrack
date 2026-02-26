@@ -283,7 +283,7 @@ def test_signup_checkout_route_redirects_to_signup_without_session_creation(
 
     assert response.status_code in {301, 302}
     location = response.headers.get("Location") or ""
-    assert location.startswith("/auth/signup")
+    assert location.startswith("/signup")
     assert "tier=3" in location
     assert "billing_mode=standard" in location
     assert "billing_cycle=monthly" in location

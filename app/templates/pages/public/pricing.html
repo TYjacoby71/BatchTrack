@@ -457,37 +457,6 @@ document.addEventListener('DOMContentLoaded', function() {
     authenticated: false
   });
 
-  document.addEventListener('click', function(event) {
-    const anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
-    if (!anchor) {
-      return;
-    }
-    const href = anchor.getAttribute('href') || '';
-    if (!href || href.indexOf('/auth/signup') === -1) {
-      return;
-    }
-    let destination = null;
-    let source = null;
-    let billingMode = null;
-    let billingCycle = null;
-    let tier = null;
-    try {
-      const parsed = new URL(href, window.location.origin);
-      destination = parsed.pathname;
-      source = parsed.searchParams.get('source');
-      billingMode = parsed.searchParams.get('billing_mode');
-      billingCycle = parsed.searchParams.get('billing_cycle');
-      tier = parsed.searchParams.get('tier');
-    } catch (error) {}
-    window.BTAnalytics.capture('pricing_checkout_clicked', {
-      destination_path: destination,
-      source: source,
-      billing_mode: billingMode,
-      billing_cycle: billingCycle,
-      tier: tier,
-      cta_text: (anchor.textContent || '').trim().slice(0, 120)
-    });
-  });
 });
 </script>
 {% endif %}
