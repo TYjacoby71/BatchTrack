@@ -909,24 +909,32 @@ def update_recipe(
 
         # Update basic fields
         if name is not None:
-            # Validate name uniqueness for updates
-            validation_result = validate_recipe_data(
-                name=name,
-                recipe_id=recipe_id,
-                allow_partial=True,
-                organization_id=recipe.organization_id,
-                allow_duplicate_name=bool(recipe.test_sequence)
-                or (not recipe.is_master),
-            )
-            if not validation_result["valid"]:
-                return False, validation_result
-            recipe.name = name
+            submitted_name = (name or "").strip()
+            existing_name = (recipe.name or "").strip()
+            name_changed = submitted_name != existing_name
+
+            # Only run duplicate-name validation on true renames.
+            # This keeps edits unblocked for legacy lineages that already
+            # contain multiple historical versions with the same name.
+            if name_changed:
+                validation_result = validate_recipe_data(
+                    name=submitted_name,
+                    recipe_id=recipe_id,
+                    allow_partial=True,
+                    organization_id=recipe.organization_id,
+                    allow_duplicate_name=bool(recipe.test_sequence)
+                    or (not recipe.is_master),
+                )
+                if not validation_result["valid"]:
+                    return False, validation_result
+
+            recipe.name = submitted_name
             if (
                 recipe.is_master
                 and recipe.test_sequence is None
                 and recipe.recipe_group_id
             ):
-                group_name = name.strip() if name else ""
+                group_name = submitted_name
                 if (
                     group_name
                     and recipe.recipe_group

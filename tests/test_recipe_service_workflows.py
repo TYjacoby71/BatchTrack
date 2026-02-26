@@ -557,6 +557,54 @@ def test_promote_test_to_current_restores_master_name():
     assert "test" not in promoted.name.lower()
 
 
+@pytest.mark.usefixtures("app_context")
+def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions():
+    category = _create_category("EditNameCollision")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Edit Collision Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="ECM",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Promotion prep edits",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+
+    promote_ok, promoted = promote_test_to_current(test_recipe.id)
+    assert promote_ok, promoted
+    assert promoted.name == master_name
+
+    update_ok, updated = update_recipe(
+        recipe_id=promoted.id,
+        name=promoted.name,
+        instructions="Edited instructions after promotion",
+        allow_published_edit=True,
+    )
+    assert update_ok, updated
+
+    refreshed = db.session.get(Recipe, promoted.id)
+    assert refreshed is not None
+    assert refreshed.name == master_name
+    assert "Edited instructions after promotion" in (refreshed.instructions or "")
+
+
 def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, client):
     with app.app_context():
         user_id = User.query.first().id
