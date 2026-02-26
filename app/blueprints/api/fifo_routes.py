@@ -175,7 +175,7 @@ def get_batch_inventory_summary(batch_id):
                 "batch": {
                     "label_code": batch.label_code,
                     "recipe_name": format_recipe_lineage_name(
-                        batch.target_version or batch.recipe
+                        batch.recipe
                     ),
                     "scale": batch.scale,
                 },
