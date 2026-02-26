@@ -627,7 +627,7 @@ def test_homepage_performance_and_accessibility_basics(app):
 
     # All "Start Free Trial" links should resolve to the same destination.
     trial_links = re.findall(
-        r'href="(/auth/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        r'href="(/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
         html,
     )
     assert len(trial_links) >= 3
@@ -1024,6 +1024,8 @@ def test_public_crawler_assets_are_accessible(app):
     assert sitemap_response.mimetype in {"application/xml", "text/xml"}
     assert "<urlset" in sitemap_body
     assert "https://www.batchtrack.com/" in sitemap_body
+    assert "https://www.batchtrack.com/signup" in sitemap_body
+    assert "https://www.batchtrack.com/auth/signup" not in sitemap_body
 
     robots_response = _assert_public_get(client, "/robots.txt", label="robots.txt")
     robots_body = robots_response.get_data(as_text=True)

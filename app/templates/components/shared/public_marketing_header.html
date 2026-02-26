@@ -17,7 +17,7 @@ Glossary:
 {% set show_staging_variant_switcher = active_env == 'staging' %}
 {% set public_header_signup_href = url_for('core.signup_alias') %}
 {% if public_header_signup_source %}
-{% set public_header_signup_href = url_for('auth.signup', source=public_header_signup_source) %}
+{% set public_header_signup_href = url_for('core.signup_alias', source=public_header_signup_source) %}
 {% endif %}
 
 <a class="navbar-brand text-primary" href="{{ public_header_home_url }}" aria-label="BatchTrack home">

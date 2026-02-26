@@ -156,7 +156,7 @@ Shared analytics runtime helpers and page-level event capture wiring.
           return;
         }
         var path = url.pathname || '';
-        if (path.includes('/auth/signup')) {
+        if (path.includes('/signup')) {
           window.BTAnalytics.capture('public_signup_cta_clicked', {
             cta_text: (anchor.textContent || '').trim().slice(0, 120),
             signup_source: url.searchParams.get('source') || null,

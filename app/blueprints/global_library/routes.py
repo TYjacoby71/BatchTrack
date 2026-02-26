@@ -76,7 +76,7 @@ def _global_library_disabled_response():
     """Gracefully route visitors when the public library feature is disabled."""
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
-    return redirect(url_for("auth.signup", source="global_library"), code=302)
+    return redirect(url_for("core.signup_alias", source="global_library"), code=302)
 
 
 def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
