@@ -266,6 +266,11 @@
             margin: 0 auto;
         }
 
+        .media-embed-frame {
+            border: 0;
+            display: block;
+        }
+
         .tool-slot-media {
             min-height: 200px;
             padding: 0 !important;
@@ -488,6 +493,15 @@
                             <video class="hero-slot-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack demo media">
                                 <source src="{{ url_for('static', filename=hero_slot_media.path) }}">
                             </video>
+                            {% elif hero_slot_media.kind == 'youtube' and hero_slot_media.embed_url %}
+                            <iframe
+                                class="hero-slot-media media-embed-frame"
+                                src="{{ hero_slot_media.embed_url }}"
+                                title="BatchTrack demo media"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen
+                            ></iframe>
                             {% else %}
                             <img src="{{ url_for('static', filename=hero_slot_media.path) }}" class="hero-slot-media" alt="BatchTrack workflow preview" loading="lazy" decoding="async">
                             {% endif %}
@@ -535,6 +549,16 @@
                                         <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                             <source src="{{ url_for('static', filename=tool.media.path) }}">
                                         </video>
+                                            {% elif tool.media.kind == 'youtube' and tool.media.embed_url %}
+                                        <iframe
+                                            class="tool-slot-video media-embed-frame"
+                                            src="{{ tool.media.embed_url }}"
+                                            title="{{ tool.name }} preview video"
+                                            loading="lazy"
+                                            referrerpolicy="strict-origin-when-cross-origin"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            allowfullscreen
+                                        ></iframe>
                                             {% else %}
                                         <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                             {% endif %}
@@ -577,6 +601,16 @@
                                             <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
                                                 <source src="{{ url_for('static', filename=tool.media.path) }}">
                                             </video>
+                                                {% elif tool.media.kind == 'youtube' and tool.media.embed_url %}
+                                            <iframe
+                                                class="tool-slot-video media-embed-frame"
+                                                src="{{ tool.media.embed_url }}"
+                                                title="{{ tool.name }} preview video"
+                                                loading="lazy"
+                                                referrerpolicy="strict-origin-when-cross-origin"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                allowfullscreen
+                                            ></iframe>
                                                 {% else %}
                                             <img src="{{ url_for('static', filename=tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
                                                 {% endif %}
@@ -611,6 +645,16 @@
                                 <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
                                     <source src="{{ url_for('static', filename=single_tool.media.path) }}">
                                 </video>
+                                    {% elif single_tool.media.kind == 'youtube' and single_tool.media.embed_url %}
+                                <iframe
+                                    class="tool-slot-video media-embed-frame"
+                                    src="{{ single_tool.media.embed_url }}"
+                                    title="{{ single_tool.name }} preview video"
+                                    loading="lazy"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                ></iframe>
                                     {% else %}
                                 <img src="{{ url_for('static', filename=single_tool.media.path) }}" class="tool-slot-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
                                     {% endif %}
@@ -668,6 +712,16 @@
                                 <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ feature.name }} preview">
                                     <source src="{{ url_for('static', filename=feature.media.path) }}">
                                 </video>
+                                    {% elif feature.media.kind == 'youtube' and feature.media.embed_url %}
+                                <iframe
+                                    class="tool-card-video media-embed-frame"
+                                    src="{{ feature.media.embed_url }}"
+                                    title="{{ feature.name }} preview video"
+                                    loading="lazy"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                ></iframe>
                                     {% else %}
                                 <img src="{{ url_for('static', filename=feature.media.path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
                                     {% endif %}
@@ -803,6 +857,16 @@
                             <video class="testimonial-logo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} logo media">
                                 <source src="{{ url_for('static', filename=logo_media.path) }}">
                             </video>
+                                {% elif logo_media.kind == 'youtube' and logo_media.embed_url %}
+                            <iframe
+                                class="testimonial-logo-media media-embed-frame"
+                                src="{{ logo_media.embed_url }}"
+                                title="{{ review_name }} logo media"
+                                loading="lazy"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen
+                            ></iframe>
                                 {% else %}
                             <img src="{{ url_for('static', filename=logo_media.path) }}"
                                  alt="{{ review_name }} logo"
@@ -822,6 +886,16 @@
                                 <video class="testimonial-photo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} profile media">
                                     <source src="{{ url_for('static', filename=photo_media.path) }}">
                                 </video>
+                                    {% elif photo_media.kind == 'youtube' and photo_media.embed_url %}
+                                <iframe
+                                    class="testimonial-photo-media media-embed-frame"
+                                    src="{{ photo_media.embed_url }}"
+                                    title="{{ review_name }} profile media"
+                                    loading="lazy"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                ></iframe>
                                     {% else %}
                                 <img src="{{ url_for('static', filename=photo_media.path) }}"
                                      alt="{{ review_name }}"
@@ -893,6 +967,16 @@
                                 <video class="tool-card-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ feature.name }} preview">
                                     <source src="{{ url_for('static', filename=feature.media.path) }}">
                                 </video>
+                                    {% elif feature.media.kind == 'youtube' and feature.media.embed_url %}
+                                <iframe
+                                    class="tool-card-video media-embed-frame"
+                                    src="{{ feature.media.embed_url }}"
+                                    title="{{ feature.name }} preview video"
+                                    loading="lazy"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                ></iframe>
                                     {% else %}
                                 <img src="{{ url_for('static', filename=feature.media.path) }}" class="tool-card-image" alt="{{ feature.name }}" loading="lazy" decoding="async">
                                     {% endif %}
@@ -960,6 +1044,16 @@
                         >
                             <source src="{{ url_for('static', filename=integration.media.path) }}">
                         </video>
+                            {% elif integration.media.kind == 'youtube' and integration.media.embed_url %}
+                        <iframe
+                            class="integration-logo-media media-embed-frame"
+                            src="{{ integration.media.embed_url }}"
+                            title="{{ integration.name }} integration media"
+                            loading="lazy"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
                             {% else %}
                         <img
                             src="{{ url_for('static', filename=integration.media.path) }}"
@@ -1002,6 +1096,16 @@
                         <video class="final-cta-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app workflow media">
                             <source src="{{ url_for('static', filename=final_cta_media.path) }}">
                         </video>
+                            {% elif final_cta_media.kind == 'youtube' and final_cta_media.embed_url %}
+                        <iframe
+                            class="final-cta-media media-embed-frame"
+                            src="{{ final_cta_media.embed_url }}"
+                            title="BatchTrack app workflow media"
+                            loading="lazy"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
                             {% else %}
                         <img src="{{ url_for('static', filename=final_cta_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
                             {% endif %}

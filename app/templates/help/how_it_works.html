@@ -72,7 +72,7 @@
         <div class="card border-dashed">
           <div class="card-body">
             <h3 class="h6 text-uppercase text-muted mb-2">Section Media</h3>
-            <p class="small text-muted mb-3">Drop image or video files for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. Items display in alphabetical order.</p>
+            <p class="small text-muted mb-3">Drop image/video files or <code>.url</code> files (with a YouTube link) into <code>/app/static/images/help/{{ section.slug }}/</code>. Items display in alphabetical order, with <code>.url</code> links first.</p>
             <div class="row g-3">
               {% set section_media = (help_section_media.get(section.slug) if help_section_media is defined else []) %}
               {% for label in section.gallery %}
@@ -84,6 +84,16 @@
                   <video class="img-fluid rounded mb-2" autoplay muted loop playsinline preload="metadata" aria-label="{{ label }}">
                     <source src="{{ url_for('static', filename=media_item.path) }}">
                   </video>
+                  {% elif media_item.kind == 'youtube' and media_item.embed_url %}
+                  <iframe
+                    class="img-fluid rounded mb-2"
+                    src="{{ media_item.embed_url }}"
+                    title="{{ label }}"
+                    loading="lazy"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                  ></iframe>
                   {% else %}
                   <img src="{{ url_for('static', filename=media_item.path) }}" class="img-fluid rounded mb-2" alt="{{ label }}" loading="lazy" decoding="async">
                   {% endif %}
