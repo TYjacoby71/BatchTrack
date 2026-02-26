@@ -751,7 +751,9 @@ class BillingService:
 
     # Purpose: Fetch Stripe pricing for an arbitrary lookup key.
     @staticmethod
-    def get_live_pricing_for_lookup_key(lookup_key: str | None):
+    def get_live_pricing_for_lookup_key(
+        lookup_key: str | None, *, allow_network: bool = True
+    ):
         """Get live pricing from Stripe for any lookup key or price ID."""
         if not lookup_key:
             return None
@@ -763,6 +765,11 @@ class BillingService:
         if cached is not None:
             return cached
 
+        # Public page renders can opt into cache-only reads so request latency
+        # is never gated on Stripe API availability.
+        if not allow_network:
+            return None
+
         lock = BillingService._get_pricing_lock(lookup_key)
         with lock:
             cached = app_cache.get(cache_key)
@@ -770,6 +777,9 @@ class BillingService:
                 return None
             if cached is not None:
                 return cached
+
+            if not allow_network:
+                return None
 
             if not BillingService.ensure_stripe():
                 return None
@@ -856,10 +866,12 @@ class BillingService:
 
     # Purpose: Fetch Stripe pricing for a tier.
     @staticmethod
-    def get_live_pricing_for_tier(tier_obj):
+    def get_live_pricing_for_tier(tier_obj, *, allow_network: bool = True):
         """Get live pricing from Stripe for a subscription tier."""
         lookup_key = getattr(tier_obj, "stripe_lookup_key", None)
-        return BillingService.get_live_pricing_for_lookup_key(lookup_key)
+        return BillingService.get_live_pricing_for_lookup_key(
+            lookup_key, allow_network=allow_network
+        )
 
     # Purpose: Resolve Stripe price for lookup key.
     @staticmethod
@@ -924,7 +936,11 @@ class BillingService:
     # Purpose: Discover a related price key on the same Stripe product.
     @classmethod
     def find_related_price_lookup_key(
-        cls, base_lookup_key: str | None, *, billing_cycle: str
+        cls,
+        base_lookup_key: str | None,
+        *,
+        billing_cycle: str,
+        allow_network: bool = True,
     ) -> str | None:
         """Find an active related price key for the same product and billing cycle.
 
@@ -945,6 +961,9 @@ class BillingService:
             return None
         if cached:
             return str(cached)
+
+        if not allow_network:
+            return None
 
         if not cls.ensure_stripe():
             app_cache.set(

@@ -356,6 +356,32 @@ def test_robots_txt_unknown_path_does_not_auto_block(app):
     assert still_public.status_code == 200
 
 
+def test_passive_public_assets_skip_bot_trap_checks(app, monkeypatch):
+    client = app.test_client()
+    from app.services.public_bot_trap_service import PublicBotTrapService
+
+    observed_paths: list[str] = []
+
+    def _record_should_block_request(_cls, request, user=None):
+        observed_paths.append(request.path)
+        return False
+
+    monkeypatch.setattr(
+        PublicBotTrapService,
+        "should_block_request",
+        classmethod(_record_should_block_request),
+    )
+
+    favicon_response = client.get("/favicon.ico", follow_redirects=False)
+    robots_response = client.get("/robots.txt", follow_redirects=False)
+    branding_response = client.get("/branding/app-tile.svg", follow_redirects=False)
+
+    assert favicon_response.status_code == 200
+    assert robots_response.status_code == 200
+    assert branding_response.status_code == 200
+    assert observed_paths == []
+
+
 def test_bot_trap_identity_blocks_are_db_backed(app):
     from app.services.public_bot_trap_service import PublicBotTrapService
 

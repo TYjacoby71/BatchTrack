@@ -28,6 +28,7 @@ class RouteAccessConfig:
         "core.branding_full_logo",
         "core.branding_full_logo_header",
         "core.branding_app_tile",
+        "core.favicon",
         "core.public_page",
         "pricing_routes.pricing",
         "landing_pages.lp_hormozi",
@@ -111,6 +112,18 @@ class RouteAccessConfig:
         "/ping",
     )
 
+    # Passive crawler/browser assets should bypass auth/bot-trap middleware work.
+    PASSIVE_PUBLIC_ASSET_PATH_PREFIXES: Tuple[str, ...] = (
+        "/static/",
+        "/branding/",
+        "/favicon.ico",
+        "/robots.txt",
+        "/sitemap.xml",
+        "/llms.txt",
+        "/apple-touch-icon",
+        "/site.webmanifest",
+    )
+
     DEVELOPER_ONLY_PATH_PREFIXES: Tuple[str, ...] = ("/developer/",)
 
     DEVELOPER_NO_ORG_REQUIRED_PREFIXES: Tuple[str, ...] = (
@@ -138,6 +151,10 @@ class RouteAccessConfig:
     @classmethod
     def is_public_path(cls, path: str) -> bool:
         return cls._matches_prefix(path, cls.PUBLIC_PATH_PREFIXES)
+
+    @classmethod
+    def is_passive_public_asset_path(cls, path: str) -> bool:
+        return cls._matches_prefix(path, cls.PASSIVE_PUBLIC_ASSET_PATH_PREFIXES)
 
     @classmethod
     def is_developer_only_path(cls, path: str) -> bool:

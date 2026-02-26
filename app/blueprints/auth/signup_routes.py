@@ -52,8 +52,16 @@ def _build_signup_fallback_url(
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
     db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
-    available_tiers = SignupPlanCatalogService.build_available_tiers_payload(db_tiers)
-    lifetime_offers = LifetimePricingService.build_lifetime_offers(db_tiers)
+    available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
+        db_tiers,
+        include_live_pricing=False,
+        allow_live_pricing_network=False,
+    )
+    lifetime_offers = LifetimePricingService.build_lifetime_offers(
+        db_tiers,
+        include_live_pricing=False,
+        allow_live_pricing_network=False,
+    )
     oauth_providers = OAuthService.get_enabled_providers()
 
     return jsonify(
@@ -109,6 +117,7 @@ def signup():
     signup_context = SignupCheckoutService.build_request_context(
         request=request,
         oauth_user_info=session.get("oauth_user_info"),
+        allow_live_pricing_network=request.method == "POST",
     )
 
     if request.method == "POST":

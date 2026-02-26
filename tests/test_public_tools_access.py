@@ -989,6 +989,7 @@ def test_public_branding_assets_are_accessible(app):
     """Logo and favicon assets should remain publicly available for marketing pages."""
     client = app.test_client()
     brand_asset_paths = [
+        "/favicon.ico",
         "/branding/full-logo.svg",
         "/branding/full-logo-header.svg",
         "/branding/app-tile.svg",
