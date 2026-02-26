@@ -181,7 +181,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
             conversion_payload = sess.get("ga4_checkout_conversion")
             assert isinstance(conversion_payload, dict)
             assert conversion_payload.get("transaction_id") == "cs_live"
-            assert conversion_payload.get("tier_id") == str(org.subscription_tier_id)
+            assert conversion_payload.get("tier_id") == str(solo.id)
 
 
 def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
