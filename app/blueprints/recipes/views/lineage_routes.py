@@ -58,7 +58,7 @@ def recipe_lineage(recipe_id):
 
     root_id = recipe.root_recipe_id or recipe.id
     relatives = (
-        Recipe.query.options(joinedload(Recipe.organization))
+        Recipe.scoped().options(joinedload(Recipe.organization))
         .filter(or_(Recipe.id == root_id, Recipe.root_recipe_id == root_id))
         .order_by(Recipe.created_at.asc())
         .all()
@@ -128,7 +128,7 @@ def recipe_lineage(recipe_id):
     variation_branches = []
     if recipe.recipe_group_id:
         group_versions = (
-            Recipe.query.filter(Recipe.recipe_group_id == recipe.recipe_group_id)
+            Recipe.scoped().filter(Recipe.recipe_group_id == recipe.recipe_group_id)
             .order_by(
                 Recipe.is_master.desc(),
                 Recipe.variation_name.asc().nullsfirst(),
@@ -143,7 +143,7 @@ def recipe_lineage(recipe_id):
     origin_parent_recipe = recipe.parent
     if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
         origin_parent_recipe = (
-            Recipe.query.filter(
+            Recipe.scoped().filter(
                 Recipe.recipe_group_id == recipe.recipe_group_id,
                 Recipe.is_master.is_(True),
                 Recipe.test_sequence.is_(None),
@@ -156,7 +156,7 @@ def recipe_lineage(recipe_id):
     if events_page < 1:
         events_page = 1
     events_pagination = (
-        RecipeLineage.query.options(selectinload(RecipeLineage.source_recipe))
+        RecipeLineage.scoped().options(selectinload(RecipeLineage.source_recipe))
         .filter_by(recipe_id=recipe.id)
         .order_by(RecipeLineage.created_at.desc())
         .paginate(page=events_page, per_page=10, error_out=False)

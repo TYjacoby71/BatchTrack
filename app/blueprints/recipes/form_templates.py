@@ -140,7 +140,7 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
             "product_groups": [],
         }
 
-    ingredients_query = InventoryItem.query.filter(InventoryItem.type == "ingredient")
+    ingredients_query = InventoryItem.scoped().filter(InventoryItem.type == "ingredient")
     if org_id:
         ingredients_query = ingredients_query.filter_by(organization_id=org_id)
     all_ingredients = [
@@ -148,7 +148,7 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
         for item in ingredients_query.order_by(InventoryItem.name).all()
     ]
 
-    consumables_query = InventoryItem.query.filter(InventoryItem.type == "consumable")
+    consumables_query = InventoryItem.scoped().filter(InventoryItem.type == "consumable")
     if org_id:
         consumables_query = consumables_query.filter_by(organization_id=org_id)
     all_consumables = [
@@ -156,7 +156,7 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
         for item in consumables_query.order_by(InventoryItem.name).all()
     ]
 
-    containers_query = InventoryItem.query.filter(InventoryItem.type == "container")
+    containers_query = InventoryItem.scoped().filter(InventoryItem.type == "container")
     if org_id:
         containers_query = containers_query.filter_by(organization_id=org_id)
     all_containers = [

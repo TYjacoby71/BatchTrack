@@ -77,7 +77,7 @@ def _group_variations_for_masters(
     if not group_ids:
         return {}
 
-    query = Recipe.query.filter(
+    query = Recipe.scoped().filter(
         Recipe.recipe_group_id.in_(group_ids),
         Recipe.is_master.is_(False),
         Recipe.test_sequence.is_(None),
@@ -156,7 +156,7 @@ def list_recipes():
         base_filters.append(Recipe.organization_id == current_user.organization_id)
 
     query = (
-        Recipe.query.filter(*base_filters)
+        Recipe.scoped().filter(*base_filters)
         .outerjoin(ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id)
         .outerjoin(batch_counts, batch_counts.c.recipe_id == Recipe.id)
         .add_columns(
@@ -228,10 +228,10 @@ def view_recipe(recipe_id):
             current_user, "recipes.create_variations"
         )
         lineage_id = generate_lineage_id(recipe)
-        batch_count = Batch.query.filter_by(recipe_id=recipe.id).count()
+        batch_count = Batch.scoped().filter_by(recipe_id=recipe.id).count()
         has_batches = batch_count > 0
         if recipe.recipe_group_id:
-            variation_count = Recipe.query.filter(
+            variation_count = Recipe.scoped().filter(
                 Recipe.recipe_group_id == recipe.recipe_group_id,
                 Recipe.is_master.is_(False),
                 Recipe.test_sequence.is_(None),
@@ -239,7 +239,7 @@ def view_recipe(recipe_id):
                 Recipe.is_current.is_(True),
             ).count()
         else:
-            variation_count = Recipe.query.filter(
+            variation_count = Recipe.scoped().filter(
                 Recipe.parent_recipe_id == recipe.id,
                 Recipe.test_sequence.is_(None),
                 Recipe.is_archived.is_(False),
@@ -267,7 +267,7 @@ def view_recipe(recipe_id):
 
         note_types = ("NOTE", "EDIT", "EDIT_OVERRIDE")
         recipe_notes = (
-            RecipeLineage.query.filter(
+            RecipeLineage.scoped().filter(
                 RecipeLineage.recipe_id == recipe.id,
                 RecipeLineage.notes.isnot(None),
                 RecipeLineage.event_type.in_(note_types),
@@ -282,7 +282,7 @@ def view_recipe(recipe_id):
         variation_branches = []
         if recipe.recipe_group_id:
             group_versions = (
-                Recipe.query.filter(Recipe.recipe_group_id == recipe.recipe_group_id)
+                Recipe.scoped().filter(Recipe.recipe_group_id == recipe.recipe_group_id)
                 .order_by(
                     Recipe.is_master.desc(),
                     Recipe.variation_name.asc().nullsfirst(),
@@ -310,7 +310,7 @@ def view_recipe(recipe_id):
         origin_parent_recipe = recipe.parent
         if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
             origin_parent_recipe = (
-                Recipe.query.filter(
+                Recipe.scoped().filter(
                     Recipe.recipe_group_id == recipe.recipe_group_id,
                     Recipe.is_master.is_(True),
                     Recipe.test_sequence.is_(None),
@@ -481,7 +481,7 @@ def make_parent_recipe(recipe_id):
 @login_required
 @require_permission("recipes.edit")
 def lock_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe = Recipe.scoped().filter_by(id=recipe_id).first_or_404()
     recipe.is_locked = True
     db.session.commit()
     flash("Recipe locked successfully.")
@@ -496,7 +496,7 @@ def lock_recipe(recipe_id):
 @login_required
 @require_permission("recipes.edit")
 def unlock_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe = Recipe.scoped().filter_by(id=recipe_id).first_or_404()
     unlock_password = request.form.get("unlock_password")
 
     if current_user.check_password(unlock_password):

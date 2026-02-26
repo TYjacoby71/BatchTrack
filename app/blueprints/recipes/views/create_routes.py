@@ -147,7 +147,7 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
         return
 
     purchased_recipes = (
-        Recipe.query.options(joinedload(Recipe.recipe_ingredients))
+        Recipe.scoped().options(joinedload(Recipe.recipe_ingredients))
         .filter(
             Recipe.organization_id == org_id,
             Recipe.org_origin_purchased.is_(True),
@@ -617,7 +617,7 @@ def edit_recipe(recipe_id):
         flash("Recipe not found.", "error")
         return redirect(url_for("recipes.list_recipes"))
 
-    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
+    existing_batches = Batch.scoped().filter_by(recipe_id=recipe.id).count()
     force_edit = str(
         request.args.get("force") or request.form.get("force_edit") or ""
     ).lower() in {"1", "true", "yes"}
