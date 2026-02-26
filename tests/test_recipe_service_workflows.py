@@ -17,10 +17,12 @@ from flask_login import login_user
 
 from app.extensions import db
 from app.models import Recipe
+from app.models.batch import Batch
 from app.models.global_item import GlobalItem
 from app.models.inventory import InventoryItem
 from app.models.models import Organization, User
 from app.models.product_category import ProductCategory
+from app.services.lineage_service import generate_lineage_id
 from app.services.recipe_service import (
     create_recipe,
     create_test_version,
@@ -28,6 +30,7 @@ from app.services.recipe_service import (
     promote_test_to_current,
     update_recipe,
 )
+from app.utils.recipe_batch_counts import count_batches_for_recipe_lineage
 
 
 def _unique_name(prefix: str) -> str:
@@ -615,6 +618,77 @@ def test_update_recipe_allows_unchanged_name_with_historical_duplicate_versions(
     assert refreshed.name == master_name
     assert refreshed.allowed_containers == [container.id]
     assert "Edited instructions after promotion" in (refreshed.instructions or "")
+
+
+@pytest.mark.usefixtures("app_context")
+def test_batch_counts_are_lineage_scoped_per_version_and_test():
+    category = _create_category("LineageBatchCounts")
+    ingredient = _create_ingredient()
+    master_name = _unique_name("Batch Scope Master")
+
+    create_ok, master = create_recipe(
+        name=master_name,
+        instructions="Base instructions",
+        yield_amount=6,
+        yield_unit="oz",
+        ingredients=[{"item_id": ingredient.id, "quantity": 6, "unit": "oz"}],
+        allowed_containers=[],
+        label_prefix="BSC",
+        category_id=category.id,
+        status="published",
+    )
+    assert create_ok, master
+
+    test_ok, test_recipe = create_test_version(
+        base=master,
+        payload=_test_recipe_payload(
+            ingredient_id=ingredient.id,
+            category_id=category.id,
+            instructions="Master test",
+        ),
+        target_status="published",
+    )
+    assert test_ok, test_recipe
+
+    master_lineage = generate_lineage_id(master)
+    test_lineage = generate_lineage_id(test_recipe)
+    assert master_lineage != test_lineage
+
+    # Master batch (explicit target version + lineage).
+    master_batch = Batch(
+        recipe_id=master.id,
+        target_version_id=master.id,
+        lineage_id=master_lineage,
+        label_code=_unique_name("MASTER-BATCH"),
+        batch_type="ingredient",
+        organization_id=master.organization_id,
+        status="completed",
+    )
+
+    # Test batch emulating legacy rows that reused master recipe_id while still
+    # carrying the test lineage/target version snapshot.
+    test_batch = Batch(
+        recipe_id=master.id,
+        target_version_id=test_recipe.id,
+        lineage_id=test_lineage,
+        label_code=_unique_name("TEST-BATCH"),
+        batch_type="ingredient",
+        organization_id=master.organization_id,
+        status="completed",
+    )
+    db.session.add_all([master_batch, test_batch])
+    db.session.commit()
+
+    assert (
+        count_batches_for_recipe_lineage(master, organization_id=master.organization_id)
+        == 1
+    )
+    assert (
+        count_batches_for_recipe_lineage(
+            test_recipe, organization_id=test_recipe.organization_id
+        )
+        == 1
+    )
 
 
 def test_recipe_list_keeps_group_variations_after_master_test_promotion(app, client):
