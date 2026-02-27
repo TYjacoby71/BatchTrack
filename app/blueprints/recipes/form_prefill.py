@@ -187,7 +187,7 @@ def lookup_inventory_names(item_ids):
     unique_ids = list({item_id for item_id in item_ids if item_id})
     if not unique_ids:
         return {}
-    items = InventoryItem.query.filter(InventoryItem.id.in_(unique_ids)).all()
+    items = InventoryItem.scoped().filter(InventoryItem.id.in_(unique_ids)).all()
     return {item.id: item.name for item in items}
 
 

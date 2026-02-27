@@ -79,7 +79,7 @@ def create_reservation():
         )
 
     # Find SKU by code
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         sku_code=data["sku_code"],
         organization_id=current_user.organization_id,
         is_active=True,
@@ -206,7 +206,7 @@ def expire_old_reservations():
 
     try:
         # Find expired reservations
-        expired_reservations = Reservation.query.filter(
+        expired_reservations = Reservation.scoped().filter(
             Reservation.status == "active",
             Reservation.expires_at.isnot(None),
             Reservation.expires_at < datetime.now(timezone.utc),

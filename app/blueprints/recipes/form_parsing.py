@@ -234,7 +234,7 @@ def extract_ingredients_from_form(form):
             if gi:
                 try:
                     existing = (
-                        InventoryItem.query.filter_by(
+                        InventoryItem.scoped().filter_by(
                             organization_id=current_user.organization_id,
                             global_item_id=gi.id,
                             type=gi.item_type,
@@ -250,7 +250,7 @@ def extract_ingredients_from_form(form):
                 else:
                     try:
                         name_match = (
-                            InventoryItem.query.filter(
+                            InventoryItem.scoped().filter(
                                 InventoryItem.organization_id
                                 == current_user.organization_id,
                                 func.lower(InventoryItem.name)

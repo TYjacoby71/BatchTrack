@@ -49,7 +49,7 @@ Tool drafts can be exported through `/exports/tool/*` routes:
 
 ## Relevance Check (2026-02-17)
 Validated against:
-- `app/routes/tools_routes.py`
+- `app/blueprints/tools/routes.py`
 - `app/blueprints/api/public.py`
-- `app/routes/exports_routes.py`
+- `app/blueprints/exports/routes.py`
 - `app/route_access.py`

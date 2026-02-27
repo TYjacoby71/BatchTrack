@@ -12,6 +12,7 @@ The public recipe library allows organizations to publish curated formulations t
 | `FEATURE_RECIPE_LIBRARY_NAV` | Shows the “Recipe Library” link in customer/public navigation. |
 | `FEATURE_RECIPE_PURCHASE_OPTIONS` | Displays Shopify purchase buttons on public recipe cards and detail pages. |
 | `FEATURE_ORG_MARKETPLACE_DASHBOARD` | Enables the public-facing Organization Marketplace dashboard surface and related navigation links. |
+| `FEATURE_RECIPE_MARKETPLACE_DISPLAY` | Controls recipe marketplace display visibility in navbar and public-facing areas. |
 
 ## Submission Flow
 

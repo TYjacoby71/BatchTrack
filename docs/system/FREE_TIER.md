@@ -53,4 +53,4 @@ Validated against:
 - `app/middleware.py`
 - `app/services/billing_access_policy_service.py`
 - `app/route_access.py`
-- `app/routes/tools_routes.py`
+- `app/blueprints/tools/routes.py`

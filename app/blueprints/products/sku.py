@@ -47,11 +47,11 @@ def _merge_skus_enabled() -> bool:
 @require_permission("products.view")
 def view_sku(inventory_item_id):
     """View individual SKU details"""
-    sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
+    sku = ProductSKU.scoped().filter_by(inventory_item_id=inventory_item_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
     history = (
-        UnifiedInventoryHistory.query.filter_by(
+        UnifiedInventoryHistory.scoped().filter_by(
             inventory_item_id=sku.inventory_item_id,
             organization_id=current_user.organization_id,
         )
@@ -108,7 +108,7 @@ def view_sku(inventory_item_id):
 @require_permission("products.manage_variants")
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         inventory_item_id=inventory_item_id,
         organization_id=current_user.organization_id,
     ).first_or_404()
@@ -163,7 +163,7 @@ def edit_sku(inventory_item_id):
                     from ...blueprints.expiration.services import ExpirationService
                     from ...models.inventory_lot import InventoryLot
 
-                    lots = InventoryLot.query.filter(
+                    lots = InventoryLot.scoped().filter(
                         InventoryLot.inventory_item_id == sku.inventory_item_id
                     ).all()
 
@@ -176,7 +176,7 @@ def edit_sku(inventory_item_id):
                                 )
                             )
 
-                        history_entries = UnifiedInventoryHistory.query.filter(
+                        history_entries = UnifiedInventoryHistory.scoped().filter(
                             UnifiedInventoryHistory.affected_lot_id == lot.id
                         ).all()
                         for entry in history_entries:
@@ -192,7 +192,7 @@ def edit_sku(inventory_item_id):
                 sku.inventory_item.shelf_life_days = None
 
                 # Clear expiration data from FIFO entries when marking as non-perishable
-                fifo_entries = UnifiedInventoryHistory.query.filter(
+                fifo_entries = UnifiedInventoryHistory.scoped().filter(
                     UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id
                 ).all()
 
@@ -233,7 +233,7 @@ def select_skus_to_merge():
         flash("SKU merge is not enabled for your plan.", "warning")
         return redirect(url_for("products.list_products"))
     skus = (
-        ProductSKU.query.join(
+        ProductSKU.scoped().join(
             InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
         )
         .filter(
@@ -264,7 +264,7 @@ def configure_merge():
         return redirect(url_for("sku.select_skus_to_merge"))
 
     # Get selected SKUs
-    skus = ProductSKU.query.filter(
+    skus = ProductSKU.scoped().filter(
         ProductSKU.inventory_item_id.in_(sku_ids),
         ProductSKU.organization_id == current_user.organization_id,
     ).all()
@@ -325,7 +325,7 @@ def execute_merge():
             return redirect(url_for("sku.select_skus_to_merge"))
 
         # Get all SKUs
-        skus = ProductSKU.query.filter(
+        skus = ProductSKU.scoped().filter(
             ProductSKU.inventory_item_id.in_(sku_ids),
             ProductSKU.organization_id == current_user.organization_id,
         ).all()
@@ -413,12 +413,12 @@ def execute_merge():
         # Merge history entries
         for source_sku in source_skus:
             # Update all history entries to point to target SKU
-            UnifiedInventoryHistory.query.filter_by(
+            UnifiedInventoryHistory.scoped().filter_by(
                 inventory_item_id=source_sku.inventory_item_id
             ).update({"inventory_item_id": target_sku.inventory_item_id})
 
             # Update reservations
-            Reservation.query.filter_by(
+            Reservation.scoped().filter_by(
                 product_item_id=source_sku.inventory_item_id
             ).update({"product_item_id": target_sku.inventory_item_id})
 
@@ -470,17 +470,17 @@ def execute_merge():
 @require_permission("products.manage_variants")
 def get_merge_preview(sku_id):
     """Get preview data for SKU merge"""
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         inventory_item_id=sku_id, organization_id=current_user.organization_id
     ).first_or_404()
 
     # Get history count
-    history_count = UnifiedInventoryHistory.query.filter_by(
+    history_count = UnifiedInventoryHistory.scoped().filter_by(
         inventory_item_id=sku_id
     ).count()
 
     # Get reservations count
-    reservations_count = Reservation.query.filter_by(
+    reservations_count = Reservation.scoped().filter_by(
         product_item_id=sku_id, status="active"
     ).count()
 

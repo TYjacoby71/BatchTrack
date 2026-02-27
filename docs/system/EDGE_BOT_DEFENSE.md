@@ -1,5 +1,12 @@
 # Edge Bot Defense Playbook
 
+## Synopsis
+Guidance for deploying edge-layer (CDN/WAF) bot protection in front of the Flask app. Covers WAF rules, rate limiting, bot management, and origin hardening.
+
+## Glossary
+- **Edge**: CDN/WAF layer that sits between users and the Flask origin.
+- **Bot trap**: In-app honeypot endpoint that flags automated scanners (see middleware).
+
 This app already blocks suspicious probes in middleware, but production-grade protection should start at the edge (CDN/WAF) so abusive traffic never reaches app workers.
 
 ## 1) Put the app behind an edge WAF/CDN

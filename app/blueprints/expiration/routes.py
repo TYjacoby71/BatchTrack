@@ -130,7 +130,7 @@ def api_life_remaining(fifo_id):
     """Get life remaining percentage for a FIFO entry"""
     from app.models import UnifiedInventoryHistory
 
-    entry = UnifiedInventoryHistory.query.get_or_404(fifo_id)
+    entry = UnifiedInventoryHistory.scoped().filter_by(id=fifo_id).first_or_404()
     if not entry.expiration_date:
         return jsonify({"life_remaining_percent": None, "non_perishable": True})
 
@@ -178,7 +178,7 @@ def api_debug_expiration():
     from ...models import InventoryItem, InventoryLot, db
 
     sku_lots = (
-        db.session.query(InventoryLot)
+        InventoryLot.scoped()
         .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
         .filter(
             and_(

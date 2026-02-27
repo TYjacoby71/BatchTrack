@@ -74,7 +74,7 @@ def conversion_unit_mapping_modal_post():
     if conversion_factor <= 0:
         return jsonify({"error": "Conversion factor must be greater than 0"}), 400
 
-    existing = CustomUnitMapping.query.filter_by(
+    existing = CustomUnitMapping.scoped().filter_by(
         from_unit=from_unit,
         to_unit=to_unit,
         organization_id=current_user.organization_id,

@@ -22,7 +22,7 @@ def list_reservations():
     status_filter = request.args.get("status", "active")
     order_id_filter = request.args.get("order_id", "")
 
-    query = Reservation.query
+    query = Reservation.scoped()
 
     # Apply filters
     if status_filter != "all":
@@ -90,19 +90,19 @@ def list_reservations():
 
     # Get summary stats
     stats = {
-        "total_active": Reservation.query.filter(
+        "total_active": Reservation.scoped().filter(
             and_(
                 Reservation.status == "active",
                 Reservation.organization_id == current_user.organization_id,
             )
         ).count(),
-        "total_expired": Reservation.query.filter(
+        "total_expired": Reservation.scoped().filter(
             and_(
                 Reservation.status == "expired",
                 Reservation.organization_id == current_user.organization_id,
             )
         ).count(),
-        "total_converted": Reservation.query.filter(
+        "total_converted": Reservation.scoped().filter(
             and_(
                 Reservation.status == "converted_to_sale",
                 Reservation.organization_id == current_user.organization_id,
@@ -165,7 +165,7 @@ def release_reservation(order_id):
         # First check if reservations exist for this order
         from ...models import Reservation
 
-        reservations = Reservation.query.filter_by(
+        reservations = Reservation.scoped().filter_by(
             order_id=order_id, status="active"
         ).all()
         print(
@@ -286,7 +286,7 @@ def get_item_reservations(item_id):
     """Get all reservations for a specific inventory item"""
     try:
         reservations = (
-            Reservation.query.filter(
+            Reservation.scoped().filter(
                 and_(
                     Reservation.product_item_id == item_id,
                     Reservation.organization_id == current_user.organization_id,

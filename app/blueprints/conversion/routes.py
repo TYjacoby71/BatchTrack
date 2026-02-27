@@ -55,7 +55,7 @@ def delete_unit(unit_id):
         return redirect(url_for("conversion_bp.manage_units"))
 
     try:
-        CustomUnitMapping.query.filter(
+        CustomUnitMapping.scoped().filter(
             (CustomUnitMapping.from_unit == unit.name)
             | (CustomUnitMapping.to_unit == unit.name)
         ).delete()
@@ -207,7 +207,7 @@ def manage_units():
                     flash("This type of unit conversion is not supported.", "danger")
                     return redirect(url_for("conversion_bp.manage_units"))
 
-            existing = CustomUnitMapping.query.filter_by(from_unit=custom_unit).first()
+            existing = CustomUnitMapping.scoped().filter_by(from_unit=custom_unit).first()
             if existing:
                 flash("This custom unit already has a mapping.", "warning")
                 return redirect(url_for("conversion_bp.manage_units"))
@@ -277,14 +277,14 @@ def manage_units():
 
             selected_org_id = session.get("dev_selected_org_id")
             if selected_org_id:
-                mappings = CustomUnitMapping.query.filter_by(
+                mappings = CustomUnitMapping.scoped().filter_by(
                     organization_id=selected_org_id
                 ).all()
             else:
-                mappings = CustomUnitMapping.query.all()
+                mappings = CustomUnitMapping.scoped().all()
         else:
             # Regular users see only their organization's mappings
-            mappings = CustomUnitMapping.query.filter_by(
+            mappings = CustomUnitMapping.scoped().filter_by(
                 organization_id=current_user.organization_id
             ).all()
     else:
@@ -313,13 +313,13 @@ def delete_mapping(mapping_id):
 
         selected_org_id = session.get("dev_selected_org_id")
         if selected_org_id:
-            mapping = CustomUnitMapping.query.filter_by(
+            mapping = CustomUnitMapping.scoped().filter_by(
                 id=mapping_id, organization_id=selected_org_id
             ).first_or_404()
         else:
-            mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+            mapping = CustomUnitMapping.scoped().filter_by(id=mapping_id).first_or_404()
     else:
-        mapping = CustomUnitMapping.query.filter_by(
+        mapping = CustomUnitMapping.scoped().filter_by(
             id=mapping_id, organization_id=current_user.organization_id
         ).first_or_404()
     try:

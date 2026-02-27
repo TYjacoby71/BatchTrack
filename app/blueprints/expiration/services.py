@@ -240,19 +240,13 @@ class ExpirationService:
 
         # Base lot query with remaining quantity and org scoping - ensure relationship is loaded
         query = (
-            db.session.query(InventoryLot)
+            InventoryLot.scoped()
             .join(InventoryItem)
             .options(joinedload(InventoryLot.inventory_item))
             .filter(
                 and_(
                     InventoryLot.remaining_quantity_base > 0,
                     InventoryItem.is_perishable,
-                    (
-                        InventoryItem.organization_id == current_user.organization_id
-                        if current_user.is_authenticated
-                        and current_user.organization_id
-                        else True
-                    ),
                 )
             )
         )
@@ -317,7 +311,7 @@ class ExpirationService:
         now_utc = TimezoneUtils.utc_now()
 
         query = (
-            db.session.query(InventoryLot)
+            InventoryLot.scoped()
             .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
             .join(
                 ProductSKU,
@@ -329,12 +323,6 @@ class ExpirationService:
                     InventoryLot.remaining_quantity_base > 0,
                     InventoryItem.type == "product",
                     InventoryItem.is_perishable,
-                    (
-                        InventoryItem.organization_id == current_user.organization_id
-                        if current_user.is_authenticated
-                        and current_user.organization_id
-                        else True
-                    ),
                 )
             )
         )
@@ -381,7 +369,7 @@ class ExpirationService:
             # Get product info
             from ...models import Product, ProductSKU, ProductVariant
 
-            sku = ProductSKU.query.filter_by(
+            sku = ProductSKU.scoped().filter_by(
                 inventory_item_id=lot.inventory_item_id
             ).first()
             if not sku:
@@ -458,7 +446,7 @@ class ExpirationService:
             item.shelf_life_days = shelf_life_days
 
         # Update existing lots to reflect perishable status and set expiration if missing
-        lots = InventoryLot.query.filter(
+        lots = InventoryLot.scoped().filter(
             and_(
                 InventoryLot.inventory_item_id == inventory_item_id,
                 InventoryLot.remaining_quantity_base > 0,
@@ -541,7 +529,7 @@ class ExpirationService:
                 InventoryLot.organization_id == current_user.organization_id
             )
 
-        lots = db.session.query(InventoryLot).filter(and_(*base_filter)).all()
+        lots = InventoryLot.scoped().filter(and_(*base_filter)).all()
 
         expired_lots = []
         expiring_soon_lots = []
@@ -566,7 +554,7 @@ class ExpirationService:
         from app.models.inventory_lot import InventoryLot
 
         lots = (
-            db.session.query(InventoryLot)
+            InventoryLot.scoped()
             .filter(
                 and_(
                     InventoryLot.inventory_item_id == inventory_item_id,
@@ -708,7 +696,7 @@ class ExpirationService:
 
             # Query inventory lots with organization scoping and perishable via InventoryItem
             query = (
-                db.session.query(InventoryLot)
+                InventoryLot.scoped()
                 .join(InventoryItem)
                 .filter(
                     and_(
@@ -717,13 +705,6 @@ class ExpirationService:
                         InventoryLot.expiration_date <= future_date,
                         InventoryLot.remaining_quantity_base > 0,
                         InventoryItem.is_perishable,
-                        (
-                            InventoryItem.organization_id
-                            == current_user.organization_id
-                            if current_user.is_authenticated
-                            and current_user.organization_id
-                            else True
-                        ),
                     )
                 )
             )
@@ -784,7 +765,7 @@ class ExpirationService:
         now_utc = TimezoneUtils.utc_now()
 
         query = (
-            db.session.query(InventoryLot)
+            InventoryLot.scoped()
             .join(InventoryItem)
             .filter(
                 and_(
@@ -792,12 +773,6 @@ class ExpirationService:
                     InventoryLot.expiration_date.isnot(None),
                     InventoryLot.expiration_date < now_utc,
                     InventoryItem.is_perishable,
-                    (
-                        InventoryItem.organization_id == current_user.organization_id
-                        if current_user.is_authenticated
-                        and current_user.organization_id
-                        else True
-                    ),
                 )
             )
         )
@@ -813,7 +788,7 @@ class ExpirationService:
         cutoff_date_utc = now_utc + timedelta(days=days_ahead)
 
         query = (
-            db.session.query(InventoryLot)
+            InventoryLot.scoped()
             .join(InventoryItem)
             .filter(
                 and_(
@@ -822,12 +797,6 @@ class ExpirationService:
                     InventoryLot.expiration_date > now_utc,
                     InventoryLot.expiration_date <= cutoff_date_utc,
                     InventoryItem.is_perishable,
-                    (
-                        InventoryItem.organization_id == current_user.organization_id
-                        if current_user.is_authenticated
-                        and current_user.organization_id
-                        else True
-                    ),
                 )
             )
         )

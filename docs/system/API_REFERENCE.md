@@ -1,9 +1,26 @@
-## POST /batches/api/start-batch
+# API Reference
 
+## Synopsis
+This document lists the JSON API and key HTML endpoints available in BatchTrack. All authenticated endpoints require a Flask-Login session cookie. CSRF tokens are required for all POST/PUT/DELETE requests.
+
+## Glossary
+- **Public endpoint**: No authentication required.
+- **Authenticated endpoint**: Requires Flask-Login session.
+- **Developer endpoint**: Requires `user_type = 'developer'`.
+- **Drawer payload**: Structured error response the frontend can render as a fix-it modal (see `WALL_OF_DRAWERS_PROTOCOL.md`).
+
+---
+
+## Batch Operations
+
+### Start Batch (canonical)
+```
+POST /batches/api/start-batch
+```
 Start a new batch from a client-provided PlanSnapshot.
 
-Request JSON:
-```
+**Request:**
+```json
 {
   "plan_snapshot": {
     "recipe_id": 12,
@@ -24,52 +41,83 @@ Request JSON:
 }
 ```
 
-Response JSON:
+**Response:** `{ "success": true, "message": "Batch started successfully", "batch_id": 34 }`
+
+### Start Batch (compatibility)
 ```
-{ "success": true, "message": "Batch started successfully", "batch_id": 34 }
+POST /batches/start/start_batch
+```
+Builds a plan snapshot internally and delegates to `BatchOperationsService`.
+
+### Finish / Fail Batch
+```
+POST /batches/finish-batch/<batch_id>/complete
+POST /batches/finish-batch/<batch_id>/fail
 ```
 
-Errors:
-- 400 if `plan_snapshot` is missing/invalid or deductions fail
+### Batch Container Management
+```
+GET  /api/batches/<batch_id>/containers
+POST /api/batches/<batch_id>/containers/<container_id>/adjust
+DELETE /api/batches/<batch_id>/containers/<container_id>
+```
 
-# API Reference
+### Batch Inventory Details
+```
+GET /batches/api/batch-inventory-summary/<batch_id>
+GET /batches/api/batch-remaining-details/<batch_id>
+GET /batches/api/available-ingredients/<recipe_id>
+```
+
+---
 
 ## Production Planning
 
-- POST `/production/stock/check` — Recipe stock check
-  - Body: `{ recipe_id: number, scale_factor?: number }`
-  - Returns: `{ success: boolean, shortages?: [...], drawer_payload?: {...} }`
-  - Notes: May include `drawer_payload` for user-fixable issues (see `docs/WALL_OF_DRAWERS_PROTOCOL.md`).
-
-## FIFO & Inventory
-
-- GET `/api/fifo-details/:inventory_id` — FIFO entries for an inventory item
-- GET `/api/batch-inventory-summary/:batch_id` — Batch usage summary
-
-## Drawer Actions
-
-- GET `/api/drawers/conversion/density-modal/:ingredient_id` — Density fix modal
-- GET `/api/drawers/conversion/unit-mapping-modal` — Unit mapping modal
-
-See controller: `app/blueprints/api/drawers/`.
-# API Reference
-
-This document provides a comprehensive reference for all API endpoints available in BatchTrack.
-
-## Authentication
-
-All API endpoints require user authentication via Flask-Login session cookies.
-
-## Dashboard APIs
-
-### Get Dashboard Alerts
+### Stock Check
 ```
-GET /api/dashboard-alerts
+POST /production-planning/stock/check
+```
+**Body:** `{ "recipe_id": number, "scale_factor": number }`
+**Returns:** `{ "success": boolean, "shortages": [...], "drawer_payload": {...} }`
+
+### Plan Production
+```
+GET/POST /production-planning/recipe/<recipe_id>/plan
+POST     /production-planning/recipe/<recipe_id>/plan/container
+POST     /production-planning/recipe/<recipe_id>/auto-fill-containers
 ```
 
-Returns active alerts for the current user's organization using `DashboardAlertService.get_dashboard_alerts()`.
+---
 
-**Response:**
+## FIFO & Inventory APIs
+
+```
+GET /api/inventory/item/<item_id>
+GET /batches/api/batch-inventory-summary/<batch_id>
+```
+
+### Inventory Management (HTML + form POST)
+```
+POST /inventory/add
+POST /inventory/adjust/<item_id>
+POST /inventory/edit/<id>
+POST /inventory/api/quick-create
+POST /inventory/api/bulk-adjustments
+POST /inventory/api/global-link/<item_id>
+GET  /inventory/api/search
+GET  /inventory/api/get-item/<item_id>
+```
+
+---
+
+## Dashboard
+
+```
+GET  /api/dashboard-alerts
+POST /api/dismiss-alert
+```
+
+**Response (alerts):**
 ```json
 {
   "success": true,
@@ -80,637 +128,323 @@ Returns active alerts for the current user's organization using `DashboardAlertS
       "title": "Alert Title",
       "message": "Alert description",
       "action_url": "/path/to/action",
-      "action_text": "Action Button Text",
       "dismissible": true
     }
   ]
 }
 ```
 
-### Dismiss Alert
-```
-POST /api/dismiss-alert
-```
-
-Dismisses a specific alert for the current session (session-based dismissal).
-
-**Request Body:**
-```json
-{
-  "alert_id": "alert_identifier"
-}
-```
-
-## Unit Conversion APIs
-
-### Get Available Units
-```
-GET /api/units
-```
-
-Returns all available units for the current user using `get_global_unit_list()`.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "gram",
-      "symbol": "g",
-      "unit_type": "weight",
-      "base_unit": true
-    }
-  ]
-}
-```
-
-### Convert Units
-```
-POST /api/convert-units
-```
-
-Converts a quantity from one unit to another using `ConversionEngine.convert_units()`.
-
-**Request Body:**
-```json
-{
-  "from_unit_id": 1,
-  "to_unit_id": 2,
-  "quantity": 100,
-  "ingredient_id": 5
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "converted_quantity": 100.0,
-    "from_unit": "g",
-    "to_unit": "oz",
-    "conversion_factor": 0.035274
-  }
-}
-```
-
-## Recipes
-
-### Generate Label Prefix
-```
-GET /api/recipes/prefix?name=Milk%20and%20Honey
-```
-
-Returns a unique label prefix for the given recipe name, scoped to the active organization.
-
-**Response:**
-```json
-{
-  "prefix": "MAH"
-}
-```
-
-## Organization Management
-
-### Get Organization Dashboard Data
-```http
-GET /organization/dashboard
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "organization": {
-            "id": 1,
-            "name": "Example Soaps",
-            "subscription_tier": "team",
-            "active_users_count": 5
-        },
-        "users": [...],
-        "roles": [...],
-        "permissions": [...]
-    }
-}
-```
-
-### Invite User
-```http
-POST /organization/invite-user
-```
-
-**Request Body:**
-```json
-{
-    "email": "user@example.com",
-    "first_name": "John",
-    "last_name": "Doe", 
-    "phone": "555-123-4567",
-    "role_id": 2
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "message": "User invited successfully",
-    "data": {
-        "username": "john.doe",
-        "temporary_password": "temp123456"
-    }
-}
-```
-
-## Inventory Management
-
-### Get Inventory Items
-```http
-GET /api/inventory
-```
-
-**Query Parameters:**
-- `page` (int): Page number for pagination
-- `per_page` (int): Items per page (max 100)
-- `category_id` (int): Filter by ingredient category
-- `low_stock` (bool): Show only low stock items
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "items": [
-            {
-                "id": 1,
-                "ingredient_name": "Coconut Oil",
-                "quantity": 250.5,
-                "unit": "oz",
-                "cost_per_unit": 0.15,
-                "expiration_date": "2024-12-31",
-                "low_stock": false
-            }
-        ],
-        "pagination": {
-            "page": 1,
-            "pages": 5,
-            "per_page": 20,
-            "total": 98
-        }
-    }
-}
-```
-
-### Adjust Inventory
-```http
-POST /api/inventory/adjust
-```
-
-**Request Body:**
-```json
-{
-    "adjustments": [
-        {
-            "inventory_id": 1,
-            "adjustment_type": "restock",
-            "quantity": 100.0,
-            "cost_per_unit": 0.16,
-            "expiration_date": "2024-12-31",
-            "reason": "New shipment received"
-        }
-    ],
-    "notes": "Monthly restock order #12345"
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "message": "Inventory adjusted successfully",
-    "data": {
-        "adjustments_processed": 1,
-        "total_cost_change": 16.00
-    }
-}
-```
-
-## Batch Management
-
-### Get Batches
-```http
-GET /api/batches
-```
-
-**Query Parameters:**
-- `status` (string): Filter by status (planned, in_progress, finished)
-- `recipe_id` (int): Filter by recipe
-- `date_from` (date): Start date filter
-- `date_to` (date): End date filter
-
-### Start Batch
-```http
-POST /api/batches/start
-```
-
-**Request Body:**
-```json
-{
-    "recipe_id": 1,
-    "planned_quantity": 10,
-    "notes": "Double batch for holiday orders"
-}
-```
-
-### Finish Batch
-```http
-POST /api/batches/<batch_id>/finish
-```
-
-**Request Body:**
-```json
-{
-    "products": [
-        {
-            "product_sku_id": 1,
-            "quantity": 8,
-            "notes": "2 bars broke during unmolding"
-        }
-    ],
-    "batch_notes": "Successful batch, good trace"
-}
-```
-
-## Product Management
-
-### Get Product Variants
-```http
-GET /api/products/<product_id>/variants
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "sku": "SOAP-LAV-4OZ",
-            "name": "Lavender Soap - 4oz",
-            "price": 8.99,
-            "current_stock": 15,
-            "reserved_stock": 2
-        }
-    ]
-}
-```
-
-### Reserve Product
-```http
-POST /api/reservations/create
-```
-
-**Request Body:**
-```json
-{
-    "product_sku_id": 1,
-    "quantity": 3,
-    "customer_name": "Jane Smith",
-    "notes": "Wedding favors order"
-}
-```
-
-## Stock Management
-
-### Check Stock Availability
-```http
-POST /api/check-stock
-```
-
-**Request Body:**
-```json
-{
-    "items": [
-        {
-            "ingredient_id": 1,
-            "quantity_needed": 50.0,
-            "unit_id": 2
-        }
-    ]
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "overall_status": "sufficient",
-        "items": [
-            {
-                "ingredient_id": 1,
-                "status": "sufficient",
-                "available_quantity": 75.5,
-                "needed_quantity": 50.0,
-                "shortage": 0
-            }
-        ]
-    }
-}
-```
-
-### Get FIFO Details
-```http
-GET /api/fifo-details/<inventory_id>
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "ingredient_name": "Coconut Oil",
-        "total_available": 250.5,
-        "lots": [
-            {
-                "id": 1,
-                "quantity": 100.0,
-                "cost_per_unit": 0.15,
-                "expiration_date": "2024-10-15",
-                "lot_number": "LOT001"
-            }
-        ]
-    }
-}
-```
-
-## Alert Management
-
-### Get Dashboard Alerts
-```http
-GET /api/dashboard-alerts
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "alerts": [
-            {
-                "id": 1,
-                "type": "low_stock",
-                "severity": "warning",
-                "title": "Low Stock Alert",
-                "message": "Coconut Oil is running low (25.5 oz remaining)",
-                "ingredient_id": 1,
-                "created_at": "2024-01-15T10:30:00Z"
-            }
-        ],
-        "count": 1
-    }
-}
-```
-
-### Dismiss Alert
-```http
-POST /api/dismiss-alert
-```
-
-**Request Body:**
-```json
-{
-    "alert_id": 1
-}
-```
+---
 
 ## Unit Conversion
 
-### Get Available Units
-```http
-GET /api/units
+```
+GET  /api/units             — List units (authenticated)
+POST /api/unit-converter    — Convert units (authenticated)
+GET  /api/unit-search       — Search units
+GET  /api/public/units      — List units (public, no auth)
+POST /api/public/convert-units — Convert units (public, no auth)
 ```
 
-**Response:**
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Ounces",
-            "symbol": "oz",
-            "unit_type": "weight",
-            "base_unit": false
-        }
-    ]
-}
+---
+
+## Recipes
+
+```
+GET /api/recipes/prefix?name=...  — Generate label prefix
 ```
 
-### Convert Units
-```http
-POST /api/convert-units
+Recipe CRUD is HTML-based:
+```
+GET/POST /recipes/new
+GET/POST /recipes/<recipe_id>/edit
+GET      /recipes/<recipe_id>/view
+POST     /recipes/<recipe_id>/delete
+GET      /recipes/<recipe_id>/lineage
+GET      /recipes/<recipe_id>/clone
+GET/POST /recipes/<recipe_id>/variation
+GET/POST /recipes/<recipe_id>/test
+POST     /recipes/<recipe_id>/archive
+POST     /recipes/<recipe_id>/restore
+POST     /recipes/<recipe_id>/lock
+POST     /recipes/<recipe_id>/unlock
+POST     /recipes/<recipe_id>/publish-test
+POST     /recipes/<recipe_id>/set-current
+POST     /recipes/<recipe_id>/promote-to-master
+POST     /recipes/<recipe_id>/unlist
+POST     /recipes/ingredients/quick-add
+POST     /recipes/units/quick-add
 ```
 
-**Request Body:**
-```json
-{
-    "from_unit_id": 1,
-    "to_unit_id": 2,
-    "quantity": 16.0,
-    "ingredient_id": 1
-}
+---
+
+## Products
+
+```
+GET  /api/products/                         — List products
+GET  /api/products/<product_id>/variants    — Product variants
+GET  /api/products/<product_id>/inventory-summary
+GET  /api/products/search
+GET  /api/products/low-stock
+POST /api/products/quick-add
+GET  /api/products/sku/<sku_id>/product
 ```
 
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "converted_quantity": 1.0,
-        "from_unit": "oz",
-        "to_unit": "lb",
-        "conversion_factor": 0.0625
-    }
-}
+Product HTML routes:
+```
+GET/POST /products/new
+GET      /products/<product_id>
+POST     /products/<product_id>/edit
+POST     /products/<product_id>/delete
 ```
 
-## Developer Endpoints
+---
 
-### Get Organizations (Developer Only)
-```http
-GET /api/admin/organizations
+## Reservations
+
+```
+POST /reservations/api/reservations/create
+POST /reservations/api/reservations/<order_id>/release
+POST /reservations/api/reservations/<order_id>/confirm_sale
+GET  /reservations/api/reservations/<order_id>/details
+GET  /reservations/api/inventory/<item_id>/reservations
+POST /reservations/api/reservations/cleanup_expired
 ```
 
-**Requires**: Developer user type
+---
 
-### Switch Organization Context (Developer Only)
-```http
-POST /api/admin/switch-organization
+## Drawer Actions
+
+```
+GET  /api/drawers/check
+GET  /api/drawers/conversion/density-modal/<ingredient_id>
+GET  /api/drawers/conversion/unit-mapping-modal
+POST /api/drawers/conversion/unit-mapping-modal
+GET  /api/drawers/containers/unit-mismatch-modal
+GET  /api/drawers/global-link/check
+GET  /api/drawers/global-link/modal
+POST /api/drawers/global-link/confirm
+GET  /api/drawers/inventory/quick-create-modal
+GET  /api/drawers/units/quick-create-modal
+GET  /api/drawers/retention/check
+GET  /api/drawers/retention/modal
+POST /api/drawers/retention/acknowledge
+GET  /api/drawers/retention/export
+POST /api/drawers/retry-operation
 ```
 
-**Request Body:**
-```json
-{
-    "organization_id": 1
-}
+See `app/blueprints/api/drawers/` for implementation.
+
+---
+
+## Expiration
+
+```
+GET  /expiration/api/expiring-soon
+GET  /expiration/api/expired-items
+GET  /expiration/api/expiration-summary
+GET  /expiration/api/summary
+GET  /expiration/api/inventory-status/<inventory_item_id>
+GET  /expiration/api/life-remaining/<fifo_id>
+GET  /expiration/api/product-status/<product_id>
+GET  /expiration/api/product-inventory/<inventory_id>/expiration
+POST /expiration/api/mark-expired
+POST /expiration/api/archive-expired
+POST /expiration/api/calculate-expiration
 ```
 
-## Billing Management
+---
 
-### Upgrade Subscription
-```http
-POST /billing/upgrade
+## Timers
+
+```
+POST /timers/api/create-timer
+GET  /timers/api/batch-timers/<batch_id>
+GET  /timers/api/timer-status/<timer_id>
+GET  /timers/api/timer-summary
+GET  /timers/api/expired-timers
+GET  /timers/api/check-expired
+POST /timers/api/pause-timer/<timer_id>
+POST /timers/api/resume-timer/<timer_id>
+POST /timers/api/stop-timer/<timer_id>
+POST /timers/api/cancel/<timer_id>
+POST /timers/api/complete-expired
+POST /timers/api/auto-expire-timers
 ```
 
-### Checkout
-```http
-POST /billing/checkout/<tier>/<billing_cycle>
-POST /billing/checkout/<tier>
+---
+
+## Tags
+
+```
+GET    /tag-manager/api/tags
+POST   /tag-manager/api/tags
+PUT    /tag-manager/api/tags/<tag_id>
+DELETE /tag-manager/api/tags/<tag_id>
 ```
 
-### Customer Portal
-```http
-GET /billing/customer-portal
+---
+
+## Ingredients & Global Library (API)
+
+```
+GET /api/ingredients                               — Ingredient list
+GET /api/ingredients/categories                     — Ingredient categories
+GET /api/ingredients/global-items/search            — Search global items
+GET /api/ingredients/global-items/<id>/stats        — Global item stats
+GET /api/ingredients/global-library/density-options — Density reference
+GET /api/ingredients/ingredient/<id>/density        — Item density
+GET /api/ingredients/ingredients/search             — Search ingredients
+GET /api/ingredients/ingredients/definitions/search — Search definitions
+GET /api/ingredients/ingredients/definitions/<id>/forms
+GET /api/ingredients/physical-forms/search
+GET /api/ingredients/variations/search
+POST /api/ingredients/ingredients/create-or-link
 ```
 
-### Cancel Subscription
-```http
+---
+
+## Public APIs (no auth required)
+
+```
+GET  /api/public/units                  — Unit list
+POST /api/public/convert-units          — Unit conversion
+GET  /api/public/global-items/search    — Global item search
+GET  /api/public/soapcalc-oils/search   — Soap calculator oil search
+GET  /api/public/soapcalc-items/search  — Soap calculator item search
+POST /api/public/help-bot               — Public help bot
+GET  /api/public/server-time            — Server time
+GET,POST /api/public/bot-trap           — Bot trap honeypot
+```
+
+### Soap Tool APIs (public)
+```
+POST /tools/api/soap/calculate       — Soap formula calculation
+POST /tools/api/soap/recipe-payload  — Build canonical recipe JSON from tool data
+POST /tools/api/soap/quality-nudge   — Quality-target oil nudging
+GET  /tools/api/soap/oils-catalog    — Bulk oils catalog
+POST /tools/api/feedback-notes       — Submit feedback note
+POST /tools/draft                    — Save tool draft to session
+```
+
+---
+
+## Organization Management
+
+```
+GET  /organization/dashboard
+POST /organization/invite-user
+POST /organization/create-role
+POST /organization/add-user
+POST /organization/update
+POST /organization/update-settings
+POST /organization/update-tier
+GET  /organization/user/<user_id>
+PUT  /organization/user/<user_id>
+DELETE /organization/user/<user_id>
+POST /organization/user/<user_id>/toggle-status
+POST /organization/user/<user_id>/restore
+GET  /organization/export/<report_type>
+```
+
+---
+
+## Settings
+
+```
+GET  /settings/
+GET  /settings/user-management
+POST /settings/update-timezone
+POST /settings/password/change
+POST /settings/profile/save
+POST /settings/set-backup-password
+POST /settings/update-user-preference
+POST /settings/update-system-setting
+POST /settings/bulk-update-ingredients
+POST /settings/bulk-update-containers
+GET  /settings/api/user-preferences
+POST /settings/api/user-preferences
+GET  /settings/api/list-preferences/<scope>
+POST /settings/api/list-preferences/<scope>
+POST /settings/api/system-settings
+```
+
+---
+
+## Billing
+
+```
+GET  /billing/upgrade
+GET  /billing/checkout/<tier>
+GET  /billing/checkout/<tier>/<billing_cycle>
+GET  /billing/customer-portal
 POST /billing/cancel-subscription
-```
-
-### Stripe Webhook
-```http
 POST /billing/webhooks/stripe
+GET  /billing/complete-signup-from-stripe
+GET  /billing/complete-signup-from-whop
+GET  /billing/storage
+POST /billing/addons/start/<addon_key>
+GET/POST /billing/downgrade/<tier>
+GET/POST /billing/downgrade/<tier>/<billing_cycle>
 ```
 
-## Container Management
+---
 
-### Get Available Containers
-```http
-GET /api/available-containers/<int:recipe_id>
-GET /api/containers/available
+## Auth
+
+```
+GET/POST /auth/login
+GET/POST /auth/signup
+GET/POST /auth/quick-signup
+GET      /auth/logout
+GET/POST /auth/forgot-password
+GET/POST /auth/reset-password/<token>
+GET/POST /auth/resend-verification
+GET      /auth/verify-email/<token>
+GET      /auth/oauth/google
+GET      /auth/oauth/facebook
+GET      /auth/oauth/facebook/callback
+GET      /auth/oauth/callback
 ```
 
-### Batch Container Management
-```http
-GET /api/batches/<int:batch_id>/containers
-GET /api/batches/<int:batch_id>/containers/<int:container_id>
-POST /api/batches/<int:batch_id>/containers/<int:container_id>/adjust
+---
+
+## Bulk Stock Check
+
+```
+GET/POST /bulk-stock/bulk-check
+GET      /bulk-stock/bulk-check/csv
 ```
 
-### Debug Containers
-```http
-GET /api/debug-containers
+---
+
+## Conversion Manager
+
 ```
+GET/POST /conversion/units
+GET      /conversion/convert/<amount>/<from_unit>/<to_unit>
+POST     /conversion/add_mapping
+POST     /conversion/validate_mapping
+POST     /conversion/mappings/<mapping_id>/delete
+POST     /conversion/units/<unit_id>/delete
+```
+
+---
 
 ## Error Codes
 
-### HTTP Status Codes
-- `200`: Success
-- `400`: Bad Request (validation errors)
-- `401`: Unauthorized (not logged in)
-- `403`: Forbidden (insufficient permissions)
-- `404`: Not Found
-- `500`: Internal Server Error
+| HTTP Status | Meaning |
+|-------------|---------|
+| 200 | Success |
+| 400 | Bad Request (validation errors) |
+| 401 | Unauthorized (not logged in) |
+| 403 | Forbidden (insufficient permissions) |
+| 404 | Not Found |
+| 500 | Internal Server Error |
 
-### Custom Error Types
-- `validation_error`: Input validation failed
-- `permission_denied`: User lacks required permission
-- `organization_limit`: Subscription limit exceeded
-- `stock_insufficient`: Not enough inventory available
-- `batch_in_progress`: Cannot modify active batch
+---
 
 ## Rate Limiting
 
-### Current Limits
-- General API: 100 requests per minute per user
-- Batch operations: 10 requests per minute per user
-- Inventory adjustments: 20 requests per minute per user
-
-### Rate Limit Headers
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1640995200
-```
-
-## Pagination
-
-### Standard Pagination
-```json
-{
-    "pagination": {
-        "page": 1,
-        "pages": 10,
-        "per_page": 20,
-        "total": 195,
-        "has_next": true,
-        "has_prev": false
-    }
-}
-```
-
-### Pagination Parameters
-- `page` (int): Page number (1-based)
-- `per_page` (int): Items per page (default: 20, max: 100)
-
-## WebSocket Events (Future)
-
-### Real-time Updates
-```javascript
-// Batch status updates
-socket.on('batch_status_change', (data) => {
-    // Update UI with new batch status
-});
-
-// Inventory alerts
-socket.on('low_stock_alert', (data) => {
-    // Show new alert notification
-});
-```
-
-## SDK Examples
-
-### JavaScript/TypeScript
-```javascript
-class BatchTrackAPI {
-    constructor(baseURL, csrfToken) {
-        this.baseURL = baseURL;
-        this.csrfToken = csrfToken;
-    }
-
-    async checkStock(ingredients) {
-        const response = await fetch(`${this.baseURL}/api/check-stock`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': this.csrfToken
-            },
-            body: JSON.stringify({ items: ingredients })
-        });
-
-        return response.json();
-    }
-}
-```
-
-### Python (for testing)
-```python
-import requests
-
-class BatchTrackAPI:
-    def __init__(self, base_url, session_cookies):
-        self.base_url = base_url
-        self.session = requests.Session()
-        self.session.cookies.update(session_cookies)
-
-    def check_stock(self, ingredients):
-        response = self.session.post(
-            f"{self.base_url}/api/check-stock",
-            json={"items": ingredients}
-        )
-        return response.json()
+Global default: `5000 per hour; 1000 per minute` (configurable via `RATELIMIT_DEFAULT`).
+Backed by Redis in production, in-memory for development.

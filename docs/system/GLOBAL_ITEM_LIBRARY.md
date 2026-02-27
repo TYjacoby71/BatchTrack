@@ -34,7 +34,7 @@ The Global Item Library separates platform-curated item intelligence from organi
 ## User and Developer Surfaces
 
 ### Public/Authenticated Library Browsing
-- Routes in `app/routes/global_library_routes.py`.
+- Routes in `app/blueprints/global_library/routes.py`.
 - Canonical endpoints include:
   - `/global-items`
   - `/global-items/<id>` (and slug variant)
@@ -58,6 +58,6 @@ The Global Item Library separates platform-curated item intelligence from organi
 Validated against:
 - `app/models/global_item.py`
 - `app/models/inventory.py`
-- `app/routes/global_library_routes.py`
+- `app/blueprints/global_library/routes.py`
 - `app/blueprints/developer/views/global_item_routes.py`
 - `app/seeders/seed_global_inventory_library.py`

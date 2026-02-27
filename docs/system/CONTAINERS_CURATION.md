@@ -82,7 +82,7 @@ aka_names (semicolon-separated),default_unit
 - Inventory creation reuses this exact signature through `_find_matching_container()` inside `app/services/inventory_adjustment/_creation_logic.py`, so repeated submissions with identical attributes re-link to the same `InventoryItem` even if the user re-enters it later.
 
 ### Loading curated data
-- Use `scripts/seed_containers.py` to upsert curated JSON/CSV into `GlobalItem`.
+- Use `app/seeders/seed_containers.py` to upsert curated JSON/CSV into `GlobalItem`.
 - JSON can be either an array of items or an object with an `items` array.
 - CSV must use the header format described above.
 

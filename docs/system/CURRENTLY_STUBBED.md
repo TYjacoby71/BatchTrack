@@ -36,7 +36,7 @@ This document consolidates stubs, placeholders, no-ops, and partially implemente
   - Notes: Placeholder `require_developer_permission` and `permission_required` defined when imports fail.
 
 - Recipe library customer-facing detail view [PARTIAL]
-  - Files: `app/routes/recipe_library_routes.py`, `app/templates/library/recipe_detail.html`
+  - Files: `app/blueprints/recipe_library/routes.py`, `app/templates/library/recipe_detail.html`
   - Notes: Developer/org view shows blurred sections; customer-facing unblur still needs UI.
 
 ## Permissions & Roles
@@ -47,9 +47,9 @@ This document consolidates stubs, placeholders, no-ops, and partially implemente
 
 ## Organization & Users
 
-- Invite email dispatch [TODO]
-  - Files: `app/blueprints/organization/routes.py` (`invite_user`)
-  - Notes: TODO to send email; currently returns credentials in API response (dev‑only behavior).
+- Invite email dispatch [IMPLEMENTED]
+  - Files: `app/services/user_invite_service.py`, `app/blueprints/organization/routes.py`
+  - Notes: `UserInviteService.invite_user()` sends a password-setup email via `EmailService` when configured; falls back to manual password setup when email is not configured.
 
 ## Statistics / Warehouse / Reporting
 
@@ -82,10 +82,9 @@ This document consolidates stubs, placeholders, no-ops, and partially implemente
 1. Replace mocks in `app/services/pos_integration.py` with real model imports; remove dummy classes.
 2. Implement `role_required` with real role checks; audit routes using it.
 3. Wire Whop integration or gate it behind feature flags; update `billing_service` branches.
-4. Implement email sending for invites; remove returning plaintext temp passwords.
-5. If needed, expand `handle_unit_conversion` or fully route via `ConversionEngine` and remove placeholder.
-6. Convert developer decorator fallbacks into required imports; fail fast in prod builds.
-7. Convert roadmap placeholders into tracked issues; add test coverage for stubs once implemented.
+4. If needed, expand `handle_unit_conversion` or fully route via `ConversionEngine` and remove placeholder.
+5. Convert developer decorator fallbacks into required imports; fail fast in prod builds.
+6. Convert roadmap placeholders into tracked issues; add test coverage for stubs once implemented.
 
 ## Legend
 

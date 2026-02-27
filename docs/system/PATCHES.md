@@ -1,5 +1,11 @@
 # Patch Log
 
+## Synopsis
+Tracks temporary patches or workarounds that diverge from upstream behavior. Each entry has a code-referenced `[PATCH-XXX]` identifier.
+
+## Glossary
+- **Patch**: A temporary workaround for an upstream bug or limitation.
+
 This document tracks temporary patches or workarounds that diverge from
 upstream behavior. Each entry has a unique identifier referenced in code via
 `[PATCH-XXX]` so we can audit and retire them once the upstream issue is

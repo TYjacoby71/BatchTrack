@@ -147,7 +147,7 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
         return
 
     purchased_recipes = (
-        Recipe.query.options(joinedload(Recipe.recipe_ingredients))
+        Recipe.scoped().options(joinedload(Recipe.recipe_ingredients))
         .filter(
             Recipe.organization_id == org_id,
             Recipe.org_origin_purchased.is_(True),

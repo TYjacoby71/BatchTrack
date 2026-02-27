@@ -41,7 +41,7 @@ This document records the current SEO-capable surface in BatchTrack and the acti
 
 ## Relevance Check (2026-02-17)
 Validated against:
-- `app/routes/global_library_routes.py`
+- `app/blueprints/global_library/routes.py`
 - `app/route_access.py`
 - `app/templates/layout.html`
 - `app/templates/library/global_items_list.html`

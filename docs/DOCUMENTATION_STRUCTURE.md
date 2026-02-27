@@ -12,38 +12,50 @@ This document explains where documentation lives and how updates should be stage
 ```
 docs/
 ├── system/              Master documentation for every platform system and concept
+│   ├── SYSTEM_INDEX.md           (start here)
+│   ├── APP_DICTIONARY.md         (glossary + cross-links)
+│   ├── APP_MASTER_DESCRIPTION.md
 │   ├── ARCHITECTURE.md
-│   ├── ADDONS_AND_ENTITLEMENTS.md
-│   ├── APP_DICTIONARY.md
 │   ├── SERVICES.md
 │   ├── DATABASE_MODELS.md
 │   ├── PLAN_SNAPSHOT.md
-│   ├── API_REFERENCE.md
+│   ├── RECIPE_SERVICE.md
 │   ├── DEVELOPMENT_GUIDE.md
+│   ├── OPERATIONS_AND_FAQ.md
 │   ├── deploy_migration_guide.md
+│   ├── WALL_OF_DRAWERS_PROTOCOL.md
+│   ├── TEST_SUITE.md
+│   ├── PATCHES.md
+│   ├── API_REFERENCE.md
 │   ├── PUBLIC_TOOLS.md
 │   ├── EXPORTS.md
+│   ├── BILLING.md
+│   ├── STRIPE_INTEGRATION.md
 │   ├── FREE_TIER.md
+│   ├── TIER_FEATURE_CATALOG.md
+│   ├── ADDONS_AND_ENTITLEMENTS.md
 │   ├── TRACKING_PLAN.md
+│   ├── STATS.md
+│   ├── recipe_library_marketplace.md
 │   ├── CURRENTLY_STUBBED.md
 │   ├── DEPRECATED_FEATURES.md
 │   ├── GLOBAL_ITEM_LIBRARY.md
+│   ├── GLOBAL_ITEM_JSON_STRUCTURE.md
 │   ├── CONTAINERS_CURATION.md
 │   ├── CONTAINER_NAMING.md
-│   ├── GLOBAL_ITEM_JSON_STRUCTURE.md
 │   ├── INVENTORY_EVENTS_TERMINOLOGY.md
 │   ├── TIMEZONE_SYSTEM.md
 │   ├── STORAGE_VS_DISPLAY.md
-│   └── USERS_AND_PERMISSIONS.md
+│   ├── USERS_AND_PERMISSIONS.md
+│   ├── ROUTE_ACCESS_CONTROL.md
+│   ├── SCALING_RUNBOOK.md
+│   ├── EDGE_BOT_DEFENSE.md
+│   ├── IMAGE_UPLOAD_CHECKLIST.md
+│   ├── SEO_GUIDE.md
+│   └── SEO_ACCELERATION_PLAN.md
 │
-├── todo/                Launch readiness, QA, and immediate action lists
-│   ├── CRITICAL_PRELAUNCH.md
-│   ├── LAUNCH_RUNBOOK.md
-│   ├── FIX_IMMEDIATE.md
-│   ├── RETENTION_CANCELLATION_QA.md
-│   ├── INVENTORY_UPGRADE_QA.md
-│   ├── INVENTORY_COST_QA.md
-│   └── UNIT_MAPPING_QA.md
+├── todo/                Backlog and action items
+│   └── CONSOLIDATED_BACKLOG.md
 │
 ├── changelog/           Complete history of changes
 │   ├── CHANGELOG_INDEX.md
@@ -52,14 +64,10 @@ docs/
 ├── refactor/            Refactoring documentation and progress logs
 │   └── (various refactor docs)
 │
-└── (root level)         Indexes, future planning, and special studies
-    ├── DOCUMENTATION_STRUCTURE.md
-    ├── FUTURE_ROADMAP.md
-    ├── original-styling-analysis.md
-    └── (additional one-off analyses)
+└── DOCUMENTATION_STRUCTURE.md  (this file)
 ```
 
-Marketing documentation that describes the content workspace now lives in `marketing/README.md` alongside the site assets.
+Marketing documentation lives in `app/marketing/README.md` alongside the site assets.
 
 ## Document Categories
 

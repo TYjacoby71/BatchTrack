@@ -41,11 +41,11 @@ def get_fifo_details(inventory_id):
         batch_id = request.args.get("batch_id", type=int)
 
         # Get inventory item
-        item = InventoryItem.query.get_or_404(inventory_id)
+        item = InventoryItem.scoped().filter_by(id=inventory_id).first_or_404()
 
         # Get current FIFO entries (available stock) from UnifiedInventoryHistory
         fifo_entries = (
-            UnifiedInventoryHistory.query.filter_by(inventory_item_id=inventory_id)
+            UnifiedInventoryHistory.scoped().filter_by(inventory_item_id=inventory_id)
             .filter(
                 or_(
                     UnifiedInventoryHistory.remaining_quantity_base > 0,
@@ -118,14 +118,14 @@ def get_fifo_details(inventory_id):
 def get_batch_inventory_summary(batch_id):
     try:
         # Get batch
-        batch = Batch.query.get_or_404(batch_id)
+        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
 
         # Build merged ingredient summary from unified inventory events (covers regular and extra usage)
         ingredient_summary = build_merged_ingredient_summary(batch)
 
         # Add containers
-        batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
-        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
+        batch_containers = BatchContainer.scoped().filter_by(batch_id=batch_id).all()
+        extra_containers = ExtraBatchContainer.scoped().filter_by(batch_id=batch_id).all()
 
         container_summary = []
         for container in batch_containers:
@@ -196,7 +196,7 @@ def get_batch_inventory_summary(batch_id):
 def get_batch_fifo_usage(inventory_id, batch_id):
     """Get lot-level usage data for a specific ingredient in a specific batch using unified events."""
     events = (
-        UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.scoped().filter(
             UnifiedInventoryHistory.inventory_item_id == inventory_id,
             UnifiedInventoryHistory.batch_id == batch_id,
             UnifiedInventoryHistory.change_type == "batch",
@@ -281,7 +281,7 @@ def build_merged_ingredient_summary(batch: Batch):
     """
     # Gather all deduction events for this batch
     events = (
-        UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.scoped().filter(
             UnifiedInventoryHistory.batch_id == batch.id,
             UnifiedInventoryHistory.change_type == "batch",
             UnifiedInventoryHistory.quantity_change < 0,
