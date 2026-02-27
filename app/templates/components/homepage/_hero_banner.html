@@ -3,16 +3,29 @@
     <div class="container">
         <div class="hero-media-box">
             <div class="hero-media-stage">
-                <div class="placeholder-img hero-video-placeholder has-media">
+                {% set hero_media = (homepage_media_slots.get('hero-primary') if homepage_media_slots is defined else none) %}
+                <div class="placeholder-img hero-video-placeholder{% if hero_media %} has-media{% endif %}">
+                    {% if hero_media %}
+                        {% if hero_media.kind == 'video' %}
+                    <video class="hero-slot-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack demo media">
+                        <source src="{{ url_for('static', filename=hero_media.path) }}">
+                    </video>
+                        {% elif hero_media.kind == 'youtube' and hero_media.embed_url %}
                     <iframe
                         class="hero-slot-media media-embed-frame"
-                        src="https://www.youtube.com/embed/NWTnxw_4GJw?rel=0"
+                        src="{{ hero_media.embed_url }}"
                         title="BatchTrack demo media"
                         loading="lazy"
                         referrerpolicy="strict-origin-when-cross-origin"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowfullscreen
                     ></iframe>
+                        {% else %}
+                    <img src="{{ url_for('static', filename=hero_media.path) }}" class="hero-slot-media" alt="BatchTrack demo media" loading="lazy" decoding="async">
+                        {% endif %}
+                    {% else %}
+                    <span class="hero-video-label">BatchTrack demo media</span>
+                    {% endif %}
                 </div>
                 <div class="hero-overlay">
                     <div class="hero-copy">

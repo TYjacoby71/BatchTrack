@@ -841,6 +841,54 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
 
 
 @pytest.mark.usefixtures("app")
+def test_homepage_hero_slot_renders_uploaded_youtube_shortcut_without_hardcoded_id(app):
+    """Homepage hero slot should render embed URL from youtube.url instead of fallback ID."""
+    from pathlib import Path
+
+    client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    hero_folder: Path | None = None
+    youtube_shortcut: Path | None = None
+
+    with app.app_context():
+        hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
+        hero_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in hero_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in (_SUPPORTED_MEDIA_EXTENSIONS | {".url"})
+            ):
+                backup = hero_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+
+        youtube_shortcut = hero_folder / "youtube.url"
+        youtube_shortcut.write_text(
+            "[InternetShortcut]\nURL=https://youtu.be/dQw4w9WgXcQ\n",
+            encoding="utf-8",
+        )
+
+    try:
+        response = _assert_public_get(
+            client, "/", label="homepage", query_string={"refresh": "1"}
+        )
+        html = response.get_data(as_text=True)
+        assert (
+            "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&amp;modestbranding=1&amp;playsinline=1"
+            in html
+        )
+        assert 'class="hero-slot-media media-embed-frame"' in html
+        assert "https://www.youtube.com/embed/NWTnxw_4GJw?rel=0" not in html
+    finally:
+        if youtube_shortcut is not None and youtube_shortcut.exists():
+            youtube_shortcut.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
+
+
+@pytest.mark.usefixtures("app")
 def test_help_gallery_renders_uploaded_media_without_strict_filename(app):
     """Help gallery should render media files from section folder by sorted order."""
     from pathlib import Path
