@@ -49,6 +49,7 @@
 - Multi-batch scheduling and resource optimization: plan batches across time with equipment scheduling and conflict prevention.
 - Quality control integration: batch testing protocols, specification compliance, recall management, and certificate generation.
 - Cost tracking and trend analysis: historical ingredient pricing, profit margin monitoring, recipe cost trends, and batch profitability (actual vs planned).
+- Inventory-page restock/order flow for global-library imports: show a `Restock` action on imported items that reuses the last supplier and supports either BatchTrack-charged ordering (we purchase from supplier on the maker’s behalf) or direct redirect to the supplier’s checkout page for that item.
 - Advanced reporting dashboard: cost optimization reports, inventory turn analysis, production efficiency metrics, supplier performance, and site analytics service integration.
 - Maker-to-maker community platform: recipe sharing with ratings, ingredient marketplace, process documentation, collaboration tools, and maker profiles.
 - Batchley AI assistant: conversational interface for production workflows, multi-modal input (voice, camera, file imports), smart purchase management via OCR, recipe/ingredient creation by voice/text, and contextual recommendations.
