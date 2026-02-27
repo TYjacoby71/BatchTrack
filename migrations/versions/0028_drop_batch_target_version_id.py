@@ -22,7 +22,7 @@ from migrations.postgres_helpers import (
 )
 
 
-revision = "0028_drop_batch_target_version_id"
+revision = "0028_drop_batch_target_ver_id"
 down_revision = "0027_bot_trap_db_state"
 branch_labels = None
 depends_on = None

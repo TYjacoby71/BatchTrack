@@ -29,6 +29,7 @@ gunicorn
 psycopg2-binary
 beautifulsoup4
 requests
+httpx
 redis>=5.0.0
 flask-mail
 Flask-Session==0.6.0
