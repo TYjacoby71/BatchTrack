@@ -9,6 +9,7 @@ Glossary:
 """
 
 import logging
+import sys
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -400,7 +401,23 @@ class BillingService:
         if current_timeout is None:
             current_timeout = getattr(current_client, "timeout", None)
 
-        if current_timeout == desired_timeout or current_timeout == timeout_seconds:
+        # Prefer HTTPXClient when gevent is active to avoid RecursionError from
+        # gevent+requests+SSL (see e.g. gunicorn#1559, SO 52764313).
+        gevent_active = "gevent" in sys.modules
+        current_client_name = str(getattr(current_client, "name", "") or "").lower()
+        if gevent_active:
+            if current_client_name == "httpx" and (
+                current_timeout == desired_timeout or current_timeout == timeout_seconds
+            ):
+                return
+            try:
+                stripe.default_http_client = stripe.HTTPXClient(
+                    timeout=timeout_seconds, allow_sync_methods=True
+                )
+                return
+            except Exception:
+                pass
+        elif current_timeout == desired_timeout or current_timeout == timeout_seconds:
             return
 
         try:
@@ -410,7 +427,9 @@ class BillingService:
             pass
 
         try:
-            stripe.default_http_client = stripe.HTTPXClient(timeout=timeout_seconds)
+            stripe.default_http_client = stripe.HTTPXClient(
+                timeout=timeout_seconds, allow_sync_methods=True
+            )
         except Exception as exc:  # pragma: no cover - defensive fallback
             logger.debug("Unable to configure Stripe HTTP timeout client: %s", exc)
 
