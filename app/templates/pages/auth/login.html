@@ -71,7 +71,7 @@ Glossary:
 
                     <div class="text-center">
                         <p class="mb-2">
-                            <a href="{{ url_for('auth.signup', source=public_header_signup_source if public_header_signup_source is defined else 'login_start_free_trial') }}" class="btn btn-outline-success w-100">
+                            <a href="{{ url_for('core.signup_alias', source=public_header_signup_source if public_header_signup_source is defined else 'login_start_free_trial') }}" class="btn btn-outline-success w-100">
                                 Start Free Trial
                             </a>
                         </p>

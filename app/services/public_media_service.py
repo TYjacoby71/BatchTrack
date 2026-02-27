@@ -112,18 +112,6 @@ HOMEPAGE_INTEGRATION_TILE_CATALOG: tuple[Dict[str, str], ...] = (
         "folder": "images/homepage/integrations/quickbooks",
         "fallback_logo": "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/quickbooks.svg",
     },
-    {
-        "slug": "zapier",
-        "name": "Zapier",
-        "folder": "images/homepage/integrations/zapier",
-        "fallback_logo": "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/zapier.svg",
-    },
-    {
-        "slug": "slack",
-        "name": "Slack",
-        "folder": "images/homepage/integrations/slack",
-        "fallback_logo": "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/slack.svg",
-    },
 )
 
 HOMEPAGE_MEDIA_SLOTS: tuple[Tuple[str, str], ...] = (

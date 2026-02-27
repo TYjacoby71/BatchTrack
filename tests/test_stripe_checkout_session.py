@@ -1,3 +1,4 @@
+import sys
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -201,7 +202,7 @@ def test_resolve_lookup_variant_falls_back_to_related_product_price(app):
         with patch.object(
             LifetimePricingService,
             "_get_lookup_key_pricing",
-            side_effect=lambda lookup_key: (
+            side_effect=lambda lookup_key, **_kwargs: (
                 {"billing_cycle": "yearly"}
                 if lookup_key == "price_yearly_123"
                 else None
@@ -243,6 +244,7 @@ def test_ensure_stripe_applies_network_timeouts_and_retries(app, monkeypatch):
         app.config["STRIPE_HTTP_TIMEOUT_SECONDS"] = 7
         app.config["STRIPE_MAX_NETWORK_RETRIES"] = 0
 
+        monkeypatch.delitem(sys.modules, "gevent", raising=False)
         monkeypatch.setattr(
             "app.services.billing_service.stripe.default_http_client", None, raising=False
         )
@@ -258,6 +260,49 @@ def test_ensure_stripe_applies_network_timeouts_and_retries(app, monkeypatch):
         assert BillingService.ensure_stripe() is True
 
     assert configured["timeout"] == (3.0, 7.0)
+
+
+def test_ensure_stripe_prefers_httpx_when_gevent_is_loaded(app, monkeypatch):
+    configured = {}
+
+    class _DummyHTTPXClient:
+        name = "httpx"
+
+        def __init__(self, timeout, allow_sync_methods=False, **_kwargs):
+            configured["timeout"] = timeout
+            configured["allow_sync_methods"] = allow_sync_methods
+            self._timeout = timeout
+
+    def _unexpected_requests_client(*_args, **_kwargs):
+        raise AssertionError("RequestsClient should not be used when gevent is active")
+
+    with app.app_context():
+        app.config["STRIPE_SECRET_KEY"] = "sk_test_123"
+        app.config["STRIPE_HTTP_TIMEOUT_SECONDS"] = 7
+        app.config["STRIPE_MAX_NETWORK_RETRIES"] = 0
+
+        monkeypatch.setitem(sys.modules, "gevent", object())
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.default_http_client", None, raising=False
+        )
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.max_network_retries", 2, raising=False
+        )
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.HTTPXClient",
+            _DummyHTTPXClient,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "app.services.billing_service.stripe.RequestsClient",
+            _unexpected_requests_client,
+            raising=False,
+        )
+
+        assert BillingService.ensure_stripe() is True
+
+    assert configured["timeout"] == 7.0
+    assert configured["allow_sync_methods"] is True
 
 
 def test_signup_checkout_route_redirects_to_signup_without_session_creation(
@@ -283,7 +328,7 @@ def test_signup_checkout_route_redirects_to_signup_without_session_creation(
 
     assert response.status_code in {301, 302}
     location = response.headers.get("Location") or ""
-    assert location.startswith("/auth/signup")
+    assert location.startswith("/signup")
     assert "tier=3" in location
     assert "billing_mode=standard" in location
     assert "billing_cycle=monthly" in location

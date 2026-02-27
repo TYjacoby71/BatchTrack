@@ -45,7 +45,7 @@ def _build_signup_fallback_url(
         params["source"] = str(source)
     if referral_code:
         params["ref"] = str(referral_code)
-    return url_for("auth.signup", **params)
+    return url_for("core.signup_alias", **params)
 
 
 @auth_bp.route("/signup-data")

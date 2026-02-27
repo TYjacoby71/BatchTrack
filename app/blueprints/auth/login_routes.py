@@ -253,7 +253,7 @@ def login():
             flash("Login temporarily unavailable. Please try again.")
             return _render_login_page(503)
 
-        if login_identifier and login_identifier.startswith("loadtest_user"):
+        if login_identifier and login_identifier.startswith("[REDACTED]"):
             logger.info(
                 "Load test login attempt: %s, user_found=%s",
                 login_identifier,
@@ -284,7 +284,7 @@ def login():
 
         if user and password_ok:
             if not user.is_active:
-                if login_identifier and login_identifier.startswith("loadtest_user"):
+                if login_identifier and login_identifier.startswith("[REDACTED]"):
                     logger.warning("Load test user %s is inactive", login_identifier)
                 _log_loadtest_login_context(
                     "inactive_user", {"identifier": login_identifier}
@@ -419,7 +419,7 @@ def login():
             "invalid_credentials",
             {"identifier": login_identifier, "user_found": bool(user)},
         )
-        if login_identifier and login_identifier.startswith("loadtest_user"):
+        if login_identifier and login_identifier.startswith("[REDACTED]"):
             logger.warning(
                 "Load test login failed: invalid credentials for %s", login_identifier
             )
@@ -443,6 +443,15 @@ def _safe_next_path(value: str | None):
     if value.startswith("/") and not value.startswith("//"):
         return value
     return None
+
+
+def _normalize_signup_source(value: str | None, *, fallback: str = "quick_signup") -> str:
+    """Normalize quick-signup source tags for analytics-safe tracking."""
+    raw = (value or "").strip().lower()
+    if not raw:
+        return fallback
+    normalized = re.sub(r"[^a-z0-9._-]+", "_", raw).strip("._-")
+    return normalized or fallback
 
 
 # --- Generate username from email ---
@@ -492,6 +501,7 @@ def quick_signup():
         global_item_name: str,
         prefill_name: str,
         prefill_email: str,
+        signup_source: str,
     ):
         return render_template(
             "pages/auth/quick_signup.html",
@@ -500,6 +510,7 @@ def quick_signup():
             global_item_name=global_item_name,
             prefill_name=prefill_name,
             prefill_email=prefill_email,
+            signup_source=signup_source,
             **quick_signup_page_context,
         )
 
@@ -508,13 +519,19 @@ def quick_signup():
             "inventory.list_inventory"
         )
         global_item_id = (request.form.get("global_item_id") or "").strip()
+        signup_source = _normalize_signup_source(
+            request.form.get("source"),
+            fallback=(
+                "global_inventory_library_cta" if global_item_id else "quick_signup"
+            ),
+        )
 
         trap_value = (request.form.get("website") or "").strip()
         if trap_value:
             trap_email = (request.form.get("email") or "").strip().lower() or None
             PublicBotTrapService.record_hit(
                 request=request,
-                source="quick_signup",
+                source=signup_source,
                 reason="honeypot",
                 email=trap_email,
                 extra={"field": "website"},
@@ -545,6 +562,7 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                signup_source=signup_source,
             )
 
         if PublicBotTrapService.is_blocked(
@@ -553,7 +571,7 @@ def quick_signup():
         ):
             PublicBotTrapService.record_hit(
                 request=request,
-                source="quick_signup",
+                source=signup_source,
                 reason="blocked",
                 email=email,
                 extra={"flow": "quick_signup"},
@@ -569,6 +587,7 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                signup_source=signup_source,
             )
 
         existing_by_email = User.query.filter_by(email=email).first()
@@ -597,7 +616,7 @@ def quick_signup():
                 name=org_name,
                 contact_email=email,
                 is_active=True,
-                signup_source="global_library",
+                signup_source=signup_source,
                 subscription_status="active",
                 billing_status="active",
             )
@@ -652,16 +671,21 @@ def quick_signup():
                         exc,
                     )
 
-            AnalyticsTrackingService.track_signup_completed(
+            quick_signup_completion_properties = {
+                "signup_source": signup_source,
+                "signup_flow": "quick_signup",
+                "billing_provider": "none",
+                "tier_id": getattr(tier, "id", None),
+                "is_oauth_signup": False,
+                "purchase_completed": False,
+                "account_origin": "free_quick_signup",
+                **AnalyticsTrackingService.build_code_usage_properties(),
+            }
+            AnalyticsTrackingService.emit_quick_signup_completion_bundle(
                 organization_id=org.id,
                 user_id=user.id,
                 entity_id=org.id,
-                signup_source="global_library",
-                signup_flow="quick_signup",
-                billing_provider="none",
-                tier_id=getattr(tier, "id", None),
-                is_oauth_signup=False,
-                purchase_completed=False,
+                completion_properties=quick_signup_completion_properties,
             )
 
             login_user(user)
@@ -684,6 +708,7 @@ def quick_signup():
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
                 prefill_name=full_name,
                 prefill_email=email,
+                signup_source=signup_source,
             )
 
     next_url = _safe_next_path(request.args.get("next")) or url_for(
@@ -697,6 +722,10 @@ def quick_signup():
             global_item_name = getattr(gi, "name", "") if gi else ""
     except Exception:
         global_item_name = ""
+    signup_source = _normalize_signup_source(
+        request.args.get("source"),
+        fallback=("global_inventory_library_cta" if global_item_id else "quick_signup"),
+    )
 
     return _render_quick_signup_form(
         next_url=next_url,
@@ -704,6 +733,7 @@ def quick_signup():
         global_item_name=global_item_name,
         prefill_name="",
         prefill_email="",
+        signup_source=signup_source,
     )
 
 

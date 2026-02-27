@@ -21,7 +21,6 @@ from wtforms.validators import ValidationError
 
 from app.extensions import db
 from app.models import InventoryItem, Recipe
-from app.models.batch import Batch
 from app.models.product_category import ProductCategory
 from app.services.lineage_service import format_label_prefix, generate_variation_prefix
 from app.services.recipe_proportionality_service import RecipeProportionalityService
@@ -44,6 +43,7 @@ from app.utils.permissions import (
     has_permission,
     require_permission,
 )
+from app.utils.recipe_batch_counts import count_batches_for_recipe
 from app.utils.seo import slugify_value
 from app.utils.timezone_utils import TimezoneUtils
 
@@ -617,7 +617,10 @@ def edit_recipe(recipe_id):
         flash("Recipe not found.", "error")
         return redirect(url_for("recipes.list_recipes"))
 
-    existing_batches = Batch.scoped().filter_by(recipe_id=recipe.id).count()
+    existing_batches = count_batches_for_recipe(
+        recipe,
+        organization_id=getattr(current_user, "organization_id", None),
+    )
     force_edit = str(
         request.args.get("force") or request.form.get("force_edit") or ""
     ).lower() in {"1", "true", "yes"}

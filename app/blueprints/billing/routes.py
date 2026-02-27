@@ -380,7 +380,7 @@ def complete_signup_from_stripe():
     session_id = request.args.get("session_id")
     if not session_id:
         flash("Invalid checkout session", "error")
-        return redirect(url_for("auth.signup"))
+        return redirect(url_for("core.signup_alias"))
 
     logger.info("Completing signup for checkout session %s", session_id)
 
@@ -389,7 +389,7 @@ def complete_signup_from_stripe():
     except Exception as exc:
         logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
         flash("Account setup failed. Please contact support.", "error")
-        return redirect(url_for("auth.signup"))
+        return redirect(url_for("core.signup_alias"))
 
     organization = None
     owner_user = None
@@ -401,6 +401,50 @@ def complete_signup_from_stripe():
             "Payment confirmed! Please check your inbox for setup instructions.", "info"
         )
         return redirect(url_for("auth.login"))
+
+    ga4_conversion_payload = {
+        "transaction_id": str(session_id),
+        "currency": "USD",
+        "value": None,
+        "coupon": (
+            str(getattr(organization, "promo_code", "")).strip() or None
+            if organization
+            else None
+        ),
+        "tier_id": (
+            str(getattr(organization, "subscription_tier_id", "")).strip() or None
+            if organization
+            else None
+        ),
+        "tier_name": (
+            str(getattr(getattr(organization, "subscription_tier_obj", None), "name", "")).strip()
+            or None
+            if organization
+            else None
+        ),
+    }
+    try:
+        checkout_session = BillingService.get_checkout_session(session_id)
+        if checkout_session is not None:
+            amount_total = getattr(checkout_session, "amount_total", None)
+            if amount_total not in (None, ""):
+                ga4_conversion_payload["value"] = round(float(amount_total) / 100.0, 2)
+            currency_code = str(
+                getattr(checkout_session, "currency", "") or ""
+            ).strip()
+            if currency_code:
+                ga4_conversion_payload["currency"] = currency_code.upper()
+            metadata = getattr(checkout_session, "metadata", {}) or {}
+            if isinstance(metadata, dict):
+                coupon_code = str(metadata.get("promo_code") or "").strip()
+                if coupon_code:
+                    ga4_conversion_payload["coupon"] = coupon_code
+    except Exception as exc:
+        logger.warning(
+            "Unable to enrich GA4 conversion payload for session %s: %s",
+            session_id,
+            exc,
+        )
 
     login_user(owner_user)
     SessionService.rotate_user_session(owner_user)
@@ -419,6 +463,7 @@ def complete_signup_from_stripe():
     )
 
     session["onboarding_welcome"] = True
+    session["ga4_checkout_conversion"] = ga4_conversion_payload
     if owner_user.email and not owner_user.email_verified:
         flash(
             "Please verify your email while you complete account setup.",

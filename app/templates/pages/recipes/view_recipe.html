@@ -217,16 +217,18 @@
           <li>Make a test version of this recipe to try something new.</li>
           <li>Make a variation of this current master recipe to add a new flavor or scent (for example: <strong>{{ base_master_name }} - Lavender</strong>).</li>
         </ol>
-        <p class="mb-0">
-          If neither of those are what you want, only edit details you forgot or missed,
-          like instructions, quantities, missing ingredients, or batch configuration. Changes will be recorded
-          in the recipe notes with a timestamp.
-        </p>
+        <p class="mb-2">Override edits are best for corrections and operational updates, such as:</p>
+        <ul class="mb-3">
+          <li>Fixing instructions, quantities, or missing ingredient rows.</li>
+          <li>Adding newly available <strong>allowed containers</strong> to an existing master recipe.</li>
+          <li>Correcting metadata or batch configuration details.</li>
+        </ul>
+        <p class="mb-0">Changes will be recorded in the recipe notes with a timestamp.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id, force='1') }}" class="btn btn-warning">
-          Proceed to Edit
+          Continue to Edit Recipe
         </a>
       </div>
     </div>
@@ -579,7 +581,7 @@
           </a>
           {% elif force_edit_allowed %}
           <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUnlockModal">
-            <i class="fas fa-edit"></i> Edit Recipe
+            <i class="fas fa-edit"></i> Edit Published Recipe
           </button>
           {% else %}
           <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}"

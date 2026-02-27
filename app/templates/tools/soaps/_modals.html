@@ -9,7 +9,7 @@
         You are almost at the free calculation limit. Create a free account to save recipes and keep calculating.
       </div>
       <div class="modal-footer">
-        <a class="btn btn-primary" href="{{ url_for('auth.quick_signup') }}">Create free account</a>
+        <a class="btn btn-primary" href="{{ url_for('auth.quick_signup', source='soap_making_cta') }}">Create free account</a>
         <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Sign in</a>
       </div>
     </div>
