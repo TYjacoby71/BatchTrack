@@ -814,7 +814,7 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
             if (
                 candidate.is_file()
                 and not candidate.name.startswith(".")
-                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+                and candidate.suffix.lower() in (_SUPPORTED_MEDIA_EXTENSIONS | {".url"})
             ):
                 backup = hero_folder / f"{candidate.name}.bak-test"
                 candidate.rename(backup)
