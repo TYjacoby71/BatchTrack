@@ -57,6 +57,6 @@ All recipe routes require login plus `reports.export` permission.
 
 ## Relevance Check (2026-02-17)
 Validated against:
-- `app/routes/exports_routes.py`
+- `app/blueprints/exports/routes.py`
 - `app/services/exports.py`
 - `app/route_access.py` (public `/exports/tool` access)

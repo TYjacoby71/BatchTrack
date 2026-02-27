@@ -142,7 +142,7 @@ def auto_fill_containers(recipe_id):
         data = request.get_json()
         scale = data.get("scale", 1.0)
 
-        recipe = Recipe.query.get_or_404(recipe_id)
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first_or_404()
         if recipe.is_archived:
             return (
                 jsonify(
@@ -222,13 +222,13 @@ def debug_recipe_containers(recipe_id):
             )
 
         # Get all available containers in org
-        container_category = IngredientCategory.query.filter_by(
+        container_category = IngredientCategory.scoped().filter_by(
             name="Container", organization_id=current_user.organization_id
         ).first()
 
         all_containers = []
         if container_category:
-            containers = InventoryItem.query.filter_by(
+            containers = InventoryItem.scoped().filter_by(
                 organization_id=current_user.organization_id,
                 category_id=container_category.id,
             ).all()
@@ -284,7 +284,7 @@ def plan_container_route(recipe_id):
                 400,
             )
 
-        recipe = Recipe.query.get_or_404(recipe_id)
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first_or_404()
         if recipe.is_archived:
             return (
                 jsonify(

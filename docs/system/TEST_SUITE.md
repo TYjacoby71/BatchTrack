@@ -1,6 +1,10 @@
 # Test Suite Overview
 
-Quick reference for what each automated test module exercises.
+## Synopsis
+Quick reference for what each automated test module exercises. Run tests with `make test` or `python -m pytest tests/ -v`.
+
+## Glossary
+- **Test module**: A single `tests/*.py` file exercising one domain or feature area.
 
 | Test File | Purpose |
 | --- | --- |

@@ -47,7 +47,7 @@ def container_unit_mismatch_modal():
     if not recipe_id:
         return jsonify({"success": False, "error": "Recipe ID required"}), 400
 
-    recipe = Recipe.query.filter_by(
+    recipe = Recipe.scoped().filter_by(
         id=recipe_id,
         organization_id=current_user.organization_id,
     ).first()
@@ -60,7 +60,7 @@ def container_unit_mismatch_modal():
     container_items = []
     allowed_ids = getattr(recipe, "allowed_containers", []) or []
     if allowed_ids:
-        containers = InventoryItem.query.filter(
+        containers = InventoryItem.scoped().filter(
             InventoryItem.id.in_(allowed_ids),
             InventoryItem.organization_id == current_user.organization_id,
         ).all()
@@ -96,7 +96,7 @@ def container_unit_mismatch_modal():
 @require_permission("recipes.plan_production")
 def container_unit_mismatch_update_yield(recipe_id):
     """Quickly update a recipe's predicted yield and unit from the drawer."""
-    recipe = Recipe.query.filter_by(
+    recipe = Recipe.scoped().filter_by(
         id=recipe_id,
         organization_id=current_user.organization_id,
     ).first()

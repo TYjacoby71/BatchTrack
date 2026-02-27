@@ -96,7 +96,7 @@ def dashboard():
 
         # Get active batch with explicit error catching.
         try:
-            batch_query = Batch.query.filter_by(status="in_progress")
+            batch_query = Batch.scoped().filter_by(status="in_progress")
             if current_user.organization_id:
                 batch_query = batch_query.filter_by(
                     organization_id=current_user.organization_id

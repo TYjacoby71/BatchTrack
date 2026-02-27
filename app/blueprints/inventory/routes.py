@@ -538,7 +538,7 @@ def list_inventory():
         pass
 
     units = Unit.scoped().filter(Unit.is_active).all()
-    categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    categories = IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
     org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
@@ -683,7 +683,7 @@ def view_inventory(id):
         from app.services.quantity_base import from_base_quantity
 
         # Only check InventoryLot for expired quantities
-        expired_lots_for_calc = InventoryLot.query.filter(
+        expired_lots_for_calc = InventoryLot.scoped().filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
                 InventoryLot.remaining_quantity_base > 0,
@@ -726,7 +726,7 @@ def view_inventory(id):
     if not hasattr(item, "temp_available_quantity"):
         item.temp_available_quantity = float(item.quantity)
 
-    history_query = UnifiedInventoryHistory.query.filter_by(
+    history_query = UnifiedInventoryHistory.scoped().filter_by(
         inventory_item_id=id
     ).options(
         joinedload(UnifiedInventoryHistory.batch),
@@ -742,7 +742,7 @@ def view_inventory(id):
     # When FIFO toggle is ON, show ALL lots (including depleted ones).
     # When FIFO toggle is OFF, show only active lots.
     # In tracked mode, hide infinite-anchor rows from the default lot table.
-    lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+    lots_query = InventoryLot.scoped().filter_by(inventory_item_id=id)
     if item.is_tracked:
         lots_query = lots_query.filter(
             InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE
@@ -771,7 +771,7 @@ def view_inventory(id):
 
         # Only check InventoryLot for expired entries
         expired_entries = (
-            InventoryLot.query.filter(
+            InventoryLot.scoped().filter(
                 and_(
                     InventoryLot.inventory_item_id == id,
                     InventoryLot.remaining_quantity_base > 0,
@@ -802,7 +802,7 @@ def view_inventory(id):
         expired_total=expired_total,
         units=get_global_unit_list(),
         get_global_unit_list=get_global_unit_list,
-        get_ingredient_categories=IngredientCategory.query.order_by(
+        get_ingredient_categories=IngredientCategory.scoped().order_by(
             IngredientCategory.name
         ).all,
         User=User,
@@ -1215,7 +1215,7 @@ def edit_inventory(id):
 @login_required
 @permission_required("inventory.delete")
 def archive_inventory(id):
-    item = InventoryItem.query.get_or_404(id)
+    item = InventoryItem.scoped().filter_by(id=id).first_or_404()
     try:
         item.is_archived = True
         db.session.commit()
@@ -1234,7 +1234,7 @@ def archive_inventory(id):
 @login_required
 @permission_required("inventory.edit")
 def restore_inventory(id):
-    item = InventoryItem.query.get_or_404(id)
+    item = InventoryItem.scoped().filter_by(id=id).first_or_404()
     try:
         item.is_archived = False
         db.session.commit()
@@ -1255,7 +1255,7 @@ def restore_inventory(id):
 def debug_inventory(id):
     """Debug endpoint to check inventory status"""
     try:
-        item = InventoryItem.query.get_or_404(id)
+        item = InventoryItem.scoped().filter_by(id=id).first_or_404()
 
         # Check FIFO sync
         from app.services.inventory_adjustment import validate_inventory_fifo_sync
@@ -1272,7 +1272,7 @@ def debug_inventory(id):
             "fifo_error": error_msg,
             "inventory_qty": inv_qty,
             "fifo_total": fifo_total,
-            "history_count": UnifiedInventoryHistory.query.filter_by(
+            "history_count": UnifiedInventoryHistory.scoped().filter_by(
                 inventory_item_id=id
             ).count(),
         }

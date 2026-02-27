@@ -345,7 +345,7 @@ def invite_user():
             )
 
         # Validate role exists and is not developer role
-        role = Role.query.filter_by(id=role_id).first()
+        role = Role.scoped().filter_by(id=role_id).first()
         if not role:
             return jsonify({"success": False, "error": "Invalid role selected"})
 
@@ -661,7 +661,7 @@ def update_user(user_id):
             user.phone = data["phone"]
         if "role_id" in data:
             # Validate role exists and is not developer role
-            role = Role.query.filter_by(id=data["role_id"]).first()
+            role = Role.scoped().filter_by(id=data["role_id"]).first()
             if role and role.name not in ["developer", "organization_owner"]:
                 user.role_id = data["role_id"]
 
@@ -680,7 +680,7 @@ def update_user(user_id):
 
                 from app.models.role import Role
 
-                org_owner_role = Role.query.filter_by(
+                org_owner_role = Role.scoped().filter_by(
                     name="organization_owner", is_system_role=True
                 ).first()
 
@@ -704,7 +704,7 @@ def update_user(user_id):
                 # Remove the organization owner role
                 from app.models.role import Role
 
-                org_owner_role = Role.query.filter_by(
+                org_owner_role = Role.scoped().filter_by(
                     name="organization_owner", is_system_role=True
                 ).first()
                 if org_owner_role:

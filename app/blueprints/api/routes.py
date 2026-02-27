@@ -239,7 +239,7 @@ def get_inventory_item(item_id):
     """Get inventory item details for editing"""
     from ...models import InventoryItem
 
-    item = InventoryItem.query.filter_by(
+    item = InventoryItem.scoped().filter_by(
         id=item_id, organization_id=current_user.organization_id
     ).first_or_404()
 
@@ -496,7 +496,7 @@ def get_ingredients():
             if cached is not None:
                 return jsonify(cached)
 
-        query = InventoryItem.query.filter_by(type="ingredient")
+        query = InventoryItem.scoped().filter_by(type="ingredient")
         if current_user.organization_id:
             query = query.filter_by(organization_id=current_user.organization_id)
 
@@ -550,7 +550,7 @@ def bootstrap_recipes():
             )
 
     masters = (
-        Recipe.query.options(
+        Recipe.scoped().options(
             load_only(
                 Recipe.id,
                 Recipe.name,
@@ -570,7 +570,7 @@ def bootstrap_recipes():
         .order_by(Recipe.name.asc())
     )
 
-    variations_query = Recipe.query.options(
+    variations_query = Recipe.scoped().options(
         load_only(
             Recipe.id,
             Recipe.name,
@@ -655,7 +655,7 @@ def bootstrap_products():
             return jsonify({**cached, "cache": "hit", "version": 1})
 
     products = (
-        Product.query.options(load_only(Product.id, Product.name))
+        Product.scoped().options(load_only(Product.id, Product.name))
         .filter(
             Product.organization_id == org_id,
             Product.is_active.is_(True),
@@ -666,7 +666,7 @@ def bootstrap_products():
     )
 
     sku_rows = (
-        ProductSKU.query.options(load_only(ProductSKU.inventory_item_id))
+        ProductSKU.scoped().options(load_only(ProductSKU.inventory_item_id))
         .filter(
             ProductSKU.organization_id == org_id,
             ProductSKU.is_active.is_(True),

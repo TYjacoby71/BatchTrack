@@ -48,7 +48,7 @@ def adjust_sku_inventory(inventory_item_id):
     logger.info(f"Request is JSON: {request.is_json}")
 
     # The sku_id parameter IS the inventory_item_id (primary key of ProductSKU)
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         inventory_item_id=inventory_item_id,
         organization_id=current_user.organization_id,
     ).first()
@@ -267,7 +267,7 @@ def get_sku_fifo_status(sku_id):
     logger.info("=== FIFO STATUS REQUEST ===")
     logger.info(f"SKU ID: {sku_id}")
 
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         inventory_item_id=sku_id, organization_id=current_user.organization_id
     ).first()
 
@@ -285,7 +285,7 @@ def get_sku_fifo_status(sku_id):
     inventory_item_id = sku.inventory_item_id
 
     fresh_lots = (
-        InventoryLot.query.filter(
+        InventoryLot.scoped().filter(
             InventoryLot.inventory_item_id == inventory_item_id,
             InventoryLot.organization_id == current_user.organization_id,
             InventoryLot.remaining_quantity_base > 0,
@@ -299,7 +299,7 @@ def get_sku_fifo_status(sku_id):
     )
 
     expired_lots = (
-        InventoryLot.query.filter(
+        InventoryLot.scoped().filter(
             InventoryLot.inventory_item_id == inventory_item_id,
             InventoryLot.organization_id == current_user.organization_id,
             InventoryLot.remaining_quantity_base > 0,
@@ -361,7 +361,7 @@ def get_sku_fifo_status(sku_id):
 @require_permission("inventory.adjust")
 def dispose_expired_sku(sku_id):
     """Dispose of expired SKU inventory using unified inventory system"""
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         inventory_item_id=sku_id, organization_id=current_user.organization_id
     ).first()
 
@@ -377,7 +377,7 @@ def dispose_expired_sku(sku_id):
 
     from ...models.inventory_lot import InventoryLot
 
-    expired_lots = InventoryLot.query.filter(
+    expired_lots = InventoryLot.scoped().filter(
         InventoryLot.inventory_item_id == inventory_item_id,
         InventoryLot.organization_id == current_user.organization_id,
         InventoryLot.remaining_quantity_base > 0,
@@ -434,7 +434,7 @@ def process_sale_webhook():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find SKU by code with organization scoping
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         sku_code=data["sku_code"],
         organization_id=current_user.organization_id,
         is_active=True,
@@ -490,7 +490,7 @@ def process_return_webhook():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find SKU by code with organization scoping
-    sku = ProductSKU.query.filter_by(
+    sku = ProductSKU.scoped().filter_by(
         sku_code=data["sku_code"],
         organization_id=current_user.organization_id,
         is_active=True,
@@ -624,7 +624,7 @@ def add_inventory_from_batch():
     try:
         # Get product name from ID if provided - with org scoping
         if product_id:
-            base_sku = ProductSKU.query.filter_by(
+            base_sku = ProductSKU.scoped().filter_by(
                 id=product_id, organization_id=current_user.organization_id
             ).first()
             if not base_sku:

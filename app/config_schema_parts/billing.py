@@ -52,6 +52,15 @@ FIELDS = [
         "description": "Billing status cache TTL in seconds.",
         "recommended": "120",
     },
+    {
+        "key": "SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK",
+        "cast": "bool",
+        "default": True,
+        "description": (
+            "Allow public signup surfaces to call Stripe for live price displays."
+        ),
+        "recommended": "true",
+    },
 ]
 
 # --- Billing section ---

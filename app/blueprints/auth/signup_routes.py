@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from flask import flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user
 
 from ...extensions import limiter
@@ -48,19 +57,27 @@ def _build_signup_fallback_url(
     return url_for("core.signup_alias", **params)
 
 
+def _public_signup_allow_live_pricing_network() -> bool:
+    """Return whether public signup reads can fetch live Stripe prices."""
+    return bool(
+        current_app.config.get("SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK", True)
+    )
+
+
 @auth_bp.route("/signup-data")
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
+    allow_live_pricing_network = _public_signup_allow_live_pricing_network()
     db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
     available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
         db_tiers,
-        include_live_pricing=False,
-        allow_live_pricing_network=False,
+        include_live_pricing=True,
+        allow_live_pricing_network=allow_live_pricing_network,
     )
     lifetime_offers = LifetimePricingService.build_lifetime_offers(
         db_tiers,
-        include_live_pricing=False,
-        allow_live_pricing_network=False,
+        include_live_pricing=True,
+        allow_live_pricing_network=allow_live_pricing_network,
     )
     oauth_providers = OAuthService.get_enabled_providers()
 
@@ -114,10 +131,11 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
 
+    allow_live_pricing_network = _public_signup_allow_live_pricing_network()
     signup_context = SignupCheckoutService.build_request_context(
         request=request,
         oauth_user_info=session.get("oauth_user_info"),
-        allow_live_pricing_network=request.method == "POST",
+        allow_live_pricing_network=allow_live_pricing_network,
     )
 
     if request.method == "POST":

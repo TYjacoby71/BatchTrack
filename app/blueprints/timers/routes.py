@@ -19,7 +19,7 @@ def list_timers():
     active_timers = TimerService.get_active_timers()
 
     # Get active batches for the dropdown
-    query = Batch.query.filter_by(status="in_progress")
+    query = Batch.scoped().filter_by(status="in_progress")
     if current_user and current_user.is_authenticated and current_user.organization_id:
         query = query.filter(Batch.organization_id == current_user.organization_id)
     active_batches = query.all()
@@ -141,7 +141,7 @@ def delete_timer(timer_id):
     try:
         from ...models import BatchTimer
 
-        timer = BatchTimer.query.get_or_404(timer_id)
+        timer = BatchTimer.scoped().filter_by(id=timer_id).first_or_404()
 
         # Check organization access
         if (
@@ -257,7 +257,7 @@ def cancel_timer(timer_id):
     try:
         from ...models import BatchTimer
 
-        timer = BatchTimer.query.get_or_404(timer_id)
+        timer = BatchTimer.scoped().filter_by(id=timer_id).first_or_404()
 
         # Check organization access
         if (

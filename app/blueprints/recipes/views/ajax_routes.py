@@ -88,7 +88,7 @@ def quick_add_ingredient():
         if not name:
             return jsonify({"error": "Ingredient name is required"}), 400
 
-        existing = InventoryItem.query.filter_by(
+        existing = InventoryItem.scoped().filter_by(
             name=name,
             organization_id=current_user.organization_id,
         ).first()

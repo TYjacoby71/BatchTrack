@@ -42,11 +42,24 @@
 - Add a quarterly duplicate-name and duplicate-intent audit to catch drift early and keep test naming/intent unique across files.
 
 ## Future Features & Growth
-- Ship the multi-step retention/cancellation experience end-to-end: redirect from billing to a retention landing page (video/value props/testimonials), present four objection-specific paths (discount/downgrade, ROI/training, pause/reactivation reminders, migration help), gate final cancellation behind warnings + alternate actions, capture exit survey responses, and persist all analytics (intent events, offers shown/accepted, time-on-step). Ensure FTC-compliant easy cancellation, data export options, follow-up win-back emails, and phased rollout (A/B test → optimization → 100% launch) backed by RetentionFlow/Offer/AccountPause/ChurnAnalytics services and dedicated frontend components.
-- Finish custom unit mapping experience: fully functional `CustomUnitMapping` flows with user attribution, density prompts for cross-type conversions, recipe editor enforcement against unmapped units, mapping-form training content/video guidance, clearer messaging, and status badges inside Unit Manager so users know which units are unmapped or pending density.
+- Ship the multi-step retention/cancellation experience end-to-end: retention landing page, objection-specific paths, exit survey, analytics, FTC-compliant cancellation, win-back emails, and phased rollout.
+- Finish custom unit mapping experience: `CustomUnitMapping` flows with user attribution, density prompts, recipe editor enforcement, training content, and status badges in Unit Manager.
+- Batch augmentation system: split base yield into scented/colored variations pre-finish, with percentage allocation, automatic sub-labels (101A-Lavender, 101B-Rose), added-ingredient tracking, and container redistribution.
+- Multi-batch scheduling and resource optimization: plan batches across time with equipment scheduling and conflict prevention.
+- Quality control integration: batch testing protocols, specification compliance, recall management, and certificate generation.
+- Cost tracking and trend analysis: historical ingredient pricing, profit margin monitoring, recipe cost trends, and batch profitability (actual vs planned).
+- Advanced reporting dashboard: cost optimization reports, inventory turn analysis, production efficiency metrics, supplier performance, and site analytics service integration.
+- Maker-to-maker community platform: recipe sharing with ratings, ingredient marketplace, process documentation, collaboration tools, and maker profiles.
+- Batchley AI assistant: conversational interface for production workflows, multi-modal input (voice, camera, file imports), smart purchase management via OCR, recipe/ingredient creation by voice/text, and contextual recommendations.
+- API platform development: GraphQL API, webhook system for customers, auto-generated OpenAPI docs, and SDK generation.
 
 ## Long-Term / Strategic Initiatives
 - Author and execute the inventory data migration plan (backups, rollback, verification scripts) before moving legacy data into the FIFO system.
 - Expand retention program analytics post-launch: retention KPIs, objection performance, offer optimization, predictive churn modeling, and automated win-back sequences.
 - Future unit-mapping roadmap items: mapping templates, AI-assisted suggestions, and shared community mapping libraries for common custom units.
 - Complete static asset pipeline hardening: JS bundling + hashed manifest resolution is now in place for template-referenced entrypoints with legacy `app/static/js/**/*.min.js` removed. Remaining work is CSS bundling, CI enforcement (`npm ci && npm run build:assets`), and immutable cache-header rollout.
+- Multi-region support: geographic distribution, local compliance, multi-currency, and language localization.
+- Enterprise features: event sourcing, CQRS, service mesh, and enhanced multi-tenant isolation.
+- Integration ecosystem: ERP (QuickBooks, Xero), e-commerce (Shopify, WooCommerce), shipping (FedEx, UPS), and compliance tools.
+- Mobile and IoT: production floor app, barcode/QR scanning, mobile timers, smart scales, temperature monitoring, and environmental sensors.
+- UI customization and accessibility: custom color schemes per org, high contrast mode, compact/spacious layouts, WCAG 2.1 AA compliance, screen reader optimization, keyboard navigation, and font size controls.

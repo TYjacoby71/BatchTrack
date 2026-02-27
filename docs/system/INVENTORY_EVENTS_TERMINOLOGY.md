@@ -37,7 +37,7 @@ Change Types and prefixes:
 - returned: RTN-
 - refunded: REF-
 - cost_override: CST-
-- fallback: TXN-
+- fallback: EVT-
 
 Known inconsistencies to avoid:
 - “FIFO event” is legacy; use “Inventory event”.

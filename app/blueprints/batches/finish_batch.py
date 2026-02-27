@@ -135,7 +135,7 @@ def _complete_batch_internal(batch_id, form_data):
     try:
         # Get the batch with conditional organization scoping
         org_id = getattr(current_user, "organization_id", None)
-        query = Batch.query.filter_by(id=batch_id, status="in_progress")
+        query = Batch.scoped().filter_by(id=batch_id, status="in_progress")
         if org_id:
             query = query.filter_by(organization_id=org_id)
         batch = query.first()
@@ -180,7 +180,7 @@ def _complete_batch_internal(batch_id, form_data):
                     getattr(current_user, "organization_id", None)
                     or batch.organization_id
                 )
-                existing_skus_query = ProductSKU.query.join(
+                existing_skus_query = ProductSKU.scoped().join(
                     ProductSKU.inventory_item
                 ).filter(
                     ProductSKU.product_id == product_id,
@@ -333,7 +333,7 @@ def _create_intermediate_ingredient(
         # Create or get inventory item for the intermediate ingredient
         ingredient_name = f"{batch.recipe.name} (Intermediate)"
 
-        inventory_item = InventoryItem.query.filter_by(
+        inventory_item = InventoryItem.scoped().filter_by(
             name=ingredient_name,
             organization_id=(
                 getattr(current_user, "organization_id", None) or batch.organization_id
@@ -410,14 +410,14 @@ def _create_product_output(
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
         # Get product and variant with proper organization scoping
-        product = Product.query.filter_by(
+        product = Product.scoped().filter_by(
             id=product_id,
             organization_id=(
                 getattr(current_user, "organization_id", None) or batch.organization_id
             ),
         ).first()
 
-        variant = ProductVariant.query.filter_by(
+        variant = ProductVariant.scoped().filter_by(
             id=variant_id,
             product_id=product_id,
             organization_id=(
@@ -426,9 +426,9 @@ def _create_product_output(
         ).first()
 
         if not product:
-            product = Product.query.filter_by(id=product_id).first()
+            product = Product.scoped().filter_by(id=product_id).first()
         if not variant:
-            variant = ProductVariant.query.filter_by(
+            variant = ProductVariant.scoped().filter_by(
                 id=variant_id, product_id=product_id
             ).first()
 
@@ -517,7 +517,7 @@ def _create_product_output(
                 from ...models import InventoryItem
                 from ...models.product import ProductSKU
 
-                sku = ProductSKU.query.filter_by(
+                sku = ProductSKU.scoped().filter_by(
                     product_id=product.id, variant_id=variant.id, size_label=size_label
                 ).first()
 
@@ -606,7 +606,7 @@ def _create_product_output(
                     )
 
                 portion_lot = (
-                    InventoryLot.query.filter_by(
+                    InventoryLot.scoped().filter_by(
                         inventory_item_id=sku.inventory_item_id, batch_id=batch.id
                     )
                     .order_by(InventoryLot.created_at.desc())
@@ -705,7 +705,7 @@ def _process_container_allocations(
         if final_quantity > 0:
             try:
                 # Get container with simple query
-                container_item = InventoryItem.query.filter_by(
+                container_item = InventoryItem.scoped().filter_by(
                     id=int(container_id),
                     organization_id=(
                         getattr(current_user, "organization_id", None)
@@ -906,7 +906,7 @@ def _create_container_sku(
         )
 
         new_lot = (
-            InventoryLot.query.filter_by(
+            InventoryLot.scoped().filter_by(
                 inventory_item_id=product_sku.inventory_item_id, batch_id=batch.id
             )
             .order_by(InventoryLot.created_at.desc())
@@ -976,7 +976,7 @@ def _create_bulk_sku(
             f"Created/updated {bulk_size_label} SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}"
         )
         bulk_lot = (
-            InventoryLot.query.filter_by(
+            InventoryLot.scoped().filter_by(
                 inventory_item_id=bulk_sku.inventory_item_id, batch_id=batch.id
             )
             .order_by(InventoryLot.created_at.desc())

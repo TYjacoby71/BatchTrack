@@ -18,7 +18,7 @@ from app.services.lineage_service import generate_variation_prefix
 def create_variation_template(parent: Recipe) -> Recipe:
     variation_prefix = ""
     if parent.label_prefix:
-        existing_variations = Recipe.query.filter(
+        existing_variations = Recipe.scoped().filter(
             Recipe.parent_recipe_id == parent.id,
             Recipe.test_sequence.is_(None),
         ).count()
