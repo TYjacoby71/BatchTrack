@@ -208,13 +208,13 @@ Made a code change?
 - [ ] 2) **Scoping and Security** — org scoping, permission checks, and timezone handling are correct.
 - [ ] 3) **Service and Domain Correctness** — update scripts considered and multi-tenant behavior tested when relevant.
 - [ ] 4) **User Impact** — metadata and user-visible behavior/risk notes are updated.
-- [ ] 5) **Validation** — during iterative editing, do not run pytest/pip install/docs-guard unless explicitly requested and avoid repeated repo-wide loops; at finalization run one validation pass: tests once (as appropriate), docs guard once (`python3 scripts/validate_pr_documentation.py --staged`), and only use `--full-link-check` when dictionary links/paths changed.
+- [ ] 5) **Validation** — during iterative editing, do not run pytest/pip install/docs-guard unless explicitly requested and avoid repeated repo-wide loops; only when user explicitly says `finalize PR` run one validation pass: tests once (as appropriate), docs guard once (`python3 scripts/validate_pr_documentation.py --staged`), and only use `--full-link-check` when dictionary links/paths changed.
 - [ ] 6) **Documentation and Knowledge Integrity** — system docs + follow APP_DICTIONARY head instruction block for Synopsis/Glossary and app Python terms/locations + one-entry rule.
 - [ ] 7) **PR Narrative and Readiness** — description/type/changes complete with rollout/rollback note, plus reviewer evidence.
 
 ### AI Shortcut Phrase
 Use this exact delegation phrase:
-`Implement feature work first. Do not run pytest, pip install, or docs guard during implementation unless explicitly requested. When I say "finalize", run one finalization pass only: update APP_DICTIONARY/glossary requirements for changed scope, run tests once, then run docs guard once (prefer --staged). Do not repeat full validations unless new commits change validated files.`
+`Implement feature work first. Default to implementation-only mode: no new tests, no pytest, and no docs guard unless explicitly requested. Only when I say "finalize PR" should you run one finalization pass: run targeted tests once, run docs guard once (prefer --staged), then commit/push once.`
 
 ## Enforcement (Automated Guard)
 

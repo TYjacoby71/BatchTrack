@@ -44,7 +44,8 @@ This guide captures the current engineering workflow and guardrails for changing
    - Templates/static: presentation only.
 
 3. **Validate behavior**
-   - Add/update tests where behavior changes.
+   - Do not add new tests by default during implementation.
+   - Add/update tests only when explicitly requested by the user or when user asks to finalize with regression coverage.
    - Verify tenant isolation and permission outcomes.
    - Verify edge cases for batch/inventory/state transitions.
 
@@ -57,6 +58,7 @@ This guide captures the current engineering workflow and guardrails for changing
 5. **Run validation tooling**
    - During iterative editing, do not run pytest/pip installs/docs guard unless explicitly requested.
    - During iterative editing, avoid repeated repo-wide validation loops and only run targeted debug checks when explicitly requested.
+   - Enter finalization only when the user explicitly says `finalize PR` (or equivalent).
    - At finalization, run **one** validation pass for the change set:
      1. Stage changes.
      2. Run docs guard once on staged scope: `python3 scripts/validate_pr_documentation.py --staged`
