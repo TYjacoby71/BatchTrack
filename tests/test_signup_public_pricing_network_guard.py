@@ -30,7 +30,7 @@ def _add_public_stripe_tier(app, *, name_prefix: str) -> str:
 
 @pytest.mark.usefixtures("app")
 def test_signup_page_uses_cache_only_pricing_reads(app, monkeypatch):
-    """GET /auth/signup should never enable network Stripe fetches."""
+    """GET /auth/signup can be forced into cache-only pricing reads."""
     _add_public_stripe_tier(app, name_prefix="Signup Guard Tier")
     observed_network_flags: list[bool] = []
 
@@ -43,6 +43,7 @@ def test_signup_page_uses_cache_only_pricing_reads(app, monkeypatch):
         "get_live_pricing_for_lookup_key",
         staticmethod(_fake_live_pricing_lookup),
     )
+    app.config["SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK"] = False
 
     client = app.test_client()
     response = client.get("/auth/signup")
@@ -57,7 +58,7 @@ def test_signup_page_uses_cache_only_pricing_reads(app, monkeypatch):
 
 @pytest.mark.usefixtures("app")
 def test_signup_data_endpoint_uses_cache_only_pricing_reads(app, monkeypatch):
-    """GET /auth/signup-data should avoid live Stripe network calls."""
+    """GET /auth/signup-data can be forced to avoid live Stripe network calls."""
     tier_name = _add_public_stripe_tier(app, name_prefix="Signup Data Guard Tier")
     observed_network_flags: list[bool] = []
 
@@ -70,6 +71,7 @@ def test_signup_data_endpoint_uses_cache_only_pricing_reads(app, monkeypatch):
         "get_live_pricing_for_lookup_key",
         staticmethod(_fake_live_pricing_lookup),
     )
+    app.config["SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK"] = False
 
     client = app.test_client()
     response = client.get("/auth/signup-data")
@@ -92,3 +94,29 @@ def test_signup_data_endpoint_uses_cache_only_pricing_reads(app, monkeypatch):
     assert all(
         flag is False for flag in observed_network_flags
     ), "Signup-data must remain cache-only for pricing reads"
+
+
+@pytest.mark.usefixtures("app")
+def test_signup_page_uses_live_network_pricing_reads_when_enabled(app, monkeypatch):
+    """GET /auth/signup should permit live Stripe pricing by default."""
+    _add_public_stripe_tier(app, name_prefix="Signup Live Tier")
+    observed_network_flags: list[bool] = []
+
+    def _fake_live_pricing_lookup(lookup_key, *, allow_network=True):
+        observed_network_flags.append(bool(allow_network))
+        return None
+
+    monkeypatch.setattr(
+        BillingService,
+        "get_live_pricing_for_lookup_key",
+        staticmethod(_fake_live_pricing_lookup),
+    )
+    app.config["SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK"] = True
+
+    client = app.test_client()
+    response = client.get("/auth/signup")
+    assert response.status_code == 200
+    assert observed_network_flags, "Expected signup rendering to evaluate pricing keys"
+    assert any(
+        flag is True for flag in observed_network_flags
+    ), "Signup GET should allow live pricing reads when enabled"
