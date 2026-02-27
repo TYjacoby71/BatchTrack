@@ -120,3 +120,32 @@ def test_signup_page_uses_live_network_pricing_reads_when_enabled(app, monkeypat
     assert any(
         flag is True for flag in observed_network_flags
     ), "Signup GET should allow live pricing reads when enabled"
+
+
+@pytest.mark.usefixtures("app")
+def test_signup_page_renders_live_pricing_copy_when_enabled(app, monkeypatch):
+    """GET /auth/signup should surface formatted live pricing when available."""
+    _add_public_stripe_tier(app, name_prefix="Signup Render Tier")
+
+    def _fake_live_pricing_lookup(lookup_key, *, allow_network=True):
+        if not allow_network:
+            return None
+        key = str(lookup_key or "").lower()
+        if "yearly" in key:
+            return {"formatted_price": "$290.00", "billing_cycle": "yearly"}
+        if "lifetime" in key:
+            return {"formatted_price": "$990.00", "billing_cycle": "one-time"}
+        return {"formatted_price": "$29.00", "billing_cycle": "monthly"}
+
+    monkeypatch.setattr(
+        BillingService,
+        "get_live_pricing_for_lookup_key",
+        staticmethod(_fake_live_pricing_lookup),
+    )
+    app.config["SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK"] = True
+
+    client = app.test_client()
+    response = client.get("/auth/signup")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "$29.00" in html
