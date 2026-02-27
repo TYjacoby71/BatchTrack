@@ -51,6 +51,8 @@ class SignupRequestContext:
     oauth_user_info: dict | None
     prefill_email: str
     prefill_phone: str
+    signup_variant: str
+    signup_primary_tier_id: str | None
 
 
 # --- SignupViewState ---
@@ -109,6 +111,9 @@ class SignupFlowResult:
 class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
+    _VALID_SIGNUP_VARIANTS = {"lifetime_primary", "monthly_primary"}
+    _FOUNDING_MEMBER_SEAT_LIMIT = 300
+
     @classmethod
     def build_request_context(
         cls,
@@ -129,10 +134,11 @@ class SignupCheckoutService:
             include_live_pricing=include_live_pricing,
             allow_live_pricing_network=allow_live_pricing_network,
         )
-        lifetime_by_key = LifetimePricingService.map_by_key(lifetime_offers)
-        lifetime_by_tier_id = LifetimePricingService.map_by_tier_id(lifetime_offers)
 
         signup_source = request.args.get("source", request.form.get("source", "direct"))
+        requested_signup_variant = request.args.get(
+            "signup_variant", request.form.get("signup_variant", "")
+        )
         referral_code = request.args.get("ref", request.form.get("ref"))
         promo_code = request.args.get("promo", request.form.get("promo"))
         preselected_tier = request.args.get("tier")
@@ -151,18 +157,60 @@ class SignupCheckoutService:
         )
         prefill_phone = request.form.get("contact_phone") or ""
 
+        signup_primary_tier_id = cls._resolve_primary_tier_id(
+            available_tiers=available_tiers,
+            lifetime_offers=lifetime_offers,
+            preselected_tier=preselected_tier,
+        )
+
+        if signup_primary_tier_id and signup_primary_tier_id in available_tiers:
+            available_tiers = {
+                signup_primary_tier_id: available_tiers[signup_primary_tier_id]
+            }
+            db_tiers = [
+                tier for tier in db_tiers if str(getattr(tier, "id", "")) == signup_primary_tier_id
+            ]
+            preselected_tier = signup_primary_tier_id
+
+        primary_lifetime_offer = next(
+            (
+                offer
+                for offer in lifetime_offers
+                if str(offer.get("tier_id", "")) == str(signup_primary_tier_id or "")
+            ),
+            None,
+        )
+        lifetime_offers = (
+            [
+                cls._apply_founding_member_seat_cap(
+                    primary_lifetime_offer,
+                    seat_limit=cls._FOUNDING_MEMBER_SEAT_LIMIT,
+                )
+            ]
+            if primary_lifetime_offer
+            else []
+        )
+        lifetime_by_key = LifetimePricingService.map_by_key(lifetime_offers)
+        lifetime_by_tier_id = LifetimePricingService.map_by_tier_id(lifetime_offers)
+
         has_lifetime_capacity = LifetimePricingService.any_seats_remaining(
             lifetime_offers
         )
-        default_billing_mode = "lifetime" if has_lifetime_capacity else "standard"
+        signup_variant = cls._normalize_signup_variant(
+            requested_variant=requested_signup_variant,
+            has_lifetime_capacity=has_lifetime_capacity,
+        )
+        default_billing_mode = (
+            "standard"
+            if (has_lifetime_capacity and signup_variant == "monthly_primary")
+            else ("lifetime" if has_lifetime_capacity else "standard")
+        )
         billing_mode = (
             requested_billing_mode
             if requested_billing_mode in {"standard", "lifetime"}
             else default_billing_mode
         )
-        default_standard_billing_cycle = (
-            "monthly" if has_lifetime_capacity else "yearly"
-        )
+        default_standard_billing_cycle = "monthly"
         standard_billing_cycle = (
             requested_billing_cycle
             if requested_billing_cycle in {"monthly", "yearly"}
@@ -192,15 +240,7 @@ class SignupCheckoutService:
                     promo_code = first_open_offer["coupon_code"]
 
         if not preselected_tier and db_tiers:
-            preferred_default_tier = next(
-                (
-                    tier
-                    for tier in db_tiers
-                    if (getattr(tier, "name", "") or "").strip().lower() == "enthusiast"
-                ),
-                None,
-            )
-            preselected_tier = str((preferred_default_tier or db_tiers[0]).id)
+            preselected_tier = str(db_tiers[0].id)
 
         return SignupRequestContext(
             db_tiers=db_tiers,
@@ -219,6 +259,8 @@ class SignupCheckoutService:
             oauth_user_info=oauth_user_info or None,
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
+            signup_variant=signup_variant,
+            signup_primary_tier_id=signup_primary_tier_id,
         )
 
     @staticmethod
@@ -245,11 +287,9 @@ class SignupCheckoutService:
         default_tier_id = view_state.selected_tier or (
             str(context.db_tiers[0].id) if context.db_tiers else ""
         )
-        page_title = "BatchTrack Signup | Choose Your Plan"
+        page_title = "BatchTrack Signup | Artisan Plan"
         page_description = (
-            "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly, yearly, and limited lifetime options."
-            if context.has_lifetime_capacity
-            else "Simple pricing for makers: Hobbyist, Enthusiast, and Fanatic tiers with monthly and yearly subscriptions in a calm, batch-first flow."
+            "Choose the Artisan plan with monthly billing or a limited founding-member lifetime option."
         )
         return {
             "signup_source": context.signup_source,
@@ -268,6 +308,8 @@ class SignupCheckoutService:
             "default_tier_id": default_tier_id,
             "contact_email": view_state.contact_email,
             "contact_phone": view_state.contact_phone,
+            "signup_variant": context.signup_variant,
+            "signup_primary_tier_id": context.signup_primary_tier_id,
             "page_title": page_title,
             "page_description": page_description,
             "canonical_url": canonical_url,
@@ -317,7 +359,7 @@ class SignupCheckoutService:
                     selected_tier=lifetime_offer.get("tier_id")
                     or submission.selected_tier,
                     selected_lifetime_key=lifetime_offer.get("key", ""),
-                    selected_standard_cycle="yearly",
+                    selected_standard_cycle="monthly",
                 )
 
             submission.selected_lifetime_key = lifetime_offer.get("key", "")
@@ -338,7 +380,7 @@ class SignupCheckoutService:
                     submission=submission,
                     selected_mode="standard",
                     selected_lifetime_key="",
-                    selected_standard_cycle="yearly",
+                    selected_standard_cycle="monthly",
                 )
 
             lifetime_pricing = BillingService.get_live_pricing_for_lookup_key(
@@ -353,7 +395,7 @@ class SignupCheckoutService:
                     submission=submission,
                     selected_mode="standard",
                     selected_lifetime_key="",
-                    selected_standard_cycle="yearly",
+                    selected_standard_cycle="monthly",
                 )
 
             submission.stripe_coupon_id = lifetime_offer.get("stripe_coupon_id") or None
@@ -509,18 +551,6 @@ class SignupCheckoutService:
 
     @staticmethod
     def _preferred_open_lifetime_offer(lifetime_offers: list[dict]) -> dict | None:
-        preferred_offer = next(
-            (
-                offer
-                for offer in lifetime_offers
-                if str(offer.get("key", "")).lower() == "enthusiast"
-                and offer.get("tier_id")
-                and offer.get("has_remaining")
-            ),
-            None,
-        )
-        if preferred_offer:
-            return preferred_offer
         return next(
             (
                 offer
@@ -576,7 +606,7 @@ class SignupCheckoutService:
         if not context.has_lifetime_capacity and submission.selected_mode == "lifetime":
             submission.selected_mode = "standard"
             submission.selected_lifetime_key = ""
-            submission.selected_standard_cycle = "yearly"
+            submission.selected_standard_cycle = context.standard_billing_cycle
 
         return submission
 
@@ -638,6 +668,7 @@ class SignupCheckoutService:
             "tier_id": str(tier_obj.id),
             "tier_name": tier_obj.name,
             "signup_source": context.signup_source,
+            "signup_variant": context.signup_variant,
             "oauth_signup": str(submission.oauth_signup),
             "billing_mode": submission.selected_mode,
             "billing_cycle": (
@@ -681,6 +712,68 @@ class SignupCheckoutService:
             metadata["promo_code"] = submission.effective_promo_code
 
         return metadata
+
+    @classmethod
+    def _resolve_primary_tier_id(
+        cls,
+        *,
+        available_tiers: dict[str, dict],
+        lifetime_offers: list[dict],
+        preselected_tier: str | None,
+    ) -> str | None:
+        if preselected_tier and str(preselected_tier) in available_tiers:
+            return str(preselected_tier)
+
+        preferred_names = {
+            "artisan",
+            "enthusiast",
+            "solo maker",
+            "solo plan",
+            "solo",
+        }
+        for tier_id, tier_data in available_tiers.items():
+            tier_name = str((tier_data or {}).get("name") or "").strip().lower()
+            if tier_name in preferred_names:
+                return str(tier_id)
+
+        for offer in lifetime_offers:
+            tier_id = str(offer.get("tier_id") or "")
+            if tier_id and tier_id in available_tiers and offer.get("has_remaining"):
+                return tier_id
+
+        return next(iter(available_tiers.keys()), None)
+
+    @classmethod
+    def _apply_founding_member_seat_cap(
+        cls, offer: dict, *, seat_limit: int
+    ) -> dict:
+        normalized_limit = max(1, int(seat_limit or cls._FOUNDING_MEMBER_SEAT_LIMIT))
+        sold_count = int(offer.get("sold_count") or 0)
+        true_spots_left = max(0, normalized_limit - sold_count)
+        has_offer_config = bool(
+            offer.get("tier_id")
+            and offer.get("lifetime_lookup_key")
+            and offer.get("has_remaining")
+        )
+        patched = dict(offer)
+        patched["seat_total"] = normalized_limit
+        patched["display_floor"] = normalized_limit
+        patched["threshold"] = 0
+        patched["true_spots_left"] = true_spots_left
+        patched["display_spots_left"] = true_spots_left
+        patched["has_remaining"] = bool(has_offer_config and true_spots_left > 0)
+        return patched
+
+    @classmethod
+    def _normalize_signup_variant(
+        cls, *, requested_variant: str | None, has_lifetime_capacity: bool
+    ) -> str:
+        normalized = str(requested_variant or "").strip().lower()
+        if normalized not in cls._VALID_SIGNUP_VARIANTS:
+            normalized = "lifetime_primary"
+        if not has_lifetime_capacity and normalized == "lifetime_primary":
+            return "monthly_primary"
+        return normalized
 
     @staticmethod
     def _parse_client_epoch_ms(raw_value: Any) -> int | None:

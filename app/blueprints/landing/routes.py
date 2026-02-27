@@ -62,3 +62,27 @@ def lp_robbins():
             _external=True,
         ),
     )
+
+
+# --- Founder v4 landing page ---
+# Purpose: Prepare a fourth homepage variant without touching active homepage routes.
+@landing_pages_bp.route("/lp/founder-v4")
+def lp_founder_v4():
+    """Founding-member focused landing page scaffold (prep only)."""
+    return render_template(
+        "pages/public/landing_founder_v4.html",
+        show_public_header=True,
+        lightweight_public_shell=True,
+        public_header_is_homepage=True,
+        public_header_signup_source="lp_founder_v4_start_free_trial",
+        page_title="BatchTrack.com | Founder Offer Variant (V4)",
+        page_description=(
+            "Prepared fourth landing variant for founder-offer messaging and signup experiment wiring."
+        ),
+        canonical_url=url_for("landing_pages.lp_founder_v4", _external=True),
+        page_og_image=url_for(
+            "static",
+            filename="images/og/batchtrack-default-og.svg",
+            _external=True,
+        ),
+    )

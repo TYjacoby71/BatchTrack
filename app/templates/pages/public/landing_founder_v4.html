@@ -1,0 +1,69 @@
+{#
+Synopsis:
+Prepared fourth public landing page variant for future homepage experimentation.
+This scaffold intentionally keeps copy minimal and does not alter existing homepage behavior.
+#}
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+  .founder-v4-shell {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  .founder-v4-hero {
+    border-radius: 1.2rem;
+    padding: 2rem;
+    border: 1px solid rgba(186, 201, 233, 0.9);
+    background: linear-gradient(145deg, #f8fbff 0%, #f4f7ff 45%, #f8f2ff 100%);
+    box-shadow: 0 14px 28px rgba(19, 32, 68, 0.08);
+  }
+
+  .founder-v4-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    border: 1px solid rgba(63, 99, 188, 0.35);
+    background: rgba(13, 110, 253, 0.08);
+    color: #2b4c92;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    margin-bottom: 0.95rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="founder-v4-shell py-4">
+  <section class="founder-v4-hero">
+    <span class="founder-v4-kicker"><i class="fas fa-flask"></i> Prepared Variant V4 (Not Active)</span>
+    <h1 class="h2 mb-2">Founder-offer homepage variant scaffold is ready.</h1>
+    <p class="text-muted mb-3">
+      This page is intentionally lightweight for now so future copy/layout iterations can happen without touching the existing homepage variants.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('core.signup_alias', source=public_header_signup_source if public_header_signup_source is defined else 'lp_founder_v4_start_free_trial') }}" class="btn btn-primary btn-lg">
+        Start Signup
+      </a>
+      <a href="{{ url_for('core.homepage') }}" class="btn btn-outline-secondary btn-lg">
+        View Current Homepage
+      </a>
+    </div>
+  </section>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+    return;
+  }
+  window.BTAnalytics.capture('landing_variant_viewed', {
+    landing_variant: 'founder_v4_prep'
+  });
+});
+</script>
+{% endblock %}
