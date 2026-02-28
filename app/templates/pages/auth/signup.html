@@ -8,7 +8,7 @@
 {% set primary_lifetime_offer = (lifetime_offers | first) if lifetime_offers else none %}
 <div class="py-4">
     <div class="row justify-content-center">
-        <div class="col-xl-10 col-xxl-9">
+        <div class="col-xl-10 col-xxl-9 signup-layout-col">
             <div class="signup-shell">
                 <div class="text-center mb-5">
                     <h2 class="mb-1">
@@ -774,6 +774,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     .plan-subtext {
         font-size: 0.7rem;
+    }
+}
+
+/* Phone-sized screens (e.g., Galaxy widths): keep white background,
+   but remove visible outer shell edges/shadow to avoid nested look. */
+@media (max-width: 430px) {
+    .signup-layout-col {
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+
+    .signup-shell {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: #ffffff;
+        padding: 0.45rem 0.25rem 0.75rem;
+    }
+
+    .pricing-section {
+        margin-bottom: 1.15rem;
     }
 }
 </style>
