@@ -48,6 +48,14 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Add unlock mechanism (time-based auto-unlock after 30 minutes, or admin manual unlock)
 - [ ] Add tests for lockout behavior
 
+### 1.5 Public signup commerce hardening
+- [ ] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
+- [ ] Make the 14-day trial explicit in checkout session construction (`app/services/billing_service.py`) by setting subscription trial parameters in code, or documenting the enforced Stripe-level equivalent
+- [ ] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy
+- [ ] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`) including governing jurisdiction and business address
+- [ ] Tighten public signup abuse controls (`app/blueprints/auth/signup_routes.py`) with stricter throttles and bot challenge strategy at threshold
+- [ ] Add a no-JavaScript fallback submit path for checkout handoff (`app/templates/pages/auth/signup.html`) so payment flow still works when scripts are blocked
+
 ---
 
 ## Priority 2: Production Visibility
