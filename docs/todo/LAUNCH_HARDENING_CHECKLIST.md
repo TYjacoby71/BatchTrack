@@ -63,15 +63,15 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Verify no bare `except:` clauses remain (confirmed)
 
 ### 2.2 Replace pickle in cache manager
-- [ ] `app/utils/cache_manager.py` line 161: replace `pickle.loads(raw)` with JSON deserialization
-- [ ] Replace corresponding `pickle.dumps()` with JSON serialization
-- [ ] Add test to verify cache serialization round-trips correctly
+- [x] `app/utils/cache_manager.py` line 161: replace `pickle.loads(raw)` with JSON deserialization
+- [x] Replace corresponding `pickle.dumps()` with JSON serialization
+- [x] Add test to verify cache serialization round-trips correctly
 
 ### 2.3 Branded error pages
-- [ ] Create `app/templates/errors/404.html` (not found)
-- [ ] Create `app/templates/errors/500.html` (server error)
-- [ ] Register Flask error handlers in `app/resilience.py` for 404 and 500
-- [ ] Verify `errors/maintenance.html` (503) is already registered (confirmed)
+- [x] Create `app/templates/errors/404.html` (not found)
+- [x] Create `app/templates/errors/500.html` (server error)
+- [x] Register Flask error handlers in `app/resilience.py` for 404 and 500
+- [x] Verify `errors/maintenance.html` (503) is already registered (confirmed)
 
 ---
 

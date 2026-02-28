@@ -27,6 +27,21 @@ logger = logging.getLogger(__name__)
 def register_resilience_handlers(app) -> None:
     """Install global DB rollback and friendly maintenance/CSRF handlers."""
 
+    def _error_wants_json_response() -> bool:
+        try:
+            from .utils.http import wants_json
+
+            return (
+                request.path.startswith("/api/")
+                or request.is_json
+                or wants_json(request)
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            )
+        except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:39", exc_info=True)
+            accept_header = request.headers.get("Accept", "")
+            return request.path.startswith("/api/") or "application/json" in accept_header
+
     def _csrf_wants_json_response() -> bool:
         try:
             from .utils.http import wants_json
@@ -39,6 +54,16 @@ def register_resilience_handlers(app) -> None:
         except Exception:
             logger.warning("Suppressed exception fallback at app/resilience.py:35", exc_info=True)
             return bool(request.is_json)
+
+    @app.errorhandler(404)
+    def _not_found_error_handler(_error):
+        if _error_wants_json_response():
+            return jsonify({"error": "Not found"}), 404
+        try:
+            return render_template("errors/404.html"), 404
+        except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:53", exc_info=True)
+            return ("Not Found", 404)
 
     def _csrf_login_target(next_path: str | None = None) -> str:
         if (
@@ -113,6 +138,29 @@ def register_resilience_handlers(app) -> None:
         except Exception:
             logger.warning("Suppressed exception fallback at app/resilience.py:104", exc_info=True)
             return ("Service temporarily unavailable. Please try again shortly.", 503)
+
+    @app.errorhandler(500)
+    def _internal_error_handler(_error):
+        try:
+            db.session.rollback()
+        except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:112", exc_info=True)
+            pass
+        if _error_wants_json_response():
+            return (
+                jsonify(
+                    {
+                        "error": "internal_server_error",
+                        "message": "Unexpected server error. Please try again.",
+                    }
+                ),
+                500,
+            )
+        try:
+            return render_template("errors/500.html"), 500
+        except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:129", exc_info=True)
+            return ("Internal Server Error", 500)
 
     @app.errorhandler(CSRFError)
     def _csrf_error_handler(err: CSRFError):

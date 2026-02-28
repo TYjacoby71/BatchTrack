@@ -10,10 +10,12 @@ Glossary:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import pickle
 import time
+from datetime import date, datetime
+from decimal import Decimal
 from threading import Lock
 from typing import Any, Dict
 
@@ -39,6 +41,50 @@ __all__ = [
     "drawer_request_cache",
     "app_cache",
 ]
+
+_CACHE_JSON_TYPE_KEY = "__cache_json_type__"
+
+
+def _cache_json_default(value: Any) -> Any:
+    """Serialize non-JSON-native values used in cache payloads."""
+    if isinstance(value, datetime):
+        return {_CACHE_JSON_TYPE_KEY: "datetime", "value": value.isoformat()}
+    if isinstance(value, date):
+        return {_CACHE_JSON_TYPE_KEY: "date", "value": value.isoformat()}
+    if isinstance(value, Decimal):
+        return {_CACHE_JSON_TYPE_KEY: "decimal", "value": str(value)}
+    if isinstance(value, set):
+        return {_CACHE_JSON_TYPE_KEY: "set", "value": list(value)}
+    raise TypeError(f"Value of type {type(value).__name__} is not JSON serializable")
+
+
+def _cache_json_object_hook(obj: Dict[str, Any]) -> Any:
+    value_type = obj.get(_CACHE_JSON_TYPE_KEY)
+    if value_type == "datetime":
+        return datetime.fromisoformat(str(obj.get("value")))
+    if value_type == "date":
+        return date.fromisoformat(str(obj.get("value")))
+    if value_type == "decimal":
+        return Decimal(str(obj.get("value")))
+    if value_type == "set":
+        values = obj.get("value")
+        return set(values if isinstance(values, list) else [])
+    return obj
+
+
+def _serialize_cache_value(value: Any) -> bytes:
+    payload = json.dumps(
+        value,
+        default=_cache_json_default,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return payload.encode("utf-8")
+
+
+def _deserialize_cache_value(raw: bytes) -> Any:
+    payload = raw.decode("utf-8")
+    return json.loads(payload, object_hook=_cache_json_object_hook)
 
 
 # --- SimpleCache ---
@@ -155,11 +201,22 @@ class RedisCache:
         if self._can_use_redis():
             try:
                 client = self._get_client()
-                raw = client.get(self._k(key))
+                redis_key = self._k(key)
+                raw = client.get(redis_key)
                 if raw is None:
                     self._fallback.delete(key)
                     return None
-                value = pickle.loads(raw)
+                try:
+                    value = _deserialize_cache_value(raw)
+                except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+                    logger.warning(
+                        "Invalid non-JSON Redis payload for %s; treating as cache miss.",
+                        redis_key,
+                        exc_info=True,
+                    )
+                    client.delete(redis_key)
+                    self._fallback.delete(key)
+                    return None
                 self._fallback.set(key, value, ttl=self._default_ttl)
                 return value
             except RedisError as exc:  # type: ignore[arg-type]
@@ -174,8 +231,17 @@ class RedisCache:
         if self._can_use_redis():
             try:
                 client = self._get_client()
-                raw = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
-                client.set(self._k(key), raw, ex=expires)
+                redis_key = self._k(key)
+                try:
+                    raw = _serialize_cache_value(value)
+                except (TypeError, ValueError):
+                    logger.warning(
+                        "Skipped Redis cache write for %s due to non-JSON payload.",
+                        redis_key,
+                        exc_info=True,
+                    )
+                else:
+                    client.set(redis_key, raw, ex=expires)
             except RedisError as exc:  # type: ignore[arg-type]
                 self._handle_redis_failure("set", exc)
         self._fallback.set(key, value, ttl=expires)

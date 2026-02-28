@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from werkzeug.exceptions import NotFound
 
 from app.utils.cache_manager import app_cache
 
@@ -78,6 +79,41 @@ def test_unknown_api_path_returns_json_404(app):
     assert response.status_code == 404
     assert response.is_json
     assert response.get_json()["error"] == "Not found"
+
+
+def test_public_asset_not_found_uses_branded_404_template(app, monkeypatch):
+    client = app.test_client()
+    from app.blueprints.core import routes as core_routes
+
+    def _raise_not_found(_filename: str):
+        raise NotFound()
+
+    monkeypatch.setattr(core_routes, "_serve_brand_asset", _raise_not_found)
+
+    response = client.get("/branding/app-tile.svg", follow_redirects=False)
+
+    assert response.status_code == 404
+    body = response.get_data(as_text=True)
+    assert "Page not found" in body
+    assert "Go back home" in body
+
+
+def test_public_asset_exception_uses_branded_500_template(app, monkeypatch):
+    app.config["PROPAGATE_EXCEPTIONS"] = False
+    client = app.test_client()
+    from app.blueprints.core import routes as core_routes
+
+    def _raise_runtime_error(_filename: str):
+        raise RuntimeError("unexpected boom")
+
+    monkeypatch.setattr(core_routes, "_serve_brand_asset", _raise_runtime_error)
+
+    response = client.get("/branding/app-tile.svg", follow_redirects=False)
+
+    assert response.status_code == 500
+    body = response.get_data(as_text=True)
+    assert "Something went wrong" in body
+    assert "Go back home" in body
 
 
 def test_known_protected_route_still_redirects_to_login(app):
