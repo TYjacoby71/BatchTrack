@@ -63,9 +63,10 @@
                             <div class="plan-chip mb-3">Monthly</div>
                             <h4 class="h3 fw-bold mb-2">Artisan Plan</h4>
                             <div class="plan-price mb-2" data-role="priceText">
-                                {{ primary_tier.monthly_price_display or primary_tier.price_display or '24.99' }}
+                                {{ primary_tier.monthly_price_display or primary_tier.price_display or '$24.99' }}
                             </div>
-                            <p class="plan-includes mb-0">Includes All the Features we have to offer!</p>
+                            <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                            <p class="small text-muted mb-0">14-day free trial, then monthly billing.</p>
                         </article>
                         {% endif %}
                     </div>
@@ -86,7 +87,7 @@
                                 </div>
                                 <button
                                     type="button"
-                                    class="btn {% if signup_variant == 'lifetime_primary' %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm"
+                                    class="btn btn-outline-dark btn-sm"
                                     id="selectLifetimeBtn"
                                 >
                                     Choose Grand Slam Lifetime
@@ -97,13 +98,6 @@
                                 Grand Slam lifetime seats are currently sold out. Monthly access is active.
                             </p>
                             {% endif %}
-
-                            <div class="mt-3 pt-3 border-top">
-                                <h5 class="h6 mb-2">Guarantee (placeholder)</h5>
-                                <p class="small text-muted mb-0">
-                                    Add final guarantee language here after copy review.
-                                </p>
-                            </div>
                         </div>
                     </div>
 
@@ -164,7 +158,6 @@ const lifetimeOffers = {{ lifetime_offers|tojson }};
 const signupSource = {{ signup_source|tojson }};
 const referralCode = {{ referral_code|tojson }};
 const initialPromoCode = {{ promo_code|tojson }};
-const signupVariant = {{ signup_variant|tojson }};
 const hasLifetimeCapacity = Boolean({{ has_lifetime_capacity|tojson }});
 const VALID_PLAN_KINDS = ['lifetime', 'monthly', 'yearly'];
 
@@ -263,7 +256,7 @@ function getPlanState(planKind) {
     let effectivePlanKind = planKind;
     let modeBadgeText = planKind === 'lifetime' ? 'Lifetime' : (planKind === 'yearly' ? 'Yearly' : 'Monthly');
     let priceText = monthlyPrice;
-    let statusText = 'Billed monthly subscription.';
+    let statusText = 'Starts with a 14-day free trial, then billed monthly.';
     let fallbackText = '';
     let fallbackFromLifetime = false;
     let isUnavailable = false;
@@ -326,7 +319,7 @@ function getPlanState(planKind) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly';
             priceText = monthlyPrice;
-            statusText = 'Billed monthly subscription.';
+            statusText = 'Starts with a 14-day free trial, then billed monthly.';
         } else if (!hasLifetimeCapacity && hasYearly) {
             effectivePlanKind = 'yearly';
             modeBadgeText = 'Yearly fallback';
@@ -485,8 +478,13 @@ function updatePlanSummary() {
 
     selectedLifetimeTier = '';
     continueBtn.disabled = false;
-    continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
-    selectedText.textContent = `You selected Artisan ${planState.modeBadgeText.toLowerCase()} billing.`;
+    if (planState.effectivePlanKind === 'monthly') {
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start 14-Day Free Trial';
+        selectedText.textContent = 'You selected Artisan monthly with a 14-day free trial.';
+    } else {
+        continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
+        selectedText.textContent = `You selected Artisan ${planState.modeBadgeText.toLowerCase()} billing.`;
+    }
 
     if (planState.fallbackText) {
         lifetimeCounterMessage.textContent = planState.fallbackText;
@@ -534,7 +532,6 @@ function proceedToPayment() {
             billing_mode: billingMode,
             billing_cycle: billingCycle,
             signup_source: signupSource || null,
-            signup_variant: signupVariant || null,
         });
     }
 
@@ -547,7 +544,6 @@ function proceedToPayment() {
         ['selected_tier', selectedTier],
         ['billing_mode', billingMode],
         ['billing_cycle', billingCycle],
-        ['signup_variant', signupVariant],
     ];
 
     if (signupSource) entries.push(['source', signupSource]);
@@ -634,7 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
             selected_tier: String(selectedTier || ''),
             requested_plan_kind: selectedPlanKind,
             signup_source: signupSource || null,
-            signup_variant: signupVariant || null,
         });
     }
 

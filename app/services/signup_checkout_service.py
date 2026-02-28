@@ -51,7 +51,6 @@ class SignupRequestContext:
     oauth_user_info: dict | None
     prefill_email: str
     prefill_phone: str
-    signup_variant: str
     signup_primary_tier_id: str | None
 
 
@@ -111,7 +110,6 @@ class SignupFlowResult:
 class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
-    _VALID_SIGNUP_VARIANTS = {"lifetime_primary", "monthly_primary"}
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
 
     @classmethod
@@ -136,9 +134,6 @@ class SignupCheckoutService:
         )
 
         signup_source = request.args.get("source", request.form.get("source", "direct"))
-        requested_signup_variant = request.args.get(
-            "signup_variant", request.form.get("signup_variant", "")
-        )
         referral_code = request.args.get("ref", request.form.get("ref"))
         promo_code = request.args.get("promo", request.form.get("promo"))
         preselected_tier = request.args.get("tier")
@@ -196,15 +191,7 @@ class SignupCheckoutService:
         has_lifetime_capacity = LifetimePricingService.any_seats_remaining(
             lifetime_offers
         )
-        signup_variant = cls._normalize_signup_variant(
-            requested_variant=requested_signup_variant,
-            has_lifetime_capacity=has_lifetime_capacity,
-        )
-        default_billing_mode = (
-            "standard"
-            if (has_lifetime_capacity and signup_variant == "monthly_primary")
-            else ("lifetime" if has_lifetime_capacity else "standard")
-        )
+        default_billing_mode = "standard"
         billing_mode = (
             requested_billing_mode
             if requested_billing_mode in {"standard", "lifetime"}
@@ -259,7 +246,6 @@ class SignupCheckoutService:
             oauth_user_info=oauth_user_info or None,
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
-            signup_variant=signup_variant,
             signup_primary_tier_id=signup_primary_tier_id,
         )
 
@@ -308,7 +294,6 @@ class SignupCheckoutService:
             "default_tier_id": default_tier_id,
             "contact_email": view_state.contact_email,
             "contact_phone": view_state.contact_phone,
-            "signup_variant": context.signup_variant,
             "signup_primary_tier_id": context.signup_primary_tier_id,
             "page_title": page_title,
             "page_description": page_description,
@@ -668,7 +653,6 @@ class SignupCheckoutService:
             "tier_id": str(tier_obj.id),
             "tier_name": tier_obj.name,
             "signup_source": context.signup_source,
-            "signup_variant": context.signup_variant,
             "oauth_signup": str(submission.oauth_signup),
             "billing_mode": submission.selected_mode,
             "billing_cycle": (
@@ -763,17 +747,6 @@ class SignupCheckoutService:
         patched["display_spots_left"] = true_spots_left
         patched["has_remaining"] = bool(has_offer_config and true_spots_left > 0)
         return patched
-
-    @classmethod
-    def _normalize_signup_variant(
-        cls, *, requested_variant: str | None, has_lifetime_capacity: bool
-    ) -> str:
-        normalized = str(requested_variant or "").strip().lower()
-        if normalized not in cls._VALID_SIGNUP_VARIANTS:
-            normalized = "lifetime_primary"
-        if not has_lifetime_capacity and normalized == "lifetime_primary":
-            return "monthly_primary"
-        return normalized
 
     @staticmethod
     def _parse_client_epoch_ms(raw_value: Any) -> int | None:

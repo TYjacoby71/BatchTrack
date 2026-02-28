@@ -203,7 +203,6 @@ def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
         oauth_user_info={"email": "social@example.com"},
         prefill_email="social@example.com",
         prefill_phone="",
-        signup_variant="monthly_primary",
         signup_primary_tier_id="1",
     )
 
