@@ -1,19 +1,21 @@
-
 {% extends 'layout.html' %}
 
-{% block title %}BatchTrack.com | Pricing for Small-Batch Makers{% endblock %}
+{% block title %}BatchTrack.com | Artisan Plan Signup{% endblock %}
 
 {% block content %}
+{% set primary_tier_id = (signup_primary_tier_id or preselected_tier or default_tier_id)|string %}
+{% set primary_tier = available_tiers.get(primary_tier_id) if available_tiers else none %}
+{% set primary_lifetime_offer = (lifetime_offers | first) if lifetime_offers else none %}
 <div class="py-4">
     <div class="row justify-content-center">
-        <div class="col-xl-10">
-            <div class="card">
-                <div class="card-header text-center">
+        <div class="col-xl-10 col-xxl-9 signup-layout-col">
+            <div class="signup-shell">
+                <div class="text-center mb-5">
                     <h2 class="mb-1">
-                        <i class="fas fa-rocket me-2"></i>Choose Your BatchTrack Plan
+                        The Artisan Plan
                     </h2>
                 </div>
-                <div class="card-body p-4 p-lg-5">
+                <div>
                     {% if oauth_user_info %}
                     <div class="alert alert-success mb-4">
                         <i class="fas fa-check-circle me-2"></i>
@@ -41,82 +43,101 @@
                     </div>
                     {% endif %}
 
-                    <section id="successivePlansSection">
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="tierCardGrid">
-                            {% for tier_id, tier_data in available_tiers.items() %}
-                            {% set lifetime_offer = (lifetime_offers | selectattr('tier_id', 'equalto', tier_id) | list | first) %}
-                            <div class="col">
-                                <div class="tier-choice-card-shell h-100">
-                                    {% if tier_data.name|lower == 'enthusiast' %}
-                                    <div class="tier-choice-card-topline">
-                                        <span class="badge bg-success">Recommended</span>
-                                    </div>
-                                    {% endif %}
-
-                                    <article
-                                        class="tier-choice-card h-100 {% if tier_data.name|lower == 'enthusiast' %}is-recommended{% endif %}"
-                                        data-tier-id="{{ tier_id }}"
-                                        role="button"
-                                        tabindex="0"
-                                        aria-pressed="false"
-                                    >
-                                        <div class="mb-2">
-                                            <h3 class="h5 fw-bold mb-1">{{ tier_data.name }}</h3>
-                                            <p class="small text-muted mb-0">
-                                                {{ lifetime_offer.tagline if lifetime_offer else 'Choose this tier for your next step.' }}
-                                            </p>
-                                        </div>
-
-                                        <div class="tier-choice-mode-badge mb-2" data-role="modeBadge" data-mode="lifetime">Lifetime</div>
-                                        <div class="tier-choice-price mb-2" data-role="priceText">
-                                            {% if lifetime_offer and lifetime_offer.has_remaining %}
-                                                {{ lifetime_offer.lifetime_price_copy }}
-                                            {% elif tier_data.yearly_price_display %}
-                                                {{ tier_data.yearly_price_display }}
-                                            {% elif tier_data.monthly_price_display %}
-                                                {{ tier_data.monthly_price_display }}
-                                            {% else %}
-                                                Contact Sales
-                                            {% endif %}
-                                        </div>
-                                        <p class="small mb-2" data-role="statusText">Select this tier to continue.</p>
-                                        <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
-                                    </article>
+                    <section class="pricing-section mb-5">
+                        {% if not primary_tier %}
+                        <div class="alert alert-warning mb-0">
+                            No customer-facing tier is configured yet. Please configure at least one Stripe-backed tier.
+                        </div>
+                        {% else %}
+                        <div class="pricing-cards-grid">
+                            <article
+                                class="plan-choice-card h-100 active-offer"
+                                id="monthlyPlanCard"
+                                data-plan-kind="monthly"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="true"
+                            >
+                                <div class="plan-chip mb-2">Monthly</div>
+                                <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_tier.monthly_price_display or primary_tier.price_display or '$24.99' }}
                                 </div>
-                            </div>
-                            {% endfor %}
-                        </div>
+                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Start your 14 day free trial now</p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
 
-                        <div class="billing-toggle-wrap mt-4">
-                            <p class="small text-muted mb-2">Billing cadence</p>
-                            <div class="btn-group" role="group" aria-label="Billing cadence toggle" id="billingPlanToggle">
-                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="monthly">Monthly</button>
-                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="yearly">Yearly</button>
-                                <button type="button" class="btn btn-outline-primary plan-kind-toggle" data-plan-kind="lifetime">Lifetime</button>
-                            </div>
+                            {% if has_lifetime_capacity and primary_lifetime_offer %}
+                            <article
+                                class="plan-choice-card h-100"
+                                id="lifetimePlanCard"
+                                data-plan-kind="lifetime"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="false"
+                            >
+                                <div class="plan-chip plan-chip-lifetime mb-2">FOUNDING MEMBERS LIMITED OFFER</div>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_lifetime_offer.lifetime_price_copy }}
+                                </div>
+                                <p class="plan-includes mb-1">Everything We have to offer... FOREVER</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">
+                                    Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
+                                </p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
+                            {% else %}
+                            <article
+                                class="plan-choice-card h-100"
+                                id="yearlyPlanCard"
+                                data-plan-kind="yearly"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="false"
+                            >
+                                <div class="plan-chip mb-2">Yearly</div>
+                                <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_tier.yearly_price_display or 'Yearly pricing at secure checkout' }}
+                                </div>
+                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Billed yearly.</p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
+                            {% endif %}
                         </div>
+                        {% endif %}
                     </section>
 
-                    <div class="card mt-4 shadow-sm" id="tierFeaturesCard">
+                    <div class="card shadow-sm mb-5" id="tierFeaturesCard">
                         <div class="card-body p-4">
-                            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-3">
-                                <div>
-                                    <h4 class="mb-1" id="featuresCardTitle">Plan summary</h4>
-                                    <p class="text-muted mb-0" id="selectedTierText">Select a plan to continue to checkout.</p>
-                                </div>
-                                <div class="text-lg-end">
-                                    <div class="badge rounded-pill text-success border border-success soft-success-badge mb-2" id="selectedTierBadge">
-                                        No plan selected
-                                    </div>
-                                    <div class="fs-4 fw-bold text-primary" id="tierPriceText">—</div>
-                                </div>
-                            </div>
+                            <h4 class="mb-1" id="featuresCardTitle">Why Chose Batchtrack?</h4>
+                            <p class="text-muted mb-3" id="selectedTierText">Choose a billing option to continue to checkout.</p>
                             <div id="lifetimeCounterMessage" class="alert alert-warning py-2 px-3 small d-none mb-3"></div>
                             <ul class="features-checklist mb-0" id="featuresChecklist"></ul>
+                            <div class="summary-total-wrap mt-3 pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold">Selected Offer Total</span>
+                                    <span class="fw-bold text-primary" id="selectedOfferTotalText">—</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="text-center mt-4" id="confirmationSection">
+                    <div class="card border-0 soft-panel mb-4">
+                        <div class="card-body py-3">
+                            <h4 class="h6 mb-2">Coming soon previews</h4>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li>25,000+ ingredient global library</li>
+                                <li>Recipe marketplace</li>
+                                <li>Shopify sync</li>
+                                <li>AI import/parser</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="text-center" id="confirmationSection">
                         <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
                             <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Login
@@ -133,15 +154,18 @@
 </div>
 
 <script>
-let selectedTier = '{{ preselected_tier or default_tier_id }}';
-let selectedLifetimeTier = '{{ selected_lifetime_tier or "" }}';
-let selectedPlanKind = '{{ "lifetime" if billing_mode == "lifetime" else (standard_billing_cycle or "monthly") }}';
+let selectedTier = {{ primary_tier_id|tojson }};
+let selectedLifetimeTier = {{ selected_lifetime_tier|tojson }};
+const initialBillingMode = {{ billing_mode|tojson }};
+const standardBillingCycle = {{ standard_billing_cycle|tojson }};
 const availableTiers = {{ available_tiers|tojson }};
 const lifetimeOffers = {{ lifetime_offers|tojson }};
 const signupSource = {{ signup_source|tojson }};
 const referralCode = {{ referral_code|tojson }};
 const initialPromoCode = {{ promo_code|tojson }};
-const VALID_PLAN_KINDS = ['lifetime', 'yearly', 'monthly'];
+const hasLifetimeCapacity = Boolean({{ has_lifetime_capacity|tojson }});
+const VALID_PLAN_KINDS = ['lifetime', 'monthly', 'yearly'];
+
 const lifetimeByKey = Object.fromEntries(
     lifetimeOffers
         .filter((offer) => offer && offer.key)
@@ -149,16 +173,16 @@ const lifetimeByKey = Object.fromEntries(
 );
 const lifetimeByTier = Object.fromEntries(
     lifetimeOffers
-        .filter((offer) => offer.tier_id)
+        .filter((offer) => offer && offer.tier_id)
         .map((offer) => [String(offer.tier_id), offer])
 );
 
-function getTierData(tierId) {
-    return availableTiers[String(tierId)] || null;
+function getTierData() {
+    return availableTiers[String(selectedTier || '')] || null;
 }
 
-function getLifetimeOfferForTier(tierId) {
-    return lifetimeByTier[String(tierId)] || null;
+function getLifetimeOffer() {
+    return lifetimeByTier[String(selectedTier || '')] || null;
 }
 
 function isConfiguredPrice(priceCopy) {
@@ -166,109 +190,133 @@ function isConfiguredPrice(priceCopy) {
     return Boolean(normalized) && normalized !== 'contact sales';
 }
 
-function getPreferredTierId() {
-    const enthusiastTier = Object.entries(availableTiers).find((entry) => {
-        const tierData = entry[1] || {};
-        return String(tierData.name || '').toLowerCase() === 'enthusiast';
-    });
-    if (enthusiastTier) {
-        return String(enthusiastTier[0]);
+function parsePriceAmount(priceCopy) {
+    const normalized = String(priceCopy || '').replace(/,/g, '');
+    const match = normalized.match(/(\d+(?:\.\d{1,2})?)/);
+    if (!match) return null;
+    const parsed = Number.parseFloat(match[1]);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatUsd(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+function getYearlyPriceDisplay(monthlyPrice, tierData) {
+    const monthlyAmount = parsePriceAmount(monthlyPrice);
+    if (monthlyAmount !== null) {
+        return `${formatUsd(monthlyAmount * 10)} / year`;
     }
-
-    return Object.keys(availableTiers)[0] || '';
+    return tierData.yearly_price_display || 'Yearly pricing at secure checkout';
 }
 
-function formatPlanLabel(planKind) {
-    if (planKind === 'lifetime') return 'Lifetime';
-    if (planKind === 'yearly') return 'Yearly';
-    if (planKind === 'monthly') return 'Monthly';
-    return 'Unavailable';
+function getInitialPlanKind() {
+    if (initialBillingMode === 'lifetime' && hasLifetimeCapacity) {
+        return 'lifetime';
+    }
+    if (
+        initialBillingMode === 'standard'
+        && standardBillingCycle === 'yearly'
+        && !hasLifetimeCapacity
+    ) {
+        return standardBillingCycle;
+    }
+    return 'monthly';
 }
 
-function resolveTierSelection(tierId) {
-    const normalizedTierId = String(tierId || '');
-    const tierData = getTierData(normalizedTierId);
-    const lifetimeOffer = getLifetimeOfferForTier(normalizedTierId);
+let selectedPlanKind = getInitialPlanKind();
 
+function getPlanState(planKind) {
+    const tierData = getTierData();
     if (!tierData) {
         return {
-            tierData: null,
-            lifetimeOffer,
-            requestedPlanKind: selectedPlanKind,
             effectivePlanKind: 'unavailable',
             modeBadgeText: 'Unavailable',
             priceText: '—',
-            statusText: 'Tier configuration is unavailable.',
+            statusText: 'Tier configuration unavailable.',
             fallbackText: '',
-            fallbackFromLifetime: false,
             isUnavailable: true,
+            lifetimeOffer: null,
+            fallbackFromLifetime: false,
         };
     }
 
-    const monthlyPrice = tierData.monthly_price_display || tierData.price_display || '';
-    const yearlyPrice = tierData.yearly_price_display || '';
+    const monthlyPrice = tierData.monthly_price_display || tierData.price_display || 'Contact Sales';
+    const yearlyPrice = getYearlyPriceDisplay(monthlyPrice, tierData);
     const hasMonthly = isConfiguredPrice(monthlyPrice);
-    const hasYearly = isConfiguredPrice(yearlyPrice);
+    const hasYearly = Boolean(yearlyPrice);
+    const lifetimeOffer = getLifetimeOffer();
     const hasLifetime = Boolean(
-        lifetimeOffer
-        && lifetimeOffer.tier_id
-        && lifetimeOffer.has_remaining
-        && lifetimeOffer.lifetime_lookup_key
+        lifetimeOffer &&
+        lifetimeOffer.tier_id &&
+        lifetimeOffer.has_remaining &&
+        lifetimeOffer.lifetime_lookup_key
     );
 
-    let effectivePlanKind = selectedPlanKind;
-    let modeBadgeText = formatPlanLabel(selectedPlanKind);
-    let priceText = monthlyPrice || yearlyPrice || 'Contact Sales';
-    let statusText = 'Select this tier to continue.';
+    let effectivePlanKind = planKind;
+    let modeBadgeText = planKind === 'lifetime' ? 'Lifetime' : (planKind === 'yearly' ? 'Yearly' : 'Monthly');
+    let priceText = monthlyPrice;
+    let statusText = 'Start your 14 day free trial now';
     let fallbackText = '';
     let fallbackFromLifetime = false;
     let isUnavailable = false;
 
-    if (selectedPlanKind === 'lifetime') {
+    if (planKind === 'lifetime') {
         if (hasLifetime) {
             effectivePlanKind = 'lifetime';
             modeBadgeText = 'Lifetime';
             priceText = lifetimeOffer.lifetime_price_copy || 'One-time payment';
-            statusText = `Only ${lifetimeOffer.display_spots_left} spots left / ${lifetimeOffer.seat_total}.`;
-        } else {
-            fallbackFromLifetime = true;
-            statusText = 'No lifetime offers remain for this tier.';
-            if (hasYearly) {
-                effectivePlanKind = 'yearly';
-                modeBadgeText = 'Yearly fallback';
-                priceText = yearlyPrice;
-                fallbackText = 'Showing yearly billing as the next step down.';
-            } else if (hasMonthly) {
-                effectivePlanKind = 'monthly';
-                modeBadgeText = 'Monthly fallback';
-                priceText = monthlyPrice;
-                fallbackText = 'Showing monthly billing as the next step down.';
-            } else {
-                effectivePlanKind = 'unavailable';
-                modeBadgeText = 'Unavailable';
-                priceText = 'Contact Sales';
-                fallbackText = 'This tier is not configured for checkout yet.';
-                isUnavailable = true;
-            }
-        }
-    } else if (selectedPlanKind === 'yearly') {
-        if (hasYearly) {
-            effectivePlanKind = 'yearly';
-            modeBadgeText = 'Yearly';
-            priceText = yearlyPrice;
-            statusText = 'Billed yearly subscription.';
+            statusText = `Only ${lifetimeOffer.display_spots_left} seats left / ${lifetimeOffer.seat_total}.`;
         } else if (hasMonthly) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly fallback';
             priceText = monthlyPrice;
-            statusText = 'Yearly pricing is not configured for this tier.';
-            fallbackText = 'Showing monthly billing instead.';
+            statusText = 'Founding seats are sold out.';
+            fallbackText = 'Continuing with monthly billing.';
+            fallbackFromLifetime = true;
+        } else if (hasYearly) {
+            effectivePlanKind = 'yearly';
+            modeBadgeText = 'Yearly fallback';
+            priceText = yearlyPrice;
+            statusText = 'Founding seats are sold out.';
+            fallbackText = 'Continuing with yearly billing.';
+            fallbackFromLifetime = true;
         } else {
             effectivePlanKind = 'unavailable';
             modeBadgeText = 'Unavailable';
             priceText = 'Contact Sales';
-            statusText = 'Yearly pricing is unavailable for this tier.';
-            fallbackText = 'This tier is not configured for checkout yet.';
+            statusText = 'No checkout price configured yet.';
+            isUnavailable = true;
+        }
+    } else if (planKind === 'yearly') {
+        if (hasLifetimeCapacity) {
+            effectivePlanKind = hasMonthly ? 'monthly' : 'unavailable';
+            modeBadgeText = hasMonthly ? 'Monthly fallback' : 'Unavailable';
+            priceText = hasMonthly ? monthlyPrice : 'Contact Sales';
+            statusText = hasMonthly ? 'Yearly is hidden while lifetime seats remain.' : 'Yearly is hidden while lifetime seats remain.';
+            fallbackText = hasMonthly ? 'Continuing with monthly billing.' : '';
+            isUnavailable = !hasMonthly;
+        } else if (hasYearly) {
+            effectivePlanKind = 'yearly';
+            modeBadgeText = 'Yearly';
+            priceText = yearlyPrice;
+            statusText = 'Billed yearly subscription (10x monthly display).';
+        } else if (hasMonthly) {
+            effectivePlanKind = 'monthly';
+            modeBadgeText = 'Monthly fallback';
+            priceText = monthlyPrice;
+            statusText = 'Yearly pricing unavailable.';
+            fallbackText = 'Continuing with monthly billing.';
+        } else {
+            effectivePlanKind = 'unavailable';
+            modeBadgeText = 'Unavailable';
+            priceText = 'Contact Sales';
+            statusText = 'Yearly pricing unavailable.';
             isUnavailable = true;
         }
     } else {
@@ -276,57 +324,45 @@ function resolveTierSelection(tierId) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly';
             priceText = monthlyPrice;
-            statusText = 'Billed monthly subscription.';
-        } else if (hasYearly) {
+            statusText = 'Start your 14 day free trial now';
+        } else if (!hasLifetimeCapacity && hasYearly) {
             effectivePlanKind = 'yearly';
             modeBadgeText = 'Yearly fallback';
             priceText = yearlyPrice;
-            statusText = 'Monthly pricing is not configured for this tier.';
-            fallbackText = 'Showing yearly billing instead.';
+            statusText = 'Monthly pricing unavailable.';
+            fallbackText = 'Continuing with yearly billing.';
         } else {
             effectivePlanKind = 'unavailable';
             modeBadgeText = 'Unavailable';
             priceText = 'Contact Sales';
-            statusText = 'Monthly pricing is unavailable for this tier.';
-            fallbackText = 'This tier is not configured for checkout yet.';
+            statusText = 'Monthly pricing unavailable.';
             isUnavailable = true;
         }
     }
 
     return {
-        tierData,
-        lifetimeOffer,
-        requestedPlanKind: selectedPlanKind,
         effectivePlanKind,
         modeBadgeText,
         priceText,
         statusText,
         fallbackText,
-        fallbackFromLifetime,
         isUnavailable,
+        lifetimeOffer,
+        fallbackFromLifetime,
     };
 }
 
-function updateToggleState() {
-    document.querySelectorAll('.plan-kind-toggle').forEach((button) => {
-        const isActive = button.dataset.planKind === selectedPlanKind;
-        button.classList.toggle('active', isActive);
-        button.classList.toggle('btn-primary', isActive);
-        button.classList.toggle('btn-outline-primary', !isActive);
-    });
-}
+function updateOfferCards() {
+    document.querySelectorAll('.plan-choice-card').forEach((card) => {
+        const cardPlanKind = String(card.dataset.planKind || '');
+        const planState = getPlanState(cardPlanKind);
+        const isSelected = cardPlanKind === selectedPlanKind;
 
-function updateTierCardPresentations() {
-    document.querySelectorAll('.tier-choice-card').forEach((card) => {
-        const tierId = String(card.dataset.tierId || '');
-        const state = resolveTierSelection(tierId);
-        const isSelectedTier = tierId && tierId === String(selectedTier);
-
-        card.classList.toggle('selected-tier', isSelectedTier);
-        card.classList.toggle('is-lifetime-exhausted', selectedPlanKind === 'lifetime' && state.fallbackFromLifetime);
-        card.classList.toggle('is-disabled', state.isUnavailable);
-        card.setAttribute('aria-pressed', isSelectedTier ? 'true' : 'false');
-        card.setAttribute('aria-disabled', state.isUnavailable ? 'true' : 'false');
+        card.classList.toggle('active-offer', isSelected);
+        card.classList.toggle('is-disabled', planState.isUnavailable);
+        card.classList.toggle('is-lifetime-fallback', cardPlanKind === 'lifetime' && planState.fallbackFromLifetime);
+        card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        card.setAttribute('aria-disabled', planState.isUnavailable ? 'true' : 'false');
 
         const modeBadge = card.querySelector('[data-role="modeBadge"]');
         const priceText = card.querySelector('[data-role="priceText"]');
@@ -334,147 +370,148 @@ function updateTierCardPresentations() {
         const fallbackText = card.querySelector('[data-role="fallbackText"]');
 
         if (modeBadge) {
-            modeBadge.textContent = state.modeBadgeText;
-            modeBadge.dataset.mode = state.effectivePlanKind || 'unavailable';
+            modeBadge.textContent = planState.modeBadgeText;
+            modeBadge.dataset.mode = planState.effectivePlanKind || 'unavailable';
         }
         if (priceText) {
-            priceText.textContent = state.priceText;
+            priceText.textContent = planState.priceText;
         }
         if (statusText) {
-            statusText.textContent = state.statusText;
+            statusText.textContent = planState.statusText;
         }
         if (fallbackText) {
-            fallbackText.textContent = state.fallbackText || '';
-            fallbackText.classList.toggle('d-none', !state.fallbackText);
+            fallbackText.textContent = planState.fallbackText || '';
+            fallbackText.classList.toggle('d-none', !planState.fallbackText);
         }
     });
+}
+
+function buildSelectedOfferTotal(planState) {
+    if (!planState || planState.isUnavailable) {
+        return '—';
+    }
+    if (planState.effectivePlanKind === 'lifetime') {
+        return `Subscription Tier Lifetime Price: ${planState.priceText}`;
+    }
+    if (planState.effectivePlanKind === 'yearly') {
+        return `Subscription Tier Yearly Price: ${planState.priceText}`;
+    }
+    return `Subscription Tier Monthly Price: ${planState.priceText}`;
 }
 
 function updatePlanSummary() {
     const title = document.getElementById('featuresCardTitle');
     const selectedText = document.getElementById('selectedTierText');
-    const badge = document.getElementById('selectedTierBadge');
-    const priceText = document.getElementById('tierPriceText');
     const featuresList = document.getElementById('featuresChecklist');
+    const selectedOfferTotalText = document.getElementById('selectedOfferTotalText');
     const lifetimeCounterMessage = document.getElementById('lifetimeCounterMessage');
     const continueBtn = document.getElementById('continueBtn');
 
+    const tierData = getTierData();
+    const planState = getPlanState(selectedPlanKind);
+
     featuresList.innerHTML = '';
+    selectedOfferTotalText.textContent = '—';
     lifetimeCounterMessage.classList.add('d-none');
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
-    const tierData = availableTiers[String(selectedTier)];
+    const valueStackItems = [
+        { label: 'Artisan Core System', value: '$1,200 value' },
+        { label: 'Global Ingredient Library (coming soon)', value: '$500 value' },
+        { label: 'AI Recipe Parser (coming soon)', value: '$400 value' },
+        { label: 'Container Fill Logic Engine', value: '$300 value' },
+        { label: 'Compliance + Lot Traceability', value: '$250 value' },
+    ];
+
     if (!tierData) {
-        title.textContent = 'Plan summary';
-        selectedText.textContent = 'Select a plan to continue to checkout.';
-        badge.textContent = 'No plan selected';
-        priceText.textContent = '—';
+        title.textContent = 'Why Chose Batchtrack?';
+        selectedText.textContent = 'Tier configuration unavailable.';
         continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
 
-    const features = tierData.presentation_features || tierData.features || [];
-    const featureTotal = Number(
-        tierData.presentation_feature_total || tierData.feature_total || features.length
-    );
-    features.forEach((feature) => {
+    valueStackItems.forEach((stackItem) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-check text-success me-2';
         const copy = document.createElement('span');
-        copy.textContent = feature;
+        copy.textContent = `${stackItem.label} — ${stackItem.value}`;
         item.appendChild(icon);
         item.appendChild(copy);
         featuresList.appendChild(item);
     });
 
-    if (featureTotal > features.length) {
-        const moreItem = document.createElement('li');
-        moreItem.className = 'text-muted';
-        moreItem.textContent = `...and ${featureTotal - features.length} more capabilities inside the app.`;
-        featuresList.appendChild(moreItem);
-    }
+    const totalValueItem = document.createElement('li');
+    totalValueItem.className = 'fw-semibold';
+    totalValueItem.textContent = 'Total stack value: $2,650+';
+    featuresList.appendChild(totalValueItem);
 
-    const selectionState = resolveTierSelection(selectedTier);
-    const effectivePlanLabel = formatPlanLabel(selectionState.effectivePlanKind);
-
-    if (selectionState.isUnavailable) {
-        title.textContent = `${tierData.name} summary`;
-        selectedText.textContent = 'This tier is currently unavailable for checkout.';
-        badge.textContent = `${tierData.name} Unavailable`;
-        priceText.textContent = '—';
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
+    if (planState.isUnavailable) {
+        title.textContent = 'Why Chose Batchtrack?';
+        selectedText.textContent = 'This plan is currently unavailable for checkout.';
         continueBtn.disabled = true;
-        lifetimeCounterMessage.textContent = selectionState.fallbackText || 'Pricing is not configured for this tier yet.';
-        lifetimeCounterMessage.classList.remove('d-none');
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
 
-    title.textContent = `${tierData.name} plan summary`;
-    badge.textContent = `${tierData.name} ${effectivePlanLabel}`;
-    priceText.textContent = selectionState.priceText;
+    title.textContent = 'Why Chose Batchtrack?';
 
-    if (selectionState.effectivePlanKind === 'lifetime') {
-        const offer = selectionState.lifetimeOffer;
-        if (!offer || !offer.has_remaining || !offer.tier_id) {
-            selectedLifetimeTier = '';
-            continueBtn.disabled = true;
-            continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
-            selectedText.textContent = 'Lifetime checkout is unavailable for this tier right now.';
-            lifetimeCounterMessage.textContent = 'No lifetime offers remain for this tier.';
-            lifetimeCounterMessage.classList.remove('d-none');
-            return;
-        }
-
-        selectedLifetimeTier = offer.key;
-        selectedText.textContent = `You selected ${tierData.name} lifetime access.`;
-        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
+    if (planState.effectivePlanKind === 'lifetime') {
+        const lifetimeOffer = planState.lifetimeOffer;
+        selectedLifetimeTier = lifetimeOffer ? lifetimeOffer.key : '';
+        selectedText.textContent = 'You selected Founding Member Lifetime checkout.';
         continueBtn.disabled = false;
-        lifetimeCounterMessage.textContent = `Only ${offer.display_spots_left} spots left / ${offer.seat_total} for ${offer.name}.`;
-        lifetimeCounterMessage.classList.remove('d-none');
+        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Claim Founding Members Lifetime';
+        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
+        if (lifetimeOffer) {
+            lifetimeCounterMessage.textContent = `Only ${lifetimeOffer.display_spots_left} seats left / ${lifetimeOffer.seat_total} for Founding Members.`;
+            lifetimeCounterMessage.classList.remove('d-none');
+        }
         return;
     }
 
     selectedLifetimeTier = '';
     continueBtn.disabled = false;
-    continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${effectivePlanLabel} Checkout`;
-
-    if (selectedPlanKind === 'lifetime' && selectionState.fallbackFromLifetime) {
-        selectedText.textContent = `No lifetime offers remain for this tier. Checkout will continue with ${effectivePlanLabel.toLowerCase()} billing.`;
-        lifetimeCounterMessage.textContent = `No lifetime offers remain for this tier. Showing ${effectivePlanLabel.toLowerCase()} as the next step down.`;
-        lifetimeCounterMessage.classList.remove('d-none');
+    if (planState.effectivePlanKind === 'monthly') {
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start your 14 day free trial now';
+        selectedText.textContent = 'You selected Artisan monthly. Start your 14 day free trial now.';
+        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
     } else {
-        selectedText.textContent = `You selected the ${tierData.name} plan (${effectivePlanLabel.toLowerCase()}).`;
-        if (selectionState.effectivePlanKind !== selectionState.requestedPlanKind && selectionState.fallbackText) {
-            lifetimeCounterMessage.textContent = selectionState.fallbackText;
-            lifetimeCounterMessage.classList.remove('d-none');
-            lifetimeCounterMessage.classList.remove('alert-warning');
-            lifetimeCounterMessage.classList.add('alert-info');
-        }
+        continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
+        selectedText.textContent = `You selected Artisan ${planState.modeBadgeText.toLowerCase()} billing.`;
+        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
+    }
+
+    if (planState.fallbackText) {
+        lifetimeCounterMessage.textContent = planState.fallbackText;
+        lifetimeCounterMessage.classList.remove('d-none');
+        lifetimeCounterMessage.classList.remove('alert-warning');
+        lifetimeCounterMessage.classList.add('alert-info');
     }
 }
 
 function proceedToPayment() {
-    if (!selectedTier || !availableTiers[String(selectedTier)]) {
-        alert('Please select a plan first.');
+    const tierData = getTierData();
+    if (!selectedTier || !tierData) {
+        alert('The Artisan tier is not configured for checkout.');
         return;
     }
 
-    const selectionState = resolveTierSelection(selectedTier);
-    if (selectionState.isUnavailable || !VALID_PLAN_KINDS.includes(selectionState.effectivePlanKind)) {
-        alert('This tier is not available for checkout yet.');
+    const planState = getPlanState(selectedPlanKind);
+    if (planState.isUnavailable || !VALID_PLAN_KINDS.includes(planState.effectivePlanKind)) {
+        alert('This billing option is not available for checkout yet.');
         return;
     }
 
     let billingMode = 'standard';
-    let billingCycle = selectionState.effectivePlanKind === 'yearly' ? 'yearly' : 'monthly';
+    let billingCycle = planState.effectivePlanKind === 'yearly' ? 'yearly' : 'monthly';
 
-    if (selectionState.effectivePlanKind === 'lifetime') {
-        const offer = selectionState.lifetimeOffer;
+    if (planState.effectivePlanKind === 'lifetime') {
+        const offer = planState.lifetimeOffer;
         if (!offer || !offer.has_remaining || !offer.tier_id) {
-            alert('That lifetime tier is sold out. Please choose another option.');
+            alert('Founding lifetime seats are sold out. Please choose monthly billing.');
             return;
         }
         selectedLifetimeTier = offer.key;
@@ -488,9 +525,11 @@ function proceedToPayment() {
     if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
         window.BTAnalytics.capture('signup_continue_to_payment_clicked', {
             selected_tier: String(selectedTier || ''),
+            requested_plan_kind: selectedPlanKind,
+            effective_plan_kind: planState.effectivePlanKind,
             billing_mode: billingMode,
             billing_cycle: billingCycle,
-            signup_source: signupSource || null
+            signup_source: signupSource || null,
         });
     }
 
@@ -549,179 +588,136 @@ function proceedToPayment() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const tierCards = Array.from(document.querySelectorAll('.tier-choice-card'));
-    const toggleButtons = Array.from(document.querySelectorAll('.plan-kind-toggle'));
+    const offerCards = Array.from(document.querySelectorAll('.plan-choice-card'));
+    if (!VALID_PLAN_KINDS.includes(selectedPlanKind)) {
+        selectedPlanKind = 'monthly';
+    }
 
-    tierCards.forEach((card) => {
+    offerCards.forEach((card) => {
         card.addEventListener('click', () => {
-            selectedTier = String(card.dataset.tierId || '');
-            updateToggleState();
-            updateTierCardPresentations();
+            const nextKind = String(card.dataset.planKind || '');
+            if (!VALID_PLAN_KINDS.includes(nextKind)) return;
+            selectedPlanKind = nextKind;
+            updateOfferCards();
             updatePlanSummary();
         });
 
         card.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                selectedTier = String(card.dataset.tierId || '');
-                updateToggleState();
-                updateTierCardPresentations();
+                const nextKind = String(card.dataset.planKind || '');
+                if (!VALID_PLAN_KINDS.includes(nextKind)) return;
+                selectedPlanKind = nextKind;
+                updateOfferCards();
                 updatePlanSummary();
             }
         });
     });
 
-    toggleButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-            const nextKind = String(button.dataset.planKind || '').toLowerCase();
-            if (!VALID_PLAN_KINDS.includes(nextKind)) {
-                return;
-            }
-            selectedPlanKind = nextKind;
-            updateToggleState();
-            updateTierCardPresentations();
-            updatePlanSummary();
-        });
-    });
-
-    if (!VALID_PLAN_KINDS.includes(selectedPlanKind)) {
-        selectedPlanKind = 'lifetime';
-    }
-
-    if (selectedLifetimeTier && lifetimeByKey[selectedLifetimeTier] && lifetimeByKey[selectedLifetimeTier].tier_id) {
-        selectedTier = String(lifetimeByKey[selectedLifetimeTier].tier_id);
-    }
-
-    if (!selectedTier || !getTierData(selectedTier)) {
-        selectedTier = getPreferredTierId();
-    }
-
-    if (!selectedTier && tierCards.length > 0) {
-        selectedTier = String(tierCards[0].dataset.tierId || '');
-    }
-
-    if (!selectedTier || !getTierData(selectedTier)) {
-        selectedTier = '';
-    }
-
     if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
         window.BTAnalytics.capture('signup_page_viewed', {
             selected_tier: String(selectedTier || ''),
-            requested_plan_kind: selectedPlanKind || null,
-            signup_source: signupSource || null
+            requested_plan_kind: selectedPlanKind,
+            signup_source: signupSource || null,
         });
     }
 
-    updateToggleState();
-    updateTierCardPresentations();
+    updateOfferCards();
     updatePlanSummary();
 });
 </script>
 
 <style>
-.tier-choice-card-shell {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+.signup-shell {
+    background: #ffffff;
+    border: 1px solid #e1e6f2;
+    border-radius: 16px;
+    box-shadow: 0 10px 26px rgba(22, 32, 61, 0.08);
+    padding: 1rem 1rem 1.15rem;
 }
 
-.tier-choice-card-topline {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.4rem;
+.pricing-section {
+    margin-bottom: 1.5rem;
 }
 
-.tier-choice-card-shell .tier-choice-card {
-    flex: 1 1 auto;
+.pricing-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
 }
 
-.tier-choice-card {
-    border: 2px solid #d8e0ef;
+.plan-choice-card {
+    border: 2px solid #d6dff0;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
-    background: var(--theme-ext-color-e26efca41a);
-    padding: var(--theme-ext-space-8d9db2a862);
-    box-shadow: var(--theme-ext-shadow-f0041b4741);
+    background: #ffffff;
+    padding: 1.15rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
     cursor: pointer;
 }
 
-.tier-choice-card.is-recommended {
-    background: var(--theme-ext-color-866694556b);
+.plan-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f0ff;
+    border: 1px solid #9eb8ee;
+    color: #244a97;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
 }
 
-.tier-choice-card.selected-tier {
+.plan-chip-lifetime {
+    background: #fff4de;
+    border-color: #f2d18b;
+    color: #7a4f00;
+}
+
+.plan-choice-card.active-offer {
     border-color: var(--theme-ext-color-7630a14d9f);
     box-shadow: var(--theme-ext-shadow-a9f9d9573c);
     transform: translateY(-2px);
 }
 
-.tier-choice-card.is-lifetime-exhausted {
+.plan-choice-card.is-disabled {
+    opacity: 0.72;
+}
+
+.plan-choice-card.is-lifetime-fallback {
     border-style: dashed;
     background: #f8f9fd;
 }
 
-.tier-choice-card.is-disabled {
-    opacity: 0.72;
-}
-
-.tier-choice-mode-badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: var(--theme-ext-radius-13166981e2);
-    font-size: var(--theme-ext-size-6ab716b90b);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 700;
-    padding: 0.25rem 0.6rem;
-}
-
-.tier-choice-mode-badge[data-mode="lifetime"] {
-    background: #fff4de;
-    border: 1px solid #f2d18b;
-    color: #7a4f00;
-}
-
-.tier-choice-mode-badge[data-mode="yearly"] {
-    background: #e4f7ea;
-    border: 1px solid #9fd8ad;
-    color: #21643a;
-}
-
-.tier-choice-mode-badge[data-mode="monthly"] {
-    background: #e8f0ff;
-    border: 1px solid #9eb8ee;
-    color: #244a97;
-}
-
-.tier-choice-mode-badge[data-mode="unavailable"] {
-    background: #f0f2f6;
-    border: 1px solid #d4dae6;
-    color: #68738a;
-}
-
-.tier-choice-price {
-    font-size: 1.25rem;
+.plan-price {
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--theme-ext-color-7630a14d9f);
     line-height: 1.25;
 }
 
-.billing-toggle-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.plan-includes {
+    font-size: 1rem;
+    color: #2f3a56;
 }
 
-#billingPlanToggle .plan-kind-toggle {
-    min-width: 7.5rem;
+.plan-subtext {
+    font-size: 0.86rem;
+    color: #5f6b84;
+}
+
+.soft-panel {
+    background: #f8f9fd;
+    border: 1px solid #e0e7f4;
+    border-radius: var(--theme-ext-radius-1f2f59cc9c);
 }
 
 .features-checklist {
     list-style: none;
     padding: var(--theme-ext-space-369a047e0c);
     margin: var(--theme-ext-space-4cb477d5ee);
-    columns: 2;
-    column-gap: var(--theme-ext-space-db375252e4);
+    columns: 1;
 }
 
 .features-checklist li {
@@ -733,29 +729,73 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 @media (max-width: 768px) {
-    .tier-choice-card {
-        padding: var(--theme-ext-space-32524b311c);
+    .signup-shell {
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(22, 32, 61, 0.06);
+        padding: 0.7rem 0.65rem 0.9rem;
     }
 
-    #billingPlanToggle {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.5rem;
+    .pricing-cards-grid {
+        gap: 0.65rem;
     }
 
-    #billingPlanToggle .plan-kind-toggle {
-        min-width: 0;
-        border-radius: var(--theme-ext-radius-1f2f59cc9c) !important;
+    .plan-choice-card {
+        border: 1px solid #d8e0ef;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 1px 6px rgba(22, 32, 61, 0.06);
+        padding: 0.75rem 0.65rem;
     }
 
-    .features-checklist {
-        columns: 1;
+    .plan-choice-card.is-lifetime-fallback {
+        border-style: dashed;
+        background: #fbfcff;
+    }
+
+    .plan-choice-card.active-offer {
+        border: 1px solid var(--theme-ext-color-7630a14d9f);
+        box-shadow: 0 4px 12px rgba(36, 74, 151, 0.16);
+        transform: none;
+        background: #ffffff;
+    }
+
+    .plan-chip {
+        font-size: 0.58rem;
+        padding: 0.15rem 0.45rem;
+    }
+
+    .plan-price {
+        font-size: 0.95rem;
+    }
+
+    .plan-includes {
+        font-size: 0.8rem;
+    }
+
+    .plan-subtext {
+        font-size: 0.7rem;
     }
 }
 
-.soft-success-badge {
-    background-color: var(--theme-ext-color-5851662767);
+/* Phone-sized screens (e.g., Galaxy widths): keep white background,
+   but remove visible outer shell edges/shadow to avoid nested look. */
+@media (max-width: 430px) {
+    .signup-layout-col {
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+
+    .signup-shell {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: #ffffff;
+        padding: 0.45rem 0.25rem 0.75rem;
+    }
+
+    .pricing-section {
+        margin-bottom: 1.15rem;
+    }
 }
 </style>
 {% endblock %}
