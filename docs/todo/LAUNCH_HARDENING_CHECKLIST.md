@@ -78,12 +78,12 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 ## Priority 3: Test Coverage for Critical Paths
 
 ### 3.1 Auth flow tests
-- [ ] Login success and failure (username/password)
-- [ ] Signup flow (form validation, org creation, tier assignment)
-- [ ] Password reset request and completion
-- [ ] Email verification flow
-- [ ] OAuth callback handling (Google flow beyond current coverage)
-- [ ] Session enforcement (single-session guard)
+- [x] Login success and failure (username/password)
+- [x] Signup flow (form validation, org creation, tier assignment)
+- [ ] Password reset request and completion (deferred in current scope by request)
+- [x] Email verification flow
+- [x] OAuth callback handling (Google flow beyond current coverage)
+- [x] Session enforcement (single-session guard)
 
 ### 3.2 Organization management tests
 - [ ] Invite user flow (create user, assign role, email dispatch)
