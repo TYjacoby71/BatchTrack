@@ -12,10 +12,10 @@
             <div class="card shadow-sm">
                 <div class="card-header text-center">
                     <h2 class="mb-1">
-                        <i class="fas fa-rocket me-2"></i>Choose Your Artisan Plan Access
+                        The Artisan Plan
                     </h2>
                     <p class="text-muted mb-0">
-                        One plan. Two ways to pay. Lifetime is limited to founding seats.
+                        Lifetime Membership Available for the first 300 Founding Members
                     </p>
                 </div>
                 <div class="card-body p-4 p-lg-5">
@@ -52,71 +52,79 @@
                             No customer-facing tier is configured yet. Please configure at least one Stripe-backed tier.
                         </div>
                         {% else %}
-                        <article
-                            class="plan-choice-card h-100 active-offer"
-                            id="monthlyPlanCard"
-                            data-plan-kind="monthly"
-                            role="button"
-                            tabindex="0"
-                            aria-pressed="true"
-                        >
-                            <div class="plan-chip mb-3">Monthly</div>
-                            <h4 class="h3 fw-bold mb-2">Artisan Plan</h4>
-                            <div class="plan-price mb-2" data-role="priceText">
-                                {{ primary_tier.monthly_price_display or primary_tier.price_display or '$24.99' }}
-                            </div>
-                            <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
-                            <p class="small text-muted mb-0">14-day free trial, then monthly billing.</p>
-                        </article>
-                        {% endif %}
-                    </div>
-
-                    <div class="card border-0 soft-panel mb-4" id="grandSlamOfferCard">
-                        <div class="card-body py-3">
-                            <h4 class="h6 mb-2">Grand Slam Offer</h4>
-                            {% if has_lifetime_capacity and primary_lifetime_offer %}
-                            <p class="small text-muted mb-2">
-                                Founding member lifetime access is available while seats last.
-                            </p>
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                <div>
-                                    <div class="fw-bold text-dark">{{ primary_lifetime_offer.lifetime_price_copy }}</div>
-                                    <div class="small text-muted">
-                                        Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
-                                    </div>
+                        <div class="pricing-cards-grid">
+                            <article
+                                class="plan-choice-card h-100 active-offer"
+                                id="monthlyPlanCard"
+                                data-plan-kind="monthly"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="true"
+                            >
+                                <div class="plan-chip mb-2">Monthly</div>
+                                <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_tier.monthly_price_display or primary_tier.price_display or '$24.99' }}
                                 </div>
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-dark btn-sm"
-                                    id="selectLifetimeBtn"
-                                >
-                                    Choose Grand Slam Lifetime
-                                </button>
-                            </div>
+                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Start your 14 day free trial now</p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
+
+                            {% if has_lifetime_capacity and primary_lifetime_offer %}
+                            <article
+                                class="plan-choice-card h-100"
+                                id="lifetimePlanCard"
+                                data-plan-kind="lifetime"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="false"
+                            >
+                                <div class="plan-chip plan-chip-lifetime mb-2">FOUNDING MEMBERS LIMITED OFFER</div>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_lifetime_offer.lifetime_price_copy }}
+                                </div>
+                                <p class="plan-includes mb-1">Everything We have to offer... FOREVER</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">
+                                    Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
+                                </p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
                             {% else %}
-                            <p class="small text-muted mb-0">
-                                Grand Slam lifetime seats are currently sold out. Monthly access is active.
-                            </p>
+                            <article
+                                class="plan-choice-card h-100"
+                                id="yearlyPlanCard"
+                                data-plan-kind="yearly"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="false"
+                            >
+                                <div class="plan-chip mb-2">Yearly</div>
+                                <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
+                                <div class="plan-price mb-2" data-role="priceText">
+                                    {{ primary_tier.yearly_price_display or 'Yearly pricing at secure checkout' }}
+                                </div>
+                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Billed yearly.</p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                            </article>
                             {% endif %}
                         </div>
+                        {% endif %}
                     </div>
 
                     <div class="card shadow-sm mb-4" id="tierFeaturesCard">
                         <div class="card-body p-4">
-                            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-3">
-                                <div>
-                                    <h4 class="mb-1" id="featuresCardTitle">Artisan plan summary</h4>
-                                    <p class="text-muted mb-0" id="selectedTierText">Choose a billing option to continue to checkout.</p>
-                                </div>
-                                <div class="text-lg-end">
-                                    <div class="badge rounded-pill text-success border border-success soft-success-badge mb-2" id="selectedTierBadge">
-                                        Artisan plan
-                                    </div>
-                                    <div class="fs-4 fw-bold text-primary" id="tierPriceText">—</div>
-                                </div>
-                            </div>
+                            <h4 class="mb-1" id="featuresCardTitle">Why Chose Batchtrack?</h4>
+                            <p class="text-muted mb-3" id="selectedTierText">Choose a billing option to continue to checkout.</p>
                             <div id="lifetimeCounterMessage" class="alert alert-warning py-2 px-3 small d-none mb-3"></div>
                             <ul class="features-checklist mb-0" id="featuresChecklist"></ul>
+                            <div class="summary-total-wrap mt-3 pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold">Selected Offer Total</span>
+                                    <span class="fw-bold text-primary" id="selectedOfferTotalText">—</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -256,7 +264,7 @@ function getPlanState(planKind) {
     let effectivePlanKind = planKind;
     let modeBadgeText = planKind === 'lifetime' ? 'Lifetime' : (planKind === 'yearly' ? 'Yearly' : 'Monthly');
     let priceText = monthlyPrice;
-    let statusText = 'Starts with a 14-day free trial, then billed monthly.';
+    let statusText = 'Start your 14 day free trial now';
     let fallbackText = '';
     let fallbackFromLifetime = false;
     let isUnavailable = false;
@@ -319,7 +327,7 @@ function getPlanState(planKind) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly';
             priceText = monthlyPrice;
-            statusText = 'Starts with a 14-day free trial, then billed monthly.';
+            statusText = 'Start your 14 day free trial now';
         } else if (!hasLifetimeCapacity && hasYearly) {
             effectivePlanKind = 'yearly';
             modeBadgeText = 'Yearly fallback';
@@ -381,94 +389,72 @@ function updateOfferCards() {
     });
 }
 
-function updateGrandSlamOffer(planState) {
-    const grandSlamCard = document.getElementById('grandSlamOfferCard');
-    const selectLifetimeBtn = document.getElementById('selectLifetimeBtn');
-    const isLifetimeSelected = planState.effectivePlanKind === 'lifetime';
-
-    if (grandSlamCard) {
-        grandSlamCard.classList.toggle('is-selected', isLifetimeSelected);
-    }
-
-    if (selectLifetimeBtn) {
-        selectLifetimeBtn.classList.toggle('btn-dark', isLifetimeSelected);
-        selectLifetimeBtn.classList.toggle('btn-outline-dark', !isLifetimeSelected);
-        selectLifetimeBtn.textContent = isLifetimeSelected
-            ? 'Grand Slam Lifetime Selected'
-            : 'Choose Grand Slam Lifetime';
-    }
-}
-
 function updatePlanSummary() {
     const title = document.getElementById('featuresCardTitle');
     const selectedText = document.getElementById('selectedTierText');
-    const badge = document.getElementById('selectedTierBadge');
-    const priceText = document.getElementById('tierPriceText');
     const featuresList = document.getElementById('featuresChecklist');
+    const selectedOfferTotalText = document.getElementById('selectedOfferTotalText');
     const lifetimeCounterMessage = document.getElementById('lifetimeCounterMessage');
     const continueBtn = document.getElementById('continueBtn');
 
     const tierData = getTierData();
     const planState = getPlanState(selectedPlanKind);
-    updateGrandSlamOffer(planState);
 
     featuresList.innerHTML = '';
+    selectedOfferTotalText.textContent = '—';
     lifetimeCounterMessage.classList.add('d-none');
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
+    const valueStackItems = [
+        { label: 'Artisan Core System', value: '$1,200 value' },
+        { label: 'Global Ingredient Library (coming soon)', value: '$500 value' },
+        { label: 'AI Recipe Parser (coming soon)', value: '$400 value' },
+        { label: 'Container Fill Logic Engine', value: '$300 value' },
+        { label: 'Compliance + Lot Traceability', value: '$250 value' },
+    ];
+
     if (!tierData) {
-        title.textContent = 'Artisan plan summary';
+        title.textContent = 'Why Chose Batchtrack?';
         selectedText.textContent = 'Tier configuration unavailable.';
-        badge.textContent = 'Unavailable';
-        priceText.textContent = '—';
         continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
 
-    const features = tierData.presentation_features || tierData.features || [];
-    const featureTotal = Number(
-        tierData.presentation_feature_total || tierData.feature_total || features.length
-    );
-    features.forEach((feature) => {
+    valueStackItems.forEach((stackItem) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-check text-success me-2';
         const copy = document.createElement('span');
-        copy.textContent = feature;
+        copy.textContent = `${stackItem.label} — ${stackItem.value}`;
         item.appendChild(icon);
         item.appendChild(copy);
         featuresList.appendChild(item);
     });
 
-    if (featureTotal > features.length) {
-        const moreItem = document.createElement('li');
-        moreItem.className = 'text-muted';
-        moreItem.textContent = `...and ${featureTotal - features.length} more capabilities inside the app.`;
-        featuresList.appendChild(moreItem);
-    }
+    const totalValueItem = document.createElement('li');
+    totalValueItem.className = 'fw-semibold';
+    totalValueItem.textContent = 'Total stack value: $2,650+';
+    featuresList.appendChild(totalValueItem);
 
     if (planState.isUnavailable) {
-        title.textContent = 'Artisan plan summary';
+        title.textContent = 'Why Chose Batchtrack?';
         selectedText.textContent = 'This plan is currently unavailable for checkout.';
-        badge.textContent = 'Unavailable';
-        priceText.textContent = '—';
         continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
 
-    title.textContent = 'Artisan plan summary';
-    badge.textContent = `Artisan ${planState.modeBadgeText}`;
-    priceText.textContent = planState.priceText;
+    title.textContent = 'Why Chose Batchtrack?';
 
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
         selectedLifetimeTier = lifetimeOffer ? lifetimeOffer.key : '';
         selectedText.textContent = 'You selected Founding Member Lifetime checkout.';
         continueBtn.disabled = false;
-        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Continue to Lifetime Checkout';
+        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Claim Founding Members Lifetime';
+        selectedOfferTotalText.textContent = planState.priceText;
         if (lifetimeOffer) {
             lifetimeCounterMessage.textContent = `Only ${lifetimeOffer.display_spots_left} seats left / ${lifetimeOffer.seat_total} for Founding Members.`;
             lifetimeCounterMessage.classList.remove('d-none');
@@ -479,11 +465,13 @@ function updatePlanSummary() {
     selectedLifetimeTier = '';
     continueBtn.disabled = false;
     if (planState.effectivePlanKind === 'monthly') {
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start 14-Day Free Trial';
-        selectedText.textContent = 'You selected Artisan monthly with a 14-day free trial.';
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start your 14 day free trial now';
+        selectedText.textContent = 'You selected Artisan monthly. Start your 14 day free trial now.';
+        selectedOfferTotalText.textContent = planState.priceText;
     } else {
         continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
         selectedText.textContent = `You selected Artisan ${planState.modeBadgeText.toLowerCase()} billing.`;
+        selectedOfferTotalText.textContent = planState.priceText;
     }
 
     if (planState.fallbackText) {
@@ -616,15 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const selectLifetimeBtn = document.getElementById('selectLifetimeBtn');
-    if (selectLifetimeBtn) {
-        selectLifetimeBtn.addEventListener('click', () => {
-            selectedPlanKind = 'lifetime';
-            updateOfferCards();
-            updatePlanSummary();
-        });
-    }
-
     if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
         window.BTAnalytics.capture('signup_page_viewed', {
             selected_tier: String(selectedTier || ''),
@@ -644,6 +623,12 @@ document.addEventListener('DOMContentLoaded', () => {
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
     background: #f9fbff;
     padding: 1rem;
+}
+
+.pricing-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
 }
 
 .plan-choice-card {
@@ -669,6 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
     padding: 0.2rem 0.6rem;
 }
 
+.plan-chip-lifetime {
+    background: #fff4de;
+    border-color: #f2d18b;
+    color: #7a4f00;
+}
+
 .plan-choice-card.active-offer {
     border-color: var(--theme-ext-color-7630a14d9f);
     box-shadow: var(--theme-ext-shadow-a9f9d9573c);
@@ -684,41 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
     background: #f8f9fd;
 }
 
-.plan-mode-badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: var(--theme-ext-radius-13166981e2);
-    font-size: var(--theme-ext-size-6ab716b90b);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 700;
-    padding: 0.25rem 0.6rem;
-}
-
-.plan-mode-badge[data-mode="lifetime"] {
-    background: #fff4de;
-    border: 1px solid #f2d18b;
-    color: #7a4f00;
-}
-
-.plan-mode-badge[data-mode="yearly"] {
-    background: #e4f7ea;
-    border: 1px solid #9fd8ad;
-    color: #21643a;
-}
-
-.plan-mode-badge[data-mode="monthly"] {
-    background: #e8f0ff;
-    border: 1px solid #9eb8ee;
-    color: #244a97;
-}
-
-.plan-mode-badge[data-mode="unavailable"] {
-    background: #f0f2f6;
-    border: 1px solid #d4dae6;
-    color: #68738a;
-}
-
 .plan-price {
     font-size: 1.2rem;
     font-weight: 700;
@@ -731,23 +687,22 @@ document.addEventListener('DOMContentLoaded', () => {
     color: #2f3a56;
 }
 
+.plan-subtext {
+    font-size: 0.86rem;
+    color: #5f6b84;
+}
+
 .soft-panel {
     background: #f8f9fd;
     border: 1px solid #e0e7f4;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
 }
 
-.soft-panel.is-selected {
-    border-color: #29375f;
-    box-shadow: 0 10px 22px rgba(30, 43, 78, 0.12);
-}
-
 .features-checklist {
     list-style: none;
     padding: var(--theme-ext-space-369a047e0c);
     margin: var(--theme-ext-space-4cb477d5ee);
-    columns: 2;
-    column-gap: var(--theme-ext-space-db375252e4);
+    columns: 1;
 }
 
 .features-checklist li {
@@ -758,18 +713,34 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size: var(--theme-ext-size-03c2698f9e);
 }
 
-.soft-success-badge {
-    background-color: var(--theme-ext-color-5851662767);
-}
-
 @media (max-width: 768px) {
-    .single-tier-shell,
-    .plan-choice-card {
+    .single-tier-shell {
         padding: var(--theme-ext-space-32524b311c);
     }
 
-    .features-checklist {
-        columns: 1;
+    .pricing-cards-grid {
+        gap: 0.5rem;
+    }
+
+    .plan-choice-card {
+        padding: 0.75rem;
+    }
+
+    .plan-chip {
+        font-size: 0.62rem;
+        padding: 0.15rem 0.45rem;
+    }
+
+    .plan-price {
+        font-size: 1rem;
+    }
+
+    .plan-includes {
+        font-size: 0.88rem;
+    }
+
+    .plan-subtext {
+        font-size: 0.75rem;
     }
 }
 </style>
