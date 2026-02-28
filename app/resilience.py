@@ -10,6 +10,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from urllib.parse import urlparse
 
@@ -18,6 +19,9 @@ from flask_wtf.csrf import CSRFError
 from sqlalchemy.exc import DBAPIError, OperationalError
 
 from .extensions import db
+
+logger = logging.getLogger(__name__)
+
 
 
 def register_resilience_handlers(app) -> None:
@@ -33,6 +37,7 @@ def register_resilience_handlers(app) -> None:
                 or request.headers.get("X-Requested-With") == "XMLHttpRequest"
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:35", exc_info=True)
             return bool(request.is_json)
 
     def _csrf_login_target(next_path: str | None = None) -> str:
@@ -76,6 +81,7 @@ def register_resilience_handlers(app) -> None:
                 )
             return target
         except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:78", exc_info=True)
             return default_target
 
     @app.teardown_request
@@ -84,11 +90,13 @@ def register_resilience_handlers(app) -> None:
             if exc is not None:
                 db.session.rollback()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:86", exc_info=True)
             pass
         finally:
             try:
                 db.session.remove()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/resilience.py:91", exc_info=True)
                 pass
 
     @app.errorhandler(OperationalError)
@@ -97,11 +105,13 @@ def register_resilience_handlers(app) -> None:
         try:
             db.session.rollback()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:99", exc_info=True)
             pass
         # Return lightweight 503 page; avoid cascading errors if template missing.
         try:
             return render_template("errors/maintenance.html"), 503
         except Exception:
+            logger.warning("Suppressed exception fallback at app/resilience.py:104", exc_info=True)
             return ("Service temporarily unavailable. Please try again shortly.", 503)
 
     @app.errorhandler(CSRFError)

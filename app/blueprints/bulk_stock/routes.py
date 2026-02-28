@@ -9,6 +9,7 @@ Glossary:
 - Shopping list export: CSV output of low/needed ingredients from summary data.
 - Feature gate: Plan/flag check controlling route availability.
 """
+import logging
 
 import csv
 import io
@@ -29,6 +30,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models import Recipe
 from app.utils.permissions import require_permission
 from app.utils.settings import is_feature_enabled
+
+logger = logging.getLogger(__name__)
+
 
 # --- Bulk stock blueprint ---
 # Purpose: Group bulk stock-check routes.
@@ -131,6 +135,7 @@ def bulk_stock_check():
             "bulk_stock_check.html", recipes=recipes, summary=summary
         )
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/bulk_stock/routes.py:133", exc_info=True)
         flash(f"Error checking stock: {str(exc)}")
         return redirect(url_for("bulk_stock.bulk_stock_check"))
 

@@ -1,5 +1,9 @@
+import logging
 from ..extensions import db
 from ..models import Unit
+
+logger = logging.getLogger(__name__)
+
 
 
 def seed_units():
@@ -657,6 +661,7 @@ def seed_units():
         print(f"✅ Added {added_count} new units")
         print(f"ℹ️  Total units in database: {Unit.query.count()}")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/seeders/unit_seeder.py:659", exc_info=True)
         print(f"❌ Error seeding units: {e}")
         db.session.rollback()
         raise

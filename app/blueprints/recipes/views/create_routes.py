@@ -75,6 +75,7 @@ def _resolve_active_org_id():
     try:
         return getattr(current_user, "organization_id", None)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:77", exc_info=True)
         return None
 
 
@@ -246,6 +247,7 @@ def new_recipe():
                             )
                         )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:248", exc_info=True)
                     pass
                 if target_status == "draft":
                     flash(
@@ -260,6 +262,7 @@ def new_recipe():
                     _session.pop("tool_draft", None)
                     _session.pop("tool_draft_meta", None)
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:262", exc_info=True)
                     pass
                 return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
 
@@ -283,6 +286,7 @@ def new_recipe():
             )
 
         except Exception as exc:
+            logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:285", exc_info=True)
             db.session.rollback()
             logger.exception("Error creating recipe: %s", exc)
             flash("An unexpected error occurred", "error")
@@ -313,6 +317,7 @@ def new_recipe():
                 session.pop("tool_draft_meta", None)
                 draft = None
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:315", exc_info=True)
         pass
     prefill = None
     if isinstance(draft, dict):
@@ -331,6 +336,7 @@ def new_recipe():
                 if cat:
                     prefill.category_id = cat.id
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:333", exc_info=True)
             prefill = None
 
     return render_recipe_form(recipe=prefill)
@@ -468,6 +474,7 @@ def create_variation(recipe_id):
         )
 
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:470", exc_info=True)
         flash(f"Error creating variation: {exc}", "error")
         logger.exception("Error creating variation: %s", exc)
         return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
@@ -598,6 +605,7 @@ def create_test_version(recipe_id):
         )
 
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:600", exc_info=True)
         flash(f"Error creating test: {exc}", "error")
         logger.exception("Error creating test: %s", exc)
         return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
@@ -721,6 +729,7 @@ def clone_recipe(recipe_id):
         )
 
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:723", exc_info=True)
         db.session.rollback()
         flash(f"Error handling clone request: {exc}", "error")
         logger.exception("Error cloning recipe: %s", exc)

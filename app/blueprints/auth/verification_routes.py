@@ -71,6 +71,7 @@ def _safe_local_path(candidate: str | None) -> str | None:
     try:
         parsed = urlparse(candidate)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/verification_routes.py:73", exc_info=True)
         return None
 
     if not parsed.path.startswith("/") or parsed.path.startswith("//"):
@@ -218,6 +219,7 @@ def resend_verification():
                         user.email_verification_sent_at = None
                         db.session.commit()
             except Exception as exc:
+                logger.warning("Suppressed exception fallback at app/blueprints/auth/verification_routes.py:220", exc_info=True)
                 db.session.rollback()
                 logger.warning("Resend verification failed for %s: %s", email, exc)
 

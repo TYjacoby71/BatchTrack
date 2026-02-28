@@ -1,9 +1,13 @@
 """Production-safe maintenance command set."""
+import logging
 
 import click
 from flask.cli import with_appcontext
 
 from ...extensions import db
+
+logger = logging.getLogger(__name__)
+
 
 
 @click.command("update-permissions")
@@ -25,6 +29,7 @@ def update_permissions_command():
         print("   - Old permissions deactivated")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/maintenance.py:27", exc_info=True)
         print(f"❌ Permission update failed: {str(e)}")
         db.session.rollback()
         raise
@@ -48,6 +53,7 @@ def update_addons_command():
         print("   - Tier add-on permissions backfilled")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/maintenance.py:50", exc_info=True)
         print(f"❌ Add-on update failed: {str(e)}")
         db.session.rollback()
         raise
@@ -67,6 +73,7 @@ def update_subscription_tiers_command():
         print("✅ Subscription tiers updated!")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/maintenance.py:69", exc_info=True)
         print(f"❌ Subscription tier update failed: {str(e)}")
         db.session.rollback()
         raise

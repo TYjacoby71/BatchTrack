@@ -126,6 +126,7 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
             try:
                 db.session.commit()
             except Exception as clear_exc:
+                logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:128", exc_info=True)
                 db.session.rollback()
                 logger.warning(
                     "Failed to clear verification token after send failure for user %s: %s",
@@ -134,6 +135,7 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
                 )
         return sent
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:136", exc_info=True)
         db.session.rollback()
         logger.warning(
             "Unable to queue verification email for user %s: %s", user.id, exc
@@ -214,6 +216,7 @@ def login():
             ):
                 session["login_next"] = next_param
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:216", exc_info=True)
         pass
 
     try:
@@ -263,6 +266,7 @@ def login():
                 try:
                     password_valid = user.check_password(password or "")
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:265", exc_info=True)
                     password_valid = False
                 logger.info(
                     "Load test user state: is_active=%s, password_valid=%s",
@@ -406,6 +410,7 @@ def login():
             try:
                 next_url = session.pop("login_next", None) or request.args.get("next")
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:408", exc_info=True)
                 next_url = None
             if (
                 isinstance(next_url, str)
@@ -699,6 +704,7 @@ def quick_signup():
 
             return redirect(next_url)
         except Exception as exc:
+            logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:701", exc_info=True)
             db.session.rollback()
             logger.error("Quick signup failed: %s", exc, exc_info=True)
             flash("Unable to create your account right now. Please try again.", "error")
@@ -721,6 +727,7 @@ def quick_signup():
             gi = db.session.get(GlobalItem, int(global_item_id))
             global_item_name = getattr(gi, "name", "") if gi else ""
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:723", exc_info=True)
         global_item_name = ""
     signup_source = _normalize_signup_source(
         request.args.get("source"),
@@ -750,6 +757,7 @@ def logout():
         session.pop("tool_draft", None)
         session.pop("tool_draft_meta", None)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:752", exc_info=True)
         pass
 
     if current_user.is_authenticated:
@@ -757,6 +765,7 @@ def logout():
         try:
             db.session.commit()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:759", exc_info=True)
             db.session.rollback()
 
     SessionService.clear_session_state()

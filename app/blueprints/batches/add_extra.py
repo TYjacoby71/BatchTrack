@@ -9,6 +9,7 @@ Glossary:
 - Thin controller: Route that validates request and delegates business logic.
 - Batch operations service: Service authority for batch mutation workflows.
 """
+import logging
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
@@ -16,6 +17,9 @@ from flask_login import login_required
 from app.utils.permissions import require_permission
 
 from ...services.batch_service import BatchOperationsService
+
+logger = logging.getLogger(__name__)
+
 
 # --- Add-extra blueprint ---
 # Purpose: Group add-extra batch endpoint registrations.
@@ -56,4 +60,5 @@ def add_extra_to_batch(batch_id):
         return jsonify({"status": "success", "message": message})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/add_extra.py:58", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500

@@ -7,6 +7,7 @@ Glossary:
 - Module path: Source file `app/blueprints/developer/debug_routes.py`.
 - Unit heading block: Standardized comment metadata above each top-level function/class.
 """
+import logging
 
 from flask import Blueprint, jsonify
 from flask_login import current_user
@@ -17,6 +18,9 @@ from app.models.subscription_tier import SubscriptionTier
 from app.utils.permissions import _org_tier_includes_permission, has_permission
 
 from .decorators import require_developer_permission
+
+logger = logging.getLogger(__name__)
+
 
 debug_bp = Blueprint("debug", __name__, url_prefix="/debug")
 
@@ -43,6 +47,7 @@ def debug_permissions():
     try:
         tier_id = int(current_tier) if isinstance(current_tier, str) else current_tier
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/debug_routes.py:45", exc_info=True)
         tier_id = None
     tier_obj = db.session.get(SubscriptionTier, tier_id) if tier_id else None
     tier_permissions = (

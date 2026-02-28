@@ -53,14 +53,14 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 ## Priority 2: Production Visibility
 
 ### 2.1 Add logging to silent exception handlers
-- [ ] `app/template_context.py` (12 silent handlers): add `logger.debug()` or `logger.warning()` to each
-- [ ] `app/services/batch_service/batch_operations.py` (~20 silent handlers): add logging
-- [ ] `app/services/recipe_service/_core.py` (~15 silent handlers): add logging
-- [ ] `app/middleware.py` (~10 silent handlers): add logging
-- [ ] `app/blueprints/tools/routes.py` (7 silent handlers): add logging
-- [ ] `app/blueprints/inventory/routes.py` (5 silent handlers): add logging
-- [ ] Remaining files: search for `except Exception` and `except:` without a `logger.` call on the next line; fix all remaining instances
-- [ ] Verify no bare `except:` clauses remain (currently 1 in `cache_manager.py`)
+- [x] `app/template_context.py` (12 silent handlers): add `logger.debug()` or `logger.warning()` to each
+- [x] `app/services/batch_service/batch_operations.py` (~20 silent handlers): add logging
+- [x] `app/services/recipe_service/_core.py` (~15 silent handlers): add logging
+- [x] `app/middleware.py` (~10 silent handlers): add logging
+- [x] `app/blueprints/tools/routes.py` (7 silent handlers): add logging
+- [x] `app/blueprints/inventory/routes.py` (5 silent handlers): add logging
+- [x] Remaining files: search for `except Exception` and `except:` without a `logger.` call on the next line; fix all remaining instances
+- [x] Verify no bare `except:` clauses remain (confirmed)
 
 ### 2.2 Replace pickle in cache manager
 - [ ] `app/utils/cache_manager.py` line 161: replace `pickle.loads(raw)` with JSON deserialization

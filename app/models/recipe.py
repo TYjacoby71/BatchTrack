@@ -8,6 +8,7 @@ Glossary:
 - Test sequence: Numeric identifier for non-current test versions.
 - Current version: Active master/variation used for production.
 """
+import logging
 
 import sqlalchemy as sa
 from sqlalchemy import event
@@ -21,6 +22,9 @@ from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 from .mixins import ScopedModelMixin
+
+logger = logging.getLogger(__name__)
+
 
 _IS_PG = is_postgres()
 
@@ -462,6 +466,7 @@ def _assign_default_category_before_insert(mapper, connection, target):
             target.category_id = default_cat.id
     except Exception:
         # As a last resort, do nothing and let DB raise if truly impossible
+        logger.warning("Suppressed exception fallback at app/models/recipe.py:463", exc_info=True)
         pass
 
 

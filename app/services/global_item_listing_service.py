@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,9 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models import GlobalItem
 from app.models.category import IngredientCategory
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_SCOPE = "ingredient"
 VALID_SCOPES = ("ingredient", "container", "packaging", "consumable")
@@ -55,6 +59,7 @@ def _attach_search_filter(query, search_query: str):
             "global_item_alias", db.metadata, autoload_with=db.engine
         )
     except Exception:  # pragma: no cover - defensive
+        logger.warning("Suppressed exception fallback at app/services/global_item_listing_service.py:57", exc_info=True)
         alias_table = None
 
     if alias_table is None:
@@ -94,6 +99,7 @@ def _fetch_categories() -> List[str]:
         if categories:
             return categories
     except Exception:  # pragma: no cover - defensive
+        logger.warning("Suppressed exception fallback at app/services/global_item_listing_service.py:96", exc_info=True)
         pass
 
     fallback = (

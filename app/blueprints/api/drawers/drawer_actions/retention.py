@@ -7,6 +7,7 @@ Glossary:
 - Retention drawer: UI prompt for acknowledging retention actions.
 - Retention queue: Scheduled deletions for aged records.
 """
+import logging
 
 from flask import jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -18,6 +19,9 @@ from app.services.retention_service import RetentionService
 from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_cadence_check, register_drawer_action
+
+logger = logging.getLogger(__name__)
+
 
 register_drawer_action(
     "retention.modal",
@@ -51,12 +55,14 @@ def _resolve_current_org():
     try:
         org_id = getattr(current_user, "organization_id", None)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/retention.py:53", exc_info=True)
         org_id = None
     if not org_id:
         return None
     try:
         return db.session.get(Organization, org_id)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/retention.py:59", exc_info=True)
         return None
 
 

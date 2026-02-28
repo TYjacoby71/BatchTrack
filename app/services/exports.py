@@ -1,8 +1,12 @@
 from __future__ import annotations
+import logging
 
 from typing import Any, Dict, List, Optional
 
 from flask import render_template, request
+
+logger = logging.getLogger(__name__)
+
 
 
 def _extract_lines_from_recipe(recipe) -> Dict[str, List[Dict[str, Any]]]:
@@ -20,6 +24,7 @@ def _extract_lines_from_recipe(recipe) -> Dict[str, List[Dict[str, Any]]]:
             for ri in (getattr(recipe, "recipe_ingredients", []) or [])
         ]
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/exports.py:22", exc_info=True)
         ings = []
     try:
         cons = [
@@ -35,6 +40,7 @@ def _extract_lines_from_recipe(recipe) -> Dict[str, List[Dict[str, Any]]]:
             for rc in (getattr(recipe, "recipe_consumables", []) or [])
         ]
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/exports.py:37", exc_info=True)
         cons = []
     return {"ingredients": ings, "consumables": cons}
 
@@ -205,6 +211,7 @@ class ExportService:
             base_url = request.host_url if request else None
             return HTML(string=html, base_url=base_url).write_pdf()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/exports.py:207", exc_info=True)
             pass
         # Fallback: wrap HTML bytes (minimal) to keep route functional
         return html.encode("utf-8")

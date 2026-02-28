@@ -21,10 +21,13 @@ from flask import current_app, has_app_context
 
 from .redis_pool import get_redis_pool
 
+logger = logging.getLogger(__name__)
+
 try:  # optional dependency
     import redis  # type: ignore
     from redis.exceptions import RedisError  # type: ignore
 except Exception:  # pragma: no cover - optional dependency missing
+    logger.warning("Suppressed exception fallback at app/utils/cache_manager.py:27", exc_info=True)
     redis = None
     RedisError = Exception  # type: ignore[misc,assignment]
 
@@ -36,8 +39,6 @@ __all__ = [
     "drawer_request_cache",
     "app_cache",
 ]
-
-logger = logging.getLogger(__name__)
 
 
 # --- SimpleCache ---
@@ -164,6 +165,7 @@ class RedisCache:
             except RedisError as exc:  # type: ignore[arg-type]
                 self._handle_redis_failure("get", exc)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/utils/cache_manager.py:166", exc_info=True)
                 pass
         return self._fallback.get(key)
 

@@ -11,12 +11,16 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from ..models.subscription_tier import SubscriptionTier
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
 from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import coerce_int, normalize_token_set
+
+logger = logging.getLogger(__name__)
+
 
 
 # --- Signup plan catalog service ---
@@ -146,6 +150,7 @@ class SignupPlanCatalogService:
                         allow_network=allow_live_pricing_network,
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/signup_plan_catalog_service.py:148", exc_info=True)
                     monthly_pricing = None
 
             yearly_lookup_key = (
@@ -162,6 +167,7 @@ class SignupPlanCatalogService:
                         allow_network=allow_live_pricing_network,
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/signup_plan_catalog_service.py:164", exc_info=True)
                     yearly_pricing = None
             if yearly_pricing and yearly_pricing.get("billing_cycle") != "yearly":
                 yearly_pricing = None

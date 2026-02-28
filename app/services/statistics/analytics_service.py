@@ -851,6 +851,7 @@ class AnalyticsDataService:
                     formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
                     iso_value = dt.isoformat()
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/statistics/analytics_service.py:853", exc_info=True)
                     formatted = str(timestamp)
                     iso_value = str(timestamp)
 

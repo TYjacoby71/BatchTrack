@@ -83,6 +83,7 @@ def prepare_batch_data(production_plan: ProductionPlan) -> Dict[str, Any]:
                 batch_data["portioning_data"] = snap
         except Exception:
             # Do not fail overall plan prep because of optional portioning
+            logger.warning("Suppressed exception fallback at app/services/production_planning/_batch_preparation.py:84", exc_info=True)
             pass
 
         logger.info(

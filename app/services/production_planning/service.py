@@ -7,6 +7,7 @@ Glossary:
 - PlanSnapshot: Frozen data used to start a batch.
 - Portioning: Packaging metadata derived from recipe fields.
 """
+import logging
 
 from typing import Optional
 
@@ -19,6 +20,9 @@ from .types import (
     PlanSnapshot,
     PortioningPlan,
 )
+
+logger = logging.getLogger(__name__)
+
 
 
 class PlanProductionService:
@@ -57,6 +61,7 @@ class PlanProductionService:
                     portion_count=getattr(recipe, "portion_count", None),
                 )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/production_planning/service.py:59", exc_info=True)
             portioning = PortioningPlan(
                 is_portioned=False,
                 portion_name=None,
@@ -76,6 +81,7 @@ class PlanProductionService:
                     )
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/production_planning/service.py:78", exc_info=True)
                 continue
 
         # Consumables plan (scale recipe_consumables)
@@ -90,6 +96,7 @@ class PlanProductionService:
                     )
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/production_planning/service.py:92", exc_info=True)
                 continue
 
         # Containers snapshot - pass-through of selections
@@ -100,12 +107,14 @@ class PlanProductionService:
                     ContainerSelection(id=int(c["id"]), quantity=int(c["quantity"]))
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/production_planning/service.py:102", exc_info=True)
                 continue
 
         # Attach category-specific structured data (nullable) for full audit/export
         try:
             category_extension = dict(getattr(recipe, "category_data", None) or {})
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/production_planning/service.py:108", exc_info=True)
             category_extension = None
 
         return PlanSnapshot(

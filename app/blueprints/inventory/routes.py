@@ -427,6 +427,7 @@ def api_toggle_global_link(item_id: int):
             }
         )
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:429", exc_info=True)
         db.session.rollback()
         logger.exception("Failed to toggle global link")
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -535,6 +536,7 @@ def list_inventory():
         if bypass_cache:
             cache.delete(cache_key)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:537", exc_info=True)
         pass
 
     units = Unit.scoped().filter(Unit.is_active).all()
@@ -546,6 +548,7 @@ def list_inventory():
         try:
             cached_payload = cache.get(cache_key)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:548", exc_info=True)
             cached_payload = None
         if cached_payload:
             cached_items = _hydrate_inventory_items(cached_payload.get("items", []))
@@ -606,6 +609,7 @@ def list_inventory():
             timeout=cache_ttl,
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:608", exc_info=True)
         pass
 
     hydrated_items = _hydrate_inventory_items(serialized_items)
@@ -645,6 +649,7 @@ def set_column_visibility():
             )
             db.session.commit()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:647", exc_info=True)
         db.session.rollback()
         logger.exception("Failed to persist inventory column visibility preferences")
     return redirect(url_for("inventory.list_inventory"))
@@ -1156,6 +1161,7 @@ def edit_inventory(id):
                         else:
                             item.density_source = "manual"
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1158", exc_info=True)
                         item.density_source = "manual"
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid category_id provided: {raw_category_id}")
@@ -1221,6 +1227,7 @@ def archive_inventory(id):
         db.session.commit()
         flash("Inventory item archived successfully.")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1223", exc_info=True)
         db.session.rollback()
         flash(f"Error archiving item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
@@ -1240,6 +1247,7 @@ def restore_inventory(id):
         db.session.commit()
         flash("Inventory item restored successfully.")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1242", exc_info=True)
         db.session.rollback()
         flash(f"Error restoring item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
@@ -1280,6 +1288,7 @@ def debug_inventory(id):
         return jsonify(debug_info)
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1282", exc_info=True)
         import traceback
 
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500

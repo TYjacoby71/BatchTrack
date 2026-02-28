@@ -342,6 +342,7 @@ class SignupService:
             return org, owner_user
 
         except Exception as exc:
+            logger.warning("Suppressed exception fallback at app/services/signup_service.py:344", exc_info=True)
             db.session.rollback()
             logger.error(
                 "Failed to complete pending signup %s: %s", pending_signup.id, exc
@@ -368,6 +369,7 @@ class SignupService:
             try:
                 return dict(obj)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/signup_service.py:370", exc_info=True)
                 return {}
 
     @staticmethod
@@ -425,5 +427,6 @@ class SignupService:
                 if isinstance(payload, dict):
                     return payload.get("value")
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/signup_service.py:427", exc_info=True)
             return None
         return None

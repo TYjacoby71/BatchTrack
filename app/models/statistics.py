@@ -7,12 +7,16 @@ Glossary:
 - UserStats: Per-user counts used for performance tracking.
 - OrganizationStats: Aggregated org counts for dashboards.
 """
+import logging
 
 from sqlalchemy import extract, func
 
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .mixins import ScopedModelMixin
+
+logger = logging.getLogger(__name__)
+
 
 
 # --- UserStats ---
@@ -286,6 +290,7 @@ class OrganizationStats(db.Model):
             db.session.commit()
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/models/statistics.py:288", exc_info=True)
             print(f"Error refreshing organization stats: {e}")
             import traceback
 

@@ -9,6 +9,7 @@ Glossary:
 - Allowed containers: Recipe-linked container ids considered in the drawer.
 - Yield update action: POST handler that persists recipe yield/unit edits.
 """
+import logging
 
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -19,6 +20,9 @@ from app.utils.permissions import require_permission
 from app.utils.unit_utils import get_global_unit_list
 
 from .. import drawers_bp, register_drawer_action
+
+logger = logging.getLogger(__name__)
+
 
 # --- Register drawer action ---
 # Purpose: Publish metadata for unit-mismatch drawer discovery.
@@ -108,6 +112,7 @@ def container_unit_mismatch_update_yield(recipe_id):
     try:
         validate_csrf(data.get("csrf_token"))
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:110", exc_info=True)
         return jsonify({"success": False, "error": "Invalid CSRF token"}), 400
 
     try:
@@ -125,6 +130,7 @@ def container_unit_mismatch_update_yield(recipe_id):
     try:
         db.session.commit()
     except Exception as exc:  # pragma: no cover - rollback guard
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:127", exc_info=True)
         db.session.rollback()
         return (
             jsonify({"success": False, "error": f"Failed to update recipe: {exc}"}),

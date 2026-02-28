@@ -1,6 +1,10 @@
+import logging
 import json
 import os
 import sys
+
+logger = logging.getLogger(__name__)
+
 
 # Add the parent directory to the Python path so we can import app
 sys.path.insert(
@@ -30,6 +34,7 @@ def seed_packaging_from_files(selected_files):
             with open(filepath, "r") as f:
                 category_data = json.load(f)
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/seeders/seed_packaging.py:32", exc_info=True)
             print(f"  ⚠️  Error loading {filename}: {e}")
             continue
 
@@ -128,5 +133,6 @@ if __name__ == "__main__":
             print("\n🎉 Packaging Seeding Complete!")
             print(f"📊 Items created: {items_created}")
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/seeders/seed_packaging.py:130", exc_info=True)
             db.session.rollback()
             print(f"\n❌ Seeding failed during commit: {e}")

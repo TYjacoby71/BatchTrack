@@ -1,4 +1,5 @@
 """Public waitlist capture routes."""
+import logging
 
 import re
 from datetime import datetime, timezone
@@ -8,6 +9,9 @@ from flask import Blueprint, jsonify, render_template, request
 
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.utils.json_store import read_json_file, write_json_file
+
+logger = logging.getLogger(__name__)
+
 
 waitlist_bp = Blueprint("waitlist", __name__)
 
@@ -154,6 +158,7 @@ def join_waitlist():
         return jsonify({"message": "Successfully joined waitlist"}), 200
 
     except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Suppressed exception fallback at app/blueprints/waitlist/routes.py:156", exc_info=True)
         import traceback
 
         print("Waitlist error:", exc)

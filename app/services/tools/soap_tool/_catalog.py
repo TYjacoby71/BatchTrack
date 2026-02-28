@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 import copy
 from functools import lru_cache
@@ -27,6 +28,9 @@ from app.services.soapcalc_catalog_data_service import (
     parse_soapcalc_float,
 )
 from app.utils.cache_utils import stable_cache_key
+
+logger = logging.getLogger(__name__)
+
 
 SOAP_BULK_FATTY_KEYS = SOAPCALC_FATTY_KEYS
 SOAP_BULK_SORT_KEYS = {"name", *SOAP_BULK_FATTY_KEYS}
@@ -259,6 +263,7 @@ def build_bulk_catalog(
     try:
         cached_records = cache.get(cache_key)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/tools/soap_tool/_catalog.py:261", exc_info=True)
         cached_records = None
     if isinstance(cached_records, list):
         return copy.deepcopy(cached_records)
@@ -274,6 +279,7 @@ def build_bulk_catalog(
             ),
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/tools/soap_tool/_catalog.py:276", exc_info=True)
         pass
     return records
 
@@ -403,6 +409,7 @@ def get_bulk_catalog_page(
         try:
             cached_result = cache.get(page_cache_key)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/tools/soap_tool/_catalog.py:405", exc_info=True)
             cached_result = None
         if isinstance(cached_result, dict):
             return copy.deepcopy(cached_result)
@@ -439,6 +446,7 @@ def get_bulk_catalog_page(
                 ),
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/tools/soap_tool/_catalog.py:441", exc_info=True)
             pass
     return result_payload
 
