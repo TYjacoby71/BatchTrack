@@ -9,8 +9,8 @@
 <div class="py-4">
     <div class="row justify-content-center">
         <div class="col-xl-10 col-xxl-9">
-            <div class="card shadow-sm">
-                <div class="card-header text-center">
+            <div class="signup-shell">
+                <div class="text-center mb-4">
                     <h2 class="mb-1">
                         The Artisan Plan
                     </h2>
@@ -18,7 +18,7 @@
                         Lifetime Membership Available for the first 300 Founding Members
                     </p>
                 </div>
-                <div class="card-body p-4 p-lg-5">
+                <div>
                     {% if oauth_user_info %}
                     <div class="alert alert-success mb-4">
                         <i class="fas fa-check-circle me-2"></i>
@@ -46,7 +46,7 @@
                     </div>
                     {% endif %}
 
-                    <div class="single-tier-shell mb-4">
+                    <section class="pricing-section mb-4">
                         {% if not primary_tier %}
                         <div class="alert alert-warning mb-0">
                             No customer-facing tier is configured yet. Please configure at least one Stripe-backed tier.
@@ -111,7 +111,7 @@
                             {% endif %}
                         </div>
                         {% endif %}
-                    </div>
+                    </section>
 
                     <div class="card shadow-sm mb-4" id="tierFeaturesCard">
                         <div class="card-body p-4">
@@ -618,11 +618,12 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <style>
-.single-tier-shell {
-    border: 1px solid #dbe2f2;
-    border-radius: var(--theme-ext-radius-1f2f59cc9c);
-    background: #f9fbff;
-    padding: 1rem;
+.signup-shell {
+    padding: 0 0.25rem;
+}
+
+.pricing-section {
+    margin-bottom: 1rem;
 }
 
 .pricing-cards-grid {
@@ -714,8 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 @media (max-width: 768px) {
-    .single-tier-shell {
-        padding: var(--theme-ext-space-32524b311c);
+    .signup-shell {
+        padding: 0;
     }
 
     .pricing-cards-grid {
@@ -723,7 +724,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     .plan-choice-card {
-        padding: 0.75rem;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0.45rem 0.1rem;
+    }
+
+    .plan-choice-card.is-lifetime-fallback {
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    .plan-choice-card.active-offer {
+        border: 0 !important;
+        border-bottom: 2px solid var(--theme-ext-color-7630a14d9f) !important;
+        box-shadow: none !important;
+        transform: none !important;
+        background: transparent !important;
     }
 
     .plan-chip {
