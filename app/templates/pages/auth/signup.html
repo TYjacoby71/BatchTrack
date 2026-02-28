@@ -11,9 +11,6 @@
         <div class="col-xl-10 col-xxl-9">
             <div class="card shadow-sm">
                 <div class="card-header text-center">
-                    <div class="small text-uppercase text-muted fw-semibold mb-1">
-                        Signup Offer Variant: {{ signup_variant|replace('_', ' ')|title }}
-                    </div>
                     <h2 class="mb-1">
                         <i class="fas fa-rocket me-2"></i>Choose Your Artisan Plan Access
                     </h2>
@@ -50,119 +47,63 @@
                     {% endif %}
 
                     <div class="single-tier-shell mb-4">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                            <div>
-                                <h3 class="h5 fw-bold mb-1">Artisan Plan</h3>
-                                <p class="small text-muted mb-0">
-                                    Full core system flow with Stripe-reactive pricing.
-                                </p>
-                            </div>
-                            {% if primary_tier %}
-                            <span class="badge rounded-pill bg-light text-dark border">
-                                Backed by tier logic: {{ primary_tier.name }}
-                            </span>
-                            {% endif %}
-                        </div>
-
                         {% if not primary_tier %}
                         <div class="alert alert-warning mb-0">
                             No customer-facing tier is configured yet. Please configure at least one Stripe-backed tier.
                         </div>
                         {% else %}
-                        <div class="row g-3">
-                            {% if has_lifetime_capacity %}
-                            <div class="col-12 col-lg-6 {% if signup_variant == 'monthly_primary' %}order-lg-2{% else %}order-lg-1{% endif %}">
-                                <article
-                                    class="plan-choice-card h-100"
-                                    data-plan-kind="lifetime"
-                                    role="button"
-                                    tabindex="0"
-                                    aria-pressed="false"
-                                >
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-warning text-dark text-uppercase">Primary lifetime offer</span>
-                                        <span class="badge bg-dark text-white">Founding Members</span>
-                                    </div>
-                                    <h4 class="h6 fw-bold mb-1">Founding Member Lifetime</h4>
-                                    <p class="small text-muted mb-2">
-                                        One-time payment for lifetime access to the Artisan plan.
-                                    </p>
-                                    <div class="plan-mode-badge mb-2" data-role="modeBadge">Lifetime</div>
-                                    <div class="plan-price mb-2" data-role="priceText">
-                                        {{ primary_lifetime_offer.lifetime_price_copy if primary_lifetime_offer else 'One-time pricing at secure checkout' }}
-                                    </div>
-                                    <p class="small mb-2" data-role="statusText">
-                                        {% if primary_lifetime_offer %}
-                                        Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
-                                        {% else %}
-                                        Limited seats available.
-                                        {% endif %}
-                                    </p>
-                                    <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
-                                </article>
+                        <article
+                            class="plan-choice-card h-100 active-offer"
+                            id="monthlyPlanCard"
+                            data-plan-kind="monthly"
+                            role="button"
+                            tabindex="0"
+                            aria-pressed="true"
+                        >
+                            <div class="plan-chip mb-3">Monthly</div>
+                            <h4 class="h3 fw-bold mb-2">Artisan Plan</h4>
+                            <div class="plan-price mb-2" data-role="priceText">
+                                {{ primary_tier.monthly_price_display or primary_tier.price_display or '24.99' }}
                             </div>
-                            {% endif %}
-
-                            <div class="col-12 col-lg-6 {% if signup_variant == 'monthly_primary' %}order-lg-1{% else %}order-lg-2{% endif %}">
-                                <article
-                                    class="plan-choice-card h-100"
-                                    data-plan-kind="monthly"
-                                    role="button"
-                                    tabindex="0"
-                                    aria-pressed="false"
-                                >
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-primary text-white text-uppercase">Artisan monthly</span>
-                                        {% if signup_variant == 'monthly_primary' %}
-                                        <span class="badge bg-success">Primary in this variant</span>
-                                        {% endif %}
-                                    </div>
-                                    <h4 class="h6 fw-bold mb-1">Artisan Monthly</h4>
-                                    <p class="small text-muted mb-2">
-                                        Subscription billing using the same Stripe tier logic as today.
-                                    </p>
-                                    <div class="plan-mode-badge mb-2" data-role="modeBadge">Monthly</div>
-                                    <div class="plan-price mb-2" data-role="priceText">
-                                        {{ primary_tier.monthly_price_display or primary_tier.price_display or 'Monthly pricing at secure checkout' }}
-                                    </div>
-                                    <p class="small mb-2" data-role="statusText">Billed monthly subscription.</p>
-                                    <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
-                                </article>
-                            </div>
-
-                            {% if not has_lifetime_capacity %}
-                            <div class="col-12">
-                                <article
-                                    class="plan-choice-card h-100"
-                                    data-plan-kind="yearly"
-                                    role="button"
-                                    tabindex="0"
-                                    aria-pressed="false"
-                                >
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-secondary text-white text-uppercase">Yearly fallback</span>
-                                    </div>
-                                    <h4 class="h6 fw-bold mb-1">Artisan Yearly</h4>
-                                    <p class="small text-muted mb-2">
-                                        Yearly billing is displayed only after lifetime seats are exhausted.
-                                    </p>
-                                    <div class="plan-mode-badge mb-2" data-role="modeBadge">Yearly</div>
-                                    <div class="plan-price mb-2" data-role="priceText">Yearly pricing at secure checkout</div>
-                                    <p class="small mb-2" data-role="statusText">Billed yearly subscription.</p>
-                                    <p class="small text-muted mb-0 d-none" data-role="fallbackText"></p>
-                                </article>
-                            </div>
-                            {% endif %}
-                        </div>
+                            <p class="plan-includes mb-0">Includes All the Features we have to offer!</p>
+                        </article>
                         {% endif %}
                     </div>
 
-                    <div class="card border-0 soft-panel mb-4">
+                    <div class="card border-0 soft-panel mb-4" id="grandSlamOfferCard">
                         <div class="card-body py-3">
-                            <h4 class="h6 mb-2">Guarantee (placeholder)</h4>
-                            <p class="small text-muted mb-0">
-                                Add final guarantee language here after copy review.
+                            <h4 class="h6 mb-2">Grand Slam Offer</h4>
+                            {% if has_lifetime_capacity and primary_lifetime_offer %}
+                            <p class="small text-muted mb-2">
+                                Founding member lifetime access is available while seats last.
                             </p>
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                <div>
+                                    <div class="fw-bold text-dark">{{ primary_lifetime_offer.lifetime_price_copy }}</div>
+                                    <div class="small text-muted">
+                                        Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn {% if signup_variant == 'lifetime_primary' %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm"
+                                    id="selectLifetimeBtn"
+                                >
+                                    Choose Grand Slam Lifetime
+                                </button>
+                            </div>
+                            {% else %}
+                            <p class="small text-muted mb-0">
+                                Grand Slam lifetime seats are currently sold out. Monthly access is active.
+                            </p>
+                            {% endif %}
+
+                            <div class="mt-3 pt-3 border-top">
+                                <h5 class="h6 mb-2">Guarantee (placeholder)</h5>
+                                <p class="small text-muted mb-0">
+                                    Add final guarantee language here after copy review.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -280,11 +221,12 @@ function getInitialPlanKind() {
     if (initialBillingMode === 'lifetime' && hasLifetimeCapacity) {
         return 'lifetime';
     }
-    if (initialBillingMode === 'standard' && ['monthly', 'yearly'].includes(standardBillingCycle)) {
+    if (
+        initialBillingMode === 'standard'
+        && standardBillingCycle === 'yearly'
+        && !hasLifetimeCapacity
+    ) {
         return standardBillingCycle;
-    }
-    if (hasLifetimeCapacity) {
-        return signupVariant === 'monthly_primary' ? 'monthly' : 'lifetime';
     }
     return 'monthly';
 }
@@ -446,6 +388,24 @@ function updateOfferCards() {
     });
 }
 
+function updateGrandSlamOffer(planState) {
+    const grandSlamCard = document.getElementById('grandSlamOfferCard');
+    const selectLifetimeBtn = document.getElementById('selectLifetimeBtn');
+    const isLifetimeSelected = planState.effectivePlanKind === 'lifetime';
+
+    if (grandSlamCard) {
+        grandSlamCard.classList.toggle('is-selected', isLifetimeSelected);
+    }
+
+    if (selectLifetimeBtn) {
+        selectLifetimeBtn.classList.toggle('btn-dark', isLifetimeSelected);
+        selectLifetimeBtn.classList.toggle('btn-outline-dark', !isLifetimeSelected);
+        selectLifetimeBtn.textContent = isLifetimeSelected
+            ? 'Grand Slam Lifetime Selected'
+            : 'Choose Grand Slam Lifetime';
+    }
+}
+
 function updatePlanSummary() {
     const title = document.getElementById('featuresCardTitle');
     const selectedText = document.getElementById('selectedTierText');
@@ -457,6 +417,7 @@ function updatePlanSummary() {
 
     const tierData = getTierData();
     const planState = getPlanState(selectedPlanKind);
+    updateGrandSlamOffer(planState);
 
     featuresList.innerHTML = '';
     lifetimeCounterMessage.classList.add('d-none');
@@ -634,9 +595,8 @@ function proceedToPayment() {
 
 document.addEventListener('DOMContentLoaded', () => {
     const offerCards = Array.from(document.querySelectorAll('.plan-choice-card'));
-    const visiblePlanKinds = offerCards.map((card) => String(card.dataset.planKind || ''));
-    if (!visiblePlanKinds.includes(selectedPlanKind)) {
-        selectedPlanKind = visiblePlanKinds[0] || 'monthly';
+    if (!VALID_PLAN_KINDS.includes(selectedPlanKind)) {
+        selectedPlanKind = 'monthly';
     }
 
     offerCards.forEach((card) => {
@@ -659,6 +619,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    const selectLifetimeBtn = document.getElementById('selectLifetimeBtn');
+    if (selectLifetimeBtn) {
+        selectLifetimeBtn.addEventListener('click', () => {
+            selectedPlanKind = 'lifetime';
+            updateOfferCards();
+            updatePlanSummary();
+        });
+    }
 
     if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
         window.BTAnalytics.capture('signup_page_viewed', {
@@ -689,6 +658,20 @@ document.addEventListener('DOMContentLoaded', () => {
     padding: 1rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
     cursor: pointer;
+}
+
+.plan-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #e8f0ff;
+    border: 1px solid #9eb8ee;
+    color: #244a97;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
 }
 
 .plan-choice-card.active-offer {
@@ -748,10 +731,20 @@ document.addEventListener('DOMContentLoaded', () => {
     line-height: 1.25;
 }
 
+.plan-includes {
+    font-size: 1rem;
+    color: #2f3a56;
+}
+
 .soft-panel {
     background: #f8f9fd;
     border: 1px solid #e0e7f4;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
+}
+
+.soft-panel.is-selected {
+    border-color: #29375f;
+    box-shadow: 0 10px 22px rgba(30, 43, 78, 0.12);
 }
 
 .features-checklist {
