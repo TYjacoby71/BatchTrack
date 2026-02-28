@@ -10,6 +10,8 @@ Glossary:
 - Alert service: Service layer that builds alert payload collections.
 """
 
+import logging
+
 from flask import Blueprint, jsonify
 from flask_login import login_required
 
