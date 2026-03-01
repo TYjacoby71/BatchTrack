@@ -14,6 +14,7 @@
                     <h2 class="mb-1">
                         The Artisan Plan
                     </h2>
+                    <p class="text-muted mb-0">Full Access to the BatchTrack Ecosystem</p>
                 </div>
                 <div>
                     {% if oauth_user_info %}
@@ -49,6 +50,7 @@
                             No customer-facing tier is configured yet. Please configure at least one Stripe-backed tier.
                         </div>
                         {% else %}
+                        <h4 class="mb-3 text-center">Choose Your Access</h4>
                         <div class="pricing-cards-grid">
                             <article
                                 class="plan-choice-card h-100 active-offer"
@@ -59,12 +61,11 @@
                                 aria-pressed="true"
                             >
                                 <div class="plan-chip mb-2">Monthly</div>
-                                <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
-                                <div class="plan-price mb-2" data-role="priceText">
-                                    {{ primary_tier.monthly_price_display or primary_tier.price_display or '$24.99' }}
-                                </div>
-                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
-                                <p class="plan-subtext mb-0" data-role="statusText">Start your 14 day free trial now</p>
+                                <h4 class="h5 fw-bold mb-1">Monthly Artisan Subscription</h4>
+                                <div class="plan-price mb-2" data-role="priceText">$24.99 / Month</div>
+                                <p class="plan-includes mb-1">Full access to the core Batching Engine.</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Includes a 14-day Free Trial.</p>
+                                <p class="plan-subtext mb-0">Cancel anytime.</p>
                                 <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
                             </article>
 
@@ -77,13 +78,14 @@
                                 tabindex="0"
                                 aria-pressed="false"
                             >
-                                <div class="plan-chip plan-chip-lifetime mb-2">FOUNDING MEMBERS LIMITED OFFER</div>
-                                <div class="plan-price mb-2" data-role="priceText">
-                                    {{ primary_lifetime_offer.lifetime_price_copy }}
-                                </div>
-                                <p class="plan-includes mb-1">Everything We have to offer... FOREVER</p>
+                                <div class="plan-chip plan-chip-lifetime mb-2">Founding Member</div>
+                                <h4 class="h5 fw-bold mb-1">Founding Member Lifetime Pass</h4>
+                                <div class="plan-price mb-2" data-role="priceText">$197 (One-Time Payment)</div>
+                                <p class="plan-includes mb-1">Lifetime access to every feature listed above.</p>
+                                <p class="plan-subtext mb-0">No monthly subscriptions or price hikes ever.</p>
+                                <p class="plan-subtext mb-0">Early-access status to help finalize the Global Library.</p>
                                 <p class="plan-subtext mb-0" data-role="statusText">
-                                    Only {{ primary_lifetime_offer.display_spots_left }} seats left / {{ primary_lifetime_offer.seat_total }}.
+                                    Limited to the first 300 seats. Only {{ primary_lifetime_offer.display_spots_left }} remain.
                                 </p>
                                 <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
                             </article>
@@ -101,7 +103,7 @@
                                 <div class="plan-price mb-2" data-role="priceText">
                                     {{ primary_tier.yearly_price_display or 'Yearly pricing at secure checkout' }}
                                 </div>
-                                <p class="plan-includes mb-1">Includes All the Features we have to offer!</p>
+                                <p class="plan-includes mb-1">Full access to the core Batching Engine.</p>
                                 <p class="plan-subtext mb-0" data-role="statusText">Billed yearly.</p>
                                 <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
                             </article>
@@ -112,28 +114,10 @@
 
                     <div class="card shadow-sm mb-5" id="tierFeaturesCard">
                         <div class="card-body p-4">
-                            <h4 class="mb-1" id="featuresCardTitle">Why Chose Batchtrack?</h4>
-                            <p class="text-muted mb-3" id="selectedTierText">Choose a billing option to continue to checkout.</p>
+                            <h4 class="mb-1" id="featuresCardTitle">Full Access to the BatchTrack Ecosystem</h4>
+                            <p class="text-muted mb-3" id="selectedTierText">Included with your Early-Access Seat</p>
                             <div id="lifetimeCounterMessage" class="alert alert-warning py-2 px-3 small d-none mb-3"></div>
                             <ul class="features-checklist mb-0" id="featuresChecklist"></ul>
-                            <div class="summary-total-wrap mt-3 pt-3 border-top">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-semibold">Selected Offer Total</span>
-                                    <span class="fw-bold text-primary" id="selectedOfferTotalText">—</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card border-0 soft-panel mb-4">
-                        <div class="card-body py-3">
-                            <h4 class="h6 mb-2">Coming soon previews</h4>
-                            <ul class="small text-muted mb-0 ps-3">
-                                <li>25,000+ ingredient global library</li>
-                                <li>Recipe marketplace</li>
-                                <li>Shopify sync</li>
-                                <li>AI import/parser</li>
-                            </ul>
                         </div>
                     </div>
 
@@ -233,6 +217,8 @@ let selectedPlanKind = getInitialPlanKind();
 
 function getPlanState(planKind) {
     const tierData = getTierData();
+    const monthlyPriceCopy = '$24.99 / Month';
+    const lifetimePriceCopy = '$197 (One-Time Payment)';
     if (!tierData) {
         return {
             effectivePlanKind: 'unavailable',
@@ -260,8 +246,8 @@ function getPlanState(planKind) {
 
     let effectivePlanKind = planKind;
     let modeBadgeText = planKind === 'lifetime' ? 'Lifetime' : (planKind === 'yearly' ? 'Yearly' : 'Monthly');
-    let priceText = monthlyPrice;
-    let statusText = 'Start your 14 day free trial now';
+    let priceText = monthlyPriceCopy;
+    let statusText = 'Includes a 14-day Free Trial.';
     let fallbackText = '';
     let fallbackFromLifetime = false;
     let isUnavailable = false;
@@ -270,20 +256,20 @@ function getPlanState(planKind) {
         if (hasLifetime) {
             effectivePlanKind = 'lifetime';
             modeBadgeText = 'Lifetime';
-            priceText = lifetimeOffer.lifetime_price_copy || 'One-time payment';
-            statusText = `Only ${lifetimeOffer.display_spots_left} seats left / ${lifetimeOffer.seat_total}.`;
+            priceText = lifetimePriceCopy;
+            statusText = `Limited to the first 300 seats. Only ${lifetimeOffer.display_spots_left} remain.`;
         } else if (hasMonthly) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly fallback';
-            priceText = monthlyPrice;
-            statusText = 'Founding seats are sold out.';
+            priceText = monthlyPriceCopy;
+            statusText = 'Founding Member Lifetime Pass is currently sold out.';
             fallbackText = 'Continuing with monthly billing.';
             fallbackFromLifetime = true;
         } else if (hasYearly) {
             effectivePlanKind = 'yearly';
             modeBadgeText = 'Yearly fallback';
             priceText = yearlyPrice;
-            statusText = 'Founding seats are sold out.';
+            statusText = 'Founding Member Lifetime Pass is currently sold out.';
             fallbackText = 'Continuing with yearly billing.';
             fallbackFromLifetime = true;
         } else {
@@ -297,7 +283,7 @@ function getPlanState(planKind) {
         if (hasLifetimeCapacity) {
             effectivePlanKind = hasMonthly ? 'monthly' : 'unavailable';
             modeBadgeText = hasMonthly ? 'Monthly fallback' : 'Unavailable';
-            priceText = hasMonthly ? monthlyPrice : 'Contact Sales';
+            priceText = hasMonthly ? monthlyPriceCopy : 'Contact Sales';
             statusText = hasMonthly ? 'Yearly is hidden while lifetime seats remain.' : 'Yearly is hidden while lifetime seats remain.';
             fallbackText = hasMonthly ? 'Continuing with monthly billing.' : '';
             isUnavailable = !hasMonthly;
@@ -309,7 +295,7 @@ function getPlanState(planKind) {
         } else if (hasMonthly) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly fallback';
-            priceText = monthlyPrice;
+            priceText = monthlyPriceCopy;
             statusText = 'Yearly pricing unavailable.';
             fallbackText = 'Continuing with monthly billing.';
         } else {
@@ -323,8 +309,8 @@ function getPlanState(planKind) {
         if (hasMonthly) {
             effectivePlanKind = 'monthly';
             modeBadgeText = 'Monthly';
-            priceText = monthlyPrice;
-            statusText = 'Start your 14 day free trial now';
+            priceText = monthlyPriceCopy;
+            statusText = 'Includes a 14-day Free Trial.';
         } else if (!hasLifetimeCapacity && hasYearly) {
             effectivePlanKind = 'yearly';
             modeBadgeText = 'Yearly fallback';
@@ -386,24 +372,10 @@ function updateOfferCards() {
     });
 }
 
-function buildSelectedOfferTotal(planState) {
-    if (!planState || planState.isUnavailable) {
-        return '—';
-    }
-    if (planState.effectivePlanKind === 'lifetime') {
-        return `Subscription Tier Lifetime Price: ${planState.priceText}`;
-    }
-    if (planState.effectivePlanKind === 'yearly') {
-        return `Subscription Tier Yearly Price: ${planState.priceText}`;
-    }
-    return `Subscription Tier Monthly Price: ${planState.priceText}`;
-}
-
 function updatePlanSummary() {
     const title = document.getElementById('featuresCardTitle');
     const selectedText = document.getElementById('selectedTierText');
     const featuresList = document.getElementById('featuresChecklist');
-    const selectedOfferTotalText = document.getElementById('selectedOfferTotalText');
     const lifetimeCounterMessage = document.getElementById('lifetimeCounterMessage');
     const continueBtn = document.getElementById('continueBtn');
 
@@ -411,21 +383,33 @@ function updatePlanSummary() {
     const planState = getPlanState(selectedPlanKind);
 
     featuresList.innerHTML = '';
-    selectedOfferTotalText.textContent = '—';
     lifetimeCounterMessage.classList.add('d-none');
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
     const valueStackItems = [
-        { label: 'Artisan Core System', value: '$1,200 value' },
-        { label: 'Global Ingredient Library (coming soon)', value: '$500 value' },
-        { label: 'AI Recipe Parser (coming soon)', value: '$400 value' },
-        { label: 'Container Fill Logic Engine', value: '$300 value' },
-        { label: 'Compliance + Lot Traceability', value: '$250 value' },
+        { label: 'Inventory Tracking (FIFO)' },
+        { label: 'Recipe Management & Versioning' },
+        { label: 'Production Planning' },
+        { label: 'Batch-in-Progress Tracker' },
+        { label: 'Container Fill Logic' },
+        { label: 'Immutable Batch Summary' },
+        { label: 'Product & SKU System' },
+        { label: 'Unit Conversion & Density Engine' },
+        { label: 'Neurodivergent-Friendly UI' },
+        { label: 'Batch Label Printing' },
+        { label: 'Contextual Error Handling' },
+        { label: 'Founding Member Bonus (Coming Soon)', isSectionLabel: true },
+        { label: 'Included with your Early-Access Seat', isSectionLabel: true },
+        { label: 'Global Inventory Library (25,000+ Items)' },
+        { label: 'AI Recipe & Inventory Parser' },
+        { label: 'Recipe Marketplace' },
+        { label: 'Shopify & Etsy Integration' },
+        { label: 'Supplier Integration' },
     ];
 
     if (!tierData) {
-        title.textContent = 'Why Chose Batchtrack?';
+        title.textContent = 'Full Access to the BatchTrack Ecosystem';
         selectedText.textContent = 'Tier configuration unavailable.';
         continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
@@ -435,53 +419,44 @@ function updatePlanSummary() {
     valueStackItems.forEach((stackItem) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
-        icon.className = 'fas fa-check text-success me-2';
+        icon.className = stackItem.isSectionLabel
+            ? 'fas fa-star text-warning me-2'
+            : 'fas fa-check text-success me-2';
         const copy = document.createElement('span');
-        copy.textContent = `${stackItem.label} — ${stackItem.value}`;
+        copy.textContent = stackItem.label;
+        if (stackItem.isSectionLabel) {
+            copy.classList.add('fw-semibold');
+        }
         item.appendChild(icon);
         item.appendChild(copy);
         featuresList.appendChild(item);
     });
 
-    const totalValueItem = document.createElement('li');
-    totalValueItem.className = 'fw-semibold';
-    totalValueItem.textContent = 'Total stack value: $2,650+';
-    featuresList.appendChild(totalValueItem);
-
     if (planState.isUnavailable) {
-        title.textContent = 'Why Chose Batchtrack?';
+        title.textContent = 'Full Access to the BatchTrack Ecosystem';
         selectedText.textContent = 'This plan is currently unavailable for checkout.';
         continueBtn.disabled = true;
         continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
         return;
     }
 
-    title.textContent = 'Why Chose Batchtrack?';
+    title.textContent = 'Full Access to the BatchTrack Ecosystem';
+    selectedText.textContent = 'Included with your Early-Access Seat';
 
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
         selectedLifetimeTier = lifetimeOffer ? lifetimeOffer.key : '';
-        selectedText.textContent = 'You selected Founding Member Lifetime checkout.';
         continueBtn.disabled = false;
         continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Claim Founding Members Lifetime';
-        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
-        if (lifetimeOffer) {
-            lifetimeCounterMessage.textContent = `Only ${lifetimeOffer.display_spots_left} seats left / ${lifetimeOffer.seat_total} for Founding Members.`;
-            lifetimeCounterMessage.classList.remove('d-none');
-        }
         return;
     }
 
     selectedLifetimeTier = '';
     continueBtn.disabled = false;
     if (planState.effectivePlanKind === 'monthly') {
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start your 14 day free trial now';
-        selectedText.textContent = 'You selected Artisan monthly. Start your 14 day free trial now.';
-        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start your 14-day Free Trial';
     } else {
         continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
-        selectedText.textContent = `You selected Artisan ${planState.modeBadgeText.toLowerCase()} billing.`;
-        selectedOfferTotalText.textContent = buildSelectedOfferTotal(planState);
     }
 
     if (planState.fallbackText) {
