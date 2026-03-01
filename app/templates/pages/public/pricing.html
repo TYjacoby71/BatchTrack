@@ -286,12 +286,29 @@
     <span class="pricing-kicker">⚡ Batch-first pricing</span>
     <h1>Choose the right BatchTrack plan for your production stage</h1>
     <p>
-      Compare Hobbyist, Enthusiast, and Fanatic side-by-side. Every plan starts with a free trial
-      and scales with your process, team, and inventory complexity.
+      Compare customer-facing plans side-by-side. Every plan scales with your process,
+      team, and inventory complexity.
     </p>
   </section>
 
+  {% set pricing_tier_count = pricing_tiers|length %}
+  {% if pricing_tier_count <= 1 %}
+  {% set pricing_tier_column_class = "col-12" %}
+  {% elif pricing_tier_count == 2 %}
+  {% set pricing_tier_column_class = "col-12 col-lg-6" %}
+  {% else %}
+  {% set pricing_tier_column_class = "col-12 col-lg-4" %}
+  {% endif %}
+
   {% if lifetime_has_capacity %}
+  {% set lifetime_tier_count = lifetime_tiers|length %}
+  {% if lifetime_tier_count <= 1 %}
+  {% set lifetime_tier_column_class = "col-12" %}
+  {% elif lifetime_tier_count == 2 %}
+  {% set lifetime_tier_column_class = "col-12 col-lg-6" %}
+  {% else %}
+  {% set lifetime_tier_column_class = "col-12 col-lg-4" %}
+  {% endif %}
   <section class="lifetime-shell mb-4 mb-lg-5 pricing-deferred-section">
     <div class="section-heading">
       <div>
@@ -301,10 +318,10 @@
       <span class="badge bg-light text-dark">Pay once, keep your tier forever</span>
     </div>
     <div class="row g-3">
-      {% for tier in pricing_tiers %}
+      {% for tier in lifetime_tiers %}
       {% set offer = tier.lifetime_offer %}
-      <div class="col-12 col-lg-4">
-        <article class="tier-card lifetime-card {% if tier.key == 'enthusiast' %}is-featured{% endif %} {% if not tier.lifetime_has_remaining %}is-sold-out{% endif %}">
+      <div class="{{ lifetime_tier_column_class }}">
+        <article class="tier-card lifetime-card {% if not tier.lifetime_has_remaining %}is-sold-out{% endif %}">
           <span class="tier-chip">{{ tier.name }}</span>
           <h3>{{ offer.tagline or tier.tagline }}</h3>
           <p class="tier-tagline">{{ offer.future_scope or tier.future_scope }}</p>
@@ -336,17 +353,14 @@
         <h2>Monthly and yearly plans</h2>
         <p>Pick a tier and go straight to secure checkout from this page.</p>
       </div>
-      <span class="text-muted small">Recommended: Enthusiast for most small teams</span>
+      <span class="text-muted small">Plans shown are ordered from smaller to larger tiers</span>
     </div>
     <div class="row g-3">
       {% for tier in pricing_tiers %}
-      <div class="col-12 col-lg-4">
-        <article class="tier-card {% if tier.key == 'enthusiast' %}is-featured{% endif %}">
+      <div class="{{ pricing_tier_column_class }}">
+        <article class="tier-card">
           <span class="tier-chip">
             {{ tier.name }}
-            {% if tier.key == 'enthusiast' %}
-            <span aria-hidden="true">★</span>
-            {% endif %}
           </span>
           <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
@@ -391,7 +405,7 @@
     <div class="section-heading">
       <div>
         <h2>Feature and limits comparison</h2>
-        <p>Customer-facing capability map across Hobbyist, Enthusiast, and Fanatic.</p>
+        <p>Customer-facing capability map across the currently enabled plans.</p>
       </div>
     </div>
     <div class="comparison-shell table-responsive">
