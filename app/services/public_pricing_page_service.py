@@ -175,7 +175,14 @@ class PublicPricingPageService:
             has_retention_entitlement=has_retention_entitlement,
         )
 
-        has_yearly_price = bool(tier_data.get("yearly_price_display"))
+        monthly_price_display = str(tier_data.get("monthly_price_display") or "").strip()
+        yearly_price_display = str(tier_data.get("yearly_price_display") or "").strip()
+        has_monthly_subscription = bool(
+            can_standard_checkout
+            and monthly_price_display
+            and monthly_price_display.lower() != "contact sales"
+        )
+        has_yearly_subscription = bool(can_standard_checkout and yearly_price_display)
         has_lifetime_remaining = bool(resolved_offer.get("has_remaining") and tier_id)
 
         monthly_url = (
@@ -186,7 +193,7 @@ class PublicPricingPageService:
                 billing_cycle="monthly",
                 source=f"pricing_{tier_key}_monthly",
             )
-            if tier_id and can_standard_checkout
+            if tier_id and has_monthly_subscription
             else None
         )
         yearly_url = (
@@ -197,7 +204,7 @@ class PublicPricingPageService:
                 billing_cycle="yearly",
                 source=f"pricing_{tier_key}_yearly",
             )
-            if tier_id and can_standard_checkout and has_yearly_price
+            if tier_id and has_yearly_subscription
             else None
         )
         lifetime_url = (
@@ -218,8 +225,8 @@ class PublicPricingPageService:
             "tagline": str(resolved_offer.get("tagline") or "Built for makers"),
             "future_scope": str(resolved_offer.get("future_scope") or ""),
             "tier_id": tier_id,
-            "monthly_price_display": tier_data.get("monthly_price_display"),
-            "yearly_price_display": tier_data.get("yearly_price_display"),
+            "monthly_price_display": monthly_price_display or None,
+            "yearly_price_display": yearly_price_display or None,
             "feature_highlights": highlight_features,
             "all_feature_labels": all_feature_labels,
             "all_feature_set": all_feature_set,
@@ -239,6 +246,8 @@ class PublicPricingPageService:
             "signup_monthly_url": monthly_url,
             "signup_yearly_url": yearly_url,
             "signup_lifetime_url": lifetime_url,
+            "has_monthly_subscription": has_monthly_subscription,
+            "has_yearly_subscription": has_yearly_subscription,
             "can_standard_checkout": can_standard_checkout,
         }
 

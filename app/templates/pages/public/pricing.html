@@ -143,6 +143,12 @@
     font-size: var(--theme-ext-size-e87070bfde);
   }
 
+  .tier-billing-toggle {
+    display: inline-flex;
+    gap: var(--theme-ext-space-e0100a51c2);
+    flex-wrap: wrap;
+  }
+
   .tier-feature-list {
     list-style: none;
     padding: var(--theme-ext-space-369a047e0c);
@@ -357,6 +363,9 @@
     </div>
     <div class="row g-3">
       {% for tier in pricing_tiers %}
+      {% set has_monthly_option = tier.signup_monthly_url %}
+      {% set has_yearly_option = tier.signup_yearly_url %}
+      {% set has_billing_options = has_monthly_option or has_yearly_option %}
       <div class="{{ pricing_tier_column_class }}">
         <article class="tier-card">
           <span class="tier-chip">
@@ -364,16 +373,18 @@
           </span>
           <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
+          {% if has_billing_options %}
           <div class="tier-price-row">
+            {% if has_monthly_option %}
             <div class="tier-price-figure">{{ tier.monthly_price_display or "Contact sales" }} / month</div>
+            {% endif %}
+            {% if has_yearly_option %}
             <div class="tier-price-alt">
-              {% if tier.yearly_price_display %}
               {{ tier.yearly_price_display }} / year
-              {% else %}
-              Yearly pricing not configured yet
-              {% endif %}
             </div>
+            {% endif %}
           </div>
+          {% endif %}
           <ul class="tier-feature-list">
             {% for feature in tier.feature_highlights[:6] %}
             <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ feature }}</span></li>
@@ -382,17 +393,24 @@
           {% if tier.feature_total > (tier.feature_highlights|length) %}
           <div class="small text-muted mb-3">+ {{ tier.feature_total - (tier.feature_highlights|length) }} more capabilities inside the app</div>
           {% endif %}
-          <div class="mt-auto d-grid gap-2">
-            {% if tier.signup_monthly_url %}
-            <a href="{{ tier.signup_monthly_url }}" class="btn btn-primary">Checkout {{ tier.name }} Monthly</a>
+          <div class="mt-auto d-grid gap-2 align-items-start">
+            {% if has_billing_options %}
+            <div class="tier-billing-toggle" role="group" aria-label="{{ tier.name }} billing options">
+              {% if has_monthly_option %}
+              <a href="{{ tier.signup_monthly_url }}" class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %}">
+                Checkout {{ tier.name }} Monthly
+              </a>
+              {% endif %}
+              {% if has_yearly_option %}
+              <a href="{{ tier.signup_yearly_url }}" class="btn btn-sm btn-outline-primary">
+                Checkout {{ tier.name }} Yearly
+              </a>
+              {% endif %}
+            </div>
             {% else %}
-            <button type="button" class="btn btn-outline-secondary" disabled>Unavailable</button>
-            {% endif %}
-
-            {% if tier.signup_yearly_url %}
-            <a href="{{ tier.signup_yearly_url }}" class="btn btn-outline-primary">Checkout {{ tier.name }} Yearly</a>
-            {% else %}
-            <button type="button" class="btn btn-outline-secondary" disabled>Yearly Unavailable</button>
+            <a href="{{ url_for('core.signup_alias', source='pricing_' ~ tier.key ~ '_overview') }}" class="btn btn-outline-primary btn-sm">
+              Explore {{ tier.name }}
+            </a>
             {% endif %}
           </div>
         </article>
