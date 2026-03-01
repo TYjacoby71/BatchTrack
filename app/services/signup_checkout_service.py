@@ -115,6 +115,12 @@ class SignupCheckoutService:
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
     _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
+    _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
+        "Recipe tracking",
+        "Plan production",
+        "Batching progress timers",
+        "Infinite ingredients",
+    )
 
     @classmethod
     def build_request_context(
@@ -781,20 +787,12 @@ class SignupCheckoutService:
         if not free_tier:
             return None
         tier_name = str(getattr(free_tier, "name", "") or "Free").strip() or "Free"
-        free_tier_payload = SignupPlanCatalogService.build_available_tiers_payload(
-            [free_tier],
-            include_live_pricing=False,
-            allow_live_pricing_network=False,
-        ).get(str(getattr(free_tier, "id", "") or ""), {})
-        dynamic_features = list(free_tier_payload.get("presentation_features") or [])
-        if not dynamic_features:
-            dynamic_features = list(free_tier_payload.get("features") or [])
         return {
             "tier_id": str(getattr(free_tier, "id", "") or ""),
             "name": tier_name,
             "price_display": "Free",
             "core_heading": "Core features",
-            "core_features": dynamic_features[:8],
+            "core_features": list(cls._SIGNUP_FREE_TIER_CORE_FEATURES),
             "description": (
                 "Starter access for planning and recipe tracking before upgrading to Artisan."
             ),

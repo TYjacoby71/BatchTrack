@@ -222,6 +222,32 @@ const hasLifetimeCapacity = Boolean({{ has_lifetime_capacity|tojson }});
 const showSignupFreeTier = Boolean({{ show_signup_free_tier|tojson }});
 const freeTierDisplay = {{ (free_tier_display if free_tier_display is defined else none)|tojson }};
 const VALID_PLAN_KINDS = ['lifetime', 'monthly', 'yearly'];
+const FREE_TIER_CORE_FEATURES = [
+    'Recipe tracking',
+    'Plan production',
+    'Batching progress timers',
+    'Infinite ingredients',
+];
+const ARTISAN_CORE_FEATURES = [
+    'Inventory Tracking (FIFO)',
+    'Recipe Management & Versioning',
+    'Production Planning',
+    'Batch-in-Progress Tracker',
+    'Container Fill Logic',
+    'Immutable Batch Summary',
+    'Product & SKU System',
+    'Unit Conversion & Density Engine',
+    'Neurodivergent-Friendly UI',
+    'Batch Label Printing',
+    'Contextual Error Handling',
+];
+const ARTISAN_FUTURE_FEATURES = [
+    'Global Inventory Library (25,000+ Items)',
+    'AI Recipe & Inventory Parser',
+    'Recipe Marketplace',
+    'Shopify & Etsy Integration',
+    'Supplier Integration',
+];
 
 const lifetimeByKey = Object.fromEntries(
     lifetimeOffers
@@ -240,16 +266,6 @@ function getTierData() {
 
 function getLifetimeOffer() {
     return lifetimeByTier[String(selectedTier || '')] || null;
-}
-
-function normalizeFeatureList(rawFeatures, limit = 14) {
-    if (!Array.isArray(rawFeatures)) {
-        return [];
-    }
-    return rawFeatures
-        .map((value) => String(value || '').trim())
-        .filter((value) => Boolean(value))
-        .slice(0, Math.max(1, Number(limit) || 14));
 }
 
 function isConfiguredPrice(priceCopy) {
@@ -483,8 +499,7 @@ function updatePlanSummary() {
     lifetimeCounterMessage.classList.add('alert-warning');
 
     if (showSignupFreeTier && selectedSignupTier === 'free' && freeTierDisplay) {
-        const freeFeatures = normalizeFeatureList(freeTierDisplay.core_features, 14);
-        freeFeatures.forEach((label) => {
+        FREE_TIER_CORE_FEATURES.forEach((label) => {
             const item = document.createElement('li');
             const icon = document.createElement('i');
             icon.className = 'fas fa-check text-success me-2';
@@ -494,17 +509,8 @@ function updatePlanSummary() {
             item.appendChild(copy);
             featuresList.appendChild(item);
         });
-        if (!freeFeatures.length) {
-            const item = document.createElement('li');
-            const copy = document.createElement('span');
-            copy.className = 'text-muted';
-            copy.textContent = 'Feature list updates dynamically from this tier configuration.';
-            item.appendChild(copy);
-            featuresList.appendChild(item);
-        }
-
         title.textContent = `${freeTierDisplay.name || 'Free'} core features`;
-        selectedText.textContent = 'Features shown are driven by the selected tier configuration.';
+        selectedText.textContent = 'Included with the Free tier';
         selectedLifetimeTier = '';
         checkoutButtons.forEach((button) => {
             button.disabled = true;
@@ -513,21 +519,7 @@ function updatePlanSummary() {
         return;
     }
 
-    if (!tierData) {
-        title.textContent = 'Full Access to the BatchTrack Ecosystem';
-        selectedText.textContent = 'Tier configuration unavailable.';
-        checkoutButtons.forEach((button) => {
-            button.disabled = true;
-            button.innerHTML = checkoutButtonHtml;
-        });
-        return;
-    }
-
-    const dynamicFeatures = normalizeFeatureList(tierData.presentation_features, 14);
-    const fallbackFeatures = normalizeFeatureList(tierData.features, 14);
-    const summaryFeatures = dynamicFeatures.length ? dynamicFeatures : fallbackFeatures;
-
-    summaryFeatures.forEach((label) => {
+    ARTISAN_CORE_FEATURES.forEach((label) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-check text-success me-2';
@@ -537,18 +529,29 @@ function updatePlanSummary() {
         item.appendChild(copy);
         featuresList.appendChild(item);
     });
-    if (!summaryFeatures.length) {
+
+    const futureHeading = document.createElement('li');
+    futureHeading.className = 'features-section-label';
+    futureHeading.innerHTML = '<span>Included features coming soon</span>';
+    featuresList.appendChild(futureHeading);
+
+    ARTISAN_FUTURE_FEATURES.forEach((label) => {
         const item = document.createElement('li');
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-clock text-muted me-2';
         const copy = document.createElement('span');
         copy.className = 'text-muted';
-        copy.textContent = 'Feature list updates dynamically from this tier configuration.';
+        copy.textContent = label;
+        item.appendChild(icon);
         item.appendChild(copy);
         featuresList.appendChild(item);
-    }
+    });
 
-    if (planState.isUnavailable) {
-        title.textContent = 'Full Access to the BatchTrack Ecosystem';
-        selectedText.textContent = 'This plan is currently unavailable for checkout.';
+    title.textContent = 'Full Access to the BatchTrack Ecosystem';
+    selectedText.textContent = 'Included with your Early-Access Seat';
+
+    if (!tierData) {
+        selectedText.textContent = 'Tier configuration unavailable.';
         checkoutButtons.forEach((button) => {
             button.disabled = true;
             button.innerHTML = checkoutButtonHtml;
@@ -556,8 +559,14 @@ function updatePlanSummary() {
         return;
     }
 
-    title.textContent = `${tierData.name || 'Selected'} core features`;
-    selectedText.textContent = 'Features shown are driven by the selected tier configuration.';
+    if (planState.isUnavailable) {
+        selectedText.textContent = 'This plan is currently unavailable for checkout.';
+        checkoutButtons.forEach((button) => {
+            button.disabled = true;
+            button.innerHTML = checkoutButtonHtml;
+        });
+        return;
+    }
 
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
@@ -943,6 +952,19 @@ document.addEventListener('DOMContentLoaded', () => {
     align-items: flex-start;
     margin-bottom: var(--theme-ext-space-7a506f4f36);
     font-size: var(--theme-ext-size-03c2698f9e);
+}
+
+.features-checklist li.features-section-label {
+    margin-top: var(--theme-ext-space-685ff92249);
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+}
+
+.features-checklist li.features-section-label span {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #5f6b84;
 }
 
 @media (max-width: 768px) {
