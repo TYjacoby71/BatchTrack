@@ -112,6 +112,12 @@
                         {% endif %}
                     </section>
 
+                    <div class="text-center mb-4" id="topCheckoutSection">
+                        <button type="button" class="btn btn-success btn-lg px-4" data-role="proceedCheckoutBtn" onclick="proceedToPayment()">
+                            <i class="fas fa-credit-card me-2"></i>Proceed to Checkout
+                        </button>
+                    </div>
+
                     <div class="card shadow-sm mb-5" id="tierFeaturesCard">
                         <div class="card-body p-4">
                             <h4 class="mb-1" id="featuresCardTitle">Full Access to the BatchTrack Ecosystem</h4>
@@ -122,14 +128,9 @@
                     </div>
 
                     <div class="text-center" id="confirmationSection">
-                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
-                            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Login
-                            </a>
-                            <button type="button" class="btn btn-success btn-lg px-4" id="continueBtn" onclick="proceedToPayment()">
-                                <i class="fas fa-credit-card me-2"></i>Continue to Payment
-                            </button>
-                        </div>
+                        <button type="button" class="btn btn-success btn-lg px-4" data-role="proceedCheckoutBtn" onclick="proceedToPayment()">
+                            <i class="fas fa-credit-card me-2"></i>Proceed to Checkout
+                        </button>
                     </div>
                 </div>
             </div>
@@ -377,7 +378,8 @@ function updatePlanSummary() {
     const selectedText = document.getElementById('selectedTierText');
     const featuresList = document.getElementById('featuresChecklist');
     const lifetimeCounterMessage = document.getElementById('lifetimeCounterMessage');
-    const continueBtn = document.getElementById('continueBtn');
+    const checkoutButtons = document.querySelectorAll('[data-role="proceedCheckoutBtn"]');
+    const checkoutButtonHtml = '<i class="fas fa-credit-card me-2"></i>Proceed to Checkout';
 
     const tierData = getTierData();
     const planState = getPlanState(selectedPlanKind);
@@ -387,46 +389,61 @@ function updatePlanSummary() {
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
-    const valueStackItems = [
-        { label: 'Inventory Tracking (FIFO)' },
-        { label: 'Recipe Management & Versioning' },
-        { label: 'Production Planning' },
-        { label: 'Batch-in-Progress Tracker' },
-        { label: 'Container Fill Logic' },
-        { label: 'Immutable Batch Summary' },
-        { label: 'Product & SKU System' },
-        { label: 'Unit Conversion & Density Engine' },
-        { label: 'Neurodivergent-Friendly UI' },
-        { label: 'Batch Label Printing' },
-        { label: 'Contextual Error Handling' },
-        { label: 'Founding Member Bonus (Coming Soon)', isSectionLabel: true },
-        { label: 'Included with your Early-Access Seat', isSectionLabel: true },
-        { label: 'Global Inventory Library (25,000+ Items)' },
-        { label: 'AI Recipe & Inventory Parser' },
-        { label: 'Recipe Marketplace' },
-        { label: 'Shopify & Etsy Integration' },
-        { label: 'Supplier Integration' },
+    const includedFeatures = [
+        'Inventory Tracking (FIFO)',
+        'Recipe Management & Versioning',
+        'Production Planning',
+        'Batch-in-Progress Tracker',
+        'Container Fill Logic',
+        'Immutable Batch Summary',
+        'Product & SKU System',
+        'Unit Conversion & Density Engine',
+        'Neurodivergent-Friendly UI',
+        'Batch Label Printing',
+        'Contextual Error Handling',
+    ];
+
+    const futureFeatures = [
+        'Global Inventory Library (25,000+ Items)',
+        'AI Recipe & Inventory Parser',
+        'Recipe Marketplace',
+        'Shopify & Etsy Integration',
+        'Supplier Integration',
     ];
 
     if (!tierData) {
         title.textContent = 'Full Access to the BatchTrack Ecosystem';
         selectedText.textContent = 'Tier configuration unavailable.';
-        continueBtn.disabled = true;
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
+        checkoutButtons.forEach((button) => {
+            button.disabled = true;
+            button.innerHTML = checkoutButtonHtml;
+        });
         return;
     }
 
-    valueStackItems.forEach((stackItem) => {
+    includedFeatures.forEach((label) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
-        icon.className = stackItem.isSectionLabel
-            ? 'fas fa-star text-warning me-2'
-            : 'fas fa-check text-success me-2';
+        icon.className = 'fas fa-check text-success me-2';
         const copy = document.createElement('span');
-        copy.textContent = stackItem.label;
-        if (stackItem.isSectionLabel) {
-            copy.classList.add('fw-semibold');
-        }
+        copy.textContent = label;
+        item.appendChild(icon);
+        item.appendChild(copy);
+        featuresList.appendChild(item);
+    });
+
+    const futureHeading = document.createElement('li');
+    futureHeading.className = 'features-section-label';
+    futureHeading.innerHTML = '<span>Included features coming soon</span>';
+    featuresList.appendChild(futureHeading);
+
+    futureFeatures.forEach((label) => {
+        const item = document.createElement('li');
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-clock text-muted me-2';
+        const copy = document.createElement('span');
+        copy.className = 'text-muted';
+        copy.textContent = label;
         item.appendChild(icon);
         item.appendChild(copy);
         featuresList.appendChild(item);
@@ -435,8 +452,10 @@ function updatePlanSummary() {
     if (planState.isUnavailable) {
         title.textContent = 'Full Access to the BatchTrack Ecosystem';
         selectedText.textContent = 'This plan is currently unavailable for checkout.';
-        continueBtn.disabled = true;
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Continue to Payment';
+        checkoutButtons.forEach((button) => {
+            button.disabled = true;
+            button.innerHTML = checkoutButtonHtml;
+        });
         return;
     }
 
@@ -446,18 +465,18 @@ function updatePlanSummary() {
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
         selectedLifetimeTier = lifetimeOffer ? lifetimeOffer.key : '';
-        continueBtn.disabled = false;
-        continueBtn.innerHTML = '<i class="fas fa-gem me-2"></i>Claim Founding Members Lifetime';
+        checkoutButtons.forEach((button) => {
+            button.disabled = false;
+            button.innerHTML = checkoutButtonHtml;
+        });
         return;
     }
 
     selectedLifetimeTier = '';
-    continueBtn.disabled = false;
-    if (planState.effectivePlanKind === 'monthly') {
-        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Start your 14-day Free Trial';
-    } else {
-        continueBtn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Continue to ${planState.modeBadgeText} Checkout`;
-    }
+    checkoutButtons.forEach((button) => {
+        button.disabled = false;
+        button.innerHTML = checkoutButtonHtml;
+    });
 
     if (planState.fallbackText) {
         lifetimeCounterMessage.textContent = planState.fallbackText;
@@ -701,6 +720,19 @@ document.addEventListener('DOMContentLoaded', () => {
     align-items: flex-start;
     margin-bottom: var(--theme-ext-space-7a506f4f36);
     font-size: var(--theme-ext-size-03c2698f9e);
+}
+
+.features-checklist li.features-section-label {
+    margin-top: var(--theme-ext-space-685ff92249);
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+}
+
+.features-checklist li.features-section-label span {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #5f6b84;
 }
 
 @media (max-width: 768px) {
