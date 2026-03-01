@@ -37,6 +37,7 @@ class BatchStatisticsService:
                     if vfp is not None:
                         planned_efficiency = float(vfp)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/statistics/_batch_stats.py:39", exc_info=True)
                 pass
 
             # Extract yield data

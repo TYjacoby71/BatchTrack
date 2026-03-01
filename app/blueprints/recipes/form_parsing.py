@@ -152,6 +152,7 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
             .first()
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:154", exc_info=True)
         existing = None
 
     if existing:
@@ -176,6 +177,7 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
         db.session.flush()
         return unit.id
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:178", exc_info=True)
         db.session.rollback()
         return None
 
@@ -229,6 +231,7 @@ def extract_ingredients_from_form(form):
             try:
                 gi = db.session.get(GlobalItem, int(gi_id)) if gi_id else None
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:231", exc_info=True)
                 gi = None
 
             if gi:
@@ -243,6 +246,7 @@ def extract_ingredients_from_form(form):
                         .first()
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:245", exc_info=True)
                     existing = None
 
                 if existing:
@@ -261,6 +265,7 @@ def extract_ingredients_from_form(form):
                             .first()
                         )
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:263", exc_info=True)
                         name_match = None
 
                     if name_match:
@@ -269,6 +274,7 @@ def extract_ingredients_from_form(form):
                             name_match.ownership = "global"
                             db.session.flush()
                         except Exception:
+                            logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:271", exc_info=True)
                             db.session.rollback()
                         item_id = int(name_match.id)
                     else:

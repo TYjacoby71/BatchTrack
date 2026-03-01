@@ -7,6 +7,7 @@ Glossary:
 - Expired items: Inventory lots past their expiration date.
 - Expiring soon: Items nearing expiration within a window.
 """
+import logging
 
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -15,6 +16,9 @@ from app.utils.permissions import require_permission
 
 from . import expiration_bp
 from .services import ExpirationService
+
+logger = logging.getLogger(__name__)
+
 
 
 # =========================================================
@@ -274,6 +278,7 @@ def api_mark_expired():
                 400,
             )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/expiration/routes.py:276", exc_info=True)
         print(f"Error marking item as expired: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
@@ -429,6 +434,7 @@ def expiration_summary():
         summary = ExpirationService.get_expiration_summary()
         return jsonify(summary)
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/expiration/routes.py:431", exc_info=True)
         print(f"Expiration summary error: {e}")
         return (
             jsonify({"error": str(e), "message": "Failed to load expiration data"}),

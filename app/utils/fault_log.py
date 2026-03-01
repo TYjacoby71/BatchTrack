@@ -20,6 +20,9 @@ from typing import Any, Dict, Optional
 from .json_store import read_json_file, write_json_file
 from .timezone_utils import TimezoneUtils
 
+logger = logging.getLogger(__name__)
+
+
 LOG = logging.getLogger(__name__)
 DEFAULT_FAULT_LOG = Path(os.environ.get("FAULT_LOG_PATH", "faults.json"))
 
@@ -48,6 +51,7 @@ def log_fault(
     try:
         existing = read_json_file(log_path, default=[]) or []
     except Exception as err:  # pragma: no cover - defensive path
+        logger.warning("Suppressed exception fallback at app/utils/fault_log.py:50", exc_info=True)
         LOG.warning("Failed to read fault log; starting new file: %s", err)
         existing = []
 
@@ -57,5 +61,6 @@ def log_fault(
         write_json_file(log_path, existing)
         return True
     except Exception as err:
+        logger.warning("Suppressed exception fallback at app/utils/fault_log.py:59", exc_info=True)
         LOG.error("Failed to write fault log %s: %s", log_path, err)
         return False

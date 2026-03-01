@@ -105,18 +105,22 @@ def _force_logout_for_billing_lock() -> None:
             current_user.active_session_token = None
             db.session.commit()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/middleware.py:107", exc_info=True)
         try:
             db.session.rollback()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/middleware.py:110", exc_info=True)
             pass
     finally:
         try:
             SessionService.clear_session_state()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/middleware.py:115", exc_info=True)
             pass
         try:
             logout_user()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/middleware.py:119", exc_info=True)
             pass
 
 
@@ -267,6 +271,7 @@ def register_middleware(app: Flask) -> None:
                 try:
                     logout_user()
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/middleware.py:269", exc_info=True)
                     pass
             if _wants_json_response():
                 return jsonify({"error": "Access blocked"}), 403
@@ -284,6 +289,7 @@ def register_middleware(app: Flask) -> None:
                     try:
                         logout_user()
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/middleware.py:286", exc_info=True)
                         pass
                 if _wants_json_response():
                     return jsonify({"error": "Access blocked"}), 403
@@ -350,6 +356,7 @@ def register_middleware(app: Flask) -> None:
                     try:
                         flash("Developer access required.", "error")
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/middleware.py:352", exc_info=True)
                         pass
                     return redirect(url_for("app_routes.dashboard"))
         except Exception as exc:  # pragma: no cover - avoid hard failures
@@ -365,6 +372,7 @@ def register_middleware(app: Flask) -> None:
                 try:
                     flash("Developer access required.", "error")
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/middleware.py:367", exc_info=True)
                     pass
                 return redirect(url_for("app_routes.dashboard"))
 
@@ -438,6 +446,7 @@ def _handle_developer_context(
                     "warning",
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/middleware.py:440", exc_info=True)
                 pass
             return redirect(url_for("developer.organizations"))
 
@@ -509,6 +518,7 @@ def _enforce_billing() -> Response | None:
             try:
                 flash(decision.message, "error")
             except Exception:
+                logger.warning("Suppressed exception fallback at app/middleware.py:511", exc_info=True)
                 pass
             return redirect(url_for("auth.login"))
 
@@ -529,6 +539,7 @@ def _enforce_billing() -> Response | None:
             try:
                 flash(decision.message, "warning")
             except Exception:
+                logger.warning("Suppressed exception fallback at app/middleware.py:531", exc_info=True)
                 pass
             return redirect(url_for("billing.upgrade"))
 
@@ -538,5 +549,6 @@ def _enforce_billing() -> Response | None:
         try:
             db.session.rollback()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/middleware.py:540", exc_info=True)
             pass
         return None

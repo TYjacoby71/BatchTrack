@@ -147,6 +147,7 @@ def _safe_register_blueprint(
         successes.append(spec.description or spec.attribute)
         return True
     except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Suppressed exception fallback at app/blueprints_registry.py:149", exc_info=True)
         failures.append(f"{spec.description or spec.attribute}: {exc}")
         return False
 
@@ -158,6 +159,7 @@ def _register_products(app, successes: List[str], failures: List[str]) -> None:
         register_product_blueprints(app)
         successes.append("Products")
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints_registry.py:160", exc_info=True)
         failures.append(f"Products: {exc}")
         try:
             from app.blueprints.products.products import products_bp
@@ -165,6 +167,7 @@ def _register_products(app, successes: List[str], failures: List[str]) -> None:
             app.register_blueprint(products_bp)
             successes.append("Products Fallback")
         except Exception as fallback_exc:  # pragma: no cover
+            logger.warning("Suppressed exception fallback at app/blueprints_registry.py:167", exc_info=True)
             failures.append(f"Products Fallback: {fallback_exc}")
 
 
@@ -191,6 +194,7 @@ def _apply_csrf_exemptions(app) -> None:
     try:
         from .extensions import csrf
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints_registry.py:193", exc_info=True)
         return
 
     for view_name in CSRF_EXEMPT_VIEWS:
@@ -199,4 +203,5 @@ def _apply_csrf_exemptions(app) -> None:
             try:
                 csrf.exempt(view)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints_registry.py:201", exc_info=True)
                 continue

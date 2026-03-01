@@ -9,6 +9,9 @@ from ...models import Unit, db
 from ...utils.cache_manager import conversion_cache
 from .drawer_errors import handle_conversion_error
 
+logger = logging.getLogger(__name__)
+
+
 
 class ConversionEngine:
     """
@@ -73,6 +76,7 @@ class ConversionEngine:
                     effective_org_id = current_user.organization_id
         except Exception:
             # Fallback to provided organization_id only
+            logger.warning("Suppressed exception fallback at app/services/unit_conversion/unit_conversion.py:74", exc_info=True)
             pass
 
         # Create cache key (org-scoped), include rounding to avoid precision mix-ups

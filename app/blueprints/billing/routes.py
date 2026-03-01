@@ -136,6 +136,7 @@ def storage_addon():
 
         storage_addon = Addon.query.filter_by(key="storage", is_active=True).first()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/billing/routes.py:138", exc_info=True)
         storage_addon = None
     if not storage_addon or storage_addon not in getattr(tier, "allowed_addons", []):
         flash(

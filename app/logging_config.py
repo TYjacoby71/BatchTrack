@@ -6,6 +6,9 @@ from typing import Iterable
 
 from flask import Flask
 
+logger = logging.getLogger(__name__)
+
+
 DEV_FORMAT = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s"
 PROD_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 PII_PATTERNS = {
@@ -27,6 +30,7 @@ class PiiRedactionFilter(logging.Filter):
             msg = PII_PATTERNS["bearer"].sub("Bearer [REDACTED]", msg)
             record.msg = msg
         except Exception:
+            logger.warning("Suppressed exception fallback at app/logging_config.py:29", exc_info=True)
             pass
         return True
 
@@ -66,6 +70,7 @@ def _apply_formatter(
             if redact_pii:
                 handler.addFilter(PiiRedactionFilter())
         except Exception:  # pragma: no cover
+            logger.warning("Suppressed exception fallback at app/logging_config.py:68", exc_info=True)
             continue
 
 

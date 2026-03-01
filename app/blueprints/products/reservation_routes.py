@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, render_template, request
@@ -7,6 +8,9 @@ from sqlalchemy import and_, desc
 from ...models import Reservation, db
 from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import require_permission
+
+logger = logging.getLogger(__name__)
+
 
 # No separate audit needed - all history goes through UnifiedInventoryHistory via FIFO operations
 
@@ -151,6 +155,7 @@ def create_reservation():
             return jsonify({"error": message}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:153", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -222,6 +227,7 @@ def release_reservation(order_id):
             return jsonify({"error": message}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:224", exc_info=True)
         print(f"DEBUG: Exception in release_reservation: {str(e)}")
         import traceback
 
@@ -246,6 +252,7 @@ def confirm_sale(order_id):
             return jsonify({"error": message}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:248", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -261,6 +268,7 @@ def get_reservation_details(order_id):
         return jsonify({"reservations": details})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:263", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -276,6 +284,7 @@ def cleanup_expired():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:278", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -324,4 +333,5 @@ def get_item_reservations(item_id):
         return jsonify({"reservations": result})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:326", exc_info=True)
         return jsonify({"error": str(e)}), 500

@@ -1,7 +1,11 @@
+import logging
 from datetime import date, datetime
 from typing import Optional
 
 from app.models import FreshnessSnapshot, InventoryItem, UnifiedInventoryHistory, db
+
+logger = logging.getLogger(__name__)
+
 
 
 class FreshnessSnapshotService:
@@ -29,6 +33,7 @@ class FreshnessSnapshotService:
                 if e.affected_lot and e.affected_lot.received_date and e.timestamp:
                     return max(0, (e.timestamp - e.affected_lot.received_date).days)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/freshness_snapshot_service.py:31", exc_info=True)
                 return None
             return None
 

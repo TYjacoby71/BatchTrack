@@ -107,6 +107,7 @@ class BatchOperationsService(BaseService):
                     try:
                         serializable_plan_snapshot = asdict(plan_snapshot)
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:109", exc_info=True)
                         serializable_plan_snapshot = plan_snapshot
 
             batch = None
@@ -215,10 +216,12 @@ class BatchOperationsService(BaseService):
                     if hasattr(batch, "cost_method_locked_at"):
                         batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:217", exc_info=True)
                 try:
                     if hasattr(batch, "cost_method"):
                         batch.cost_method = "fifo"
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:221", exc_info=True)
                     pass
 
             all_errors = []
@@ -298,11 +301,13 @@ class BatchOperationsService(BaseService):
                         },
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:300", exc_info=True)
                     pass
 
                 return batch, []
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:305", exc_info=True)
             db.session.rollback()
             logger.error(f"Error starting batch: {str(e)}")
             return None, [str(e)]
@@ -352,6 +357,7 @@ class BatchOperationsService(BaseService):
                                         )
                                     )
                                 except Exception:
+                                    logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:354", exc_info=True)
                                     container_cost_snapshot = float(
                                         container_item.cost_per_unit or 0.0
                                     )
@@ -374,6 +380,7 @@ class BatchOperationsService(BaseService):
                                     or f"Not enough {container_item.name} in stock."
                                 )
                         except Exception as e:
+                            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:376", exc_info=True)
                             errors.append(
                                 f"Error adjusting inventory for {container_item.name}: {str(e)}"
                             )
@@ -449,6 +456,7 @@ class BatchOperationsService(BaseService):
                             ingredient.id, batch.id
                         )
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:451", exc_info=True)
                         cost_per_unit_snapshot = float(ingredient.cost_per_unit or 0.0)
 
                     batch_ingredient = BatchIngredient(
@@ -537,6 +545,7 @@ class BatchOperationsService(BaseService):
                             item.id, batch.id
                         )
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:539", exc_info=True)
                         consumable_cost_snapshot = float(item.cost_per_unit or 0.0)
 
                     snap = BatchConsumable(
@@ -739,11 +748,13 @@ class BatchOperationsService(BaseService):
                     },
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:741", exc_info=True)
                 pass
 
             return True, restoration_summary
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:746", exc_info=True)
             db.session.rollback()
             logger.error(f"Error cancelling batch: {str(e)}")
             return False, str(e)
@@ -780,6 +791,7 @@ class BatchOperationsService(BaseService):
                                 refreshed.final_portions = val
                                 db.session.commit()
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:782", exc_info=True)
                         pass
                     # Compute containment efficiency if BatchStats exists
                     from app.models.statistics import BatchStats as _BatchStats
@@ -807,6 +819,7 @@ class BatchOperationsService(BaseService):
                                     / float(refreshed.projected_yield)
                                 ) * 100.0
                         except Exception:
+                            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:809", exc_info=True)
                             accuracy_pct = None
                     # Compute overall freshness for event payload
                     try:
@@ -819,6 +832,7 @@ class BatchOperationsService(BaseService):
                             freshness_summary, "overall_freshness_percent", None
                         )
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:821", exc_info=True)
                         overall_freshness = None
                     AnalyticsTrackingService.track_batch_lifecycle_event(
                         event_name="batch_completed",
@@ -840,6 +854,7 @@ class BatchOperationsService(BaseService):
                         },
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:842", exc_info=True)
                     pass
 
             return success, message
@@ -886,11 +901,13 @@ class BatchOperationsService(BaseService):
                     properties={"label_code": batch.label_code, "reason": reason},
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:888", exc_info=True)
                 pass
 
             return True, f"Batch {batch.label_code} marked as failed"
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:893", exc_info=True)
             db.session.rollback()
             logger.error(f"Error failing batch: {str(e)}")
             return False, str(e)
@@ -1028,6 +1045,7 @@ class BatchOperationsService(BaseService):
                         container_item.id, batch.id
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1030", exc_info=True)
                     extra_container_cost = float(container_item.cost_per_unit or 0.0)
 
                 new_extra = ExtraBatchContainer(
@@ -1096,6 +1114,7 @@ class BatchOperationsService(BaseService):
                                     f"Not enough in stock. {normalized_message}"
                                 )
                         except Exception:
+                            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1098", exc_info=True)
                             pass
                         errors.append(
                             {
@@ -1116,6 +1135,7 @@ class BatchOperationsService(BaseService):
                                 inventory_item.id, batch.id
                             )
                         except Exception:
+                            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1118", exc_info=True)
                             extra_ing_cost = float(inventory_item.cost_per_unit or 0.0)
 
                         new_extra = ExtraBatchIngredient(
@@ -1187,6 +1207,7 @@ class BatchOperationsService(BaseService):
                                     f"Not enough in stock. {normalized_message}"
                                 )
                         except Exception:
+                            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1189", exc_info=True)
                             pass
                         errors.append(
                             {
@@ -1210,6 +1231,7 @@ class BatchOperationsService(BaseService):
                             consumable_item.id, batch.id
                         )
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1212", exc_info=True)
                         extra_cons_cost = float(consumable_item.cost_per_unit or 0.0)
 
                     extra_rec = ExtraBatchConsumable(
@@ -1232,6 +1254,7 @@ class BatchOperationsService(BaseService):
             return True, "Items added successfully", []
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/batch_operations.py:1234", exc_info=True)
             db.session.rollback()
             logger.error(f"Error adding extra items to batch: {str(e)}")
             return False, str(e), []

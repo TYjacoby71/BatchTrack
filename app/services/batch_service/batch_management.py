@@ -46,6 +46,7 @@ class BatchManagementService(BaseService):
                     for c in getattr(batch, "consumables", []) or []
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/batch_service/batch_management.py:48", exc_info=True)
                 consumable_total = 0
 
             # Extra ingredients
@@ -67,6 +68,7 @@ class BatchManagementService(BaseService):
                     for e in getattr(batch, "extra_consumables", []) or []
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/batch_service/batch_management.py:69", exc_info=True)
                 extra_consumable_total = 0
 
             total_cost = (

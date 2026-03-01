@@ -121,3 +121,50 @@ class TestSignupTierCharacterization:
             db.session.commit()
             db.session.refresh(fresh_org)
             assert fresh_org.can_add_users() is True
+
+    def test_signup_rejects_missing_or_invalid_tier_selection(self, app, client):
+        """Signup POST should surface plan-selection validation errors."""
+        with app.app_context():
+            tier = SubscriptionTier(
+                name=_unique("ValidPlan"),
+                billing_provider="stripe",
+                stripe_lookup_key=_unique("price_valid_"),
+                is_customer_facing=True,
+                user_limit=1,
+            )
+            db.session.add(tier)
+            db.session.commit()
+
+        missing_tier_response = client.post(
+            "/auth/signup",
+            data={
+                "selected_tier": "",
+                "contact_email": "missing-tier@example.com",
+                "contact_phone": "555-0001",
+                "billing_mode": "standard",
+                "billing_cycle": "monthly",
+            },
+            follow_redirects=True,
+        )
+        assert missing_tier_response.status_code == 200
+        assert (
+            "Please select a subscription plan"
+            in missing_tier_response.get_data(as_text=True)
+        )
+
+        invalid_tier_response = client.post(
+            "/auth/signup",
+            data={
+                "selected_tier": "99999999",
+                "contact_email": "invalid-tier@example.com",
+                "contact_phone": "555-0002",
+                "billing_mode": "standard",
+                "billing_cycle": "monthly",
+            },
+            follow_redirects=True,
+        )
+        assert invalid_tier_response.status_code == 200
+        assert (
+            "Invalid subscription plan selected"
+            in invalid_tier_response.get_data(as_text=True)
+        )

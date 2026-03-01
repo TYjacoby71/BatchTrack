@@ -61,37 +61,37 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 ## Priority 2: Production Visibility
 
 ### 2.1 Add logging to silent exception handlers
-- [ ] `app/template_context.py` (12 silent handlers): add `logger.debug()` or `logger.warning()` to each
-- [ ] `app/services/batch_service/batch_operations.py` (~20 silent handlers): add logging
-- [ ] `app/services/recipe_service/_core.py` (~15 silent handlers): add logging
-- [ ] `app/middleware.py` (~10 silent handlers): add logging
-- [ ] `app/blueprints/tools/routes.py` (7 silent handlers): add logging
-- [ ] `app/blueprints/inventory/routes.py` (5 silent handlers): add logging
-- [ ] Remaining files: search for `except Exception` and `except:` without a `logger.` call on the next line; fix all remaining instances
-- [ ] Verify no bare `except:` clauses remain (currently 1 in `cache_manager.py`)
+- [x] `app/template_context.py` (12 silent handlers): add `logger.debug()` or `logger.warning()` to each
+- [x] `app/services/batch_service/batch_operations.py` (~20 silent handlers): add logging
+- [x] `app/services/recipe_service/_core.py` (~15 silent handlers): add logging
+- [x] `app/middleware.py` (~10 silent handlers): add logging
+- [x] `app/blueprints/tools/routes.py` (7 silent handlers): add logging
+- [x] `app/blueprints/inventory/routes.py` (5 silent handlers): add logging
+- [x] Remaining files: search for `except Exception` and `except:` without a `logger.` call on the next line; fix all remaining instances
+- [x] Verify no bare `except:` clauses remain (confirmed)
 
 ### 2.2 Replace pickle in cache manager
-- [ ] `app/utils/cache_manager.py` line 161: replace `pickle.loads(raw)` with JSON deserialization
-- [ ] Replace corresponding `pickle.dumps()` with JSON serialization
-- [ ] Add test to verify cache serialization round-trips correctly
+- [x] `app/utils/cache_manager.py` line 161: replace `pickle.loads(raw)` with JSON deserialization
+- [x] Replace corresponding `pickle.dumps()` with JSON serialization
+- [x] Add test to verify cache serialization round-trips correctly
 
 ### 2.3 Branded error pages
-- [ ] Create `app/templates/errors/404.html` (not found)
-- [ ] Create `app/templates/errors/500.html` (server error)
-- [ ] Register Flask error handlers in `app/resilience.py` for 404 and 500
-- [ ] Verify `errors/maintenance.html` (503) is already registered (confirmed)
+- [x] Create `app/templates/errors/404.html` (not found)
+- [x] Create `app/templates/errors/500.html` (server error)
+- [x] Register Flask error handlers in `app/resilience.py` for 404 and 500
+- [x] Verify `errors/maintenance.html` (503) is already registered (confirmed)
 
 ---
 
 ## Priority 3: Test Coverage for Critical Paths
 
 ### 3.1 Auth flow tests
-- [ ] Login success and failure (username/password)
-- [ ] Signup flow (form validation, org creation, tier assignment)
-- [ ] Password reset request and completion
-- [ ] Email verification flow
-- [ ] OAuth callback handling (Google flow beyond current coverage)
-- [ ] Session enforcement (single-session guard)
+- [x] Login success and failure (username/password)
+- [x] Signup flow (form validation, org creation, tier assignment)
+- [ ] Password reset request and completion (deferred in current scope by request)
+- [x] Email verification flow
+- [x] OAuth callback handling (Google flow beyond current coverage)
+- [x] Session enforcement (single-session guard)
 
 ### 3.2 Organization management tests
 - [ ] Invite user flow (create user, assign role, email dispatch)

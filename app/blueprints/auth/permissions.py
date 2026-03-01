@@ -9,6 +9,7 @@ Glossary:
 - Catalog metadata: Consolidated permission descriptions/categories from seeder.
 - Role management: Creation/update helpers for organization/system roles.
 """
+import logging
 
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -19,6 +20,9 @@ from app.models.subscription_tier import SubscriptionTier
 from app.utils.permissions import clear_permission_scope_cache, require_permission
 
 from . import auth_bp
+
+logger = logging.getLogger(__name__)
+
 
 
 # --- Get tier permissions ---
@@ -53,6 +57,7 @@ def _load_permission_catalog():
 
         data = load_consolidated_permissions()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:55", exc_info=True)
         return {}
 
     catalog = {}
@@ -262,6 +267,7 @@ def update_permission_matrix():
                 for tier in org_perm.tiers.all():
                     org_perm.tiers.remove(tier)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:264", exc_info=True)
                 pass
             db.session.delete(org_perm)
 
@@ -297,6 +303,7 @@ def update_permission_matrix():
             }
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:299", exc_info=True)
         db.session.rollback()
         return (
             jsonify(
@@ -340,6 +347,7 @@ def toggle_permission_status():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:342", exc_info=True)
         db.session.rollback()
         return jsonify(
             {"success": False, "message": f"Error updating permission: {str(e)}"}
@@ -425,6 +433,7 @@ def create_role():
         return jsonify({"success": True, "message": "Role created successfully"})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:427", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -473,5 +482,6 @@ def update_role(role_id):
         return jsonify({"success": True, "message": "Role updated successfully"})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:475", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})

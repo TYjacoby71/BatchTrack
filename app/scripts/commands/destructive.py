@@ -1,9 +1,13 @@
 """Danger-zone commands for destructive user/org data operations."""
+import logging
 
 import click
 from flask.cli import with_appcontext
 
 from ...extensions import db
+
+logger = logging.getLogger(__name__)
+
 
 
 @click.command("clear-all-users")
@@ -113,6 +117,7 @@ def clear_all_users_command():
                             f"   ⚠️  {table} doesn't have organization_id column - skipping"
                         )
             except Exception as table_error:
+                logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:115", exc_info=True)
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
 
         print("🗑️  Clearing all users...")
@@ -131,6 +136,7 @@ def clear_all_users_command():
         print("🔄 Run 'flask init-production' to recreate default data")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:133", exc_info=True)
         print(f"❌ Error clearing user data: {str(e)}")
         db.session.rollback()
         raise
@@ -185,6 +191,7 @@ def clear_dev_users_command():
         print("🔄 Run 'flask seed-users' to recreate developer user")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:187", exc_info=True)
         print(f"❌ Error clearing developer users: {str(e)}")
         db.session.rollback()
         raise
@@ -299,6 +306,7 @@ def clear_customer_users_command():
                             f"   ⚠️  {table} doesn't have organization_id column - skipping"
                         )
             except Exception as table_error:
+                logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:301", exc_info=True)
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
 
         print("🗑️  Clearing user references in organization data...")
@@ -338,6 +346,7 @@ def clear_customer_users_command():
                                 f"   ⚠️  Column {column} doesn't exist in {table} - skipping"
                             )
             except Exception as table_error:
+                logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:340", exc_info=True)
                 print(
                     f"   ⚠️  Could not clear user references in {table}: {table_error}"
                 )
@@ -358,6 +367,7 @@ def clear_customer_users_command():
         print(f"Remaining organizations: {remaining_orgs} (should be 0)")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/destructive.py:360", exc_info=True)
         db.session.rollback()
         print(f"❌ Error clearing customer user data: {e}")
         import traceback

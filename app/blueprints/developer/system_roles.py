@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 from werkzeug.security import generate_password_hash
@@ -9,6 +10,9 @@ from app.models.developer_role import DeveloperRole
 from app.models.user_role_assignment import UserRoleAssignment
 
 from .decorators import require_developer_permission
+
+logger = logging.getLogger(__name__)
+
 
 system_roles_bp = Blueprint("system_roles", __name__)
 
@@ -73,6 +77,7 @@ def create_system_role():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:75", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -128,6 +133,7 @@ def update_system_role(role_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:130", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -151,6 +157,7 @@ def delete_system_role(role_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:153", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -197,6 +204,7 @@ def create_developer_role():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:199", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -252,6 +260,7 @@ def update_developer_role(role_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:254", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -274,6 +283,7 @@ def delete_developer_role(role_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:276", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -335,6 +345,7 @@ def create_developer_user():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:337", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -383,6 +394,7 @@ def update_developer_user_role(user_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:385", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -406,6 +418,7 @@ def get_developer_user_role(user_id):
         return jsonify({"success": True, "current_role_id": current_role_id})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:408", exc_info=True)
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -433,6 +446,7 @@ def delete_developer_user(user_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/system_roles.py:435", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 

@@ -93,6 +93,7 @@ def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
             if now - last_dt > timedelta(hours=PUBLIC_LIBRARY_WINDOW_HOURS):
                 record = {}
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:95", exc_info=True)
         record = {}
     count = int(record.get("count") or 0)
     if count >= limit:
@@ -115,6 +116,7 @@ def _remaining_public_counter(key: str, limit: int) -> int:
             ):
                 return limit
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:117", exc_info=True)
         return limit
     count = int(record.get("count") or 0)
     return max(0, limit - count)
@@ -359,10 +361,12 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
     try:
         rollup = AnalyticsDataService.get_global_item_rollup(item_id) or {}
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:361", exc_info=True)
         rollup = {}
     try:
         cost = AnalyticsDataService.get_cost_distribution(item_id) or {}
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:365", exc_info=True)
         cost = {}
 
     related_items = []
@@ -382,6 +386,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
             )
         related_items = related_query.all()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:384", exc_info=True)
         related_items = []
 
     structured_data = {
@@ -622,6 +627,7 @@ def global_library_item_stats(item_id: int):
             }
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/global_library/routes.py:624", exc_info=True)
         import logging
 
         logger = logging.getLogger(__name__)

@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from flask_caching import Cache
 from flask_limiter import Limiter
@@ -18,6 +19,9 @@ from flask_migrate import Migrate
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+
+logger = logging.getLogger(__name__)
+
 
 __all__ = [
     "db",
@@ -46,6 +50,7 @@ def _limiter_key_func():
             if user_id:
                 return f"user:{user_id}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/extensions.py:48", exc_info=True)
         pass
     return get_remote_address()
 

@@ -138,6 +138,7 @@ class InventoryStatisticsService:
                         delta = e.timestamp - e.affected_lot.received_date
                         return max(0, delta.days)
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/statistics/_inventory_stats.py:140", exc_info=True)
                     return None
                 return None
 

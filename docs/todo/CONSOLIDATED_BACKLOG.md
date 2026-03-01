@@ -45,9 +45,11 @@
 - Ship the multi-step retention/cancellation experience end-to-end: retention landing page, objection-specific paths, exit survey, analytics, FTC-compliant cancellation, win-back emails, and phased rollout.
 - Finish custom unit mapping experience: `CustomUnitMapping` flows with user attribution, density prompts, recipe editor enforcement, training content, and status badges in Unit Manager.
 - Batch augmentation system: split base yield into scented/colored variations pre-finish, with percentage allocation, automatic sub-labels (101A-Lavender, 101B-Rose), added-ingredient tracking, and container redistribution.
+- Recipe-bound instruction propagation + maker tool: duplicate instructions across every test and variation while preserving the exact source recipe ID linkage, and add a maker tool on the batch in-progress page so makers can pull up the linked instructions instantly.
 - Multi-batch scheduling and resource optimization: plan batches across time with equipment scheduling and conflict prevention.
 - Quality control integration: batch testing protocols, specification compliance, recall management, and certificate generation.
 - Cost tracking and trend analysis: historical ingredient pricing, profit margin monitoring, recipe cost trends, and batch profitability (actual vs planned).
+- Inventory-page restock/order flow for global-library imports: show a `Restock` action on imported items that reuses the last supplier and supports either BatchTrack-charged ordering (we purchase from supplier on the maker’s behalf) or direct redirect to the supplier’s checkout page for that item.
 - Advanced reporting dashboard: cost optimization reports, inventory turn analysis, production efficiency metrics, supplier performance, and site analytics service integration.
 - Maker-to-maker community platform: recipe sharing with ratings, ingredient marketplace, process documentation, collaboration tools, and maker profiles.
 - Batchley AI assistant: conversational interface for production workflows, multi-modal input (voice, camera, file imports), smart purchase management via OCR, recipe/ingredient creation by voice/text, and contextual recommendations.

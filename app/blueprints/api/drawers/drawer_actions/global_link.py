@@ -7,6 +7,7 @@ Glossary:
 - Global item: Canonical catalog entry for ingredients.
 - Suggestion drawer: UI prompt to link local items to global items.
 """
+import logging
 
 from flask import jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -17,6 +18,9 @@ from app.services.global_link_suggestions import GlobalLinkSuggestionService
 from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_cadence_check, register_drawer_action
+
+logger = logging.getLogger(__name__)
+
 
 register_drawer_action(
     "global_link.modal",
@@ -181,12 +185,14 @@ def global_link_confirm():
             db.session.add(history_event)
             updated += 1
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/global_link.py:183", exc_info=True)
             skipped += 1
             continue
 
     try:
         db.session.commit()
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/global_link.py:189", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(exc)}), 500
 

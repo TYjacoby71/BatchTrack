@@ -10,6 +10,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 import html
 from typing import Dict, List, Optional, Tuple
@@ -18,6 +19,9 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.models import Organization, User
+
+logger = logging.getLogger(__name__)
+
 
 
 # --- Organization service class ---
@@ -134,6 +138,7 @@ class OrganizationService:
             db.session.commit()
             return True, org, "Organization created"
         except Exception as exc:
+            logger.warning("Suppressed exception fallback at app/services/developer/organization_service.py:136", exc_info=True)
             db.session.rollback()
             return False, None, str(exc)
 
@@ -160,6 +165,7 @@ class OrganizationService:
             db.session.commit()
             return True, "Organization updated successfully"
         except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Suppressed exception fallback at app/services/developer/organization_service.py:162", exc_info=True)
             db.session.rollback()
             return False, str(exc)
 
@@ -476,6 +482,7 @@ class OrganizationService:
                 message += f" Detached {detached_links} external recipe link(s)."
             return True, message
         except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Suppressed exception fallback at app/services/developer/organization_service.py:478", exc_info=True)
             db.session.rollback()
             return False, str(exc)
 

@@ -30,6 +30,7 @@ def _resolve_import_name(
             if global_item and getattr(global_item, "name", None):
                 return global_item.name
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_imports.py:32", exc_info=True)
             pass
     return "Imported Item"
 
@@ -113,6 +114,7 @@ def _ensure_inventory_item_for_import(
         try:
             global_item = db.session.get(GlobalItem, int(global_item_id))
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_imports.py:115", exc_info=True)
             global_item = None
 
     display_name = _resolve_import_name(

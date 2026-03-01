@@ -1,3 +1,4 @@
+import logging
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
@@ -7,6 +8,9 @@ from ...models import Batch, db
 from ...services.timer_service import TimerService
 from ...utils.timezone_utils import TimezoneUtils
 from . import timers_bp
+
+logger = logging.getLogger(__name__)
+
 
 
 @timers_bp.route("/list_timers")
@@ -85,6 +89,7 @@ def api_create_timer():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:87", exc_info=True)
         import traceback
 
         print(f"Timer creation error: {str(e)}")
@@ -105,6 +110,7 @@ def api_timer_status(timer_id):
         return jsonify(status)
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:107", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -130,6 +136,7 @@ def api_stop_timer(timer_id):
             return jsonify({"error": "Failed to stop timer"}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:132", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -156,6 +163,7 @@ def delete_timer(timer_id):
         return jsonify({"success": True, "message": "Timer deleted"})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:158", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -172,6 +180,7 @@ def api_pause_timer(timer_id):
             return jsonify({"error": "Failed to pause timer"}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:174", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -188,6 +197,7 @@ def api_resume_timer(timer_id):
             return jsonify({"error": "Failed to resume timer"}), 400
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:190", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -201,6 +211,7 @@ def api_batch_timers(batch_id):
         return jsonify({"timers": timers})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:203", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -214,6 +225,7 @@ def api_expired_timers():
         return jsonify({"expired_timers": expired_timers})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:216", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -233,6 +245,7 @@ def api_auto_expire_timers():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:235", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -246,6 +259,7 @@ def api_timer_summary():
         return jsonify(summary)
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:248", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -273,6 +287,7 @@ def cancel_timer(timer_id):
         return jsonify({"success": True, "message": f'Timer "{timer.name}" cancelled'})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:275", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -308,6 +323,7 @@ def complete_expired_timers():
             )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:310", exc_info=True)
         import traceback
 
         print(f"Timer completion endpoint error: {str(e)}")
@@ -362,4 +378,5 @@ def check_expired_timers():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/timers/routes.py:364", exc_info=True)
         return jsonify({"error": str(e)}), 500
