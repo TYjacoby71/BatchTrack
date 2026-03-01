@@ -21,8 +21,8 @@ def pricing():
         load_feedback_widget=False,
         page_title="BatchTrack.com | Pricing for Small-Batch Makers",
         page_description=(
-            "Compare customer-facing plans with monthly, yearly, and limited lifetime "
-            "launch seats."
+            "Compare customer-facing plans and choose the checkout option that is "
+            "available for your tier."
         ),
         canonical_url=url_for("pricing_routes.pricing", _external=True),
         page_og_image=url_for(

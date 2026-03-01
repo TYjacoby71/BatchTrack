@@ -60,20 +60,6 @@
     color: var(--color-muted);
   }
 
-  .lifetime-shell {
-    border-radius: var(--theme-ext-radius-cf5969e6df);
-    padding: var(--theme-ext-space-27ec725b7d);
-    border: 1px solid rgba(99, 110, 198, 0.2);
-    background: var(--theme-ext-color-335defddb5);
-    box-shadow: var(--theme-ext-shadow-f7d933f886);
-    color: var(--theme-ext-color-325b628415);
-  }
-
-  .lifetime-shell .section-heading h2,
-  .lifetime-shell .section-heading p {
-    color: var(--theme-ext-color-325b628415);
-  }
-
   .tier-card {
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
     border: 1px solid rgba(210, 218, 236, 0.85);
@@ -84,10 +70,6 @@
     flex-direction: column;
     padding: var(--theme-ext-space-8d9db2a862);
     box-shadow: var(--theme-ext-shadow-8fd694988c);
-  }
-
-  .lifetime-card {
-    background: var(--theme-ext-color-42cef2f23b);
   }
 
   .tier-card.is-featured {
@@ -169,12 +151,6 @@
     color: var(--theme-ext-color-960ccd0cac);
     font-weight: 700;
     line-height: 1;
-  }
-
-  .lifetime-seat-copy {
-    color: var(--theme-ext-color-bd84f9fcd1);
-    font-size: var(--theme-ext-size-0eeb212e7b);
-    margin-bottom: var(--theme-ext-space-7a506f4f36);
   }
 
   .comparison-shell {
@@ -304,53 +280,6 @@
   {% set pricing_tier_column_class = "col-12 col-lg-6" %}
   {% else %}
   {% set pricing_tier_column_class = "col-12 col-lg-4" %}
-  {% endif %}
-
-  {% if lifetime_has_capacity %}
-  {% set lifetime_tier_count = lifetime_tiers|length %}
-  {% if lifetime_tier_count <= 1 %}
-  {% set lifetime_tier_column_class = "col-12" %}
-  {% elif lifetime_tier_count == 2 %}
-  {% set lifetime_tier_column_class = "col-12 col-lg-6" %}
-  {% else %}
-  {% set lifetime_tier_column_class = "col-12 col-lg-4" %}
-  {% endif %}
-  <section class="lifetime-shell mb-4 mb-lg-5 pricing-deferred-section">
-    <div class="section-heading">
-      <div>
-        <h2>Limited Lifetime Launch Seats</h2>
-        <p>These one-time offers appear first while seats are still available.</p>
-      </div>
-      <span class="badge bg-light text-dark">Pay once, keep your tier forever</span>
-    </div>
-    <div class="row g-3">
-      {% for tier in lifetime_tiers %}
-      {% set offer = tier.lifetime_offer %}
-      <div class="{{ lifetime_tier_column_class }}">
-        <article class="tier-card lifetime-card {% if not tier.lifetime_has_remaining %}is-sold-out{% endif %}">
-          <span class="tier-chip">{{ tier.name }}</span>
-          <h3>{{ offer.tagline or tier.tagline }}</h3>
-          <p class="tier-tagline">{{ offer.future_scope or tier.future_scope }}</p>
-          <div class="tier-price-row">
-            <div class="tier-price-figure">{{ offer.lifetime_price_copy or "Configure lifetime pricing" }}</div>
-          </div>
-          <div class="lifetime-seat-copy">
-            Only <strong>{{ offer.display_spots_left or 0 }}</strong> seats left / {{ offer.seat_total or 0 }}.
-          </div>
-          <div class="mt-auto d-grid">
-            {% if tier.signup_lifetime_url %}
-            <a href="{{ tier.signup_lifetime_url }}" class="btn btn-warning">
-              Checkout {{ tier.name }} Lifetime
-            </a>
-            {% else %}
-            <button type="button" class="btn btn-outline-secondary" disabled>Sold out</button>
-            {% endif %}
-          </div>
-        </article>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
   {% endif %}
 
   <section class="mb-4 mb-lg-5 pricing-deferred-section" id="plans">

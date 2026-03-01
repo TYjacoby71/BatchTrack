@@ -57,22 +57,6 @@ class PublicPricingPageService:
             allow_live_pricing_network=True,
         )
 
-        paid_tiers = [
-            tier
-            for tier in db_tiers
-            if str(getattr(tier, "billing_provider", "")).strip().lower() != "exempt"
-        ]
-        lifetime_offers = LifetimePricingService.build_lifetime_offers(
-            paid_tiers,
-            include_live_pricing=True,
-            allow_live_pricing_network=True,
-        )
-        offers_by_tier_id = {
-            str(offer.get("tier_id") or ""): offer
-            for offer in lifetime_offers
-            if offer and offer.get("tier_id")
-        }
-
         pricing_tiers: list[dict[str, Any]] = []
         seen_tier_keys: set[str] = set()
         for tier_obj in db_tiers:
@@ -90,28 +74,20 @@ class PublicPricingPageService:
                 tier_key=tier_key,
                 tier_id=tier_id,
                 tier_data=tier_data,
-                offer=offers_by_tier_id.get(tier_id, {}),
+                offer={},
                 can_standard_checkout=cls._can_standard_checkout(tier_obj),
             )
             pricing_tiers.append(tier_payload)
 
-        lifetime_tiers = [
-            tier
-            for tier in pricing_tiers
-            if (tier.get("lifetime_offer") or {}).get("tier_id")
-        ]
         comparison_sections = cls._tier_presentation.build_comparison_sections(
             pricing_tiers
-        )
-        lifetime_has_capacity = any(
-            tier.get("lifetime_has_remaining") for tier in lifetime_tiers
         )
 
         return {
             "pricing_tiers": pricing_tiers,
-            "lifetime_tiers": lifetime_tiers,
+            "lifetime_tiers": [],
             "comparison_sections": comparison_sections,
-            "lifetime_has_capacity": lifetime_has_capacity,
+            "lifetime_has_capacity": False,
         }
 
     @classmethod
