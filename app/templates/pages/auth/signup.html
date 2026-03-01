@@ -7,6 +7,7 @@
 {% set primary_tier = available_tiers.get(primary_tier_id) if available_tiers else none %}
 {% set primary_lifetime_offer = (lifetime_offers | first) if lifetime_offers else none %}
 {% set signup_free_tier_enabled = (show_signup_free_tier and free_tier_display) %}
+{% set artisan_signup_features = (primary_tier.presentation_features if primary_tier and primary_tier.presentation_features else (primary_tier.features if primary_tier and primary_tier.features else [])) %}
 <div class="py-4">
     <div class="row justify-content-center">
         <div class="col-xl-10 col-xxl-9 signup-layout-col">
@@ -73,11 +74,8 @@
                                 <ul class="plan-mini-features mb-2">
                                     {% for feature in free_tier_display.core_features or [] %}
                                     <li><i class="fas fa-check text-success me-2" aria-hidden="true"></i><span>{{ feature }}</span></li>
-                                    {% endfor %}
-                                </ul>
-                                <ul class="plan-mini-features plan-mini-limitations mb-0">
-                                    {% for feature in free_tier_display.limitations or [] %}
-                                    <li><i class="fas fa-minus-circle text-muted me-2" aria-hidden="true"></i><span class="text-muted">{{ feature }}</span></li>
+                                    {% else %}
+                                    <li><span class="text-muted">Features update dynamically from the Free tier permissions.</span></li>
                                     {% endfor %}
                                 </ul>
                             </article>
@@ -94,6 +92,14 @@
                                 <h4 class="h5 fw-bold mb-1">Artisan Access</h4>
                                 <div class="plan-price mb-2" data-role="priceText">$24.99 / Month</div>
                                 <p class="plan-includes mb-1">Full access to the core BatchTrack ecosystem.</p>
+                                <p class="plan-subtext mb-1 fw-semibold text-uppercase small">Core features</p>
+                                <ul class="plan-mini-features mb-2">
+                                    {% for feature in artisan_signup_features[:8] %}
+                                    <li><i class="fas fa-check text-success me-2" aria-hidden="true"></i><span>{{ feature }}</span></li>
+                                    {% else %}
+                                    <li><span class="text-muted">Features update dynamically from the Artisan tier permissions.</span></li>
+                                    {% endfor %}
+                                </ul>
                                 <p class="plan-subtext mb-0" data-role="statusText">Includes a 14-day Free Trial.</p>
                                 <p class="plan-subtext mb-0">Cancel anytime.</p>
                                 <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
@@ -136,6 +142,14 @@
                                 <h4 class="h5 fw-bold mb-1">Monthly Artisan Subscription</h4>
                                 <div class="plan-price mb-2" data-role="priceText">$24.99 / Month</div>
                                 <p class="plan-includes mb-1">Full access to the core Batching Engine.</p>
+                                <p class="plan-subtext mb-1 fw-semibold text-uppercase small">Core features</p>
+                                <ul class="plan-mini-features mb-2">
+                                    {% for feature in artisan_signup_features[:8] %}
+                                    <li><i class="fas fa-check text-success me-2" aria-hidden="true"></i><span>{{ feature }}</span></li>
+                                    {% else %}
+                                    <li><span class="text-muted">Features update dynamically from the Artisan tier permissions.</span></li>
+                                    {% endfor %}
+                                </ul>
                                 <p class="plan-subtext mb-0" data-role="statusText">Includes a 14-day Free Trial.</p>
                                 <p class="plan-subtext mb-0">Cancel anytime.</p>
                                 <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
@@ -463,28 +477,6 @@ function updatePlanSummary() {
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
-    const includedFeatures = [
-        'Inventory Tracking (FIFO)',
-        'Recipe Management & Versioning',
-        'Production Planning',
-        'Batch-in-Progress Tracker',
-        'Container Fill Logic',
-        'Immutable Batch Summary',
-        'Product & SKU System',
-        'Unit Conversion & Density Engine',
-        'Neurodivergent-Friendly UI',
-        'Batch Label Printing',
-        'Contextual Error Handling',
-    ];
-
-    const futureFeatures = [
-        'Global Inventory Library (25,000+ Items)',
-        'AI Recipe & Inventory Parser',
-        'Recipe Marketplace',
-        'Shopify & Etsy Integration',
-        'Supplier Integration',
-    ];
-
     if (!tierData) {
         title.textContent = 'Full Access to the BatchTrack Ecosystem';
         selectedText.textContent = 'Tier configuration unavailable.';
@@ -495,7 +487,19 @@ function updatePlanSummary() {
         return;
     }
 
-    includedFeatures.forEach((label) => {
+    const dynamicFeatures = Array.isArray(tierData.presentation_features)
+        ? tierData.presentation_features.filter(
+            (value) => Boolean(String(value || '').trim())
+        )
+        : [];
+    const fallbackFeatures = Array.isArray(tierData.features)
+        ? tierData.features.filter((value) => Boolean(String(value || '').trim()))
+        : [];
+    const summaryFeatures = (
+        dynamicFeatures.length ? dynamicFeatures : fallbackFeatures
+    ).slice(0, 14);
+
+    summaryFeatures.forEach((label) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-check text-success me-2';
@@ -505,23 +509,14 @@ function updatePlanSummary() {
         item.appendChild(copy);
         featuresList.appendChild(item);
     });
-
-    const futureHeading = document.createElement('li');
-    futureHeading.className = 'features-section-label';
-    futureHeading.innerHTML = '<span>Included features coming soon</span>';
-    featuresList.appendChild(futureHeading);
-
-    futureFeatures.forEach((label) => {
+    if (!summaryFeatures.length) {
         const item = document.createElement('li');
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-clock text-muted me-2';
         const copy = document.createElement('span');
         copy.className = 'text-muted';
-        copy.textContent = label;
-        item.appendChild(icon);
+        copy.textContent = 'Feature list updates dynamically from this tier configuration.';
         item.appendChild(copy);
         featuresList.appendChild(item);
-    });
+    }
 
     if (planState.isUnavailable) {
         title.textContent = 'Full Access to the BatchTrack Ecosystem';
@@ -533,8 +528,8 @@ function updatePlanSummary() {
         return;
     }
 
-    title.textContent = 'Full Access to the BatchTrack Ecosystem';
-    selectedText.textContent = 'Included with your Early-Access Seat';
+    title.textContent = `${tierData.name || 'Selected'} core features`;
+    selectedText.textContent = 'Features shown are driven by the selected tier configuration.';
 
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
@@ -858,10 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size: 0.86rem;
 }
 
-.plan-mini-limitations li {
-    margin-bottom: 0.25rem;
-}
-
 .artisan-billing-toggle {
     display: flex;
     flex-wrap: wrap;
@@ -903,19 +894,6 @@ document.addEventListener('DOMContentLoaded', () => {
     align-items: flex-start;
     margin-bottom: var(--theme-ext-space-7a506f4f36);
     font-size: var(--theme-ext-size-03c2698f9e);
-}
-
-.features-checklist li.features-section-label {
-    margin-top: var(--theme-ext-space-685ff92249);
-    margin-bottom: var(--theme-ext-space-21b301a6b6);
-}
-
-.features-checklist li.features-section-label span {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #5f6b84;
 }
 
 @media (max-width: 768px) {
