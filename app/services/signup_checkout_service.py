@@ -20,6 +20,7 @@ from flask import url_for
 
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
+from ..utils.settings import is_feature_enabled
 from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
@@ -52,6 +53,8 @@ class SignupRequestContext:
     prefill_email: str
     prefill_phone: str
     signup_primary_tier_id: str | None
+    show_signup_free_tier: bool = False
+    free_tier_display: dict[str, Any] | None = None
 
 
 # --- SignupViewState ---
@@ -111,6 +114,18 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
+    _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
+    _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
+        "Recipe tracking",
+        "Production planning",
+        "Batching progress timers",
+        "Infinite ingredients",
+    )
+    _SIGNUP_FREE_TIER_LIMITATIONS: tuple[str, ...] = (
+        "No batch output posting",
+        "No recipe variations",
+        "No product access",
+    )
 
     @classmethod
     def build_request_context(
@@ -151,6 +166,11 @@ class SignupCheckoutService:
             (oauth_user_info or {}).get("email") or ""
         )
         prefill_phone = request.form.get("contact_phone") or ""
+        show_signup_free_tier = is_feature_enabled(cls._SIGNUP_FREE_TIER_FLAG_KEY)
+        free_tier_display = cls._build_signup_free_tier_display(
+            enabled=show_signup_free_tier
+        )
+        show_signup_free_tier = bool(show_signup_free_tier and free_tier_display)
 
         signup_primary_tier_id = cls._resolve_primary_tier_id(
             available_tiers=available_tiers,
@@ -247,6 +267,8 @@ class SignupCheckoutService:
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
             signup_primary_tier_id=signup_primary_tier_id,
+            show_signup_free_tier=show_signup_free_tier,
+            free_tier_display=free_tier_display,
         )
 
     @staticmethod
@@ -273,9 +295,18 @@ class SignupCheckoutService:
         default_tier_id = view_state.selected_tier or (
             str(context.db_tiers[0].id) if context.db_tiers else ""
         )
-        page_title = "BatchTrack Signup | Artisan Plan"
+        free_tier_enabled = bool(
+            context.show_signup_free_tier and context.free_tier_display
+        )
+        page_title = (
+            "BatchTrack Signup | Free + Artisan Plans"
+            if free_tier_enabled
+            else "BatchTrack Signup | Artisan Plan"
+        )
         page_description = (
-            "Choose the Artisan plan with monthly billing or a limited founding-member lifetime option."
+            "Compare the Free tier on the left, then choose Artisan monthly or a limited founding-member lifetime option."
+            if free_tier_enabled
+            else "Choose the Artisan plan with monthly billing or a limited founding-member lifetime option."
         )
         return {
             "signup_source": context.signup_source,
@@ -295,6 +326,10 @@ class SignupCheckoutService:
             "contact_email": view_state.contact_email,
             "contact_phone": view_state.contact_phone,
             "signup_primary_tier_id": context.signup_primary_tier_id,
+            "show_signup_free_tier": free_tier_enabled,
+            "free_tier_display": (
+                context.free_tier_display if free_tier_enabled else None
+            ),
             "page_title": page_title,
             "page_description": page_description,
             "canonical_url": canonical_url,
@@ -747,6 +782,27 @@ class SignupCheckoutService:
         patched["display_spots_left"] = true_spots_left
         patched["has_remaining"] = bool(has_offer_config and true_spots_left > 0)
         return patched
+
+    @classmethod
+    def _build_signup_free_tier_display(cls, *, enabled: bool) -> dict[str, Any] | None:
+        """Build informational payload for the optional signup Free tier card."""
+        if not enabled:
+            return None
+        free_tier = SignupPlanCatalogService.load_customer_facing_free_tier()
+        if not free_tier:
+            return None
+        tier_name = str(getattr(free_tier, "name", "") or "Free").strip() or "Free"
+        return {
+            "tier_id": str(getattr(free_tier, "id", "") or ""),
+            "name": tier_name,
+            "price_display": "Free",
+            "core_heading": "Core features",
+            "core_features": list(cls._SIGNUP_FREE_TIER_CORE_FEATURES),
+            "limitations": list(cls._SIGNUP_FREE_TIER_LIMITATIONS),
+            "description": (
+                "Starter access for planning and recipe tracking before upgrading to Artisan."
+            ),
+        }
 
     @staticmethod
     def _parse_client_epoch_ms(raw_value: Any) -> int | None:
