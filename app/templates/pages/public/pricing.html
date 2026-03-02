@@ -158,7 +158,13 @@
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
     background: var(--theme-ext-color-333b2a35fa);
     box-shadow: var(--theme-ext-shadow-8fd694988c);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comparison-table {
+    min-width: 760px;
   }
 
   .comparison-table thead th {
@@ -246,6 +252,69 @@
     .section-heading {
       flex-direction: column;
       align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .tier-card h3 {
+      font-size: 1.1rem;
+    }
+
+    .tier-price-figure {
+      font-size: 1rem;
+    }
+
+    .tier-feature-list li {
+      gap: 0.35rem;
+      font-size: 0.84rem;
+      line-height: 1.3;
+    }
+
+    .tier-feature-marker {
+      font-size: 0.8rem;
+      margin-top: 0.2rem;
+    }
+
+    .comparison-table {
+      min-width: 640px;
+    }
+
+    .comparison-table thead th {
+      font-size: 0.68rem;
+      letter-spacing: 0.02em;
+      padding-top: 0.45rem;
+      padding-bottom: 0.45rem;
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+    }
+
+    .comparison-table tbody th,
+    .comparison-cell-text {
+      font-size: 0.76rem;
+      line-height: 1.25;
+    }
+
+    .comparison-cell-text {
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .comparison-section-row td {
+      font-size: 0.64rem;
+      letter-spacing: 0.02em;
+      padding: 0.4rem 0.35rem;
+    }
+
+    .comparison-table td,
+    .comparison-table th {
+      padding: 0.45rem 0.35rem;
+    }
+
+    .comparison-icon-yes,
+    .comparison-icon-no {
+      width: 1.2rem;
+      height: 1.2rem;
+      font-size: 0.72rem;
     }
   }
 
