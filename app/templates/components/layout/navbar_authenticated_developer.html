@@ -180,6 +180,9 @@ Authenticated developer navigation and developer/customer switcher menus.
             <span class="badge bg-primary ms-1">Active</span>
             {% endif %}
         </a></li>
+        <li><a class="dropdown-item" href="{{ url_for('developer.support_submissions') }}">
+            <i class="fas fa-inbox"></i> Support Submissions
+        </a></li>
         {% if session.get('dev_selected_org_id') %}
         <li><a class="dropdown-item" href="{{ url_for('developer.clear_organization_filter') }}">
             <i class="fas fa-times"></i> Clear Customer Filter

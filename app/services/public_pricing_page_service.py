@@ -5,18 +5,21 @@ Builds view-ready data for the public `/pricing` page while delegating feature
 presentation rules to `tier_presentation`.
 
 Glossary:
-- Tier card: Display payload for one of Hobbyist/Enthusiast/Fanatic columns.
+- Tier card: Display payload for one customer-facing subscription tier.
 - Comparison row: A feature label with availability/limit value by tier.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from flask import url_for
 
+from ..models.subscription_tier import SubscriptionTier
+from ..utils.settings import is_feature_enabled
 from .lifetime_pricing_service import LifetimePricingService
-from .signup_checkout_service import SignupCheckoutService
+from .signup_plan_catalog_service import SignupPlanCatalogService
 from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import (
     coerce_int,
@@ -27,56 +30,77 @@ from .tier_presentation.helpers import (
 
 # --- Public pricing page service ---
 # Purpose: Build pricing-page tier cards and comparison-table payloads for templates.
-# Inputs: Signup checkout request context and tier/lifetime catalog payloads.
+# Inputs: Customer-facing subscription tiers and optional lifetime offer payloads.
 # Outputs: Render-ready dictionary with pricing tiers, grouped comparison sections, and capacity flags.
 class PublicPricingPageService:
     """Compose public pricing page data from signup catalog services."""
 
-    _ORDERED_TIER_KEYS: tuple[str, ...] = ("hobbyist", "enthusiast", "fanatic")
+    _TIER_KEY_SANITIZE_RE = re.compile(r"[^a-z0-9]+")
+    _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
     _tier_presentation = TierPresentationCore()
 
     @classmethod
     def build_context(cls, *, request) -> dict[str, Any]:
         """Return render-ready context for the `/pricing` page."""
-        signup_context = SignupCheckoutService.build_request_context(
-            request=request,
-            oauth_user_info=None,
+        del request
+
+        db_tiers = cls._load_customer_facing_tiers()
+        show_signup_free_tier = is_feature_enabled(cls._SIGNUP_FREE_TIER_FLAG_KEY)
+        if not show_signup_free_tier:
+            free_tier = SignupPlanCatalogService.load_customer_facing_free_tier()
+            free_tier_id = str(getattr(free_tier, "id", "") or "") if free_tier else ""
+            if free_tier_id:
+                db_tiers = [
+                    tier
+                    for tier in db_tiers
+                    if str(getattr(tier, "id", "") or "") != free_tier_id
+                ]
+
+        if not db_tiers:
+            return {
+                "pricing_tiers": [],
+                "lifetime_tiers": [],
+                "comparison_sections": [],
+                "lifetime_has_capacity": False,
+            }
+
+        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
+            db_tiers,
+            include_live_pricing=True,
             allow_live_pricing_network=True,
         )
-        available_tiers = signup_context.available_tiers
-        lifetime_offers = signup_context.lifetime_offers
-        offers_by_key = {
-            str(offer.get("key", "")).strip().lower(): offer
-            for offer in lifetime_offers
-            if offer
-        }
-        offers_by_tier_id = {
-            str(offer.get("tier_id") or ""): offer
-            for offer in lifetime_offers
-            if offer and offer.get("tier_id")
-        }
 
         pricing_tiers: list[dict[str, Any]] = []
-        for tier_key in cls._ORDERED_TIER_KEYS:
+        seen_tier_keys: set[str] = set()
+        for tier_obj in db_tiers:
+            tier_id = str(getattr(tier_obj, "id", "") or "")
+            tier_data = available_tiers.get(tier_id)
+            if not tier_data:
+                continue
+
+            tier_key = cls._next_tier_key(
+                tier_name=str(tier_data.get("name") or ""),
+                tier_id=tier_id,
+                seen_tier_keys=seen_tier_keys,
+            )
             tier_payload = cls._build_tier_payload(
                 tier_key=tier_key,
-                offer=offers_by_key.get(tier_key, {}),
-                offers_by_tier_id=offers_by_tier_id,
-                available_tiers=available_tiers,
+                tier_id=tier_id,
+                tier_data=tier_data,
+                offer={},
+                can_standard_checkout=cls._can_standard_checkout(tier_obj),
             )
             pricing_tiers.append(tier_payload)
 
         comparison_sections = cls._tier_presentation.build_comparison_sections(
             pricing_tiers
         )
-        lifetime_has_capacity = any(
-            tier.get("lifetime_has_remaining") for tier in pricing_tiers
-        )
 
         return {
             "pricing_tiers": pricing_tiers,
+            "lifetime_tiers": [],
             "comparison_sections": comparison_sections,
-            "lifetime_has_capacity": lifetime_has_capacity,
+            "lifetime_has_capacity": False,
         }
 
     @classmethod
@@ -84,39 +108,21 @@ class PublicPricingPageService:
         cls,
         *,
         tier_key: str,
+        tier_id: str,
+        tier_data: dict[str, Any],
         offer: dict[str, Any],
-        offers_by_tier_id: dict[str, dict[str, Any]],
-        available_tiers: dict[str, dict[str, Any]],
+        can_standard_checkout: bool,
     ) -> dict[str, Any]:
         """Build one tier card payload for public pricing display."""
-        tier_id = ""
-        tier_data = None
-
-        # Resolve by canonical pricing key first so cards/table columns stay stable
-        # even when lifetime offer tier mappings drift.
-        for candidate_tier_id, candidate_tier_data in available_tiers.items():
-            candidate_name = str(candidate_tier_data.get("name", "")).strip().lower()
-            if candidate_name == tier_key:
-                tier_data = candidate_tier_data
-                tier_id = str(candidate_tier_id)
-                break
-
-        if not tier_data:
-            tier_id = str(offer.get("tier_id") or "")
-            tier_data = available_tiers.get(tier_id) if tier_id else None
-
         resolved_offer = offer or {}
-        if tier_id:
-            resolved_offer = offers_by_tier_id.get(tier_id, resolved_offer)
-
-        raw_feature_names = (tier_data or {}).get("all_features") or []
+        raw_feature_names = tier_data.get("all_features") or []
         permission_set = normalize_token_set(raw_feature_names)
-        addon_key_set = normalize_token_set((tier_data or {}).get("all_addon_keys"))
+        addon_key_set = normalize_token_set(tier_data.get("all_addon_keys"))
         addon_function_set = normalize_token_set(
-            (tier_data or {}).get("all_addon_function_keys")
+            tier_data.get("all_addon_function_keys")
         )
         addon_permission_set = normalize_token_set(
-            (tier_data or {}).get("addon_permission_names")
+            tier_data.get("addon_permission_names")
         )
 
         all_feature_labels: list[str] = []
@@ -132,21 +138,19 @@ class PublicPricingPageService:
             all_feature_labels.append(feature_label)
 
         limit_map = {
-            "user_limit": coerce_int((tier_data or {}).get("user_limit")),
-            "max_recipes": coerce_int((tier_data or {}).get("max_recipes")),
-            "max_batches": coerce_int((tier_data or {}).get("max_batches")),
-            "max_products": coerce_int((tier_data or {}).get("max_products")),
+            "user_limit": coerce_int(tier_data.get("user_limit")),
+            "max_recipes": coerce_int(tier_data.get("max_recipes")),
+            "max_batches": coerce_int(tier_data.get("max_batches")),
+            "max_products": coerce_int(tier_data.get("max_products")),
             "max_monthly_batches": coerce_int(
-                (tier_data or {}).get("max_monthly_batches")
+                tier_data.get("max_monthly_batches")
             ),
             "max_batchbot_requests": coerce_int(
-                (tier_data or {}).get("max_batchbot_requests")
+                tier_data.get("max_batchbot_requests")
             ),
         }
-        retention_policy = (
-            str((tier_data or {}).get("retention_policy") or "").strip().lower()
-        )
-        retention_label = str((tier_data or {}).get("retention_label") or "").strip()
+        retention_policy = str(tier_data.get("retention_policy") or "").strip().lower()
+        retention_label = str(tier_data.get("retention_label") or "").strip()
         has_retention_entitlement = bool(
             retention_policy == "subscribed" or "retention" in addon_function_set
         )
@@ -160,7 +164,14 @@ class PublicPricingPageService:
             has_retention_entitlement=has_retention_entitlement,
         )
 
-        has_yearly_price = bool((tier_data or {}).get("yearly_price_display"))
+        monthly_price_display = str(tier_data.get("monthly_price_display") or "").strip()
+        yearly_price_display = str(tier_data.get("yearly_price_display") or "").strip()
+        has_monthly_subscription = bool(
+            can_standard_checkout
+            and monthly_price_display
+            and monthly_price_display.lower() != "contact sales"
+        )
+        has_yearly_subscription = bool(can_standard_checkout and yearly_price_display)
         has_lifetime_remaining = bool(resolved_offer.get("has_remaining") and tier_id)
 
         monthly_url = (
@@ -171,7 +182,7 @@ class PublicPricingPageService:
                 billing_cycle="monthly",
                 source=f"pricing_{tier_key}_monthly",
             )
-            if tier_id
+            if tier_id and has_monthly_subscription
             else None
         )
         yearly_url = (
@@ -182,7 +193,7 @@ class PublicPricingPageService:
                 billing_cycle="yearly",
                 source=f"pricing_{tier_key}_yearly",
             )
-            if tier_id and has_yearly_price
+            if tier_id and has_yearly_subscription
             else None
         )
         lifetime_url = (
@@ -193,18 +204,18 @@ class PublicPricingPageService:
                 tier=tier_id,
                 source=f"pricing_{tier_key}_lifetime",
             )
-            if has_lifetime_remaining
+            if has_lifetime_remaining and can_standard_checkout
             else None
         )
 
         return {
             "key": tier_key,
-            "name": str((tier_data or {}).get("name") or tier_key.title()),
+            "name": str(tier_data.get("name") or tier_key.title()),
             "tagline": str(resolved_offer.get("tagline") or "Built for makers"),
             "future_scope": str(resolved_offer.get("future_scope") or ""),
             "tier_id": tier_id,
-            "monthly_price_display": (tier_data or {}).get("monthly_price_display"),
-            "yearly_price_display": (tier_data or {}).get("yearly_price_display"),
+            "monthly_price_display": monthly_price_display or None,
+            "yearly_price_display": yearly_price_display or None,
             "feature_highlights": highlight_features,
             "all_feature_labels": all_feature_labels,
             "all_feature_set": all_feature_set,
@@ -217,11 +228,55 @@ class PublicPricingPageService:
             "retention_label": retention_label,
             "has_retention_entitlement": has_retention_entitlement,
             "feature_total": int(
-                (tier_data or {}).get("feature_total") or len(all_feature_labels)
+                tier_data.get("feature_total") or len(all_feature_labels)
             ),
             "lifetime_offer": resolved_offer,
             "lifetime_has_remaining": has_lifetime_remaining,
             "signup_monthly_url": monthly_url,
             "signup_yearly_url": yearly_url,
             "signup_lifetime_url": lifetime_url,
+            "has_monthly_subscription": has_monthly_subscription,
+            "has_yearly_subscription": has_yearly_subscription,
+            "can_standard_checkout": can_standard_checkout,
         }
+
+    @classmethod
+    def _load_customer_facing_tiers(cls) -> list[SubscriptionTier]:
+        tiers = (
+            SubscriptionTier.query.filter_by(is_customer_facing=True)
+            .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+            .all()
+        )
+        return sorted(tiers, key=cls._tier_sort_key)
+
+    @staticmethod
+    def _tier_sort_key(tier_obj: SubscriptionTier) -> tuple[int, int]:
+        user_limit = getattr(tier_obj, "user_limit", None)
+        limit_sort_value = 1_000_000 if user_limit in (None, -1) else int(user_limit)
+        tier_id = int(getattr(tier_obj, "id", 0) or 0)
+        return (limit_sort_value, tier_id)
+
+    @classmethod
+    def _next_tier_key(
+        cls,
+        *,
+        tier_name: str,
+        tier_id: str,
+        seen_tier_keys: set[str],
+    ) -> str:
+        normalized_name = cls._TIER_KEY_SANITIZE_RE.sub(
+            "_", str(tier_name or "").strip().lower()
+        ).strip("_")
+        base_key = normalized_name or f"tier_{tier_id}"
+        candidate = base_key
+        suffix = 2
+        while candidate in seen_tier_keys:
+            candidate = f"{base_key}_{suffix}"
+            suffix += 1
+        seen_tier_keys.add(candidate)
+        return candidate
+
+    @staticmethod
+    def _can_standard_checkout(tier_obj: SubscriptionTier) -> bool:
+        billing_provider = str(getattr(tier_obj, "billing_provider", "")).strip().lower()
+        return billing_provider != "exempt"

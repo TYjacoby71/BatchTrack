@@ -343,3 +343,55 @@ class ToolFeedbackNoteService:
             "bucket_path": f"{source}/{flow}.json",
             "bucket_count": len(entries),
         }
+
+    @classmethod
+    def load_global_index(cls, *, refresh: bool = False) -> dict[str, Any]:
+        """Return the global source/flow index for support dashboards."""
+        if refresh:
+            return cls._write_global_index()
+
+        index_path = cls.BASE_DIR / "index.json"
+        payload = read_json_file(index_path, default={}) or {}
+        if not isinstance(payload, dict) or "sources" not in payload:
+            payload = cls._write_global_index()
+        return payload if isinstance(payload, dict) else {"sources": []}
+
+    @classmethod
+    def load_bucket(
+        cls, *, source: Any, flow: Any, limit: int | None = None
+    ) -> dict[str, Any]:
+        """Load a normalized feedback bucket and optionally cap returned entries."""
+        normalized_source = cls.normalize_source(source)
+        normalized_flow = cls.normalize_flow(flow)
+        if not normalized_flow:
+            raise ValueError(
+                "Choose one type: question, missing feature, glitch, or bad preset data."
+            )
+
+        bucket_path = cls._bucket_path(normalized_source, normalized_flow)
+        bucket = read_json_file(bucket_path, default={}) or {}
+        entries = bucket.get("entries") if isinstance(bucket, dict) else []
+        if not isinstance(entries, list):
+            entries = []
+
+        if isinstance(limit, int) and limit > 0:
+            entries = entries[:limit]
+
+        count = (
+            int(bucket.get("count") or 0)
+            if isinstance(bucket, dict)
+            else len(entries)
+        )
+        return {
+            "source": normalized_source,
+            "flow": normalized_flow,
+            "flow_label": cls.FLOW_LABELS.get(
+                normalized_flow, normalized_flow.replace("_", " ").title()
+            ),
+            "count": count,
+            "entries": entries,
+            "bucket_path": f"{normalized_source}/{normalized_flow}.json",
+            "updated_at": (
+                bucket.get("updated_at") if isinstance(bucket, dict) else None
+            ),
+        }
