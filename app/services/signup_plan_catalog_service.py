@@ -40,15 +40,32 @@ class SignupPlanCatalogService:
 
     @staticmethod
     def load_customer_facing_free_tier() -> SubscriptionTier | None:
-        """Return the first customer-facing exempt tier for signup comparison UI."""
-        return (
-            SubscriptionTier.query.filter_by(
-                is_customer_facing=True,
-                billing_provider="exempt",
-            )
+        """Return the best customer-facing free-tier candidate for signup UI."""
+        customer_facing_tiers = (
+            SubscriptionTier.query.filter_by(is_customer_facing=True)
             .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
-            .first()
+            .all()
         )
+        if not customer_facing_tiers:
+            return None
+
+        def _is_non_billed_candidate(tier: SubscriptionTier) -> bool:
+            provider = str(getattr(tier, "billing_provider", "") or "").strip().lower()
+            stripe_key = str(getattr(tier, "stripe_lookup_key", "") or "").strip()
+            whop_key = str(getattr(tier, "whop_product_key", "") or "").strip()
+            return provider == "exempt" or (not stripe_key and not whop_key)
+
+        for tier in customer_facing_tiers:
+            tier_name = str(getattr(tier, "name", "") or "").strip().lower()
+            if "free" in tier_name and _is_non_billed_candidate(tier):
+                return tier
+
+        for tier in customer_facing_tiers:
+            provider = str(getattr(tier, "billing_provider", "") or "").strip().lower()
+            if provider == "exempt":
+                return tier
+
+        return None
 
     @classmethod
     def build_available_tiers_payload(

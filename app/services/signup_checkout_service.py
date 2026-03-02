@@ -20,7 +20,6 @@ from flask import url_for
 
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
-from ..utils.settings import is_feature_enabled
 from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
@@ -114,7 +113,6 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
-    _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
     _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
         "Recipe tracking",
         "Plan production",
@@ -161,11 +159,8 @@ class SignupCheckoutService:
             (oauth_user_info or {}).get("email") or ""
         )
         prefill_phone = request.form.get("contact_phone") or ""
-        show_signup_free_tier = is_feature_enabled(cls._SIGNUP_FREE_TIER_FLAG_KEY)
-        free_tier_display = cls._build_signup_free_tier_display(
-            enabled=show_signup_free_tier
-        )
-        show_signup_free_tier = bool(show_signup_free_tier and free_tier_display)
+        free_tier_display = cls._build_signup_free_tier_display()
+        show_signup_free_tier = bool(free_tier_display)
 
         signup_primary_tier_id = cls._resolve_primary_tier_id(
             available_tiers=available_tiers,
@@ -779,10 +774,8 @@ class SignupCheckoutService:
         return patched
 
     @classmethod
-    def _build_signup_free_tier_display(cls, *, enabled: bool) -> dict[str, Any] | None:
+    def _build_signup_free_tier_display(cls) -> dict[str, Any] | None:
         """Build informational payload for the optional signup Free tier card."""
-        if not enabled:
-            return None
         free_tier = SignupPlanCatalogService.load_customer_facing_free_tier()
         if not free_tier:
             return None
