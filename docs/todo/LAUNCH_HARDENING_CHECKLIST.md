@@ -81,6 +81,12 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Register Flask error handlers in `app/resilience.py` for 404 and 500
 - [x] Verify `errors/maintenance.html` (503) is already registered (confirmed)
 
+### 2.4 Request correlation and access-log schema parity
+- [x] Generate or preserve `X-Request-ID` in middleware and include it on all responses
+- [x] Add `request_id` to application log output format via logging filter context
+- [x] Include request ID and `X-Forwarded-For` in Gunicorn access logs for edge/origin joins
+- [x] Add focused middleware tests to verify request-ID propagation and passthrough behavior
+
 ---
 
 ## Priority 3: Test Coverage for Critical Paths
