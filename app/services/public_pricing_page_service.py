@@ -17,6 +17,7 @@ from typing import Any
 from flask import url_for
 
 from ..models.subscription_tier import SubscriptionTier
+from ..utils.settings import is_feature_enabled
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_plan_catalog_service import SignupPlanCatalogService
 from .tier_presentation import TierPresentationCore
@@ -35,6 +36,7 @@ class PublicPricingPageService:
     """Compose public pricing page data from signup catalog services."""
 
     _TIER_KEY_SANITIZE_RE = re.compile(r"[^a-z0-9]+")
+    _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
     _tier_presentation = TierPresentationCore()
 
     @classmethod
@@ -43,6 +45,17 @@ class PublicPricingPageService:
         del request
 
         db_tiers = cls._load_customer_facing_tiers()
+        show_signup_free_tier = is_feature_enabled(cls._SIGNUP_FREE_TIER_FLAG_KEY)
+        if not show_signup_free_tier:
+            free_tier = SignupPlanCatalogService.load_customer_facing_free_tier()
+            free_tier_id = str(getattr(free_tier, "id", "") or "") if free_tier else ""
+            if free_tier_id:
+                db_tiers = [
+                    tier
+                    for tier in db_tiers
+                    if str(getattr(tier, "id", "") or "") != free_tier_id
+                ]
+
         if not db_tiers:
             return {
                 "pricing_tiers": [],
