@@ -61,6 +61,7 @@ class BillingService:
     _related_price_cache_miss_sentinel = "__missing__"
     _stripe_http_timeout_seconds = 12.0
     _stripe_max_network_retries = 1
+    _default_signup_trial_days = 14
     _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
     _pricing_registry_lock = Lock()
 
@@ -1153,6 +1154,31 @@ class BillingService:
                 ]
             elif stripe_coupon_id:
                 session_params["discounts"] = [{"coupon": stripe_coupon_id}]
+
+            requires_stripe_billing = bool(
+                getattr(tier_obj, "requires_stripe_billing", False)
+            )
+            if not requires_stripe_billing:
+                requires_stripe_billing = (
+                    str(getattr(tier_obj, "billing_provider", "")).strip().lower()
+                    == "stripe"
+                )
+            trial_days = int(
+                current_app.config.get(
+                    "SIGNUP_STRIPE_TRIAL_DAYS", BillingService._default_signup_trial_days
+                )
+                or 0
+            )
+            should_apply_trial = bool(
+                session_params.get("mode") == "subscription"
+                and requires_stripe_billing
+                and trial_days > 0
+                and not existing_customer_id
+            )
+            if should_apply_trial:
+                session_params["subscription_data"] = {
+                    "trial_period_days": trial_days
+                }
 
             if session_params.get("mode") == "payment":
                 session_params["customer_creation"] = "always"

@@ -24,9 +24,14 @@
                                   <span class="badge bg-light text-muted">Last updated {{ generated_at }}</span>
                               </div>
                               {% endif %}
-                            <a href="{{ url_for('developer.dashboard') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to Dashboard
-                            </a>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                  <a href="{{ url_for('developer.support_submissions') }}" class="btn btn-outline-primary">
+                                      <i class="fas fa-inbox"></i> Support submissions
+                                  </a>
+                                  <a href="{{ url_for('developer.dashboard') }}" class="btn btn-outline-secondary">
+                                      <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                  </a>
+                              </div>
                         </div>
                     </div>
                 </div>
