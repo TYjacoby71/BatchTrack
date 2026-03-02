@@ -144,6 +144,52 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 
 ---
 
+## Priority 5: SaaS Operational Maturity (Next Phase)
+
+### 5.1 Billing reliability and replay safety
+- [ ] Add outbound Stripe idempotency keys for mutating API calls (checkout/session creation, customer metadata writes, cancellations)
+- [ ] Enforce webhook environment/shape checks (`livemode`, provider version expectations) before applying state transitions
+- [ ] Add Stripe webhook replay tooling for failed events (developer command + safe status transition from `failed` to `received`)
+- [ ] Add dead-letter visibility for webhook processing failures (dashboard count + alert threshold)
+- [ ] Add retention/pruning policy for `stripe_event` table to prevent unbounded growth
+- [ ] Implement Whop webhook handler path or explicitly disable and document non-support in runtime checks
+
+### 5.2 Async side effects and queue durability
+- [ ] Introduce a background job worker for non-critical request side effects (emails, outbound webhooks, analytics fan-out)
+- [ ] Move signup completion email fan-out off the request path (verification, welcome, password setup)
+- [ ] Add retry policy with exponential backoff and dead-letter handling for failed jobs
+- [ ] Ensure domain-event dispatcher failures are observable with explicit queue backlog metrics and alerting
+- [ ] Add runbook for replaying domain events that exceeded retry threshold
+
+### 5.3 Public edge abuse, throttling, and cost controls
+- [ ] Reclassify rate limits by endpoint risk class (auth, public compute, webhook, read-only public search)
+- [ ] Remove/justify limiter exemptions on public compute endpoints and add explicit per-IP caps
+- [ ] Tighten signup/login throttles to production-safe defaults and document override policy for controlled load tests
+- [ ] Add abuse telemetry dashboards for 403/429 rates, bot-trap actions, and high-cost endpoint traffic spikes
+- [ ] Add webhook endpoint abuse protections (source validation + saturation-safe limits)
+
+### 5.4 Access governance and policy drift prevention
+- [ ] Replace static route allowlists with decorator/registry-driven route classification for public/developer/customer access
+- [ ] Add CI guard that fails when new routes are introduced without access classification metadata
+- [ ] Add scheduled access-audit report for publicly reachable endpoints and developer-only endpoints
+- [ ] Add policy regression tests for route classification drift
+
+### 5.5 Data model and state-machine hygiene
+- [ ] Clean legacy/duplicate billing fields from `Organization` and document canonical fields
+- [ ] Add explicit allowed-state transitions for billing/subscription statuses to avoid invalid state writes
+- [ ] Add migration guardrails for high-risk model changes (backfill + verification query + rollback notes)
+- [ ] Add periodic data-integrity checks for billing/customer linkage consistency
+
+### 5.6 Observability, incident response, and recovery
+- [ ] Add production error monitoring (e.g., Sentry/OpenTelemetry) with request ID tags on all errors
+- [ ] Propagate request correlation ID into domain events (`correlation_id`) for cross-log/event tracing
+- [ ] Define SLOs + alert thresholds for login success, signup completion, checkout conversion, and webhook lag
+- [ ] Add structured incident runbook for billing/webhook failures (detect, triage, replay, verify, closeout)
+- [ ] Replace auto-backup toggle stub with real scheduled backup + restore workflow
+- [ ] Run and document periodic restore drills (RPO/RTO targets + evidence)
+
+---
+
 ## How to Use This Checklist
 
 Pick the next unchecked box. Complete it. Check it off. Commit. Move to the next one.
