@@ -11,6 +11,22 @@ from app.utils.settings import get_settings, save_settings
 
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
     {
+        "title": "Pricing",
+        "description": "Controls for public pricing and signup plan presentation.",
+        "flags": [
+            {
+                "key": "FEATURE_PRICING_SIGNUP_FREE_TIER",
+                "label": "Show Free Tier on Signup",
+                "status": "wired",
+                "default_enabled": False,
+                "description": (
+                    "Display a Free tier comparison card on signup while keeping "
+                    "Artisan checkout with monthly/founding-member toggle."
+                ),
+            },
+        ],
+    },
+    {
         "title": "Core business features",
         "description": "Enable or disable the production features that every organization depends on.",
         "flags": [

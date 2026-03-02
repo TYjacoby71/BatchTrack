@@ -1,0 +1,206 @@
+{% extends 'layout.html' %}
+
+{% block title %}Support Submissions{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h2 class="mb-1">
+                            <i class="fas fa-inbox text-primary"></i> Support Submissions
+                        </h2>
+                        <p class="text-muted mb-0">Customer feedback notes grouped by source and type.</p>
+                    </div>
+                    <div class="text-md-end">
+                        {% if generated_at %}
+                        <div class="mb-2">
+                            <span class="badge bg-light text-muted">Updated {{ generated_at }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                            <a href="{{ url_for('developer.organizations') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-arrow-left"></i> Customer Support
+                            </a>
+                            <a href="{{ url_for('developer.waitlist_statistics') }}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-envelope-open-text"></i> Waitlist Insights
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-primary h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-comment-dots fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-1">{{ feedback_total_count }}</h3>
+                    <p class="text-muted mb-0">Total submissions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-info h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-sitemap fa-2x text-info mb-2"></i>
+                    <h3 class="mb-1">{{ feedback_source_count }}</h3>
+                    <p class="text-muted mb-0">Sources tracked</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-secondary h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-filter fa-2x text-secondary mb-2"></i>
+                    <h3 class="mb-1">{{ selected_feedback_bucket.count if selected_feedback_bucket else 0 }}</h3>
+                    <p class="text-muted mb-0">
+                        {% if selected_feedback_bucket %}
+                        {{ selected_feedback_bucket.flow_label }} in selected bucket
+                        {% else %}
+                        Select a source to view entries
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if feedback_sources %}
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-map-signs me-2"></i>Submission Sources</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for source in feedback_sources %}
+                        {% set source_flow = selected_feedback_flow if selected_feedback_source and selected_feedback_source.source == source.source and selected_feedback_flow else source.flows[0].flow %}
+                        <a
+                            href="{{ url_for('developer.support_submissions', source=source.source, flow=source_flow) }}"
+                            class="list-group-item list-group-item-action {% if selected_feedback_source and selected_feedback_source.source == source.source %}active{% endif %}"
+                        >
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>{{ source.source_label }}</strong>
+                                <span class="badge {% if selected_feedback_source and selected_feedback_source.source == source.source %}bg-light text-dark{% else %}bg-primary{% endif %}">
+                                    {{ source.total_count }}
+                                </span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                {% for flow in source.flows %}
+                                <span class="badge {% if selected_feedback_source and selected_feedback_source.source == source.source and selected_feedback_flow == flow.flow %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}">
+                                    {{ flow.flow_label }} · {{ flow.count }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    {% if selected_feedback_source %}
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-folder-open me-2"></i>
+                                {{ selected_feedback_source.source_label }}
+                            </h5>
+                            {% if selected_feedback_bucket %}
+                            <span class="badge bg-light text-dark border">{{ selected_feedback_bucket.bucket_path }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for flow in selected_feedback_source.flows %}
+                            <a
+                                href="{{ url_for('developer.support_submissions', source=selected_feedback_source.source, flow=flow.flow) }}"
+                                class="btn btn-sm {% if selected_feedback_flow == flow.flow %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                            >
+                                {{ flow.flow_label }} ({{ flow.count }})
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Select a source</h5>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if selected_feedback_entries %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 170px;">Submitted</th>
+                                    <th style="min-width: 360px;">Details</th>
+                                    <th style="min-width: 180px;">Contact</th>
+                                    <th style="min-width: 220px;">Context</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in selected_feedback_entries %}
+                                <tr>
+                                    <td>
+                                        <div>{{ entry.submitted_at or '—' }}</div>
+                                        <small class="text-muted">{{ entry.flow_label or selected_feedback_bucket.flow_label if selected_feedback_bucket else 'Note' }}</small>
+                                    </td>
+                                    <td>
+                                        {% if entry.title %}
+                                        <div class="fw-semibold">{{ entry.title }}</div>
+                                        {% endif %}
+                                        <div style="white-space: pre-wrap;">{{ entry.message or '—' }}</div>
+                                    </td>
+                                    <td>
+                                        {% if entry.contact_email %}
+                                        <a href="mailto:{{ entry.contact_email }}">{{ entry.contact_email }}</a>
+                                        {% else %}
+                                        <span class="text-muted">No email</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="small">{{ entry.page_path or '—' }}</div>
+                                        {% if entry.request and entry.request.ip %}
+                                        <div class="text-muted small">IP {{ entry.request.ip }}</div>
+                                        {% endif %}
+                                        {% if entry.context %}
+                                        <div class="text-muted small">{{ entry.context }}</div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% elif selected_feedback_source %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No entries in this bucket yet</h5>
+                        <p class="text-muted mb-0">Choose another type or source to inspect submissions.</p>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Select a source on the left to view submissions.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No support submissions yet</h5>
+            <p class="text-muted mb-0">Feedback notes will appear here after users submit them from the feedback widget.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

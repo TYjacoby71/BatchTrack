@@ -20,9 +20,17 @@ from sqlalchemy import or_
 from app.models import Organization, User
 from app.services.developer.organization_service import OrganizationService
 from app.services.statistics import AnalyticsDataService
+from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
+
+
+def _feedback_flow_sort_key(flow_key: str) -> int:
+    try:
+        return ToolFeedbackNoteService.FLOW_ORDER.index(flow_key)
+    except ValueError:
+        return len(ToolFeedbackNoteService.FLOW_ORDER)
 
 
 # --- Organizations ---
@@ -69,6 +77,132 @@ def organizations():
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
             {"label": "Customer Support"},
+        ],
+    )
+
+
+# --- Support Feedback Submissions ---
+# Purpose: Define the top-level behavior of `support_submissions` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
+@developer_bp.route("/support-submissions")
+@require_developer_permission("dev.all_organizations")
+def support_submissions():
+    """View customer feedback-note submissions grouped by source and type."""
+    refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
+    global_index = ToolFeedbackNoteService.load_global_index(refresh=refresh)
+    raw_sources = (
+        global_index.get("sources")
+        if isinstance(global_index, dict)
+        else []
+    )
+    if not isinstance(raw_sources, list):
+        raw_sources = []
+
+    source_rows: list[dict] = []
+    feedback_total_count = 0
+    for source_row in raw_sources:
+        if not isinstance(source_row, dict):
+            continue
+        source_key = ToolFeedbackNoteService.normalize_source(source_row.get("source"))
+        raw_flows = source_row.get("flows")
+        if not isinstance(raw_flows, list):
+            continue
+
+        flows: list[dict] = []
+        source_total = 0
+        for flow_row in raw_flows:
+            if not isinstance(flow_row, dict):
+                continue
+            flow_key = ToolFeedbackNoteService.normalize_flow(flow_row.get("flow"))
+            if not flow_key:
+                continue
+
+            try:
+                count = int(flow_row.get("count") or 0)
+            except (TypeError, ValueError):
+                count = 0
+            source_total += max(count, 0)
+            flows.append(
+                {
+                    "flow": flow_key,
+                    "flow_label": str(
+                        flow_row.get("flow_label")
+                        or ToolFeedbackNoteService.FLOW_LABELS.get(
+                            flow_key, flow_key.replace("_", " ").title()
+                        )
+                    ),
+                    "count": max(count, 0),
+                }
+            )
+
+        if not flows:
+            continue
+
+        flows.sort(key=lambda row: _feedback_flow_sort_key(row["flow"]))
+        source_rows.append(
+            {
+                "source": source_key,
+                "source_label": source_key.replace("_", " ").replace("-", " ").title(),
+                "flows": flows,
+                "total_count": source_total,
+            }
+        )
+        feedback_total_count += source_total
+
+    source_rows.sort(key=lambda row: (-row["total_count"], row["source_label"]))
+
+    requested_source = request.args.get("source")
+    selected_source_key = (
+        ToolFeedbackNoteService.normalize_source(requested_source)
+        if requested_source
+        else None
+    )
+    selected_source = next(
+        (
+            row
+            for row in source_rows
+            if selected_source_key and row["source"] == selected_source_key
+        ),
+        None,
+    )
+    if selected_source is None and source_rows:
+        selected_source = source_rows[0]
+        selected_source_key = selected_source["source"]
+
+    requested_flow = request.args.get("flow")
+    selected_flow_key = (
+        ToolFeedbackNoteService.normalize_flow(requested_flow) if requested_flow else None
+    )
+    if selected_source:
+        available_flows = [flow["flow"] for flow in selected_source["flows"]]
+        if selected_flow_key not in available_flows:
+            selected_flow_key = available_flows[0] if available_flows else None
+
+    selected_bucket = None
+    selected_entries: list[dict] = []
+    if selected_source_key and selected_flow_key:
+        selected_bucket = ToolFeedbackNoteService.load_bucket(
+            source=selected_source_key, flow=selected_flow_key, limit=250
+        )
+        selected_entries = selected_bucket.get("entries") or []
+
+    return render_template(
+        "developer/support_submissions.html",
+        feedback_sources=source_rows,
+        feedback_source_count=len(source_rows),
+        feedback_total_count=feedback_total_count,
+        selected_feedback_source=selected_source,
+        selected_feedback_flow=selected_flow_key,
+        selected_feedback_bucket=selected_bucket,
+        selected_feedback_entries=selected_entries,
+        generated_at=(
+            global_index.get("updated_at") if isinstance(global_index, dict) else None
+        ),
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "Customer Support", "url": url_for("developer.organizations")},
+            {"label": "Support Submissions"},
         ],
     )
 

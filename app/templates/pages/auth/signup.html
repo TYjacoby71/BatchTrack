@@ -6,15 +6,26 @@
 {% set primary_tier_id = (signup_primary_tier_id or preselected_tier or default_tier_id)|string %}
 {% set primary_tier = available_tiers.get(primary_tier_id) if available_tiers else none %}
 {% set primary_lifetime_offer = (lifetime_offers | first) if lifetime_offers else none %}
+{% set signup_free_tier_enabled = (show_signup_free_tier and free_tier_display) %}
 <div class="py-4">
     <div class="row justify-content-center">
         <div class="col-xl-10 col-xxl-9 signup-layout-col">
             <div class="signup-shell">
                 <div class="text-center mb-5">
                     <h2 class="mb-1">
+                        {% if signup_free_tier_enabled %}
+                        Free + Artisan Access
+                        {% else %}
                         The Artisan Plan
+                        {% endif %}
                     </h2>
-                    <p class="text-muted mb-0">Full Access to the BatchTrack Ecosystem</p>
+                    <p class="text-muted mb-0">
+                        {% if signup_free_tier_enabled %}
+                        Compare the Free tier on the left, then choose Artisan monthly or Founding Member on the right.
+                        {% else %}
+                        Full Access to the BatchTrack Ecosystem
+                        {% endif %}
+                    </p>
                 </div>
                 <div>
                     {% if oauth_user_info %}
@@ -51,6 +62,64 @@
                         </div>
                         {% else %}
                         <h4 class="mb-3 text-center">Choose Your Access</h4>
+                        {% if signup_free_tier_enabled %}
+                        <div class="pricing-cards-grid pricing-cards-grid-with-free">
+                            <article
+                                class="plan-info-card free-plan-card h-100"
+                                id="freePlanCard"
+                                aria-label="Free tier comparison card"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="false"
+                            >
+                                <div class="plan-chip plan-chip-free mb-2">{{ free_tier_display.name or 'Free' }}</div>
+                                <h4 class="h5 fw-bold mb-1">{{ free_tier_display.name or 'Free' }} Tier</h4>
+                                <div class="plan-price plan-price-free mb-2">{{ free_tier_display.price_display or 'Free' }}</div>
+                                <p class="plan-includes mb-2">{{ free_tier_display.description or 'Starter access for planning and recipe tracking.' }}</p>
+                                <p class="plan-subtext mb-0">Select to preview Free-tier features below.</p>
+                            </article>
+
+                            <article
+                                class="plan-choice-card h-100 active-offer"
+                                id="monthlyPlanCard"
+                                data-plan-kind="monthly"
+                                role="button"
+                                tabindex="0"
+                                aria-pressed="true"
+                            >
+                                <div class="plan-chip mb-2" data-role="modeBadge" data-mode="monthly">Monthly</div>
+                                <h4 class="h5 fw-bold mb-1">Artisan Access</h4>
+                                <div class="plan-price mb-2" data-role="priceText">$24.99 / Month</div>
+                                <p class="plan-includes mb-1">Full access to the core BatchTrack ecosystem.</p>
+                                <p class="plan-subtext mb-0" data-role="statusText">Includes a 14-day Free Trial.</p>
+                                <p class="plan-subtext mb-0">Cancel anytime.</p>
+                                <p class="plan-subtext text-muted mb-0 d-none" data-role="fallbackText"></p>
+                                {% if has_lifetime_capacity and primary_lifetime_offer %}
+                                <div class="artisan-billing-toggle mt-3" role="radiogroup" aria-label="Artisan billing mode">
+                                    <label class="artisan-billing-toggle-option">
+                                        <input
+                                            type="radio"
+                                            name="artisanBillingToggle"
+                                            id="artisanBillingMonthly"
+                                            value="monthly"
+                                            checked
+                                        >
+                                        <span>Artisan Monthly</span>
+                                    </label>
+                                    <label class="artisan-billing-toggle-option">
+                                        <input
+                                            type="radio"
+                                            name="artisanBillingToggle"
+                                            id="artisanBillingLifetime"
+                                            value="lifetime"
+                                        >
+                                        <span>Founding Member</span>
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </article>
+                        </div>
+                        {% else %}
                         <div class="pricing-cards-grid">
                             <article
                                 class="plan-choice-card h-100 active-offer"
@@ -60,7 +129,7 @@
                                 tabindex="0"
                                 aria-pressed="true"
                             >
-                                <div class="plan-chip mb-2">Monthly</div>
+                                <div class="plan-chip mb-2" data-role="modeBadge" data-mode="monthly">Monthly</div>
                                 <h4 class="h5 fw-bold mb-1">Monthly Artisan Subscription</h4>
                                 <div class="plan-price mb-2" data-role="priceText">$24.99 / Month</div>
                                 <p class="plan-includes mb-1">Full access to the core Batching Engine.</p>
@@ -78,7 +147,7 @@
                                 tabindex="0"
                                 aria-pressed="false"
                             >
-                                <div class="plan-chip plan-chip-lifetime mb-2">Founding Member</div>
+                                <div class="plan-chip plan-chip-lifetime mb-2" data-role="modeBadge" data-mode="lifetime">Founding Member</div>
                                 <h4 class="h5 fw-bold mb-1">Founding Member Lifetime Pass</h4>
                                 <div class="plan-price mb-2" data-role="priceText">$197 (One-Time Payment)</div>
                                 <p class="plan-includes mb-1">Lifetime access to every feature listed above.</p>
@@ -98,7 +167,7 @@
                                 tabindex="0"
                                 aria-pressed="false"
                             >
-                                <div class="plan-chip mb-2">Yearly</div>
+                                <div class="plan-chip mb-2" data-role="modeBadge" data-mode="yearly">Yearly</div>
                                 <h4 class="h5 fw-bold mb-1">Artisan Plan</h4>
                                 <div class="plan-price mb-2" data-role="priceText">
                                     {{ primary_tier.yearly_price_display or 'Yearly pricing at secure checkout' }}
@@ -109,6 +178,7 @@
                             </article>
                             {% endif %}
                         </div>
+                        {% endif %}
                         {% endif %}
                     </section>
 
@@ -149,7 +219,35 @@ const signupSource = {{ signup_source|tojson }};
 const referralCode = {{ referral_code|tojson }};
 const initialPromoCode = {{ promo_code|tojson }};
 const hasLifetimeCapacity = Boolean({{ has_lifetime_capacity|tojson }});
+const showSignupFreeTier = Boolean({{ show_signup_free_tier|tojson }});
+const freeTierDisplay = {{ (free_tier_display if free_tier_display is defined else none)|tojson }};
 const VALID_PLAN_KINDS = ['lifetime', 'monthly', 'yearly'];
+const FREE_TIER_CORE_FEATURES = [
+    'Recipe tracking',
+    'Plan production',
+    'Batching progress timers',
+    'Infinite ingredients',
+];
+const ARTISAN_CORE_FEATURES = [
+    'Inventory Tracking (FIFO)',
+    'Recipe Management & Versioning',
+    'Production Planning',
+    'Batch-in-Progress Tracker',
+    'Container Fill Logic',
+    'Immutable Batch Summary',
+    'Product & SKU System',
+    'Unit Conversion & Density Engine',
+    'Neurodivergent-Friendly UI',
+    'Batch Label Printing',
+    'Contextual Error Handling',
+];
+const ARTISAN_FUTURE_FEATURES = [
+    'Global Inventory Library (25,000+ Items)',
+    'AI Recipe & Inventory Parser',
+    'Recipe Marketplace',
+    'Shopify & Etsy Integration',
+    'Supplier Integration',
+];
 
 const lifetimeByKey = Object.fromEntries(
     lifetimeOffers
@@ -215,6 +313,7 @@ function getInitialPlanKind() {
 }
 
 let selectedPlanKind = getInitialPlanKind();
+let selectedSignupTier = 'artisan';
 
 function getPlanState(planKind) {
     const tierData = getTierData();
@@ -340,10 +439,14 @@ function getPlanState(planKind) {
 }
 
 function updateOfferCards() {
+    const freePlanCard = document.getElementById('freePlanCard');
     document.querySelectorAll('.plan-choice-card').forEach((card) => {
         const cardPlanKind = String(card.dataset.planKind || '');
         const planState = getPlanState(cardPlanKind);
-        const isSelected = cardPlanKind === selectedPlanKind;
+        const isPrimaryArtisanCard = showSignupFreeTier && card.id === 'monthlyPlanCard';
+        const isSelected = isPrimaryArtisanCard
+            ? selectedSignupTier !== 'free'
+            : cardPlanKind === selectedPlanKind;
 
         card.classList.toggle('active-offer', isSelected);
         card.classList.toggle('is-disabled', planState.isUnavailable);
@@ -371,6 +474,12 @@ function updateOfferCards() {
             fallbackText.classList.toggle('d-none', !planState.fallbackText);
         }
     });
+
+    if (showSignupFreeTier && freePlanCard) {
+        const freeIsSelected = selectedSignupTier === 'free';
+        freePlanCard.classList.toggle('active-offer', freeIsSelected);
+        freePlanCard.setAttribute('aria-pressed', freeIsSelected ? 'true' : 'false');
+    }
 }
 
 function updatePlanSummary() {
@@ -389,39 +498,28 @@ function updatePlanSummary() {
     lifetimeCounterMessage.classList.remove('alert-info');
     lifetimeCounterMessage.classList.add('alert-warning');
 
-    const includedFeatures = [
-        'Inventory Tracking (FIFO)',
-        'Recipe Management & Versioning',
-        'Production Planning',
-        'Batch-in-Progress Tracker',
-        'Container Fill Logic',
-        'Immutable Batch Summary',
-        'Product & SKU System',
-        'Unit Conversion & Density Engine',
-        'Neurodivergent-Friendly UI',
-        'Batch Label Printing',
-        'Contextual Error Handling',
-    ];
-
-    const futureFeatures = [
-        'Global Inventory Library (25,000+ Items)',
-        'AI Recipe & Inventory Parser',
-        'Recipe Marketplace',
-        'Shopify & Etsy Integration',
-        'Supplier Integration',
-    ];
-
-    if (!tierData) {
-        title.textContent = 'Full Access to the BatchTrack Ecosystem';
-        selectedText.textContent = 'Tier configuration unavailable.';
+    if (showSignupFreeTier && selectedSignupTier === 'free' && freeTierDisplay) {
+        FREE_TIER_CORE_FEATURES.forEach((label) => {
+            const item = document.createElement('li');
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-check text-success me-2';
+            const copy = document.createElement('span');
+            copy.textContent = label;
+            item.appendChild(icon);
+            item.appendChild(copy);
+            featuresList.appendChild(item);
+        });
+        title.textContent = `${freeTierDisplay.name || 'Free'} core features`;
+        selectedText.textContent = 'Included with the Free tier';
+        selectedLifetimeTier = '';
         checkoutButtons.forEach((button) => {
             button.disabled = true;
-            button.innerHTML = checkoutButtonHtml;
+            button.innerHTML = '<i class="fas fa-lock me-2"></i>Select Artisan to continue';
         });
         return;
     }
 
-    includedFeatures.forEach((label) => {
+    ARTISAN_CORE_FEATURES.forEach((label) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-check text-success me-2';
@@ -437,7 +535,7 @@ function updatePlanSummary() {
     futureHeading.innerHTML = '<span>Included features coming soon</span>';
     featuresList.appendChild(futureHeading);
 
-    futureFeatures.forEach((label) => {
+    ARTISAN_FUTURE_FEATURES.forEach((label) => {
         const item = document.createElement('li');
         const icon = document.createElement('i');
         icon.className = 'fas fa-clock text-muted me-2';
@@ -449,9 +547,11 @@ function updatePlanSummary() {
         featuresList.appendChild(item);
     });
 
-    if (planState.isUnavailable) {
-        title.textContent = 'Full Access to the BatchTrack Ecosystem';
-        selectedText.textContent = 'This plan is currently unavailable for checkout.';
+    title.textContent = 'Full Access to the BatchTrack Ecosystem';
+    selectedText.textContent = 'Included with your Early-Access Seat';
+
+    if (!tierData) {
+        selectedText.textContent = 'Tier configuration unavailable.';
         checkoutButtons.forEach((button) => {
             button.disabled = true;
             button.innerHTML = checkoutButtonHtml;
@@ -459,8 +559,14 @@ function updatePlanSummary() {
         return;
     }
 
-    title.textContent = 'Full Access to the BatchTrack Ecosystem';
-    selectedText.textContent = 'Included with your Early-Access Seat';
+    if (planState.isUnavailable) {
+        selectedText.textContent = 'This plan is currently unavailable for checkout.';
+        checkoutButtons.forEach((button) => {
+            button.disabled = true;
+            button.innerHTML = checkoutButtonHtml;
+        });
+        return;
+    }
 
     if (planState.effectivePlanKind === 'lifetime') {
         const lifetimeOffer = planState.lifetimeOffer;
@@ -487,6 +593,11 @@ function updatePlanSummary() {
 }
 
 function proceedToPayment() {
+    if (showSignupFreeTier && selectedSignupTier === 'free') {
+        alert('Select Artisan to continue to checkout.');
+        return;
+    }
+
     const tierData = getTierData();
     if (!selectedTier || !tierData) {
         alert('The Artisan tier is not configured for checkout.');
@@ -582,15 +693,71 @@ function proceedToPayment() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const freePlanCard = document.getElementById('freePlanCard');
     const offerCards = Array.from(document.querySelectorAll('.plan-choice-card'));
+    const artisanPlanCard = document.getElementById('monthlyPlanCard');
+    const artisanBillingToggles = Array.from(
+        document.querySelectorAll('input[name="artisanBillingToggle"]')
+    );
+
     if (!VALID_PLAN_KINDS.includes(selectedPlanKind)) {
         selectedPlanKind = 'monthly';
+    }
+    if (showSignupFreeTier && !hasLifetimeCapacity && selectedPlanKind === 'yearly') {
+        selectedPlanKind = 'monthly';
+    }
+    if (showSignupFreeTier) {
+        selectedSignupTier = 'artisan';
+    }
+
+    const syncArtisanToggleState = () => {
+        if (!showSignupFreeTier || !artisanPlanCard) return;
+        if (!artisanBillingToggles.length) {
+            artisanPlanCard.dataset.planKind = selectedPlanKind;
+            return;
+        }
+        const selectedToggle = artisanBillingToggles.find((input) => input.checked);
+        const requestedKind = String(selectedToggle ? selectedToggle.value : 'monthly');
+        const nextKind = VALID_PLAN_KINDS.includes(requestedKind)
+            ? requestedKind
+            : 'monthly';
+        selectedPlanKind = nextKind;
+        artisanPlanCard.dataset.planKind = nextKind;
+    };
+
+    if (showSignupFreeTier && artisanBillingToggles.length) {
+        const monthlyToggle = document.getElementById('artisanBillingMonthly');
+        const lifetimeToggle = document.getElementById('artisanBillingLifetime');
+        if (
+            selectedPlanKind === 'lifetime'
+            && hasLifetimeCapacity
+            && lifetimeToggle
+        ) {
+            lifetimeToggle.checked = true;
+        } else if (monthlyToggle) {
+            monthlyToggle.checked = true;
+            selectedPlanKind = 'monthly';
+        }
+        syncArtisanToggleState();
+        artisanBillingToggles.forEach((toggle) => {
+            toggle.addEventListener('change', () => {
+                selectedSignupTier = 'artisan';
+                syncArtisanToggleState();
+                updateOfferCards();
+                updatePlanSummary();
+            });
+        });
+    } else if (showSignupFreeTier && artisanPlanCard) {
+        artisanPlanCard.dataset.planKind = selectedPlanKind;
     }
 
     offerCards.forEach((card) => {
         card.addEventListener('click', () => {
             const nextKind = String(card.dataset.planKind || '');
             if (!VALID_PLAN_KINDS.includes(nextKind)) return;
+            if (showSignupFreeTier) {
+                selectedSignupTier = 'artisan';
+            }
             selectedPlanKind = nextKind;
             updateOfferCards();
             updatePlanSummary();
@@ -601,12 +768,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 const nextKind = String(card.dataset.planKind || '');
                 if (!VALID_PLAN_KINDS.includes(nextKind)) return;
+                if (showSignupFreeTier) {
+                    selectedSignupTier = 'artisan';
+                }
                 selectedPlanKind = nextKind;
                 updateOfferCards();
                 updatePlanSummary();
             }
         });
     });
+
+    if (showSignupFreeTier && freePlanCard) {
+        const activateFreeSelection = () => {
+            selectedSignupTier = 'free';
+            updateOfferCards();
+            updatePlanSummary();
+        };
+        freePlanCard.addEventListener('click', activateFreeSelection);
+        freePlanCard.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activateFreeSelection();
+            }
+        });
+    }
 
     if (window.BTAnalytics && typeof window.BTAnalytics.capture === 'function') {
         window.BTAnalytics.capture('signup_page_viewed', {
@@ -640,6 +825,20 @@ document.addEventListener('DOMContentLoaded', () => {
     gap: 1rem;
 }
 
+.plan-info-card {
+    border: 2px solid #d6dff0;
+    border-radius: var(--theme-ext-radius-1f2f59cc9c);
+    background: #ffffff;
+    padding: 1.15rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+
+.free-plan-card {
+    border-color: #c7d8f8;
+    background: #f7faff;
+}
+
 .plan-choice-card {
     border: 2px solid #d6dff0;
     border-radius: var(--theme-ext-radius-1f2f59cc9c);
@@ -669,7 +868,14 @@ document.addEventListener('DOMContentLoaded', () => {
     color: #7a4f00;
 }
 
-.plan-choice-card.active-offer {
+.plan-chip-free {
+    background: #e6f4ea;
+    border-color: #a8d8b6;
+    color: #1f6b39;
+}
+
+.plan-choice-card.active-offer,
+.plan-info-card.active-offer {
     border-color: var(--theme-ext-color-7630a14d9f);
     box-shadow: var(--theme-ext-shadow-a9f9d9573c);
     transform: translateY(-2px);
@@ -691,6 +897,10 @@ document.addEventListener('DOMContentLoaded', () => {
     line-height: 1.25;
 }
 
+.plan-price-free {
+    color: #1f6b39;
+}
+
 .plan-includes {
     font-size: 1rem;
     color: #2f3a56;
@@ -699,6 +909,28 @@ document.addEventListener('DOMContentLoaded', () => {
 .plan-subtext {
     font-size: 0.86rem;
     color: #5f6b84;
+}
+
+.artisan-billing-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.artisan-billing-toggle-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid #d5deef;
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.8rem;
+    color: #33405d;
+    background: #f8fafd;
+}
+
+.artisan-billing-toggle-option input {
+    margin: 0;
 }
 
 .soft-panel {
@@ -754,6 +986,13 @@ document.addEventListener('DOMContentLoaded', () => {
         padding: 0.75rem 0.65rem;
     }
 
+    .plan-info-card {
+        border: 1px solid #d8e0ef;
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(22, 32, 61, 0.06);
+        padding: 0.75rem 0.65rem;
+    }
+
     .plan-choice-card.is-lifetime-fallback {
         border-style: dashed;
         background: #fbfcff;
@@ -781,6 +1020,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     .plan-subtext {
         font-size: 0.7rem;
+    }
+
+    .artisan-billing-toggle-option {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.45rem;
     }
 }
 

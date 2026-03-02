@@ -38,6 +38,18 @@ class SignupPlanCatalogService:
             .all()
         )
 
+    @staticmethod
+    def load_customer_facing_free_tier() -> SubscriptionTier | None:
+        """Return the first customer-facing exempt tier for signup comparison UI."""
+        return (
+            SubscriptionTier.query.filter_by(
+                is_customer_facing=True,
+                billing_provider="exempt",
+            )
+            .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+            .first()
+        )
+
     @classmethod
     def build_available_tiers_payload(
         cls,

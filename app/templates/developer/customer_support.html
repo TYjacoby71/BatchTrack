@@ -189,6 +189,9 @@
                     <p class="text-muted mb-0">No tickets in the queue. Great job!</p>
                     {% endif %}
                     <div class="d-grid gap-2 mt-3">
+                        <a href="{{ url_for('developer.support_submissions') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-inbox"></i> Support submissions
+                        </a>
                         <a href="{{ url_for('developer.waitlist_statistics') }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-envelope-open-text"></i> Waitlist insights
                         </a>
