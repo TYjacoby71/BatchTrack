@@ -81,6 +81,31 @@ def test_unknown_api_path_returns_json_404(app):
     assert response.get_json()["error"] == "Not found"
 
 
+def test_unknown_path_sets_response_request_id_header(app):
+    client = app.test_client()
+
+    response = client.get("/this-path-does-not-exist", follow_redirects=False)
+
+    assert response.status_code == 404
+    request_id = response.headers.get("X-Request-ID")
+    assert isinstance(request_id, str)
+    assert request_id
+
+
+def test_request_id_header_is_preserved_when_provided(app):
+    client = app.test_client()
+    incoming_request_id = "req-demo-123456"
+
+    response = client.get(
+        "/health",
+        headers={"X-Request-ID": incoming_request_id},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert response.headers.get("X-Request-ID") == incoming_request_id
+
+
 def test_public_asset_not_found_uses_branded_404_template(app, monkeypatch):
     client = app.test_client()
     from app.blueprints.core import routes as core_routes

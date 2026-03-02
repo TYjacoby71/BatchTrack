@@ -4,13 +4,18 @@ import logging
 import re
 from typing import Iterable
 
-from flask import Flask
+from flask import Flask, g, has_request_context, request
 
 logger = logging.getLogger(__name__)
 
 
-DEV_FORMAT = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s"
-PROD_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+DEV_FORMAT = (
+    "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d request_id=%(request_id)s: "
+    "%(message)s"
+)
+PROD_FORMAT = (
+    "%(asctime)s [%(levelname)s] %(name)s request_id=%(request_id)s: %(message)s"
+)
 PII_PATTERNS = {
     "email": re.compile(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-.]+"),
     "token": re.compile(
@@ -32,6 +37,22 @@ class PiiRedactionFilter(logging.Filter):
         except Exception:
             logger.warning("Suppressed exception fallback at app/logging_config.py:29", exc_info=True)
             pass
+        return True
+
+
+class RequestContextFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:  # pragma: no cover - defensive
+        request_id = "-"
+        if has_request_context():
+            try:
+                request_id = (
+                    str(getattr(g, "request_id", None) or request.headers.get("X-Request-ID"))
+                    if request is not None
+                    else "-"
+                )
+            except Exception:
+                request_id = "-"
+        setattr(record, "request_id", request_id or "-")
         return True
 
 
@@ -66,6 +87,11 @@ def _apply_formatter(
 ) -> None:
     for handler in handlers:
         try:
+            if not any(
+                isinstance(existing_filter, RequestContextFilter)
+                for existing_filter in handler.filters
+            ):
+                handler.addFilter(RequestContextFilter())
             handler.setFormatter(formatter)
             if redact_pii:
                 handler.addFilter(PiiRedactionFilter())

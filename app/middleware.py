@@ -11,6 +11,9 @@ Glossary:
 from __future__ import annotations
 
 import logging
+import re
+import time
+import uuid
 from collections.abc import Mapping
 
 from flask import (
@@ -40,6 +43,9 @@ from .services.session_service import SessionService
 from .utils.permissions import PermissionScope, resolve_permission_scope
 
 logger = logging.getLogger(__name__)
+
+_REQUEST_ID_MAX_LENGTH = 128
+_REQUEST_ID_ALLOWED_RE = re.compile(r"^[A-Za-z0-9._:/-]+$")
 
 DEFAULT_SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
@@ -95,6 +101,48 @@ def _wants_json_response() -> bool:
     return request.path.startswith("/api/") or (
         "application/json" in accepts and not accepts.accept_html
     )
+
+
+def _normalize_request_id(raw: str | None) -> str | None:
+    if not raw or not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    if not value:
+        return None
+    if len(value) > _REQUEST_ID_MAX_LENGTH:
+        value = value[:_REQUEST_ID_MAX_LENGTH]
+    if not _REQUEST_ID_ALLOWED_RE.match(value):
+        return None
+    return value
+
+
+def _request_id_from_traceparent(traceparent: str | None) -> str | None:
+    if not traceparent or not isinstance(traceparent, str):
+        return None
+    parts = traceparent.strip().split("-")
+    if len(parts) < 4:
+        return None
+    trace_id = parts[1]
+    if len(trace_id) != 32:
+        return None
+    normalized = _normalize_request_id(trace_id)
+    return normalized
+
+
+def _resolve_request_id() -> str:
+    direct_request_id = _normalize_request_id(request.headers.get("X-Request-ID"))
+    if direct_request_id:
+        return direct_request_id
+
+    correlation_id = _normalize_request_id(request.headers.get("X-Correlation-ID"))
+    if correlation_id:
+        return correlation_id
+
+    trace_id = _request_id_from_traceparent(request.headers.get("traceparent"))
+    if trace_id:
+        return trace_id
+
+    return uuid.uuid4().hex
 
 
 # --- Force logout for billing lock ---
@@ -235,6 +283,11 @@ def register_middleware(app: Flask) -> None:
 
     @app.before_request
     def single_security_checkpoint() -> Response | None:
+        g.request_started_at = time.perf_counter()
+        request_id = _resolve_request_id()
+        g.request_id = request_id
+        request.environ["HTTP_X_REQUEST_ID"] = request_id
+
         path = request.path
 
         if RouteAccessConfig.is_monitoring_request(request):
@@ -388,6 +441,10 @@ def register_middleware(app: Flask) -> None:
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
+        request_id = getattr(g, "request_id", None)
+        if request_id:
+            response.headers.setdefault("X-Request-ID", str(request_id))
+
         if disable_security_headers:
             return response
 
