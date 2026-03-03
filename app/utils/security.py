@@ -1,6 +1,10 @@
+import logging
 from functools import wraps
 
 from flask import abort, request
+
+logger = logging.getLogger(__name__)
+
 
 
 class SecurityUtils:
@@ -44,6 +48,7 @@ class SecurityUtils:
             validate_csrf(token)
             return True
         except Exception:
+            logger.warning("Suppressed exception fallback at app/utils/security.py:46", exc_info=True)
             return False
 
 

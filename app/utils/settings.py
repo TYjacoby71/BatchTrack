@@ -1,7 +1,11 @@
 from __future__ import annotations
+import logging
 
 import copy
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_SETTINGS_KEY = "settings"
 
@@ -119,6 +123,7 @@ def get_app_setting(key: str, default: Any = None) -> Any:
         if entry is not None and entry.value is not None:
             return copy.deepcopy(entry.value)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/settings.py:121", exc_info=True)
         pass
     return copy.deepcopy(default)
 
@@ -140,6 +145,7 @@ def set_app_setting(key: str, value: Any, *, description: str | None = None) -> 
         db.session.commit()
         return True
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/settings.py:142", exc_info=True)
         db.session.rollback()
         return False
 
@@ -153,6 +159,7 @@ def is_feature_enabled(feature_key: str) -> bool:
         if flag is not None:
             return bool(flag.enabled)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/settings.py:155", exc_info=True)
         pass
     try:
         from app.services.developer.dashboard_service import FEATURE_FLAG_SECTIONS
@@ -167,5 +174,6 @@ def is_feature_enabled(feature_key: str) -> bool:
                         )
                     )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/settings.py:169", exc_info=True)
         pass
     return False

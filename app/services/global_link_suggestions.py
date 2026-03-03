@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Tuple
 
 from flask import current_app
@@ -5,6 +6,9 @@ from sqlalchemy import func
 
 from ..models import GlobalItem, InventoryItem, Unit, db
 from .density_assignment_service import DensityAssignmentService
+
+logger = logging.getLogger(__name__)
+
 
 
 class GlobalLinkSuggestionService:
@@ -36,6 +40,7 @@ class GlobalLinkSuggestionService:
             # Otherwise, not compatible (e.g., count vs volume/weight)
             return False
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/global_link_suggestions.py:38", exc_info=True)
             return False
 
     @staticmethod
@@ -54,11 +59,13 @@ class GlobalLinkSuggestionService:
             if any((a or "").strip().lower() == iname for a in aka):
                 return 0.98
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/global_link_suggestions.py:56", exc_info=True)
             pass
         # Fuzzy
         try:
             return DensityAssignmentService._similarity_score(iname, gname)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/global_link_suggestions.py:61", exc_info=True)
             return 0.0
 
     @staticmethod

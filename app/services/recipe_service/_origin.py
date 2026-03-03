@@ -1,6 +1,7 @@
 """Organization origin helpers for recipes."""
 
 from __future__ import annotations
+import logging
 
 from typing import Any, Dict, Optional
 
@@ -8,11 +9,15 @@ from flask import current_app
 
 from ...models import Recipe
 
+logger = logging.getLogger(__name__)
+
+
 
 def _get_batchtrack_org_id() -> int:
     try:
         return int(current_app.config.get("BATCHTRACK_ORG_ID", 1))
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/recipe_service/_origin.py:15", exc_info=True)
         return 1
 
 

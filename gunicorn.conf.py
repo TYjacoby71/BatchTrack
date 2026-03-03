@@ -84,7 +84,10 @@ max_requests_jitter = _env_int("GUNICORN_MAX_REQUESTS_JITTER", 100)
 preload_app = _env_bool("GUNICORN_PRELOAD_APP", False)
 
 # Logging
-access_log_format = '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+access_log_format = (
+    '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" '
+    'request_id="%({x-request-id}o)s" forwarded_for="%({x-forwarded-for}i)s" %(D)s'
+)
 errorlog = "-"
 accesslog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")

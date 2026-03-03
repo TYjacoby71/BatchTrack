@@ -265,6 +265,7 @@ class PublicBotTrapService:
         try:
             import redis
         except Exception:  # pragma: no cover - optional dependency
+            logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:267", exc_info=True)
             return None
 
         app_obj = None
@@ -326,6 +327,7 @@ class PublicBotTrapService:
         try:
             return bool(redis_client.exists(key))
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:328", exc_info=True)
             return False
 
     @classmethod
@@ -762,6 +764,7 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:764", exc_info=True)
                 pass
             return False
 
@@ -866,6 +869,7 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:868", exc_info=True)
                 pass
 
     @classmethod
@@ -953,6 +957,7 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:955", exc_info=True)
                 pass
 
         return entry
@@ -1054,6 +1059,7 @@ class PublicBotTrapService:
                 try:
                     db.session.rollback()
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1056", exc_info=True)
                     pass
 
         try:
@@ -1100,6 +1106,7 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1102", exc_info=True)
                 pass
 
         return {
@@ -1125,6 +1132,7 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1127", exc_info=True)
                 pass
 
     @classmethod
@@ -1144,5 +1152,6 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1146", exc_info=True)
                 pass
         return None

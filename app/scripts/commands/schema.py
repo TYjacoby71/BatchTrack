@@ -1,10 +1,14 @@
 """Database schema and model synchronization commands."""
+import logging
 
 import click
 from flask.cli import with_appcontext
 from sqlalchemy import inspect, text
 
 from ...extensions import db
+
+logger = logging.getLogger(__name__)
+
 
 
 @click.command("create-app")
@@ -58,6 +62,7 @@ def create_app_command():
         print("   2. Or run individual seeders as needed")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/schema.py:60", exc_info=True)
         print(f"❌ Database creation failed: {str(e)}")
         import traceback
 
@@ -188,6 +193,7 @@ def sync_schema_command():
                         print(f"      ✅ Added column: {column_name} ({column_type})")
 
                     except Exception as e:
+                        logger.warning("Suppressed exception fallback at app/scripts/commands/schema.py:190", exc_info=True)
                         print(f"      ❌ Failed to add column {column_name}: {e}")
                         db.session.rollback()
             else:
@@ -202,6 +208,7 @@ def sync_schema_command():
         print("⚠️  New columns are added as nullable for safety")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/scripts/commands/schema.py:204", exc_info=True)
         print(f"❌ Schema sync failed: {str(e)}")
         import traceback
 

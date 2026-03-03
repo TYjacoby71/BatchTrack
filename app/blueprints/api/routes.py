@@ -300,6 +300,7 @@ def list_units():
     try:
         units = get_global_unit_list() or []
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:302", exc_info=True)
         units = []
 
     if unit_type:
@@ -320,6 +321,7 @@ def list_units():
             )
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:322", exc_info=True)
         pass
 
     results = units[:50]
@@ -386,6 +388,7 @@ def create_unit():
             }
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:388", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -441,6 +444,7 @@ def get_container_suggestions():
         }
         return jsonify({"success": True, "suggestions": payload})
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:443", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -519,6 +523,7 @@ def get_ingredients():
         )
         return jsonify(payload)
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:521", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 

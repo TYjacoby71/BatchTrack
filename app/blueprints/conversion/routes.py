@@ -65,6 +65,7 @@ def delete_unit(unit_id):
         logger.info(f"Successfully deleted unit: {unit.name}")
         flash("Unit deleted successfully", "success")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/conversion/routes.py:67", exc_info=True)
         db.session.rollback()
         flash(f"Error deleting unit: {str(e)}", "error")
 
@@ -327,6 +328,7 @@ def delete_mapping(mapping_id):
         db.session.commit()
         flash("Mapping deleted successfully.", "success")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/conversion/routes.py:329", exc_info=True)
         db.session.rollback()
         flash(f"Error deleting mapping: {str(e)}", "error")
     return redirect(url_for("conversion_bp.manage_units"))

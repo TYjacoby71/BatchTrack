@@ -6,11 +6,15 @@ obvious which tables, aggregates, and dimensions power each analytics surface.
 """
 
 from __future__ import annotations
+import logging
 
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
 
 
 @dataclass(frozen=True)
@@ -492,6 +496,7 @@ class AnalyticsCatalogService:
         try:
             return [copy.deepcopy(domain.__dict__) for domain in cls._DOMAINS]
         except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Suppressed exception fallback at app/services/statistics/catalog.py:494", exc_info=True)
             raise AnalyticsCatalogError("Failed to build analytics catalog") from exc
 
     @classmethod

@@ -10,6 +10,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from pathlib import Path
 
@@ -43,6 +44,9 @@ from app.services.public_tools_service import (
     get_public_tool_flags,
 )
 from app.utils.cache_utils import should_bypass_cache
+
+logger = logging.getLogger(__name__)
+
 
 core_bp = Blueprint("core", __name__)
 _BRAND_ASSET_MAX_AGE_SECONDS = 31536000
@@ -130,11 +134,13 @@ def _render_public_homepage_response():
             f"{cache_key}:global_library:{'on' if global_library_enabled else 'off'}"
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:132", exc_info=True)
         pass
     try:
         tool_flag_signature = build_public_tool_flag_signature(tool_flags=tool_flags)
         cache_key = f"{cache_key}:tools:{tool_flag_signature}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:137", exc_info=True)
         pass
     try:
         tool_media_signature = build_media_signature(
@@ -146,6 +152,7 @@ def _render_public_homepage_response():
         )
         cache_key = f"{cache_key}:tool-media:{tool_media_signature or 'none'}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:148", exc_info=True)
         pass
     try:
         feature_media_signature = build_media_signature(
@@ -157,6 +164,7 @@ def _render_public_homepage_response():
         )
         cache_key = f"{cache_key}:feature-media:{feature_media_signature or 'none'}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:159", exc_info=True)
         pass
     try:
         more_feature_media_signature = build_media_signature(
@@ -170,6 +178,7 @@ def _render_public_homepage_response():
             f"{cache_key}:more-feature-media:{more_feature_media_signature or 'none'}"
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:172", exc_info=True)
         pass
     try:
         integration_media_signature = build_media_signature(
@@ -181,6 +190,7 @@ def _render_public_homepage_response():
         )
         cache_key = f"{cache_key}:integration-media:{integration_media_signature or 'none'}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:183", exc_info=True)
         pass
     try:
         testimonial_media_signature = build_media_signature(
@@ -202,6 +212,7 @@ def _render_public_homepage_response():
             f":testimonial-photo:{testimonial_photo_signature or 'none'}"
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:204", exc_info=True)
         pass
     try:
         slot_media_signature = build_media_signature(
@@ -209,6 +220,7 @@ def _render_public_homepage_response():
         )
         cache_key = f"{cache_key}:page-slots:{slot_media_signature or 'none'}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:211", exc_info=True)
         pass
     try:
         cache_ttl = int(current_app.config.get("PUBLIC_HOMEPAGE_CACHE_TTL", 600))
@@ -239,6 +251,7 @@ def _render_public_homepage_response():
             cache.set(cache_key, rendered, timeout=cache_ttl)
         except Exception:
             # Homepage rendering should never fail because cache is unavailable.
+            logger.warning("Suppressed exception fallback at app/blueprints/core/routes.py:240", exc_info=True)
             pass
     return rendered
 

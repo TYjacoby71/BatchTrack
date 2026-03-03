@@ -10,6 +10,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 import re
 from collections.abc import Sequence
@@ -19,6 +20,9 @@ from sqlalchemy import func
 from ..extensions import db
 from ..models.models import Organization
 from ..models.subscription_tier import SubscriptionTier
+
+logger = logging.getLogger(__name__)
+
 
 
 class LifetimePricingService:
@@ -458,6 +462,7 @@ class LifetimePricingService:
                 allow_network=allow_network,
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/lifetime_pricing_service.py:460", exc_info=True)
             return None
 
     @classmethod
@@ -511,4 +516,5 @@ class LifetimePricingService:
                 lookup_key, allow_network=allow_network
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/lifetime_pricing_service.py:513", exc_info=True)
             return None

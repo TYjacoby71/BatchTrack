@@ -225,6 +225,7 @@ def set_column_visibility():
         }
         _persist_batch_list_preferences(columns, filters)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:227", exc_info=True)
         db.session.rollback()
         logger.exception("Failed to persist batch column visibility preferences")
     flash("Column preferences updated")
@@ -295,6 +296,7 @@ def list_batches():
         try:
             _persist_batch_list_preferences(visible_columns, filters)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:297", exc_info=True)
             db.session.rollback()
             logger.exception("Failed to persist batch list preferences")
 
@@ -387,6 +389,7 @@ def view_batch_record(batch_identifier):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:389", exc_info=True)
         print(f"DEBUG: Error in view_batch: {str(e)}")
         flash(f"Error viewing batch: {str(e)}", "error")
         return redirect(url_for("batches.list_batches"))

@@ -116,6 +116,7 @@ def update_recipe_from_batch(
         }
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/recipe_service/_batch_integration.py:118", exc_info=True)
         db.session.rollback()
         logger.error(f"Error updating recipe from batch: {e}")
         return {"success": False, "error": str(e)}

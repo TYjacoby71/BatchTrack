@@ -140,6 +140,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         assert response.status_code == 302
         pending = PendingSignup.query.filter_by(email="solo@applicant.com").first()
         assert pending is not None
+        assert pending.tier_id == solo_id
 
         if live_mode:
             # End here; webhook + real Stripe finalize the rest.
@@ -161,6 +162,8 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
 
         org, user = BillingService._provision_checkout_session(fake_session)
         assert org and user
+        assert int(org.subscription_tier_id or 0) == solo_id
+        assert int(user.organization_id or 0) == int(org.id)
         assert pending.status == "account_created"
 
         # Simulate success route

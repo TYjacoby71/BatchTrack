@@ -170,6 +170,7 @@ class POSIntegrationService:
             return True, f"Reserved {quantity} units for order {order_id}"
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/pos_integration.py:172", exc_info=True)
             from flask import has_app_context
 
             if has_app_context():
@@ -196,6 +197,7 @@ class POSIntegrationService:
             return success, message
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/pos_integration.py:198", exc_info=True)
             print(f"DEBUG POS: Exception in release_reservation: {str(e)}")
             import traceback
 
@@ -262,6 +264,7 @@ class POSIntegrationService:
             return True, f"Confirmed sale of {total_sold} units for order {order_id}"
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/pos_integration.py:264", exc_info=True)
             from flask import has_app_context
 
             if has_app_context():
@@ -329,6 +332,7 @@ class POSIntegrationService:
             )
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/pos_integration.py:331", exc_info=True)
             from flask import has_app_context
 
             if has_app_context():
@@ -365,6 +369,7 @@ class POSIntegrationService:
             return count
 
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/pos_integration.py:367", exc_info=True)
             from flask import has_app_context
 
             if has_app_context():

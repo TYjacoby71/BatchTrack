@@ -317,6 +317,51 @@ def test_login_accepts_email_identifier(client, app):
         assert sess.get("_user_id") is not None
 
 
+# --- Login failure (wrong password) ---
+# Purpose: Verify incorrect password re-renders login and does not create a session.
+def test_login_rejects_wrong_password(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    with app.app_context():
+        user = _create_user(
+            username=f"wrong_pass_{uuid.uuid4().hex[:6]}",
+            email=f"wrong_pass_{uuid.uuid4().hex[:6]}@example.com",
+            password="right-password-123",
+            verified=True,
+        )
+        username = user.username
+
+    response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "not-the-right-password"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "Invalid email/username or password" in response.get_data(as_text=True)
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is None
+
+
+# --- Login failure (unknown user) ---
+# Purpose: Verify unknown username/email follows the same invalid-credentials behavior.
+def test_login_rejects_unknown_identifier(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+
+    response = client.post(
+        "/auth/login",
+        data={"username": f"missing_{uuid.uuid4().hex[:6]}", "password": "does-not-matter"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "Invalid email/username or password" in response.get_data(as_text=True)
+
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") is None
+
+
 # --- Provider fallback login ---
 # Purpose: Verify auth-email features auto-relax when provider-required mode lacks credentials.
 def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):

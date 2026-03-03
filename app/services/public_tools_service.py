@@ -10,11 +10,15 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from typing import Any, Dict, List
 
 from app.models import FeatureFlag
 from app.services.public_media_service import resolve_first_media_from_folder
+
+logger = logging.getLogger(__name__)
+
 
 PUBLIC_TOOL_CATALOG: tuple[Dict[str, Any], ...] = (
     {
@@ -128,6 +132,7 @@ def is_tool_flag_enabled(flag_key: str, default: bool = True) -> bool:
         if flag is not None:
             return bool(flag.enabled)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/public_tools_service.py:130", exc_info=True)
         return bool(default)
     return bool(default)
 
@@ -149,6 +154,7 @@ def get_public_tool_flags() -> Dict[str, bool]:
     try:
         rows = FeatureFlag.query.filter(FeatureFlag.key.in_(tuple(key_to_slug.keys()))).all()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/public_tools_service.py:151", exc_info=True)
         rows = []
 
     for row in rows:

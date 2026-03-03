@@ -2,12 +2,16 @@
 """Seed feature flags from the catalog."""
 
 from __future__ import annotations
+import logging
 
 from typing import Dict, Iterable
 
 from app.extensions import db
 from app.models.feature_flag import FeatureFlag
 from app.services.developer.dashboard_service import FEATURE_FLAG_SECTIONS
+
+logger = logging.getLogger(__name__)
+
 
 
 def _iter_catalog_flags() -> Iterable[Dict[str, object]]:
@@ -65,6 +69,7 @@ def seed_feature_flags() -> None:
         db.session.commit()
         print(f"✅ Feature flags seeded: {created} created, {updated} updated")
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/seeders/feature_flag_seeder.py:67", exc_info=True)
         db.session.rollback()
         print(f"❌ Error seeding feature flags: {exc}")
         raise

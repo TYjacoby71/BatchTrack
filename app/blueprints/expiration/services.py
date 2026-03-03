@@ -683,6 +683,7 @@ class ExpirationService:
             return False, "Invalid expiration type"
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/blueprints/expiration/services.py:685", exc_info=True)
             return False, f"Error marking as expired: {str(e)}"
 
     @staticmethod

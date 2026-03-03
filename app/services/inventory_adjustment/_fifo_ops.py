@@ -253,6 +253,7 @@ def create_new_fifo_lot(
 
                     batch = db.session.get(Batch, batch_id)
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_fifo_ops.py:255", exc_info=True)
                     batch = None
             if batch:
                 batch_lineage_id = batch.lineage_id
@@ -403,6 +404,7 @@ def deduct_fifo_inventory(
             if valuation_method not in ("fifo", "average"):
                 valuation_method = "fifo"
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_fifo_ops.py:405", exc_info=True)
             valuation_method = "fifo"
 
         org_tracks_quantities = org_allows_inventory_quantity_tracking(
@@ -430,6 +432,7 @@ def deduct_fifo_inventory(
                         batch_lineage_id = batch.lineage_id
                     return code, batch_lineage_id
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_fifo_ops.py:432", exc_info=True)
                     return (
                         generate_inventory_event_code(
                             change_type, item_id=item_id, code_type="event"
@@ -702,6 +705,7 @@ def estimate_fifo_issue_unit_cost(
 
         return (cost_sum / qty_sum) if qty_sum > 0 else float(item.cost_per_unit or 0.0)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_fifo_ops.py:704", exc_info=True)
         return 0.0
 
 
@@ -786,5 +790,6 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
         return True, f"Credited {quantity} back to lot {lot_id}"
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_fifo_ops.py:788", exc_info=True)
         db.session.rollback()
         return False, f"Error crediting lot: {str(e)}"

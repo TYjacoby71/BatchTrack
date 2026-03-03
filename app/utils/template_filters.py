@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 
 from datetime import datetime
 from typing import Any, Callable, Dict
@@ -26,6 +27,9 @@ from .permissions import has_subscription_feature
 from .permissions import has_tier_permission as perm_has_tier_permission
 from .permissions import is_developer
 from .permissions import is_organization_owner as permissions_is_organization_owner
+
+logger = logging.getLogger(__name__)
+
 
 __all__ = ["register_template_filters"]
 
@@ -103,10 +107,12 @@ def _format_user_datetime(value: Any, format_string: str) -> str:
     try:
         return TimezoneUtils.format_for_user(value, format_string)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:105", exc_info=True)
         try:
             aware = TimezoneUtils.ensure_timezone_aware(value)
             return aware.strftime(format_string)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/utils/template_filters.py:109", exc_info=True)
             return ""
 
 
@@ -148,6 +154,7 @@ def _timestamp_to_date_filter(value: Any) -> str:
         aware = TimezoneUtils.ensure_timezone_aware(dt_obj)
         return TimezoneUtils.format_for_user(aware, "%B %d, %Y")
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:150", exc_info=True)
         return "Invalid date"
 
 
@@ -160,6 +167,7 @@ def _current_user_timezone() -> str:
             if timezone:
                 return timezone
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:162", exc_info=True)
         pass
     return "UTC"
 
@@ -184,6 +192,7 @@ def _from_symbol_filter(symbol: str):
         engine = ConversionEngine()
         return engine.get_unit_by_symbol(symbol)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:186", exc_info=True)
         return None
 
 
@@ -233,6 +242,7 @@ def _is_organization_owner_global() -> bool:
     try:
         return permissions_is_organization_owner()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:235", exc_info=True)
         return False
 
 
@@ -243,6 +253,7 @@ def _has_permission_global(*args) -> bool:
         if len(args) == 2:
             return perm_has_permission(args[0], args[1])
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:245", exc_info=True)
         pass
     return False
 
@@ -251,6 +262,7 @@ def _has_role_global(role_name: str) -> bool:
     try:
         return perm_has_role(role_name)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:253", exc_info=True)
         return False
 
 
@@ -261,6 +273,7 @@ def _current_user_organization():
         if current_user.is_authenticated:
             return getattr(current_user, "organization", None)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:263", exc_info=True)
         return None
     return None
 
@@ -269,6 +282,7 @@ def _has_tier_permission_global(permission_name: str) -> bool:
     try:
         return perm_has_tier_permission(permission_name)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:271", exc_info=True)
         return False
 
 
@@ -296,6 +310,7 @@ def _get_tier_features_global(tier_key: Any = None):
             return []
         return [permission.name for permission in getattr(tier, "permissions", [])]
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:298", exc_info=True)
         return []
 
 
@@ -303,6 +318,7 @@ def _has_subscription_feature_global(feature: str) -> bool:
     try:
         return has_subscription_feature(feature)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:305", exc_info=True)
         return False
 
 
@@ -310,6 +326,7 @@ def _is_developer_global() -> bool:
     try:
         return is_developer()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/utils/template_filters.py:312", exc_info=True)
         return False
 
 

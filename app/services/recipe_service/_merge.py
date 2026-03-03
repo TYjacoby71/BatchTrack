@@ -9,10 +9,14 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from typing import Dict, Iterable, List, Tuple
 
 from ...models import Recipe
+
+logger = logging.getLogger(__name__)
+
 
 
 # --- Ingredient map ---
@@ -30,6 +34,7 @@ def _ingredient_map(rows: Iterable) -> Dict[int, Dict[str, float | str]]:
         try:
             qty = float(quantity or 0)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_merge.py:32", exc_info=True)
             qty = 0.0
         mapping[int(item_id)] = {"quantity": qty, "unit": unit}
     return mapping

@@ -35,6 +35,7 @@ def _form_cache_ttl() -> int:
     try:
         return int(current_app.config.get("RECIPE_FORM_CACHE_TTL", 60))
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:37", exc_info=True)
         return 60
 
 
@@ -110,6 +111,7 @@ def _effective_org_id() -> Optional[int]:
         ):
             return session.get("dev_selected_org_id")
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:112", exc_info=True)
         return None
     return None
 
@@ -250,6 +252,7 @@ def render_recipe_form(recipe=None, **context):
                 test_sequence=context.get("test_sequence_hint"),
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:252", exc_info=True)
             label_prefix_display = None
     payload = {**form_data, **context, "label_prefix_display": label_prefix_display}
     return render_template("pages/recipes/recipe_form.html", recipe=recipe, **payload)
