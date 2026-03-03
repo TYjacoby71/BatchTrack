@@ -196,6 +196,7 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Add behavior-based controls for scanner patterns (bursting, high 404/403 ratios, high path entropy, HEAD sweeps across unknown paths)
 - [ ] Add challenge-first policy for medium-confidence traffic and block-only for high-confidence abuse
 - [ ] Lock origin to edge-only ingress (reject direct-to-origin internet traffic)
+- [ ] Enable origin-auth handshake between edge and app (`ENFORCE_EDGE_ORIGIN_AUTH`, `EDGE_ORIGIN_AUTH_HEADER`, `EDGE_ORIGIN_AUTH_SECRET`) after shadow validation
 - [ ] Re-scope `/api/public/bot-trap` to telemetry-only (or remove) once equivalent WAF controls are enforced
 - [ ] Add WAF dashboards and alerts (block/challenge rates, top rules, top source ASNs/IPs, false-positive samples)
 - [ ] Roll out in phases (shadow -> challenge -> block) with explicit conversion guardrails on `/homepage`, `/help/how-it-works`, `/signup`, and `/auth/signup`

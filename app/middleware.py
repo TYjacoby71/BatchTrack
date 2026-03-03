@@ -10,6 +10,7 @@ Glossary:
 
 from __future__ import annotations
 
+import hmac
 import logging
 import re
 import time
@@ -92,6 +93,72 @@ def _config_int(name: str, default: int, *, app: Flask | None = None) -> int:
     except (TypeError, ValueError):
         logger.warning("Invalid value for %s=%r; defaulting to %s", name, raw, default)
         return default
+
+
+# --- Config string ---
+# Purpose: Resolve string config values from app config.
+def _config_str(name: str, default: str = "", *, app: Flask | None = None) -> str:
+    if app is None and has_app_context():
+        app = current_app._get_current_object()
+    raw = app.config.get(name, default) if app is not None else default
+    if raw is None:
+        return default
+    value = str(raw).strip()
+    return value if value else default
+
+
+# --- Config CSV ---
+# Purpose: Resolve comma-separated config values.
+def _config_csv(name: str, default: str, *, app: Flask | None = None) -> tuple[str, ...]:
+    value = _config_str(name, default, app=app)
+    parsed = tuple(part.strip() for part in value.split(",") if part.strip())
+    if parsed:
+        return parsed
+    return tuple(part.strip() for part in default.split(",") if part.strip())
+
+
+# --- Path rule check ---
+# Purpose: Match exact paths or prefix rules ending with "*".
+def _path_matches_rule(path: str, rule: str) -> bool:
+    if not rule:
+        return False
+    if rule.endswith("*"):
+        return path.startswith(rule[:-1])
+    return path == rule
+
+
+# --- Edge origin auth ---
+# Purpose: Optionally require a shared edge header before serving requests.
+def _enforce_edge_origin_auth(app: Flask) -> Response | tuple[str, int] | None:
+    if not _config_flag("ENFORCE_EDGE_ORIGIN_AUTH", app=app):
+        return None
+
+    request_path = request.path or "/"
+    exempt_rules = _config_csv("EDGE_ORIGIN_AUTH_EXEMPT_PATHS", "/health", app=app)
+    if any(_path_matches_rule(request_path, rule) for rule in exempt_rules):
+        return None
+
+    expected_secret = _config_str("EDGE_ORIGIN_AUTH_SECRET", "", app=app)
+    if not expected_secret:
+        logger.error(
+            "ENFORCE_EDGE_ORIGIN_AUTH is enabled but EDGE_ORIGIN_AUTH_SECRET is empty."
+        )
+        return ("Service unavailable", 503)
+
+    header_name = _config_str("EDGE_ORIGIN_AUTH_HEADER", "X-Edge-Origin-Auth", app=app)
+    provided_secret = request.headers.get(header_name, "")
+    if hmac.compare_digest(str(provided_secret), expected_secret):
+        return None
+
+    logger.warning(
+        "Blocked request missing valid edge origin auth header: path=%s ip=%s ua=%s",
+        request_path,
+        PublicBotTrapService.resolve_request_ip(request),
+        (request.headers.get("User-Agent") or "-")[:160],
+    )
+    if _wants_json_response():
+        return jsonify({"error": "Forbidden"}), 403
+    return ("Forbidden", 403)
 
 
 # --- Wants JSON response ---
@@ -289,6 +356,10 @@ def register_middleware(app: Flask) -> None:
         request.environ["HTTP_X_REQUEST_ID"] = request_id
 
         path = request.path
+
+        edge_origin_auth_response = _enforce_edge_origin_auth(app)
+        if edge_origin_auth_response is not None:
+            return edge_origin_auth_response
 
         if RouteAccessConfig.is_monitoring_request(request):
             return None
