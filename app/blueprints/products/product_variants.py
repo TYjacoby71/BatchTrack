@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -7,6 +8,9 @@ from ...services.product_service import ProductService
 from ...utils.permissions import require_permission
 from ...utils.settings import is_feature_enabled
 from ...utils.unit_utils import get_global_unit_list
+
+logger = logging.getLogger(__name__)
+
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint("product_variants", __name__)
@@ -162,6 +166,7 @@ def add_variant(product_id):
 
     except Exception as e:
         # Rollback any changes if there's an error
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_variants.py:163", exc_info=True)
         db.session.rollback()
         # Log the full error for debugging
         import traceback
@@ -381,6 +386,7 @@ def create_sku_for_variant(product_id, variant_name):
 
         flash(f'SKU "{size_label}" created successfully.', "success")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_variants.py:383", exc_info=True)
         db.session.rollback()
         flash(f"Failed to create SKU: {str(e)}", "error")
 

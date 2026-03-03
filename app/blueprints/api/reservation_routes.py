@@ -116,6 +116,7 @@ def create_reservation():
             return jsonify({"error": "Failed to create reservation"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:118", exc_info=True)
         db.session.rollback()
         logger.error(f"Error creating reservation: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -149,6 +150,7 @@ def release_reservation(reservation_id):
             return jsonify({"error": "Failed to release reservation"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:151", exc_info=True)
         db.session.rollback()
         logger.error(f"Error releasing reservation: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -186,6 +188,7 @@ def convert_reservation_to_sale(reservation_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:188", exc_info=True)
         db.session.rollback()
         logger.error(f"Error converting reservation to sale: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -236,6 +239,7 @@ def expire_old_reservations():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:238", exc_info=True)
         db.session.rollback()
         logger.error(f"Error expiring reservations: {str(e)}")
         return jsonify({"error": str(e)}), 500

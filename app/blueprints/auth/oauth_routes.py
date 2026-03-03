@@ -106,6 +106,7 @@ def _oauth_success_or_signup_redirect(
         try:
             next_url = session.pop("login_next", None)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/auth/oauth_routes.py:108", exc_info=True)
             next_url = None
         if (
             isinstance(next_url, str)

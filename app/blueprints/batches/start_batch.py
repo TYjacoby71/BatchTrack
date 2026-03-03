@@ -7,6 +7,7 @@ Glossary:
 - Plan snapshot: Immutable payload used to start a batch.
 - Batch start: Creates an in-progress batch and inventory deductions.
 """
+import logging
 
 from flask import Blueprint, current_app, flash, jsonify, request
 from flask_login import current_user, login_required
@@ -21,6 +22,9 @@ from app.utils.permissions import (
 )
 
 from ...services.batch_service import BatchOperationsService
+
+logger = logging.getLogger(__name__)
+
 
 start_batch_bp = Blueprint("start_batch", __name__)
 
@@ -156,5 +160,6 @@ def start_batch():
         return jsonify({"batch_id": batch.id})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/start_batch.py:158", exc_info=True)
         flash(f"Error starting batch: {str(e)}", "error")
         return jsonify({"error": str(e)}), 500

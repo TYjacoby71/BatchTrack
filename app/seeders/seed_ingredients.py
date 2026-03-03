@@ -1,7 +1,11 @@
+import logging
 import json
 import os
 import re
 import sys
+
+logger = logging.getLogger(__name__)
+
 
 # Add the parent directory to the Python path so we can import app
 sys.path.insert(
@@ -368,6 +372,7 @@ def seed_ingredients_from_files(selected_files):
             with open(filepath, "r") as f:
                 category_data = json.load(f)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/seeders/seed_ingredients.py:370", exc_info=True)
             continue
 
         cat_name = category_data.get("category_name", "").strip()
@@ -559,5 +564,6 @@ if __name__ == "__main__":
             print(f"📊 Categories created: {categories_created}")
             print(f"📊 Items created: {items_created}")
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/seeders/seed_ingredients.py:561", exc_info=True)
             db.session.rollback()
             print(f"\n❌ Seeding failed during commit: {e}")

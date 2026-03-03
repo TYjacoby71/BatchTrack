@@ -417,6 +417,7 @@ class BillingService:
                 )
                 return
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/billing_service.py:418", exc_info=True)
                 pass
         elif current_timeout == desired_timeout or current_timeout == timeout_seconds:
             return
@@ -425,6 +426,7 @@ class BillingService:
             stripe.default_http_client = stripe.RequestsClient(timeout=desired_timeout)
             return
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/billing_service.py:426", exc_info=True)
             pass
 
         try:
@@ -441,6 +443,7 @@ class BillingService:
         try:
             secret = current_app.config.get("STRIPE_SECRET_KEY")
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/billing_service.py:442", exc_info=True)
             secret = None
         return secret
 
@@ -740,6 +743,7 @@ class BillingService:
                         next_payment_time
                     ).date()
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/billing_service.py:741", exc_info=True)
                     pass
 
             db.session.commit()

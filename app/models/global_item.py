@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import event
 
 from app.services.cache_invalidation import invalidate_global_library_cache
@@ -6,6 +7,9 @@ from ..extensions import db
 from ..utils.seo import slugify_value
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
+
+logger = logging.getLogger(__name__)
+
 
 
 class GlobalItem(db.Model):
@@ -202,6 +206,7 @@ def _apply_metadata_defaults(target):
     try:
         from app.services.global_item_metadata_service import GlobalItemMetadataService
     except Exception:
+        logger.warning("Suppressed exception fallback at app/models/global_item.py:204", exc_info=True)
         return
 
     new_metadata = GlobalItemMetadataService.merge_metadata(target)

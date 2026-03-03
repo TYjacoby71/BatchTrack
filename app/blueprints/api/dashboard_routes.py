@@ -10,11 +10,16 @@ Glossary:
 - Alert service: Service layer that builds alert payload collections.
 """
 
+import logging
+
 from flask import Blueprint, jsonify
 from flask_login import login_required
 
 from app.services.dashboard_alerts import DashboardAlertService
 from app.utils.permissions import require_permission
+
+logger = logging.getLogger(__name__)
+
 
 # --- Dashboard API blueprint ---
 # Purpose: Group dashboard-alert API handlers under /api.
@@ -93,6 +98,7 @@ def dismiss_alert():
         return jsonify({"success": True, "message": "Alert dismissed successfully"})
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/dashboard_routes.py:95", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -111,4 +117,5 @@ def clear_dismissed_alerts():
         session.pop("dismissed_alerts", None)
         return jsonify({"success": True, "message": "All dismissed alerts cleared"})
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/dashboard_routes.py:113", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500

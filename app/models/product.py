@@ -7,6 +7,7 @@ Glossary:
 - Product: Parent entity grouping variants and SKUs.
 - Variant: Option set under a product (size, scent, etc.).
 """
+import logging
 
 from datetime import datetime, timezone
 
@@ -18,6 +19,9 @@ from app.services.cache_invalidation import invalidate_product_list_cache
 
 from ..extensions import db
 from .mixins import ScopedModelMixin
+
+logger = logging.getLogger(__name__)
+
 
 
 class Product(ScopedModelMixin, db.Model):
@@ -314,6 +318,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
                 qty = float(lot.remaining_quantity or 0.0)
                 cost = float(lot.unit_cost or 0.0)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/models/product.py:316", exc_info=True)
                 qty = 0.0
                 cost = 0.0
 
@@ -348,6 +353,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
         try:
             return float(total_reserved or 0.0)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/models/product.py:350", exc_info=True)
             return 0.0
 
     @property
@@ -471,6 +477,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
                 _sz = "Bulk"
             _sz = " ".join(_sz.split())[:64]
         except Exception:
+            logger.warning("Suppressed exception fallback at app/models/product.py:473", exc_info=True)
             _sz = "Bulk"
         self.size_label = _sz
         self.sku_code = sku_code

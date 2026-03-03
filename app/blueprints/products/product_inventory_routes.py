@@ -243,6 +243,7 @@ def adjust_sku_inventory(inventory_item_id):
                 return jsonify({"error": str(e)}), 400
             flash(f"Error: {str(e)}", "error")
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:245", exc_info=True)
         db.session.rollback()
         error_msg = f"Error adjusting inventory: {str(e)}"
         logger.error(f"Exception in SKU inventory adjustment: {error_msg}")
@@ -414,6 +415,7 @@ def dispose_expired_sku(sku_id):
             return jsonify({"error": "Failed to dispose expired inventory"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:416", exc_info=True)
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -470,6 +472,7 @@ def process_sale_webhook():
             return jsonify({"error": "Failed to process sale"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:472", exc_info=True)
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -525,6 +528,7 @@ def process_return_webhook():
             return jsonify({"error": "Failed to process return"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:527", exc_info=True)
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -593,6 +597,7 @@ def create_manual_reservation():
             flash("Failed to create reservation", "error")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:595", exc_info=True)
         db.session.rollback()
         error_msg = f"Error creating reservation: {str(e)}"
         logger.error(error_msg)
@@ -662,5 +667,6 @@ def add_inventory_from_batch():
             return jsonify({"error": "Failed to add inventory"}), 500
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:664", exc_info=True)
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

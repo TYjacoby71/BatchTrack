@@ -112,6 +112,7 @@ def process_inventory_adjustment(
     try:
         qty_float = float(quantity)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_core.py:114", exc_info=True)
         qty_float = 0.0
     if is_initial_stock and qty_float > 0 and change_type in ADDITIVE_OPERATIONS:
         effective_change_type = "initial_stock"
@@ -149,6 +150,7 @@ def process_inventory_adjustment(
                         f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit}).",
                     )
             except Exception as e:
+                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_core.py:151", exc_info=True)
                 db.session.rollback()
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")
                 return _response(False, f"Unit conversion failed: {str(e)}")
@@ -325,11 +327,13 @@ def process_inventory_adjustment(
                 try:
                     current = float(item.cost_per_unit or 0.0)
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_core.py:327", exc_info=True)
                     current = 0.0
                 if abs((new_wac or 0.0) - current) > 1e-9:
                     item.cost_per_unit = float(new_wac or 0.0)
         except Exception:
             # Do not fail the adjustment because of WAC recompute issues
+            logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_core.py:331", exc_info=True)
             pass
 
         if quantity_delta_base is not None:
@@ -402,6 +406,7 @@ def process_inventory_adjustment(
             return _response(False, f"Database error: {str(e)}")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_core.py:404", exc_info=True)
         db.session.rollback()
         logger.error(
             f"Central delegation error for {change_type} on item {item.id}: {e}",

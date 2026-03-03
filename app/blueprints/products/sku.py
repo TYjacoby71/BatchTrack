@@ -209,6 +209,7 @@ def edit_sku(inventory_item_id):
         db.session.commit()
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/sku.py:211", exc_info=True)
         db.session.rollback()
         flash(f"Error updating SKU: {str(e)}", "error")
 
@@ -457,6 +458,7 @@ def execute_merge():
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/sku.py:459", exc_info=True)
         db.session.rollback()
         logger.error(f"Error merging SKUs: {str(e)}")
         flash(f"Error merging SKUs: {str(e)}", "error")

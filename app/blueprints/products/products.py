@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from flask import (
@@ -28,6 +29,9 @@ from ...services.product_service import ProductService
 from ...utils.cache_utils import should_bypass_cache
 from ...utils.settings import is_feature_enabled
 from ...utils.unit_utils import get_global_unit_list
+
+logger = logging.getLogger(__name__)
+
 
 try:
     from ...utils.permissions import require_permission
@@ -225,6 +229,7 @@ def create_product_from_data(data):
         }
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:227", exc_info=True)
         db.session.rollback()
         return {"success": False, "error": str(e)}
 
@@ -258,6 +263,7 @@ def list_products():
                 )
                 db.session.commit()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:260", exc_info=True)
             db.session.rollback()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
@@ -284,6 +290,7 @@ def list_products():
             try:
                 cache.set(page_cache_key, rendered, timeout=cache_ttl)
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:286", exc_info=True)
                 pass
             return rendered
 
@@ -451,6 +458,7 @@ def list_products():
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:453", exc_info=True)
         pass
     return rendered
 
@@ -517,6 +525,7 @@ def new_product():
             )
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:519", exc_info=True)
             db.session.rollback()
             flash(f"Error creating product: {str(e)}", "error")
             return redirect(url_for("products.new_product"))
@@ -527,6 +536,7 @@ def new_product():
 
         categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:529", exc_info=True)
         categories = []
     return render_template(
         "pages/products/new_product.html", product_categories=categories
@@ -625,6 +635,7 @@ def view_product(product_id):
             ProductCategory.name.asc()
         ).all()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:627", exc_info=True)
         product_categories = []
 
     auto_create_bulk_sku_on_variant = is_feature_enabled(
@@ -706,6 +717,7 @@ def edit_product(product_id):
     try:
         product.category_id = int(category_id)
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:708", exc_info=True)
         pass
 
     db.session.commit()
@@ -771,6 +783,7 @@ def delete_product(product_id):
         return redirect(url_for("products.list_products"))
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:773", exc_info=True)
         db.session.rollback()
         flash(f"Error deleting product: {str(e)}", "error")
         return redirect(url_for("products.view_product", product_id=product_id))

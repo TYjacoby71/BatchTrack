@@ -7,6 +7,7 @@ Glossary:
 - Module path: Source file `app/blueprints/developer/routes.py`.
 - Unit heading block: Standardized comment metadata above each top-level function/class.
 """
+import logging
 
 import os
 
@@ -21,6 +22,9 @@ from app.utils.timezone_utils import TimezoneUtils
 from .addons import addons_bp
 from .subscription_tiers import subscription_tiers_bp
 from .system_roles import system_roles_bp
+
+logger = logging.getLogger(__name__)
+
 
 # Initialize Limiter
 limiter = Limiter(
@@ -107,6 +111,7 @@ def api_vendor_signup():
     try:
         write_json_file(vendor_file, vendor_signup_data, append=True)
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/routes.py:109", exc_info=True)
         return jsonify({"error": f"Failed to save signup: {str(e)}"}), 500
 
     return jsonify({"message": "Vendor signup received successfully!"}), 201

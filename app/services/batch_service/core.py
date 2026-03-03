@@ -42,6 +42,7 @@ class BatchService(BaseService):
             return batch
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/core.py:44", exc_info=True)
             print(f"DEBUG: Error in get_batch_by_identifier: {str(e)}")
             logger.error(
                 f"Error getting batch by identifier {batch_identifier}: {str(e)}"
@@ -150,6 +151,7 @@ class BatchService(BaseService):
                         for c in getattr(batch, "consumables", []) or []
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/core.py:152", exc_info=True)
                     consumable_total = 0
 
                 # Extras
@@ -167,6 +169,7 @@ class BatchService(BaseService):
                         for e in getattr(batch, "extra_consumables", []) or []
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/batch_service/core.py:169", exc_info=True)
                     extra_consumable_total = 0
 
                 total_cost = (
@@ -211,6 +214,7 @@ class BatchService(BaseService):
             return True, "Batch updated successfully"
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/batch_service/core.py:213", exc_info=True)
             db.session.rollback()
             logger.error(f"Error updating batch notes/tags: {str(e)}")
             return False, str(e)

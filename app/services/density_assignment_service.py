@@ -1,3 +1,4 @@
+import logging
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -5,6 +6,9 @@ from flask import current_app
 
 from ..extensions import db
 from ..models import GlobalItem, IngredientCategory, InventoryItem
+
+logger = logging.getLogger(__name__)
+
 
 
 class DensityAssignmentService:
@@ -236,6 +240,7 @@ class DensityAssignmentService:
                 for c in cats
             ]
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/density_assignment_service.py:238", exc_info=True)
             return []
 
     @staticmethod

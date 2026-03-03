@@ -159,6 +159,7 @@ def _derive_variation_name(name: str | None, parent_name: str | None) -> str | N
                 if suffix:
                     return suffix
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:161", exc_info=True)
             pass
     return name
 
@@ -257,6 +258,7 @@ def _ensure_recipe_group(
             try:
                 _reset_group_insert_lock_timeout()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:259", exc_info=True)
                 pass
             existing_group = _find_group_by_name(recipe_org_id, normalized_name)
             if existing_group:
@@ -268,6 +270,7 @@ def _ensure_recipe_group(
             try:
                 _reset_group_insert_lock_timeout()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:270", exc_info=True)
                 pass
             existing_group = _find_group_by_name(recipe_org_id, normalized_name)
             if existing_group:
@@ -388,6 +391,7 @@ def create_recipe(
             if cloned_from_id:
                 clone_source = db.session.get(Recipe, cloned_from_id)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:390", exc_info=True)
             parent_recipe = parent_recipe or None
             clone_source = clone_source or None
 
@@ -417,6 +421,7 @@ def create_recipe(
                         if u and getattr(u, "name", None):
                             derived_unit = u.name
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:419", exc_info=True)
             pass
 
         recipe_group = None
@@ -713,11 +718,13 @@ def create_recipe(
                 is_variation=bool(parent_recipe_id),
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:715", exc_info=True)
             pass
 
         return True, recipe
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:720", exc_info=True)
         db.session.rollback()
         logger.error(f"Error creating recipe: {e}")
         return False, str(e)
@@ -796,6 +803,7 @@ def update_recipe(
                         )
                     )
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:798", exc_info=True)
                     continue
             return sorted(normalized)
 
@@ -1157,11 +1165,13 @@ def update_recipe(
                 properties={"recipe_id": recipe_id},
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1159", exc_info=True)
             pass
 
         return True, recipe
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1164", exc_info=True)
         db.session.rollback()
         logger.error(f"Error updating recipe {recipe_id}: {e}")
         return False, str(e)
@@ -1220,10 +1230,12 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
                 properties={"name": recipe_name},
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1222", exc_info=True)
             pass
         return True, f"Recipe '{recipe_name}' deleted successfully"
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1226", exc_info=True)
         db.session.rollback()
         logger.error(f"Error deleting recipe {recipe_id}: {e}")
         return False, f"Error deleting recipe: {str(e)}"
@@ -1333,6 +1345,7 @@ def duplicate_recipe(
                 if gi:
                     ingredient_globals.add(int(gi))
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1335", exc_info=True)
                 continue
         for rc in original.recipe_consumables:
             try:
@@ -1342,6 +1355,7 @@ def duplicate_recipe(
                 if gi:
                     consumable_globals.add(int(gi))
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/recipe_service/_core.py:1344", exc_info=True)
                 continue
 
         target_org_for_mapping = (

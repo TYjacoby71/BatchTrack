@@ -1,5 +1,9 @@
+import logging
 from app.extensions import db
 from app.models.product_category import ProductCategory
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_CATEGORIES = [
     # Portioned categories use derivative portion size attributes
@@ -98,6 +102,7 @@ def seed_product_categories():
             f"✅ Product categories seeded successfully! (Created: {categories_created}, Updated: {categories_updated})"
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/seeders/product_category_seeder.py:100", exc_info=True)
         db.session.rollback()
         print(f"❌ Error seeding product categories: {e}")
         raise

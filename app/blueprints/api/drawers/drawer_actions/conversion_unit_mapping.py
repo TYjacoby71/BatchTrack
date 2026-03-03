@@ -9,6 +9,7 @@ Glossary:
 - Custom unit mapping: Organization-specific conversion relationship record.
 - Mapping factor: Numeric multiplier translating from one unit to another.
 """
+import logging
 
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -17,6 +18,9 @@ from app.models import CustomUnitMapping, db
 from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_drawer_action
+
+logger = logging.getLogger(__name__)
+
 
 # --- Register drawer action ---
 # Purpose: Advertise unit-mapping drawer metadata to drawer clients.
@@ -96,6 +100,7 @@ def conversion_unit_mapping_modal_post():
     try:
         db.session.commit()
     except Exception as exc:  # pragma: no cover - defensive rollback
+        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py:98", exc_info=True)
         db.session.rollback()
         return jsonify({"error": f"Failed to create mapping: {exc}"}), 500
 

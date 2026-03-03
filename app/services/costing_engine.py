@@ -63,6 +63,7 @@ def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> 
             item = db.session.get(InventoryItem, inventory_item_id)
             return float(item.cost_per_unit or 0.0) if item else 0.0
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/costing_engine.py:65", exc_info=True)
             return 0.0
 
 
@@ -123,4 +124,5 @@ def weighted_average_cost_for_item(inventory_item_id: int) -> float:
             item = db.session.get(InventoryItem, int(inventory_item_id))
             return float(item.cost_per_unit or 0.0) if item else 0.0
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/costing_engine.py:125", exc_info=True)
             return 0.0

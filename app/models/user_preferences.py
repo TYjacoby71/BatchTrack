@@ -1,8 +1,12 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from ..extensions import db
 from .mixins import ScopedModelMixin
+
+logger = logging.getLogger(__name__)
+
 
 
 class UserPreferences(ScopedModelMixin, db.Model):
@@ -82,6 +86,7 @@ class UserPreferences(ScopedModelMixin, db.Model):
 
             return preferences
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/models/user_preferences.py:84", exc_info=True)
             print(f"Error getting user preferences for user {user_id}: {e}")
             db.session.rollback()
             return None

@@ -8,6 +8,7 @@ Glossary:
 - Organization: Tenant owning recipes, inventory, and users.
 - User: Authenticated account tied to an organization or developer role.
 """
+import logging
 
 # app/models/models.py
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
@@ -24,6 +25,9 @@ from sqlalchemy.orm import selectinload
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 
+logger = logging.getLogger(__name__)
+
+
 
 # --- Export model symbols ---
 # Purpose: Safely re-export models for legacy imports without crashing.
@@ -36,6 +40,7 @@ def _export(targets):
             g[alias or name] = cls
         except Exception:
             # silently skip if module/class doesn't exist
+            logger.warning("Suppressed exception fallback at app/models/models.py:37", exc_info=True)
             pass
 
 
@@ -107,6 +112,7 @@ def _rollback_if_inactive() -> None:
         if not getattr(db.session, "is_active", True):
             db.session.rollback()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/models/models.py:109", exc_info=True)
         pass
 
 
@@ -271,6 +277,7 @@ class Organization(db.Model):
 
             return BillingService.get_comprehensive_pricing_data()
         except Exception:
+            logger.warning("Suppressed exception fallback at app/models/models.py:273", exc_info=True)
             return {"tiers": {}, "available": False}
 
     def is_owner(self, user):
@@ -502,6 +509,7 @@ class User(UserMixin, db.Model):
 
             return roles
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/models/models.py:504", exc_info=True)
             print("---!!! USER ROLE ASSIGNMENT ERROR (POTENTIAL ORIGINAL SIN?) !!!---")
             print(f"Error getting active roles for user {self.id}: {e}")
             print(f"Error type: {type(e).__name__}")
@@ -541,6 +549,7 @@ class User(UserMixin, db.Model):
                     self.organization
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/models/models.py:543", exc_info=True)
                 tier_permissions = None
 
         for role in roles:

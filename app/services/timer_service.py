@@ -23,6 +23,7 @@ class TimerService:
             if current_user and current_user.is_authenticated:
                 return getattr(current_user, "organization_id", None)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/timer_service.py:25", exc_info=True)
             return None
         return None
 
@@ -107,6 +108,7 @@ class TimerService:
             try:
                 db.session.commit()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/timer_service.py:109", exc_info=True)
                 db.session.rollback()
                 raise
 
@@ -148,9 +150,11 @@ class TimerService:
                     },
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/timer_service.py:150", exc_info=True)
                 pass
             return timer
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/services/timer_service.py:153", exc_info=True)
             db.session.rollback()
             raise e
 
@@ -177,6 +181,7 @@ class TimerService:
                 },
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/timer_service.py:179", exc_info=True)
             pass
         return True
 

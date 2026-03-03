@@ -36,6 +36,11 @@ def app():
             "DATABASE_URL": f"sqlite:///{db_path}",
             "WTF_CSRF_ENABLED": False,
             "SECRET_KEY": "test-secret-key",
+            "REDIS_URL": None,
+            "SESSION_TYPE": "filesystem",
+            "RATELIMIT_STORAGE_URI": "memory://",
+            "BOT_TRAP_REDIS_ENABLED": False,
+            "SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK": False,
             "STRIPE_SECRET_KEY": "sk_test_fake",
             "STRIPE_WEBHOOK_SECRET": "whsec_test_fake",
             "LOGIN_DISABLED": False,  # Ensure authentication is active in tests

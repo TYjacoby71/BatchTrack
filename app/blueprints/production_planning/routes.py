@@ -253,6 +253,7 @@ def debug_recipe_containers(recipe_id):
         )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/production_planning/routes.py:255", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 

@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -31,6 +32,9 @@ from ..lineage_utils import (
     serialize_lineage_tree,
 )
 
+logger = logging.getLogger(__name__)
+
+
 
 # =========================================================
 # LINEAGE VIEW
@@ -49,6 +53,7 @@ def recipe_lineage(recipe_id):
         flash("You do not have access to this recipe.", "error")
         return redirect(url_for("recipes.list_recipes"))
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/lineage_routes.py:51", exc_info=True)
         flash(f"Unable to load recipe lineage: {exc}", "error")
         return redirect(url_for("recipes.list_recipes"))
 

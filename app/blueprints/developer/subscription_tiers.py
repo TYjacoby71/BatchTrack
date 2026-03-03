@@ -170,6 +170,7 @@ def create_tier():
                 v = int(str(text).strip())
                 return v
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:172", exc_info=True)
                 return default
 
         user_limit = _parse_int_allow_neg1(request.form.get("user_limit", 1), 1)
@@ -298,6 +299,7 @@ def create_tier():
                     else []
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:300", exc_info=True)
                 pass
 
         db.session.commit()
@@ -470,6 +472,7 @@ def edit_tier(tier_id):
                     else []
                 )
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:472", exc_info=True)
                 pass
 
             # Update permissions (merge with addon-linked permissions)
@@ -499,6 +502,7 @@ def edit_tier(tier_id):
             return redirect(url_for(".manage_tiers"))
 
         except Exception as e:
+            logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:501", exc_info=True)
             db.session.rollback()
             logger.error(f"Error updating tier: {e}")
             flash("Error updating tier. Please try again.", "error")
@@ -553,6 +557,7 @@ def delete_tier(tier_id):
         flash(f'Subscription tier "{tier.name}" has been deleted.', "success")
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:555", exc_info=True)
         db.session.rollback()
         logger.error(f"Error deleting tier: {e}")
         flash("Error deleting tier. Please try again.", "error")

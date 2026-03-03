@@ -31,6 +31,9 @@ from app.utils.seo import slugify_value
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
+logger = logging.getLogger(__name__)
+
+
 
 class FormValidationError(Exception):
     """Raised when a submitted form payload cannot be processed."""
@@ -409,6 +412,7 @@ def global_item_edit(item_id):
     try:
         validate_csrf(request.form.get("csrf_token"))
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:411", exc_info=True)
         flash(f"CSRF validation failed: {exc}", "error")
         return redirect(url_for("developer.global_item_detail", item_id=item_id))
 
@@ -456,6 +460,7 @@ def global_item_edit(item_id):
         item.container_style = (form_data.get("container_style") or "").strip() or None
         item.container_color = (form_data.get("container_color") or "").strip() or None
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:458", exc_info=True)
         pass
     item.default_is_perishable = form_data.get("default_is_perishable") == "on"
     shelf_life = form_data.get("recommended_shelf_life_days")
@@ -475,6 +480,7 @@ def global_item_edit(item_id):
     try:
         item.cas_number = (form_data.get("cas_number") or "").strip() or None
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:477", exc_info=True)
         pass
 
     protein = form_data.get("protein_content_pct")
@@ -611,6 +617,7 @@ def global_item_edit(item_id):
         )
         flash("Global item updated successfully", "success")
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:613", exc_info=True)
         db.session.rollback()
         flash(f"Error updating global item: {exc}", "error")
 
@@ -805,6 +812,7 @@ def create_global_item():
                     form_data.get("container_color") or ""
                 ).strip() or None
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:807", exc_info=True)
                 pass
             new_item.default_is_perishable = (
                 form_data.get("default_is_perishable") == "on"
@@ -829,6 +837,7 @@ def create_global_item():
                     form_data.get("cas_number") or ""
                 ).strip() or None
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:831", exc_info=True)
                 new_item.cas_number = None
 
             protein_content = form_data.get("protein_content_pct", "").strip()
@@ -933,6 +942,7 @@ def create_global_item():
                 selected_physical_form=selected_physical_form_for_render,
             )
         except Exception as exc:
+            logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:935", exc_info=True)
             db.session.rollback()
             flash(f"Error creating global item: {exc}", "error")
             return render_form(
@@ -1027,6 +1037,7 @@ def delete_global_item(item_id):
         )
 
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:1029", exc_info=True)
         db.session.rollback()
         logging.error(
             "GLOBAL_ITEM_DELETE_FAILED: Error deleting global item %s: %s",

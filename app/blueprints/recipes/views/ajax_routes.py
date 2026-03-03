@@ -71,6 +71,7 @@ def quick_add_unit():
             }
         )
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:73", exc_info=True)
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
 
@@ -129,6 +130,7 @@ def quick_add_ingredient():
         )
 
     except Exception as exc:
+        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:131", exc_info=True)
         db.session.rollback()
         logger.error("Error quick-adding ingredient: %s", exc)
         return jsonify({"error": str(exc)}), 500

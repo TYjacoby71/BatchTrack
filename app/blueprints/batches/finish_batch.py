@@ -72,6 +72,7 @@ def complete_batch(batch_id):
         # This delegates to the existing _complete_batch_internal function below
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:74", exc_info=True)
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f"Error completing batch: {str(e)}", "error")
@@ -116,6 +117,7 @@ def fail_batch(batch_id):
             )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:118", exc_info=True)
         db.session.rollback()
         logger.error(f"Error failing batch {batch_id}: {str(e)}")
         if request.is_json:
@@ -215,6 +217,7 @@ def _complete_batch_internal(batch_id, form_data):
                         "Final portions must be provided for portioned batches",
                     )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:217", exc_info=True)
             return False, "Invalid final portions value"
 
         # Perishable settings
@@ -303,12 +306,14 @@ def _complete_batch_internal(batch_id, form_data):
                     # Fallback: if no containers involved, treat as N/A (leave default)
                     pass
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:305", exc_info=True)
             pass
 
         try:
             db.session.commit()
             return True, f"Batch {batch.label_code} completed successfully!"
         except Exception as commit_error:
+            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:311", exc_info=True)
             db.session.rollback()
             return (
                 False,
@@ -316,6 +321,7 @@ def _complete_batch_internal(batch_id, form_data):
             )
 
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:318", exc_info=True)
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         return False, f"Error completing batch: {str(e)}"
@@ -511,6 +517,7 @@ def _create_product_output(
                 try:
                     portion_unit_cost = total_ingredient_cost / float(final_portions)
                 except Exception:
+                    logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:513", exc_info=True)
                     portion_unit_cost = ingredient_unit_cost
 
                 # Fetch or create SKU tied to provided product/variant within batch org context
@@ -570,6 +577,7 @@ def _create_product_output(
                         base_context.update(naming_context)
                         sku_name = SKUNameBuilder.render(template, base_context)
                     except Exception:
+                        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:572", exc_info=True)
                         sku_name = f"{product.name} - {variant.name} - {size_label}"
 
                     sku = ProductSKU(
@@ -653,6 +661,7 @@ def _derive_size_label_from_portions(
         unit = bulk_unit
         return f"{per_portion} {unit} {portion_name}"
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:655", exc_info=True)
         return "Portion"
 
 
@@ -810,6 +819,7 @@ def _create_container_sku(
             try:
                 display_name = container_item.container_display_name
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:812", exc_info=True)
                 display_name = container_item.name
             size_label = f"{cap_str} {display_name}".strip()
         else:
@@ -817,6 +827,7 @@ def _create_container_sku(
             try:
                 display_name = container_item.container_display_name
             except Exception:
+                logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:819", exc_info=True)
                 display_name = container_item.name
             size_label = display_name
         # Final sanitize
@@ -875,6 +886,7 @@ def _create_container_sku(
             base_context.update(naming_context)
             product_sku.sku_name = SKUNameBuilder.render(template, base_context)
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:877", exc_info=True)
             pass
 
         # Set perishable data at the inventory_item level from batch

@@ -58,6 +58,7 @@ class EventEmitter:
                     .scalar()
                 ) or 0
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/event_emitter.py:60", exc_info=True)
             user_count = None
             org_count = None
         return user_count, org_count
@@ -76,6 +77,7 @@ class EventEmitter:
                 .scalar()
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/event_emitter.py:78", exc_info=True)
             return None
 
     @staticmethod
@@ -187,5 +189,6 @@ class EventEmitter:
             try:
                 db.session.rollback()
             except Exception:
+                logger.warning("Suppressed exception fallback at app/services/event_emitter.py:189", exc_info=True)
                 pass
             return None

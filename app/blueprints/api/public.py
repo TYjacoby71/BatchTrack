@@ -9,6 +9,7 @@ Glossary:
 - Bot trap: Endpoint that records and blocks suspicious automation traffic.
 - Group mode: Ingredient-centric payload mode for grouped global-item results.
 """
+import logging
 
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -30,6 +31,9 @@ from app.services.soapcalc_oils_service import (
 )
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.utils.cache_utils import stable_cache_key
+
+logger = logging.getLogger(__name__)
+
 
 # --- Public API blueprint ---
 # Purpose: Group unauthenticated API routes used by public tools/pages.
@@ -149,6 +153,7 @@ def public_units():
             }
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/public.py:151", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -203,6 +208,7 @@ def public_global_item_search():
                 )
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/blueprints/api/public.py:205", exc_info=True)
             query = query.filter(GlobalItem.name.ilike(term))
 
         items = query.order_by(func.length(GlobalItem.name).asc()).limit(25).all()
@@ -446,6 +452,7 @@ def public_global_item_search():
                 )
         return jsonify(payload)
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/public.py:448", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -521,6 +528,7 @@ def public_convert_units():
         )
         return jsonify({"success": result.get("success", False), "data": result})
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/public.py:523", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 

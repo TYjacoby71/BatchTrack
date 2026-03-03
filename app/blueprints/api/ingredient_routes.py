@@ -10,6 +10,7 @@ Glossary:
 - Definition search: Ingredient-definition lookup for curated global items.
 - Group mode: Ingredient-centric payload mode that nests forms per ingredient.
 """
+import logging
 
 from collections import OrderedDict
 
@@ -27,6 +28,9 @@ from ...services.cache_invalidation import global_library_cache_key
 from ...services.density_assignment_service import DensityAssignmentService
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...utils.cache_utils import stable_cache_key
+
+logger = logging.getLogger(__name__)
+
 
 # --- Ingredient API blueprint ---
 # Purpose: Group authenticated ingredient and global-item API endpoints.
@@ -494,6 +498,7 @@ def create_or_link_ingredient():
             }
         )
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/ingredient_routes.py:496", exc_info=True)
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -548,6 +553,7 @@ def search_global_items():
             .all()
         )
     except Exception:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/ingredient_routes.py:550", exc_info=True)
         items = (
             query.filter(name_match)
             .order_by(func.length(GlobalItem.name).asc())
@@ -809,4 +815,5 @@ def get_global_item_stats(global_item_id):
         rollup = GlobalItemStatsService.get_rollup(global_item_id)
         return jsonify({"success": True, "stats": rollup})
     except Exception as e:
+        logger.warning("Suppressed exception fallback at app/blueprints/api/ingredient_routes.py:811", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500

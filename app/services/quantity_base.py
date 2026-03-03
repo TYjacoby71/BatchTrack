@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+import logging
 
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
@@ -17,6 +18,9 @@ from sqlalchemy import func
 
 from app.models import Unit
 from app.services.unit_conversion import ConversionEngine
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_SCALE = 1_000_000
 COUNT_SCALE = 32  # Allow 1/32 increments for count-based units
@@ -72,6 +76,7 @@ def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
 
         seed_units()
     except Exception:
+        logger.warning("Suppressed exception fallback at app/services/quantity_base.py:74", exc_info=True)
         return None
     return Unit.query.filter(
         (Unit.name == unit_key)

@@ -398,6 +398,7 @@ class EmailService:
                 and current_app.config.get("MAIL_PASSWORD")
             )
         except Exception:
+            logger.warning("Suppressed exception fallback at app/services/email_service.py:400", exc_info=True)
             return False
 
     @staticmethod
