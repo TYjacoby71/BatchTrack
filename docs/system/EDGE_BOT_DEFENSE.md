@@ -17,6 +17,29 @@ Recommended providers:
 - Fastly + Next-Gen WAF
 - AWS CloudFront + AWS WAF
 
+### Step 1 execution (Cloudflare + Render)
+
+Use this sequence for a low-risk first cutover:
+
+1. Add `batchtrack.com` to Cloudflare and import existing DNS records.
+2. Proxy the public web records through Cloudflare (orange-cloud) for:
+   - apex (`batchtrack.com`)
+   - `www.batchtrack.com`
+3. Keep non-web records (mail, verification, etc.) DNS-only unless they must traverse the edge.
+4. Set SSL/TLS mode to `Full (strict)` and enable HTTPS redirects.
+5. Configure a shared origin-auth header at the edge (Transform Rule or Worker), for example:
+   - Header: `X-Edge-Origin-Auth`
+   - Value: long random secret
+6. Configure app env vars:
+   - `EDGE_ORIGIN_AUTH_HEADER=X-Edge-Origin-Auth`
+   - `EDGE_ORIGIN_AUTH_SECRET=<same-random-secret>`
+   - `EDGE_ORIGIN_AUTH_EXEMPT_PATHS=/health`
+   - Keep `ENFORCE_EDGE_ORIGIN_AUTH=false` during shadow validation.
+7. Validate edge header arrives at origin, then set `ENFORCE_EDGE_ORIGIN_AUTH=true`.
+8. If unexpected blocking occurs, rollback by setting `ENFORCE_EDGE_ORIGIN_AUTH=false`.
+
+This repository now supports optional origin-auth enforcement in middleware so direct-to-origin requests can be rejected once the edge is injecting the shared header.
+
 ## 2) Enable managed WAF rules
 
 At minimum, enable:
