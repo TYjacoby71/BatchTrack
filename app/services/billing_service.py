@@ -765,6 +765,25 @@ class BillingService:
                     pass
 
             db.session.commit()
+
+            # Auto-run eligible affiliate payouts after successful invoice events.
+            try:
+                from .affiliate_service import AffiliateService
+
+                auto_result = AffiliateService.run_automatic_stripe_payouts(
+                    limit_batches=20, auto_commit=True
+                )
+                if int(auto_result.get("sent_batches", 0) or 0) > 0:
+                    logger.info(
+                        "Auto affiliate payout run pushed %s batch(es) (%s).",
+                        auto_result.get("sent_batches"),
+                        auto_result.get("sent_commission_display"),
+                    )
+            except Exception:
+                logger.warning(
+                    "Suppressed exception fallback at app/services/billing_service.py:auto_affiliate_payouts",
+                    exc_info=True,
+                )
         except Exception as exc:
             logger.error(f"Error handling payment succeeded: {exc}")
             db.session.rollback()

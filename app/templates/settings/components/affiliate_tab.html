@@ -72,7 +72,7 @@
                 <h6 class="mb-0">Payout / Payment Status</h6>
             </div>
             <div class="card-body">
-                <p class="text-muted small mb-2">Stripe payout lifecycle for commissions attributed to your organization.</p>
+                <p class="text-muted small mb-2">Stripe payout lifecycle for commissions attributed to your organization, released after a 30-day arrears hold.</p>
                 {% with payout_status_summary=affiliate.payout_status_summary %}
                     {% include "components/affiliate/payout_status_summary_cards.html" %}
                 {% endwith %}

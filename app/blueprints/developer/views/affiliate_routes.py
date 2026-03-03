@@ -120,7 +120,27 @@ def _payout_update_error_message(reason: str | None) -> str:
         return "Invalid payout status requested. Use Pending, Sent, Complete, or Unsuccessful."
     if reason == "not_found":
         return "No payout rows were found for the selected organization/month batch."
+    if reason == "organization_not_found":
+        return "The selected organization no longer exists."
+    if reason == "unsupported_payout_provider":
+        return "Only Stripe payout destinations are supported for affiliate payout pushes."
+    if reason == "payout_account_not_ready":
+        return "Stripe payout destination is not configured for this organization."
+    if reason == "not_eligible":
+        return "This batch is still in arrears and is not eligible yet. Use force push to override."
+    if reason == "blocked_by_churn_window":
+        return "This batch was blocked by churn within the 30-day arrears window."
+    if reason == "no_payable_rows":
+        return "No payable earnings were found in this batch."
+    if reason == "stripe_not_configured":
+        return "Stripe is not configured on this environment."
+    if reason == "stripe_transfer_failed":
+        return "Stripe payout push failed. Check payout destination and platform balance."
     return "Unable to update payout status due to an unexpected error."
+
+
+def _parse_force_flag(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 @developer_bp.route("/affiliate-payouts/update-status", methods=["POST"])
@@ -196,9 +216,122 @@ def affiliate_payout_update_status():
     return _affiliate_payout_redirect()
 
 
+@developer_bp.route("/affiliate-payouts/push-stripe", methods=["POST"])
+@require_developer_permission("dev.view_all_billing")
+def affiliate_payout_push_stripe():
+    """Push a payout batch to Stripe and mark it as sent."""
+    try:
+        validate_csrf(request.form.get("csrf_token"))
+    except Exception:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/affiliate_routes.py:csrf_push",
+            exc_info=True,
+        )
+        flash(
+            "Security validation failed while pushing payout. Refresh and try again.",
+            "error",
+        )
+        return _affiliate_payout_redirect()
+
+    organization_id = request.form.get("organization_id", type=int)
+    earning_month = request.form.get("earning_month", type=str)
+    force_push = _parse_force_flag(request.form.get("force_push", type=str))
+    result = AffiliateService.push_monthly_payout_to_stripe(
+        organization_id=organization_id,
+        earning_month=earning_month,
+        force=force_push,
+        auto_commit=True,
+        send_email=True,
+    )
+    if not result.get("ok"):
+        message = _payout_update_error_message(result.get("reason"))
+        if result.get("reason") == "not_eligible" and result.get("eligible_on"):
+            message = (
+                f"Batch is in arrears until {result.get('eligible_on')} "
+                f"({result.get('days_until_eligible')} day(s) remaining)."
+            )
+        flash(message, "error")
+        return _affiliate_payout_redirect()
+
+    flash(
+        (
+            f"Stripe payout pushed as Sent for {result.get('earning_month')} "
+            f"({AffiliateService._format_currency_cents(result.get('status_changed_commission_cents'))})."
+        ),
+        "success",
+    )
+    payout_reference = result.get("payout_reference")
+    if payout_reference:
+        flash(f"Payout reference: {payout_reference}", "info")
+
+    blocked_rows = int(result.get("blocked_rows", 0) or 0)
+    if blocked_rows > 0:
+        flash(
+            (
+                f"Skipped {blocked_rows} earning row(s) due to churn inside the "
+                f"{AffiliateService.PAYOUT_ARREARS_DAYS}-day hold window."
+            ),
+            "warning",
+        )
+    email_attempted = int(result.get("email_attempted", 0) or 0)
+    email_sent = int(result.get("email_sent", 0) or 0)
+    if email_attempted == 0:
+        flash(
+            "Stripe payout was pushed, but no recipient email was available for status notification.",
+            "info",
+        )
+    elif email_sent < email_attempted:
+        flash(
+            f"Stripe payout pushed, but only {email_sent}/{email_attempted} notification emails were sent from noreply.",
+            "warning",
+        )
+    return _affiliate_payout_redirect()
+
+
+@developer_bp.route("/affiliate-payouts/run-auto", methods=["POST"])
+@require_developer_permission("dev.view_all_billing")
+def affiliate_payout_run_auto():
+    """Run auto payout processing for eligible arrears batches."""
+    try:
+        validate_csrf(request.form.get("csrf_token"))
+    except Exception:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/affiliate_routes.py:csrf_auto",
+            exc_info=True,
+        )
+        flash(
+            "Security validation failed while running auto payouts. Refresh and try again.",
+            "error",
+        )
+        return _affiliate_payout_redirect()
+
+    result = AffiliateService.run_automatic_stripe_payouts(limit_batches=50, auto_commit=True)
+    if not result.get("ok"):
+        flash(_payout_update_error_message(result.get("reason")), "error")
+        return _affiliate_payout_redirect()
+
+    flash(
+        (
+            f"Auto payout run complete: {result.get('sent_batches')} batch(es) pushed, "
+            f"{result.get('skipped_not_eligible')} not yet eligible, "
+            f"{result.get('skipped_no_payable')} without payable rows, "
+            f"{result.get('failed_batches')} failed."
+        ),
+        "success",
+    )
+    if int(result.get("sent_batches", 0) or 0) > 0:
+        flash(
+            f"Auto-pushed payout total: {result.get('sent_commission_display')}.",
+            "info",
+        )
+    return _affiliate_payout_redirect()
+
+
 __all__ = [
     "affiliate_ecosystem",
     "affiliate_ecosystem_organization",
     "affiliate_payouts",
+    "affiliate_payout_push_stripe",
+    "affiliate_payout_run_auto",
     "affiliate_payout_update_status",
 ]

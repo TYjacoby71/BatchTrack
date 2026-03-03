@@ -122,7 +122,7 @@
                     <h6 class="mb-0">Stripe Payout Status</h6>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Track payout collection state for affiliate commissions before and after Stripe settlement.</p>
+                    <p class="text-muted small mb-2">Track payout collection state for affiliate commissions after a 30-day arrears hold and through Stripe settlement.</p>
                     {% with payout_status_summary=affiliate.payout_status_summary %}
                         {% include "components/affiliate/payout_status_summary_cards.html" %}
                     {% endwith %}

@@ -39,6 +39,7 @@ from ..utils.timezone_utils import TimezoneUtils
 class AffiliateService:
     COOKIE_NAME = "bt_affiliate_ref"
     COOKIE_MAX_AGE_SECONDS = 90 * 24 * 60 * 60
+    PAYOUT_ARREARS_DAYS = 30
     _CODE_PATTERN = re.compile(r"^[a-z0-9_-]{4,64}$")
 
     @classmethod
@@ -603,14 +604,64 @@ class AffiliateService:
     @staticmethod
     def _parse_earning_month(earning_month_value: str | date | None) -> date | None:
         if isinstance(earning_month_value, date):
-            return earning_month_value
+            return earning_month_value.replace(day=1)
         raw_value = str(earning_month_value or "").strip()
         if not raw_value:
             return None
         try:
-            return datetime.strptime(raw_value, "%Y-%m-%d").date()
+            return datetime.strptime(raw_value, "%Y-%m-%d").date().replace(day=1)
         except ValueError:
             return None
+
+    @staticmethod
+    def _add_months(month_start: date, months: int) -> date:
+        """Add months to a month-start date and return normalized month-start."""
+        index = (month_start.year * 12) + (month_start.month - 1) + int(months or 0)
+        year = index // 12
+        month = (index % 12) + 1
+        return date(year, month, 1)
+
+    @classmethod
+    def _compute_payout_arrears_window(
+        cls,
+        earning_month: date | None,
+        *,
+        as_of_date: date | None = None,
+    ) -> dict[str, Any]:
+        """Compute one-month-in-arrears eligibility details for a payout batch."""
+        month_start = (earning_month or TimezoneUtils.utc_now().date()).replace(day=1)
+        month_end = cls._add_months(month_start, 1) - timedelta(days=1)
+        eligible_on = month_end + timedelta(days=cls.PAYOUT_ARREARS_DAYS)
+        comparison_date = as_of_date or TimezoneUtils.utc_now().date()
+        days_until_eligible = max(0, (eligible_on - comparison_date).days)
+        return {
+            "month_start": month_start,
+            "month_end": month_end,
+            "eligible_on": eligible_on,
+            "eligible_on_iso": eligible_on.isoformat(),
+            "eligible_on_display": eligible_on.strftime("%Y-%m-%d"),
+            "arrears_days": int(cls.PAYOUT_ARREARS_DAYS),
+            "days_until_eligible": int(days_until_eligible),
+            "is_eligible": comparison_date >= eligible_on,
+        }
+
+    @classmethod
+    def _is_row_blocked_by_churn_window(
+        cls,
+        row: AffiliateMonthlyEarning,
+        *,
+        eligible_on: date,
+    ) -> bool:
+        """Return True when referral churn happened before payout became eligible."""
+        if row is None:
+            return False
+        referral = getattr(row, "referral", None)
+        if referral is None:
+            return False
+        churned_at = cls._to_utc_aware(getattr(referral, "churned_at", None))
+        if churned_at is None:
+            return False
+        return churned_at.date() <= eligible_on
 
     @staticmethod
     def _payout_status_case_expression():
@@ -709,26 +760,40 @@ class AffiliateService:
             .limit(max(1, int(limit)))
             .all()
         )
-        return [
-            {
-                "earning_month": row.earning_month,
-                "earning_month_iso": row.earning_month.isoformat() if row.earning_month else "",
-                "earning_month_display": (
-                    row.earning_month.strftime("%b %Y") if row.earning_month else "Unknown"
-                ),
-                "payout_status": normalize_payout_status(getattr(row, "canonical_status", None))
-                or PAYOUT_STATUS_PENDING,
-                "payout_status_label": payout_status_label(
-                    getattr(row, "canonical_status", None)
-                ),
-                "commission_cents": int(getattr(row, "commission_cents", 0) or 0),
-                "commission_display": cls._format_currency_cents(
-                    getattr(row, "commission_cents", 0) or 0
-                ),
-                "payout_reference": row.payout_reference,
-            }
-            for row in rows
-        ]
+        payload_rows: list[dict[str, Any]] = []
+        for row in rows:
+            arrears_window = cls._compute_payout_arrears_window(row.earning_month)
+            payload_rows.append(
+                {
+                    "earning_month": row.earning_month,
+                    "earning_month_iso": (
+                        row.earning_month.isoformat() if row.earning_month else ""
+                    ),
+                    "earning_month_display": (
+                        row.earning_month.strftime("%b %Y")
+                        if row.earning_month
+                        else "Unknown"
+                    ),
+                    "payout_status": normalize_payout_status(
+                        getattr(row, "canonical_status", None)
+                    )
+                    or PAYOUT_STATUS_PENDING,
+                    "payout_status_label": payout_status_label(
+                        getattr(row, "canonical_status", None)
+                    ),
+                    "commission_cents": int(getattr(row, "commission_cents", 0) or 0),
+                    "commission_display": cls._format_currency_cents(
+                        getattr(row, "commission_cents", 0) or 0
+                    ),
+                    "payout_reference": row.payout_reference,
+                    "eligible_on": arrears_window["eligible_on"],
+                    "eligible_on_iso": arrears_window["eligible_on_iso"],
+                    "eligible_on_display": arrears_window["eligible_on_display"],
+                    "is_eligible": bool(arrears_window["is_eligible"]),
+                    "days_until_eligible": int(arrears_window["days_until_eligible"]),
+                }
+            )
+        return payload_rows
 
     @staticmethod
     def _to_utc_aware(value: datetime | None) -> datetime | None:
@@ -774,6 +839,7 @@ class AffiliateService:
             "total_unsuccessful_cents": 0,
             "total_unsuccessful_display": "$0.00",
             "payout_status_summary": cls._empty_payout_status_summary(),
+            "arrears_days": int(cls.PAYOUT_ARREARS_DAYS),
             "status_filter": PAYOUT_STATUS_PENDING,
             "status_options": [
                 {"value": PAYOUT_STATUS_PENDING, "label": payout_status_label(PAYOUT_STATUS_PENDING)},
@@ -815,6 +881,11 @@ class AffiliateService:
                 AffiliateMonthlyEarning.earning_month.label("earning_month"),
                 AffiliateMonthlyEarning.currency.label("currency"),
                 canonical_status_expr.label("canonical_payout_status"),
+                AffiliatePayoutAccount.payout_provider.label("payout_provider"),
+                AffiliatePayoutAccount.payout_account_reference.label(
+                    "payout_destination"
+                ),
+                AffiliatePayoutAccount.is_verified.label("payout_verified"),
                 func.count(AffiliateMonthlyEarning.id).label("earning_rows"),
                 func.count(
                     func.distinct(AffiliateMonthlyEarning.affiliate_referral_id)
@@ -826,6 +897,11 @@ class AffiliateService:
             .join(
                 Organization,
                 Organization.id == AffiliateMonthlyEarning.referrer_organization_id,
+            )
+            .outerjoin(
+                AffiliatePayoutAccount,
+                AffiliatePayoutAccount.organization_id
+                == AffiliateMonthlyEarning.referrer_organization_id,
             )
         )
         if organization_id:
@@ -845,6 +921,9 @@ class AffiliateService:
             AffiliateMonthlyEarning.earning_month,
             AffiliateMonthlyEarning.currency,
             canonical_status_expr,
+            AffiliatePayoutAccount.payout_provider,
+            AffiliatePayoutAccount.payout_account_reference,
+            AffiliatePayoutAccount.is_verified,
         ).order_by(AffiliateMonthlyEarning.earning_month.desc(), sum_commission_expr.desc())
 
         summary_rows = grouped_query.all()
@@ -909,54 +988,70 @@ class AffiliateService:
             pending_payout_batches + sent_payout_batches + unsuccessful_payout_batches
         )
 
+        table_rows: list[dict[str, Any]] = []
+        for row in rows:
+            canonical_status = normalize_payout_status(
+                getattr(row, "canonical_payout_status", None)
+            ) or PAYOUT_STATUS_PENDING
+            arrears_window = cls._compute_payout_arrears_window(row.earning_month)
+            has_destination = bool((getattr(row, "payout_destination", "") or "").strip())
+            table_rows.append(
+                {
+                    "organization_id": row.organization_id,
+                    "organization_name": row.organization_name,
+                    "earning_month": row.earning_month,
+                    "earning_month_iso": (
+                        row.earning_month.isoformat() if row.earning_month else ""
+                    ),
+                    "earning_month_display": (
+                        row.earning_month.strftime("%b %Y")
+                        if row.earning_month
+                        else "Unknown"
+                    ),
+                    "currency": (row.currency or "usd").upper(),
+                    "payout_status": canonical_status,
+                    "payout_status_label": payout_status_label(
+                        getattr(row, "canonical_payout_status", None)
+                    ),
+                    "earning_rows": int(row.earning_rows or 0),
+                    "referral_count": int(row.referral_count or 0),
+                    "gross_cents": int(row.gross_cents or 0),
+                    "gross_display": cls._format_currency_cents(row.gross_cents or 0),
+                    "commission_cents": int(row.commission_cents or 0),
+                    "commission_display": cls._format_currency_cents(
+                        row.commission_cents or 0
+                    ),
+                    "effective_rate_percent": (
+                        round(
+                            ((int(row.commission_cents or 0)) / max(1, int(row.gross_cents or 0)))
+                            * 100.0,
+                            2,
+                        )
+                        if int(row.gross_cents or 0) > 0
+                        else 0.0
+                    ),
+                    "payout_reference": row.payout_reference,
+                    "eligible_on": arrears_window["eligible_on"],
+                    "eligible_on_iso": arrears_window["eligible_on_iso"],
+                    "eligible_on_display": arrears_window["eligible_on_display"],
+                    "is_eligible": bool(arrears_window["is_eligible"]),
+                    "days_until_eligible": int(arrears_window["days_until_eligible"]),
+                    "payout_provider": (row.payout_provider or "stripe").strip().lower(),
+                    "payout_destination": (row.payout_destination or "").strip(),
+                    "has_payout_destination": has_destination,
+                    "payout_verified": bool(row.payout_verified),
+                    "can_push_stripe_now": bool(
+                        canonical_status in {PAYOUT_STATUS_PENDING, PAYOUT_STATUS_UNSUCCESSFUL}
+                        and has_destination
+                        and arrears_window["is_eligible"]
+                    ),
+                }
+            )
+
         payload.update(
             {
                 "enabled": True,
-                "rows": [
-                    {
-                        "organization_id": row.organization_id,
-                        "organization_name": row.organization_name,
-                        "earning_month": row.earning_month,
-                        "earning_month_iso": (
-                            row.earning_month.isoformat() if row.earning_month else ""
-                        ),
-                        "earning_month_display": (
-                            row.earning_month.strftime("%b %Y")
-                            if row.earning_month
-                            else "Unknown"
-                        ),
-                        "currency": (row.currency or "usd").upper(),
-                        "payout_status": normalize_payout_status(
-                            getattr(row, "canonical_payout_status", None)
-                        )
-                        or PAYOUT_STATUS_PENDING,
-                        "payout_status_label": payout_status_label(
-                            getattr(row, "canonical_payout_status", None)
-                        ),
-                        "earning_rows": int(row.earning_rows or 0),
-                        "referral_count": int(row.referral_count or 0),
-                        "gross_cents": int(row.gross_cents or 0),
-                        "gross_display": cls._format_currency_cents(row.gross_cents or 0),
-                        "commission_cents": int(row.commission_cents or 0),
-                        "commission_display": cls._format_currency_cents(
-                            row.commission_cents or 0
-                        ),
-                        "effective_rate_percent": (
-                            round(
-                                (
-                                    (int(row.commission_cents or 0))
-                                    / max(1, int(row.gross_cents or 0))
-                                )
-                                * 100.0,
-                                2,
-                            )
-                            if int(row.gross_cents or 0) > 0
-                            else 0.0
-                        ),
-                        "payout_reference": row.payout_reference,
-                    }
-                    for row in rows
-                ],
+                "rows": table_rows,
                 "page": page,
                 "pages": pages,
                 "has_prev": page > 1,
@@ -1058,6 +1153,273 @@ class AffiliateService:
             "target_status": canonical_target_status,
             "target_status_label": payout_status_label(canonical_target_status),
             "referrer_user_ids": sorted(changed_referrer_user_ids),
+        }
+
+    @classmethod
+    def push_monthly_payout_to_stripe(
+        cls,
+        *,
+        organization_id: int | None,
+        earning_month: str | date | None,
+        force: bool = False,
+        auto_commit: bool = True,
+        as_of_date: date | None = None,
+        send_email: bool = True,
+    ) -> dict[str, Any]:
+        """Push an org-month affiliate batch to Stripe as a transfer."""
+        if not cls._schema_ready():
+            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
+        month_date = cls._parse_earning_month(earning_month)
+        if not organization_id or not month_date:
+            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
+
+        organization = db.session.get(Organization, int(organization_id))
+        if not organization:
+            return {"ok": False, "reason": "organization_not_found", "updated_rows": 0}
+        payout_account = AffiliatePayoutAccount.query.filter_by(
+            organization_id=int(organization_id)
+        ).first()
+        payout_destination = (
+            (getattr(payout_account, "payout_account_reference", "") or "").strip()
+            if payout_account
+            else ""
+        )
+        payout_provider = (
+            (getattr(payout_account, "payout_provider", "stripe") or "stripe")
+            .strip()
+            .lower()
+        )
+        if payout_provider != "stripe":
+            return {"ok": False, "reason": "unsupported_payout_provider", "updated_rows": 0}
+        if not payout_destination:
+            return {"ok": False, "reason": "payout_account_not_ready", "updated_rows": 0}
+
+        rows = AffiliateMonthlyEarning.query.filter_by(
+            referrer_organization_id=int(organization_id),
+            earning_month=month_date,
+        ).all()
+        if not rows:
+            return {"ok": False, "reason": "not_found", "updated_rows": 0}
+
+        arrears_window = cls._compute_payout_arrears_window(
+            month_date, as_of_date=as_of_date
+        )
+        if not force and not arrears_window["is_eligible"]:
+            return {
+                "ok": False,
+                "reason": "not_eligible",
+                "updated_rows": 0,
+                "organization_id": int(organization_id),
+                "earning_month": month_date.isoformat(),
+                "eligible_on": arrears_window["eligible_on_iso"],
+                "days_until_eligible": int(arrears_window["days_until_eligible"]),
+                "arrears_days": int(arrears_window["arrears_days"]),
+            }
+
+        now = TimezoneUtils.utc_now()
+        payout_rows: list[AffiliateMonthlyEarning] = []
+        blocked_rows = 0
+        blocked_commission_cents = 0
+        blocked_status_updates = 0
+        for row in rows:
+            normalized_status = normalize_payout_status(row.payout_status) or PAYOUT_STATUS_PENDING
+            if normalized_status in {PAYOUT_STATUS_COMPLETE, PAYOUT_STATUS_SENT}:
+                continue
+            commission_cents = int(row.commission_amount_cents or 0)
+            if commission_cents <= 0:
+                continue
+            if cls._is_row_blocked_by_churn_window(
+                row, eligible_on=arrears_window["eligible_on"]
+            ):
+                blocked_rows += 1
+                blocked_commission_cents += commission_cents
+                if normalized_status != PAYOUT_STATUS_UNSUCCESSFUL:
+                    row.payout_status = PAYOUT_STATUS_UNSUCCESSFUL
+                    row.updated_at = now
+                    blocked_status_updates += 1
+                continue
+            payout_rows.append(row)
+
+        if not payout_rows:
+            if blocked_status_updates > 0 and auto_commit:
+                db.session.commit()
+            return {
+                "ok": False,
+                "reason": (
+                    "blocked_by_churn_window" if blocked_rows > 0 else "no_payable_rows"
+                ),
+                "updated_rows": int(blocked_status_updates),
+                "organization_id": int(organization_id),
+                "earning_month": month_date.isoformat(),
+                "eligible_on": arrears_window["eligible_on_iso"],
+                "blocked_rows": int(blocked_rows),
+                "blocked_commission_cents": int(blocked_commission_cents),
+            }
+
+        from .billing_service import BillingService, stripe
+
+        if not BillingService.ensure_stripe():
+            if blocked_status_updates > 0 and auto_commit:
+                db.session.commit()
+            return {"ok": False, "reason": "stripe_not_configured", "updated_rows": 0}
+
+        amount_cents = int(sum(int(row.commission_amount_cents or 0) for row in payout_rows))
+        if amount_cents <= 0:
+            if blocked_status_updates > 0 and auto_commit:
+                db.session.commit()
+            return {"ok": False, "reason": "no_payable_rows", "updated_rows": 0}
+
+        currency_code = str(getattr(payout_rows[0], "currency", "usd") or "usd").lower()
+        payout_reference = None
+        try:
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency=currency_code,
+                destination=payout_destination,
+                description=f"Affiliate payout {organization.name} {month_date.strftime('%Y-%m')}",
+                metadata={
+                    "organization_id": str(organization.id),
+                    "earning_month": month_date.isoformat(),
+                    "source": "affiliate_payout_batch",
+                    "arrears_days": str(cls.PAYOUT_ARREARS_DAYS),
+                    "forced": "true" if force else "false",
+                },
+            )
+            payout_reference = str(getattr(transfer, "id", "") or transfer.get("id"))
+        except Exception as exc:
+            if blocked_status_updates > 0 and auto_commit:
+                db.session.commit()
+            return {
+                "ok": False,
+                "reason": "stripe_transfer_failed",
+                "updated_rows": 0,
+                "error": str(exc),
+            }
+
+        sent_rows = 0
+        sent_commission_cents = 0
+        changed_referrer_user_ids: set[int] = set()
+        for row in payout_rows:
+            row.payout_status = PAYOUT_STATUS_SENT
+            row.payout_reference = payout_reference
+            row.updated_at = now
+            sent_rows += 1
+            sent_commission_cents += int(row.commission_amount_cents or 0)
+            if row.referrer_user_id:
+                changed_referrer_user_ids.add(int(row.referrer_user_id))
+
+        if auto_commit and (sent_rows > 0 or blocked_status_updates > 0):
+            db.session.commit()
+
+        email_result = {"attempted": 0, "sent": 0}
+        if send_email and sent_rows > 0:
+            email_result = cls.notify_payout_status_update(
+                organization_id=int(organization_id),
+                earning_month=month_date,
+                payout_status=PAYOUT_STATUS_SENT,
+                commission_amount_cents=sent_commission_cents,
+                updated_rows=sent_rows,
+                payout_reference=payout_reference,
+                referrer_user_ids=sorted(changed_referrer_user_ids),
+            )
+
+        return {
+            "ok": True,
+            "reason": None,
+            "updated_rows": int(sent_rows + blocked_status_updates),
+            "status_changed_rows": int(sent_rows),
+            "status_changed_commission_cents": int(sent_commission_cents),
+            "blocked_rows": int(blocked_rows),
+            "blocked_commission_cents": int(blocked_commission_cents),
+            "blocked_status_updates": int(blocked_status_updates),
+            "organization_id": int(organization_id),
+            "earning_month": month_date.isoformat(),
+            "eligible_on": arrears_window["eligible_on_iso"],
+            "payout_reference": payout_reference,
+            "target_status": PAYOUT_STATUS_SENT,
+            "target_status_label": payout_status_label(PAYOUT_STATUS_SENT),
+            "force": bool(force),
+            "email_attempted": int(email_result.get("attempted", 0) or 0),
+            "email_sent": int(email_result.get("sent", 0) or 0),
+            "referrer_user_ids": sorted(changed_referrer_user_ids),
+        }
+
+    @classmethod
+    def run_automatic_stripe_payouts(
+        cls,
+        *,
+        limit_batches: int = 50,
+        as_of_date: date | None = None,
+        auto_commit: bool = True,
+    ) -> dict[str, Any]:
+        """Auto-process eligible pending affiliate payout batches via Stripe."""
+        if not cls._schema_ready():
+            return {"ok": False, "reason": "schema_not_ready", "processed_batches": 0}
+        pending_values = payout_status_query_values(PAYOUT_STATUS_PENDING)
+        batch_rows = (
+            db.session.query(
+                AffiliateMonthlyEarning.referrer_organization_id.label("organization_id"),
+                AffiliateMonthlyEarning.earning_month.label("earning_month"),
+            )
+            .join(
+                AffiliatePayoutAccount,
+                AffiliatePayoutAccount.organization_id
+                == AffiliateMonthlyEarning.referrer_organization_id,
+            )
+            .filter(
+                AffiliateMonthlyEarning.payout_status.in_(pending_values),
+                AffiliatePayoutAccount.payout_provider == "stripe",
+                AffiliatePayoutAccount.payout_account_reference.isnot(None),
+                AffiliatePayoutAccount.payout_account_reference != "",
+            )
+            .group_by(
+                AffiliateMonthlyEarning.referrer_organization_id,
+                AffiliateMonthlyEarning.earning_month,
+            )
+            .order_by(AffiliateMonthlyEarning.earning_month.asc())
+            .limit(max(1, int(limit_batches or 50)))
+            .all()
+        )
+
+        processed_batches = 0
+        sent_batches = 0
+        skipped_not_eligible = 0
+        skipped_no_payable = 0
+        failed_batches = 0
+        sent_commission_cents = 0
+        for batch in batch_rows:
+            processed_batches += 1
+            result = cls.push_monthly_payout_to_stripe(
+                organization_id=batch.organization_id,
+                earning_month=batch.earning_month,
+                force=False,
+                auto_commit=auto_commit,
+                as_of_date=as_of_date,
+                send_email=True,
+            )
+            if result.get("ok"):
+                sent_batches += 1
+                sent_commission_cents += int(result.get("status_changed_commission_cents", 0) or 0)
+                continue
+            reason = str(result.get("reason") or "")
+            if reason == "not_eligible":
+                skipped_not_eligible += 1
+            elif reason in {"no_payable_rows", "blocked_by_churn_window"}:
+                skipped_no_payable += 1
+            else:
+                failed_batches += 1
+
+        return {
+            "ok": True,
+            "reason": None,
+            "processed_batches": int(processed_batches),
+            "sent_batches": int(sent_batches),
+            "skipped_not_eligible": int(skipped_not_eligible),
+            "skipped_no_payable": int(skipped_no_payable),
+            "failed_batches": int(failed_batches),
+            "sent_commission_cents": int(sent_commission_cents),
+            "sent_commission_display": cls._format_currency_cents(sent_commission_cents),
+            "arrears_days": int(cls.PAYOUT_ARREARS_DAYS),
         }
 
     @classmethod

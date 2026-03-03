@@ -51,7 +51,7 @@
                         · Contact: {{ affiliate_payout_account.payout_email }}
                         {% endif %}
                     </p>
-                    <small class="text-muted">Collect payouts in Stripe. Status cards below track Pending, Sent, Complete, and Unsuccessful batches.</small>
+                    <small class="text-muted">Collect payouts in Stripe. Affiliate earnings are held 30 days in arrears before auto payout eligibility.</small>
                 </div>
                 {% if organization.stripe_customer_id %}
                 <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-primary btn-sm">
