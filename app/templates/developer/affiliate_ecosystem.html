@@ -90,10 +90,16 @@
                                         <td>{{ row.referral_count }}</td>
                                         <td>{{ row.commission_display }}</td>
                                         <td class="pe-3">
-                                            <a class="btn btn-sm btn-outline-primary"
-                                               href="{{ url_for('developer.organization_detail', org_id=row.organization_id) }}">
-                                                View Organization
-                                            </a>
+                                            <div class="d-flex gap-1">
+                                                <a class="btn btn-sm btn-outline-primary"
+                                                   href="{{ url_for('developer.organization_detail', org_id=row.organization_id) }}">
+                                                    View Organization
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-dark"
+                                                   href="{{ url_for('developer.affiliate_ecosystem_organization', org_id=row.organization_id) }}">
+                                                    Scoped Dashboard
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}

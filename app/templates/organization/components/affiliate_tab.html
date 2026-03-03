@@ -1,5 +1,12 @@
 {% set affiliate = affiliate_context or {} %}
 <div class="row g-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-end">
+            <a href="{{ url_for('organization.affiliate_dashboard') }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-chart-column me-1"></i>Open Detailed Affiliate Dashboard
+            </a>
+        </div>
+    </div>
     <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body">

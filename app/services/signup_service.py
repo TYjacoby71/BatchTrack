@@ -252,11 +252,16 @@ class SignupService:
             pending_signup.organization_id = org.id
             pending_signup.user_id = owner_user.id
             pending_signup.mark_status("account_created")
+            pending_extra_metadata = SignupService._object_to_dict(
+                pending_signup.extra_metadata
+            )
             AffiliateService.register_referred_organization(
                 referral_code=pending_signup.referral_code,
                 referred_organization=org,
                 referred_user=owner_user,
                 signup_source=pending_signup.signup_source,
+                billing_mode_snapshot=pending_extra_metadata.get("billing_mode"),
+                billing_cycle_snapshot=pending_extra_metadata.get("billing_cycle"),
                 auto_commit=False,
             )
 

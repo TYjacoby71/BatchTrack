@@ -556,6 +556,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import Addon, OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             # Resolve organization
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
@@ -582,12 +583,18 @@ class BillingService:
             if status in ["active", "trialing"]:
                 org.billing_status = "active"
                 org.is_active = True
+                AffiliateService.clear_referral_churn_for_organization(
+                    org.id, auto_commit=False
+                )
             elif status in ["past_due", "unpaid"]:
                 org.billing_status = "past_due"
                 org.is_active = False
             elif status in ["canceled", "cancelled"]:
                 org.billing_status = "canceled"
                 org.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    org.id, auto_commit=False
+                )
 
             if not org.stripe_customer_id:
                 org.stripe_customer_id = customer_id
@@ -637,6 +644,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             # Update OrganizationAddon for matching Stripe subscription id
             rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
@@ -667,12 +675,18 @@ class BillingService:
                 if status in ["active", "trialing"]:
                     org.billing_status = "active"
                     org.is_active = True
+                    AffiliateService.clear_referral_churn_for_organization(
+                        org.id, auto_commit=False
+                    )
                 elif status in ["past_due", "unpaid"]:
                     org.billing_status = "past_due"
                     org.is_active = False
                 elif status in ["canceled", "cancelled"]:
                     org.billing_status = "canceled"
                     org.is_active = False
+                    AffiliateService.mark_referral_churned_for_organization(
+                        org.id, auto_commit=False
+                    )
 
             db.session.commit()
         except Exception as e:
@@ -688,6 +702,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
             if rec:
@@ -710,6 +725,9 @@ class BillingService:
                 org.subscription_status = "canceled"
                 org.billing_status = "canceled"
                 org.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    org.id, auto_commit=False
+                )
 
             db.session.commit()
         except Exception as e:
@@ -1277,6 +1295,7 @@ class BillingService:
             if not organization:
                 logger.error(f"Organization {organization_id} not found")
                 return False
+            from .affiliate_service import AffiliateService
 
             # Get tier from subscription metadata
             tier_id = subscription.get("metadata", {}).get("tier_id")
@@ -1298,12 +1317,18 @@ class BillingService:
             if status == "active":
                 organization.is_active = True
                 organization.billing_status = "active"
+                AffiliateService.clear_referral_churn_for_organization(
+                    organization.id, auto_commit=False
+                )
             elif status in ["past_due", "unpaid"]:
                 organization.billing_status = "payment_failed"
                 organization.is_active = False
             elif status == "canceled":
                 organization.billing_status = "canceled"
                 organization.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    organization.id, auto_commit=False
+                )
 
             # Store Stripe customer ID if not present
             if not organization.stripe_customer_id:

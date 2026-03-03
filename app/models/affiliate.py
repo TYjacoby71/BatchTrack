@@ -62,6 +62,8 @@ class AffiliateReferral(db.Model):
     )
     referral_code = db.Column(db.String(64), nullable=False, index=True)
     referral_source = db.Column(db.String(64), nullable=True)
+    billing_mode_snapshot = db.Column(db.String(32), nullable=True)
+    billing_cycle_snapshot = db.Column(db.String(32), nullable=True)
     commission_percentage_snapshot = db.Column(
         db.Numeric(5, 2), nullable=False, default=0, server_default="0"
     )
@@ -71,6 +73,7 @@ class AffiliateReferral(db.Model):
     signed_up_at = db.Column(
         db.DateTime, nullable=False, index=True, default=lambda: datetime.now(timezone.utc)
     )
+    churned_at = db.Column(db.DateTime, nullable=True, index=True)
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )

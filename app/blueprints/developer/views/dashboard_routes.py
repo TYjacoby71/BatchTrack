@@ -14,6 +14,7 @@ import logging
 from flask import jsonify, render_template, request, url_for
 
 from app.models.feature_flag import FeatureFlag
+from app.models.models import Organization
 from app.services.affiliate_service import AffiliateService
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.statistics import AnalyticsDataService
@@ -238,6 +239,29 @@ def affiliate_ecosystem():
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
             {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
             {"label": "Affiliate Ecosystem"},
+        ],
+    )
+
+
+@developer_bp.route("/affiliate-ecosystem/organization/<int:org_id>")
+@require_developer_permission("dev.view_all_billing")
+def affiliate_ecosystem_organization(org_id):
+    """Scoped affiliate analytics for one organization."""
+    org = Organization.query.get_or_404(org_id)
+    affiliate_context = AffiliateService.build_organization_dashboard_context(
+        org, page=1, per_page=25
+    )
+    affiliate_analytics = AffiliateService.build_organization_analytics_context(org)
+    return render_template(
+        "developer/affiliate_organization_scope.html",
+        organization=org,
+        affiliate_context=affiliate_context,
+        affiliate_analytics=affiliate_analytics,
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
+            {"label": "Affiliate Ecosystem", "url": url_for("developer.affiliate_ecosystem")},
+            {"label": org.name},
         ],
     )
 

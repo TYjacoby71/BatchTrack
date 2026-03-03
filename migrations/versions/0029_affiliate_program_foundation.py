@@ -10,7 +10,12 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-from migrations.postgres_helpers import safe_add_column, safe_drop_column, table_exists
+from migrations.postgres_helpers import (
+    safe_add_column,
+    safe_create_index,
+    safe_drop_column,
+    table_exists,
+)
 
 
 revision = "0029_affiliate_program_foundation"
@@ -80,6 +85,8 @@ def upgrade():
             sa.Column("referred_tier_id", sa.Integer(), nullable=True),
             sa.Column("referral_code", sa.String(length=64), nullable=False),
             sa.Column("referral_source", sa.String(length=64), nullable=True),
+            sa.Column("billing_mode_snapshot", sa.String(length=32), nullable=True),
+            sa.Column("billing_cycle_snapshot", sa.String(length=32), nullable=True),
             sa.Column(
                 "commission_percentage_snapshot",
                 sa.Numeric(5, 2),
@@ -93,6 +100,7 @@ def upgrade():
                 server_default="12",
             ),
             sa.Column("signed_up_at", sa.DateTime(), nullable=False),
+            sa.Column("churned_at", sa.DateTime(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.ForeignKeyConstraint(
@@ -159,6 +167,33 @@ def upgrade():
             "ix_affiliate_referral_signed_up_at",
             "affiliate_referral",
             ["signed_up_at"],
+        )
+        op.create_index(
+            "ix_affiliate_referral_churned_at",
+            "affiliate_referral",
+            ["churned_at"],
+        )
+    else:
+        safe_add_column(
+            "affiliate_referral",
+            sa.Column("billing_mode_snapshot", sa.String(length=32), nullable=True),
+            verbose=False,
+        )
+        safe_add_column(
+            "affiliate_referral",
+            sa.Column("billing_cycle_snapshot", sa.String(length=32), nullable=True),
+            verbose=False,
+        )
+        safe_add_column(
+            "affiliate_referral",
+            sa.Column("churned_at", sa.DateTime(), nullable=True),
+            verbose=False,
+        )
+        safe_create_index(
+            "affiliate_referral",
+            "ix_affiliate_referral_churned_at",
+            ["churned_at"],
+            verbose=False,
         )
 
     if not table_exists("affiliate_monthly_earning"):

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import secrets
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy import func, inspect
@@ -171,6 +171,8 @@ class AffiliateService:
         referred_organization: Organization | None,
         referred_user: User | None = None,
         signup_source: str | None = None,
+        billing_mode_snapshot: str | None = None,
+        billing_cycle_snapshot: str | None = None,
         auto_commit: bool = False,
     ) -> AffiliateReferral | None:
         if not referred_organization or not cls._schema_ready():
@@ -207,6 +209,8 @@ class AffiliateService:
             referred_tier_id=getattr(referred_organization, "subscription_tier_id", None),
             referral_code=normalized,
             referral_source=signup_source or "signup",
+            billing_mode_snapshot=(billing_mode_snapshot or "").strip() or None,
+            billing_cycle_snapshot=(billing_cycle_snapshot or "").strip() or None,
             commission_percentage_snapshot=commission_snapshot,
             months_eligible=12,
             signed_up_at=TimezoneUtils.utc_now(),
@@ -565,3 +569,255 @@ class AffiliateService:
         db.session.add(payout_account)
         db.session.commit()
         return payout_account
+
+    @classmethod
+    def mark_referral_churned_for_organization(
+        cls,
+        referred_organization_id: int | None,
+        *,
+        churned_at=None,
+        auto_commit: bool = False,
+    ) -> bool:
+        if not referred_organization_id or not cls._schema_ready():
+            return False
+        referral = AffiliateReferral.query.filter_by(
+            referred_organization_id=referred_organization_id
+        ).first()
+        if not referral:
+            return False
+        if referral.churned_at is not None:
+            return False
+        referral.churned_at = churned_at or TimezoneUtils.utc_now()
+        if auto_commit:
+            db.session.commit()
+        return True
+
+    @classmethod
+    def clear_referral_churn_for_organization(
+        cls, referred_organization_id: int | None, *, auto_commit: bool = False
+    ) -> bool:
+        if not referred_organization_id or not cls._schema_ready():
+            return False
+        referral = AffiliateReferral.query.filter_by(
+            referred_organization_id=referred_organization_id
+        ).first()
+        if not referral or referral.churned_at is None:
+            return False
+        referral.churned_at = None
+        if auto_commit:
+            db.session.commit()
+        return True
+
+    @staticmethod
+    def _status_is_canceled(org: Organization | None) -> bool:
+        if not org:
+            return False
+        billing_status = str(getattr(org, "billing_status", "") or "").lower()
+        subscription_status = str(getattr(org, "subscription_status", "") or "").lower()
+        return billing_status in {"canceled", "cancelled", "suspended"} or subscription_status in {
+            "canceled",
+            "cancelled",
+            "suspended",
+        }
+
+    @classmethod
+    def _compute_referral_type(cls, referral: AffiliateReferral) -> str:
+        mode = (referral.billing_mode_snapshot or "").strip().lower()
+        cycle = (referral.billing_cycle_snapshot or "").strip().lower()
+        if mode == "lifetime" or cycle == "lifetime":
+            return "lifetime"
+        if cycle in {"monthly", "yearly"}:
+            return cycle
+        if mode == "standard":
+            return "monthly"
+        return "special_offer"
+
+    @classmethod
+    def build_organization_analytics_context(
+        cls, organization: Organization | None
+    ) -> dict[str, Any]:
+        now = TimezoneUtils.utc_now()
+        payload = {
+            "enabled": False,
+            "total_referrals": 0,
+            "active_referrals": 0,
+            "churn_rate_percent": 0.0,
+            "members_left_this_month": 0,
+            "average_lifespan_days": 0.0,
+            "average_days_to_churn": 0.0,
+            "commission_percentage": 0.0,
+            "current_month_income_cents": 0,
+            "current_month_income_display": "$0.00",
+            "monthly_income_12m": {"labels": [], "values": []},
+            "referrals_trend": {
+                "day": {"labels": [], "values": []},
+                "week": {"labels": [], "values": []},
+                "month": {"labels": [], "values": []},
+            },
+            "tier_spread": {"labels": [], "values": []},
+            "subscription_type_spread": {"labels": [], "values": []},
+        }
+        if not organization or not cls._schema_ready():
+            return payload
+
+        referrals = AffiliateReferral.query.filter_by(
+            referrer_organization_id=organization.id
+        ).all()
+        total_referrals = len(referrals)
+
+        tier_counts: dict[str, int] = {}
+        subscription_type_counts: dict[str, int] = {}
+        day_counts: dict[str, int] = {}
+        week_counts: dict[str, int] = {}
+        month_counts: dict[str, int] = {}
+
+        churned_count = 0
+        churn_durations: list[float] = []
+        lifespan_durations: list[float] = []
+        current_month_churns = 0
+
+        month_start = date(now.year, now.month, 1)
+        for referral in referrals:
+            signed_up_at = referral.signed_up_at or now
+            referred_org = referral.referred_organization
+            tier_name = (
+                referred_org.tier.name
+                if referred_org and getattr(referred_org, "tier", None)
+                else "Unknown Tier"
+            )
+            tier_counts[tier_name] = tier_counts.get(tier_name, 0) + 1
+
+            referral_type = cls._compute_referral_type(referral)
+            subscription_type_counts[referral_type] = (
+                subscription_type_counts.get(referral_type, 0) + 1
+            )
+
+            day_key = signed_up_at.date().isoformat()
+            iso_year, iso_week, _ = signed_up_at.isocalendar()
+            week_key = f"{iso_year}-W{iso_week:02d}"
+            month_key = f"{signed_up_at.year}-{signed_up_at.month:02d}"
+            day_counts[day_key] = day_counts.get(day_key, 0) + 1
+            week_counts[week_key] = week_counts.get(week_key, 0) + 1
+            month_counts[month_key] = month_counts.get(month_key, 0) + 1
+
+            churned_at = referral.churned_at
+            status_indicates_churn = cls._status_is_canceled(referred_org)
+            is_churned = churned_at is not None or status_indicates_churn
+            end_for_lifespan = churned_at or now
+            lifespan_days = max(0.0, (end_for_lifespan - signed_up_at).total_seconds() / 86400.0)
+            lifespan_durations.append(lifespan_days)
+
+            if is_churned:
+                churned_count += 1
+                if churned_at is not None:
+                    churn_days = max(
+                        0.0, (churned_at - signed_up_at).total_seconds() / 86400.0
+                    )
+                    churn_durations.append(churn_days)
+                if churned_at is not None and churned_at.date() >= month_start:
+                    current_month_churns += 1
+
+        # Time-series buckets
+        day_labels = []
+        day_values = []
+        for index in range(29, -1, -1):
+            bucket_date = (now - timedelta(days=index)).date()
+            key = bucket_date.isoformat()
+            day_labels.append(bucket_date.strftime("%m-%d"))
+            day_values.append(day_counts.get(key, 0))
+
+        week_labels = []
+        week_values = []
+        for index in range(11, -1, -1):
+            bucket_date = now.date() - timedelta(days=index * 7)
+            iso_year, iso_week, _ = bucket_date.isocalendar()
+            key = f"{iso_year}-W{iso_week:02d}"
+            week_labels.append(key)
+            week_values.append(week_counts.get(key, 0))
+
+        month_labels = []
+        month_values = []
+        for index in range(11, -1, -1):
+            pointer = now.date().replace(day=1)
+            for _ in range(index):
+                prev = pointer - timedelta(days=1)
+                pointer = prev.replace(day=1)
+            key = f"{pointer.year}-{pointer.month:02d}"
+            month_labels.append(pointer.strftime("%b %Y"))
+            month_values.append(month_counts.get(key, 0))
+
+        # Income 12 months
+        earning_rows = (
+            db.session.query(
+                AffiliateMonthlyEarning.earning_month,
+                func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0).label(
+                    "commission_cents"
+                ),
+            )
+            .filter(AffiliateMonthlyEarning.referrer_organization_id == organization.id)
+            .group_by(AffiliateMonthlyEarning.earning_month)
+            .all()
+        )
+        earnings_map = {
+            row.earning_month.strftime("%Y-%m"): int(row.commission_cents or 0)
+            for row in earning_rows
+            if row.earning_month
+        }
+        income_labels = []
+        income_values = []
+        current_month = now.date().replace(day=1)
+        for index in range(11, -1, -1):
+            pointer = current_month
+            for _ in range(index):
+                prev = pointer - timedelta(days=1)
+                pointer = prev.replace(day=1)
+            map_key = pointer.strftime("%Y-%m")
+            income_labels.append(pointer.strftime("%b %Y"))
+            income_values.append(earnings_map.get(map_key, 0))
+
+        current_month_income_cents = earnings_map.get(now.strftime("%Y-%m"), 0)
+        active_referrals = max(0, total_referrals - churned_count)
+        churn_rate = (churned_count / total_referrals * 100.0) if total_referrals else 0.0
+        avg_lifespan = (
+            sum(lifespan_durations) / len(lifespan_durations) if lifespan_durations else 0.0
+        )
+        avg_to_churn = (
+            sum(churn_durations) / len(churn_durations) if churn_durations else 0.0
+        )
+
+        payload.update(
+            {
+                "enabled": True,
+                "total_referrals": total_referrals,
+                "active_referrals": active_referrals,
+                "churn_rate_percent": round(churn_rate, 2),
+                "members_left_this_month": int(current_month_churns),
+                "average_lifespan_days": round(avg_lifespan, 2),
+                "average_days_to_churn": round(avg_to_churn, 2),
+                "commission_percentage": float(
+                    getattr(organization.tier, "commission_percentage", 0) or 0
+                ),
+                "current_month_income_cents": int(current_month_income_cents),
+                "current_month_income_display": cls._format_currency_cents(
+                    current_month_income_cents
+                ),
+                "monthly_income_12m": {"labels": income_labels, "values": income_values},
+                "referrals_trend": {
+                    "day": {"labels": day_labels, "values": day_values},
+                    "week": {"labels": week_labels, "values": week_values},
+                    "month": {"labels": month_labels, "values": month_values},
+                },
+                "tier_spread": {
+                    "labels": list(tier_counts.keys()),
+                    "values": [tier_counts[label] for label in tier_counts.keys()],
+                },
+                "subscription_type_spread": {
+                    "labels": list(subscription_type_counts.keys()),
+                    "values": [
+                        subscription_type_counts[label]
+                        for label in subscription_type_counts.keys()
+                    ],
+                },
+            }
+        )
+        return payload
