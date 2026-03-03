@@ -188,6 +188,18 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Replace auto-backup toggle stub with real scheduled backup + restore workflow
 - [ ] Run and document periodic restore drills (RPO/RTO targets + evidence)
 
+### 5.7 Managed WAF migration (if adopted)
+- [ ] Select edge WAF provider and define ownership, failure policy (fail-open/fail-closed), and rollback runbook
+- [ ] Run WAF in observe/log-only mode and compare outcomes with current bot-trap/security decisions before enforcement
+- [ ] Enable managed exploit signatures and add custom rules for recurring probes (`/xmlrpc.php`, WordPress paths, random `*.php` scans)
+- [ ] Add verified-bot policy for search/ad/social crawlers using provider verification (reverse DNS/IP ranges), not user-agent string alone
+- [ ] Add behavior-based controls for scanner patterns (bursting, high 404/403 ratios, high path entropy, HEAD sweeps across unknown paths)
+- [ ] Add challenge-first policy for medium-confidence traffic and block-only for high-confidence abuse
+- [ ] Lock origin to edge-only ingress (reject direct-to-origin internet traffic)
+- [ ] Re-scope `/api/public/bot-trap` to telemetry-only (or remove) once equivalent WAF controls are enforced
+- [ ] Add WAF dashboards and alerts (block/challenge rates, top rules, top source ASNs/IPs, false-positive samples)
+- [ ] Roll out in phases (shadow -> challenge -> block) with explicit conversion guardrails on `/homepage`, `/help/how-it-works`, `/signup`, and `/auth/signup`
+
 ---
 
 ## How to Use This Checklist
