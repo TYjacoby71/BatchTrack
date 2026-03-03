@@ -190,6 +190,9 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 
 ### 5.7 Managed WAF migration (if adopted)
 - [ ] Select edge WAF provider and define ownership, failure policy (fail-open/fail-closed), and rollback runbook
+- [ ] Confirm ownership model: domain registrar (e.g., GoDaddy) is not the WAF; WAF is managed in a separate edge account
+- [ ] Select and fund the required WAF tier (managed rules, bot management, and rate limiting may require paid plans)
+- [ ] Decide DNS onboarding path for edge protection (move authoritative DNS to edge provider or use provider-supported partial/CNAME setup)
 - [ ] Run WAF in observe/log-only mode and compare outcomes with current bot-trap/security decisions before enforcement
 - [ ] Enable managed exploit signatures and add custom rules for recurring probes (`/xmlrpc.php`, WordPress paths, random `*.php` scans)
 - [ ] Add verified-bot policy for search/ad/social crawlers using provider verification (reverse DNS/IP ranges), not user-agent string alone
