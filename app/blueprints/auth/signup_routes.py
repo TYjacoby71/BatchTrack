@@ -6,6 +6,7 @@ from flask import (
     current_app,
     flash,
     jsonify,
+    make_response,
     redirect,
     render_template,
     request,
@@ -17,6 +18,7 @@ from flask_login import current_user
 from ...extensions import limiter
 from ...services.lifetime_pricing_service import LifetimePricingService
 from ...services.oauth_service import OAuthService
+from ...services.affiliate_service import AffiliateService
 from ...services.signup_checkout_service import SignupCheckoutService
 from ...services.signup_plan_catalog_service import SignupPlanCatalogService
 from . import auth_bp
@@ -144,7 +146,12 @@ def signup():
             form_data=request.form,
         )
         if result.redirect_url:
-            return redirect(result.redirect_url)
+            response = redirect(result.redirect_url)
+            return AffiliateService.set_referral_cookie(
+                response,
+                signup_context.referral_code,
+                secure=request.is_secure,
+            )
 
         if result.flash_message:
             flash(result.flash_message, result.flash_category)
@@ -163,4 +170,9 @@ def signup():
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
     )
-    return render_template("pages/auth/signup.html", **template_context)
+    response = make_response(render_template("pages/auth/signup.html", **template_context))
+    return AffiliateService.set_referral_cookie(
+        response,
+        signup_context.referral_code,
+        secure=request.is_secure,
+    )

@@ -10,6 +10,12 @@ Glossary:
 
 from ..extensions import db
 from .app_setting import AppSetting
+from .affiliate import (
+    AffiliateMonthlyEarning,
+    AffiliatePayoutAccount,
+    AffiliateProfile,
+    AffiliateReferral,
+)
 from .batch import (
     Batch,
     BatchConsumable,

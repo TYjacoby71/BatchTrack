@@ -15,6 +15,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import Role, User
+from app.services.affiliate_service import AffiliateService
 from app.utils.permissions import has_permission, require_permission
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,10 @@ def dashboard():
     # Check subscription tier first (except for developers)
     if current_user.user_type != "developer":
         effective_tier = current_user.organization.effective_subscription_tier
-        if effective_tier in ["free", "solo"]:
+        has_affiliate_access = has_permission(
+            current_user, "affiliates.view_org_dashboard"
+        ) or has_permission(current_user, "affiliates.view")
+        if effective_tier in ["free", "solo"] and not has_affiliate_access:
             flash(
                 "Organization dashboard is available with Team and Enterprise plans.",
                 "info",
@@ -115,6 +119,19 @@ def dashboard():
         .all()
     )
 
+    affiliate_page = request.args.get("affiliate_page", 1, type=int)
+    affiliate_context = AffiliateService.build_organization_dashboard_context(
+        organization, page=affiliate_page, per_page=15
+    )
+    affiliate_tab_visible = has_permission(current_user, "organization.manage_billing") or has_permission(
+        current_user, "affiliates.view_org_dashboard"
+    )
+    affiliate_payout_account = (
+        AffiliateService.get_or_create_payout_account(organization)
+        if affiliate_tab_visible
+        else None
+    )
+
     # Debug: Print to console to verify data
     print(f"Permission categories: {list(permission_categories.keys())}")
     print(f"Total permissions: {len(permissions)}")
@@ -133,6 +150,9 @@ def dashboard():
         roles=roles,
         users=users,
         tiers_config=tiers_config,
+        affiliate_context=affiliate_context,
+        affiliate_tab_visible=affiliate_tab_visible,
+        affiliate_payout_account=affiliate_payout_account,
     )
 
 

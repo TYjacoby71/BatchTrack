@@ -22,6 +22,7 @@ from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
 from ..utils.settings import is_feature_enabled
 from .analytics_tracking_service import AnalyticsTrackingService
+from .affiliate_service import AffiliateService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_plan_catalog_service import SignupPlanCatalogService
@@ -144,7 +145,7 @@ class SignupCheckoutService:
         )
 
         signup_source = request.args.get("source", request.form.get("source", "direct"))
-        referral_code = request.args.get("ref", request.form.get("ref"))
+        referral_code = AffiliateService.extract_referral_code_from_request(request)
         promo_code = request.args.get("promo", request.form.get("promo"))
         preselected_tier = request.args.get("tier")
         selected_lifetime_tier = request.args.get(

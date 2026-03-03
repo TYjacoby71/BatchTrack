@@ -14,6 +14,7 @@ import logging
 from flask import jsonify, render_template, request, url_for
 
 from app.models.feature_flag import FeatureFlag
+from app.services.affiliate_service import AffiliateService
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.statistics import AnalyticsDataService
 
@@ -218,6 +219,27 @@ def system_statistics():
 def billing_integration():
     """Billing integration management shell page."""
     return render_template("developer/billing_integration.html")
+
+
+# --- Affiliate Ecosystem ---
+# Purpose: Define the top-level behavior of `affiliate_ecosystem` in this module.
+# Inputs: Function/class parameters and request/runtime context used by this unit.
+# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
+@developer_bp.route("/affiliate-ecosystem")
+@require_developer_permission("dev.view_all_billing")
+def affiliate_ecosystem():
+    """Developer view of cross-organization affiliate health and payouts."""
+    page = request.args.get("page", 1, type=int)
+    context = AffiliateService.build_developer_ecosystem_context(page=page, per_page=25)
+    return render_template(
+        "developer/affiliate_ecosystem.html",
+        **context,
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
+            {"label": "Affiliate Ecosystem"},
+        ],
+    )
 
 
 # --- Waitlist Statistics ---

@@ -114,6 +114,7 @@ def manage_tiers():
             "is_customer_facing": tier.is_customer_facing,
             "is_available": getattr(tier, "is_available", True),
             "billing_provider": tier.billing_provider,
+            "commission_percentage": float(tier.commission_percentage or 0),
             "is_billing_exempt": tier.is_billing_exempt,
             "stripe_lookup_key": tier.stripe_lookup_key,
             "stripe_storage_lookup_key": getattr(
@@ -185,6 +186,9 @@ def create_tier():
         retention_notice_days_raw = request.form.get(
             "retention_notice_days", ""
         ).strip()
+        commission_percentage_raw = (
+            request.form.get("commission_percentage") or ""
+        ).strip()
 
         billing_provider = request.form.get("billing_provider", "exempt")
         stripe_key = request.form.get("stripe_lookup_key", "").strip()
@@ -218,6 +222,18 @@ def create_tier():
             if retention_notice_days_raw.isdigit()
             else None
         )
+        try:
+            commission_percentage = (
+                round(float(commission_percentage_raw), 2)
+                if commission_percentage_raw != ""
+                else 0.0
+            )
+        except (TypeError, ValueError):
+            flash("Commission percentage must be a number between 0 and 100.", "error")
+            return redirect(url_for(".create_tier"))
+        if commission_percentage < 0 or commission_percentage > 100:
+            flash("Commission percentage must be between 0 and 100.", "error")
+            return redirect(url_for(".create_tier"))
 
         # Validation
         if not name:
@@ -257,6 +273,7 @@ def create_tier():
             data_retention_days=data_retention_days,
             retention_notice_days=retention_notice_days,
             billing_provider=billing_provider,
+            commission_percentage=commission_percentage,
             stripe_lookup_key=stripe_key if stripe_key else None,
             whop_product_key=whop_key if whop_key else None,
             is_customer_facing=is_customer_facing,
@@ -438,6 +455,10 @@ def edit_tier(tier_id):
             retention_notice_days_raw = request.form.get(
                 "retention_notice_days", ""
             ).strip()
+            commission_percentage_raw = (
+                request.form.get("commission_percentage")
+                or str(tier.commission_percentage or 0)
+            ).strip()
             # Apply policy normalization
             if retention_policy == "one_year":
                 tier.retention_policy = "one_year"
@@ -458,6 +479,18 @@ def edit_tier(tier_id):
                 if retention_notice_days_raw.isdigit()
                 else None
             )
+            try:
+                commission_percentage = round(float(commission_percentage_raw), 2)
+            except (TypeError, ValueError):
+                flash(
+                    "Commission percentage must be a number between 0 and 100.",
+                    "error",
+                )
+                return redirect(url_for(".edit_tier", tier_id=tier_id))
+            if commission_percentage < 0 or commission_percentage > 100:
+                flash("Commission percentage must be between 0 and 100.", "error")
+                return redirect(url_for(".edit_tier", tier_id=tier_id))
+            tier.commission_percentage = commission_percentage
 
             # Update allowed and included add-ons
             addon_ids = request.form.getlist("allowed_addons", type=int)
