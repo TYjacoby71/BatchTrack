@@ -24,7 +24,7 @@
                         <h3 class="mb-0">
                             <i class="fas fa-handshake text-primary"></i> Affiliate Ecosystem
                         </h3>
-                        <p class="text-muted mb-0">Cross-organization referrals, accrued commissions, and payout visibility.</p>
+                        <p class="text-muted mb-0">Cross-organization referrals with pending, sent, complete, and unsuccessful payout visibility.</p>
                     </div>
                     <div>
                         <a href="{{ url_for('developer.affiliate_payouts') }}" class="btn btn-outline-secondary btn-sm">
@@ -49,7 +49,7 @@
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small text-uppercase">Paid Out</div>
+                    <div class="text-muted small text-uppercase">Complete</div>
                     <div class="fs-3 fw-semibold">{{ total_paid_out_display }}</div>
                 </div>
             </div>
@@ -57,7 +57,7 @@
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small text-uppercase">Accrued</div>
+                    <div class="text-muted small text-uppercase">Outstanding</div>
                     <div class="fs-3 fw-semibold">{{ total_accrued_display }}</div>
                 </div>
             </div>

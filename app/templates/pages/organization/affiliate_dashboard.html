@@ -116,6 +116,27 @@
     </div>
 
     <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Stripe Payout Status</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Track payout collection state for affiliate commissions before and after Stripe settlement.</p>
+                    {% with payout_status_summary=affiliate.payout_status_summary %}
+                        {% include "components/affiliate/payout_status_summary_cards.html" %}
+                    {% endwith %}
+                </div>
+                <div class="card-body pt-0">
+                    {% with payout_rows=affiliate.recent_payout_batches, empty_message='No payout records yet for this organization.' %}
+                        {% include "components/affiliate/recent_payout_batches_table.html" %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">

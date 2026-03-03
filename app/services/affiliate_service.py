@@ -12,7 +12,7 @@ import secrets
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, inspect
+from sqlalchemy import case, func, inspect
 
 from ..extensions import db
 from ..models import Organization, User
@@ -21,6 +21,16 @@ from ..models.affiliate import (
     AffiliatePayoutAccount,
     AffiliateProfile,
     AffiliateReferral,
+)
+from .affiliate import (
+    AffiliatePayoutNotificationService,
+    PAYOUT_STATUS_COMPLETE,
+    PAYOUT_STATUS_PENDING,
+    PAYOUT_STATUS_SENT,
+    PAYOUT_STATUS_UNSUCCESSFUL,
+    normalize_payout_status,
+    payout_status_label,
+    payout_status_query_values,
 )
 from ..utils.permissions import has_permission
 from ..utils.timezone_utils import TimezoneUtils
@@ -244,6 +254,8 @@ class AffiliateService:
             "pages": 1,
             "has_prev": False,
             "has_next": False,
+            "payout_status_summary": cls._empty_payout_status_summary(),
+            "recent_payout_batches": [],
             "reason": None,
         }
         if not user or user.user_type != "customer" or not user.organization_id:
@@ -309,6 +321,11 @@ class AffiliateService:
             .scalar()
             or 0
         )
+        payout_filters = [AffiliateMonthlyEarning.referrer_user_id == user.id]
+        payout_status_summary = cls._build_payout_status_summary(payout_filters)
+        recent_payout_batches = cls._build_recent_payout_batches(
+            payout_filters, limit=6
+        )
 
         return {
             "enabled": True,
@@ -325,6 +342,8 @@ class AffiliateService:
             "pages": max(1, pagination.pages),
             "has_prev": pagination.has_prev,
             "has_next": pagination.has_next,
+            "payout_status_summary": payout_status_summary,
+            "recent_payout_batches": recent_payout_batches,
             "reason": None,
         }
 
@@ -345,6 +364,8 @@ class AffiliateService:
             "pages": 1,
             "has_prev": False,
             "has_next": False,
+            "payout_status_summary": cls._empty_payout_status_summary(),
+            "recent_payout_batches": [],
         }
         if not organization or not cls._schema_ready():
             return payload
@@ -376,6 +397,13 @@ class AffiliateService:
             .filter(AffiliateMonthlyEarning.referrer_organization_id == organization.id)
             .scalar()
             or 0
+        )
+        payout_filters = [
+            AffiliateMonthlyEarning.referrer_organization_id == organization.id
+        ]
+        payout_status_summary = cls._build_payout_status_summary(payout_filters)
+        recent_payout_batches = cls._build_recent_payout_batches(
+            payout_filters, limit=8
         )
 
         by_user_rows = (
@@ -449,6 +477,8 @@ class AffiliateService:
                 "pages": max(1, pagination.pages),
                 "has_prev": pagination.has_prev,
                 "has_next": pagination.has_next,
+                "payout_status_summary": payout_status_summary,
+                "recent_payout_batches": recent_payout_batches,
             }
         )
         return payload
@@ -464,6 +494,14 @@ class AffiliateService:
             "total_paid_out_display": "$0.00",
             "total_accrued_cents": 0,
             "total_accrued_display": "$0.00",
+            "total_pending_cents": 0,
+            "total_pending_display": "$0.00",
+            "total_sent_cents": 0,
+            "total_sent_display": "$0.00",
+            "total_complete_cents": 0,
+            "total_complete_display": "$0.00",
+            "total_unsuccessful_cents": 0,
+            "total_unsuccessful_display": "$0.00",
             "organization_rows": [],
             "page": page,
             "pages": 1,
@@ -507,18 +545,21 @@ class AffiliateService:
         pages = max(1, (total_organizations + per_page - 1) // per_page)
 
         total_referrals = AffiliateReferral.query.count()
-        total_paid_out_cents = (
-            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
-            .filter(AffiliateMonthlyEarning.payout_status == "paid")
-            .scalar()
-            or 0
+        payout_summary = cls._build_payout_status_summary([])
+        total_pending_cents = int(
+            payout_summary[PAYOUT_STATUS_PENDING]["commission_cents"] or 0
+        )
+        total_sent_cents = int(payout_summary[PAYOUT_STATUS_SENT]["commission_cents"] or 0)
+        total_complete_cents = int(
+            payout_summary[PAYOUT_STATUS_COMPLETE]["commission_cents"] or 0
+        )
+        total_unsuccessful_cents = int(
+            payout_summary[PAYOUT_STATUS_UNSUCCESSFUL]["commission_cents"] or 0
         )
         total_accrued_cents = (
-            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
-            .filter(AffiliateMonthlyEarning.payout_status != "paid")
-            .scalar()
-            or 0
+            total_pending_cents + total_sent_cents + total_unsuccessful_cents
         )
+        total_paid_out_cents = total_complete_cents
 
         payload.update(
             {
@@ -528,6 +569,16 @@ class AffiliateService:
                 "total_paid_out_display": cls._format_currency_cents(total_paid_out_cents),
                 "total_accrued_cents": int(total_accrued_cents),
                 "total_accrued_display": cls._format_currency_cents(total_accrued_cents),
+                "total_pending_cents": total_pending_cents,
+                "total_pending_display": cls._format_currency_cents(total_pending_cents),
+                "total_sent_cents": total_sent_cents,
+                "total_sent_display": cls._format_currency_cents(total_sent_cents),
+                "total_complete_cents": total_complete_cents,
+                "total_complete_display": cls._format_currency_cents(total_complete_cents),
+                "total_unsuccessful_cents": total_unsuccessful_cents,
+                "total_unsuccessful_display": cls._format_currency_cents(
+                    total_unsuccessful_cents
+                ),
                 "organization_rows": [
                     {
                         "organization_id": row.organization_id,
@@ -562,6 +613,124 @@ class AffiliateService:
             return None
 
     @staticmethod
+    def _payout_status_case_expression():
+        """Normalize legacy payout statuses directly in SQL queries."""
+        return case(
+            (
+                AffiliateMonthlyEarning.payout_status.in_(
+                    payout_status_query_values(PAYOUT_STATUS_COMPLETE)
+                ),
+                PAYOUT_STATUS_COMPLETE,
+            ),
+            (
+                AffiliateMonthlyEarning.payout_status.in_(
+                    payout_status_query_values(PAYOUT_STATUS_SENT)
+                ),
+                PAYOUT_STATUS_SENT,
+            ),
+            (
+                AffiliateMonthlyEarning.payout_status.in_(
+                    payout_status_query_values(PAYOUT_STATUS_UNSUCCESSFUL)
+                ),
+                PAYOUT_STATUS_UNSUCCESSFUL,
+            ),
+            else_=PAYOUT_STATUS_PENDING,
+        )
+
+    @classmethod
+    def _empty_payout_status_summary(cls) -> dict[str, dict[str, Any]]:
+        """Return the shared payout status dictionary contract."""
+        return {
+            status: {
+                "status": status,
+                "label": payout_status_label(status),
+                "count": 0,
+                "commission_cents": 0,
+                "commission_display": "$0.00",
+            }
+            for status in (
+                PAYOUT_STATUS_PENDING,
+                PAYOUT_STATUS_SENT,
+                PAYOUT_STATUS_COMPLETE,
+                PAYOUT_STATUS_UNSUCCESSFUL,
+            )
+        }
+
+    @classmethod
+    def _build_payout_status_summary(cls, filters: list[Any]) -> dict[str, dict[str, Any]]:
+        """Aggregate payout counts/totals by canonical status."""
+        status_alias = cls._payout_status_case_expression().label("canonical_status")
+        grouped_rows = (
+            db.session.query(
+                status_alias,
+                func.count(AffiliateMonthlyEarning.id).label("count_rows"),
+                func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0).label(
+                    "commission_cents"
+                ),
+            )
+            .filter(*filters)
+            .group_by(status_alias)
+            .all()
+        )
+        summary = cls._empty_payout_status_summary()
+        for row in grouped_rows:
+            canonical = normalize_payout_status(getattr(row, "canonical_status", None))
+            if not canonical:
+                canonical = PAYOUT_STATUS_PENDING
+            commission_cents = int(getattr(row, "commission_cents", 0) or 0)
+            summary[canonical]["count"] = int(getattr(row, "count_rows", 0) or 0)
+            summary[canonical]["commission_cents"] = commission_cents
+            summary[canonical]["commission_display"] = cls._format_currency_cents(
+                commission_cents
+            )
+        return summary
+
+    @classmethod
+    def _build_recent_payout_batches(
+        cls,
+        filters: list[Any],
+        *,
+        limit: int = 6,
+    ) -> list[dict[str, Any]]:
+        """Build recent org/user payout batches for status visibility cards."""
+        status_alias = cls._payout_status_case_expression().label("canonical_status")
+        rows = (
+            db.session.query(
+                AffiliateMonthlyEarning.earning_month.label("earning_month"),
+                status_alias,
+                func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0).label(
+                    "commission_cents"
+                ),
+                func.max(AffiliateMonthlyEarning.payout_reference).label("payout_reference"),
+            )
+            .filter(*filters)
+            .group_by(AffiliateMonthlyEarning.earning_month, status_alias)
+            .order_by(AffiliateMonthlyEarning.earning_month.desc())
+            .limit(max(1, int(limit)))
+            .all()
+        )
+        return [
+            {
+                "earning_month": row.earning_month,
+                "earning_month_iso": row.earning_month.isoformat() if row.earning_month else "",
+                "earning_month_display": (
+                    row.earning_month.strftime("%b %Y") if row.earning_month else "Unknown"
+                ),
+                "payout_status": normalize_payout_status(getattr(row, "canonical_status", None))
+                or PAYOUT_STATUS_PENDING,
+                "payout_status_label": payout_status_label(
+                    getattr(row, "canonical_status", None)
+                ),
+                "commission_cents": int(getattr(row, "commission_cents", 0) or 0),
+                "commission_display": cls._format_currency_cents(
+                    getattr(row, "commission_cents", 0) or 0
+                ),
+                "payout_reference": row.payout_reference,
+            }
+            for row in rows
+        ]
+
+    @staticmethod
     def _to_utc_aware(value: datetime | None) -> datetime | None:
         if value is None:
             return None
@@ -575,7 +744,7 @@ class AffiliateService:
         *,
         page: int = 1,
         per_page: int = 25,
-        status_filter: str = "accrued",
+        status_filter: str = PAYOUT_STATUS_PENDING,
         organization_query: str | None = None,
         organization_id: int | None = None,
     ) -> dict[str, Any]:
@@ -587,13 +756,35 @@ class AffiliateService:
             "has_prev": False,
             "has_next": False,
             "total_batches": 0,
+            "outstanding_payout_batches": 0,
             "pending_payout_batches": 0,
+            "sent_payout_batches": 0,
+            "unsuccessful_payout_batches": 0,
             "paid_payout_batches": 0,
             "total_paid_out_cents": 0,
             "total_paid_out_display": "$0.00",
             "total_accrued_cents": 0,
             "total_accrued_display": "$0.00",
-            "status_filter": "accrued",
+            "total_pending_cents": 0,
+            "total_pending_display": "$0.00",
+            "total_sent_cents": 0,
+            "total_sent_display": "$0.00",
+            "total_complete_cents": 0,
+            "total_complete_display": "$0.00",
+            "total_unsuccessful_cents": 0,
+            "total_unsuccessful_display": "$0.00",
+            "payout_status_summary": cls._empty_payout_status_summary(),
+            "status_filter": PAYOUT_STATUS_PENDING,
+            "status_options": [
+                {"value": PAYOUT_STATUS_PENDING, "label": payout_status_label(PAYOUT_STATUS_PENDING)},
+                {"value": PAYOUT_STATUS_SENT, "label": payout_status_label(PAYOUT_STATUS_SENT)},
+                {"value": PAYOUT_STATUS_COMPLETE, "label": payout_status_label(PAYOUT_STATUS_COMPLETE)},
+                {
+                    "value": PAYOUT_STATUS_UNSUCCESSFUL,
+                    "label": payout_status_label(PAYOUT_STATUS_UNSUCCESSFUL),
+                },
+                {"value": "all", "label": "All"},
+            ],
             "organization_query": (organization_query or "").strip(),
             "organization_id": int(organization_id) if organization_id else None,
         }
@@ -602,12 +793,17 @@ class AffiliateService:
 
         page = max(1, int(page or 1))
         per_page = max(1, min(int(per_page or 25), 100))
-        status_filter = (status_filter or "accrued").strip().lower()
-        if status_filter not in {"all", "accrued", "paid"}:
-            status_filter = "accrued"
+        requested_status_filter = (status_filter or PAYOUT_STATUS_PENDING).strip().lower()
+        if requested_status_filter == "all":
+            status_filter = "all"
+        else:
+            status_filter = (
+                normalize_payout_status(requested_status_filter) or PAYOUT_STATUS_PENDING
+            )
         payload["status_filter"] = status_filter
         payload["organization_query"] = (organization_query or "").strip()
 
+        canonical_status_expr = cls._payout_status_case_expression()
         sum_gross_expr = func.coalesce(func.sum(AffiliateMonthlyEarning.gross_revenue_cents), 0)
         sum_commission_expr = func.coalesce(
             func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0
@@ -618,7 +814,7 @@ class AffiliateService:
                 Organization.name.label("organization_name"),
                 AffiliateMonthlyEarning.earning_month.label("earning_month"),
                 AffiliateMonthlyEarning.currency.label("currency"),
-                AffiliateMonthlyEarning.payout_status.label("payout_status"),
+                canonical_status_expr.label("canonical_payout_status"),
                 func.count(AffiliateMonthlyEarning.id).label("earning_rows"),
                 func.count(
                     func.distinct(AffiliateMonthlyEarning.affiliate_referral_id)
@@ -643,65 +839,74 @@ class AffiliateService:
                     f"%{str(organization_query).strip().lower()}%"
                 )
             )
-        if status_filter == "paid":
-            grouped_query = grouped_query.filter(
-                AffiliateMonthlyEarning.payout_status == "paid"
-            )
-        elif status_filter == "accrued":
-            grouped_query = grouped_query.filter(
-                AffiliateMonthlyEarning.payout_status != "paid"
-            )
-
         grouped_query = grouped_query.group_by(
             AffiliateMonthlyEarning.referrer_organization_id,
             Organization.name,
             AffiliateMonthlyEarning.earning_month,
             AffiliateMonthlyEarning.currency,
-            AffiliateMonthlyEarning.payout_status,
+            canonical_status_expr,
         ).order_by(AffiliateMonthlyEarning.earning_month.desc(), sum_commission_expr.desc())
 
-        total_batches = grouped_query.count()
+        summary_rows = grouped_query.all()
+        payout_status_summary = cls._empty_payout_status_summary()
+        for row in summary_rows:
+            canonical_status = normalize_payout_status(
+                getattr(row, "canonical_payout_status", None)
+            )
+            if not canonical_status:
+                canonical_status = PAYOUT_STATUS_PENDING
+            payout_status_summary[canonical_status]["count"] += 1
+            payout_status_summary[canonical_status]["commission_cents"] += int(
+                row.commission_cents or 0
+            )
+        for status_key in payout_status_summary:
+            payout_status_summary[status_key]["commission_display"] = cls._format_currency_cents(
+                payout_status_summary[status_key]["commission_cents"]
+            )
+
+        filtered_query = grouped_query
+        if status_filter != "all":
+            filtered_query = filtered_query.filter(
+                AffiliateMonthlyEarning.payout_status.in_(
+                    payout_status_query_values(status_filter)
+                )
+            )
+
+        total_batches = filtered_query.count()
         offset = (page - 1) * per_page
-        rows = grouped_query.limit(per_page).offset(offset).all()
+        rows = filtered_query.limit(per_page).offset(offset).all()
         pages = max(1, (total_batches + per_page - 1) // per_page)
 
-        total_paid_out_cents = (
-            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
-            .filter(AffiliateMonthlyEarning.payout_status == "paid")
-            .scalar()
-            or 0
+        total_pending_cents = int(
+            payout_status_summary[PAYOUT_STATUS_PENDING]["commission_cents"] or 0
+        )
+        total_sent_cents = int(
+            payout_status_summary[PAYOUT_STATUS_SENT]["commission_cents"] or 0
+        )
+        total_complete_cents = int(
+            payout_status_summary[PAYOUT_STATUS_COMPLETE]["commission_cents"] or 0
+        )
+        total_unsuccessful_cents = int(
+            payout_status_summary[PAYOUT_STATUS_UNSUCCESSFUL]["commission_cents"] or 0
         )
         total_accrued_cents = (
-            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
-            .filter(AffiliateMonthlyEarning.payout_status != "paid")
-            .scalar()
-            or 0
+            total_pending_cents + total_sent_cents + total_unsuccessful_cents
         )
-        pending_payout_batches = (
-            db.session.query(
-                AffiliateMonthlyEarning.referrer_organization_id,
-                AffiliateMonthlyEarning.earning_month,
-            )
-            .filter(AffiliateMonthlyEarning.payout_status != "paid")
-            .group_by(
-                AffiliateMonthlyEarning.referrer_organization_id,
-                AffiliateMonthlyEarning.earning_month,
-                AffiliateMonthlyEarning.currency,
-            )
-            .count()
+        total_paid_out_cents = total_complete_cents
+        pending_payout_batches = int(
+            payout_status_summary[PAYOUT_STATUS_PENDING]["count"] or 0
         )
-        paid_payout_batches = (
-            db.session.query(
-                AffiliateMonthlyEarning.referrer_organization_id,
-                AffiliateMonthlyEarning.earning_month,
-            )
-            .filter(AffiliateMonthlyEarning.payout_status == "paid")
-            .group_by(
-                AffiliateMonthlyEarning.referrer_organization_id,
-                AffiliateMonthlyEarning.earning_month,
-                AffiliateMonthlyEarning.currency,
-            )
-            .count()
+        sent_payout_batches = int(
+            payout_status_summary[PAYOUT_STATUS_SENT]["count"] or 0
+        )
+        unsuccessful_payout_batches = int(
+            payout_status_summary[PAYOUT_STATUS_UNSUCCESSFUL]["count"] or 0
+        )
+        paid_payout_batches = int(
+            payout_status_summary[PAYOUT_STATUS_COMPLETE]["count"] or 0
+        )
+        outstanding_payout_batches = (
+            pending_payout_batches + sent_payout_batches + unsuccessful_payout_batches
         )
 
         payload.update(
@@ -721,7 +926,13 @@ class AffiliateService:
                             else "Unknown"
                         ),
                         "currency": (row.currency or "usd").upper(),
-                        "payout_status": row.payout_status or "accrued",
+                        "payout_status": normalize_payout_status(
+                            getattr(row, "canonical_payout_status", None)
+                        )
+                        or PAYOUT_STATUS_PENDING,
+                        "payout_status_label": payout_status_label(
+                            getattr(row, "canonical_payout_status", None)
+                        ),
                         "earning_rows": int(row.earning_rows or 0),
                         "referral_count": int(row.referral_count or 0),
                         "gross_cents": int(row.gross_cents or 0),
@@ -751,15 +962,103 @@ class AffiliateService:
                 "has_prev": page > 1,
                 "has_next": page < pages,
                 "total_batches": int(total_batches),
+                "outstanding_payout_batches": int(outstanding_payout_batches),
                 "pending_payout_batches": int(pending_payout_batches),
+                "sent_payout_batches": int(sent_payout_batches),
+                "unsuccessful_payout_batches": int(unsuccessful_payout_batches),
                 "paid_payout_batches": int(paid_payout_batches),
                 "total_paid_out_cents": int(total_paid_out_cents),
                 "total_paid_out_display": cls._format_currency_cents(total_paid_out_cents),
                 "total_accrued_cents": int(total_accrued_cents),
                 "total_accrued_display": cls._format_currency_cents(total_accrued_cents),
+                "total_pending_cents": int(total_pending_cents),
+                "total_pending_display": cls._format_currency_cents(total_pending_cents),
+                "total_sent_cents": int(total_sent_cents),
+                "total_sent_display": cls._format_currency_cents(total_sent_cents),
+                "total_complete_cents": int(total_complete_cents),
+                "total_complete_display": cls._format_currency_cents(total_complete_cents),
+                "total_unsuccessful_cents": int(total_unsuccessful_cents),
+                "total_unsuccessful_display": cls._format_currency_cents(
+                    total_unsuccessful_cents
+                ),
+                "payout_status_summary": payout_status_summary,
             }
         )
         return payload
+
+    @classmethod
+    def update_monthly_earnings_status(
+        cls,
+        *,
+        organization_id: int | None,
+        earning_month: str | date | None,
+        target_status: str | None,
+        payout_reference: str | None = None,
+        auto_commit: bool = True,
+    ) -> dict[str, Any]:
+        if not cls._schema_ready():
+            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
+        canonical_target_status = normalize_payout_status(target_status)
+        if not canonical_target_status:
+            return {"ok": False, "reason": "invalid_status", "updated_rows": 0}
+        month_date = cls._parse_earning_month(earning_month)
+        if not organization_id or not month_date:
+            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
+
+        rows = AffiliateMonthlyEarning.query.filter_by(
+            referrer_organization_id=int(organization_id),
+            earning_month=month_date,
+        ).all()
+        if not rows:
+            return {"ok": False, "reason": "not_found", "updated_rows": 0}
+
+        now = TimezoneUtils.utc_now()
+        updated_rows = 0
+        status_changed_rows = 0
+        status_changed_commission_cents = 0
+        changed_referrer_user_ids: set[int] = set()
+        clean_reference = (payout_reference or "").strip() or None
+        for row in rows:
+            changed = False
+            current_status = normalize_payout_status(row.payout_status) or PAYOUT_STATUS_PENDING
+            if current_status != canonical_target_status:
+                row.payout_status = canonical_target_status
+                status_changed_rows += 1
+                status_changed_commission_cents += int(row.commission_amount_cents or 0)
+                changed = True
+            should_store_reference = canonical_target_status in {
+                PAYOUT_STATUS_SENT,
+                PAYOUT_STATUS_COMPLETE,
+            }
+            if should_store_reference:
+                if clean_reference and row.payout_reference != clean_reference:
+                    row.payout_reference = clean_reference
+                    changed = True
+            elif row.payout_reference:
+                row.payout_reference = None
+                changed = True
+
+            if changed:
+                row.updated_at = now
+                updated_rows += 1
+                if row.referrer_user_id:
+                    changed_referrer_user_ids.add(int(row.referrer_user_id))
+
+        if updated_rows > 0 and auto_commit:
+            db.session.commit()
+        return {
+            "ok": True,
+            "reason": None,
+            "updated_rows": int(updated_rows),
+            "status_changed_rows": int(status_changed_rows),
+            "status_changed_commission_cents": int(status_changed_commission_cents),
+            "organization_id": int(organization_id),
+            "earning_month": month_date.isoformat(),
+            "earning_month_date": month_date,
+            "target_status": canonical_target_status,
+            "target_status_label": payout_status_label(canonical_target_status),
+            "referrer_user_ids": sorted(changed_referrer_user_ids),
+        }
 
     @classmethod
     def mark_monthly_earnings_paid(
@@ -770,49 +1069,14 @@ class AffiliateService:
         payout_reference: str | None = None,
         auto_commit: bool = True,
     ) -> dict[str, Any]:
-        if not cls._schema_ready():
-            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
-        month_date = cls._parse_earning_month(earning_month)
-        if not organization_id or not month_date:
-            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
-
-        rows = AffiliateMonthlyEarning.query.filter_by(
-            referrer_organization_id=int(organization_id),
-            earning_month=month_date,
-        ).all()
-        if not rows:
-            return {"ok": False, "reason": "not_found", "updated_rows": 0}
-
-        now = TimezoneUtils.utc_now()
-        updated_rows = 0
-        status_changed_rows = 0
-        status_changed_commission_cents = 0
-        clean_reference = (payout_reference or "").strip() or None
-        for row in rows:
-            changed = False
-            if row.payout_status != "paid":
-                row.payout_status = "paid"
-                status_changed_rows += 1
-                status_changed_commission_cents += int(row.commission_amount_cents or 0)
-                changed = True
-            if clean_reference and row.payout_reference != clean_reference:
-                row.payout_reference = clean_reference
-                changed = True
-            if changed:
-                row.updated_at = now
-                updated_rows += 1
-
-        if updated_rows > 0 and auto_commit:
-            db.session.commit()
-        return {
-            "ok": True,
-            "reason": None,
-            "updated_rows": int(updated_rows),
-            "status_changed_rows": int(status_changed_rows),
-            "status_changed_commission_cents": int(status_changed_commission_cents),
-            "organization_id": int(organization_id),
-            "earning_month": month_date.isoformat(),
-        }
+        """Backward-compatible helper that maps paid -> complete."""
+        return cls.update_monthly_earnings_status(
+            organization_id=organization_id,
+            earning_month=earning_month,
+            target_status=PAYOUT_STATUS_COMPLETE,
+            payout_reference=payout_reference,
+            auto_commit=auto_commit,
+        )
 
     @classmethod
     def mark_monthly_earnings_accrued(
@@ -822,43 +1086,41 @@ class AffiliateService:
         earning_month: str | date | None,
         auto_commit: bool = True,
     ) -> dict[str, Any]:
-        if not cls._schema_ready():
-            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
-        month_date = cls._parse_earning_month(earning_month)
-        if not organization_id or not month_date:
-            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
+        """Backward-compatible helper that maps accrued -> pending."""
+        return cls.update_monthly_earnings_status(
+            organization_id=organization_id,
+            earning_month=earning_month,
+            target_status=PAYOUT_STATUS_PENDING,
+            auto_commit=auto_commit,
+        )
 
-        rows = AffiliateMonthlyEarning.query.filter_by(
-            referrer_organization_id=int(organization_id),
-            earning_month=month_date,
-        ).all()
-        if not rows:
-            return {"ok": False, "reason": "not_found", "updated_rows": 0}
-
-        now = TimezoneUtils.utc_now()
-        updated_rows = 0
-        status_changed_rows = 0
-        status_changed_commission_cents = 0
-        for row in rows:
-            if row.payout_status == "accrued":
-                continue
-            row.payout_status = "accrued"
-            row.updated_at = now
-            updated_rows += 1
-            status_changed_rows += 1
-            status_changed_commission_cents += int(row.commission_amount_cents or 0)
-
-        if updated_rows > 0 and auto_commit:
-            db.session.commit()
-        return {
-            "ok": True,
-            "reason": None,
-            "updated_rows": int(updated_rows),
-            "status_changed_rows": int(status_changed_rows),
-            "status_changed_commission_cents": int(status_changed_commission_cents),
-            "organization_id": int(organization_id),
-            "earning_month": month_date.isoformat(),
-        }
+    @classmethod
+    def notify_payout_status_update(
+        cls,
+        *,
+        organization_id: int | None,
+        earning_month: date | None,
+        payout_status: str | None,
+        commission_amount_cents: int,
+        updated_rows: int,
+        payout_reference: str | None = None,
+        referrer_user_ids: list[int] | None = None,
+    ) -> dict[str, int]:
+        """Send payout status update email notifications to org recipients."""
+        if not organization_id:
+            return {"attempted": 0, "sent": 0}
+        organization = Organization.query.get(int(organization_id))
+        if not organization:
+            return {"attempted": 0, "sent": 0}
+        return AffiliatePayoutNotificationService.send_payout_status_update_email(
+            organization=organization,
+            earning_month=earning_month,
+            payout_status=payout_status or PAYOUT_STATUS_PENDING,
+            commission_amount_cents=int(commission_amount_cents or 0),
+            updated_rows=int(updated_rows or 0),
+            payout_reference=payout_reference,
+            referrer_user_ids=referrer_user_ids or [],
+        )
 
     @classmethod
     def get_or_create_payout_account(

@@ -22,7 +22,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="mb-0"><i class="fas fa-money-check-dollar text-primary"></i> Affiliate Payout Operations</h3>
-                        <p class="text-muted mb-0">Batch-level payout controls for monthly affiliate earnings.</p>
+                        <p class="text-muted mb-0">Batch-level payout controls for monthly affiliate earnings. Status updates trigger noreply notifications to organization recipients.</p>
                     </div>
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('developer.affiliate_ecosystem') }}" class="btn btn-outline-secondary btn-sm">
@@ -36,27 +36,32 @@
 
     {% if enabled %}
     <div class="row g-3 mb-4">
+        <div class="col-12">
+            {% with payout_status_summary=payout_status_summary %}
+                {% include "components/affiliate/payout_status_summary_cards.html" %}
+            {% endwith %}
+        </div>
         <div class="col-md-3">
             <div class="card h-100"><div class="card-body">
-                <div class="text-muted small text-uppercase">Accrued Total</div>
+                <div class="text-muted small text-uppercase">Outstanding Total</div>
                 <div class="fs-3 fw-semibold">{{ total_accrued_display }}</div>
             </div></div>
         </div>
         <div class="col-md-3">
             <div class="card h-100"><div class="card-body">
-                <div class="text-muted small text-uppercase">Paid Out Total</div>
+                <div class="text-muted small text-uppercase">Complete Total</div>
                 <div class="fs-3 fw-semibold">{{ total_paid_out_display }}</div>
             </div></div>
         </div>
         <div class="col-md-3">
             <div class="card h-100"><div class="card-body">
-                <div class="text-muted small text-uppercase">Pending Payout Batches</div>
-                <div class="fs-3 fw-semibold">{{ pending_payout_batches }}</div>
+                <div class="text-muted small text-uppercase">Outstanding Batches</div>
+                <div class="fs-3 fw-semibold">{{ outstanding_payout_batches }}</div>
             </div></div>
         </div>
         <div class="col-md-3">
             <div class="card h-100"><div class="card-body">
-                <div class="text-muted small text-uppercase">Paid Payout Batches</div>
+                <div class="text-muted small text-uppercase">Complete Batches</div>
                 <div class="fs-3 fw-semibold">{{ paid_payout_batches }}</div>
             </div></div>
         </div>
@@ -69,9 +74,9 @@
                     <div class="col-md-3">
                         <label class="form-label mb-1">Status</label>
                         <select class="form-select form-select-sm" name="status">
-                            <option value="accrued" {{ 'selected' if status_filter == 'accrued' else '' }}>Accrued</option>
-                            <option value="paid" {{ 'selected' if status_filter == 'paid' else '' }}>Paid</option>
-                            <option value="all" {{ 'selected' if status_filter == 'all' else '' }}>All</option>
+                            {% for option in status_options %}
+                            <option value="{{ option.value }}" {{ 'selected' if status_filter == option.value else '' }}>{{ option.label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-5">
@@ -133,16 +138,13 @@
                                 <td>{{ row.commission_display }}</td>
                                 <td>{{ '%.2f'|format(row.effective_rate_percent or 0) }}%</td>
                                 <td>
-                                    {% if row.payout_status == 'paid' %}
-                                        <span class="badge bg-success">Paid</span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">Accrued</span>
-                                    {% endif %}
+                                    {% with payout_status=row.payout_status %}
+                                        {% include "components/affiliate/payout_status_badge.html" %}
+                                    {% endwith %}
                                 </td>
                                 <td><code>{{ row.payout_reference or '—' }}</code></td>
                                 <td class="pe-3">
-                                    {% if row.payout_status != 'paid' %}
-                                    <form method="post" action="{{ url_for('developer.affiliate_payout_mark_paid') }}" class="d-flex gap-1">
+                                    <form method="post" action="{{ url_for('developer.affiliate_payout_update_status') }}" class="d-flex gap-1 align-items-center flex-wrap">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="organization_id" value="{{ row.organization_id }}">
                                         <input type="hidden" name="earning_month" value="{{ row.earning_month_iso }}">
@@ -150,25 +152,24 @@
                                         <input type="hidden" name="return_status" value="{{ status_filter }}">
                                         <input type="hidden" name="return_org" value="{{ organization_query or '' }}">
                                         <input type="hidden" name="return_org_id" value="{{ organization_id or '' }}">
-                                        <input type="text" name="payout_reference" class="form-control form-control-sm" style="max-width: 140px;" placeholder="Payout ref">
-                                        <button type="submit" class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-check me-1"></i>Mark Paid
+                                        <select name="target_status" class="form-select form-select-sm" style="max-width: 135px;">
+                                            <option value="pending" {{ 'selected' if row.payout_status == 'pending' else '' }}>Pending</option>
+                                            <option value="sent" {{ 'selected' if row.payout_status == 'sent' else '' }}>Sent</option>
+                                            <option value="complete" {{ 'selected' if row.payout_status == 'complete' else '' }}>Complete</option>
+                                            <option value="unsuccessful" {{ 'selected' if row.payout_status == 'unsuccessful' else '' }}>Unsuccessful</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            name="payout_reference"
+                                            class="form-control form-control-sm"
+                                            style="max-width: 140px;"
+                                            placeholder="Payout ref"
+                                            value="{{ row.payout_reference or '' }}"
+                                        >
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-save me-1"></i>Update
                                         </button>
                                     </form>
-                                    {% else %}
-                                    <form method="post" action="{{ url_for('developer.affiliate_payout_mark_accrued') }}">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="organization_id" value="{{ row.organization_id }}">
-                                        <input type="hidden" name="earning_month" value="{{ row.earning_month_iso }}">
-                                        <input type="hidden" name="return_page" value="{{ page }}">
-                                        <input type="hidden" name="return_status" value="{{ status_filter }}">
-                                        <input type="hidden" name="return_org" value="{{ organization_query or '' }}">
-                                        <input type="hidden" name="return_org_id" value="{{ organization_id or '' }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-rotate-left me-1"></i>Reopen
-                                        </button>
-                                    </form>
-                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

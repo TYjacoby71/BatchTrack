@@ -1,0 +1,13 @@
+{% set summary = payout_status_summary or {} %}
+<div class="row g-2">
+    {% for key, title in [('pending', 'Pending'), ('sent', 'Sent'), ('complete', 'Complete'), ('unsuccessful', 'Unsuccessful')] %}
+    {% set row = summary.get(key, {}) %}
+    <div class="col-sm-6 col-lg-3">
+        <div class="border rounded p-2 h-100">
+            <div class="small text-muted text-uppercase">{{ title }}</div>
+            <div class="fw-semibold">{{ row.get('commission_display', '$0.00') }}</div>
+            <div class="small text-muted">{{ row.get('count', 0) }} entries</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>

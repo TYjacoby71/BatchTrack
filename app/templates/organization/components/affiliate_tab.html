@@ -51,6 +51,7 @@
                         · Contact: {{ affiliate_payout_account.payout_email }}
                         {% endif %}
                     </p>
+                    <small class="text-muted">Collect payouts in Stripe. Status cards below track Pending, Sent, Complete, and Unsuccessful batches.</small>
                 </div>
                 {% if organization.stripe_customer_id %}
                 <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-primary btn-sm">
@@ -59,6 +60,24 @@
                 {% else %}
                 <span class="badge bg-warning text-dark">Stripe customer not connected</span>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Stripe Payout Status</h6>
+            </div>
+            <div class="card-body">
+                {% with payout_status_summary=affiliate.payout_status_summary %}
+                    {% include "components/affiliate/payout_status_summary_cards.html" %}
+                {% endwith %}
+            </div>
+            <div class="card-body pt-0">
+                {% with payout_rows=affiliate.recent_payout_batches, empty_message='No payout records yet for this organization.' %}
+                    {% include "components/affiliate/recent_payout_batches_table.html" %}
+                {% endwith %}
             </div>
         </div>
     </div>
