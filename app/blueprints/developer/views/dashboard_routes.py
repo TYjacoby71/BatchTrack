@@ -11,7 +11,7 @@ Glossary:
 from __future__ import annotations
 import logging
 
-from flask import jsonify, render_template, request, url_for
+from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from app.models.feature_flag import FeatureFlag
 from app.models.models import Organization
@@ -264,6 +264,137 @@ def affiliate_ecosystem_organization(org_id):
             {"label": org.name},
         ],
     )
+
+
+@developer_bp.route("/affiliate-payouts")
+@require_developer_permission("dev.view_all_billing")
+def affiliate_payouts():
+    """Developer payout operations console for affiliate earnings."""
+    page = request.args.get("page", 1, type=int)
+    status_filter = request.args.get("status", "accrued", type=str)
+    organization_query = request.args.get("org", "", type=str)
+    organization_id = request.args.get("org_id", type=int)
+    context = AffiliateService.build_developer_payout_operations_context(
+        page=page,
+        per_page=30,
+        status_filter=status_filter,
+        organization_query=organization_query,
+        organization_id=organization_id,
+    )
+    return render_template(
+        "developer/affiliate_payouts.html",
+        **context,
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
+            {"label": "Affiliate Payout Operations"},
+        ],
+    )
+
+
+def _affiliate_payout_redirect():
+    """Return redirect URL preserving payout list filters."""
+    page = request.form.get("return_page", 1, type=int)
+    status_filter = request.form.get("return_status", "accrued", type=str)
+    organization_query = request.form.get("return_org", "", type=str)
+    organization_id = request.form.get("return_org_id", type=int)
+    return redirect(
+        url_for(
+            "developer.affiliate_payouts",
+            page=page,
+            status=status_filter,
+            org=organization_query,
+            org_id=organization_id,
+        )
+    )
+
+
+@developer_bp.route("/affiliate-payouts/mark-paid", methods=["POST"])
+@require_developer_permission("dev.view_all_billing")
+def affiliate_payout_mark_paid():
+    """Mark all earnings in an org-month payout batch as paid."""
+    from flask_wtf.csrf import validate_csrf
+
+    try:
+        validate_csrf(request.form.get("csrf_token"))
+    except Exception as exc:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/dashboard_routes.py:csrf",
+            exc_info=True,
+        )
+        flash(f"CSRF validation failed: {exc}", "error")
+        return _affiliate_payout_redirect()
+
+    organization_id = request.form.get("organization_id", type=int)
+    earning_month = request.form.get("earning_month", type=str)
+    payout_reference = request.form.get("payout_reference", type=str)
+    result = AffiliateService.mark_monthly_earnings_paid(
+        organization_id=organization_id,
+        earning_month=earning_month,
+        payout_reference=payout_reference,
+        auto_commit=True,
+    )
+    if result.get("ok"):
+        if int(result.get("status_changed_rows", 0)) > 0:
+            flash(
+                f"Marked {result.get('status_changed_rows')} earning row(s) as paid "
+                f"for {result.get('earning_month')} "
+                f"({AffiliateService._format_currency_cents(result.get('status_changed_commission_cents'))}).",
+                "success",
+            )
+        elif int(result.get("updated_rows", 0)) > 0:
+            flash(
+                f"Payout reference updated for {result.get('earning_month')}.",
+                "success",
+            )
+        else:
+            flash("No rows changed; batch may already be paid.", "info")
+    else:
+        flash(
+            f"Unable to update payout batch ({result.get('reason', 'unknown_error')}).",
+            "error",
+        )
+    return _affiliate_payout_redirect()
+
+
+@developer_bp.route("/affiliate-payouts/mark-accrued", methods=["POST"])
+@require_developer_permission("dev.view_all_billing")
+def affiliate_payout_mark_accrued():
+    """Move an org-month payout batch back to accrued."""
+    from flask_wtf.csrf import validate_csrf
+
+    try:
+        validate_csrf(request.form.get("csrf_token"))
+    except Exception as exc:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/dashboard_routes.py:csrf2",
+            exc_info=True,
+        )
+        flash(f"CSRF validation failed: {exc}", "error")
+        return _affiliate_payout_redirect()
+
+    organization_id = request.form.get("organization_id", type=int)
+    earning_month = request.form.get("earning_month", type=str)
+    result = AffiliateService.mark_monthly_earnings_accrued(
+        organization_id=organization_id,
+        earning_month=earning_month,
+        auto_commit=True,
+    )
+    if result.get("ok"):
+        if int(result.get("status_changed_rows", 0)) > 0:
+            flash(
+                f"Moved {result.get('status_changed_rows')} earning row(s) back to accrued "
+                f"for {result.get('earning_month')}.",
+                "success",
+            )
+        else:
+            flash("No rows changed; batch is already accrued.", "info")
+    else:
+        flash(
+            f"Unable to update payout batch ({result.get('reason', 'unknown_error')}).",
+            "error",
+        )
+    return _affiliate_payout_redirect()
 
 
 # --- Waitlist Statistics ---

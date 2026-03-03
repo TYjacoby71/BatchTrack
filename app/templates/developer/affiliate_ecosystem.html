@@ -19,11 +19,18 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="mb-0">
-                        <i class="fas fa-handshake text-primary"></i> Affiliate Ecosystem
-                    </h3>
-                    <p class="text-muted mb-0">Cross-organization referrals, accrued commissions, and payout visibility.</p>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">
+                            <i class="fas fa-handshake text-primary"></i> Affiliate Ecosystem
+                        </h3>
+                        <p class="text-muted mb-0">Cross-organization referrals, accrued commissions, and payout visibility.</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('developer.affiliate_payouts') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-money-check-dollar me-1"></i>Payout Operations
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -98,6 +105,10 @@
                                                 <a class="btn btn-sm btn-outline-dark"
                                                    href="{{ url_for('developer.affiliate_ecosystem_organization', org_id=row.organization_id) }}">
                                                     Scoped Dashboard
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-success"
+                                                   href="{{ url_for('developer.affiliate_payouts', org_id=row.organization_id) }}">
+                                                    Payout Ops
                                                 </a>
                                             </div>
                                         </td>

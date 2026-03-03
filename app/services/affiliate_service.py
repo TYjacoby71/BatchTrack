@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import secrets
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func, inspect
@@ -549,6 +549,317 @@ class AffiliateService:
         )
         return payload
 
+    @staticmethod
+    def _parse_earning_month(earning_month_value: str | date | None) -> date | None:
+        if isinstance(earning_month_value, date):
+            return earning_month_value
+        raw_value = str(earning_month_value or "").strip()
+        if not raw_value:
+            return None
+        try:
+            return datetime.strptime(raw_value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _to_utc_aware(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    @classmethod
+    def build_developer_payout_operations_context(
+        cls,
+        *,
+        page: int = 1,
+        per_page: int = 25,
+        status_filter: str = "accrued",
+        organization_query: str | None = None,
+        organization_id: int | None = None,
+    ) -> dict[str, Any]:
+        payload = {
+            "enabled": False,
+            "rows": [],
+            "page": page,
+            "pages": 1,
+            "has_prev": False,
+            "has_next": False,
+            "total_batches": 0,
+            "pending_payout_batches": 0,
+            "paid_payout_batches": 0,
+            "total_paid_out_cents": 0,
+            "total_paid_out_display": "$0.00",
+            "total_accrued_cents": 0,
+            "total_accrued_display": "$0.00",
+            "status_filter": "accrued",
+            "organization_query": (organization_query or "").strip(),
+            "organization_id": int(organization_id) if organization_id else None,
+        }
+        if not cls._schema_ready():
+            return payload
+
+        page = max(1, int(page or 1))
+        per_page = max(1, min(int(per_page or 25), 100))
+        status_filter = (status_filter or "accrued").strip().lower()
+        if status_filter not in {"all", "accrued", "paid"}:
+            status_filter = "accrued"
+        payload["status_filter"] = status_filter
+        payload["organization_query"] = (organization_query or "").strip()
+
+        sum_gross_expr = func.coalesce(func.sum(AffiliateMonthlyEarning.gross_revenue_cents), 0)
+        sum_commission_expr = func.coalesce(
+            func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0
+        )
+        grouped_query = (
+            db.session.query(
+                AffiliateMonthlyEarning.referrer_organization_id.label("organization_id"),
+                Organization.name.label("organization_name"),
+                AffiliateMonthlyEarning.earning_month.label("earning_month"),
+                AffiliateMonthlyEarning.currency.label("currency"),
+                AffiliateMonthlyEarning.payout_status.label("payout_status"),
+                func.count(AffiliateMonthlyEarning.id).label("earning_rows"),
+                func.count(
+                    func.distinct(AffiliateMonthlyEarning.affiliate_referral_id)
+                ).label("referral_count"),
+                sum_gross_expr.label("gross_cents"),
+                sum_commission_expr.label("commission_cents"),
+                func.max(AffiliateMonthlyEarning.payout_reference).label("payout_reference"),
+            )
+            .join(
+                Organization,
+                Organization.id == AffiliateMonthlyEarning.referrer_organization_id,
+            )
+        )
+        if organization_id:
+            grouped_query = grouped_query.filter(
+                AffiliateMonthlyEarning.referrer_organization_id == int(organization_id)
+            )
+            payload["organization_id"] = int(organization_id)
+        if organization_query:
+            grouped_query = grouped_query.filter(
+                func.lower(Organization.name).like(
+                    f"%{str(organization_query).strip().lower()}%"
+                )
+            )
+        if status_filter == "paid":
+            grouped_query = grouped_query.filter(
+                AffiliateMonthlyEarning.payout_status == "paid"
+            )
+        elif status_filter == "accrued":
+            grouped_query = grouped_query.filter(
+                AffiliateMonthlyEarning.payout_status != "paid"
+            )
+
+        grouped_query = grouped_query.group_by(
+            AffiliateMonthlyEarning.referrer_organization_id,
+            Organization.name,
+            AffiliateMonthlyEarning.earning_month,
+            AffiliateMonthlyEarning.currency,
+            AffiliateMonthlyEarning.payout_status,
+        ).order_by(AffiliateMonthlyEarning.earning_month.desc(), sum_commission_expr.desc())
+
+        total_batches = grouped_query.count()
+        offset = (page - 1) * per_page
+        rows = grouped_query.limit(per_page).offset(offset).all()
+        pages = max(1, (total_batches + per_page - 1) // per_page)
+
+        total_paid_out_cents = (
+            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
+            .filter(AffiliateMonthlyEarning.payout_status == "paid")
+            .scalar()
+            or 0
+        )
+        total_accrued_cents = (
+            db.session.query(func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0))
+            .filter(AffiliateMonthlyEarning.payout_status != "paid")
+            .scalar()
+            or 0
+        )
+        pending_payout_batches = (
+            db.session.query(
+                AffiliateMonthlyEarning.referrer_organization_id,
+                AffiliateMonthlyEarning.earning_month,
+            )
+            .filter(AffiliateMonthlyEarning.payout_status != "paid")
+            .group_by(
+                AffiliateMonthlyEarning.referrer_organization_id,
+                AffiliateMonthlyEarning.earning_month,
+                AffiliateMonthlyEarning.currency,
+            )
+            .count()
+        )
+        paid_payout_batches = (
+            db.session.query(
+                AffiliateMonthlyEarning.referrer_organization_id,
+                AffiliateMonthlyEarning.earning_month,
+            )
+            .filter(AffiliateMonthlyEarning.payout_status == "paid")
+            .group_by(
+                AffiliateMonthlyEarning.referrer_organization_id,
+                AffiliateMonthlyEarning.earning_month,
+                AffiliateMonthlyEarning.currency,
+            )
+            .count()
+        )
+
+        payload.update(
+            {
+                "enabled": True,
+                "rows": [
+                    {
+                        "organization_id": row.organization_id,
+                        "organization_name": row.organization_name,
+                        "earning_month": row.earning_month,
+                        "earning_month_iso": (
+                            row.earning_month.isoformat() if row.earning_month else ""
+                        ),
+                        "earning_month_display": (
+                            row.earning_month.strftime("%b %Y")
+                            if row.earning_month
+                            else "Unknown"
+                        ),
+                        "currency": (row.currency or "usd").upper(),
+                        "payout_status": row.payout_status or "accrued",
+                        "earning_rows": int(row.earning_rows or 0),
+                        "referral_count": int(row.referral_count or 0),
+                        "gross_cents": int(row.gross_cents or 0),
+                        "gross_display": cls._format_currency_cents(row.gross_cents or 0),
+                        "commission_cents": int(row.commission_cents or 0),
+                        "commission_display": cls._format_currency_cents(
+                            row.commission_cents or 0
+                        ),
+                        "effective_rate_percent": (
+                            round(
+                                (
+                                    (int(row.commission_cents or 0))
+                                    / max(1, int(row.gross_cents or 0))
+                                )
+                                * 100.0,
+                                2,
+                            )
+                            if int(row.gross_cents or 0) > 0
+                            else 0.0
+                        ),
+                        "payout_reference": row.payout_reference,
+                    }
+                    for row in rows
+                ],
+                "page": page,
+                "pages": pages,
+                "has_prev": page > 1,
+                "has_next": page < pages,
+                "total_batches": int(total_batches),
+                "pending_payout_batches": int(pending_payout_batches),
+                "paid_payout_batches": int(paid_payout_batches),
+                "total_paid_out_cents": int(total_paid_out_cents),
+                "total_paid_out_display": cls._format_currency_cents(total_paid_out_cents),
+                "total_accrued_cents": int(total_accrued_cents),
+                "total_accrued_display": cls._format_currency_cents(total_accrued_cents),
+            }
+        )
+        return payload
+
+    @classmethod
+    def mark_monthly_earnings_paid(
+        cls,
+        *,
+        organization_id: int | None,
+        earning_month: str | date | None,
+        payout_reference: str | None = None,
+        auto_commit: bool = True,
+    ) -> dict[str, Any]:
+        if not cls._schema_ready():
+            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
+        month_date = cls._parse_earning_month(earning_month)
+        if not organization_id or not month_date:
+            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
+
+        rows = AffiliateMonthlyEarning.query.filter_by(
+            referrer_organization_id=int(organization_id),
+            earning_month=month_date,
+        ).all()
+        if not rows:
+            return {"ok": False, "reason": "not_found", "updated_rows": 0}
+
+        now = TimezoneUtils.utc_now()
+        updated_rows = 0
+        status_changed_rows = 0
+        status_changed_commission_cents = 0
+        clean_reference = (payout_reference or "").strip() or None
+        for row in rows:
+            changed = False
+            if row.payout_status != "paid":
+                row.payout_status = "paid"
+                status_changed_rows += 1
+                status_changed_commission_cents += int(row.commission_amount_cents or 0)
+                changed = True
+            if clean_reference and row.payout_reference != clean_reference:
+                row.payout_reference = clean_reference
+                changed = True
+            if changed:
+                row.updated_at = now
+                updated_rows += 1
+
+        if updated_rows > 0 and auto_commit:
+            db.session.commit()
+        return {
+            "ok": True,
+            "reason": None,
+            "updated_rows": int(updated_rows),
+            "status_changed_rows": int(status_changed_rows),
+            "status_changed_commission_cents": int(status_changed_commission_cents),
+            "organization_id": int(organization_id),
+            "earning_month": month_date.isoformat(),
+        }
+
+    @classmethod
+    def mark_monthly_earnings_accrued(
+        cls,
+        *,
+        organization_id: int | None,
+        earning_month: str | date | None,
+        auto_commit: bool = True,
+    ) -> dict[str, Any]:
+        if not cls._schema_ready():
+            return {"ok": False, "reason": "schema_not_ready", "updated_rows": 0}
+        month_date = cls._parse_earning_month(earning_month)
+        if not organization_id or not month_date:
+            return {"ok": False, "reason": "invalid_input", "updated_rows": 0}
+
+        rows = AffiliateMonthlyEarning.query.filter_by(
+            referrer_organization_id=int(organization_id),
+            earning_month=month_date,
+        ).all()
+        if not rows:
+            return {"ok": False, "reason": "not_found", "updated_rows": 0}
+
+        now = TimezoneUtils.utc_now()
+        updated_rows = 0
+        status_changed_rows = 0
+        status_changed_commission_cents = 0
+        for row in rows:
+            if row.payout_status == "accrued":
+                continue
+            row.payout_status = "accrued"
+            row.updated_at = now
+            updated_rows += 1
+            status_changed_rows += 1
+            status_changed_commission_cents += int(row.commission_amount_cents or 0)
+
+        if updated_rows > 0 and auto_commit:
+            db.session.commit()
+        return {
+            "ok": True,
+            "reason": None,
+            "updated_rows": int(updated_rows),
+            "status_changed_rows": int(status_changed_rows),
+            "status_changed_commission_cents": int(status_changed_commission_cents),
+            "organization_id": int(organization_id),
+            "earning_month": month_date.isoformat(),
+        }
+
     @classmethod
     def get_or_create_payout_account(
         cls, organization: Organization | None
@@ -646,9 +957,13 @@ class AffiliateService:
             "average_lifespan_days": 0.0,
             "average_days_to_churn": 0.0,
             "commission_percentage": 0.0,
+            "effective_commission_rate_percent": 0.0,
             "current_month_income_cents": 0,
             "current_month_income_display": "$0.00",
+            "current_month_gross_cents": 0,
+            "current_month_gross_display": "$0.00",
             "monthly_income_12m": {"labels": [], "values": []},
+            "monthly_commission_rate_12m": {"labels": [], "values": []},
             "referrals_trend": {
                 "day": {"labels": [], "values": []},
                 "week": {"labels": [], "values": []},
@@ -656,6 +971,8 @@ class AffiliateService:
             },
             "tier_spread": {"labels": [], "values": []},
             "subscription_type_spread": {"labels": [], "values": []},
+            "retention_windows": [],
+            "lifespan_buckets": {"labels": [], "values": []},
         }
         if not organization or not cls._schema_ready():
             return payload
@@ -675,10 +992,21 @@ class AffiliateService:
         churn_durations: list[float] = []
         lifespan_durations: list[float] = []
         current_month_churns = 0
+        retention_windows_days = (30, 90, 180)
+        retention_trackers = {
+            window_days: {"eligible": 0, "retained": 0}
+            for window_days in retention_windows_days
+        }
+        lifespan_bucket_counts = {
+            "<30 days": 0,
+            "30-89 days": 0,
+            "90-179 days": 0,
+            "180+ days": 0,
+        }
 
         month_start = date(now.year, now.month, 1)
         for referral in referrals:
-            signed_up_at = referral.signed_up_at or now
+            signed_up_at = cls._to_utc_aware(referral.signed_up_at) or now
             referred_org = referral.referred_organization
             tier_name = (
                 referred_org.tier.name
@@ -700,19 +1028,39 @@ class AffiliateService:
             week_counts[week_key] = week_counts.get(week_key, 0) + 1
             month_counts[month_key] = month_counts.get(month_key, 0) + 1
 
-            churned_at = referral.churned_at
+            churned_at = cls._to_utc_aware(referral.churned_at)
             status_indicates_churn = cls._status_is_canceled(referred_org)
             is_churned = churned_at is not None or status_indicates_churn
             end_for_lifespan = churned_at or now
             lifespan_days = max(0.0, (end_for_lifespan - signed_up_at).total_seconds() / 86400.0)
             lifespan_durations.append(lifespan_days)
+            referral_age_days = max(0.0, (now - signed_up_at).total_seconds() / 86400.0)
+
+            if lifespan_days < 30:
+                lifespan_bucket_counts["<30 days"] += 1
+            elif lifespan_days < 90:
+                lifespan_bucket_counts["30-89 days"] += 1
+            elif lifespan_days < 180:
+                lifespan_bucket_counts["90-179 days"] += 1
+            else:
+                lifespan_bucket_counts["180+ days"] += 1
+
+            churn_days = None
+            if churned_at is not None:
+                churn_days = max(0.0, (churned_at - signed_up_at).total_seconds() / 86400.0)
+
+            for window_days in retention_windows_days:
+                if referral_age_days < window_days:
+                    continue
+                retention_trackers[window_days]["eligible"] += 1
+                if (not is_churned) or (
+                    churn_days is not None and churn_days >= float(window_days)
+                ):
+                    retention_trackers[window_days]["retained"] += 1
 
             if is_churned:
                 churned_count += 1
-                if churned_at is not None:
-                    churn_days = max(
-                        0.0, (churned_at - signed_up_at).total_seconds() / 86400.0
-                    )
+                if churn_days is not None:
                     churn_durations.append(churn_days)
                 if churned_at is not None and churned_at.date() >= month_start:
                     current_month_churns += 1
@@ -750,6 +1098,9 @@ class AffiliateService:
         earning_rows = (
             db.session.query(
                 AffiliateMonthlyEarning.earning_month,
+                func.coalesce(func.sum(AffiliateMonthlyEarning.gross_revenue_cents), 0).label(
+                    "gross_cents"
+                ),
                 func.coalesce(func.sum(AffiliateMonthlyEarning.commission_amount_cents), 0).label(
                     "commission_cents"
                 ),
@@ -759,12 +1110,17 @@ class AffiliateService:
             .all()
         )
         earnings_map = {
-            row.earning_month.strftime("%Y-%m"): int(row.commission_cents or 0)
+            row.earning_month.strftime("%Y-%m"): {
+                "gross_cents": int(row.gross_cents or 0),
+                "commission_cents": int(row.commission_cents or 0),
+            }
             for row in earning_rows
             if row.earning_month
         }
         income_labels = []
         income_values = []
+        gross_values = []
+        commission_rate_values = []
         current_month = now.date().replace(day=1)
         for index in range(11, -1, -1):
             pointer = current_month
@@ -772,10 +1128,29 @@ class AffiliateService:
                 prev = pointer - timedelta(days=1)
                 pointer = prev.replace(day=1)
             map_key = pointer.strftime("%Y-%m")
+            month_entry = earnings_map.get(map_key, {})
+            month_commission = int(month_entry.get("commission_cents", 0) or 0)
+            month_gross = int(month_entry.get("gross_cents", 0) or 0)
+            commission_rate = (
+                round((month_commission / month_gross) * 100.0, 2)
+                if month_gross > 0
+                else 0.0
+            )
             income_labels.append(pointer.strftime("%b %Y"))
-            income_values.append(earnings_map.get(map_key, 0))
+            income_values.append(month_commission)
+            gross_values.append(month_gross)
+            commission_rate_values.append(commission_rate)
 
-        current_month_income_cents = earnings_map.get(now.strftime("%Y-%m"), 0)
+        current_month_entry = earnings_map.get(now.strftime("%Y-%m"), {})
+        current_month_income_cents = int(current_month_entry.get("commission_cents", 0) or 0)
+        current_month_gross_cents = int(current_month_entry.get("gross_cents", 0) or 0)
+        total_commission_12m = int(sum(income_values))
+        total_gross_12m = int(sum(gross_values))
+        effective_commission_rate_percent = (
+            round((total_commission_12m / total_gross_12m) * 100.0, 2)
+            if total_gross_12m > 0
+            else 0.0
+        )
         active_referrals = max(0, total_referrals - churned_count)
         churn_rate = (churned_count / total_referrals * 100.0) if total_referrals else 0.0
         avg_lifespan = (
@@ -784,6 +1159,21 @@ class AffiliateService:
         avg_to_churn = (
             sum(churn_durations) / len(churn_durations) if churn_durations else 0.0
         )
+        retention_windows = []
+        for window_days in retention_windows_days:
+            tracker = retention_trackers[window_days]
+            eligible = int(tracker["eligible"])
+            retained = int(tracker["retained"])
+            retained_percent = round((retained / eligible) * 100.0, 2) if eligible else 0.0
+            retention_windows.append(
+                {
+                    "days": window_days,
+                    "label": f"{window_days} days",
+                    "eligible_count": eligible,
+                    "retained_count": retained,
+                    "retained_percent": retained_percent,
+                }
+            )
 
         payload.update(
             {
@@ -797,11 +1187,20 @@ class AffiliateService:
                 "commission_percentage": float(
                     getattr(organization.tier, "commission_percentage", 0) or 0
                 ),
+                "effective_commission_rate_percent": float(effective_commission_rate_percent),
                 "current_month_income_cents": int(current_month_income_cents),
                 "current_month_income_display": cls._format_currency_cents(
                     current_month_income_cents
                 ),
+                "current_month_gross_cents": int(current_month_gross_cents),
+                "current_month_gross_display": cls._format_currency_cents(
+                    current_month_gross_cents
+                ),
                 "monthly_income_12m": {"labels": income_labels, "values": income_values},
+                "monthly_commission_rate_12m": {
+                    "labels": income_labels,
+                    "values": commission_rate_values,
+                },
                 "referrals_trend": {
                     "day": {"labels": day_labels, "values": day_values},
                     "week": {"labels": week_labels, "values": week_values},
@@ -816,6 +1215,14 @@ class AffiliateService:
                     "values": [
                         subscription_type_counts[label]
                         for label in subscription_type_counts.keys()
+                    ],
+                },
+                "retention_windows": retention_windows,
+                "lifespan_buckets": {
+                    "labels": list(lifespan_bucket_counts.keys()),
+                    "values": [
+                        lifespan_bucket_counts[label]
+                        for label in lifespan_bucket_counts.keys()
                     ],
                 },
             }

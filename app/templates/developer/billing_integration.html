@@ -55,6 +55,9 @@
                         <a href="{{ url_for('developer.affiliate_ecosystem') }}" class="btn btn-outline-secondary">
                             <i class="fas fa-handshake"></i> Affiliate Ecosystem
                         </a>
+                        <a href="{{ url_for('developer.affiliate_payouts') }}" class="btn btn-outline-success">
+                            <i class="fas fa-money-check-dollar"></i> Affiliate Payout Operations
+                        </a>
                         <button class="btn btn-outline-info" onclick="testStripeConnection()">
                             <i class="fas fa-plug"></i> Test Connection
                         </button>
@@ -170,6 +173,13 @@
                             <div class="d-grid">
                                 <a href="{{ url_for('developer.affiliate_ecosystem') }}" class="btn btn-outline-dark">
                                     <i class="fas fa-handshake"></i> Affiliate Ecosystem
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mt-3 mt-md-0">
+                            <div class="d-grid">
+                                <a href="{{ url_for('developer.affiliate_payouts') }}" class="btn btn-outline-success">
+                                    <i class="fas fa-money-check-dollar"></i> Affiliate Payouts
                                 </a>
                             </div>
                         </div>

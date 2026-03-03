@@ -79,6 +79,43 @@
     </div>
 
     <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small text-uppercase">Current Month Referred Revenue</div>
+                <div class="fs-4 fw-semibold">{{ analytics.current_month_gross_display or '$0.00' }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small text-uppercase">Effective Commission (12m)</div>
+                <div class="fs-4 fw-semibold">{{ '%.2f'|format(analytics.effective_commission_rate_percent or 0) }}%</div>
+            </div></div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><h6 class="mb-0">Retention Checkpoints</h6></div>
+                <div class="card-body py-2">
+                    {% if analytics.retention_windows %}
+                    <div class="row g-2">
+                        {% for window in analytics.retention_windows %}
+                        <div class="col-4">
+                            <div class="border rounded p-2 text-center h-100">
+                                <div class="small text-muted">{{ window.label }}</div>
+                                <div class="fw-semibold">{{ '%.2f'|format(window.retained_percent or 0) }}%</div>
+                                <div class="small text-muted">{{ window.retained_count }}/{{ window.eligible_count }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted small">No retention windows available yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -120,6 +157,25 @@
                 <div class="card-header"><h6 class="mb-0">Subscription Type Spread</h6></div>
                 <div class="card-body">
                     <canvas id="subscriptionSpreadChart" height="130"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h6 class="mb-0">Referral Lifespan Buckets</h6></div>
+                <div class="card-body">
+                    <canvas id="lifespanBucketChart" height="130"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h6 class="mb-0">Monthly Commission Rate % (12 Months)</h6></div>
+                <div class="card-body">
+                    <canvas id="commissionRateChart" height="130"></canvas>
                 </div>
             </div>
         </div>
@@ -203,7 +259,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function() {
-    const analytics = {{ analytics | tojson }};
+    const analytics = {{ (affiliate_analytics or {}) | tojson }};
     if (!analytics || !analytics.enabled || !window.Chart) return;
 
     const palette = ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#198754', '#0dcaf0'];
@@ -296,6 +352,55 @@
                 datasets: [{ data: spread.values || [], backgroundColor: palette }],
             },
             options: { responsive: true, maintainAspectRatio: false },
+        });
+    }
+
+    const lifespanCtx = document.getElementById('lifespanBucketChart');
+    if (lifespanCtx) {
+        const buckets = analytics.lifespan_buckets || {labels: [], values: []};
+        new Chart(lifespanCtx, {
+            type: 'bar',
+            data: {
+                labels: buckets.labels || [],
+                datasets: [{
+                    label: 'Referral Count',
+                    data: buckets.values || [],
+                    backgroundColor: '#6f42c1',
+                    borderRadius: 6,
+                    maxBarThickness: 34,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+    const rateCtx = document.getElementById('commissionRateChart');
+    if (rateCtx) {
+        const rate = analytics.monthly_commission_rate_12m || {labels: [], values: []};
+        new Chart(rateCtx, {
+            type: 'line',
+            data: {
+                labels: rate.labels || [],
+                datasets: [{
+                    label: 'Commission %',
+                    data: rate.values || [],
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.15)',
+                    fill: true,
+                    tension: 0.25,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } },
+            },
         });
     }
 })();
