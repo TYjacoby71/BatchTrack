@@ -189,17 +189,21 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Run and document periodic restore drills (RPO/RTO targets + evidence)
 
 ### 5.7 Managed WAF migration (if adopted)
-- [ ] Select edge WAF provider and define ownership, failure policy (fail-open/fail-closed), and rollback runbook
-- [ ] Confirm ownership model: domain registrar (e.g., GoDaddy) is not the WAF; WAF is managed in a separate edge account
-- [ ] Select and fund the required WAF tier (managed rules, bot management, and rate limiting may require paid plans)
-- [ ] Decide DNS onboarding path for edge protection (move authoritative DNS to edge provider or use provider-supported partial/CNAME setup)
-- [ ] Run WAF in observe/log-only mode and compare outcomes with current bot-trap/security decisions before enforcement
-- [ ] Enable managed exploit signatures and add custom rules for recurring probes (`/xmlrpc.php`, WordPress paths, random `*.php` scans)
+- [x] Select edge WAF provider and define ownership, failure policy (fail-open/fail-closed), and rollback runbook
+- [x] Confirm ownership model: domain registrar (e.g., GoDaddy) is not the WAF; WAF is managed in a separate edge account
+- [x] Select and fund the required WAF tier (managed rules, bot management, and rate limiting may require paid plans)
+  - Current state: Cloudflare Free tier selected; reevaluate upgrade if managed rules/rate controls are needed.
+- [x] Decide DNS onboarding path for edge protection (move authoritative DNS to edge provider or use provider-supported partial/CNAME setup)
+- [x] Run WAF in observe/log-only mode and compare outcomes with current bot-trap/security decisions before enforcement
+- [ ] Enable managed exploit signatures (OWASP/Cloudflare managed rules) for recurring probes (`/xmlrpc.php`, WordPress paths, random `*.php` scans)
+  - Pending tier upgrade from Free plan.
+- [x] Add custom edge rules for recurring probes (`/xmlrpc.php`, WordPress paths, random `*.php` scans)
 - [ ] Add verified-bot policy for search/ad/social crawlers using provider verification (reverse DNS/IP ranges), not user-agent string alone
-- [ ] Add behavior-based controls for scanner patterns (bursting, high 404/403 ratios, high path entropy, HEAD sweeps across unknown paths)
+- [x] Add behavior-based controls for scanner patterns (bursting, high 404/403 ratios, high path entropy, HEAD sweeps across unknown paths)
+  - Implemented: custom probe-block rule and auth path rate-limit rule (Free-tier constraints applied).
 - [ ] Add challenge-first policy for medium-confidence traffic and block-only for high-confidence abuse
 - [ ] Lock origin to edge-only ingress (reject direct-to-origin internet traffic)
-- [ ] Enable origin-auth handshake between edge and app (`ENFORCE_EDGE_ORIGIN_AUTH`, `EDGE_ORIGIN_AUTH_HEADER`, `EDGE_ORIGIN_AUTH_SECRET`) after shadow validation
+- [x] Enable origin-auth handshake between edge and app (`ENFORCE_EDGE_ORIGIN_AUTH`, `EDGE_ORIGIN_AUTH_HEADER`, `EDGE_ORIGIN_AUTH_SECRET`) after shadow validation
 - [ ] Re-scope `/api/public/bot-trap` to telemetry-only (or remove) once equivalent WAF controls are enforced
 - [ ] Add WAF dashboards and alerts (block/challenge rates, top rules, top source ASNs/IPs, false-positive samples)
 - [ ] Roll out in phases (shadow -> challenge -> block) with explicit conversion guardrails on `/homepage`, `/help/how-it-works`, `/signup`, and `/auth/signup`
