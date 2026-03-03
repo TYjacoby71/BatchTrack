@@ -7,21 +7,19 @@
     margin: 2rem auto;
   }
 
-  .affiliate-signup-hero {
-    border-radius: 1rem;
-    padding: 2.5rem 2rem;
-    background: linear-gradient(135deg, #0a2540 0%, #184f90 100%);
-    color: #fff;
-    box-shadow: 0 12px 30px rgba(8, 22, 55, 0.22);
+  .affiliate-heading-card {
+    border: 1px solid rgba(205, 214, 235, 0.82);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 8px 16px rgba(15, 30, 84, 0.06);
   }
 
-  .affiliate-signup-hero h1 {
-    color: #fff;
+  .affiliate-heading-title {
     margin-bottom: 0.75rem;
   }
 
-  .affiliate-signup-hero p {
-    color: rgba(255, 255, 255, 0.9);
+  .affiliate-heading-copy {
+    color: var(--color-muted);
     max-width: 760px;
   }
 
@@ -54,15 +52,20 @@
 
 {% block content %}
 <div class="container affiliate-signup-shell">
-  <section class="affiliate-signup-hero mb-4">
-    <h1>Affiliate Signup</h1>
-    <p>
-      Join the BatchTrack affiliate program and earn 10-20% commission from qualified referrals.
-      Payouts are managed in arrears so each month can clear cancellation checks before payout is sent.
-    </p>
-    <div class="d-flex flex-wrap gap-2 mt-3">
-      <a class="btn btn-light btn-lg" href="{{ url_for('core.affiliates_info') }}">Program Info</a>
-      <a class="btn btn-outline-light btn-lg" href="{{ url_for('legal.terms_of_service') }}#affiliate-program-terms">Affiliate Terms & Conditions</a>
+  <section class="card affiliate-heading-card mb-4">
+    <div class="card-header bg-white border-0 pb-0">
+      <div class="affiliate-blurb d-inline-flex mb-2">Earn 10-20% commission</div>
+      <h1 class="h3 affiliate-heading-title">Affiliate Signup</h1>
+      <p class="affiliate-heading-copy mb-0">
+        Join the BatchTrack affiliate program and earn 10-20% commission from qualified referrals.
+        Payouts are managed in arrears so each month can clear cancellation checks before payout is sent.
+      </p>
+    </div>
+    <div class="card-body pt-3">
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary btn-lg" href="{{ url_for('core.affiliates_info') }}">Program Info</a>
+        <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('legal.terms_of_service') }}#affiliate-program-terms">Affiliate Terms & Conditions</a>
+      </div>
     </div>
   </section>
 

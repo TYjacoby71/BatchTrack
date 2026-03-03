@@ -7,21 +7,19 @@
     margin: 2rem auto;
   }
 
-  .affiliate-hero {
-    border-radius: 1rem;
-    padding: 2.5rem 2rem;
-    background: linear-gradient(135deg, #1f6feb 0%, #3f8cff 100%);
-    color: #fff;
-    box-shadow: 0 12px 28px rgba(15, 30, 84, 0.18);
+  .affiliate-heading-card {
+    border: 1px solid rgba(200, 210, 233, 0.8);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(15, 30, 84, 0.06);
   }
 
-  .affiliate-hero h1 {
-    color: #fff;
+  .affiliate-heading-title {
     margin-bottom: 0.75rem;
   }
 
-  .affiliate-hero p {
-    color: rgba(255, 255, 255, 0.9);
+  .affiliate-heading-copy {
+    color: var(--color-muted);
     max-width: 720px;
   }
 
@@ -56,16 +54,20 @@
 
 {% block content %}
 <div class="container affiliate-page-shell">
-  <section class="affiliate-hero mb-4">
-    <div class="affiliate-commission-chip mb-2">Earn 10-20% commission</div>
-    <h1>BatchTrack Affiliates</h1>
-    <p>
-      Share BatchTrack with makers in your network and earn recurring commission on qualified referrals.
-      Affiliate payout reporting is transparent, with statuses like Pending, Sent (On the way), and Complete.
-    </p>
-    <div class="d-flex flex-wrap gap-2 mt-3">
-      <a class="btn btn-light btn-lg" href="{{ url_for('core.affiliates_signup') }}">Become an Affiliate</a>
-      <a class="btn btn-outline-light btn-lg" href="{{ url_for('legal.terms_of_service') }}#affiliate-program-terms">Affiliate Terms</a>
+  <section class="card affiliate-heading-card mb-4">
+    <div class="card-header bg-white border-0 pb-0">
+      <div class="affiliate-commission-chip mb-2">Earn 10-20% commission</div>
+      <h1 class="h3 affiliate-heading-title">BatchTrack Affiliates</h1>
+      <p class="affiliate-heading-copy mb-0">
+        Share BatchTrack with makers in your network and earn recurring commission on qualified referrals.
+        Affiliate payout reporting is transparent, with statuses like Pending, Sent (On the way), and Complete.
+      </p>
+    </div>
+    <div class="card-body pt-3">
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('core.affiliates_signup') }}">Become an Affiliate</a>
+        <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('legal.terms_of_service') }}#affiliate-program-terms">Affiliate Terms</a>
+      </div>
     </div>
   </section>
 
