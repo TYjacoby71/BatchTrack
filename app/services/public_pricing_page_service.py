@@ -176,7 +176,7 @@ class PublicPricingPageService:
 
         monthly_url = (
             url_for(
-                "core.signup_alias",
+                "auth.signup_checkout",
                 tier=tier_id,
                 billing_mode="standard",
                 billing_cycle="monthly",
@@ -187,7 +187,7 @@ class PublicPricingPageService:
         )
         yearly_url = (
             url_for(
-                "core.signup_alias",
+                "auth.signup_checkout",
                 tier=tier_id,
                 billing_mode="standard",
                 billing_cycle="yearly",
@@ -198,7 +198,7 @@ class PublicPricingPageService:
         )
         lifetime_url = (
             url_for(
-                "core.signup_alias",
+                "auth.signup_checkout",
                 billing_mode="lifetime",
                 lifetime_tier=resolved_offer.get("key"),
                 tier=tier_id,
