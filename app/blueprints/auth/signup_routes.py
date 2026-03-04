@@ -18,7 +18,10 @@ from flask_login import current_user
 from ...extensions import limiter
 from ...services.oauth_service import OAuthService
 from ...services.affiliate_service import AffiliateService
-from ...services.signup_checkout_service import SignupCheckoutService
+from ...services.billing.orchestrators.public_signup_orchestrator import (
+    PublicSignupOrchestrator,
+)
+from ...services.signup_checkout_service import SignupCheckoutService  # compatibility
 from . import auth_bp
 
 
@@ -68,7 +71,7 @@ def _public_signup_allow_live_pricing_network() -> bool:
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
     allow_live_pricing_network = _public_signup_allow_live_pricing_network()
-    signup_context = SignupCheckoutService.build_request_context(
+    signup_context = PublicSignupOrchestrator.build_request_context(
         request=request,
         oauth_user_info=session.get("oauth_user_info"),
         allow_live_pricing_network=allow_live_pricing_network,
@@ -105,45 +108,9 @@ def signup_checkout():
     selected_promo = request.args.get("promo") or ""
     signup_source = request.args.get("source") or "pricing_direct_checkout"
     referral_code = request.args.get("ref")
-    selected_plan_kind = (
-        "lifetime"
-        if selected_mode == "lifetime"
-        else ("yearly" if selected_cycle == "yearly" else "monthly")
-    )
-
-    allow_live_pricing_network = _public_signup_allow_live_pricing_network()
-    signup_context = SignupCheckoutService.build_request_context(
-        request=request,
-        oauth_user_info=session.get("oauth_user_info"),
-        allow_live_pricing_network=allow_live_pricing_network,
-    )
-    checkout_result = SignupCheckoutService.process_submission(
-        context=signup_context,
-        form_data={
-            "selected_tier": selected_tier,
-            "billing_mode": selected_mode,
-            "billing_cycle": selected_cycle,
-            "requested_plan_kind": selected_plan_kind,
-            "lifetime_tier": selected_lifetime_tier,
-            "promo": selected_promo,
-            "source": signup_source,
-            "ref": referral_code or "",
-            "contact_email": request.args.get("email", ""),
-            "contact_phone": request.args.get("phone", ""),
-            "oauth_signup": "false",
-        },
-    )
-
-    if checkout_result.redirect_url:
-        response = redirect(checkout_result.redirect_url)
-        return AffiliateService.set_referral_cookie(
-            response,
-            signup_context.referral_code,
-            secure=request.is_secure,
-        )
-    if checkout_result.flash_message:
-        flash(checkout_result.flash_message, checkout_result.flash_category)
-
+    # Keep public checkout links deterministic and safe: route users back to
+    # signup with selection preserved, then let explicit signup POST create
+    # checkout sessions.
     fallback_url = _build_signup_fallback_url(
         tier=selected_tier,
         billing_mode=selected_mode,
@@ -156,7 +123,7 @@ def signup_checkout():
     response = redirect(fallback_url)
     return AffiliateService.set_referral_cookie(
         response,
-        signup_context.referral_code,
+        referral_code,
         secure=request.is_secure,
     )
 
@@ -169,14 +136,14 @@ def signup():
         return redirect(url_for("app_routes.dashboard"))
 
     allow_live_pricing_network = _public_signup_allow_live_pricing_network()
-    signup_context = SignupCheckoutService.build_request_context(
+    signup_context = PublicSignupOrchestrator.build_request_context(
         request=request,
         oauth_user_info=session.get("oauth_user_info"),
         allow_live_pricing_network=allow_live_pricing_network,
     )
 
     if request.method == "POST":
-        result = SignupCheckoutService.process_submission(
+        result = PublicSignupOrchestrator.process_submission(
             context=signup_context,
             form_data=request.form,
         )
@@ -192,13 +159,13 @@ def signup():
             flash(result.flash_message, result.flash_category)
         view_state = (
             result.view_state
-            or SignupCheckoutService.build_initial_view_state(signup_context)
+            or PublicSignupOrchestrator.build_initial_view_state(signup_context)
         )
     else:
-        view_state = SignupCheckoutService.build_initial_view_state(signup_context)
+        view_state = PublicSignupOrchestrator.build_initial_view_state(signup_context)
 
     oauth_providers = OAuthService.get_enabled_providers()
-    template_context = SignupCheckoutService.build_template_context(
+    template_context = PublicSignupOrchestrator.build_template_context(
         signup_context,
         view_state,
         oauth_available=bool(any(oauth_providers.values())),

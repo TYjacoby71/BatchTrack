@@ -34,9 +34,9 @@ from wtforms.validators import DataRequired
 from ...extensions import db, limiter
 from ...models import GlobalItem, Organization, Role, User
 from ...models.subscription_tier import SubscriptionTier
-from ...services.billing_access_policy_service import (
-    BillingAccessAction,
-    BillingAccessPolicyService,
+from ...services.billing_access_policy_service import BillingAccessAction
+from ...services.billing.orchestrators.auth_billing_orchestrator import (
+    AuthBillingOrchestrator,
 )
 from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.email_service import EmailService
@@ -298,7 +298,7 @@ def login():
 
             if user.user_type != "developer":
                 organization = getattr(user, "organization", None)
-                billing_decision = BillingAccessPolicyService.evaluate_organization(
+                billing_decision = AuthBillingOrchestrator.evaluate_organization_access(
                     organization
                 )
                 if billing_decision.action == BillingAccessAction.HARD_LOCK:

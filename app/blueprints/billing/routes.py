@@ -27,6 +27,9 @@ from ...extensions import csrf, db, limiter
 from ...models.models import Organization
 from ...models.subscription_tier import SubscriptionTier
 from ...services.analytics_tracking_service import AnalyticsTrackingService
+from ...services.billing.orchestrators.account_provisioning_orchestrator import (
+    AccountProvisioningOrchestrator,
+)
 from ...services.billing_service import BillingService
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
@@ -386,7 +389,9 @@ def complete_signup_from_stripe():
     logger.info("Completing signup for checkout session %s", session_id)
 
     try:
-        result = BillingService.finalize_checkout_session(session_id)
+        result = AccountProvisioningOrchestrator.finalize_signup_checkout_session(
+            session_id
+        )
     except Exception as exc:
         logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
         flash("Account setup failed. Please contact support.", "error")
@@ -425,21 +430,11 @@ def complete_signup_from_stripe():
         ),
     }
     try:
-        checkout_session = BillingService.get_checkout_session(session_id)
-        if checkout_session is not None:
-            amount_total = getattr(checkout_session, "amount_total", None)
-            if amount_total not in (None, ""):
-                ga4_conversion_payload["value"] = round(float(amount_total) / 100.0, 2)
-            currency_code = str(
-                getattr(checkout_session, "currency", "") or ""
-            ).strip()
-            if currency_code:
-                ga4_conversion_payload["currency"] = currency_code.upper()
-            metadata = getattr(checkout_session, "metadata", {}) or {}
-            if isinstance(metadata, dict):
-                coupon_code = str(metadata.get("promo_code") or "").strip()
-                if coupon_code:
-                    ga4_conversion_payload["coupon"] = coupon_code
+        ga4_conversion_payload = (
+            AccountProvisioningOrchestrator.enrich_checkout_conversion_payload(
+                session_id, ga4_conversion_payload
+            )
+        )
     except Exception as exc:
         logger.warning(
             "Unable to enrich GA4 conversion payload for session %s: %s",

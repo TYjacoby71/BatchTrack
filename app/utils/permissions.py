@@ -660,36 +660,11 @@ class AuthorizationHierarchy:
         """
         Step 1: Check if subscription is in good standing
         """
-        if not organization:
-            return False, "No organization"
+        from ..services.billing.orchestrators.auth_billing_orchestrator import (
+            AuthBillingOrchestrator,
+        )
 
-        # Exempt organizations have access
-        if organization.effective_subscription_tier == "exempt":
-            return True, "Exempt status"
-
-        # Strict gating: no tier means no access
-        if not organization.tier:
-            return False, "No subscription tier assigned"
-
-        # Check if tier has valid integration
-        if not organization.tier.has_valid_integration:
-            return False, "Subscription tier unavailable"
-
-        # For paid tiers, check billing status using org.billing_status only
-        if (
-            organization.tier.requires_stripe_billing
-            or organization.tier.requires_whop_billing
-        ):
-            if getattr(organization, "billing_status", None) in [
-                "past_due",
-                "payment_failed",
-                "suspended",
-                "canceled",
-                "cancelled",
-            ]:
-                return False, f"Billing status: {organization.billing_status}"
-
-        return True, "Subscription in good standing"
+        return AuthBillingOrchestrator.check_subscription_standing(organization)
 
     @staticmethod
     def get_tier_allowed_permissions(organization):
@@ -996,39 +971,11 @@ class AuthorizationHierarchy:
     @staticmethod
     def check_organization_access(organization):
         """Check if organization has valid access based on subscription and billing status"""
-        if not organization:
-            return False, "No organization found"
+        from ..services.billing.orchestrators.auth_billing_orchestrator import (
+            AuthBillingOrchestrator,
+        )
 
-        # Exempt organizations have access
-        if organization.effective_subscription_tier == "exempt":
-            return True, "Exempt organization"
-
-        # Check subscription tier exists and is valid
-        if not organization.tier:
-            return False, "No valid subscription tier"
-
-        # Check if tier has valid integration setup
-        if not organization.tier.has_valid_integration:
-            return False, "Subscription tier integration not configured"
-
-        # For billing-required tiers, check billing_status only
-        if (
-            organization.tier.requires_stripe_billing
-            or organization.tier.requires_whop_billing
-        ):
-            if getattr(organization, "billing_status", None) in [
-                "past_due",
-                "payment_failed",
-                "suspended",
-                "canceled",
-                "cancelled",
-            ]:
-                return False, "Subscription not active"
-
-            # Additional billing validations can be added here
-            # e.g., check for past due payments, etc.
-
-        return True, "Active subscription"
+        return AuthBillingOrchestrator.check_subscription_standing(organization)
 
 
 class FeatureGate:

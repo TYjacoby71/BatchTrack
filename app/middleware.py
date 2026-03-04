@@ -34,9 +34,9 @@ from flask_login import current_user, logout_user
 
 from .extensions import db
 from .route_access import RouteAccessConfig
-from .services.billing_access_policy_service import (
-    BillingAccessAction,
-    BillingAccessPolicyService,
+from .services.billing_access_policy_service import BillingAccessAction
+from .services.billing.orchestrators.auth_billing_orchestrator import (
+    AuthBillingOrchestrator,
 )
 from .services.middleware_probe_service import MiddlewareProbeService
 from .services.public_bot_trap_service import PublicBotTrapService
@@ -616,10 +616,10 @@ def _enforce_billing() -> Response | None:
 
         path = request.path
         endpoint = request.endpoint
-        is_exempt_request = BillingAccessPolicyService.is_enforcement_exempt_route(
+        is_exempt_request = AuthBillingOrchestrator.is_enforcement_exempt_route(
             path, endpoint
         )
-        decision = BillingAccessPolicyService.evaluate_organization(organization)
+        decision = AuthBillingOrchestrator.evaluate_organization_access(organization)
 
         if decision.action == BillingAccessAction.ALLOW:
             return None
