@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from flask import Blueprint, jsonify, render_template, request, url_for
 
 from app.services.email_service import EmailService
+from app.services.marketing_lead_service import MarketingLeadService
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.utils.json_store import read_json_file, write_json_file
 
@@ -89,7 +90,7 @@ def waitlist_landing():
 
 @waitlist_bp.route("/api/waitlist", methods=["POST"])
 def join_waitlist():
-    """Handle waitlist submissions and optionally send confirmation email."""
+    """Handle waitlist submissions and persist lead capture metadata."""
     try:
         payload = request.get_json() or {}
         if not isinstance(payload, dict):
@@ -170,6 +171,19 @@ def join_waitlist():
 
         waitlist.append(waitlist_entry)
         write_json_file(waitlist_file, waitlist)
+
+        MarketingLeadService.record_waitlist_capture(
+            email=email,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            business_type=business_type or None,
+            source_key=metadata["source"],
+            waitlist_key=metadata["waitlist_key"],
+            context=metadata["context"],
+            notes=waitlist_entry["notes"] or None,
+            tags=waitlist_entry["tags"],
+            payload=payload,
+        )
 
         if _should_send_waitlist_confirmation(metadata["waitlist_key"]):
             try:

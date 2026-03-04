@@ -36,6 +36,7 @@ from ...utils.json_store import read_json_file
 from ...utils.settings import get_settings
 from ...utils.timezone_utils import TimezoneUtils
 from ..dashboard_alerts import DashboardAlertService
+from ..marketing_lead_service import MarketingLeadService
 from ._core import StatisticsService
 from .global_item_stats import GlobalItemStatsService
 
@@ -165,6 +166,45 @@ class AnalyticsDataService:
             )
 
         return registry
+
+    @classmethod
+    def _legacy_waitlist_rows(cls) -> List[Dict[str, Any]]:
+        raw_data = read_json_file("data/waitlist.json", default=[]) or []
+        if isinstance(raw_data, list):
+            return raw_data
+        if isinstance(raw_data, dict):
+            if isinstance(raw_data.get("entries"), list):
+                return raw_data.get("entries", [])
+            merged_rows: List[Dict[str, Any]] = []
+            for _, maybe_list in raw_data.items():
+                if isinstance(maybe_list, list):
+                    merged_rows.extend(maybe_list)
+            return merged_rows
+        return []
+
+    @classmethod
+    def _merged_waitlist_rows(cls) -> List[Dict[str, Any]]:
+        """Merge DB-backed waitlist captures with legacy JSON entries."""
+        db_rows = MarketingLeadService.fetch_waitlist_rows()
+        legacy_rows = cls._legacy_waitlist_rows()
+
+        merged: Dict[str, Dict[str, Any]] = {}
+
+        def _row_key(entry: Dict[str, Any]) -> str:
+            email = (entry.get("email") or "").strip().lower()
+            waitlist_key = cls._normalize_waitlist_key(
+                entry.get("waitlist_key") or entry.get("source")
+            )
+            return f"{email}|{waitlist_key}"
+
+        for entry in legacy_rows:
+            if isinstance(entry, dict):
+                merged[_row_key(entry)] = entry
+        for entry in db_rows:
+            if isinstance(entry, dict):
+                merged[_row_key(entry)] = entry
+
+        return list(merged.values())
 
     # --------------------------------------------------------------------- #
     # Public API                                                            #
@@ -654,8 +694,8 @@ class AnalyticsDataService:
                         }
                     )
 
-            waitlist_entries = read_json_file("data/waitlist.json", default=[]) or []
-            waitlist_count = len(waitlist_entries)
+            waitlist_stats = cls.get_waitlist_statistics(force_refresh=force_refresh)
+            waitlist_count = int(waitlist_stats.get("total", 0) or 0)
 
             payload = {
                 "overview": overview,
@@ -803,19 +843,7 @@ class AnalyticsDataService:
         if cached is not None:
             return cached
 
-        raw_data = read_json_file("data/waitlist.json", default=[]) or []
-        if isinstance(raw_data, list):
-            waitlist_rows = raw_data
-        elif isinstance(raw_data, dict):
-            if isinstance(raw_data.get("entries"), list):
-                waitlist_rows = raw_data.get("entries", [])
-            else:
-                waitlist_rows = []
-                for _, maybe_list in raw_data.items():
-                    if isinstance(maybe_list, list):
-                        waitlist_rows.extend(maybe_list)
-        else:
-            waitlist_rows = []
+        waitlist_rows = cls._merged_waitlist_rows()
 
         registry = cls._waitlist_registry()
         processed: List[Dict[str, Any]] = []
