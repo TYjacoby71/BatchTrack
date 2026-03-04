@@ -142,13 +142,13 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Developer route decorator helpers** → Blueprint decorator utilities that combine login, permission, and developer-user guards for route handlers (see `app/blueprints/developer/decorators.py`)
 - **/debug/validate-fifo-sync and /debug/validate-fifo-sync/<item_id>** → Internal diagnostics that validate inventory/FIFO consistency at org or item scope (see `app/blueprints/admin/debug_routes.py`)
 - **Admin dev_routes relocation marker** → Legacy module documenting that developer admin routes moved into the developer blueprint namespace (see `app/blueprints/admin/dev_routes.py`)
-- **Dashboard app routes** → Dashboard rendering, alert APIs, auth-check, fault-log view, and vendor-signup ingestion endpoints grouped under the app routes blueprint (see `app/blueprints/dashboard/routes.py`)
+- **Dashboard app routes** → Dashboard rendering, auth-check, fault-log view, and vendor-signup ingestion endpoints grouped under the app routes blueprint (see `app/blueprints/dashboard/routes.py`)
 - **Developer add-on catalog routes** → Developer-only add-on list/create/edit/delete handlers for entitlement management (see `app/blueprints/developer/addons.py`)
 - **Developer debug routes** → Developer diagnostics endpoints for permission and tier state inspection (see `app/blueprints/developer/debug_routes.py`)
 - **Developer blueprint vendor-signup routes** → Developer dashboard vendor-signup pages and JSON ingestion endpoints registered under the developer blueprint (see `app/blueprints/developer/routes.py`)
 - **Developer subscription tier management routes** → Developer tier CRUD, provider sync, and tier metadata API handlers (see `app/blueprints/developer/subscription_tiers.py`)
 - **/batches/<batch_id>/containers (+ delete/adjust variants)** → Container summary/remove/adjust API surfaces that delegate operations to batch integration services (see `app/blueprints/api/container_routes.py`)
-- **/api/dashboard-alerts, /api/dismiss-alert, /api/clear-dismissed-alerts** → Dashboard alert fetch + session dismissal management APIs (see `app/blueprints/api/dashboard_routes.py`)
+- **/api/dashboard-alerts, /api/dismiss-alert, /api/clear-dismissed-alerts** → Canonical dashboard alert fetch + session dismissal/reset APIs (see `app/blueprints/api/routes.py`)
 - **containers.unit_mismatch drawer action** → Drawer endpoints for rendering and resolving recipe/container unit mismatches in production planning (see `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`)
 - **conversion.density_modal drawer action** → Drawer endpoint for fixing missing ingredient density before retrying conversions (see `app/blueprints/api/drawers/drawer_actions/conversion_density.py`)
 - **/api/drawers/retry-operation** → Generic drawer retry API that re-runs conversion operations after prerequisite fixes (see `app/blueprints/api/drawers/drawer_actions/conversion_retry.py`)
@@ -175,6 +175,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **BillingService** → Tier checkout, add-on activation, and Stripe subscription cancellation primitives used by billing flows and destructive account cleanup (see `app/services/billing_service.py`)
 - **BillingAccessPolicyService** → Canonical billing-access policy evaluator that returns `allow`, `require_upgrade`, or `hard_lock` decisions for auth flows (see `app/services/billing_access_policy_service.py`)
 - **BillingAccessDecision** → Structured decision payload containing action + reason + message for billing gates (see `app/services/billing_access_policy_service.py`)
+- **DashboardAlertService** → Canonical alert-priority builder for dashboard surfaces; applies user max-alert settings (default 3) and session-dismissed filtering inputs (see `app/services/dashboard_alerts.py`)
 - **RetentionService** → Function-key retention entitlements
 - **StatisticsService** → Badge and tracker aggregation (see [STATS.md](STATS.md))
 - **Public Pricing Context Builder** → Aggregates tier pricing, lifetime launch availability, and comparison rows for the `/pricing` sales page (see `app/services/public_pricing_page_service.py`).

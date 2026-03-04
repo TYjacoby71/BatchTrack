@@ -150,8 +150,10 @@ result = UniversalStockCheckService.check_recipe_stock(
 # Get prioritized dashboard alerts
 from app.services.dashboard_alerts import DashboardAlertService
 
-alerts = DashboardAlertService.get_dashboard_alerts(max_alerts=3)
+alerts = DashboardAlertService.get_dashboard_alerts()
 ```
+
+`get_dashboard_alerts()` uses user alert preferences to determine max count; fallback is 3.
 
 ### 7. Combined Inventory Alert Service (`app/services/combined_inventory_alerts.py`)
 
