@@ -225,9 +225,11 @@ class SignupPlanCatalogService:
             price_display = monthly_price_display or "Contact Sales"
             available_tiers[str(tier_obj.id)] = {
                 "name": tier_obj.name,
+                "description": str(getattr(tier_obj, "description", "") or "").strip(),
                 "price_display": price_display,
                 "monthly_price_display": monthly_price_display,
                 "yearly_price_display": yearly_price_display,
+                "stripe_lookup_key": monthly_lookup_key,
                 "yearly_lookup_key": yearly_lookup_key,
                 "features": feature_highlights,
                 "feature_total": feature_total,

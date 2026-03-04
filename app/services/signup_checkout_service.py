@@ -113,6 +113,14 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
+    _SIGNUP_DISPLAY_LOOKUP_KEY_ORDER: tuple[str, ...] = (
+        "hobbyist_monthly",
+        "artisan_monthly",
+        "enterprise_monthly",
+        "hobbyist-monthly",
+        "artisan-monthly",
+        "enterprise-monthly",
+    )
     _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
         "Recipe tracking",
         "Plan production",
@@ -158,9 +166,8 @@ class SignupCheckoutService:
             (oauth_user_info or {}).get("email") or ""
         )
         prefill_phone = request.form.get("contact_phone") or ""
-        show_signup_free_tier = True
-        free_tier_display = cls._build_signup_free_tier_display(enabled=True)
-        show_signup_free_tier = bool(show_signup_free_tier and free_tier_display)
+        show_signup_free_tier = False
+        free_tier_display = None
 
         selected_default_tier_id = cls._resolve_primary_tier_id(
             available_tiers=available_tiers,
@@ -307,15 +314,9 @@ class SignupCheckoutService:
         )
         if artisan_upsell_offer and not artisan_upsell_offer.get("has_remaining"):
             artisan_upsell_offer = None
-        page_title = (
-            "BatchTrack Signup | Hobbyist, Artisan & Enterprise"
-            if free_tier_enabled
-            else "BatchTrack Signup | Artisan & Enterprise Plans"
-        )
+        page_title = "BatchTrack Signup | Hobbyist, Artisan & Enterprise"
         page_description = (
-            "Choose Hobbyist (free), Artisan monthly, or Enterprise monthly access."
-            if free_tier_enabled
-            else "Choose Artisan or Enterprise monthly access."
+            "Choose Hobbyist, Artisan monthly (with a 14-day free trial), or Enterprise monthly."
         )
         return {
             "signup_source": context.signup_source,
@@ -771,28 +772,16 @@ class SignupCheckoutService:
             return []
 
         tier_by_id = {str(getattr(tier, "id", "") or ""): tier for tier in db_tiers}
+        lookup_index: dict[str, SubscriptionTier] = {}
+        for tier in db_tiers:
+            lookup_key = str(getattr(tier, "stripe_lookup_key", "") or "").strip().lower()
+            if lookup_key and lookup_key not in lookup_index:
+                lookup_index[lookup_key] = tier
+
         selected_tiers: list[SubscriptionTier] = []
-
-        artisan_tier = next(
-            (
-                tier
-                for tier in db_tiers
-                if cls._is_artisan_tier_name(str(getattr(tier, "name", "") or ""))
-            ),
-            None,
-        )
-        enterprise_tier = next(
-            (
-                tier
-                for tier in db_tiers
-                if "enterprise"
-                in str(getattr(tier, "name", "") or "").strip().lower()
-            ),
-            None,
-        )
-
         seen_ids: set[str] = set()
-        for tier in (artisan_tier, enterprise_tier):
+        for preferred_lookup_key in cls._SIGNUP_DISPLAY_LOOKUP_KEY_ORDER:
+            tier = lookup_index.get(preferred_lookup_key)
             if not tier:
                 continue
             tier_id = str(getattr(tier, "id", "") or "")
@@ -800,6 +789,31 @@ class SignupCheckoutService:
                 continue
             seen_ids.add(tier_id)
             selected_tiers.append(tier)
+
+        found_families = {
+            cls._resolve_signup_plan_family(tier=tier)
+            for tier in selected_tiers
+            if cls._resolve_signup_plan_family(tier=tier)
+        }
+        for required_family in ("hobbyist", "artisan", "enterprise"):
+            if required_family in found_families:
+                continue
+            fallback_tier = next(
+                (
+                    tier
+                    for tier in db_tiers
+                    if cls._resolve_signup_plan_family(tier=tier) == required_family
+                ),
+                None,
+            )
+            if not fallback_tier:
+                continue
+            fallback_tier_id = str(getattr(fallback_tier, "id", "") or "")
+            if not fallback_tier_id or fallback_tier_id in seen_ids:
+                continue
+            seen_ids.add(fallback_tier_id)
+            selected_tiers.append(fallback_tier)
+            found_families.add(required_family)
 
         if preselected_tier:
             preselected_key = str(preselected_tier)
@@ -822,10 +836,25 @@ class SignupCheckoutService:
         )
         return any(fragment in normalized_name for fragment in artisan_name_fragments)
 
+    @classmethod
+    def _resolve_signup_plan_family(cls, *, tier: SubscriptionTier) -> str | None:
+        tier_name = str(getattr(tier, "name", "") or "").strip().lower()
+        lookup_key = str(getattr(tier, "stripe_lookup_key", "") or "").strip().lower()
+        if "hobbyist" in tier_name or "hobbyist" in lookup_key:
+            return "hobbyist"
+        if cls._is_artisan_tier_name(tier_name) or "artisan" in lookup_key:
+            return "artisan"
+        if "enterprise" in tier_name or "enterprise" in lookup_key:
+            return "enterprise"
+        return None
+
     @staticmethod
     def _resolve_artisan_tier_id(*, available_tiers: dict[str, dict]) -> str | None:
         for tier_id, tier_data in available_tiers.items():
             tier_name = str((tier_data or {}).get("name") or "").strip().lower()
+            lookup_key = str((tier_data or {}).get("stripe_lookup_key") or "").strip().lower()
+            if lookup_key in {"artisan_monthly", "artisan-monthly"}:
+                return str(tier_id)
             if SignupCheckoutService._is_artisan_tier_name(tier_name):
                 return str(tier_id)
         return None
@@ -836,6 +865,9 @@ class SignupCheckoutService:
     ) -> str | None:
         for tier_id, tier_data in available_tiers.items():
             tier_name = str((tier_data or {}).get("name") or "").strip().lower()
+            lookup_key = str((tier_data or {}).get("stripe_lookup_key") or "").strip().lower()
+            if lookup_key in {"enterprise_monthly", "enterprise-monthly"}:
+                return str(tier_id)
             if "enterprise" in tier_name:
                 return str(tier_id)
         return None
@@ -847,9 +879,14 @@ class SignupCheckoutService:
         cards: list[dict[str, Any]] = []
         for tier_id, tier_data in available_tiers.items():
             normalized_tier = dict(tier_data or {})
-            highlights = normalized_tier.get("presentation_features") or normalized_tier.get(
-                "features"
-            ) or []
+            highlights = (
+                normalized_tier.get("presentation_features")
+                or normalized_tier.get("features")
+                or []
+            )
+            tier_description = str(normalized_tier.get("description") or "").strip()
+            if not tier_description and highlights:
+                tier_description = str(list(highlights)[0]).strip()
             cards.append(
                 {
                     "tier_id": str(tier_id),
@@ -859,7 +896,7 @@ class SignupCheckoutService:
                         or normalized_tier.get("price_display")
                         or "Monthly pricing at secure checkout"
                     ),
-                    "description": str(normalized_tier.get("description") or "").strip(),
+                    "description": tier_description,
                     "highlights": [
                         str(label).strip()
                         for label in list(highlights)[:4]

@@ -10,7 +10,7 @@
             <div class="signup-shell">
                 <div class="text-center mb-4">
                     <h2 class="mb-2">Choose Your BatchTrack Plan</h2>
-                    <p class="text-muted mb-0">Hobbyist is free, and paid plans pull live Stripe monthly pricing.</p>
+                    <p class="text-muted mb-0">See monthly pricing and choose Hobbyist, Artisan, or Enterprise.</p>
                 </div>
 
                 {% if oauth_user_info %}
@@ -42,27 +42,9 @@
 
                 <section class="mb-4">
                     <div class="plan-grid">
-                        {% if show_signup_free_tier and free_tier_display %}
-                        <article class="plan-card free-plan-card h-100" aria-label="Hobbyist free plan">
-                            <div class="plan-chip plan-chip-free mb-2">{{ free_tier_display.name or 'Hobbyist' }}</div>
-                            <h3 class="h5 fw-bold mb-1">{{ free_tier_display.name or 'Hobbyist' }}</h3>
-                            <p class="plan-price plan-price-free mb-2">{{ free_tier_display.price_display or 'Free' }}</p>
-                            <p class="plan-copy mb-3">
-                                {{ free_tier_display.description or 'Starter access for planning and recipe tracking.' }}
-                            </p>
-                            <div class="mt-auto">
-                                <a
-                                    href="{{ url_for('auth.quick_signup', source='signup_hobbyist_card') }}"
-                                    class="btn btn-outline-success w-100"
-                                >
-                                    Start Hobbyist Free
-                                </a>
-                            </div>
-                        </article>
-                        {% endif %}
-
                         {% for card in signup_plan_cards %}
                         {% set tier_id = (card.tier_id or '')|string %}
+                        {% set card_name_lower = (card.name or '')|lower %}
                         <article
                             class="plan-card paid-plan-card h-100{% if tier_id == selected_paid_tier %} is-selected{% endif %}"
                             data-tier-id="{{ tier_id }}"
@@ -73,18 +55,24 @@
                             <div class="plan-chip mb-2">{{ card.name }}</div>
                             <h3 class="h5 fw-bold mb-1">{{ card.name }}</h3>
                             <p class="plan-price mb-2">{{ card.monthly_price_display }}</p>
-                            {% if card.highlights %}
-                            <ul class="plan-highlights mb-3">
-                                {% for highlight in card.highlights %}
-                                <li>{{ highlight }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <p class="plan-copy mb-3">Monthly plan with full BatchTrack access.</p>
+                            <p class="plan-copy mb-2">{{ card.description or 'Monthly plan access.' }}</p>
+                            {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) %}
+                            <p class="plan-note mb-1">Includes a 14-day free trial.</p>
                             {% endif %}
                             {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and artisan_upsell_offer %}
-                            <p class="plan-note mb-0">Founding Member lifetime option appears at checkout step.</p>
+                            <p class="plan-note mb-2">Founding Member lifetime option appears at checkout step.</p>
                             {% endif %}
+                            <div class="plan-card-cta-wrap mt-auto pt-2">
+                                <button type="button" class="btn btn-success w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
+                                    {% if tier_id == (signup_primary_tier_id|string) %}
+                                    Start 14-Day Free Trial
+                                    {% elif 'hobbyist' in card_name_lower %}
+                                    Get Started Free
+                                    {% else %}
+                                    Choose {{ card.name }}
+                                    {% endif %}
+                                </button>
+                            </div>
                         </article>
                         {% endfor %}
                     </div>
@@ -106,12 +94,6 @@
                     {% if oauth_user_info %}
                     <input type="hidden" name="oauth_signup" value="true">
                     {% endif %}
-
-                    <div class="d-flex flex-column flex-md-row justify-content-center gap-2 mt-2">
-                        <button id="proceedCheckoutBtn" type="submit" class="btn btn-success btn-lg px-4">
-                            <i class="fas fa-credit-card me-2"></i>Proceed to Checkout
-                        </button>
-                    </div>
                 </form>
             </div>
         </div>
@@ -144,9 +126,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const paidCards = Array.from(document.querySelectorAll('.paid-plan-card'));
+    const paidCardCtas = Array.from(document.querySelectorAll('.paid-card-cta'));
     const selectedTierInput = document.getElementById('selectedTierInput');
     const checkoutForm = document.getElementById('signupCheckoutForm');
-    const proceedCheckoutBtn = document.getElementById('proceedCheckoutBtn');
     const billingModeInput = document.getElementById('billingModeInput');
     const billingCycleInput = document.getElementById('billingCycleInput');
     const lifetimeTierInput = document.getElementById('lifetimeTierInput');
@@ -241,26 +223,32 @@ document.addEventListener('DOMContentLoaded', () => {
         upsellOverlay.classList.toggle('d-none', !open);
     };
 
-    if (proceedCheckoutBtn) {
-        proceedCheckoutBtn.addEventListener('click', (event) => {
+    const openCheckoutForTier = (tierId) => {
+        if (!tierId) {
+            window.alert('Select a paid plan to continue.');
+            return;
+        }
+        setSelectedTier(tierId);
+        const shouldShowArtisanUpsell = Boolean(
+            artisanUpsellOffer &&
+            artisanUpsellOffer.has_remaining &&
+            String(tierId) === String(artisanTierId)
+        );
+        if (shouldShowArtisanUpsell && upsellOverlay) {
+            toggleUpsell(true);
+            return;
+        }
+        applyStandardMonthly();
+        submitCheckout();
+    };
+
+    paidCardCtas.forEach((button) => {
+        button.addEventListener('click', (event) => {
             event.preventDefault();
-            if (!selectedTierInput || !selectedTierInput.value) {
-                window.alert('Select a paid plan to continue.');
-                return;
-            }
-            const shouldShowArtisanUpsell = Boolean(
-                artisanUpsellOffer &&
-                artisanUpsellOffer.has_remaining &&
-                String(selectedTierInput.value) === String(artisanTierId)
-            );
-            if (shouldShowArtisanUpsell && upsellOverlay) {
-                toggleUpsell(true);
-                return;
-            }
-            applyStandardMonthly();
-            submitCheckout();
+            event.stopPropagation();
+            openCheckoutForTier(String(button.dataset.tierId || '').trim());
         });
-    }
+    });
 
     if (upsellMonthlyBtn) {
         upsellMonthlyBtn.addEventListener('click', () => {
@@ -300,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
+    align-items: stretch;
 }
 
 .plan-card {
@@ -308,6 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
     background: #ffffff;
     padding: 1rem;
     box-shadow: 0 4px 12px rgba(22, 32, 61, 0.05);
+    display: flex;
+    flex-direction: column;
 }
 
 .paid-plan-card {
@@ -325,11 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
     border-color: #244a97;
     box-shadow: 0 10px 22px rgba(36, 74, 151, 0.15);
     transform: translateY(-1px);
-}
-
-.free-plan-card {
-    border-color: #c8decf;
-    background: #f7fffb;
 }
 
 .plan-chip {
@@ -367,16 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
     color: #4f5f80;
 }
 
-.plan-highlights {
-    margin: 0;
-    padding-left: 1rem;
-    color: #33415f;
-    font-size: 0.9rem;
-}
-
 .plan-note {
     color: #5e6f91;
     font-size: 0.82rem;
+}
+
+.plan-card-cta-wrap {
+    margin-top: auto;
 }
 
 .upsell-overlay {
