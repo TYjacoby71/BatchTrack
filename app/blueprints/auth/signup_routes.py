@@ -60,7 +60,7 @@ def _build_signup_fallback_url(
 def _public_signup_allow_live_pricing_network() -> bool:
     """Return whether public signup reads can fetch live Stripe prices."""
     return bool(
-        current_app.config.get("SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK", True)
+        current_app.config.get("SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK", False)
     )
 
 
