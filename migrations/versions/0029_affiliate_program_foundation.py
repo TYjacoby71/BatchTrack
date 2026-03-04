@@ -18,7 +18,7 @@ from migrations.postgres_helpers import (
 )
 
 
-revision = "0029_affiliate_program_foundation"
+revision = "0029_affiliate_prog_foundation"
 down_revision = "0028_drop_batch_target_ver_id"
 branch_labels = None
 depends_on = None
