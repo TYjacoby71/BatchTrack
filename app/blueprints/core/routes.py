@@ -109,7 +109,7 @@ def _render_public_homepage_response():
     avoid re-rendering the full template on every hit.
     """
     cache_key = current_app.config.get(
-        "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v3"
+        "PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v4"
     )
     tool_flags = get_public_tool_flags()
     enabled_public_tools = get_enabled_public_tools(tool_flags=tool_flags)
@@ -336,6 +336,46 @@ def homepage():
 def public_page():
     """Alternative public page."""
     return _render_public_homepage_response()
+
+
+@core_bp.route("/affiliates")
+def affiliates_info():
+    """Public affiliate information page."""
+    return render_template(
+        "pages/public/affiliates_info.html",
+        show_public_header=True,
+        public_header_signup_source="affiliate_info_nav",
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
+        page_title="BatchTrack Affiliate Program",
+        page_description=(
+            "Learn how BatchTrack affiliates can earn 10-20% commission on referred "
+            "subscriptions with one-month arrears payout timing."
+        ),
+        canonical_url=url_for("core.affiliates_info", _external=True),
+    )
+
+
+@core_bp.route("/affiliates/signup")
+def affiliates_signup():
+    """Public affiliate signup information and CTA page."""
+    return render_template(
+        "pages/public/affiliates_signup.html",
+        show_public_header=True,
+        public_header_signup_source="affiliate_signup_page",
+        lightweight_public_shell=True,
+        load_analytics=False,
+        load_fontawesome=False,
+        load_feedback_widget=False,
+        page_title="Join BatchTrack Affiliates",
+        page_description=(
+            "Join the BatchTrack affiliate program, earn 10-20% commission, and "
+            "start the signup flow to choose your plan."
+        ),
+        canonical_url=url_for("core.affiliates_signup", _external=True),
+    )
 
 
 @core_bp.route("/health", methods=["GET", "HEAD"])

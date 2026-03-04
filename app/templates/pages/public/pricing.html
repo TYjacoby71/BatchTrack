@@ -7,39 +7,38 @@
     margin: var(--theme-ext-space-b1c1502de5);
   }
 
-  .pricing-hero {
+  .pricing-heading-card {
     border-radius: var(--theme-ext-radius-cf5969e6df);
-    padding: var(--theme-ext-space-32f84f9697);
-    background: var(--theme-ext-color-bcc0e072a1);
-    color: var(--theme-ext-color-325b628415);
-    box-shadow: var(--theme-ext-shadow-1ad0d22700);
+    border: 1px solid rgba(210, 218, 236, 0.85);
+    background: #ffffff;
+    box-shadow: var(--theme-ext-shadow-8fd694988c);
   }
 
-  .pricing-kicker {
+  .pricing-heading-kicker {
     display: inline-flex;
     align-items: center;
     gap: var(--theme-ext-space-e0100a51c2);
     border-radius: var(--theme-ext-radius-13166981e2);
-    background: var(--theme-ext-color-d70163c255);
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: #f8f9ff;
+    border: 1px solid rgba(92, 106, 188, 0.3);
     font-size: var(--theme-ext-size-fd06642d38);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     font-weight: 700;
+    color: var(--theme-ext-color-f5ed5fda4e);
     padding: var(--theme-ext-space-d1851abc4a);
     margin-bottom: var(--theme-ext-space-685ff92249);
   }
 
-  .pricing-hero h1 {
-    color: var(--theme-ext-color-325b628415);
+  .pricing-heading-title {
     font-size: var(--theme-ext-size-4aa765915d);
     margin-bottom: var(--theme-ext-space-7a506f4f36);
   }
 
-  .pricing-hero p {
-    color: var(--theme-ext-color-6e64b963a9);
+  .pricing-heading-description {
+    color: var(--color-muted);
     max-width: 760px;
-    margin-bottom: var(--theme-ext-space-4109b0c1d1);
+    margin-bottom: 0;
   }
 
   .section-heading {
@@ -245,7 +244,7 @@
   }
 
   @media (max-width: 991px) {
-    .pricing-hero {
+    .pricing-heading-card .card-body {
       padding: var(--theme-ext-space-27ec725b7d);
     }
 
@@ -333,13 +332,15 @@
 
 {% block content %}
 <div class="pricing-shell py-4">
-  <section class="pricing-hero mb-4 mb-lg-5">
-    <span class="pricing-kicker">⚡ Batch-first pricing</span>
-    <h1>Choose the right BatchTrack plan for your production stage</h1>
-    <p>
-      Compare customer-facing plans side-by-side. Every plan scales with your process,
-      team, and inventory complexity.
-    </p>
+  <section class="card pricing-heading-card mb-4 mb-lg-5">
+    <div class="card-body">
+      <span class="pricing-heading-kicker">Batch-first pricing</span>
+      <h1 class="pricing-heading-title">Choose the right BatchTrack plan for your production stage</h1>
+      <p class="pricing-heading-description">
+        Compare customer-facing plans side-by-side. Every plan scales with your process,
+        team, and inventory complexity.
+      </p>
+    </div>
   </section>
 
   {% set pricing_tier_count = pricing_tiers|length %}

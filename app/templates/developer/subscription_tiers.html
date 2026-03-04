@@ -122,6 +122,12 @@
                         </div>
                         {% endif %}
 
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-percent me-2 text-success"></i>
+                            <strong>Affiliate Commission:</strong>
+                            <span class="ms-2">{{ '%.2f'|format(tier_data.get('commission_percentage', 0) or 0) }}%</span>
+                        </div>
+
                         {% if tier_data.included_addon_ids and tier_data.included_addon_ids|length > 0 %}
                         <div class="d-flex align-items-center mb-2">
                             <i class="fas fa-puzzle-piece me-2 text-success"></i>

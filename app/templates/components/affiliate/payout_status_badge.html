@@ -1,0 +1,11 @@
+{% set raw_status = payout_status if payout_status is defined else 'pending' %}
+{% set normalized_status = (raw_status or 'pending')|lower %}
+{% if normalized_status in ['complete', 'paid'] %}
+    <span class="badge bg-success">Complete</span>
+{% elif normalized_status == 'sent' %}
+    <span class="badge bg-info text-dark">Sent (On the way)</span>
+{% elif normalized_status in ['unsuccessful', 'failed', 'unsuccessfull', 'unsucessfull'] %}
+    <span class="badge bg-danger">Unsuccessful</span>
+{% else %}
+    <span class="badge bg-warning text-dark">Pending</span>
+{% endif %}

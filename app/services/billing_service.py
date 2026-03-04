@@ -556,6 +556,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import Addon, OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             # Resolve organization
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
@@ -582,12 +583,18 @@ class BillingService:
             if status in ["active", "trialing"]:
                 org.billing_status = "active"
                 org.is_active = True
+                AffiliateService.clear_referral_churn_for_organization(
+                    org.id, auto_commit=False
+                )
             elif status in ["past_due", "unpaid"]:
                 org.billing_status = "past_due"
                 org.is_active = False
             elif status in ["canceled", "cancelled"]:
                 org.billing_status = "canceled"
                 org.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    org.id, auto_commit=False
+                )
 
             if not org.stripe_customer_id:
                 org.stripe_customer_id = customer_id
@@ -637,6 +644,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             # Update OrganizationAddon for matching Stripe subscription id
             rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
@@ -667,12 +675,18 @@ class BillingService:
                 if status in ["active", "trialing"]:
                     org.billing_status = "active"
                     org.is_active = True
+                    AffiliateService.clear_referral_churn_for_organization(
+                        org.id, auto_commit=False
+                    )
                 elif status in ["past_due", "unpaid"]:
                     org.billing_status = "past_due"
                     org.is_active = False
                 elif status in ["canceled", "cancelled"]:
                     org.billing_status = "canceled"
                     org.is_active = False
+                    AffiliateService.mark_referral_churned_for_organization(
+                        org.id, auto_commit=False
+                    )
 
             db.session.commit()
         except Exception as e:
@@ -688,6 +702,7 @@ class BillingService:
             from ..extensions import db
             from ..models.addon import OrganizationAddon
             from ..models.models import Organization
+            from .affiliate_service import AffiliateService
 
             rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
             if rec:
@@ -710,6 +725,9 @@ class BillingService:
                 org.subscription_status = "canceled"
                 org.billing_status = "canceled"
                 org.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    org.id, auto_commit=False
+                )
 
             db.session.commit()
         except Exception as e:
@@ -747,6 +765,25 @@ class BillingService:
                     pass
 
             db.session.commit()
+
+            # Auto-run eligible affiliate payouts after successful invoice events.
+            try:
+                from .affiliate_service import AffiliateService
+
+                auto_result = AffiliateService.run_automatic_stripe_payouts(
+                    limit_batches=20, auto_commit=True
+                )
+                if int(auto_result.get("sent_batches", 0) or 0) > 0:
+                    logger.info(
+                        "Auto affiliate payout run pushed %s batch(es) (%s).",
+                        auto_result.get("sent_batches"),
+                        auto_result.get("sent_commission_display"),
+                    )
+            except Exception:
+                logger.warning(
+                    "Suppressed exception fallback at app/services/billing_service.py:auto_affiliate_payouts",
+                    exc_info=True,
+                )
         except Exception as exc:
             logger.error(f"Error handling payment succeeded: {exc}")
             db.session.rollback()
@@ -1277,6 +1314,7 @@ class BillingService:
             if not organization:
                 logger.error(f"Organization {organization_id} not found")
                 return False
+            from .affiliate_service import AffiliateService
 
             # Get tier from subscription metadata
             tier_id = subscription.get("metadata", {}).get("tier_id")
@@ -1298,12 +1336,18 @@ class BillingService:
             if status == "active":
                 organization.is_active = True
                 organization.billing_status = "active"
+                AffiliateService.clear_referral_churn_for_organization(
+                    organization.id, auto_commit=False
+                )
             elif status in ["past_due", "unpaid"]:
                 organization.billing_status = "payment_failed"
                 organization.is_active = False
             elif status == "canceled":
                 organization.billing_status = "canceled"
                 organization.is_active = False
+                AffiliateService.mark_referral_churned_for_organization(
+                    organization.id, auto_commit=False
+                )
 
             # Store Stripe customer ID if not present
             if not organization.stripe_customer_id:

@@ -1,0 +1,31 @@
+{% set rows = payout_rows or [] %}
+<div class="table-responsive">
+    <table class="table table-sm table-striped mb-0">
+        <thead>
+            <tr>
+                <th class="ps-3">Month</th>
+                <th>Eligible On</th>
+                <th>Status</th>
+                <th>Commission</th>
+                <th class="pe-3">Payout Ref</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if rows %}
+                {% for row in rows %}
+                <tr>
+                    <td class="ps-3">{{ row.earning_month_display or 'Unknown' }}</td>
+                    <td>{{ row.eligible_on_display or 'N/A' }}</td>
+                    <td>{% with payout_status=row.payout_status %}{% include "components/affiliate/payout_status_badge.html" %}{% endwith %}</td>
+                    <td>{{ row.commission_display or '$0.00' }}</td>
+                    <td class="pe-3"><code>{{ row.payout_reference or '—' }}</code></td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">{{ empty_message or 'No payout batches yet.' }}</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>

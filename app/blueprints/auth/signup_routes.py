@@ -6,6 +6,7 @@ from flask import (
     current_app,
     flash,
     jsonify,
+    make_response,
     redirect,
     render_template,
     request,
@@ -17,6 +18,7 @@ from flask_login import current_user
 from ...extensions import limiter
 from ...services.lifetime_pricing_service import LifetimePricingService
 from ...services.oauth_service import OAuthService
+from ...services.affiliate_service import AffiliateService
 from ...services.signup_checkout_service import SignupCheckoutService
 from ...services.signup_plan_catalog_service import SignupPlanCatalogService
 from . import auth_bp
@@ -94,7 +96,7 @@ def signup_data():
 @auth_bp.route("/signup/checkout")
 @limiter.limit("600/minute")
 def signup_checkout():
-    """Legacy direct-checkout route that now redirects into signup selection flow."""
+    """Direct checkout shortcut for pricing CTAs."""
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
 
@@ -111,6 +113,44 @@ def signup_checkout():
     selected_promo = request.args.get("promo") or ""
     signup_source = request.args.get("source") or "pricing_direct_checkout"
     referral_code = request.args.get("ref")
+    selected_plan_kind = (
+        "lifetime"
+        if selected_mode == "lifetime"
+        else ("yearly" if selected_cycle == "yearly" else "monthly")
+    )
+
+    allow_live_pricing_network = _public_signup_allow_live_pricing_network()
+    signup_context = SignupCheckoutService.build_request_context(
+        request=request,
+        oauth_user_info=session.get("oauth_user_info"),
+        allow_live_pricing_network=allow_live_pricing_network,
+    )
+    checkout_result = SignupCheckoutService.process_submission(
+        context=signup_context,
+        form_data={
+            "selected_tier": selected_tier,
+            "billing_mode": selected_mode,
+            "billing_cycle": selected_cycle,
+            "requested_plan_kind": selected_plan_kind,
+            "lifetime_tier": selected_lifetime_tier,
+            "promo": selected_promo,
+            "source": signup_source,
+            "ref": referral_code or "",
+            "contact_email": request.args.get("email", ""),
+            "contact_phone": request.args.get("phone", ""),
+            "oauth_signup": "false",
+        },
+    )
+
+    if checkout_result.redirect_url:
+        response = redirect(checkout_result.redirect_url)
+        return AffiliateService.set_referral_cookie(
+            response,
+            signup_context.referral_code,
+            secure=request.is_secure,
+        )
+    if checkout_result.flash_message:
+        flash(checkout_result.flash_message, checkout_result.flash_category)
 
     fallback_url = _build_signup_fallback_url(
         tier=selected_tier,
@@ -121,7 +161,12 @@ def signup_checkout():
         source=signup_source,
         referral_code=referral_code,
     )
-    return redirect(fallback_url)
+    response = redirect(fallback_url)
+    return AffiliateService.set_referral_cookie(
+        response,
+        signup_context.referral_code,
+        secure=request.is_secure,
+    )
 
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
@@ -144,7 +189,12 @@ def signup():
             form_data=request.form,
         )
         if result.redirect_url:
-            return redirect(result.redirect_url)
+            response = redirect(result.redirect_url)
+            return AffiliateService.set_referral_cookie(
+                response,
+                signup_context.referral_code,
+                secure=request.is_secure,
+            )
 
         if result.flash_message:
             flash(result.flash_message, result.flash_category)
@@ -163,4 +213,9 @@ def signup():
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
     )
-    return render_template("pages/auth/signup.html", **template_context)
+    response = make_response(render_template("pages/auth/signup.html", **template_context))
+    return AffiliateService.set_referral_cookie(
+        response,
+        signup_context.referral_code,
+        secure=request.is_secure,
+    )

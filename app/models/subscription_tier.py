@@ -78,6 +78,9 @@ class SubscriptionTier(db.Model):
     billing_provider = db.Column(
         db.String(32), nullable=False, default="exempt"
     )  # 'stripe', 'whop', 'exempt'
+    commission_percentage = db.Column(
+        db.Numeric(5, 2), nullable=False, default=0, server_default="0"
+    )
 
     # The ONLY external product links - stable lookup keys
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
@@ -167,6 +170,14 @@ class SubscriptionTier(db.Model):
     def requires_whop_billing(self):
         """Compatibility property for legacy checks; maps to billing_provider."""
         return self.billing_provider == "whop"
+
+    @property
+    def commission_rate(self) -> float:
+        """Commission percentage normalized to decimal fraction."""
+        value = float(self.commission_percentage or 0)
+        if value <= 0:
+            return 0.0
+        return value / 100.0
 
     @property
     def can_be_deleted(self):

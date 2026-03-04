@@ -1,6 +1,7 @@
 """Route modules for the developer blueprint."""
 
 from . import analytics_routes  # noqa: F401
+from . import affiliate_routes  # noqa: F401
 from . import api_routes  # noqa: F401
 from . import dashboard_routes  # noqa: F401
 from . import global_item_routes  # noqa: F401
