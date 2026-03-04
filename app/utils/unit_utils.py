@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Iterable, List
 
@@ -68,6 +69,19 @@ def _to_unit_option(unit: Any) -> UnitOption:
     """Convert ORM instances or dicts into a cache-safe representation."""
     if isinstance(unit, UnitOption):
         return unit
+    if isinstance(unit, Mapping):
+        return UnitOption(
+            id=unit.get("id"),
+            name=str(unit.get("name", "") or "").strip(),
+            unit_type=str(unit.get("unit_type", "count") or "count"),
+            base_unit=unit.get("base_unit"),
+            conversion_factor=unit.get("conversion_factor"),
+            symbol=unit.get("symbol"),
+            is_custom=bool(unit.get("is_custom", False)),
+            is_mapped=bool(unit.get("is_mapped", False)),
+            organization_id=unit.get("organization_id"),
+            created_by=unit.get("created_by", unit.get("user_id")),
+        )
     return UnitOption(
         id=getattr(unit, "id", None),
         name=(getattr(unit, "name", "") or "").strip(),

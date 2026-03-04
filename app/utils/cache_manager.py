@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import time
+from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from threading import Lock
@@ -47,6 +48,8 @@ _CACHE_JSON_TYPE_KEY = "__cache_json_type__"
 
 def _cache_json_default(value: Any) -> Any:
     """Serialize non-JSON-native values used in cache payloads."""
+    if is_dataclass(value):
+        return asdict(value)
     if isinstance(value, datetime):
         return {_CACHE_JSON_TYPE_KEY: "datetime", "value": value.isoformat()}
     if isinstance(value, date):

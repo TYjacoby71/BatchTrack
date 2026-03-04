@@ -1,0 +1,104 @@
+<!-- Solution Quiz Section -->
+<section id="solution-quiz" class="py-5 border-bottom">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="display-6 fw-bold mb-3">Find your best BatchTrack workflow in two minutes.</h2>
+            <p class="lead text-muted mb-0">Choose your craft, select your pain points, and reveal the features built to solve them.</p>
+        </div>
+
+        <div class="quiz-shell">
+            <form id="homepageQuizForm" novalidate>
+                <div class="row g-4">
+                    <div class="col-12">
+                        <h3 class="h5 fw-semibold mb-3">1) What do you primarily make?</h3>
+                        <div id="quizCraftChoices" class="quiz-chip-grid" role="radiogroup" aria-label="Maker category">
+                            {% set craft_choices = [
+                                ('soap', 'Soap'),
+                                ('candles', 'Candles'),
+                                ('baking', 'Baking'),
+                                ('fermentation', 'Fermentation'),
+                                ('brewing', 'Brewing'),
+                                ('cosmetics', 'Cosmetics')
+                            ] %}
+                            {% for value, label in craft_choices %}
+                            <button type="button" class="quiz-choice-btn" data-craft-value="{{ value }}" aria-pressed="false">{{ label }}</button>
+                            {% endfor %}
+                        </div>
+                        <input id="quizCraftInput" name="craft" type="hidden" value="">
+                    </div>
+
+                    <div class="col-12">
+                        <h3 class="h5 fw-semibold mb-2">2) What are your biggest pain points right now?</h3>
+                        <p id="quizPainIntro" class="small text-muted mb-3">Select your maker category first to load pain points.</p>
+                        <div id="quizPainChoices" class="row g-3" aria-live="polite"></div>
+                    </div>
+
+                    <div class="col-12">
+                        <h3 class="h5 fw-semibold mb-3">3) What is your primary goal for the next 6 months?</h3>
+                        <div id="quizGoalChoices" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="quiz-goal-card">
+                                    <input class="form-check-input me-2" type="radio" name="quiz_goal" value="organize" required>
+                                    <span>Get my process organized</span>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="quiz-goal-card">
+                                    <input class="form-check-input me-2" type="radio" name="quiz_goal" value="sell_consistently" required>
+                                    <span>Sell consistently at markets or online</span>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="quiz-goal-card">
+                                    <input class="form-check-input me-2" type="radio" name="quiz_goal" value="scale" required>
+                                    <span>Scale production with fewer mistakes</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-3 align-items-center mt-4">
+                    <button id="quizRevealButton" type="button" class="btn btn-primary btn-lg" disabled>Reveal My Personalized Solutions</button>
+                    <p class="small text-muted mb-0">We map your selected pain points to exact features and workflows.</p>
+                </div>
+            </form>
+
+            <div id="quizEmailGate" class="quiz-email-gate d-none mt-4">
+                <h3 class="h5 fw-semibold mb-2">Almost there. Where should we send your plan?</h3>
+                <p class="text-muted mb-3">Enter your email to unlock your personalized solution cards.</p>
+                <form id="quizEmailForm" class="row g-2" novalidate>
+                    <div class="col-md-8">
+                        <label for="quizEmailInput" class="visually-hidden">Email</label>
+                        <input
+                            id="quizEmailInput"
+                            type="email"
+                            class="form-control form-control-lg"
+                            name="email"
+                            autocomplete="email"
+                            placeholder="you@example.com"
+                            required
+                        >
+                        <label for="quizEmailCompany" class="visually-hidden">Company</label>
+                        <input id="quizEmailCompany" type="text" name="company" class="bot-trap-field" tabindex="-1" autocomplete="off">
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button id="quizEmailSubmitButton" type="submit" class="btn btn-success btn-lg">Unlock My Results</button>
+                    </div>
+                </form>
+                <p id="quizEmailStatus" class="small mt-3 mb-0 text-muted" aria-live="polite"></p>
+            </div>
+
+            <div id="quizResultsPanel" class="quiz-results d-none mt-4" aria-live="polite">
+                <h3 id="quizResultsTitle" class="h4 fw-bold mb-2">Your personalized action plan</h3>
+                <p id="quizResultsSubtitle" class="text-muted mb-4"></p>
+                <div id="quizResultsGrid" class="row g-3"></div>
+                <div class="mt-4 text-center">
+                    <a href="{{ url_for('core.signup_alias', source='homepage_quiz_results_start_free_trial') }}" class="btn btn-cta btn-lg text-white fw-semibold">
+                        Start Tracking for Free
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

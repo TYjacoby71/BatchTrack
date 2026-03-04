@@ -423,11 +423,24 @@ def get_homepage_media_slots() -> Dict[str, Dict[str, str] | None]:
     """Return singleton homepage slot media (hero, final CTA, etc.)."""
     slots: Dict[str, Dict[str, str] | None] = {}
     for slot_key, folder in HOMEPAGE_MEDIA_SLOTS:
-        slots[slot_key] = resolve_first_media_from_folder(
-            folder,
-            allow_images=True,
-            allow_videos=True,
-        )
+        # Prefer still images for hero messaging clarity, then gracefully fall back.
+        if slot_key == "hero-primary":
+            hero_image = resolve_first_media_from_folder(
+                folder,
+                allow_images=True,
+                allow_videos=False,
+            )
+            slots[slot_key] = hero_image or resolve_first_media_from_folder(
+                folder,
+                allow_images=True,
+                allow_videos=True,
+            )
+        else:
+            slots[slot_key] = resolve_first_media_from_folder(
+                folder,
+                allow_images=True,
+                allow_videos=True,
+            )
     return slots
 
 
