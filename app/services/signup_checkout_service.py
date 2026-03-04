@@ -51,8 +51,6 @@ class SignupRequestContext:
     prefill_email: str
     prefill_phone: str
     signup_primary_tier_id: str | None
-    show_signup_free_tier: bool = False
-    free_tier_display: dict[str, Any] | None = None
 
 
 # --- SignupViewState ---
@@ -82,7 +80,6 @@ class SignupSubmission:
     contact_phone: str
     selected_mode: str
     selected_standard_cycle: str
-    billing_cycle_explicit: bool
     selected_lifetime_key: str
     effective_promo_code: str | None
     detected_timezone: str | None
@@ -140,9 +137,6 @@ class SignupCheckoutService:
         requested_billing_mode = request.args.get(
             "billing_mode", request.form.get("billing_mode", "")
         )
-        requested_billing_cycle = request.args.get(
-            "billing_cycle", request.form.get("billing_cycle", "")
-        )
 
         db_tiers = cls._load_signup_customer_facing_tiers()
         db_tiers = cls._filter_signup_display_tiers(
@@ -158,8 +152,6 @@ class SignupCheckoutService:
             (oauth_user_info or {}).get("email") or ""
         )
         prefill_phone = request.form.get("contact_phone") or ""
-        show_signup_free_tier = False
-        free_tier_display = None
 
         selected_default_tier_id = cls._resolve_primary_tier_id(
             available_tiers=available_tiers,
@@ -205,12 +197,7 @@ class SignupCheckoutService:
             if requested_billing_mode in {"standard", "lifetime"}
             else default_billing_mode
         )
-        default_standard_billing_cycle = "monthly"
-        standard_billing_cycle = (
-            requested_billing_cycle
-            if requested_billing_cycle in {"monthly", "yearly"}
-            else default_standard_billing_cycle
-        )
+        standard_billing_cycle = "monthly"
 
         if not has_lifetime_capacity:
             billing_mode = "standard"
@@ -255,8 +242,6 @@ class SignupCheckoutService:
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
             signup_primary_tier_id=signup_primary_tier_id,
-            show_signup_free_tier=show_signup_free_tier,
-            free_tier_display=free_tier_display,
         )
 
     @staticmethod
@@ -298,9 +283,6 @@ class SignupCheckoutService:
             selected_paid_tier_id = next(iter(context.available_tiers.keys()), "")
 
         signup_plan_cards = cls._build_signup_paid_plan_cards(context.available_tiers)
-        free_tier_enabled = bool(
-            context.show_signup_free_tier and context.free_tier_display
-        )
         artisan_upsell_offer = context.lifetime_by_tier_id.get(
             str(context.signup_primary_tier_id or "")
         )
@@ -331,10 +313,6 @@ class SignupCheckoutService:
             "selected_paid_tier_id": selected_paid_tier_id,
             "signup_plan_cards": signup_plan_cards,
             "artisan_upsell_offer": artisan_upsell_offer,
-            "show_signup_free_tier": free_tier_enabled,
-            "free_tier_display": (
-                context.free_tier_display if free_tier_enabled else None
-            ),
             "page_title": page_title,
             "page_description": page_description,
             "canonical_url": canonical_url,
@@ -433,41 +411,6 @@ class SignupCheckoutService:
                 "Invalid subscription plan",
                 submission=submission,
             )
-
-        if (
-            submission.selected_mode == "standard"
-            and submission.selected_standard_cycle == "yearly"
-        ):
-            yearly_lookup_key = (
-                LifetimePricingService.resolve_standard_yearly_lookup_key(tier_obj)
-            )
-            if not yearly_lookup_key:
-                if not submission.billing_cycle_explicit:
-                    submission.selected_standard_cycle = "monthly"
-                else:
-                    return cls._error_result(
-                        "Yearly billing is not configured for this plan yet.",
-                        submission=submission,
-                        selected_standard_cycle="monthly",
-                    )
-            else:
-                yearly_pricing = BillingService.get_live_pricing_for_lookup_key(
-                    yearly_lookup_key
-                )
-                if (
-                    not yearly_pricing
-                    or yearly_pricing.get("billing_cycle") != "yearly"
-                ):
-                    if not submission.billing_cycle_explicit:
-                        submission.selected_standard_cycle = "monthly"
-                    else:
-                        return cls._error_result(
-                            "Yearly billing is temporarily unavailable for this plan.",
-                            submission=submission,
-                            selected_standard_cycle="monthly",
-                        )
-                else:
-                    submission.price_lookup_key_override = yearly_lookup_key
 
         metadata = cls._build_checkout_metadata(
             context=context, submission=submission, tier_obj=tier_obj
@@ -593,14 +536,7 @@ class SignupCheckoutService:
         selected_mode = (
             selected_mode if selected_mode in {"standard", "lifetime"} else "standard"
         )
-        raw_billing_cycle = form_data.get("billing_cycle")
-        billing_cycle_explicit = bool(raw_billing_cycle and raw_billing_cycle.strip())
-        selected_standard_cycle = raw_billing_cycle or context.standard_billing_cycle
-        selected_standard_cycle = (
-            selected_standard_cycle
-            if selected_standard_cycle in {"monthly", "yearly"}
-            else context.standard_billing_cycle
-        )
+        selected_standard_cycle = "monthly"
         selected_lifetime_key = form_data.get(
             "lifetime_tier", context.selected_lifetime_tier
         )
@@ -619,7 +555,6 @@ class SignupCheckoutService:
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
-            billing_cycle_explicit=billing_cycle_explicit,
             selected_lifetime_key=selected_lifetime_key,
             effective_promo_code=context.promo_code,
             detected_timezone=form_data.get("detected_timezone"),
@@ -738,11 +673,7 @@ class SignupCheckoutService:
                 "description": str(getattr(tier_obj, "description", None) or "").strip(),
                 "price_display": monthly_price_display,
                 "monthly_price_display": monthly_price_display,
-                "yearly_price_display": None,
                 "stripe_lookup_key": monthly_lookup_key,
-                "yearly_lookup_key": None,
-                "features": [],
-                "presentation_features": [],
             }
 
         return payload
@@ -917,33 +848,13 @@ class SignupCheckoutService:
         return None
 
     @staticmethod
-    def _resolve_enterprise_tier_id(
-        *, available_tiers: dict[str, dict]
-    ) -> str | None:
-        for tier_id, tier_data in available_tiers.items():
-            tier_name = str((tier_data or {}).get("name") or "").strip().lower()
-            lookup_key = str((tier_data or {}).get("stripe_lookup_key") or "").strip().lower()
-            if lookup_key in {"enterprise_monthly", "enterprise-monthly"}:
-                return str(tier_id)
-            if "enterprise" in tier_name:
-                return str(tier_id)
-        return None
-
-    @staticmethod
     def _build_signup_paid_plan_cards(
         available_tiers: dict[str, dict]
     ) -> list[dict[str, Any]]:
         cards: list[dict[str, Any]] = []
         for tier_id, tier_data in available_tiers.items():
             normalized_tier = dict(tier_data or {})
-            highlights = (
-                normalized_tier.get("presentation_features")
-                or normalized_tier.get("features")
-                or []
-            )
             tier_description = str(normalized_tier.get("description") or "").strip()
-            if not tier_description and highlights:
-                tier_description = str(list(highlights)[0]).strip()
             cards.append(
                 {
                     "tier_id": str(tier_id),
@@ -954,11 +865,6 @@ class SignupCheckoutService:
                         or "Monthly pricing at secure checkout"
                     ),
                     "description": tier_description,
-                    "highlights": [
-                        str(label).strip()
-                        for label in list(highlights)[:4]
-                        if str(label).strip()
-                    ],
                 }
             )
         return cards
