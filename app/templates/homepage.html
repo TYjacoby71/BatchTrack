@@ -341,6 +341,36 @@
             font-size: 0.82rem;
         }
 
+        .hero-content-full {
+            width: 100%;
+        }
+
+        .hero-brand-title {
+            font-size: clamp(3rem, 8vw, 5.4rem);
+            letter-spacing: -0.02em;
+            line-height: 1.02;
+            color: #15284a;
+        }
+
+        .hero-tagline {
+            font-size: clamp(1.25rem, 3.2vw, 2rem);
+            color: #213a67;
+            line-height: 1.2;
+        }
+
+        .hero-cta-stack .hero-cta-btn {
+            min-width: 248px;
+        }
+
+        .hero-cta-stack .hero-cta-btn-secondary {
+            background: linear-gradient(135deg, #335dbf, #4e7be0);
+            border: none;
+        }
+
+        .hero-cta-stack .hero-cta-btn-secondary:hover {
+            filter: brightness(0.95);
+        }
+
         .hero-visual-placeholder {
             min-height: clamp(300px, 45vw, 500px);
             border: none;
@@ -597,6 +627,23 @@
         @media (max-width: 767.98px) {
             .hero-visual-placeholder {
                 min-height: 260px;
+            }
+
+            .hero-brand-title {
+                font-size: clamp(2.4rem, 11vw, 3.2rem);
+            }
+
+            .hero-tagline {
+                font-size: clamp(1.05rem, 4.8vw, 1.28rem);
+            }
+
+            .hero-cta-stack {
+                width: 100%;
+            }
+
+            .hero-cta-stack .hero-cta-btn {
+                width: 100%;
+                min-width: 0;
             }
         }
     </style>

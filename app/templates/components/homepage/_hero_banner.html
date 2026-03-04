@@ -1,65 +1,28 @@
 <!-- Hero Banner -->
 <section class="hero-section bg-light py-5 border-bottom">
     <div class="container">
-        <div class="row align-items-center g-4 g-lg-5">
-            <div class="col-lg-6">
+        <div class="row">
+            <div class="col-12">
+                <div class="hero-content-full text-center">
                 <p class="hero-eyebrow text-uppercase fw-semibold text-primary mb-2">Built for small-batch makers</p>
-                <h1 class="display-4 fw-bold mb-3">From Creative Chaos to Calm Control.</h1>
+                <h1 class="hero-brand-title fw-bold mb-1">BatchTrack</h1>
+                <p class="hero-tagline fw-bold mb-3">From Creative Chaos to Calm Control.</p>
                 <p class="lead text-muted mb-4">
                     BatchTrack gives you one visual workspace for recipes, inventory, and live batch production so you can spend more time making and less time firefighting.
                 </p>
-                <div class="d-flex flex-wrap gap-3">
+                <div class="d-flex flex-wrap justify-content-center gap-3 hero-cta-stack">
                     <a
                         href="{{ url_for('core.signup_alias', source='homepage_start_free_trial') }}"
-                        class="btn btn-cta btn-lg text-white fw-semibold"
+                        class="btn btn-cta btn-lg text-white fw-semibold hero-cta-btn"
                     >
                         Start Tracking for Free
                     </a>
-                    <a href="#solution-quiz" class="btn btn-outline-primary btn-lg fw-semibold" data-scroll-to-quiz>
+                    <a href="#solution-quiz" class="btn btn-cta btn-lg text-white fw-semibold hero-cta-btn hero-cta-btn-secondary" data-scroll-to-quiz>
                         Find Your Solution
                     </a>
                 </div>
                 <p class="small text-muted mt-3 mb-0">No spreadsheets. No guesswork. Just a repeatable process you can trust.</p>
             </div>
-
-            <div class="col-lg-6">
-                {% set hero_media = (homepage_media_slots.get('hero-primary') if homepage_media_slots is defined else none) %}
-                {% set final_cta_media = (homepage_media_slots.get('final-cta-primary') if homepage_media_slots is defined else none) %}
-                {% set hero_visual = hero_media %}
-                {% if hero_visual and hero_visual.kind != 'image' and final_cta_media and final_cta_media.kind == 'image' %}
-                    {% set hero_visual = final_cta_media %}
-                {% endif %}
-
-                <div class="hero-media-box">
-                    <div class="placeholder-img hero-visual-placeholder{% if hero_visual %} has-media{% endif %}">
-                        {% if hero_visual %}
-                            {% if hero_visual.kind == 'video' %}
-                        <video class="hero-slot-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app preview">
-                            <source src="{{ url_for('static', filename=hero_visual.path) }}">
-                        </video>
-                            {% elif hero_visual.kind == 'youtube' and hero_visual.embed_url %}
-                        <iframe
-                            class="hero-slot-media media-embed-frame"
-                            src="{{ hero_visual.embed_url }}"
-                            title="BatchTrack app preview"
-                            loading="lazy"
-                            referrerpolicy="strict-origin-when-cross-origin"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowfullscreen
-                        ></iframe>
-                            {% else %}
-                        <img
-                            src="{{ url_for('static', filename=hero_visual.path) }}"
-                            class="hero-slot-media"
-                            alt="BatchTrack dashboard preview"
-                            loading="lazy"
-                            decoding="async"
-                        >
-                            {% endif %}
-                        {% else %}
-                        <span class="hero-video-label">Add a dashboard screenshot to this hero slot.</span>
-                        {% endif %}
-                    </div>
                 </div>
             </div>
         </div>
