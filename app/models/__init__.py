@@ -43,6 +43,7 @@ from .ingredient_reference import (
     Variation,
 )
 from .mixins import ScopedModelMixin
+from .marketing_lead import MarketingContact, MarketingLeadEvent
 
 # Import in dependency order for PostgreSQL table creation
 # 1. Base models with no dependencies

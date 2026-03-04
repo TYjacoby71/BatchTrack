@@ -77,7 +77,7 @@ def _global_library_disabled_response():
     if current_user.is_authenticated:
         return redirect(url_for("app_routes.dashboard"))
     return redirect(
-        url_for("core.signup_alias", source="global_inventory_library_cta"),
+        url_for("auth.quick_signup", source="GIL_dashboard_cta"),
         code=302,
     )
 
@@ -176,7 +176,7 @@ def global_library():
                     url_for(
                         "auth.quick_signup",
                         next=request.full_path,
-                        source="global_inventory_library_rate_limit_cta",
+                        source="GIL_dashboard_cta",
                     )
                 )
             search_remaining = remaining
@@ -325,7 +325,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
                     "auth.quick_signup",
                     next=request.path,
                     global_item_id=item_id,
-                    source="global_inventory_library_rate_limit_cta",
+                    source="GIL_dashboard_cta",
                 )
             )
 
@@ -458,6 +458,7 @@ def save_global_item_to_inventory(item_id: int):
     ).first_or_404()
 
     if not current_user.is_authenticated:
+        source_hint = request.args.get("source") or "GIL_add_item_to_account_cta"
         next_path = url_for(
             "global_library_bp.save_global_item_to_inventory", item_id=item_id
         )
@@ -466,7 +467,7 @@ def save_global_item_to_inventory(item_id: int):
                 "auth.quick_signup",
                 next=next_path,
                 global_item_id=item_id,
-                source="global_inventory_library_cta",
+                source=source_hint,
             )
         )
 

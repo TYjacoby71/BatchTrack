@@ -42,6 +42,7 @@
 - Add a quarterly duplicate-name and duplicate-intent audit to catch drift early and keep test naming/intent unique across files.
 
 ## Future Features & Growth
+- Add a dedicated homepage quiz waitlist confirmation email template (separate from tool waitlist copy), including quiz-specific messaging and a signup CTA link.
 - Ship the multi-step retention/cancellation experience end-to-end: retention landing page, objection-specific paths, exit survey, analytics, FTC-compliant cancellation, win-back emails, and phased rollout.
 - Finish custom unit mapping experience: `CustomUnitMapping` flows with user attribution, density prompts, recipe editor enforcement, training content, and status badges in Unit Manager.
 - Batch augmentation system: split base yield into scented/colored variations pre-finish, with percentage allocation, automatic sub-labels (101A-Lavender, 101B-Rose), added-ingredient tracking, and container redistribution.

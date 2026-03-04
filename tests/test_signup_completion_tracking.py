@@ -20,7 +20,8 @@ def test_quick_signup_emits_free_and_account_created_events(app, monkeypatch):
     response = client.post(
         "/auth/quick-signup",
         data={
-            "name": "Quick Signup",
+            "first_name": "Quick",
+            "last_name": "Signup",
             "email": email,
             "password": "quickpass123",
             "next": "/inventory",
@@ -34,6 +35,10 @@ def test_quick_signup_emits_free_and_account_created_events(app, monkeypatch):
     with app.app_context():
         created_user = User.query.filter_by(email=email).first()
         assert created_user is not None
+        assert created_user.first_name == "Quick"
+        assert created_user.last_name == "Signup"
+        assert created_user.organization is not None
+        assert created_user.organization.tier is not None
 
         for event_name in (
             "free_account_created",

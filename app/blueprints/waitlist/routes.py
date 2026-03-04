@@ -5,8 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, url_for
 
+from app.services.email_service import EmailService
+from app.services.marketing_lead_service import MarketingLeadService
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.utils.json_store import read_json_file, write_json_file
 
@@ -24,6 +26,7 @@ _WAITLIST_LABELS = {
     "tools.candles": "Candle Maker Tool",
     "tools.herbal": "Herbalist Calculator",
 }
+_QUIZ_WAITLIST_KEYS = {"homepage.quiz_funnel"}
 
 
 def _normalize_waitlist_key(raw_value: Optional[str]) -> str:
@@ -52,6 +55,20 @@ def _extract_waitlist_metadata(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _humanize_waitlist_label(waitlist_key: str) -> str:
+    """Return a readable waitlist label for confirmation emails."""
+    mapped_label = _WAITLIST_LABELS.get(waitlist_key)
+    if mapped_label:
+        return mapped_label
+    generated_label = waitlist_key.replace(".", " ").replace("_", " ").strip()
+    return generated_label.title() if generated_label else "BatchTrack"
+
+
+def _should_send_waitlist_confirmation(waitlist_key: str) -> bool:
+    """Skip quiz-specific confirmation template until dedicated quiz copy lands."""
+    return waitlist_key not in _QUIZ_WAITLIST_KEYS
+
+
 @waitlist_bp.route("/waitlist", methods=["GET"])
 def waitlist_landing():
     """Render a public waitlist capture page for tool and homepage flows."""
@@ -73,7 +90,7 @@ def waitlist_landing():
 
 @waitlist_bp.route("/api/waitlist", methods=["POST"])
 def join_waitlist():
-    """Handle waitlist form submissions - save to JSON only."""
+    """Handle waitlist submissions and persist lead capture metadata."""
     try:
         payload = request.get_json() or {}
         if not isinstance(payload, dict):
@@ -154,6 +171,41 @@ def join_waitlist():
 
         waitlist.append(waitlist_entry)
         write_json_file(waitlist_file, waitlist)
+
+        MarketingLeadService.record_waitlist_capture(
+            email=email,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            business_type=business_type or None,
+            source_key=metadata["source"],
+            waitlist_key=metadata["waitlist_key"],
+            context=metadata["context"],
+            notes=waitlist_entry["notes"] or None,
+            tags=waitlist_entry["tags"],
+            payload=payload,
+        )
+
+        if _should_send_waitlist_confirmation(metadata["waitlist_key"]):
+            try:
+                signup_source = (
+                    f"waitlist_email_{_normalize_waitlist_key(metadata['waitlist_key'])}"
+                )
+                EmailService.send_waitlist_confirmation(
+                    email=email,
+                    first_name=first_name or None,
+                    last_name=last_name or None,
+                    waitlist_label=_humanize_waitlist_label(metadata["waitlist_key"]),
+                    signup_url=url_for(
+                        "core.signup_alias",
+                        source=signup_source,
+                        _external=True,
+                    ),
+                )
+            except Exception:
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/waitlist/routes.py:178",
+                    exc_info=True,
+                )
 
         return jsonify({"message": "Successfully joined waitlist"}), 200
 

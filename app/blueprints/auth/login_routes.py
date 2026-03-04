@@ -499,12 +499,31 @@ def quick_signup():
         "load_feedback_widget": False,
     }
 
+    def _resolve_free_tools_tier():
+        free_tools_tier = (
+            SubscriptionTier.query.filter(
+                func.lower(SubscriptionTier.name) == "free tools"
+            )
+            .order_by(SubscriptionTier.id.asc())
+            .first()
+        )
+        if free_tools_tier:
+            return free_tools_tier
+        free_tools_tier = SubscriptionTier.find_by_identifier("free tools")
+        if free_tools_tier:
+            return free_tools_tier
+        free_tools_tier = SubscriptionTier.find_by_identifier("free")
+        if free_tools_tier:
+            return free_tools_tier
+        return SubscriptionTier.find_by_identifier("exempt")
+
     def _render_quick_signup_form(
         *,
         next_url: str,
         global_item_id: str,
         global_item_name: str,
-        prefill_name: str,
+        prefill_first_name: str,
+        prefill_last_name: str,
         prefill_email: str,
         signup_source: str,
     ):
@@ -513,7 +532,8 @@ def quick_signup():
             next_url=next_url,
             global_item_id=global_item_id,
             global_item_name=global_item_name,
-            prefill_name=prefill_name,
+            prefill_first_name=prefill_first_name,
+            prefill_last_name=prefill_last_name,
             prefill_email=prefill_email,
             signup_source=signup_source,
             **quick_signup_page_context,
@@ -526,9 +546,7 @@ def quick_signup():
         global_item_id = (request.form.get("global_item_id") or "").strip()
         signup_source = _normalize_signup_source(
             request.form.get("source"),
-            fallback=(
-                "global_inventory_library_cta" if global_item_id else "quick_signup"
-            ),
+            fallback=("GIL_dashboard_cta" if global_item_id else "quick_signup"),
         )
 
         trap_value = (request.form.get("website") or "").strip()
@@ -555,9 +573,33 @@ def quick_signup():
                 )
             return redirect(url_for("auth.login", next=next_url))
 
-        full_name = (request.form.get("name") or "").strip()
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         password = (request.form.get("password") or "").strip()
+
+        if not first_name:
+            flash("Please enter your first name.", "error")
+            return _render_quick_signup_form(
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
+                prefill_email=email,
+                signup_source=signup_source,
+            )
+        if not last_name:
+            flash("Please enter your last name.", "error")
+            return _render_quick_signup_form(
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
+                prefill_email=email,
+                signup_source=signup_source,
+            )
 
         if not email or "@" not in email:
             flash("Please enter a valid email address.", "error")
@@ -565,7 +607,8 @@ def quick_signup():
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
-                prefill_name=full_name,
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
                 prefill_email=email,
                 signup_source=signup_source,
             )
@@ -590,7 +633,8 @@ def quick_signup():
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
-                prefill_name=full_name,
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
                 prefill_email=email,
                 signup_source=signup_source,
             )
@@ -603,17 +647,8 @@ def quick_signup():
             )
             return redirect(url_for("auth.login", next=next_url))
 
-        first_name = ""
-        last_name = ""
-        if full_name:
-            parts = full_name.split()
-            first_name = parts[0]
-            last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-
         try:
-            tier = SubscriptionTier.find_by_identifier(
-                "free"
-            ) or SubscriptionTier.find_by_identifier("exempt")
+            tier = _resolve_free_tools_tier()
             verification_enabled = EmailService.should_issue_verification_tokens()
 
             org_name = f"{first_name or 'New'}'s Workspace"
@@ -712,7 +747,8 @@ def quick_signup():
                 next_url=next_url,
                 global_item_id=global_item_id,
                 global_item_name=(request.form.get("global_item_name") or "").strip(),
-                prefill_name=full_name,
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
                 prefill_email=email,
                 signup_source=signup_source,
             )
@@ -731,14 +767,15 @@ def quick_signup():
         global_item_name = ""
     signup_source = _normalize_signup_source(
         request.args.get("source"),
-        fallback=("global_inventory_library_cta" if global_item_id else "quick_signup"),
+        fallback=("GIL_dashboard_cta" if global_item_id else "quick_signup"),
     )
 
     return _render_quick_signup_form(
         next_url=next_url,
         global_item_id=global_item_id,
         global_item_name=global_item_name,
-        prefill_name="",
+        prefill_first_name="",
+        prefill_last_name="",
         prefill_email="",
         signup_source=signup_source,
     )

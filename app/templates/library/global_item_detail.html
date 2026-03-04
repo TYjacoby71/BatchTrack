@@ -12,7 +12,7 @@
     You have {{ preview_remaining }} item view{{ '' if preview_remaining == 1 else 's' }} remaining before a free account is required.
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-sm btn-primary" href="{{ url_for('auth.quick_signup', next=request.path, global_item_id=item.id, source='global_inventory_library_cta') }}">Create free account</a>
+    <a class="btn btn-sm btn-primary" href="{{ url_for('auth.quick_signup', next=request.path, global_item_id=item.id, source='GIL_dashboard_cta') }}">Create free account</a>
     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('auth.login', next=request.path) }}">Log in</a>
   </div>
 </div>
@@ -96,7 +96,7 @@
       <div class="card-header">Save to Your Inventory</div>
       <div class="card-body">
         <p class="text-muted">Save {{ item.name }} to your inventory so you can add vendors, pricing, and use it in recipes.</p>
-        <a class="btn btn-primary w-100" href="{{ url_for('global_library_bp.save_global_item_to_inventory', item_id=item.id) }}">Save to your inventory now</a>
+        <a class="btn btn-primary w-100" href="{{ url_for('global_library_bp.save_global_item_to_inventory', item_id=item.id, source='GIL_add_item_to_account_cta') }}">Save to your inventory now</a>
       </div>
     </div>
 
