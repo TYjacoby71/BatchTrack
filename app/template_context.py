@@ -106,8 +106,6 @@ def _default_units_and_categories_context() -> Dict[str, Any]:
 
 
 def _should_inject_units_and_categories() -> bool:
-    if current_user.is_authenticated:
-        return True
     endpoint = request.endpoint or ""
     return endpoint in _PUBLIC_UNITS_CONTEXT_ENDPOINTS
 

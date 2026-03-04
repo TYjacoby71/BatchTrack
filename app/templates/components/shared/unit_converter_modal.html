@@ -30,9 +30,6 @@
             <label class="visually-hidden" for="fromUnit">From unit</label>
             <select id="fromUnit" class="form-select">
               <option value="">Select unit...</option>
-              {% for unit in global_units %}
-                <option value="{{ unit.name }}" data-type="{{ unit.unit_type }}">{{ unit.name }}</option>
-              {% endfor %}
             </select>
           </div>
 
@@ -56,9 +53,6 @@
             <label class="visually-hidden" for="toUnit">To unit</label>
             <select id="toUnit" class="form-select">
               <option value="">Select unit...</option>
-              {% for unit in global_units %}
-                <option value="{{ unit.name }}" data-type="{{ unit.unit_type }}">{{ unit.name }}</option>
-              {% endfor %}
             </select>
           </div>
         </div>
@@ -140,9 +134,149 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let currentSelectedIngredient = null;
     let availableIngredients = [];
+    let availableUnits = [];
+    let unitsLoaded = false;
+    let unitsLoadingPromise = null;
+    const UNIT_CACHE_KEY = 'unitConverterUnitsV1';
+    const UNIT_CACHE_TTL_MS = 60 * 60 * 1000;
+
+    function readUnitsFromSessionCache() {
+        try {
+            const raw = sessionStorage.getItem(UNIT_CACHE_KEY);
+            if (!raw) {
+                return [];
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.units) || typeof parsed.cachedAt !== 'number') {
+                return [];
+            }
+            if ((Date.now() - parsed.cachedAt) > UNIT_CACHE_TTL_MS) {
+                sessionStorage.removeItem(UNIT_CACHE_KEY);
+                return [];
+            }
+            return parsed.units;
+        } catch (error) {
+            console.warn('UNIT CONVERTER: Failed to read cached units', error);
+            return [];
+        }
+    }
+
+    function writeUnitsToSessionCache(units) {
+        try {
+            sessionStorage.setItem(UNIT_CACHE_KEY, JSON.stringify({
+                cachedAt: Date.now(),
+                units: units
+            }));
+        } catch (error) {
+            console.warn('UNIT CONVERTER: Failed to cache units', error);
+        }
+    }
+
+    function normalizeUnitsPayload(payload) {
+        if (!payload) {
+            return [];
+        }
+        const rawUnits = Array.isArray(payload.data)
+            ? payload.data
+            : (Array.isArray(payload) ? payload : []);
+        return rawUnits
+            .map(unit => ({
+                name: String(unit.name || '').trim(),
+                unit_type: String(unit.unit_type || '').trim()
+            }))
+            .filter(unit => unit.name.length > 0);
+    }
+
+    function renderUnitOptions(units) {
+        const fromSelected = fromUnit.value;
+        const toSelected = toUnit.value;
+        const buildSelectOptions = (selectEl) => {
+            selectEl.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select unit...';
+            selectEl.appendChild(placeholder);
+
+            units.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.name;
+                option.dataset.type = unit.unit_type;
+                option.textContent = unit.name;
+                selectEl.appendChild(option);
+            });
+        };
+
+        buildSelectOptions(fromUnit);
+        buildSelectOptions(toUnit);
+
+        if (fromSelected && units.some(unit => unit.name === fromSelected)) {
+            fromUnit.value = fromSelected;
+        }
+        if (toSelected && units.some(unit => unit.name === toSelected)) {
+            toUnit.value = toSelected;
+        }
+        updateIngredientSection();
+    }
+
+    async function fetchUnits() {
+        const endpoints = ['/api/units', '/api/public/units'];
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                if (!response.ok) {
+                    continue;
+                }
+                const payload = await response.json();
+                const normalized = normalizeUnitsPayload(payload);
+                if (normalized.length > 0) {
+                    return normalized;
+                }
+            } catch (error) {
+                console.warn(`UNIT CONVERTER: Failed to load units from ${endpoint}`, error);
+            }
+        }
+        throw new Error('Unable to load unit list');
+    }
+
+    async function ensureUnitsLoaded() {
+        if (unitsLoaded && availableUnits.length > 0) {
+            return availableUnits;
+        }
+        if (unitsLoadingPromise) {
+            return unitsLoadingPromise;
+        }
+
+        const cachedUnits = readUnitsFromSessionCache();
+        if (cachedUnits.length > 0) {
+            availableUnits = cachedUnits;
+            unitsLoaded = true;
+            renderUnitOptions(availableUnits);
+            return availableUnits;
+        }
+
+        unitsLoadingPromise = (async () => {
+            const loadedUnits = await fetchUnits();
+            availableUnits = loadedUnits;
+            unitsLoaded = true;
+            renderUnitOptions(availableUnits);
+            writeUnitsToSessionCache(availableUnits);
+            return availableUnits;
+        })();
+
+        try {
+            return await unitsLoadingPromise;
+        } finally {
+            unitsLoadingPromise = null;
+        }
+    }
 
     // Load available ingredients (both inventory and global)
     async function loadIngredients() {
+        if (availableIngredients.length > 0) {
+            return;
+        }
         console.log('🔧 UNIT CONVERTER: Loading ingredients...');
         
         try {
@@ -461,9 +595,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Load ingredients on modal open
+    // Load units and ingredients on modal open
     const unitConverterModal = document.getElementById('unitConverterModal');
-    unitConverterModal.addEventListener('shown.bs.modal', loadIngredients);
+    unitConverterModal.addEventListener('shown.bs.modal', async () => {
+        try {
+            await ensureUnitsLoaded();
+        } catch (error) {
+            showError('Failed to load unit list.');
+            return;
+        }
+        loadIngredients();
+    });
 
     // Clear form when modal closes
     unitConverterModal.addEventListener('hidden.bs.modal', () => {
