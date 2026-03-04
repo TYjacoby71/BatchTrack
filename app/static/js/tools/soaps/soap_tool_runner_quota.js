@@ -36,7 +36,7 @@
     if (!SoapTool.config.calcLimit) return true;
     const usage = readCalcUsage();
     if (usage.count >= SoapTool.config.calcLimit) {
-      const signupUrl = buildQuickSignupUrl('soap_making_rate_limit_cta');
+      const signupUrl = buildQuickSignupUrl('soap_ratelimit_cta');
       SoapTool.ui.showSoapAlert(
         'warning',
         `You have reached the ${SoapTool.config.calcLimit} calculation limit for ${SoapTool.config.calcTier} accounts. <a href="${signupUrl}" class="alert-link">Create a free account</a> or upgrade to keep calculating.`,
@@ -68,7 +68,7 @@
     if (!modalEl) return;
     const signupLink = modalEl.querySelector('a.btn.btn-primary');
     if (signupLink) {
-      signupLink.href = buildQuickSignupUrl('soap_making_cta');
+      signupLink.href = buildQuickSignupUrl('soap_push_recipe_cta');
     }
     if (window.bootstrap && window.bootstrap.Modal) {
       const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
