@@ -1161,6 +1161,12 @@ class BillingService:
                 if pricing.get("billing_cycle") == "one-time"
                 else "subscription"
             )
+            is_zero_price = False
+            try:
+                is_zero_price = float(pricing.get("amount") or 0) <= 0
+            except (TypeError, ValueError):
+                is_zero_price = False
+            is_zero_priced_subscription = checkout_mode == "subscription" and is_zero_price
             session_params = {
                 "mode": checkout_mode,
                 "payment_method_types": ["card"],
@@ -1211,10 +1217,22 @@ class BillingService:
                 and requires_stripe_billing
                 and trial_days > 0
                 and not existing_customer_id
+                and not is_zero_priced_subscription
             )
             if should_apply_trial:
                 session_params["subscription_data"] = {
                     "trial_period_days": trial_days
+                }
+            elif is_zero_priced_subscription:
+                session_params["payment_method_collection"] = "if_required"
+                session_params["custom_text"] = {
+                    "submit": {
+                        "message": (
+                            "No payment method is required for this free plan. "
+                            "You can add one later from Billing settings when "
+                            "you upgrade."
+                        )
+                    }
                 }
 
             if session_params.get("mode") == "payment":

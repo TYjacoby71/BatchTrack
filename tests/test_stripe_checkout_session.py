@@ -6,6 +6,7 @@ import pytest
 
 from app.services.billing_service import BillingService
 from app.services.lifetime_pricing_service import LifetimePricingService
+from app.services.signup_checkout_service import SignupCheckoutService
 from app.utils.cache_manager import app_cache
 
 
@@ -124,6 +125,73 @@ def test_checkout_session_drops_customer_update_without_customer(app):
         assert "customer_email" not in kwargs
         assert kwargs["phone_number_collection"] == {"enabled": False}
         assert "custom_fields" not in kwargs
+
+
+def test_checkout_session_zero_price_skips_trial_and_card_collection(app):
+    tier = SimpleNamespace(id=1, name="Hobbyist", stripe_lookup_key="hobbyist_monthly")
+
+    with app.app_context(), patch(
+        "app.services.billing_service.BillingService.ensure_stripe", return_value=True
+    ), patch(
+        "app.services.billing_service.BillingService.get_live_pricing_for_lookup_key",
+        return_value={
+            "price_id": "price_hobbyist_free",
+            "amount": 0.0,
+            "formatted_price": "$0.00",
+            "currency": "USD",
+            "billing_cycle": "monthly",
+            "lookup_key": "hobbyist_monthly",
+            "last_synced": "now",
+        },
+    ), patch(
+        "app.services.billing_service.stripe.checkout.Session.create"
+    ) as mock_session_create:
+        app.config["SIGNUP_STRIPE_TRIAL_DAYS"] = 14
+        mock_session_create.return_value = SimpleNamespace(id="cs_test_free")
+
+        BillingService.create_checkout_session_for_tier(
+            tier,
+            customer_email="free@example.com",
+            success_url="https://example.com/success",
+            cancel_url="https://example.com/cancel",
+            phone_required=False,
+        )
+
+        kwargs = mock_session_create.call_args.kwargs
+        assert kwargs["mode"] == "subscription"
+        assert kwargs["payment_method_collection"] == "if_required"
+        assert "subscription_data" not in kwargs
+        assert kwargs.get("custom_text", {}).get("submit", {}).get("message")
+
+
+def test_signup_payload_uses_free_label_for_zero_live_price(app):
+    tier = SimpleNamespace(
+        id=9,
+        name="Hobbyist",
+        description="Solo plan",
+        stripe_lookup_key="hobbyist_monthly",
+    )
+
+    with app.app_context(), patch(
+        "app.services.signup_checkout_service.BillingService.get_live_pricing_for_lookup_key",
+        return_value={
+            "price_id": "price_hobbyist_free",
+            "amount": 0.0,
+            "formatted_price": "$0.00",
+            "currency": "USD",
+            "billing_cycle": "monthly",
+            "lookup_key": "hobbyist_monthly",
+            "last_synced": "now",
+        },
+    ):
+        payload = SignupCheckoutService._build_signup_available_tiers_payload(
+            db_tiers=[tier],
+            include_live_pricing=True,
+            allow_live_pricing_network=True,
+        )
+
+    assert payload["9"]["monthly_price_display"] == "FREE"
+    assert payload["9"]["is_free"] is True
 
 
 def test_find_related_price_lookup_key_prefers_lookup_key(app):
