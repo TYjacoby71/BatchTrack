@@ -60,7 +60,7 @@ def _build_signup_fallback_url(
 def _public_signup_allow_live_pricing_network() -> bool:
     """Return whether public signup reads can fetch live Stripe prices."""
     return bool(
-        current_app.config.get("SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK", False)
+        current_app.config.get("SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK", True)
     )
 
 
@@ -73,11 +73,12 @@ def signup_data():
         db_tiers,
         include_live_pricing=True,
         allow_live_pricing_network=allow_live_pricing_network,
+        include_yearly_pricing=False,
     )
     lifetime_offers = LifetimePricingService.build_lifetime_offers(
         db_tiers,
-        include_live_pricing=True,
-        allow_live_pricing_network=allow_live_pricing_network,
+        include_live_pricing=False,
+        allow_live_pricing_network=False,
     )
     oauth_providers = OAuthService.get_enabled_providers()
 
@@ -163,4 +164,4 @@ def signup():
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
     )
-    return render_template("pages/auth/signup.html", **template_context)
+    return render_template("pages/auth/signup_simple.html", **template_context)

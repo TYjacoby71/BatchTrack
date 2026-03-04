@@ -20,7 +20,6 @@ from flask import url_for
 
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
-from ..utils.settings import is_feature_enabled
 from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
@@ -114,7 +113,6 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
-    _SIGNUP_FREE_TIER_FLAG_KEY = "FEATURE_PRICING_SIGNUP_FREE_TIER"
     _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
         "Recipe tracking",
         "Plan production",
@@ -131,18 +129,6 @@ class SignupCheckoutService:
         allow_live_pricing_network: bool = True,
     ) -> SignupRequestContext:
         include_live_pricing = bool(allow_live_pricing_network)
-        db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
-        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
-            db_tiers,
-            include_live_pricing=include_live_pricing,
-            allow_live_pricing_network=allow_live_pricing_network,
-        )
-        lifetime_offers = LifetimePricingService.build_lifetime_offers(
-            db_tiers,
-            include_live_pricing=include_live_pricing,
-            allow_live_pricing_network=allow_live_pricing_network,
-        )
-
         signup_source = request.args.get("source", request.form.get("source", "direct"))
         referral_code = request.args.get("ref", request.form.get("ref"))
         promo_code = request.args.get("promo", request.form.get("promo"))
@@ -157,31 +143,39 @@ class SignupCheckoutService:
             "billing_cycle", request.form.get("billing_cycle", "")
         )
 
+        db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
+        db_tiers = cls._filter_signup_display_tiers(
+            db_tiers=db_tiers, preselected_tier=preselected_tier
+        )
+        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
+            db_tiers,
+            include_live_pricing=include_live_pricing,
+            allow_live_pricing_network=allow_live_pricing_network,
+            include_yearly_pricing=False,
+        )
+
         prefill_email = request.form.get("contact_email") or (
             (oauth_user_info or {}).get("email") or ""
         )
         prefill_phone = request.form.get("contact_phone") or ""
-        show_signup_free_tier = is_feature_enabled(cls._SIGNUP_FREE_TIER_FLAG_KEY)
-        free_tier_display = cls._build_signup_free_tier_display(
-            enabled=show_signup_free_tier
-        )
+        show_signup_free_tier = True
+        free_tier_display = cls._build_signup_free_tier_display(enabled=True)
         show_signup_free_tier = bool(show_signup_free_tier and free_tier_display)
 
-        signup_primary_tier_id = cls._resolve_primary_tier_id(
+        selected_default_tier_id = cls._resolve_primary_tier_id(
             available_tiers=available_tiers,
-            lifetime_offers=lifetime_offers,
             preselected_tier=preselected_tier,
         )
+        signup_primary_tier_id = cls._resolve_artisan_tier_id(
+            available_tiers=available_tiers
+        ) or selected_default_tier_id
+        preselected_tier = selected_default_tier_id
 
-        if signup_primary_tier_id and signup_primary_tier_id in available_tiers:
-            available_tiers = {
-                signup_primary_tier_id: available_tiers[signup_primary_tier_id]
-            }
-            db_tiers = [
-                tier for tier in db_tiers if str(getattr(tier, "id", "")) == signup_primary_tier_id
-            ]
-            preselected_tier = signup_primary_tier_id
-
+        lifetime_offers = LifetimePricingService.build_lifetime_offers(
+            db_tiers,
+            include_live_pricing=False,
+            allow_live_pricing_network=False,
+        )
         primary_lifetime_offer = next(
             (
                 offer
@@ -241,8 +235,8 @@ class SignupCheckoutService:
                 if not promo_code and first_open_offer.get("coupon_code"):
                     promo_code = first_open_offer["coupon_code"]
 
-        if not preselected_tier and db_tiers:
-            preselected_tier = str(db_tiers[0].id)
+        if not preselected_tier and available_tiers:
+            preselected_tier = next(iter(available_tiers.keys()), None)
 
         return SignupRequestContext(
             db_tiers=db_tiers,
@@ -278,8 +272,9 @@ class SignupCheckoutService:
             promo=context.promo_code,
         )
 
-    @staticmethod
+    @classmethod
     def build_template_context(
+        cls,
         context: SignupRequestContext,
         view_state: SignupViewState,
         *,
@@ -290,18 +285,37 @@ class SignupCheckoutService:
         default_tier_id = view_state.selected_tier or (
             str(context.db_tiers[0].id) if context.db_tiers else ""
         )
+        if (
+            view_state.selected_tier
+            and str(view_state.selected_tier) in context.available_tiers
+        ):
+            selected_paid_tier_id = str(view_state.selected_tier)
+        elif (
+            context.signup_primary_tier_id
+            and str(context.signup_primary_tier_id) in context.available_tiers
+        ):
+            selected_paid_tier_id = str(context.signup_primary_tier_id)
+        else:
+            selected_paid_tier_id = next(iter(context.available_tiers.keys()), "")
+
+        signup_plan_cards = cls._build_signup_paid_plan_cards(context.available_tiers)
         free_tier_enabled = bool(
             context.show_signup_free_tier and context.free_tier_display
         )
+        artisan_upsell_offer = context.lifetime_by_tier_id.get(
+            str(context.signup_primary_tier_id or "")
+        )
+        if artisan_upsell_offer and not artisan_upsell_offer.get("has_remaining"):
+            artisan_upsell_offer = None
         page_title = (
-            "BatchTrack Signup | Free + Artisan Plans"
+            "BatchTrack Signup | Hobbyist, Artisan & Enterprise"
             if free_tier_enabled
-            else "BatchTrack Signup | Artisan Plan"
+            else "BatchTrack Signup | Artisan & Enterprise Plans"
         )
         page_description = (
-            "Compare the Free tier on the left, then choose Artisan monthly or a limited founding-member lifetime option."
+            "Choose Hobbyist (free), Artisan monthly, or Enterprise monthly access."
             if free_tier_enabled
-            else "Choose the Artisan plan with monthly billing or a limited founding-member lifetime option."
+            else "Choose Artisan or Enterprise monthly access."
         )
         return {
             "signup_source": context.signup_source,
@@ -321,6 +335,9 @@ class SignupCheckoutService:
             "contact_email": view_state.contact_email,
             "contact_phone": view_state.contact_phone,
             "signup_primary_tier_id": context.signup_primary_tier_id,
+            "selected_paid_tier_id": selected_paid_tier_id,
+            "signup_plan_cards": signup_plan_cards,
+            "artisan_upsell_offer": artisan_upsell_offer,
             "show_signup_free_tier": free_tier_enabled,
             "free_tier_display": (
                 context.free_tier_display if free_tier_enabled else None
@@ -732,30 +749,125 @@ class SignupCheckoutService:
         cls,
         *,
         available_tiers: dict[str, dict],
-        lifetime_offers: list[dict],
         preselected_tier: str | None,
     ) -> str | None:
         if preselected_tier and str(preselected_tier) in available_tiers:
             return str(preselected_tier)
 
-        preferred_names = {
+        artisan_tier_id = cls._resolve_artisan_tier_id(available_tiers=available_tiers)
+        if artisan_tier_id:
+            return artisan_tier_id
+
+        return next(iter(available_tiers.keys()), None)
+
+    @classmethod
+    def _filter_signup_display_tiers(
+        cls,
+        *,
+        db_tiers: list[SubscriptionTier],
+        preselected_tier: str | None,
+    ) -> list[SubscriptionTier]:
+        if not db_tiers:
+            return []
+
+        tier_by_id = {str(getattr(tier, "id", "") or ""): tier for tier in db_tiers}
+        selected_tiers: list[SubscriptionTier] = []
+
+        artisan_tier = next(
+            (
+                tier
+                for tier in db_tiers
+                if cls._is_artisan_tier_name(str(getattr(tier, "name", "") or ""))
+            ),
+            None,
+        )
+        enterprise_tier = next(
+            (
+                tier
+                for tier in db_tiers
+                if "enterprise"
+                in str(getattr(tier, "name", "") or "").strip().lower()
+            ),
+            None,
+        )
+
+        seen_ids: set[str] = set()
+        for tier in (artisan_tier, enterprise_tier):
+            if not tier:
+                continue
+            tier_id = str(getattr(tier, "id", "") or "")
+            if not tier_id or tier_id in seen_ids:
+                continue
+            seen_ids.add(tier_id)
+            selected_tiers.append(tier)
+
+        if preselected_tier:
+            preselected_key = str(preselected_tier)
+            preselected_obj = tier_by_id.get(preselected_key)
+            if preselected_obj and preselected_key not in seen_ids:
+                selected_tiers.append(preselected_obj)
+                seen_ids.add(preselected_key)
+
+        return selected_tiers or list(db_tiers)
+
+    @staticmethod
+    def _is_artisan_tier_name(name: str) -> bool:
+        normalized_name = str(name or "").strip().lower()
+        artisan_name_fragments = (
             "artisan",
             "enthusiast",
             "solo maker",
             "solo plan",
             "solo",
-        }
+        )
+        return any(fragment in normalized_name for fragment in artisan_name_fragments)
+
+    @staticmethod
+    def _resolve_artisan_tier_id(*, available_tiers: dict[str, dict]) -> str | None:
         for tier_id, tier_data in available_tiers.items():
             tier_name = str((tier_data or {}).get("name") or "").strip().lower()
-            if tier_name in preferred_names:
+            if SignupCheckoutService._is_artisan_tier_name(tier_name):
                 return str(tier_id)
+        return None
 
-        for offer in lifetime_offers:
-            tier_id = str(offer.get("tier_id") or "")
-            if tier_id and tier_id in available_tiers and offer.get("has_remaining"):
-                return tier_id
+    @staticmethod
+    def _resolve_enterprise_tier_id(
+        *, available_tiers: dict[str, dict]
+    ) -> str | None:
+        for tier_id, tier_data in available_tiers.items():
+            tier_name = str((tier_data or {}).get("name") or "").strip().lower()
+            if "enterprise" in tier_name:
+                return str(tier_id)
+        return None
 
-        return next(iter(available_tiers.keys()), None)
+    @staticmethod
+    def _build_signup_paid_plan_cards(
+        available_tiers: dict[str, dict]
+    ) -> list[dict[str, Any]]:
+        cards: list[dict[str, Any]] = []
+        for tier_id, tier_data in available_tiers.items():
+            normalized_tier = dict(tier_data or {})
+            highlights = normalized_tier.get("presentation_features") or normalized_tier.get(
+                "features"
+            ) or []
+            cards.append(
+                {
+                    "tier_id": str(tier_id),
+                    "name": str(normalized_tier.get("name") or "Plan"),
+                    "monthly_price_display": str(
+                        normalized_tier.get("monthly_price_display")
+                        or normalized_tier.get("price_display")
+                        or "Monthly pricing at secure checkout"
+                    ),
+                    "description": str(normalized_tier.get("description") or "").strip(),
+                    "highlights": [
+                        str(label).strip()
+                        for label in list(highlights)[:4]
+                        if str(label).strip()
+                    ],
+                }
+            )
+        return cards
 
     @classmethod
     def _apply_founding_member_seat_cap(

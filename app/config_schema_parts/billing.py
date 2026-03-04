@@ -55,11 +55,11 @@ FIELDS = [
     {
         "key": "SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK",
         "cast": "bool",
-        "default": False,
+        "default": True,
         "description": (
             "Allow public signup surfaces to call Stripe for live price displays."
         ),
-        "recommended": "false",
+        "recommended": "true",
     },
 ]
 
