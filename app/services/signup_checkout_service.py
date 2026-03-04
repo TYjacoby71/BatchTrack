@@ -23,7 +23,6 @@ from ..models.subscription_tier import SubscriptionTier
 from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
-from .signup_plan_catalog_service import SignupPlanCatalogService
 from .signup_service import SignupService
 
 logger = logging.getLogger(__name__)
@@ -121,12 +120,6 @@ class SignupCheckoutService:
         "artisan-monthly",
         "enterprise-monthly",
     )
-    _SIGNUP_FREE_TIER_CORE_FEATURES: tuple[str, ...] = (
-        "Recipe tracking",
-        "Plan production",
-        "Batching progress timers",
-        "Infinite ingredients",
-    )
 
     @classmethod
     def build_request_context(
@@ -151,15 +144,14 @@ class SignupCheckoutService:
             "billing_cycle", request.form.get("billing_cycle", "")
         )
 
-        db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
+        db_tiers = cls._load_signup_customer_facing_tiers()
         db_tiers = cls._filter_signup_display_tiers(
             db_tiers=db_tiers, preselected_tier=preselected_tier
         )
-        available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
-            db_tiers,
+        available_tiers = cls._build_signup_available_tiers_payload(
+            db_tiers=db_tiers,
             include_live_pricing=include_live_pricing,
             allow_live_pricing_network=allow_live_pricing_network,
-            include_yearly_pricing=False,
         )
 
         prefill_email = request.form.get("contact_email") or (
@@ -691,6 +683,71 @@ class SignupCheckoutService:
         )
 
     @staticmethod
+    def _load_signup_customer_facing_tiers() -> list[SubscriptionTier]:
+        """Load only customer-facing, billable tiers for signup surfaces."""
+        return (
+            SubscriptionTier.query.filter_by(is_customer_facing=True)
+            .filter(SubscriptionTier.billing_provider != "exempt")
+            .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+            .all()
+        )
+
+    @classmethod
+    def _build_signup_available_tiers_payload(
+        cls,
+        *,
+        db_tiers: list[SubscriptionTier],
+        include_live_pricing: bool,
+        allow_live_pricing_network: bool,
+    ) -> dict[str, dict]:
+        """Build the lightweight tier payload used by signup pages/endpoints."""
+        payload: dict[str, dict] = {}
+        for tier_obj in db_tiers:
+            tier_id = str(getattr(tier_obj, "id", "") or "")
+            if not tier_id:
+                continue
+
+            monthly_lookup_key = str(
+                getattr(tier_obj, "stripe_lookup_key", None) or ""
+            ).strip()
+            monthly_pricing = None
+            if include_live_pricing and monthly_lookup_key:
+                try:
+                    monthly_pricing = BillingService.get_live_pricing_for_lookup_key(
+                        monthly_lookup_key,
+                        allow_network=allow_live_pricing_network,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/signup_checkout_service.py",
+                        exc_info=True,
+                    )
+                    monthly_pricing = None
+
+            monthly_price_display = (
+                str(monthly_pricing.get("formatted_price"))
+                if monthly_pricing
+                else (
+                    "Monthly pricing at secure checkout"
+                    if monthly_lookup_key
+                    else "Contact Sales"
+                )
+            )
+            payload[tier_id] = {
+                "name": str(getattr(tier_obj, "name", None) or "Plan"),
+                "description": str(getattr(tier_obj, "description", None) or "").strip(),
+                "price_display": monthly_price_display,
+                "monthly_price_display": monthly_price_display,
+                "yearly_price_display": None,
+                "stripe_lookup_key": monthly_lookup_key,
+                "yearly_lookup_key": None,
+                "features": [],
+                "presentation_features": [],
+            }
+
+        return payload
+
+    @staticmethod
     def _build_checkout_metadata(
         *,
         context: SignupRequestContext,
@@ -926,26 +983,6 @@ class SignupCheckoutService:
         patched["display_spots_left"] = true_spots_left
         patched["has_remaining"] = bool(has_offer_config and true_spots_left > 0)
         return patched
-
-    @classmethod
-    def _build_signup_free_tier_display(cls, *, enabled: bool) -> dict[str, Any] | None:
-        """Build informational payload for the optional signup Free tier card."""
-        if not enabled:
-            return None
-        free_tier = SignupPlanCatalogService.load_customer_facing_free_tier()
-        if not free_tier:
-            return None
-        tier_name = str(getattr(free_tier, "name", "") or "Free").strip() or "Free"
-        return {
-            "tier_id": str(getattr(free_tier, "id", "") or ""),
-            "name": tier_name,
-            "price_display": "Free",
-            "core_heading": "Core features",
-            "core_features": list(cls._SIGNUP_FREE_TIER_CORE_FEATURES),
-            "description": (
-                "Starter access for planning and recipe tracking before upgrading to Artisan."
-            ),
-        }
 
     @staticmethod
     def _parse_client_epoch_ms(raw_value: Any) -> int | None:

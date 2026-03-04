@@ -15,10 +15,8 @@ from flask import (
 from flask_login import current_user
 
 from ...extensions import limiter
-from ...services.lifetime_pricing_service import LifetimePricingService
 from ...services.oauth_service import OAuthService
 from ...services.signup_checkout_service import SignupCheckoutService
-from ...services.signup_plan_catalog_service import SignupPlanCatalogService
 from . import auth_bp
 
 
@@ -68,24 +66,17 @@ def _public_signup_allow_live_pricing_network() -> bool:
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
     allow_live_pricing_network = _public_signup_allow_live_pricing_network()
-    db_tiers = SignupPlanCatalogService.load_customer_facing_tiers()
-    available_tiers = SignupPlanCatalogService.build_available_tiers_payload(
-        db_tiers,
-        include_live_pricing=True,
+    signup_context = SignupCheckoutService.build_request_context(
+        request=request,
+        oauth_user_info=session.get("oauth_user_info"),
         allow_live_pricing_network=allow_live_pricing_network,
-        include_yearly_pricing=False,
-    )
-    lifetime_offers = LifetimePricingService.build_lifetime_offers(
-        db_tiers,
-        include_live_pricing=False,
-        allow_live_pricing_network=False,
     )
     oauth_providers = OAuthService.get_enabled_providers()
 
     return jsonify(
         {
-            "available_tiers": available_tiers,
-            "lifetime_offers": lifetime_offers,
+            "available_tiers": signup_context.available_tiers,
+            "lifetime_offers": signup_context.lifetime_offers,
             "oauth_available": bool(any(oauth_providers.values())),
             "oauth_providers": oauth_providers,
         }

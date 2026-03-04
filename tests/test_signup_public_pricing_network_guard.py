@@ -11,8 +11,8 @@ from app.models.subscription_tier import SubscriptionTier
 from app.services.billing_service import BillingService
 
 
-def _add_public_stripe_tier(app, *, name_prefix: str) -> str:
-    """Create a customer-facing Stripe tier and return its name."""
+def _add_public_stripe_tier(app, *, name_prefix: str) -> tuple[str, str]:
+    """Create a customer-facing Stripe tier and return (id, name)."""
     tier_name = f"{name_prefix}-{uuid.uuid4().hex[:8]}"
     lookup_key = f"guard-{uuid.uuid4().hex[:10]}-monthly"
     with app.app_context():
@@ -25,7 +25,8 @@ def _add_public_stripe_tier(app, *, name_prefix: str) -> str:
         )
         db.session.add(tier)
         db.session.commit()
-    return tier_name
+        tier_id = str(tier.id)
+    return tier_id, tier_name
 
 
 @pytest.mark.usefixtures("app")
@@ -59,7 +60,9 @@ def test_signup_page_uses_cache_only_pricing_reads(app, monkeypatch):
 @pytest.mark.usefixtures("app")
 def test_signup_data_endpoint_uses_cache_only_pricing_reads(app, monkeypatch):
     """GET /auth/signup-data can be forced to avoid live Stripe network calls."""
-    tier_name = _add_public_stripe_tier(app, name_prefix="Signup Data Guard Tier")
+    tier_id, _tier_name = _add_public_stripe_tier(
+        app, name_prefix="Signup Data Guard Tier"
+    )
     observed_network_flags: list[bool] = []
 
     def _fake_live_pricing_lookup(lookup_key, *, allow_network=True):
@@ -74,18 +77,11 @@ def test_signup_data_endpoint_uses_cache_only_pricing_reads(app, monkeypatch):
     app.config["SIGNUP_PUBLIC_ALLOW_LIVE_PRICING_NETWORK"] = False
 
     client = app.test_client()
-    response = client.get("/auth/signup-data")
+    response = client.get("/auth/signup-data", query_string={"tier": tier_id})
     assert response.status_code == 200
     payload = response.get_json() or {}
     available_tiers = payload.get("available_tiers") or {}
-    matching_tier = next(
-        (
-            tier_data
-            for tier_data in available_tiers.values()
-            if tier_data.get("name") == tier_name
-        ),
-        None,
-    )
+    matching_tier = available_tiers.get(str(tier_id))
     assert matching_tier is not None
     assert matching_tier.get("monthly_price_display") == (
         "Monthly pricing at secure checkout"
