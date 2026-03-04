@@ -336,32 +336,18 @@
             box-shadow: 0 12px 30px rgba(12, 35, 74, 0.08);
         }
 
-        .hero-media-stage {
-            position: relative;
+        .hero-eyebrow {
+            letter-spacing: 0.09em;
+            font-size: 0.82rem;
         }
 
-        .hero-media-stage::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(9, 20, 40, 0.46);
-            z-index: 1;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity 0.32s ease;
-        }
-
-        .hero-media-stage.is-overlay-dismissed::before {
-            opacity: 0;
-        }
-
-        .hero-video-placeholder {
+        .hero-visual-placeholder {
             min-height: clamp(300px, 45vw, 500px);
             border: none;
             margin: 0;
             padding: 0;
-            justify-content: flex-end;
-            align-items: flex-end;
+            justify-content: center;
+            align-items: center;
             background: linear-gradient(140deg, #223454 0%, #3b527d 50%, #5d75a3 100%);
             color: rgba(255, 255, 255, 0.8);
             font-weight: 600;
@@ -388,55 +374,154 @@
             font-size: 0.9rem;
         }
 
-        .hero-overlay {
+        .quiz-shell {
+            border: 1px solid rgba(22, 32, 61, 0.1);
+            border-radius: 1rem;
+            background: #ffffff;
+            box-shadow: 0 10px 24px rgba(12, 35, 74, 0.08);
+            padding: clamp(1.1rem, 2vw, 2rem);
+        }
+
+        .quiz-chip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.65rem;
+        }
+
+        .quiz-choice-btn {
+            border: 1px solid rgba(13, 110, 253, 0.35);
+            background: #ffffff;
+            border-radius: 999px;
+            padding: 0.65rem 0.95rem;
+            font-weight: 600;
+            color: #1f3b73;
+            transition: all 0.18s ease;
+        }
+
+        .quiz-choice-btn:hover,
+        .quiz-choice-btn:focus {
+            border-color: #0d6efd;
+            background: rgba(13, 110, 253, 0.08);
+        }
+
+        .quiz-choice-btn.is-active {
+            border-color: #0d6efd;
+            background: #0d6efd;
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.25);
+        }
+
+        .quiz-pain-option {
+            display: block;
+            border: 1px solid rgba(22, 32, 61, 0.12);
+            border-radius: 0.8rem;
+            padding: 0.85rem 0.95rem;
+            background: #ffffff;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .quiz-pain-option:hover {
+            border-color: rgba(13, 110, 253, 0.4);
+        }
+
+        .quiz-pain-option input:checked + span {
+            color: #0b2f6b;
+            font-weight: 600;
+        }
+
+        .quiz-pain-option.is-selected {
+            border-color: #0d6efd;
+            box-shadow: 0 10px 24px rgba(13, 110, 253, 0.12);
+        }
+
+        .quiz-goal-card {
+            display: flex;
+            align-items: flex-start;
+            border: 1px solid rgba(22, 32, 61, 0.12);
+            border-radius: 0.8rem;
+            padding: 0.85rem 0.95rem;
+            gap: 0.4rem;
+            background: #ffffff;
+            cursor: pointer;
+            min-height: 100%;
+        }
+
+        .quiz-goal-card:has(input:checked) {
+            border-color: #0d6efd;
+            background: rgba(13, 110, 253, 0.06);
+        }
+
+        .quiz-goal-card.is-selected {
+            border-color: #0d6efd;
+            background: rgba(13, 110, 253, 0.06);
+        }
+
+        .quiz-email-gate {
+            border: 1px solid rgba(25, 135, 84, 0.25);
+            border-radius: 0.9rem;
+            background: #f7fffb;
+            padding: 1rem;
+        }
+
+        .quiz-result-card {
+            perspective: 1000px;
+            min-height: 220px;
+            height: 100%;
+        }
+
+        .quiz-result-card-inner {
+            position: relative;
+            width: 100%;
+            min-height: 220px;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+        }
+
+        .quiz-result-card.is-flipped .quiz-result-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .quiz-result-face {
             position: absolute;
             inset: 0;
-            z-index: 2;
+            border: 1px solid rgba(22, 32, 61, 0.12);
+            border-radius: 0.9rem;
+            padding: 1rem;
+            backface-visibility: hidden;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            text-align: center;
-            padding: 1.5rem;
+            box-shadow: 0 6px 18px rgba(12, 35, 74, 0.08);
+        }
+
+        .quiz-result-face-front {
+            background: #ffffff;
+        }
+
+        .quiz-result-face-back {
+            transform: rotateY(180deg);
+            background: linear-gradient(165deg, #0d6efd 0%, #0b4fc0 100%);
             color: #ffffff;
-            pointer-events: none;
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
         }
 
-        .hero-overlay.is-fading {
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-8px);
+        .quiz-face-kicker {
+            display: inline-flex;
+            align-self: flex-start;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            margin-bottom: 0.65rem;
+            background: rgba(13, 110, 253, 0.1);
+            color: #0b4fc0;
         }
 
-        .hero-overlay.is-hidden {
-            display: none;
-        }
-
-        .hero-overlay .hero-copy {
-            pointer-events: none;
-        }
-
-        .hero-overlay .hero-title {
+        .quiz-result-face-back .quiz-face-kicker {
+            background: rgba(255, 255, 255, 0.18);
             color: #ffffff;
-            margin-bottom: 0.85rem;
-        }
-
-        .hero-overlay .hero-subtitle {
-            max-width: 52rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0;
-        }
-
-        .hero-watch-btn {
-            margin-top: 1.1rem;
-            pointer-events: auto;
-        }
-
-        .hero-media-meta {
-            padding: 1.2rem 1.4rem 1.4rem;
         }
 
         .integration-logo-tile {
@@ -500,11 +585,17 @@
             .feature-card {
                 transition: none;
             }
+
+            .quiz-choice-btn,
+            .quiz-pain-option,
+            .quiz-result-card-inner {
+                transition: none;
+            }
         }
 
         @media (max-width: 767.98px) {
-            .hero-overlay .hero-title {
-                font-size: 2rem;
+            .hero-visual-placeholder {
+                min-height: 260px;
             }
         }
     </style>
@@ -512,6 +603,7 @@
 
 {% block content %}
     {% include 'components/homepage/_hero_banner.html' %}
+    {% include 'components/homepage/_solution_quiz.html' %}
     {% include 'components/homepage/_free_tools.html' %}
     {% include 'components/homepage/_scrolling_banner.html' %}
     {% include 'components/homepage/_features.html' %}
@@ -531,83 +623,652 @@
     <script>
       document.addEventListener('DOMContentLoaded', function() {
         var hasAnalytics = !!(window.BTAnalytics && typeof window.BTAnalytics.capture === 'function');
-
-        var heroSection = document.querySelector('.hero-section');
-        var heroMediaStage = document.querySelector('.hero-media-stage');
-        var heroOverlay = document.querySelector('.hero-overlay');
-        var heroWatchButton = document.querySelector('[data-hero-watch]');
-
-        if (heroSection && heroOverlay) {
-          var heroOverlayDismissed = false;
-          var heroOverlayTimer = null;
-          var heroOverlayObserver = null;
-
-          var clearHeroOverlayTimer = function() {
-            if (heroOverlayTimer !== null) {
-              window.clearTimeout(heroOverlayTimer);
-              heroOverlayTimer = null;
-            }
-          };
-
-          var dismissHeroOverlay = function(source) {
-            if (heroOverlayDismissed) {
-              return;
-            }
-            heroOverlayDismissed = true;
-            clearHeroOverlayTimer();
-            if (heroOverlayObserver && typeof heroOverlayObserver.disconnect === 'function') {
-              heroOverlayObserver.disconnect();
-            }
-            if (heroMediaStage) {
-              heroMediaStage.classList.add('is-overlay-dismissed');
-            }
-            heroOverlay.classList.add('is-fading');
-            window.setTimeout(function() {
-              heroOverlay.classList.add('is-hidden');
-              heroOverlay.setAttribute('aria-hidden', 'true');
-            }, 320);
-          };
-
-          var startHeroOverlayTimer = function() {
-            if (heroOverlayDismissed || heroOverlayTimer !== null) {
-              return;
-            }
-            heroOverlayTimer = window.setTimeout(function() {
-              dismissHeroOverlay('dwell_3s');
-            }, 3000);
-          };
-
-          var observedTarget = heroMediaStage || heroSection;
-          if ('IntersectionObserver' in window) {
-            heroOverlayObserver = new IntersectionObserver(function(entries) {
-              entries.forEach(function(entry) {
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
-                  startHeroOverlayTimer();
-                } else {
-                  clearHeroOverlayTimer();
-                }
-              });
-            }, {
-              threshold: [0, 0.55, 1]
-            });
-            heroOverlayObserver.observe(observedTarget);
-          } else {
-            startHeroOverlayTimer();
+        var captureAnalytics = function(eventName, payload) {
+          if (!hasAnalytics) {
+            return;
           }
+          window.BTAnalytics.capture(eventName, payload || {});
+        };
 
-          if (heroWatchButton) {
-            heroWatchButton.addEventListener('click', function(event) {
+        var quizConfig = {
+          soap: {
+            label: 'soap making',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Forgetting cure or rest windows',
+                solution_title: 'Never miss cure timing again',
+                solution_text: 'Batch timers and reminder alerts keep every cure step visible from start to finish.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'lye_math',
+                prompt: 'Rechecking lye, water, or superfat math',
+                solution_title: 'Scale formulas with confidence',
+                solution_text: 'Recipe scaling and conversion tools recalculate every ingredient in seconds.',
+                feature: 'Recipe Scaling + Unit Conversion'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Running out of oils or additives mid-batch',
+                solution_title: 'Verify stock before you start',
+                solution_text: 'Stock Check flags shortages before launch so batches start fully prepared.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Using extra ingredients during a live batch',
+                solution_title: 'Track real usage changes in progress',
+                solution_text: 'Batch-in-progress updates keep your usage history accurate even when plans change.',
+                feature: 'Batch In Progress Tracking'
+              },
+              {
+                id: 'version_history',
+                prompt: 'Losing track of which variation worked best',
+                solution_title: 'Keep every revision connected',
+                solution_text: 'Recipe lineage keeps test versions and approved versions in one clear record.',
+                feature: 'Recipe Lineage'
+              }
+            ]
+          },
+          candles: {
+            label: 'candle making',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Missing cure and cool-down timing windows',
+                solution_title: 'Run every timing step on schedule',
+                solution_text: 'Named timers and alerts help you stay consistent across every pour and cure cycle.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'temperature_notes',
+                prompt: 'Tracking pour temps and adjustments manually',
+                solution_title: 'Capture process notes with each batch',
+                solution_text: 'Batch notes keep temp decisions tied to the exact run for future repeats.',
+                feature: 'Batch Notes + Change Log'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Running out of wax, fragrance, or jars',
+                solution_title: 'Catch shortages before production',
+                solution_text: 'Inventory checks verify components and lot availability before launch.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'costing',
+                prompt: 'Unclear cost per candle after material changes',
+                solution_title: 'Know your true batch cost quickly',
+                solution_text: 'Lot-aware inventory usage keeps your cost view aligned with what was actually used.',
+                feature: 'Lot Cost Tracking'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Adjusting fragrance load in the middle of a run',
+                solution_title: 'Log live adjustments without losing history',
+                solution_text: 'Edit in-progress usage and keep a complete record for future optimization.',
+                feature: 'Batch In Progress Tracking'
+              }
+            ]
+          },
+          baking: {
+            label: 'baking',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Forgetting proof, rest, or oven timing',
+                solution_title: 'Keep every process stage on time',
+                solution_text: 'Integrated timers keep proofing, baking, and cooling checkpoints visible.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'scaling',
+                prompt: 'Inconsistent recipe scaling across batch sizes',
+                solution_title: 'Scale every formula in one click',
+                solution_text: 'BatchTrack recalculates all ingredients for your target output instantly.',
+                feature: 'Recipe Scaling Engine'
+              },
+              {
+                id: 'unit_conversion',
+                prompt: 'Converting units manually and making mistakes',
+                solution_title: 'Convert units without calculator errors',
+                solution_text: 'Universal unit conversion keeps formulas aligned with available inventory units.',
+                feature: 'Universal Unit Conversion'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Running out of key ingredients mid-bake',
+                solution_title: 'Prevent short-stock starts',
+                solution_text: 'Stock Check validates ingredient availability before the batch begins.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Changing weights during production and losing traceability',
+                solution_title: 'Track live changes and learn from each run',
+                solution_text: 'In-progress batch edits keep final usage and outcomes tied together.',
+                feature: 'Batch In Progress Tracking'
+              }
+            ]
+          },
+          fermentation: {
+            label: 'fermentation',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Losing track of rest, feed, or aging schedules',
+                solution_title: 'Stay on top of long-cycle timing',
+                solution_text: 'Timers and alerts keep multi-day process steps visible and reliable.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Making mid-cycle adjustments with no clear record',
+                solution_title: 'Log process changes as they happen',
+                solution_text: 'Batch notes and adjustments preserve exactly what changed and when.',
+                feature: 'Batch In Progress Tracking'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Not knowing if ingredients are available before launch',
+                solution_title: 'Validate readiness before every start',
+                solution_text: 'Inventory checks verify quantities and lot readiness before production begins.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'consistency',
+                prompt: 'Repeating successful outcomes inconsistently',
+                solution_title: 'Repeat successful runs with confidence',
+                solution_text: 'Recipe version history and batch records make repeatability practical.',
+                feature: 'Recipe Lineage + Batch History'
+              },
+              {
+                id: 'costing',
+                prompt: 'Estimating costs with outdated inputs',
+                solution_title: 'Tie costs to actual lot usage',
+                solution_text: 'FIFO lot tracking keeps cost data grounded in real production flow.',
+                feature: 'FIFO Inventory Costing'
+              }
+            ]
+          },
+          brewing: {
+            label: 'brewing',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Missing mash, boil, or conditioning checkpoints',
+                solution_title: 'Run every brew stage on schedule',
+                solution_text: 'Named timers keep stage timing visible and repeatable.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'scaling',
+                prompt: 'Scaling recipes and hop additions inconsistently',
+                solution_title: 'Scale batches without spreadsheet drift',
+                solution_text: 'Recipe scaling keeps each ingredient aligned to the target volume.',
+                feature: 'Recipe Scaling Engine'
+              },
+              {
+                id: 'unit_conversion',
+                prompt: 'Converting weights and volumes manually',
+                solution_title: 'Convert units automatically',
+                solution_text: 'Built-in conversion removes hand-calculation errors across every recipe step.',
+                feature: 'Universal Unit Conversion'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Starting a batch before confirming inventory',
+                solution_title: 'Launch only when stock is ready',
+                solution_text: 'Inventory checks catch shortages of grains, hops, or adjuncts early.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Adjusting process mid-batch and losing notes',
+                solution_title: 'Capture all in-flight process changes',
+                solution_text: 'In-progress tracking preserves edits for future consistency and learning.',
+                feature: 'Batch In Progress Tracking'
+              }
+            ]
+          },
+          cosmetics: {
+            label: 'cosmetics',
+            pains: [
+              {
+                id: 'timers',
+                prompt: 'Forgetting hold, cool-down, or cure timing',
+                solution_title: 'Keep every timing checkpoint visible',
+                solution_text: 'Integrated timers and alerts support repeatable production windows.',
+                feature: 'Batch Timers + Alerts'
+              },
+              {
+                id: 'unit_conversion',
+                prompt: 'Converting percentages and units by hand',
+                solution_title: 'Convert with fewer mistakes',
+                solution_text: 'Unit conversion tools keep formula math accurate when inventory units differ.',
+                feature: 'Universal Unit Conversion'
+              },
+              {
+                id: 'stock_check',
+                prompt: 'Not noticing ingredient shortages before launch',
+                solution_title: 'Catch gaps before production',
+                solution_text: 'Stock checks verify enough quantity and lot availability before starting.',
+                feature: 'Inventory Stock Check'
+              },
+              {
+                id: 'batch_adjustment',
+                prompt: 'Changing usage mid-batch with no clean history',
+                solution_title: 'Track real usage during production',
+                solution_text: 'Batch-in-progress updates maintain traceable records for each run.',
+                feature: 'Batch In Progress Tracking'
+              },
+              {
+                id: 'version_history',
+                prompt: 'Managing too many formula variants across tests',
+                solution_title: 'Organize version history clearly',
+                solution_text: 'Recipe lineage keeps every test and promoted version connected.',
+                feature: 'Recipe Lineage'
+              }
+            ]
+          }
+        };
+
+        var goalLabels = {
+          organize: 'Get my process organized',
+          sell_consistently: 'Sell consistently at markets or online',
+          scale: 'Scale production with fewer mistakes'
+        };
+
+        var quizAnchorButtons = document.querySelectorAll('[data-scroll-to-quiz]');
+        if (quizAnchorButtons && quizAnchorButtons.length) {
+          quizAnchorButtons.forEach(function(button) {
+            button.addEventListener('click', function(event) {
+              var targetId = (button.getAttribute('href') || '').replace('#', '');
+              var targetSection = targetId ? document.getElementById(targetId) : null;
+              if (!targetSection) {
+                return;
+              }
               event.preventDefault();
-              dismissHeroOverlay('watch_button');
+              targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              captureAnalytics('homepage_quiz_cta_clicked', {
+                source: 'hero_find_solution'
+              });
+            });
+          });
+        }
+
+        var quizForm = document.getElementById('homepageQuizForm');
+        if (quizForm) {
+          var craftInput = document.getElementById('quizCraftInput');
+          var craftButtons = quizForm.querySelectorAll('[data-craft-value]');
+          var painIntro = document.getElementById('quizPainIntro');
+          var painChoices = document.getElementById('quizPainChoices');
+          var revealButton = document.getElementById('quizRevealButton');
+          var goalInputs = quizForm.querySelectorAll('input[name="quiz_goal"]');
+          var goalCards = quizForm.querySelectorAll('.quiz-goal-card');
+          var emailGate = document.getElementById('quizEmailGate');
+          var emailForm = document.getElementById('quizEmailForm');
+          var emailInput = document.getElementById('quizEmailInput');
+          var emailCompanyInput = document.getElementById('quizEmailCompany');
+          var emailStatus = document.getElementById('quizEmailStatus');
+          var emailSubmitButton = document.getElementById('quizEmailSubmitButton');
+          var resultsPanel = document.getElementById('quizResultsPanel');
+          var resultsTitle = document.getElementById('quizResultsTitle');
+          var resultsSubtitle = document.getElementById('quizResultsSubtitle');
+          var resultsGrid = document.getElementById('quizResultsGrid');
+          var emailSubmitting = false;
+
+          var getSelectedCraft = function() {
+            return (craftInput && craftInput.value ? craftInput.value : '').trim();
+          };
+
+          var getSelectedGoal = function() {
+            var checked = quizForm.querySelector('input[name="quiz_goal"]:checked');
+            return checked ? checked.value : '';
+          };
+
+          var getSelectedPainIds = function() {
+            var selected = [];
+            if (!painChoices) {
+              return selected;
+            }
+            painChoices.querySelectorAll('input[name="quiz_pains"]:checked').forEach(function(input) {
+              selected.push(input.value);
+            });
+            return selected;
+          };
+
+          var resolveCraftConfig = function(craftKey) {
+            if (craftKey && quizConfig[craftKey]) {
+              return quizConfig[craftKey];
+            }
+            return quizConfig.soap;
+          };
+
+          var updateGoalCardSelection = function() {
+            if (!goalCards || !goalCards.length) {
+              return;
+            }
+            goalCards.forEach(function(card) {
+              var input = card.querySelector('input[type="radio"]');
+              card.classList.toggle('is-selected', !!(input && input.checked));
+            });
+          };
+
+          var updateRevealState = function() {
+            var hasCraft = !!getSelectedCraft();
+            var hasPains = getSelectedPainIds().length > 0;
+            var hasGoal = !!getSelectedGoal();
+            if (revealButton) {
+              revealButton.disabled = !(hasCraft && hasPains && hasGoal);
+            }
+          };
+
+          var renderPainOptions = function(craftKey) {
+            if (!painChoices || !painIntro) {
+              return;
+            }
+            painChoices.innerHTML = '';
+            if (!craftKey || !quizConfig[craftKey]) {
+              painIntro.textContent = 'Select your maker category first to load pain points.';
+              return;
+            }
+
+            var config = quizConfig[craftKey];
+            painIntro.textContent = 'Choose up to 3 pain points for your ' + config.label + ' workflow.';
+
+            config.pains.forEach(function(pain) {
+              var col = document.createElement('div');
+              col.className = 'col-md-6';
+
+              var label = document.createElement('label');
+              label.className = 'quiz-pain-option';
+
+              var input = document.createElement('input');
+              input.type = 'checkbox';
+              input.name = 'quiz_pains';
+              input.value = pain.id;
+              input.className = 'form-check-input me-2';
+
+              var text = document.createElement('span');
+              text.textContent = pain.prompt;
+
+              input.addEventListener('change', function() {
+                var checkedInputs = painChoices.querySelectorAll('input[name="quiz_pains"]:checked');
+                if (checkedInputs.length > 3) {
+                  input.checked = false;
+                  return;
+                }
+                label.classList.toggle('is-selected', input.checked);
+                updateRevealState();
+              });
+
+              label.appendChild(input);
+              label.appendChild(text);
+              col.appendChild(label);
+              painChoices.appendChild(col);
+            });
+          };
+
+          var renderResults = function(craftKey, painIds, goalKey) {
+            if (!resultsPanel || !resultsTitle || !resultsSubtitle || !resultsGrid) {
+              return;
+            }
+
+            var config = resolveCraftConfig(craftKey);
+            var painById = {};
+            config.pains.forEach(function(item) {
+              painById[item.id] = item;
+            });
+
+            var selectedPainRecords = painIds
+              .map(function(painId) {
+                return painById[painId];
+              })
+              .filter(function(value) {
+                return !!value;
+              });
+
+            if (!selectedPainRecords.length) {
+              return;
+            }
+
+            resultsTitle.textContent = 'Your action plan for ' + config.label;
+            resultsSubtitle.textContent = 'Goal: ' + (goalLabels[goalKey] || 'Grow with more control') + '.';
+            resultsGrid.innerHTML = '';
+
+            selectedPainRecords.forEach(function(pain) {
+              var col = document.createElement('div');
+              col.className = 'col-lg-6';
+
+              var card = document.createElement('article');
+              card.className = 'quiz-result-card';
+              card.setAttribute('data-pain-id', pain.id);
+
+              var inner = document.createElement('div');
+              inner.className = 'quiz-result-card-inner';
+
+              var front = document.createElement('div');
+              front.className = 'quiz-result-face quiz-result-face-front';
+
+              var frontKicker = document.createElement('p');
+              frontKicker.className = 'quiz-face-kicker';
+              frontKicker.textContent = 'You said';
+
+              var frontTitle = document.createElement('h4');
+              frontTitle.className = 'h5 mb-2';
+              frontTitle.textContent = pain.prompt;
+
+              var frontBody = document.createElement('p');
+              frontBody.className = 'text-muted mb-0';
+              frontBody.textContent = 'This is a common production bottleneck.';
+
+              front.appendChild(frontKicker);
+              front.appendChild(frontTitle);
+              front.appendChild(frontBody);
+
+              var back = document.createElement('div');
+              back.className = 'quiz-result-face quiz-result-face-back';
+
+              var backKicker = document.createElement('p');
+              backKicker.className = 'quiz-face-kicker';
+              backKicker.textContent = 'BatchTrack fix';
+
+              var backTitle = document.createElement('h4');
+              backTitle.className = 'h5 mb-2';
+              backTitle.textContent = pain.solution_title;
+
+              var backBody = document.createElement('p');
+              backBody.className = 'mb-3';
+              backBody.textContent = pain.solution_text;
+
+              var featureBadge = document.createElement('span');
+              featureBadge.className = 'badge text-bg-light';
+              featureBadge.textContent = 'Feature: ' + pain.feature;
+
+              back.appendChild(backKicker);
+              back.appendChild(backTitle);
+              back.appendChild(backBody);
+              back.appendChild(featureBadge);
+
+              inner.appendChild(front);
+              inner.appendChild(back);
+              card.appendChild(inner);
+              col.appendChild(card);
+              resultsGrid.appendChild(col);
+            });
+
+            resultsPanel.classList.remove('d-none');
+            window.requestAnimationFrame(function() {
+              resultsGrid.querySelectorAll('.quiz-result-card').forEach(function(card, index) {
+                window.setTimeout(function() {
+                  card.classList.add('is-flipped');
+                }, 120 + index * 140);
+              });
+            });
+          };
+
+          if (craftButtons && craftButtons.length) {
+            craftButtons.forEach(function(button) {
+              button.addEventListener('click', function() {
+                var craftValue = (button.getAttribute('data-craft-value') || '').trim();
+                if (!craftValue || !craftInput) {
+                  return;
+                }
+                craftInput.value = craftValue;
+                craftButtons.forEach(function(target) {
+                  var isActive = target === button;
+                  target.classList.toggle('is-active', isActive);
+                  target.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+                renderPainOptions(craftValue);
+                if (emailGate) {
+                  emailGate.classList.add('d-none');
+                }
+                if (resultsPanel) {
+                  resultsPanel.classList.add('d-none');
+                }
+                if (emailStatus) {
+                  emailStatus.textContent = '';
+                  emailStatus.className = 'small mt-3 mb-0 text-muted';
+                }
+                updateRevealState();
+                captureAnalytics('homepage_quiz_craft_selected', {
+                  craft: craftValue
+                });
+              });
             });
           }
+
+          if (goalInputs && goalInputs.length) {
+            goalInputs.forEach(function(input) {
+              input.addEventListener('change', function() {
+                updateGoalCardSelection();
+                updateRevealState();
+              });
+            });
+          }
+
+          if (revealButton) {
+            revealButton.addEventListener('click', function() {
+              if (revealButton.disabled || !emailGate) {
+                return;
+              }
+              emailGate.classList.remove('d-none');
+              emailGate.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              if (emailInput) {
+                emailInput.focus();
+              }
+              captureAnalytics('homepage_quiz_gate_opened', {
+                craft: getSelectedCraft(),
+                goal: getSelectedGoal(),
+                pain_count: getSelectedPainIds().length
+              });
+            });
+          }
+
+          if (emailForm) {
+            emailForm.addEventListener('submit', async function(event) {
+              event.preventDefault();
+              if (emailSubmitting) {
+                return;
+              }
+
+              var craft = getSelectedCraft();
+              var goal = getSelectedGoal();
+              var painIds = getSelectedPainIds();
+
+              if (!craft || !goal || !painIds.length) {
+                if (emailStatus) {
+                  emailStatus.className = 'small mt-3 mb-0 text-danger';
+                  emailStatus.textContent = 'Please complete all quiz steps before unlocking results.';
+                }
+                return;
+              }
+
+              if (!emailInput || !emailInput.value || !emailInput.checkValidity()) {
+                if (emailStatus) {
+                  emailStatus.className = 'small mt-3 mb-0 text-danger';
+                  emailStatus.textContent = 'Enter a valid email address to continue.';
+                }
+                if (emailInput && typeof emailInput.reportValidity === 'function') {
+                  emailInput.reportValidity();
+                }
+                return;
+              }
+
+              emailSubmitting = true;
+              if (emailSubmitButton) {
+                emailSubmitButton.disabled = true;
+                emailSubmitButton.textContent = 'Unlocking...';
+              }
+              if (emailStatus) {
+                emailStatus.className = 'small mt-3 mb-0 text-muted';
+                emailStatus.textContent = 'Saving your plan...';
+              }
+
+              var waitlistPayload = {
+                email: emailInput.value.trim().toLowerCase(),
+                business_type: craft,
+                waitlist_key: 'homepage.quiz_funnel',
+                source: 'homepage_quiz_funnel',
+                context: 'homepage_quiz_results',
+                company: emailCompanyInput && emailCompanyInput.value ? emailCompanyInput.value : '',
+                notes: 'goal:' + goal + ';pain_points:' + painIds.join('|'),
+                tags: [
+                  'homepage_quiz',
+                  'craft_' + craft,
+                  'goal_' + goal
+                ]
+              };
+
+              var emailCaptured = false;
+              try {
+                var response = await fetch('/api/waitlist', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(waitlistPayload)
+                });
+                emailCaptured = response.ok;
+              } catch (error) {
+                emailCaptured = false;
+              }
+
+              if (emailStatus) {
+                if (emailCaptured) {
+                  emailStatus.className = 'small mt-3 mb-0 text-success';
+                  emailStatus.textContent = 'Great. Your plan is ready below.';
+                } else {
+                  emailStatus.className = 'small mt-3 mb-0 text-warning';
+                  emailStatus.textContent = 'Could not save your email right now, but your personalized plan is ready below.';
+                }
+              }
+
+              renderResults(craft, painIds, goal);
+              if (resultsPanel) {
+                resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+
+              captureAnalytics('homepage_quiz_results_revealed', {
+                craft: craft,
+                goal: goal,
+                pain_count: painIds.length,
+                email_captured: emailCaptured
+              });
+
+              emailSubmitting = false;
+              if (emailSubmitButton) {
+                emailSubmitButton.disabled = false;
+                emailSubmitButton.textContent = 'Unlock My Results';
+              }
+            });
+          }
+
+          updateGoalCardSelection();
+          updateRevealState();
         }
 
-        if (!hasAnalytics) {
-          return;
-        }
-
-        window.BTAnalytics.capture('homepage_viewed', {
+        captureAnalytics('homepage_viewed', {
           landing_variant: 'homepage',
           authenticated: false
         });
@@ -615,22 +1276,27 @@
         var enteredAt = Date.now ? Date.now() : new Date().getTime();
         var sentDwell = false;
         var sendDwell = function() {
+          if (!hasAnalytics) {
+            return;
+          }
           if (sentDwell) {
             return;
           }
           sentDwell = true;
           var now = Date.now ? Date.now() : new Date().getTime();
           var seconds = Math.max(0, Math.round((now - enteredAt) / 1000));
-          window.BTAnalytics.capture('homepage_dwell_recorded', {
+          captureAnalytics('homepage_dwell_recorded', {
             seconds_on_homepage: seconds
           });
         };
-        window.addEventListener('pagehide', sendDwell, { once: true });
-        document.addEventListener('visibilitychange', function() {
-          if (document.visibilityState === 'hidden') {
-            sendDwell();
-          }
-        });
+        if (hasAnalytics) {
+          window.addEventListener('pagehide', sendDwell, { once: true });
+          document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+              sendDwell();
+            }
+          });
+        }
 
       });
     </script>
