@@ -440,11 +440,10 @@ class DashboardAlertService:
     def _get_incomplete_batches() -> int:
         """Get count of batches missing required data"""
         try:
-            # Batches that are completed but missing final quantity.
-            # Keep legacy "finished" status for backward compatibility.
+            # Incomplete = still in progress and not finalized.
+            # Keep legacy "active" for historical/open records.
             query = Batch.query.filter(
-                Batch.status.in_(["completed", "finished"]),
-                Batch.final_quantity.is_(None),
+                Batch.status.in_(["in_progress", "active"]),
             )
 
             # Simple organization scoping
