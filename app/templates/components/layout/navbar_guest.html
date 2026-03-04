@@ -15,6 +15,7 @@ Guest navigation with optional public marketing header component.
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="publicMenuDropdown">
         <li><a class="dropdown-item" href="{{ url_for('core.signup_alias') }}">Sign up</a></li>
         <li><a class="dropdown-item" href="{{ url_for('auth.login') }}">Sign in</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('core.affiliates_info') }}">Affiliates</a></li>
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
         {% if global_library_enabled %}

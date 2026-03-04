@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+  .affiliate-signup-shell {
+    max-width: 1080px;
+    margin: 2rem auto;
+  }
+
+  .affiliate-heading-card {
+    border: 1px solid rgba(205, 214, 235, 0.82);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 8px 16px rgba(15, 30, 84, 0.06);
+  }
+
+  .affiliate-heading-title {
+    margin-bottom: 0.75rem;
+  }
+
+  .affiliate-heading-copy {
+    color: var(--color-muted);
+    max-width: 760px;
+  }
+
+  .affiliate-info-block {
+    border: 1px solid rgba(205, 214, 235, 0.82);
+    border-radius: 0.9rem;
+    background: #fff;
+    padding: 1.4rem 1.2rem;
+    box-shadow: 0 8px 16px rgba(15, 30, 84, 0.06);
+  }
+
+  .affiliate-blurb {
+    border-radius: 0.75rem;
+    background: rgba(25, 135, 84, 0.1);
+    color: #0f5132;
+    border: 1px solid rgba(25, 135, 84, 0.25);
+    padding: 0.95rem 1rem;
+    font-weight: 600;
+  }
+
+  .affiliate-signup-cta {
+    border-radius: 1rem;
+    padding: 2rem 1.5rem;
+    background: #f8f9ff;
+    border: 1px solid rgba(185, 199, 232, 0.7);
+    text-align: center;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container affiliate-signup-shell">
+  <section class="card affiliate-heading-card mb-4">
+    <div class="card-header bg-white border-0 pb-0">
+      <div class="affiliate-blurb d-inline-flex mb-2">Earn 10-20% commission</div>
+      <h1 class="h3 affiliate-heading-title">Affiliate Signup</h1>
+      <p class="affiliate-heading-copy mb-0">
+        Join the BatchTrack affiliate program and earn 10-20% commission from qualified referrals.
+        Payouts are managed in arrears so each month can clear cancellation checks before payout is sent.
+      </p>
+    </div>
+    <div class="card-body pt-3">
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary btn-lg" href="{{ url_for('core.affiliates_info') }}">Program Info</a>
+        <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('legal.terms_of_service') }}#affiliate-program-terms">Affiliate Terms & Conditions</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="affiliate-info-block h-100">
+        <h2 class="h5">Program details</h2>
+        <ul class="mb-0 ps-3">
+          <li>Commission range: <strong>10-20%</strong> depending on plan and referral value.</li>
+          <li>Payout timing: 1 month in arrears (30-day hold) before payout release.</li>
+          <li>Mid-month override: manual payout push can be triggered by ops when needed.</li>
+          <li>Payout statuses: Pending, Sent (On the way), Complete, Unsuccessful.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="affiliate-info-block h-100 d-flex flex-column justify-content-between">
+        <div>
+          <h2 class="h5">Ready to earn</h2>
+          <p class="text-muted mb-2">
+            Set up your account, choose your plan, then generate your affiliate link from settings.
+          </p>
+        </div>
+        <div class="affiliate-blurb mt-2">
+          Your subscription can pay for itself.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="affiliate-signup-cta">
+    <h2 class="h3 mb-3">Start now</h2>
+    <p class="text-muted mb-4">Create your account and select your plan to activate affiliate access.</p>
+    <a
+      class="btn btn-success btn-lg px-5 py-3"
+      href="{{ url_for('core.signup_alias', source='affiliate_program_signup') }}"
+    >
+      Signup now and select your plan
+    </a>
+  </section>
+</div>
+{% endblock %}

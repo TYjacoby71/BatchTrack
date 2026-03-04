@@ -55,6 +55,13 @@
             </button>
         </li>
         {% endif %}
+        {% if current_user.user_type == 'customer' and current_user.organization %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="affiliate-tab" data-bs-toggle="tab" data-bs-target="#affiliate" type="button" role="tab">
+                <i class="fas fa-handshake"></i> Affiliate
+            </button>
+        </li>
+        {% endif %}
 
     </ul>
 
@@ -84,6 +91,11 @@
         {% if current_user.is_organization_owner or current_user.user_type == 'developer' or has_permission(current_user, 'organization.manage_billing') %}
         <div class="tab-pane fade" id="billing" role="tabpanel">
             {% include 'settings/components/billing_tab.html' %}
+        </div>
+        {% endif %}
+        {% if current_user.user_type == 'customer' and current_user.organization %}
+        <div class="tab-pane fade" id="affiliate" role="tabpanel">
+            {% include 'settings/components/affiliate_tab.html' %}
         </div>
         {% endif %}
 

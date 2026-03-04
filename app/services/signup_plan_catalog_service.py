@@ -78,6 +78,7 @@ class SignupPlanCatalogService:
         *,
         include_live_pricing: bool = True,
         allow_live_pricing_network: bool = True,
+        include_yearly_pricing: bool = True,
     ) -> dict[str, dict]:
         available_tiers: dict[str, dict] = {}
         for tier_obj in db_tiers:
@@ -182,12 +183,14 @@ class SignupPlanCatalogService:
                     logger.warning("Suppressed exception fallback at app/services/signup_plan_catalog_service.py:148", exc_info=True)
                     monthly_pricing = None
 
-            yearly_lookup_key = (
-                LifetimePricingService.resolve_standard_yearly_lookup_key(
-                    tier_obj,
-                    allow_network=allow_live_pricing_network,
+            yearly_lookup_key = None
+            if include_yearly_pricing:
+                yearly_lookup_key = (
+                    LifetimePricingService.resolve_standard_yearly_lookup_key(
+                        tier_obj,
+                        allow_network=allow_live_pricing_network,
+                    )
                 )
-            )
             yearly_pricing = None
             if include_live_pricing and yearly_lookup_key:
                 try:
@@ -222,9 +225,11 @@ class SignupPlanCatalogService:
             price_display = monthly_price_display or "Contact Sales"
             available_tiers[str(tier_obj.id)] = {
                 "name": tier_obj.name,
+                "description": str(getattr(tier_obj, "description", "") or "").strip(),
                 "price_display": price_display,
                 "monthly_price_display": monthly_price_display,
                 "yearly_price_display": yearly_price_display,
+                "stripe_lookup_key": monthly_lookup_key,
                 "yearly_lookup_key": yearly_lookup_key,
                 "features": feature_highlights,
                 "feature_total": feature_total,

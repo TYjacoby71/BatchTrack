@@ -39,6 +39,14 @@
                                     <div class="form-text">Set to -1 for unlimited users</div>
                                 </div>
 
+                                <div class="mb-3">
+                                    <label for="commission_percentage" class="form-label">Affiliate Commission (%)</label>
+                                    <input type="number" class="form-control" id="commission_percentage" name="commission_percentage"
+                                           value="{{ tier.commission_percentage if tier.commission_percentage is not none else 0 }}"
+                                           min="0" max="100" step="0.01">
+                                    <div class="form-text">Percentage paid to affiliates for referred revenue (0-100).</div>
+                                </div>
+
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">

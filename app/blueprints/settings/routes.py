@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash
 
 from ...extensions import db
 from ...models import InventoryItem, User, UserPreferences
+from ...services.affiliate_service import AffiliateService
 from ...utils.permissions import has_permission, require_permission
 from ...utils.settings import (
     get_settings,
@@ -80,6 +81,13 @@ def index():
     from ...services.billing_service import BillingService
 
     pricing_data = BillingService.get_comprehensive_pricing_data()
+    affiliate_page = request.args.get("affiliate_page", 1, type=int)
+    affiliate_context = AffiliateService.build_user_settings_context(
+        current_user,
+        base_url=request.url_root,
+        page=affiliate_page,
+        per_page=10,
+    )
 
     return render_template(
         "settings/index.html",
@@ -91,6 +99,43 @@ def index():
         has_permission=has_permission,
         TimezoneUtils=TimezoneUtils,
         pricing_data=pricing_data,
+        affiliate_context=affiliate_context,
+    )
+
+
+@settings_bp.route("/affiliate/regenerate-link", methods=["POST"])
+@login_required
+@require_permission("settings.edit")
+def regenerate_affiliate_link():
+    """Rotate current user's affiliate referral code."""
+    can_generate = has_permission(
+        current_user, "affiliates.generate_links"
+    ) or has_permission(current_user, "organization.manage_billing")
+    if not can_generate:
+        return jsonify({"success": False, "error": "Insufficient permissions"}), 403
+
+    profile = AffiliateService.get_or_create_affiliate_profile(current_user, auto_commit=True)
+    if not profile:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Affiliate profile is unavailable. Run migrations first.",
+                }
+            ),
+            400,
+        )
+
+    AffiliateService.rotate_profile_referral_code(profile, auto_commit=True)
+    link = AffiliateService.build_referral_link(
+        current_user, base_url=request.url_root
+    )
+    return jsonify(
+        {
+            "success": True,
+            "referral_code": profile.referral_code,
+            "referral_link": link,
+        }
     )
 
 

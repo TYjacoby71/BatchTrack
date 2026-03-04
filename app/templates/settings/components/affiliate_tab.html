@@ -1,0 +1,181 @@
+{% set affiliate = affiliate_context or {} %}
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Affiliate Management</h5>
+                {% if affiliate.enabled and affiliate.can_generate_link %}
+                <button class="btn btn-sm btn-outline-primary" type="button" id="affiliateRegenerateBtn" onclick="regenerateAffiliateLink()">
+                    <i class="fas fa-sync-alt me-1"></i>Regenerate Link
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if affiliate.enabled %}
+                <p class="text-muted mb-3">
+                    Share your personal link. Referred signups are tracked to your account while commissions are attributed to your organization.
+                </p>
+                <div class="input-group mb-3">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="affiliateLinkInput"
+                        value="{{ affiliate.referral_link or '' }}"
+                        readonly
+                    >
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyAffiliateLink()">
+                        <i class="fas fa-copy me-1"></i>Copy
+                    </button>
+                </div>
+                <small class="text-muted">Code: <code id="affiliateCodeLabel">{{ affiliate.referral_code or 'N/A' }}</code> · 90-day attribution cookie</small>
+                {% if current_user.is_organization_owner and current_user.organization and current_user.organization.stripe_customer_id %}
+                <div class="mt-2">
+                    <a href="{{ url_for('organization.affiliate_dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="fas fa-chart-column me-1"></i>Organization Affiliate Analytics
+                    </a>
+                    <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-wallet me-1"></i>Configure Payout/Billing Details
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-lock me-1"></i>{{ affiliate.reason or 'Affiliate access is not currently enabled for this account.' }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase">Tracked Signups</div>
+                <div class="fs-2 fw-semibold">{{ affiliate.total_signups or 0 }}</div>
+                <small class="text-muted">Signups attributed to your link.</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase">Commission Earned</div>
+                <div class="fs-2 fw-semibold">{{ affiliate.total_commission_display or '$0.00' }}</div>
+                <small class="text-muted">Current month: {{ affiliate.monthly_commission_display or '$0.00' }}</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Payout / Payment Status</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Stripe payout lifecycle for commissions attributed to your organization, released after a 30-day arrears hold.</p>
+                {% with payout_status_summary=affiliate.payout_status_summary %}
+                    {% include "components/affiliate/payout_status_summary_cards.html" %}
+                {% endwith %}
+            </div>
+            <div class="card-body pt-0">
+                {% with payout_rows=affiliate.recent_payout_batches, empty_message='No payout status records yet for your referrals.' %}
+                    {% include "components/affiliate/recent_payout_batches_table.html" %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Accounts Created By Your Link</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">First Name</th>
+                                <th>Signup Date</th>
+                                <th>Tier</th>
+                                <th class="pe-3">Link Used</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if affiliate.referrals %}
+                                {% for row in affiliate.referrals %}
+                                <tr>
+                                    <td class="ps-3">{{ row.first_name_redacted }}</td>
+                                    <td>{{ row.signed_up_at.strftime('%Y-%m-%d') if row.signed_up_at else 'N/A' }}</td>
+                                    <td>{{ row.tier_name }}</td>
+                                    <td class="pe-3"><code>{{ row.referral_code }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">No affiliate signups yet.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if affiliate.pages and affiliate.pages > 1 %}
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <small class="text-muted">Page {{ affiliate.page }} of {{ affiliate.pages }}</small>
+                <div class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-secondary {{ 'disabled' if not affiliate.has_prev else '' }}"
+                       href="{{ url_for('settings.index', affiliate_page=affiliate.page - 1) }}#affiliate">Prev</a>
+                    <a class="btn btn-outline-secondary {{ 'disabled' if not affiliate.has_next else '' }}"
+                       href="{{ url_for('settings.index', affiliate_page=affiliate.page + 1) }}#affiliate">Next</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+async function regenerateAffiliateLink() {
+    const button = document.getElementById('affiliateRegenerateBtn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Regenerating...';
+    }
+    try {
+        const response = await fetch('/settings/affiliate/regenerate-link', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '',
+            },
+            body: JSON.stringify({}),
+        });
+        const payload = await response.json();
+        if (!payload.success) {
+            throw new Error(payload.error || 'Failed to regenerate link.');
+        }
+        const input = document.getElementById('affiliateLinkInput');
+        const codeLabel = document.getElementById('affiliateCodeLabel');
+        if (input) input.value = payload.referral_link || '';
+        if (codeLabel) codeLabel.textContent = payload.referral_code || 'N/A';
+    } catch (error) {
+        alert(error.message || 'Unable to regenerate affiliate link.');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Regenerate Link';
+        }
+    }
+}
+
+function copyAffiliateLink() {
+    const input = document.getElementById('affiliateLinkInput');
+    if (!input || !input.value) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(() => {
+        input.blur();
+    }).catch(() => {});
+}
+</script>

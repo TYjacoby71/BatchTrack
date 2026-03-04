@@ -4,16 +4,18 @@
         <div class="row align-items-center">
             <div class="col-lg-6">
                 {% set final_cta_media = (homepage_media_slots.get('final-cta-primary') if homepage_media_slots is defined else none) %}
-                <div class="placeholder-img final-cta-media-slot{% if final_cta_media %} has-media{% endif %}">
-                    {% if final_cta_media %}
-                        {% if final_cta_media.kind == 'video' %}
+                {% set hero_media = (homepage_media_slots.get('hero-primary') if homepage_media_slots is defined else none) %}
+                {% set focus_media = final_cta_media or hero_media %}
+                <div class="placeholder-img final-cta-media-slot{% if focus_media %} has-media{% endif %}">
+                    {% if focus_media %}
+                        {% if focus_media.kind == 'video' %}
                     <video class="final-cta-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app workflow media">
-                        <source src="{{ url_for('static', filename=final_cta_media.path) }}">
+                        <source src="{{ url_for('static', filename=focus_media.path) }}">
                     </video>
-                        {% elif final_cta_media.kind == 'youtube' and final_cta_media.embed_url %}
+                        {% elif focus_media.kind == 'youtube' and focus_media.embed_url %}
                     <iframe
                         class="final-cta-media media-embed-frame"
-                        src="{{ final_cta_media.embed_url }}"
+                        src="{{ focus_media.embed_url }}"
                         title="BatchTrack app workflow media"
                         loading="lazy"
                         referrerpolicy="strict-origin-when-cross-origin"
@@ -21,7 +23,7 @@
                         allowfullscreen
                     ></iframe>
                         {% else %}
-                    <img src="{{ url_for('static', filename=final_cta_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
+                    <img src="{{ url_for('static', filename=focus_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
                         {% endif %}
                     {% endif %}
                 </div>
@@ -35,6 +37,21 @@
                     <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Keep inventory and cost visibility tied to real usage</li>
                     <li class="mb-2"><span class="check-symbol" aria-hidden="true">+</span>Start free and scale when your production grows</li>
                 </ul>
+                {% if focus_media %}
+                    {% if focus_media.kind == 'youtube' and focus_media.url %}
+                <p class="mb-3">
+                    <a href="{{ focus_media.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
+                        Watch the Product Walkthrough
+                    </a>
+                </p>
+                    {% elif focus_media.path %}
+                <p class="mb-3">
+                    <a href="{{ url_for('static', filename=focus_media.path) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
+                        Open Media Preview
+                    </a>
+                </p>
+                    {% endif %}
+                {% endif %}
                 <a href="{{ url_for('core.signup_alias', source='homepage_start_free_trial') }}" class="btn btn-cta btn-lg text-white">Start Tracking for Free</a>
             </div>
         </div>

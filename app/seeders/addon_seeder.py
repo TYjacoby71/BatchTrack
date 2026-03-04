@@ -41,6 +41,17 @@ def seed_addons():
             "is_active": True,
         },
         {
+            "key": "affiliate_program",
+            "name": "Affiliate Program",
+            "description": "Enable affiliate link generation and referral tracking.",
+            "permission_name": "affiliates.view",
+            "function_key": "affiliate_program",
+            "billing_type": "subscription",
+            "stripe_lookup_key": None,
+            "batchbot_credit_amount": 0,
+            "is_active": True,
+        },
+        {
             "key": "advanced_analytics",
             "name": "Advanced Analytics",
             "description": "Unlock business intelligence and advanced reports",

@@ -215,6 +215,31 @@
         }
       ]
     },
+    "affiliate_management": {
+      "description": "Affiliate links, referrals, commissions, and payout visibility",
+      "permissions": [
+        {
+          "name": "affiliates.view",
+          "display_name": "View Affiliate Dashboard",
+          "description": "Access personal affiliate link tools and referral tracking."
+        },
+        {
+          "name": "affiliates.generate_links",
+          "display_name": "Generate Affiliate Links",
+          "description": "Create and regenerate affiliate referral links."
+        },
+        {
+          "name": "affiliates.view_org_dashboard",
+          "display_name": "View Organization Affiliate Dashboard",
+          "description": "View organization-level affiliate totals and user attribution."
+        },
+        {
+          "name": "affiliates.manage_payouts",
+          "display_name": "Manage Affiliate Payout Details",
+          "description": "Configure payout destination metadata for affiliate earnings."
+        }
+      ]
+    },
     "alerts_notifications": {
       "description": "Alert management and notification preferences",
       "permissions": [
@@ -459,6 +484,11 @@
           "name": "dev.view_all_billing",
           "display_name": "View All Billing",
           "description": "Access billing information for all organizations"
+        },
+        {
+          "name": "dev.manage_affiliates",
+          "display_name": "Manage Affiliate Ecosystem",
+          "description": "Access system-wide affiliate referral and payout oversight"
         }
       ]
     }
