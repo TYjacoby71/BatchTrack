@@ -387,14 +387,16 @@ class LifetimePricingService:
         primary = cls._derive_lookup_variant(lookup, target_variant)
         if primary:
             variants.append(primary)
-        variants.extend(cls._append_variant_candidates(lookup, target_variant))
+        else:
+            variants.extend(cls._append_variant_candidates(lookup, target_variant))
 
         stripped = cls._strip_version_suffix(lookup)
         if stripped and stripped != lookup:
             secondary = cls._derive_lookup_variant(stripped, target_variant)
             if secondary:
                 variants.append(secondary)
-            variants.extend(cls._append_variant_candidates(stripped, target_variant))
+            elif not primary:
+                variants.extend(cls._append_variant_candidates(stripped, target_variant))
 
         expanded = []
         for value in variants:

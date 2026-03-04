@@ -813,7 +813,7 @@ class BillingService:
                     BillingService._resolve_price_for_lookup_key(lookup_key)
                 )
                 if not price_obj:
-                    logger.warning(
+                    logger.debug(
                         "No active Stripe price found for lookup key %s; ensure the price exists and is active",
                         lookup_key,
                     )
@@ -915,7 +915,7 @@ class BillingService:
             if price_list.data:
                 return price_list.data[0], strategy
 
-            logger.warning(
+            logger.debug(
                 "Stripe lookup by lookup_key failed for %s; attempting to treat it as a price ID",
                 lookup_key,
             )

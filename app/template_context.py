@@ -49,6 +49,13 @@ _MARKETING_CONTEXT_ENDPOINTS = {
     "homepage",
     "public_page",
 }
+_PUBLIC_UNITS_CONTEXT_ENDPOINTS = {
+    "tools_bp.tools_soap",
+    "tools_bp.tools_candles",
+    "tools_bp.tools_lotions",
+    "tools_bp.tools_herbal",
+    "tools_bp.tools_baker",
+}
 _ASSET_MANIFEST_CACHE: Dict[str, Any] = {
     "path": None,
     "mtime": None,
@@ -94,6 +101,17 @@ def _normalize_cached_categories(raw) -> list[Dict[str, Any]]:
     return [_serialize_ingredient_category(cat) for cat in raw]
 
 
+def _default_units_and_categories_context() -> Dict[str, Any]:
+    return {"units": [], "global_units": [], "categories": []}
+
+
+def _should_inject_units_and_categories() -> bool:
+    if current_user.is_authenticated:
+        return True
+    endpoint = request.endpoint or ""
+    return endpoint in _PUBLIC_UNITS_CONTEXT_ENDPOINTS
+
+
 def register_template_context(app: Flask) -> None:
     """Register globally available template context helpers."""
 
@@ -103,6 +121,9 @@ def register_template_context(app: Flask) -> None:
 
     @app.context_processor
     def _inject_units_and_categories() -> Dict[str, Any]:
+        if not _should_inject_units_and_categories():
+            return _default_units_and_categories_context()
+
         from .models import IngredientCategory
 
         org_id = _effective_org_id()
