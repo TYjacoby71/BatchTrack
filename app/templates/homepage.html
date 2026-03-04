@@ -917,6 +917,7 @@
           var resultsSubtitle = document.getElementById('quizResultsSubtitle');
           var resultsGrid = document.getElementById('quizResultsGrid');
           var emailSubmitting = false;
+          var quizStartedTracked = false;
 
           var getSelectedCraft = function() {
             return (craftInput && craftInput.value ? craftInput.value : '').trim();
@@ -1133,6 +1134,12 @@
                   emailStatus.className = 'small mt-3 mb-0 text-muted';
                 }
                 updateRevealState();
+                if (!quizStartedTracked) {
+                  quizStartedTracked = true;
+                  captureAnalytics('homepage_quiz_started', {
+                    entry_point: 'homepage_solution_quiz'
+                  });
+                }
                 captureAnalytics('homepage_quiz_craft_selected', {
                   craft: craftValue
                 });
@@ -1222,6 +1229,15 @@
                 ]
               };
 
+              captureAnalytics('homepage_quiz_submission_attempted', {
+                submission_method: 'waitlist_api',
+                waitlist_key: waitlistPayload.waitlist_key,
+                source: waitlistPayload.source,
+                craft: craft,
+                goal: goal,
+                pain_count: painIds.length
+              });
+
               var emailCaptured = false;
               try {
                 var response = await fetch('/api/waitlist', {
@@ -1233,6 +1249,18 @@
               } catch (error) {
                 emailCaptured = false;
               }
+
+              captureAnalytics(
+                emailCaptured ? 'homepage_quiz_submission_succeeded' : 'homepage_quiz_submission_failed',
+                {
+                  submission_method: 'waitlist_api',
+                  waitlist_key: waitlistPayload.waitlist_key,
+                  source: waitlistPayload.source,
+                  craft: craft,
+                  goal: goal,
+                  pain_count: painIds.length
+                }
+              );
 
               if (emailStatus) {
                 if (emailCaptured) {
@@ -1254,6 +1282,13 @@
                 goal: goal,
                 pain_count: painIds.length,
                 email_captured: emailCaptured
+              });
+              captureAnalytics('homepage_quiz_completed', {
+                craft: craft,
+                goal: goal,
+                pain_count: painIds.length,
+                submission_status: emailCaptured ? 'captured' : 'not_captured',
+                submission_method: 'waitlist_api'
               });
 
               emailSubmitting = false;
