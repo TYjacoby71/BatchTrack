@@ -67,7 +67,7 @@ This document pairs **plain-language instructions** for every major system actio
 
 14. ### [Deployments, Migrations, and Monitoring](#instruction-devops)
     - **Source Docs:** [`docs/system/deploy_migration_guide.md`](deploy_migration_guide.md), [`docs/system/DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md#database-changes), [`docs/system/ARCHITECTURE.md`](ARCHITECTURE.md#monitoring--observability).
-    - **Checklist:** Create Alembic migration per schema change, run migrations with org-safe order, monitor logs (`app/middleware.py` adds security headers/logging), keep `docs/changelog` updated post-release.
+    - **Checklist:** Create Alembic migration per schema change, run migrations with org-safe order, monitor logs (`app/middleware/registry.py` + `app/middleware/security_headers.py` apply request/security headers and guard logging), keep `docs/changelog` updated post-release.
 
 15. ### [Configure Account Email Security Modes](#instruction-auth-email)
     - **Source Docs:** `app/config.py`, `app/services/email_service.py`, `app/blueprints/auth/password_routes.py`, `app/blueprints/auth/verification_routes.py`.

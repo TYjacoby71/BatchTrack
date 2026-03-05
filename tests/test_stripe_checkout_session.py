@@ -6,6 +6,7 @@ import pytest
 
 from app.services.billing_service import BillingService
 from app.services.lifetime_pricing_service import LifetimePricingService
+from app.services.signup_checkout_service import SignupCheckoutService
 from app.utils.cache_manager import app_cache
 
 
@@ -124,6 +125,73 @@ def test_checkout_session_drops_customer_update_without_customer(app):
         assert "customer_email" not in kwargs
         assert kwargs["phone_number_collection"] == {"enabled": False}
         assert "custom_fields" not in kwargs
+
+
+def test_checkout_session_zero_price_skips_trial_and_card_collection(app):
+    tier = SimpleNamespace(id=1, name="Hobbyist", stripe_lookup_key="hobbyist_monthly")
+
+    with app.app_context(), patch(
+        "app.services.billing_service.BillingService.ensure_stripe", return_value=True
+    ), patch(
+        "app.services.billing_service.BillingService.get_live_pricing_for_lookup_key",
+        return_value={
+            "price_id": "price_hobbyist_free",
+            "amount": 0.0,
+            "formatted_price": "$0.00",
+            "currency": "USD",
+            "billing_cycle": "monthly",
+            "lookup_key": "hobbyist_monthly",
+            "last_synced": "now",
+        },
+    ), patch(
+        "app.services.billing_service.stripe.checkout.Session.create"
+    ) as mock_session_create:
+        app.config["SIGNUP_STRIPE_TRIAL_DAYS"] = 14
+        mock_session_create.return_value = SimpleNamespace(id="cs_test_free")
+
+        BillingService.create_checkout_session_for_tier(
+            tier,
+            customer_email="free@example.com",
+            success_url="https://example.com/success",
+            cancel_url="https://example.com/cancel",
+            phone_required=False,
+        )
+
+        kwargs = mock_session_create.call_args.kwargs
+        assert kwargs["mode"] == "subscription"
+        assert kwargs["payment_method_collection"] == "if_required"
+        assert "subscription_data" not in kwargs
+        assert kwargs.get("custom_text", {}).get("submit", {}).get("message")
+
+
+def test_signup_payload_uses_free_label_for_zero_live_price(app):
+    tier = SimpleNamespace(
+        id=9,
+        name="Hobbyist",
+        description="Solo plan",
+        stripe_lookup_key="hobbyist_monthly",
+    )
+
+    with app.app_context(), patch(
+        "app.services.signup_checkout_service.BillingService.get_live_pricing_for_lookup_key",
+        return_value={
+            "price_id": "price_hobbyist_free",
+            "amount": 0.0,
+            "formatted_price": "$0.00",
+            "currency": "USD",
+            "billing_cycle": "monthly",
+            "lookup_key": "hobbyist_monthly",
+            "last_synced": "now",
+        },
+    ):
+        payload = SignupCheckoutService._build_signup_available_tiers_payload(
+            db_tiers=[tier],
+            include_live_pricing=True,
+            allow_live_pricing_network=True,
+        )
+
+    assert payload["9"]["monthly_price_display"] == "FREE"
+    assert payload["9"]["is_free"] is True
 
 
 def test_find_related_price_lookup_key_prefers_lookup_key(app):
@@ -305,19 +373,31 @@ def test_ensure_stripe_prefers_httpx_when_gevent_is_loaded(app, monkeypatch):
     assert configured["allow_sync_methods"] is True
 
 
-def test_signup_checkout_route_redirects_to_signup_without_session_creation(
+def test_signup_checkout_route_redirects_to_direct_checkout_when_available(
     app, monkeypatch
 ):
     client = app.test_client()
 
     called = {"value": False}
 
+    def _fake_build_context(*_args, **_kwargs):
+        return object()
+
     def _mark_called(*_args, **_kwargs):
         called["value"] = True
-        return None
+        return SimpleNamespace(
+            redirect_url="https://stripe.test/checkout/session_123",
+            flash_message=None,
+            flash_category="info",
+            view_state=None,
+        )
 
     monkeypatch.setattr(
-        "app.blueprints.auth.signup_routes.SignupCheckoutService.process_submission",
+        "app.blueprints.auth.signup_routes.PublicSignupOrchestrator.build_request_context",
+        _fake_build_context,
+    )
+    monkeypatch.setattr(
+        "app.blueprints.auth.signup_routes.PublicSignupOrchestrator.process_submission",
         _mark_called,
     )
 
@@ -328,8 +408,5 @@ def test_signup_checkout_route_redirects_to_signup_without_session_creation(
 
     assert response.status_code in {301, 302}
     location = response.headers.get("Location") or ""
-    assert location.startswith("/signup")
-    assert "tier=3" in location
-    assert "billing_mode=standard" in location
-    assert "billing_cycle=monthly" in location
-    assert called["value"] is False
+    assert location == "https://stripe.test/checkout/session_123"
+    assert called["value"] is True

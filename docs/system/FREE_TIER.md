@@ -34,6 +34,7 @@ Not included by default:
 - Middleware consults `BillingAccessPolicyService`.
 - Recoverable billing states redirect to `/billing/upgrade`.
 - Hard-lock states force logout + deny access.
+- Billing-exempt tiers (`billing_provider = exempt`) bypass subscription/payment-status gating (`past_due`, `payment_failed`, `canceled`, `suspended`) and are only lockable through explicit organization deactivation.
 
 ### 3) Public unauthenticated surfaces
 By route-access config, anonymous users can access:
@@ -50,7 +51,8 @@ Soap draft submissions from public tools are quota-limited for guest/free contex
 Validated against:
 - `app/seeders/subscription_seeder.py`
 - `app/utils/permissions.py`
-- `app/middleware.py`
+- `app/middleware/registry.py`
+- `app/middleware/guards.py`
 - `app/services/billing_access_policy_service.py`
 - `app/route_access.py`
 - `app/blueprints/tools/routes.py`

@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from flask import url_for
@@ -660,13 +661,18 @@ class SignupCheckoutService:
                     )
                     monthly_pricing = None
 
+            is_free_tier = cls._pricing_amount_is_zero(monthly_pricing)
             monthly_price_display = (
-                str(monthly_pricing.get("formatted_price"))
-                if monthly_pricing
+                "FREE"
+                if is_free_tier
                 else (
-                    "Monthly pricing at secure checkout"
-                    if monthly_lookup_key
-                    else "Contact Sales"
+                    str(monthly_pricing.get("formatted_price"))
+                    if monthly_pricing
+                    else (
+                        "Monthly pricing at secure checkout"
+                        if monthly_lookup_key
+                        else "Contact Sales"
+                    )
                 )
             )
             payload[tier_id] = {
@@ -675,9 +681,23 @@ class SignupCheckoutService:
                 "price_display": monthly_price_display,
                 "monthly_price_display": monthly_price_display,
                 "stripe_lookup_key": monthly_lookup_key,
+                "is_free": is_free_tier,
             }
 
         return payload
+
+    @staticmethod
+    def _pricing_amount_is_zero(pricing_payload: dict | None) -> bool:
+        if not pricing_payload:
+            return False
+        raw_amount = pricing_payload.get("amount")
+        if raw_amount in (None, ""):
+            return False
+        try:
+            normalized = Decimal(str(raw_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return False
+        return normalized <= Decimal("0")
 
     @staticmethod
     def _build_checkout_metadata(
@@ -866,6 +886,7 @@ class SignupCheckoutService:
                         or "Monthly pricing at secure checkout"
                     ),
                     "description": tier_description,
+                    "is_free": bool(normalized_tier.get("is_free", False)),
                 }
             )
         return cards

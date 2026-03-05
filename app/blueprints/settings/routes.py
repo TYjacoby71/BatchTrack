@@ -9,6 +9,9 @@ from werkzeug.security import generate_password_hash
 from ...extensions import db
 from ...models import InventoryItem, User, UserPreferences
 from ...services.affiliate_service import AffiliateService
+from ...services.billing.orchestrators.settings_billing_orchestrator import (
+    SettingsBillingOrchestrator,
+)
 from ...utils.permissions import has_permission, require_permission
 from ...utils.settings import (
     get_settings,
@@ -78,9 +81,10 @@ def index():
     detected_tz = current_user.timezone if current_user.is_authenticated else None
     grouped_timezones = TimezoneUtils.get_grouped_timezones(detected_tz)
 
-    from ...services.billing_service import BillingService
-
-    pricing_data = BillingService.get_comprehensive_pricing_data()
+    billing_context = SettingsBillingOrchestrator.build_settings_context(
+        current_user.organization
+    )
+    pricing_data = billing_context.pricing_data
     affiliate_page = request.args.get("affiliate_page", 1, type=int)
     affiliate_context = AffiliateService.build_user_settings_context(
         current_user,

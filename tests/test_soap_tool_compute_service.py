@@ -82,7 +82,10 @@ def test_compute_service_sheet_shows_fragrance_and_additives_when_present():
     result = SoapToolComputationService.calculate(_payload())
     html = result["export"]["sheet_html"]
 
-    assert "Fragrance & Essential Oils" in html
+    assert (
+        "Fragrance &amp; Essential Oils" in html
+        or "Fragrance & Essential Oils" in html
+    )
     assert "Lavender EO" in html
     assert "Additives" in html
     assert "Sodium Lactate" in html

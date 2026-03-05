@@ -8,15 +8,27 @@ Billing is centralized in `BillingService` and is the authority for tier checkou
 - **Webhook**: Provider callback that updates billing state.
 
 ## 1. Canonical Service
-- **Authority**: `app/services/billing_service.py`
-- Handles Stripe initialization, price lookups, checkout sessions, webhook processing, customer portal sessions, subscription cancellations, and pending-signup provisioning.
-- All routes/services must call this module; no direct Stripe SDK usage elsewhere.
+- **Provider authority**: `app/services/billing_service.py`
+  - Handles Stripe initialization, price lookups, checkout sessions, webhook processing, customer portal sessions, subscription cancellations, and pending-signup provisioning.
+- **Access-policy authority**: `app/services/billing_access_policy_service.py`
+  - Produces canonical billing access decisions (`allow`, `require_upgrade`, `hard_lock`) for auth flows.
+- **Workflow facades**: `app/services/billing/orchestrators/`
+  - `AuthBillingOrchestrator` (auth/middleware)
+  - `PublicSignupOrchestrator` (public signup routes)
+  - `SettingsBillingOrchestrator` (settings billing context)
+  - `AccountProvisioningOrchestrator` (post-checkout completion)
+- All route handlers should orchestrate through these authorities and avoid direct provider branching in controllers.
 
 ## 2. Signup Flow (Stripe)
-1. `/auth/signup` (POST) calls `BillingService.create_checkout_session_for_tier`.
+1. `/auth/signup` routes call `PublicSignupOrchestrator` (which delegates to `SignupCheckoutService`).
 2. `SignupService.create_pending_signup_record` stores intent.
 3. Stripe redirects user; webhook or `/billing/complete-signup-from-stripe` calls `BillingService._provision_checkout_session`.
 4. `SignupService.complete_pending_signup_from_checkout` creates the org + owner, emits events, and logs the owner in.
+
+### 2.0 Free-priced Stripe tiers
+- If live Stripe amount for a signup tier resolves to `0`, signup payload labels the tier `FREE`.
+- Stripe checkout skips free-trial injection for zero-priced subscriptions.
+- Stripe checkout sets `payment_method_collection=if_required` for zero-priced subscriptions and provides user copy that card entry is optional and can be added later in settings.
 
 ### 2.1 Lifetime launch mode (coupon + seat counters)
 - Signup now supports `billing_mode=lifetime` with three launch tiers:
@@ -86,7 +98,7 @@ Tier names are not hardcoded to Hobbyist/Enthusiast/Fanatic for standard monthly
 - `BillingService.handle_webhook_event('stripe', payload)` enforces idempotency via `stripe_event` table.
 - Subscription events update org billing status and add-ons.
 - Checkout success reuses `_provision_checkout_session`.
-- Future providers (Whop, etc.) must plug into `BillingService.handle_webhook_event`.
+- Current Whop webhook handler is present as a placeholder branch in `BillingService.handle_webhook_event` but full provider lifecycle parity is not yet implemented.
 
 ## 4. Add-ons & Entitlements
 - Add-on structure and entitlement logic lives in [ADDONS_AND_ENTITLEMENTS.md](ADDONS_AND_ENTITLEMENTS.md).
@@ -104,22 +116,29 @@ Tier names are not hardcoded to Hobbyist/Enthusiast/Fanatic for standard monthly
 - Do **not** introduce additional Stripe test helpers; extend this test if new behavior must be validated.
 
 ## 7. Change Process
-1. Update `BillingService` (never reintroduce parallel services).
-2. For billing-access gating changes, update `BillingAccessPolicyService` (`app/services/billing_access_policy_service.py`) and keep middleware thin.
-3. Document behavior changes here and in `docs/system/SERVICES.md`.
-4. Expand `test_signup_flow_end_to_end` instead of creating new ad-hoc tests.
-5. If new providers are added, they must be routed through `BillingService`.
+1. Update `BillingService` for provider behavior changes (checkout/webhooks/customer portal/cancellation).
+2. Update `BillingAccessPolicyService` for billing access semantics (recoverable vs lockout states).
+3. Keep middleware transport-only (`app/middleware/guards.py` + `app/middleware/registry.py`); do not re-embed policy branching there.
+4. Keep auth/login gating aligned by using `AuthBillingOrchestrator`.
+5. Document behavior changes here and in `docs/system/SERVICES.md`.
+6. If new providers are added, route through `BillingService` and then expose workflow entrypoints through billing orchestrators.
 
 ## 8. Billing Access Policy Boundary
 - **Policy authority:** `BillingAccessPolicyService.evaluate_organization(organization)`
   - Returns a structured decision:
     - `allow` (no billing redirect/block)
     - `require_upgrade` (recoverable billing state such as `payment_failed`/`past_due`)
-    - `hard_lock` (organization inactive/suspended/canceled; support-required lockout)
-- **Request enforcement:** `app/middleware.py::_enforce_billing`
+    - `hard_lock` (organization explicitly inactive, or non-exempt tier in suspended/canceled states)
+  - Billing-exempt tiers (`billing_provider = exempt`) bypass subscription/payment-status gating.
+- **Request enforcement:** `app/middleware/guards.py::enforce_billing` (wired via `app/middleware/registry.py`)
   - Applies transport behavior only (redirect, JSON error, logout/session invalidation).
   - Must not duplicate business-policy branching that belongs to the policy service.
 - **Auth login enforcement:** `app/blueprints/auth/login_routes.py`
   - Uses the same policy service to deny login on `hard_lock` decisions so stale sessions cannot re-enter protected pages.
 
-This document supersedes any legacy references to `StripeService`. All future fixes must consult and update this file to keep the billing architecture coherent.***
+## 9. Destructive Deletion Billing Safety
+- `OrganizationService.delete_organization` cancels Stripe subscription first when `stripe_customer_id` exists; deletion aborts if cancellation fails.
+- `UserService.hard_delete_user` cancels Stripe subscription first when deleting the final non-deleted customer account in an organization; hard delete aborts if cancellation fails.
+- This prevents orphan subscriptions during destructive account cleanup.
+
+This document supersedes any legacy references to `StripeService` and monolithic middleware billing gates. All future fixes should update this file to keep billing architecture coherent.

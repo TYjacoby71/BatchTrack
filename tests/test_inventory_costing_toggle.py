@@ -8,6 +8,32 @@ from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_adjustment._creation_logic import _resolve_cost_per_unit
 
 
+def _enable_quantity_tracking_for_org(db_session, org):
+    from app.models.permission import Permission
+    from app.models.subscription_tier import SubscriptionTier
+
+    permission = Permission.query.filter_by(name="inventory.track_quantities").first()
+    if permission is None:
+        permission = Permission(
+            name="inventory.track_quantities",
+            description="Allow tracked inventory quantity deductions",
+            is_active=True,
+        )
+        db_session.add(permission)
+        db_session.flush()
+
+    tier = SubscriptionTier(
+        name=f"Costing Tier {org.id}",
+        billing_provider="exempt",
+        user_limit=5,
+    )
+    db_session.add(tier)
+    db_session.flush()
+    tier.permissions.append(permission)
+    org.subscription_tier_id = tier.id
+    db_session.flush()
+
+
 @pytest.fixture(autouse=True)
 def ensure_inventory_item_schema(app):
     """Ensure SQLite test DB has all columns expected by InventoryItem model."""
@@ -45,6 +71,7 @@ class TestInventoryCostingToggleAndWAC:
         self, app, db_session, test_user, test_org
     ):
         with app.test_request_context():
+            _enable_quantity_tracking_for_org(db_session, test_org)
             # Ensure org is in FIFO mode
             test_org.inventory_cost_method = "fifo"
             db_session.add(test_org)
@@ -117,6 +144,7 @@ class TestInventoryCostingToggleAndWAC:
         self, app, db_session, test_user, test_org
     ):
         with app.test_request_context():
+            _enable_quantity_tracking_for_org(db_session, test_org)
             # Switch org to Average mode
             test_org.inventory_cost_method = "average"
             db_session.add(test_org)

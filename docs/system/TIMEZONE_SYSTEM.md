@@ -56,5 +56,5 @@ Validated against:
 - `app/utils/timezone_utils.py`
 - `app/utils/template_filters.py`
 - `app/blueprints/settings/routes.py`
-- `app/middleware.py`
+- `app/middleware/registry.py`
 - `app/services/timer_service.py`

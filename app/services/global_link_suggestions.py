@@ -80,7 +80,7 @@ class GlobalLinkSuggestionService:
         query = db.session.query(InventoryItem).filter(
             InventoryItem.organization_id == organization_id,
             InventoryItem.global_item_id.is_(None),
-            not InventoryItem.is_archived,
+            InventoryItem.is_archived.is_(False),
             InventoryItem.type == "ingredient",
         )
 
@@ -111,7 +111,8 @@ class GlobalLinkSuggestionService:
             global_items = (
                 db.session.query(GlobalItem)
                 .filter(
-                    not GlobalItem.is_archived, GlobalItem.item_type == "ingredient"
+                    GlobalItem.is_archived.is_(False),
+                    GlobalItem.item_type == "ingredient",
                 )
                 .order_by(func.length(GlobalItem.name).asc())
                 .limit(200)

@@ -92,7 +92,11 @@
     <div class="pricing-cards row">
         {% for tier_name, tier_data in pricing_data.items() %}
         <div class="col-md-4 mb-4">
-            <div class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}">
+            <div
+                class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}"
+                data-tier-key="{{ tier_name }}"
+                data-tier-name="{{ tier_data.get('name', tier_name.title()) }}"
+            >
                 {% if tier_data.get('badge') %}
                 <div class="card-header text-center bg-primary text-white">
                     <span class="badge">{{ tier_data.badge }}</span>
@@ -140,7 +144,7 @@
                     {% if organization.get_tier_display_name() != tier_data.get('name', tier_name.title()) %}
                     {% if has_permission(current_user, 'organization.manage_billing') %}
                       <!-- Standard billing flow for all paid tiers -->
-                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
+                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline upgrade-checkout-form" data-billing-cycle="monthly">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
@@ -148,7 +152,7 @@
                       </form>
                       {% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}
                       <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
-                         class="btn btn-outline-success btn-sm mt-2">
+                         class="btn btn-outline-success btn-sm mt-2 upgrade-checkout-link" data-billing-cycle="yearly">
                           Choose Yearly
                       </a>
                       {% endif %}
@@ -170,7 +174,46 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Cancel subscription functionality removed
+    if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+        return;
+    }
+
+    window.BTAnalytics.capture('payment_page_viewed', {
+        payment_surface: 'billing_upgrade'
+    });
+
+    const emitCheckoutClick = (payload) => {
+        window.BTAnalytics.capture('proceed_to_checkout', payload);
+        window.BTAnalytics.capture('pay_clicked', payload);
+    };
+
+    document.querySelectorAll('.upgrade-checkout-form').forEach((form) => {
+        form.addEventListener('submit', () => {
+            const card = form.closest('.pricing-card');
+            emitCheckoutClick({
+                checkout_surface: 'billing_upgrade',
+                tier_key: card ? card.getAttribute('data-tier-key') : null,
+                tier_name: card ? card.getAttribute('data-tier-name') : null,
+                billing_mode: 'standard',
+                billing_cycle: form.getAttribute('data-billing-cycle') || 'monthly',
+                destination_path: form.getAttribute('action') || null
+            });
+        });
+    });
+
+    document.querySelectorAll('.upgrade-checkout-link').forEach((link) => {
+        link.addEventListener('click', () => {
+            const card = link.closest('.pricing-card');
+            emitCheckoutClick({
+                checkout_surface: 'billing_upgrade',
+                tier_key: card ? card.getAttribute('data-tier-key') : null,
+                tier_name: card ? card.getAttribute('data-tier-name') : null,
+                billing_mode: 'standard',
+                billing_cycle: link.getAttribute('data-billing-cycle') || 'yearly',
+                destination_path: link.getAttribute('href') || null
+            });
+        });
+    });
 });
 
 {% if config['DEBUG'] %}

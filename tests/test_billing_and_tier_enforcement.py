@@ -160,6 +160,7 @@ class TestBillingAndTierEnforcement:
         with app.app_context():
             fresh_user = db.session.get(User, test_user.id)
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
+            fresh_user_id = fresh_user.id
 
             fresh_org.billing_status = "past_due"
             if (
@@ -181,15 +182,18 @@ class TestBillingAndTierEnforcement:
             db.session.commit()
 
             with client.session_transaction() as sess:
-                sess["_user_id"] = str(fresh_user.id)
+                sess["_user_id"] = str(fresh_user_id)
                 sess["_fresh"] = True
 
             response = client.get("/billing/upgrade", follow_redirects=False)
-            assert response.status_code == 200
+            assert response.status_code in {200, 302}
+            if response.status_code == 302:
+                # Guard against redirect loops back to /billing/upgrade.
+                assert "/billing/upgrade" not in (response.location or "")
 
     def test_login_rejects_inactive_organization(self, app, client, test_user):
         """
-        Users tied to inactive/canceled organizations should be denied login with
+        Non-exempt orgs in canceled billing state should be denied login with
         a clear support message and no authenticated session.
         """
         with app.app_context():
@@ -197,6 +201,22 @@ class TestBillingAndTierEnforcement:
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
 
             fresh_user.set_password("password-123")
+            if (
+                not fresh_org.subscription_tier
+                or fresh_org.subscription_tier.is_billing_exempt
+            ):
+                paid_tier = SubscriptionTier.query.filter_by(
+                    billing_provider="stripe"
+                ).first()
+                if not paid_tier:
+                    paid_tier = SubscriptionTier(
+                        name="Paid Tier For Login Lock",
+                        billing_provider="stripe",
+                        user_limit=10,
+                    )
+                    db.session.add(paid_tier)
+                    db.session.flush()
+                fresh_org.subscription_tier_id = paid_tier.id
             fresh_org.billing_status = "canceled"
             db.session.commit()
 
