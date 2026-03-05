@@ -73,7 +73,11 @@ class BillingAccessPolicyService:
         tier_obj = getattr(organization, "subscription_tier_obj", None)
         tier_is_billing_exempt = bool(getattr(tier_obj, "is_billing_exempt", False))
 
-        if (not is_active) or (billing_status in cls._HARD_LOCK_STATUSES):
+        # Billing-exempt tiers intentionally bypass subscription/payment standing
+        # checks. Explicit org deactivation still hard-locks access.
+        if (not is_active) or (
+            (not tier_is_billing_exempt) and (billing_status in cls._HARD_LOCK_STATUSES)
+        ):
             return BillingAccessDecision(
                 action=BillingAccessAction.HARD_LOCK,
                 reason="organization_inactive",

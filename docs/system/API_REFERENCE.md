@@ -115,24 +115,31 @@ GET  /inventory/api/get-item/<item_id>
 ```
 GET  /api/dashboard-alerts
 POST /api/dismiss-alert
+POST /api/clear-dismissed-alerts
 ```
 
-**Response (alerts):**
+**Response (`GET /api/dashboard-alerts`):**
 ```json
 {
   "success": true,
-  "data": [
+  "alerts": [
     {
-      "priority": "HIGH|MEDIUM|LOW",
+      "priority": "CRITICAL|HIGH|MEDIUM|LOW",
       "type": "low_stock|expiring_items|active_batches|incomplete_batches",
       "title": "Alert Title",
       "message": "Alert description",
       "action_url": "/path/to/action",
       "dismissible": true
     }
-  ]
+  ],
+  "total_alerts": 4,
+  "hidden_count": 1
 }
 ```
+
+Notes:
+- Alerts are sorted by service-defined priority order before truncation.
+- Max alerts defaults to 3 unless overridden by the authenticated user's alert setting.
 
 ---
 

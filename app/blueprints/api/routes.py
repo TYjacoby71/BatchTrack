@@ -142,8 +142,6 @@ def recipe_prefix():
 @require_permission("alerts.dismiss")
 def dismiss_alert():
     """Dismiss an alert for the current session"""
-    from flask import request
-
     data = request.get_json()
     alert_type = data.get("alert_type")
 
@@ -162,6 +160,19 @@ def dismiss_alert():
     return jsonify({"success": True})
 
 
+# --- Clear dismissed alerts ---
+# Purpose: Reset all dashboard-alert dismissals for the current session.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
+@api_bp.route("/clear-dismissed-alerts", methods=["POST"])
+@login_required
+@require_permission("alerts.dismiss")
+def clear_dismissed_alerts():
+    """Clear all dismissed dashboard alerts for the session."""
+    session.pop("dismissed_alerts", None)
+    return jsonify({"success": True})
+
+
 # --- Dashboard alerts ---
 # Purpose: Fetch dashboard alerts for the organization.
 # Inputs: Function arguments plus active request/application context.
@@ -172,10 +183,6 @@ def dismiss_alert():
 def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""
     try:
-        import logging
-
-        from flask import session
-
         from ...services.dashboard_alerts import DashboardAlertService
 
         # Get dismissed alerts from session
@@ -187,7 +194,7 @@ def get_dashboard_alerts():
         )
 
         # Log for debugging
-        logging.info(
+        logger.info(
             f"Dashboard alerts requested - found {len(alert_data.get('alerts', []))} alerts"
         )
 
@@ -201,7 +208,7 @@ def get_dashboard_alerts():
         )
 
     except Exception as e:
-        logging.error(f"Error getting dashboard alerts: {str(e)}")
+        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:203", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 

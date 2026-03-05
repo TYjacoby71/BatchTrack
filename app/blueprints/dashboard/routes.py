@@ -47,7 +47,6 @@ app_routes_bp = Blueprint("app_routes", __name__)
 @permission_required("dashboard.view")
 def dashboard():
     """Main dashboard view with stock checking and alerts."""
-    force_refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
     # Developer users should only access this dashboard when viewing an organization.
     if current_user.user_type == "developer":
         selected_org_id = session.get("dev_selected_org_id")
@@ -82,7 +81,6 @@ def dashboard():
 
     # Initialize with safe defaults.
     active_batch = None
-    alert_data = {"alerts": [], "total_alerts": 0, "hidden_count": 0}
     low_stock_ingredients = []
     expiration_summary = {
         "expired_fifo": 0,
@@ -110,22 +108,6 @@ def dashboard():
             print("-----------------------------------------------")
             db.session.rollback()
             active_batch = None
-
-        # Get dashboard alerts with explicit error catching.
-        try:
-            dismissed_alerts = session.get("dismissed_alerts", [])
-            alert_data = AnalyticsDataService.get_dashboard_alerts(
-                max_alerts=3,
-                dismissed_alerts=dismissed_alerts,
-                force_refresh=force_refresh,
-            )
-        except Exception as alert_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:120", exc_info=True)
-            print("---!!! DASHBOARD ALERTS ERROR (ORIGINAL SIN?) !!!---")
-            print(f"Error: {alert_error}")
-            print("----------------------------------------------------")
-            db.session.rollback()
-            alert_data = {"alerts": [], "total_alerts": 0, "hidden_count": 0}
 
         # Get inventory alerts with explicit error catching.
         try:
@@ -171,7 +153,6 @@ def dashboard():
         "dashboard.html",
         active_batch=active_batch,
         current_user=current_user,
-        alert_data=alert_data,
         low_stock_ingredients=low_stock_ingredients,
         expiration_summary=expiration_summary,
     )
@@ -186,63 +167,6 @@ def dashboard():
 @permission_required("inventory.edit")
 def unit_manager():
     return redirect(url_for("conversion.manage_units"))
-
-
-# --- Dismiss Alert ---
-# Purpose: Implement `dismiss_alert` behavior for this module.
-# Inputs: Function arguments plus active request/application context.
-# Outputs: Return value or response payload for caller/HTTP client.
-@app_routes_bp.route("/api/dismiss-alert", methods=["POST"])
-@login_required
-@permission_required("alerts.dismiss")
-def dismiss_alert():
-    """API endpoint to dismiss alerts for the user session."""
-    try:
-        data = request.get_json()
-        alert_type = data.get("alert_type")
-
-        if not alert_type:
-            return jsonify({"error": "Alert type is required"}), 400
-
-        # Store dismissed alerts in session.
-        dismissed_alerts = session.get("dismissed_alerts", [])
-        if alert_type not in dismissed_alerts:
-            dismissed_alerts.append(alert_type)
-            session["dismissed_alerts"] = dismissed_alerts
-            session.permanent = True
-
-        return jsonify({"success": True}), 200
-    except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:209", exc_info=True)
-        return jsonify({"error": str(exc)}), 500
-
-
-# --- Api Dashboard Alerts ---
-# Purpose: Implement `api_dashboard_alerts` behavior for this module.
-# Inputs: Function arguments plus active request/application context.
-# Outputs: Return value or response payload for caller/HTTP client.
-@app_routes_bp.route("/api/dashboard-alerts")
-@login_required
-@permission_required("alerts.view")
-def api_dashboard_alerts():
-    """API endpoint to get fresh dashboard alerts."""
-    try:
-        dismissed_alerts = session.get("dismissed_alerts", [])
-
-        force_refresh = (request.args.get("refresh") or "").lower() in (
-            "1",
-            "true",
-            "yes",
-        )
-        alert_data = AnalyticsDataService.get_dashboard_alerts(
-            dismissed_alerts=dismissed_alerts,
-            max_alerts=3,
-            force_refresh=force_refresh,
-        )
-        return jsonify(alert_data)
-    except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:236", exc_info=True)
-        return jsonify({"error": str(exc)}), 500
 
 
 # --- Auth Check ---

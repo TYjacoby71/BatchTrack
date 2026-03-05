@@ -158,7 +158,9 @@ Shared analytics runtime helpers and page-level event capture wiring.
         var path = url.pathname || '';
         var ctaText = (anchor.textContent || '').trim().slice(0, 120);
         var normalizedCtaText = ctaText.toLowerCase().replace(/\s+/g, ' ').trim();
-        if (path.includes('/signup')) {
+        var isSignupDestination = path.includes('/signup');
+        var isLoginDestination = path.includes('/auth/login');
+        if (isSignupDestination) {
           var signupSource = url.searchParams.get('source') || null;
           var sourceLooksFreeTrial = typeof signupSource === 'string' && signupSource.indexOf('start_free_trial') >= 0;
           var textLooksFreeTrial = normalizedCtaText.indexOf('14 day free trial') >= 0 || normalizedCtaText.indexOf('14day free trial') >= 0;
@@ -169,12 +171,13 @@ Shared analytics runtime helpers and page-level event capture wiring.
             cta_location: signupSource || endpoint || path || 'unknown',
             signup_source: signupSource,
             destination_path: path,
+            destination_type: 'signup',
             billing_mode: url.searchParams.get('billing_mode') || null,
             billing_cycle: url.searchParams.get('billing_cycle') || null,
             tier: url.searchParams.get('tier') || null,
             lifetime_tier: url.searchParams.get('lifetime_tier') || null
           });
-        } else if (path.includes('/auth/login')) {
+        } else if (isLoginDestination) {
           window.BTAnalytics.capture('public_login_cta_clicked', {
             cta_text: ctaText,
             destination_path: path

@@ -449,8 +449,16 @@ class EmailService:
         return True
 
     @staticmethod
-    def send_waitlist_confirmation(email, first_name=None, last_name=None, name=None):
-        """Send waitlist confirmation email"""
+    def send_waitlist_confirmation(
+        email,
+        first_name=None,
+        last_name=None,
+        name=None,
+        waitlist_label: Optional[str] = None,
+        signup_url: Optional[str] = None,
+        signup_cta_label: Optional[str] = None,
+    ):
+        """Send waitlist confirmation email with optional signup CTA."""
         if not EmailService.is_configured():
             logger.info(
                 f"Email not configured - would send waitlist confirmation to {email}"
@@ -458,7 +466,18 @@ class EmailService:
             return False
 
         try:
-            subject = "Welcome to the BatchTrack Waitlist!"
+            resolved_waitlist_label = (waitlist_label or "BatchTrack").strip() or "BatchTrack"
+            resolved_signup_url = signup_url or url_for(
+                "core.signup_alias",
+                source="waitlist_confirmation_email",
+                _external=True,
+            )
+            resolved_signup_cta_label = (
+                (signup_cta_label or "Start with Hobbyist while you wait").strip()
+                or "Start with Hobbyist while you wait"
+            )
+
+            subject = f"You're on the {resolved_waitlist_label} waitlist!"
 
             # Build personalized greeting - prefer first_name over legacy name field
             if first_name:
@@ -469,39 +488,37 @@ class EmailService:
                 greeting = "Hi there,"
 
             html_body = f"""
-            <h2>Thanks for joining our waitlist!</h2>
+            <h2>Thanks for joining the {resolved_waitlist_label} waitlist!</h2>
             <p>{greeting}</p>
-            <p>Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.</p>
+            <p>Thank you for joining the waitlist for <strong>{resolved_waitlist_label}</strong>. We'll invite you as soon as it is available.</p>
 
-            <h3>What's Next?</h3>
-            <ul>
-                <li>We'll notify you as soon as BatchTrack is ready for beta testing</li>
-                <li>You'll get early access to special pricing and lifetime deals</li>
-                <li>We'll keep you updated on our development progress</li>
-            </ul>
+            <h3>Want to start now?</h3>
+            <p>You can create your account while you wait so setup is already done when your invite arrives.</p>
+            <p><a href="{resolved_signup_url}" style="background-color: #198754; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">{resolved_signup_cta_label}</a></p>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p>{resolved_signup_url}</p>
 
-            <p>In the meantime, feel free to reach out if you have any questions about BatchTrack.</p>
+            <p>Thanks again for your interest in BatchTrack.</p>
 
             <br>
-            <p>Thanks again for your interest!<br>The BatchTrack Team</p>
+            <p>— The BatchTrack Team</p>
             """
 
             text_body = f"""
-            Thanks for joining our waitlist!
+            Thanks for joining the {resolved_waitlist_label} waitlist!
 
             {greeting}
 
-            Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.
+            Thank you for joining the waitlist for {resolved_waitlist_label}. We'll invite you as soon as it is available.
 
-            What's Next?
-            - We'll notify you as soon as BatchTrack is ready for beta testing
-            - You'll get early access to special pricing and lifetime deals  
-            - We'll keep you updated on our development progress
+            Want to start now?
+            Create your account while you wait:
+            {resolved_signup_url}
 
-            In the meantime, feel free to reach out if you have any questions about BatchTrack.
+            CTA: {resolved_signup_cta_label}
 
-            Thanks again for your interest!
-            The BatchTrack Team
+            Thanks again for your interest in BatchTrack.
+            — The BatchTrack Team
             """
 
             return EmailService._send_email(

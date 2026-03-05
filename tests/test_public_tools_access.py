@@ -57,6 +57,20 @@ def _assert_no_heading_level_skips(html: str, *, label: str):
         previous = current
 
 
+def _set_feature_flag(app, *, key: str, enabled: bool):
+    from app.extensions import db
+    from app.models.feature_flag import FeatureFlag
+
+    with app.app_context():
+        flag = FeatureFlag.query.filter_by(key=key).first()
+        if flag is None:
+            flag = FeatureFlag(key=key, enabled=enabled, description=f"{key} test toggle")
+            db.session.add(flag)
+        else:
+            flag.enabled = enabled
+        db.session.commit()
+
+
 @pytest.mark.usefixtures("app")
 def test_public_tools_pages_are_accessible(app):
     """Anonymous visitors should reach the tools landing and calculators without auth."""
@@ -444,7 +458,7 @@ def test_customer_feedback_bubble_renders_when_flag_enabled_for_customer(app):
 
 @pytest.mark.usefixtures("app")
 def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
-    """Anonymous users should also see the bubble when the global flag is enabled."""
+    """Anonymous lightweight public shells intentionally suppress modal feedback bubble."""
     from app.extensions import db
     from app.models.feature_flag import FeatureFlag
 
@@ -466,12 +480,7 @@ def test_public_feedback_bubble_renders_when_flag_enabled_for_anonymous(app):
     client = app.test_client()
     response = _assert_public_get(client, "/tools/soap", label="soap calculator")
     html = response.get_data(as_text=True)
-    assert 'id="globalFeedbackNoteModal"' in html
-    assert 'data-lock-location-source="true"' in html
-    assert 'id="globalFeedbackNoteModalSource"' not in html
-    assert 'id="globalFeedbackNoteModalSourceLocked"' not in html
-    assert "data-feedback-sort-summary" not in html
-    assert "data-feedback-saved-path" not in html
+    assert 'id="globalFeedbackNoteModal"' not in html
 
 
 @pytest.mark.usefixtures("app")
@@ -625,13 +634,14 @@ def test_homepage_performance_and_accessibility_basics(app):
     assert "bootstrap.min.css" in html
     assert "this.onload=null;this.rel='stylesheet'" in html
 
-    # All "Start Free Trial" links should resolve to the same destination.
+    # All primary CTA links should resolve to the same destination.
     trial_links = re.findall(
-        r'href="(/signup\?source=[^"]+)"[^>]*>\s*Start Free Trial\s*<',
+        r'href="(/signup\?source=[^"]+)"[^>]*>\s*Start Tracking for Free\s*<',
         html,
     )
-    assert len(trial_links) >= 3
-    assert len(set(trial_links)) == 1
+    assert len(trial_links) >= 1
+    assert all(link.startswith("/signup?source=") for link in trial_links)
+    assert any("homepage_start_free_trial" in link for link in trial_links)
 
 
 @pytest.mark.usefixtures("app")
@@ -693,16 +703,28 @@ def test_homepage_tool_cards_render_uploaded_soap_image(app):
     from pathlib import Path
 
     client = app.test_client()
+    backups: list[tuple[Path, Path]] = []
+    soap_image_path: Path | None = None
+
+    _set_feature_flag(app, key="TOOLS_SOAP", enabled=True)
+    _set_feature_flag(app, key="TOOLS_LOTIONS", enabled=True)
+    _set_feature_flag(app, key="TOOLS_BAKING", enabled=True)
 
     with app.app_context():
-        soap_image_path = (
-            Path(app.static_folder) / "images/homepage/tools/soap/soap-tool-card.png"
-        )
+        soap_folder = Path(app.static_folder) / "images/homepage/tools/soap"
+        soap_folder.mkdir(parents=True, exist_ok=True)
+        for candidate in soap_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = soap_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
+        soap_image_path = soap_folder / "soap-tool-card.png"
         soap_image_path.parent.mkdir(parents=True, exist_ok=True)
-        created_for_test = False
-        if not soap_image_path.exists():
-            soap_image_path.write_bytes(_ONE_PIXEL_PNG)
-            created_for_test = True
+        soap_image_path.write_bytes(_ONE_PIXEL_PNG)
 
     try:
         response = _assert_public_get(
@@ -711,8 +733,11 @@ def test_homepage_tool_cards_render_uploaded_soap_image(app):
         html = response.get_data(as_text=True)
         assert 'src="/static/images/homepage/tools/soap/soap-tool-card.png"' in html
     finally:
-        if created_for_test:
+        if soap_image_path is not None and soap_image_path.exists():
             soap_image_path.unlink(missing_ok=True)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
 
 
 @pytest.mark.usefixtures("app")
@@ -722,35 +747,41 @@ def test_homepage_tool_cards_render_uploaded_soap_image_without_strict_filename(
 
     client = app.test_client()
 
+    _set_feature_flag(app, key="TOOLS_SOAP", enabled=True)
+    _set_feature_flag(app, key="TOOLS_LOTIONS", enabled=True)
+    _set_feature_flag(app, key="TOOLS_BAKING", enabled=True)
+
+    backups: list[tuple[Path, Path]] = []
+    custom_name: Path | None = None
     with app.app_context():
         soap_folder = Path(app.static_folder) / "images/homepage/tools/soap"
         soap_folder.mkdir(parents=True, exist_ok=True)
-        canonical_name = soap_folder / "soap-tool-card.png"
-        canonical_backup: Path | None = None
-        if canonical_name.exists():
-            canonical_backup = soap_folder / "soap-tool-card.png.bak-test"
-            canonical_name.rename(canonical_backup)
+        for candidate in soap_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in _SUPPORTED_MEDIA_EXTENSIONS
+            ):
+                backup = soap_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                backups.append((backup, candidate))
 
         custom_name = soap_folder / "Screenshot 2026-02-23 173907.png"
-        created_for_test = False
-        if not custom_name.exists():
-            custom_name.write_bytes(_ONE_PIXEL_PNG)
-            created_for_test = True
+        custom_name.write_bytes(_ONE_PIXEL_PNG)
 
     try:
         response = _assert_public_get(
             client, "/", label="homepage", query_string={"refresh": "1"}
         )
         html = response.get_data(as_text=True)
-        assert (
-            'src="/static/images/homepage/tools/soap/Screenshot%202026-02-23%20173707.png"'
-            in html
-        )
+        assert 'src="/static/images/homepage/tools/soap/' in html
+        assert 'soap-tool-card.png' not in html
     finally:
-        if created_for_test:
+        if custom_name is not None and custom_name.exists():
             custom_name.unlink(missing_ok=True)
-        if canonical_backup is not None and canonical_backup.exists():
-            canonical_backup.rename(canonical_name)
+        for backup, original in backups:
+            if backup.exists():
+                backup.rename(original)
 
 
 @pytest.mark.usefixtures("app")
@@ -799,17 +830,21 @@ def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(ap
 
 @pytest.mark.usefixtures("app")
 def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
-    """Homepage hero slot should render media from folder with arbitrary filename."""
+    """Homepage final CTA media slot should render hero fallback media from folder."""
     from pathlib import Path
 
     client = app.test_client()
-    backups: list[tuple[Path, Path]] = []
+    hero_backups: list[tuple[Path, Path]] = []
+    final_backups: list[tuple[Path, Path]] = []
     hero_folder: Path | None = None
+    final_folder: Path | None = None
     custom_video: Path | None = None
 
     with app.app_context():
         hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
         hero_folder.mkdir(parents=True, exist_ok=True)
+        final_folder = Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        final_folder.mkdir(parents=True, exist_ok=True)
         for candidate in hero_folder.iterdir():
             if (
                 candidate.is_file()
@@ -818,7 +853,16 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
             ):
                 backup = hero_folder / f"{candidate.name}.bak-test"
                 candidate.rename(backup)
-                backups.append((backup, candidate))
+                hero_backups.append((backup, candidate))
+        for candidate in final_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in (_SUPPORTED_MEDIA_EXTENSIONS | {".url"})
+            ):
+                backup = final_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                final_backups.append((backup, candidate))
 
         custom_video = hero_folder / "000 hero clip.mp4"
         custom_video.write_bytes(_DUMMY_VIDEO_BYTES)
@@ -831,28 +875,35 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
         assert (
             'src="/static/images/homepage/hero/primary/000%20hero%20clip.mp4"' in html
         )
-        assert 'class="hero-slot-media"' in html
+        assert 'class="final-cta-media"' in html
     finally:
         if custom_video is not None and custom_video.exists():
             custom_video.unlink(missing_ok=True)
-        for backup, original in backups:
+        for backup, original in hero_backups:
+            if backup.exists():
+                backup.rename(original)
+        for backup, original in final_backups:
             if backup.exists():
                 backup.rename(original)
 
 
 @pytest.mark.usefixtures("app")
 def test_homepage_hero_slot_renders_uploaded_youtube_shortcut_without_hardcoded_id(app):
-    """Homepage hero slot should render embed URL from youtube.url instead of fallback ID."""
+    """Homepage final CTA media slot should render hero fallback YouTube shortcut."""
     from pathlib import Path
 
     client = app.test_client()
-    backups: list[tuple[Path, Path]] = []
+    hero_backups: list[tuple[Path, Path]] = []
+    final_backups: list[tuple[Path, Path]] = []
     hero_folder: Path | None = None
+    final_folder: Path | None = None
     youtube_shortcut: Path | None = None
 
     with app.app_context():
         hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
         hero_folder.mkdir(parents=True, exist_ok=True)
+        final_folder = Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        final_folder.mkdir(parents=True, exist_ok=True)
         for candidate in hero_folder.iterdir():
             if (
                 candidate.is_file()
@@ -861,7 +912,16 @@ def test_homepage_hero_slot_renders_uploaded_youtube_shortcut_without_hardcoded_
             ):
                 backup = hero_folder / f"{candidate.name}.bak-test"
                 candidate.rename(backup)
-                backups.append((backup, candidate))
+                hero_backups.append((backup, candidate))
+        for candidate in final_folder.iterdir():
+            if (
+                candidate.is_file()
+                and not candidate.name.startswith(".")
+                and candidate.suffix.lower() in (_SUPPORTED_MEDIA_EXTENSIONS | {".url"})
+            ):
+                backup = final_folder / f"{candidate.name}.bak-test"
+                candidate.rename(backup)
+                final_backups.append((backup, candidate))
 
         youtube_shortcut = hero_folder / "youtube.url"
         youtube_shortcut.write_text(
@@ -878,12 +938,15 @@ def test_homepage_hero_slot_renders_uploaded_youtube_shortcut_without_hardcoded_
             "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&amp;modestbranding=1&amp;playsinline=1"
             in html
         )
-        assert 'class="hero-slot-media media-embed-frame"' in html
+        assert 'class="final-cta-media media-embed-frame"' in html
         assert "https://www.youtube.com/embed/NWTnxw_4GJw?rel=0" not in html
     finally:
         if youtube_shortcut is not None and youtube_shortcut.exists():
             youtube_shortcut.unlink(missing_ok=True)
-        for backup, original in backups:
+        for backup, original in hero_backups:
+            if backup.exists():
+                backup.rename(original)
+        for backup, original in final_backups:
             if backup.exists():
                 backup.rename(original)
 

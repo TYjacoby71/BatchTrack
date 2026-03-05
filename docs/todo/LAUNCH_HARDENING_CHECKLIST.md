@@ -141,6 +141,16 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] `app/services/batch_service/batch_operations.py` (1,239 lines): split start/finish/cancel into separate modules
 - [ ] `app/services/public_bot_trap_service.py` (1,148 lines): split policy logic from hit recording
 - [ ] `app/utils/permissions.py` (1,085 lines): split permission checking from role/hierarchy utilities
+  - [ ] Create package scaffold `app/utils/permissions/` and keep `app/utils/permissions.py` as a temporary compatibility entrypoint
+  - [ ] Move decorators and denied-response HTTP behavior to `app/utils/permissions/decorators.py` (`require_permission`, `any_permission_required`, denied response builders)
+  - [ ] Move request/org context helpers to `app/utils/permissions/context.py` (`get_effective_organization_id`, `get_effective_organization`, owner/developer context helpers)
+  - [ ] Move permission-scope/catalog resolution + cache helpers to `app/utils/permissions/catalog.py` (`PermissionScope`, `resolve_permission_scope`, cache clear helpers)
+  - [ ] Move authorization engine to `app/utils/permissions/authorization.py` (`AuthorizationHierarchy` and tier/add-on permission composition)
+  - [ ] Move feature gating helpers to `app/utils/permissions/feature_gate.py` (`FeatureGate`)
+  - [ ] Move legacy wrappers/shims to `app/utils/permissions/legacy.py` (`require_permission_with_org_scoping`, `require_system_admin`, etc.)
+  - [ ] Add `app/utils/permissions/__init__.py` exports that preserve all current import names during migration
+  - [ ] Migrate imports incrementally across blueprints/services to module-specific imports after compatibility exports are in place
+  - [ ] Remove stub/unused paths (`role_required` TODO path, deprecated enum/wrappers not used by callsites) only after import migration + parity verification
 
 ---
 

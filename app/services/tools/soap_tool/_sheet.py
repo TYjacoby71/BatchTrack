@@ -10,7 +10,7 @@ Glossary:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -356,7 +356,7 @@ def build_formula_sheet_html(result: dict, unit_display: str) -> str:
     fragrance_pct = float(additives.get("fragrancePct") or 0.0)
     fragrance_ratio_text = _format_percent(fragrance_pct) if fragrance_pct > 0 else "--"
     fragrance_weight = float(additives.get("fragranceG") or 0.0)
-    generated = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     batch_yield = float((result.get("results_card") or {}).get("batch_yield_g") or 0.0)
     summary_items = [
         {"label": "Lye type", "value": str(result.get("lye_type") or "--")},

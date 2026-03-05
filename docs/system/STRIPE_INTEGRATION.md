@@ -12,7 +12,7 @@ This document is the point of truth for how BatchTrack integrates with Stripe. U
 ## High-Level Flow
 
 1. **Signup form** (`/auth/signup`) collects tier choice and optional referral / OAuth data.
-2. **`BillingService.create_checkout_session_for_tier`** is called with the chosen tier and whatever customer info we already have (OAuth email, etc.).
+2. **`PublicSignupOrchestrator` + `SignupCheckoutService`** prepare checkout intent and call `BillingService.create_checkout_session_for_tier` with the chosen tier and available customer info (OAuth email, etc.).
 3. The service fetches live pricing for the tier, builds a Checkout Session payload, and redirects the browser to Stripe Checkout.
 4. Stripe hosts the payment form, collecting card details and any missing customer fields.
 5. Stripe redirects back to `/billing/complete-signup-from-stripe` with `session_id`.
@@ -36,6 +36,7 @@ Key behaviors in `BillingService.create_checkout_session_for_tier`:
 - If we already know the email (OAuth signups), we set `customer_email`. Otherwise Stripe is asked to create the customer (`customer_creation='always'`) so there is no invalid `customer_update` payload.
 - Optional `client_reference_id` lets controllers correlate pending signup rows with Stripe sessions.
 - `session_overrides` allow experiments, but any `customer_update` block is stripped unless a fixed `customer` is supplied. This prevents the `customer_update can only be used with customer` 500s seen in logs.
+- For zero-priced subscription tiers, trial injection is skipped and Stripe Checkout uses `payment_method_collection='if_required'` so card entry is not required at signup.
 
 ### Passing Customer Data
 
@@ -69,7 +70,8 @@ Do not attach both `customer_update` and `customer_creation`; Stripe will reject
 
 ## Touchpoints in Code
 
-- `app/blueprints/auth/routes.py` – entry point creating checkout sessions.
+- `app/blueprints/auth/signup_routes.py` – signup route entrypoints.
+- `app/services/billing/orchestrators/public_signup_orchestrator.py` – public signup orchestration facade.
 - `app/services/billing_service.py` – Stripe API adapter, pricing cache, session creation, webhook handlers, and higher-level orchestration.
 - `app/models/subscription_tier.py` – source of lookup keys and tier metadata.
 
