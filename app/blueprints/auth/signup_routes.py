@@ -108,9 +108,38 @@ def signup_checkout():
     selected_promo = request.args.get("promo") or ""
     signup_source = request.args.get("source") or "pricing_direct_checkout"
     referral_code = request.args.get("ref")
-    # Keep public checkout links deterministic and safe: route users back to
-    # signup with selection preserved, then let explicit signup POST create
-    # checkout sessions.
+    allow_live_pricing_network = _public_signup_allow_live_pricing_network()
+    signup_context = PublicSignupOrchestrator.build_request_context(
+        request=request,
+        oauth_user_info=session.get("oauth_user_info"),
+        allow_live_pricing_network=allow_live_pricing_network,
+    )
+    result = PublicSignupOrchestrator.process_submission(
+        context=signup_context,
+        form_data={
+            "selected_tier": selected_tier,
+            "billing_mode": selected_mode,
+            "billing_cycle": selected_cycle,
+            "lifetime_tier": selected_lifetime_tier,
+            "promo": selected_promo,
+            "contact_email": request.args.get("contact_email", ""),
+            "contact_phone": request.args.get("contact_phone", ""),
+            "detected_timezone": request.args.get("detected_timezone", ""),
+            "client_first_landing_at": request.args.get("client_first_landing_at", ""),
+        },
+    )
+    if result.redirect_url:
+        response = redirect(result.redirect_url)
+        return AffiliateService.set_referral_cookie(
+            response,
+            referral_code,
+            secure=request.is_secure,
+        )
+    if result.flash_message:
+        flash(result.flash_message, result.flash_category)
+
+    # If direct checkout cannot be created, send users to signup with the
+    # selected tier preserved as a recovery path.
     fallback_url = _build_signup_fallback_url(
         tier=selected_tier,
         billing_mode=selected_mode,

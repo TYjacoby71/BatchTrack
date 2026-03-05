@@ -373,19 +373,31 @@ def test_ensure_stripe_prefers_httpx_when_gevent_is_loaded(app, monkeypatch):
     assert configured["allow_sync_methods"] is True
 
 
-def test_signup_checkout_route_redirects_to_signup_without_session_creation(
+def test_signup_checkout_route_redirects_to_direct_checkout_when_available(
     app, monkeypatch
 ):
     client = app.test_client()
 
     called = {"value": False}
 
+    def _fake_build_context(*_args, **_kwargs):
+        return object()
+
     def _mark_called(*_args, **_kwargs):
         called["value"] = True
-        return None
+        return SimpleNamespace(
+            redirect_url="https://stripe.test/checkout/session_123",
+            flash_message=None,
+            flash_category="info",
+            view_state=None,
+        )
 
     monkeypatch.setattr(
-        "app.blueprints.auth.signup_routes.SignupCheckoutService.process_submission",
+        "app.blueprints.auth.signup_routes.PublicSignupOrchestrator.build_request_context",
+        _fake_build_context,
+    )
+    monkeypatch.setattr(
+        "app.blueprints.auth.signup_routes.PublicSignupOrchestrator.process_submission",
         _mark_called,
     )
 
@@ -396,8 +408,5 @@ def test_signup_checkout_route_redirects_to_signup_without_session_creation(
 
     assert response.status_code in {301, 302}
     location = response.headers.get("Location") or ""
-    assert location.startswith("/signup")
-    assert "tier=3" in location
-    assert "billing_mode=standard" in location
-    assert "billing_cycle=monthly" in location
-    assert called["value"] is False
+    assert location == "https://stripe.test/checkout/session_123"
+    assert called["value"] is True
