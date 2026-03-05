@@ -396,18 +396,42 @@
             {% if has_billing_options %}
             <div class="tier-billing-toggle" role="group" aria-label="{{ tier.name }} billing options">
               {% if has_monthly_option %}
-              <a href="{{ tier.signup_monthly_url }}" class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %}">
+              <a
+                href="{{ tier.signup_monthly_url }}"
+                class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %} pricing-checkout-link"
+                data-tier-id="{{ tier.tier_id }}"
+                data-tier-key="{{ tier.key }}"
+                data-tier-name="{{ tier.name }}"
+                data-billing-mode="standard"
+                data-billing-cycle="monthly"
+              >
                 Checkout {{ tier.name }} Monthly
               </a>
               {% endif %}
               {% if has_yearly_option %}
-              <a href="{{ tier.signup_yearly_url }}" class="btn btn-sm btn-outline-primary">
+              <a
+                href="{{ tier.signup_yearly_url }}"
+                class="btn btn-sm btn-outline-primary pricing-checkout-link"
+                data-tier-id="{{ tier.tier_id }}"
+                data-tier-key="{{ tier.key }}"
+                data-tier-name="{{ tier.name }}"
+                data-billing-mode="standard"
+                data-billing-cycle="yearly"
+              >
                 Checkout {{ tier.name }} Yearly
               </a>
               {% endif %}
             </div>
             {% else %}
-            <a href="{{ url_for('core.signup_alias', source='pricing_' ~ tier.key ~ '_overview') }}" class="btn btn-outline-primary btn-sm">
+            <a
+              href="{{ url_for('core.signup_alias', source='pricing_' ~ tier.key ~ '_overview') }}"
+              class="btn btn-outline-primary btn-sm pricing-checkout-link"
+              data-tier-id="{{ tier.tier_id }}"
+              data-tier-key="{{ tier.key }}"
+              data-tier-name="{{ tier.name }}"
+              data-billing-mode="standard"
+              data-billing-cycle="monthly"
+            >
               Explore {{ tier.name }}
             </a>
             {% endif %}
@@ -486,6 +510,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.BTAnalytics.capture('pricing_page_viewed', {
     authenticated: false
+  });
+
+  document.querySelectorAll('.pricing-checkout-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+      var tierId = link.getAttribute('data-tier-id') || null;
+      var tierKey = link.getAttribute('data-tier-key') || null;
+      var tierName = link.getAttribute('data-tier-name') || null;
+      var billingMode = link.getAttribute('data-billing-mode') || 'standard';
+      var billingCycle = link.getAttribute('data-billing-cycle') || 'monthly';
+      var destination = link.getAttribute('href') || null;
+      window.BTAnalytics.capture('proceed_to_checkout', {
+        surface: 'public_pricing',
+        tier_id: tierId,
+        tier_key: tierKey,
+        tier_name: tierName,
+        billing_mode: billingMode,
+        billing_cycle: billingCycle,
+        destination_path: destination
+      });
+    });
   });
 
 });
