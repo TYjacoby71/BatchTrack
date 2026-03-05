@@ -4,6 +4,32 @@ from app.models import InventoryItem
 from app.services.inventory_adjustment import process_inventory_adjustment
 
 
+def _enable_quantity_tracking_for_org(db_session, org):
+    from app.models.permission import Permission
+    from app.models.subscription_tier import SubscriptionTier
+
+    permission = Permission.query.filter_by(name="inventory.track_quantities").first()
+    if permission is None:
+        permission = Permission(
+            name="inventory.track_quantities",
+            description="Allow tracked inventory quantity deductions",
+            is_active=True,
+        )
+        db_session.add(permission)
+        db_session.flush()
+
+    tier = SubscriptionTier(
+        name=f"FIFO Tier {org.id}",
+        billing_provider="exempt",
+        user_limit=5,
+    )
+    db_session.add(tier)
+    db_session.flush()
+    tier.permissions.append(permission)
+    org.subscription_tier_id = tier.id
+    db_session.flush()
+
+
 class TestInventoryFIFOCharacterization:
     """Lock in current FIFO behavior through canonical entry point only."""
 
@@ -16,6 +42,7 @@ class TestInventoryFIFOCharacterization:
     def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
         """Test FIFO deduction follows first-in-first-out order."""
         with app.test_request_context():
+            _enable_quantity_tracking_for_org(db_session, test_org)
             login_user(test_user)
 
             # Create inventory item
@@ -31,21 +58,23 @@ class TestInventoryFIFOCharacterization:
             db_session.flush()
 
             # Add stock in layers (oldest first)
-            assert process_inventory_adjustment(
+            success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=100.0,
                 change_type="restock",
                 notes="First batch",
                 created_by=test_user.id,
             )
+            assert success is True, message
 
-            assert process_inventory_adjustment(
+            success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=50.0,
                 change_type="restock",
                 notes="Second batch",
                 created_by=test_user.id,
             )
+            assert success is True, message
 
             # Verify total by querying fresh data
             db_session.commit()
@@ -53,13 +82,14 @@ class TestInventoryFIFOCharacterization:
             assert fresh_item.quantity == 150.0
 
             # Deduct and verify FIFO order
-            assert process_inventory_adjustment(
+            success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=-75.0,
                 change_type="batch",
                 notes="FIFO test deduction",
                 created_by=test_user.id,
             )
+            assert success is True, message
 
             # Verify available quantity matches expected after FIFO deduction
             db_session.commit()
@@ -73,6 +103,7 @@ class TestInventoryFIFOCharacterization:
     ):
         """Verify inventory adjustment service delegates to proper internal systems."""
         with app.test_request_context():
+            _enable_quantity_tracking_for_org(db_session, test_org)
             login_user(test_user)
 
             item = InventoryItem(
