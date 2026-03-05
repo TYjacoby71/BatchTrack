@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import current_app
 
-from app.utils.json_store import write_json_file
+from app.services.marketing_content_service import MarketingContentService
 from app.utils.settings import get_settings, save_settings
 
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
@@ -538,9 +538,9 @@ class DeveloperDashboardService:
     @staticmethod
     def save_marketing_payload(payload: Dict[str, Any]) -> None:
         if "reviews" in payload:
-            write_json_file("data/reviews.json", payload["reviews"])
+            MarketingContentService.save_reviews(payload["reviews"])
         if "spotlights" in payload:
-            write_json_file("data/spotlights.json", payload["spotlights"])
+            MarketingContentService.save_spotlights(payload["spotlights"])
         if any(
             key in payload
             for key in ("messages", "promo_codes", "demo_url", "demo_videos")

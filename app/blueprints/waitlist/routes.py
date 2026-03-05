@@ -7,10 +7,10 @@ from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, render_template, request, url_for
 
+from app.services.marketing_content_service import MarketingContentService
 from app.services.email_service import EmailService
 from app.services.marketing_lead_service import MarketingLeadService
 from app.services.public_bot_trap_service import PublicBotTrapService
-from app.utils.json_store import read_json_file, write_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -159,18 +159,16 @@ def join_waitlist():
             ),
         }
 
-        waitlist_file = "data/waitlist.json"
-        waitlist = read_json_file(waitlist_file, default=[]) or []
-
-        if any(
-            entry.get("email") == waitlist_entry["email"]
-            and entry.get("waitlist_key") == waitlist_entry["waitlist_key"]
-            for entry in waitlist
+        if MarketingLeadService.waitlist_capture_exists(
+            email=email,
+            waitlist_key=metadata["waitlist_key"],
+        ) or MarketingContentService.has_waitlist_entry(
+            email,
+            metadata["waitlist_key"],
         ):
             return jsonify({"message": "Email already on this waitlist"}), 200
 
-        waitlist.append(waitlist_entry)
-        write_json_file(waitlist_file, waitlist)
+        MarketingContentService.append_waitlist_entry(waitlist_entry)
 
         MarketingLeadService.record_waitlist_capture(
             email=email,

@@ -150,6 +150,49 @@ class MarketingLeadService:
             return False
 
     @classmethod
+    def waitlist_capture_exists(
+        cls,
+        *,
+        email: str,
+        waitlist_key: Optional[str] = None,
+    ) -> bool:
+        """Check whether a waitlist capture already exists for email + waitlist key."""
+        normalized_email = cls._normalize_email(email)
+        if not normalized_email:
+            return False
+
+        normalized_waitlist_key = cls._normalize_key(
+            waitlist_key,
+            fallback=cls._DEFAULT_SOURCE_KEY,
+        )
+
+        try:
+            contact = MarketingContact.query.filter_by(
+                email_normalized=normalized_email
+            ).first()
+            if contact is None:
+                return False
+
+            events = MarketingLeadEvent.query.filter_by(
+                contact_id=contact.id,
+                event_type=cls.WAITLIST_EVENT_TYPE,
+            ).all()
+            for event in events:
+                event_waitlist_key = cls._normalize_key(
+                    event.waitlist_key or event.source_key,
+                    fallback=cls._DEFAULT_SOURCE_KEY,
+                )
+                if event_waitlist_key == normalized_waitlist_key:
+                    return True
+            return False
+        except Exception:
+            logger.warning(
+                "Suppressed exception fallback at app/services/marketing_lead_service.py:185",
+                exc_info=True,
+            )
+            return False
+
+    @classmethod
     def fetch_waitlist_rows(cls) -> List[Dict[str, Any]]:
         """Return waitlist rows shaped like legacy JSON entries."""
         try:
