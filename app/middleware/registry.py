@@ -1,4 +1,14 @@
-"""Middleware registration and request pipeline."""
+"""Middleware registration and request pipeline.
+
+Synopsis:
+Composes common helpers and focused guards into the request/response middleware
+chain while preserving execution order.
+
+Glossary:
+- Before-request hook: Function executed before route handlers.
+- After-request hook: Function executed after route handlers.
+- Passive public asset: Static/SEO path that bypasses heavy middleware checks.
+"""
 
 from __future__ import annotations
 

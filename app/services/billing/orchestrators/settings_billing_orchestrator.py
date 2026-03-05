@@ -3,6 +3,10 @@
 Synopsis:
 Provides billing payloads needed by settings surfaces that handle plan changes,
 payment-method management, and add-on purchases.
+
+Glossary:
+- Pricing data: Aggregated provider/tier pricing payload for UI.
+- Stripe customer: Stored billing profile identifier for organization.
 """
 
 from __future__ import annotations

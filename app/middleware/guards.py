@@ -3,6 +3,11 @@
 Synopsis:
 Contains focused guard functions for edge-origin auth, developer context, and
 billing enforcement.
+
+Glossary:
+- Edge-origin auth: Shared-secret header check for trusted edge traffic.
+- Developer context: Session-backed org selection/masquerade state for dev users.
+- Billing enforcement: Access gating based on orchestrated billing decision actions.
 """
 
 from __future__ import annotations

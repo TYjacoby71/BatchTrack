@@ -2,6 +2,11 @@
 
 Synopsis:
 Holds reusable config/request helpers so guard modules stay focused.
+
+Glossary:
+- Request ID: Correlation identifier propagated through request/response headers.
+- Permission scope: Route classification indicating developer/customer access intent.
+- Security headers: Browser hardening headers applied on responses.
 """
 
 from __future__ import annotations

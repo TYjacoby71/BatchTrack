@@ -3,6 +3,10 @@
 Synopsis:
 Centralizes Stripe checkout-finalization and conversion payload enrichment used
 by billing callback routes.
+
+Glossary:
+- Checkout finalization: Resolve provider session into app org/user provisioning.
+- Conversion payload: Analytics payload enriched with checkout metadata.
 """
 
 from __future__ import annotations

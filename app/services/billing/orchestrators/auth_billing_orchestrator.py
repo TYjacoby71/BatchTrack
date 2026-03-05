@@ -3,6 +3,10 @@
 Synopsis:
 Centralizes app-access billing checks used by middleware, login, and permission
 evaluation so those layers share one policy interpretation.
+
+Glossary:
+- Access decision: Canonical allow/upgrade/lock action from policy service.
+- Enforcement-exempt route: Route allowed even when upgrade is required.
 """
 
 from __future__ import annotations

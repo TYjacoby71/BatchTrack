@@ -2,6 +2,10 @@
 
 Synopsis:
 Provides lightweight shared data shapes for billing orchestrators.
+
+Glossary:
+- Subscription standing: Boolean access verdict plus reason string.
+- Settings context: Normalized billing payload for settings templates.
 """
 
 from __future__ import annotations

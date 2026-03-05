@@ -3,6 +3,11 @@
 Synopsis:
 Organizes billing behavior into explicit orchestrators and shared helpers so
 auth, settings, public signup, and provisioning flows stay consistent.
+
+Glossary:
+- Orchestrator: Facade that coordinates one billing workflow area.
+- Helper: Reusable low-level utility for tier/status normalization.
+- Core model: Shared typed data shape used by orchestrators.
 """
 
 from .orchestrators.account_provisioning_orchestrator import (

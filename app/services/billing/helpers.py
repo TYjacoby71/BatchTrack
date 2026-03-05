@@ -3,6 +3,10 @@
 Synopsis:
 Shared helper functions used across billing orchestrators for tier and status
 normalization.
+
+Glossary:
+- Billing-exempt tier: Tier that bypasses paid-provider standing checks.
+- Tier integration: Provider configuration validity for a subscription tier.
 """
 
 from __future__ import annotations

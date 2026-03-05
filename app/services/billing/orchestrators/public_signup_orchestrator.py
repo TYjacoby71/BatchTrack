@@ -3,6 +3,10 @@
 Synopsis:
 Encapsulates how public routes prepare signup pricing context and dispatch
 checkout submissions to Stripe-backed flows.
+
+Glossary:
+- Signup context: Normalized request state used to render/process signup.
+- Submission result: Redirect/flash/view-state payload returned by processing.
 """
 
 from __future__ import annotations

@@ -1,4 +1,12 @@
-"""Response security-header middleware utilities."""
+"""Response security-header middleware utilities.
+
+Synopsis:
+Applies request-correlation and browser hardening headers to outgoing responses.
+
+Glossary:
+- HSTS: Strict-Transport-Security header for HTTPS-only browser behavior.
+- CSP: Content-Security-Policy header controlling allowed resource sources.
+"""
 
 from __future__ import annotations
 
