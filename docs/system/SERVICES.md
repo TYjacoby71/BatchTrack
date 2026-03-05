@@ -187,6 +187,20 @@ alerts = DashboardAlertService.get_dashboard_alerts()
 - Keeps business policy out of request middleware
 - Used by both middleware and login flows so hard-lock behavior is consistent
 
+### 9.1 Billing Domain Orchestrators (package: `app/services/billing/orchestrators/`)
+
+**Authority:** Workflow-specific billing facades for auth, signup, settings, and checkout finalization
+
+**Key Modules:**
+- `auth_billing_orchestrator.py` – shared auth/middleware billing decisions
+- `public_signup_orchestrator.py` – public signup pricing/checkout flow orchestration
+- `settings_billing_orchestrator.py` – billing context assembly for settings pages
+- `account_provisioning_orchestrator.py` – checkout finalization + conversion enrichment
+
+**Notes:**
+- Keeps route handlers thin by grouping billing workflow entrypoints by surface.
+- Delegates policy and provider primitives to `BillingAccessPolicyService` and `BillingService`.
+
 ### 10. Timer Service (`app/services/timer_service.py`)
 
 **Authority:** Production timer management

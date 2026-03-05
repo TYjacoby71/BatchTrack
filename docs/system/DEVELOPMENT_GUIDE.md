@@ -88,7 +88,8 @@ When running locally without PostgreSQL or Redis (e.g. ephemeral CI runners, clo
 
 ## Relevance Check (2026-02-17)
 Validated against:
-- `app/middleware.py`
+- `app/middleware/registry.py`
+- `app/middleware/guards.py`
 - `app/route_access.py`
 - `app/utils/permissions.py`
 - `app/services/inventory_adjustment/`

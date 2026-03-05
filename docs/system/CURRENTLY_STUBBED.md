@@ -5,7 +5,7 @@ This document consolidates stubs, placeholders, no-ops, and partially implemente
 ## Integrations
 
 - Whop billing provider [STUBBED]
-  - Files: `app/services/billing_service.py`, `app/services/whop_service.py`, `app/blueprints/auth/routes.py` (whop_login route)
+  - Files: `app/services/billing_service.py`, `app/services/whop_service.py`, `app/blueprints/auth/whop_routes.py` (`/auth/whop-login`)
   - Notes: Pricing, checkout, webhook handling are stubbed; logs warn integration is disabled.
 
 - POS/Shopify linkage [PARTIAL/STUBBED]
