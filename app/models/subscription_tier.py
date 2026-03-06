@@ -45,6 +45,9 @@ class SubscriptionTier(db.Model):
         db.String(64), nullable=False, unique=True
     )  # "Solo Plan", "Team Plan"
     description = db.Column(db.Text, nullable=True)
+    marketing_tagline = db.Column(db.String(255), nullable=True)
+    marketing_summary = db.Column(db.Text, nullable=True)
+    marketing_bullets = db.Column(db.Text, nullable=True)
 
     # Tier categorization for sorting/organization
     tier_type = db.Column(

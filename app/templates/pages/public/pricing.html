@@ -107,6 +107,13 @@
     font-size: var(--theme-ext-size-ad1cdf8362);
   }
 
+  .tier-summary {
+    margin-top: calc(var(--theme-ext-space-59ce73ca4e) * -1);
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+    color: var(--theme-ext-color-b6d5805367);
+    font-size: var(--theme-ext-size-e87070bfde);
+  }
+
   .tier-price-row {
     margin-top: var(--theme-ext-space-124a5c3518);
     margin-bottom: var(--theme-ext-space-7a506f4f36);
@@ -372,6 +379,9 @@
           </span>
           <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
+          {% if tier.marketing_summary_html and tier.marketing_summary and (tier.marketing_summary|lower) != (tier.tagline|lower) %}
+          <p class="tier-summary">{{ tier.marketing_summary_html }}</p>
+          {% endif %}
           {% if has_billing_options %}
           <div class="tier-price-row">
             {% if has_monthly_option %}
@@ -385,11 +395,17 @@
           </div>
           {% endif %}
           <ul class="tier-feature-list">
+            {% if tier.marketing_bullets_html %}
+            {% for bullet in tier.marketing_bullets_html[:6] %}
+            <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ bullet }}</span></li>
+            {% endfor %}
+            {% else %}
             {% for feature in tier.feature_highlights[:6] %}
             <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ feature }}</span></li>
             {% endfor %}
+            {% endif %}
           </ul>
-          {% if tier.feature_total > (tier.feature_highlights|length) %}
+          {% if not tier.marketing_bullets_html and tier.feature_total > (tier.feature_highlights|length) %}
           <div class="small text-muted mb-3">+ {{ tier.feature_total - (tier.feature_highlights|length) }} more capabilities inside the app</div>
           {% endif %}
           <div class="mt-auto d-grid gap-2 align-items-start">
