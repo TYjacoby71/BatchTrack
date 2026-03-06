@@ -26,6 +26,7 @@ from .affiliate_service import AffiliateService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_service import SignupService
+from .tier_marketing_copy import build_marketing_copy
 
 logger = logging.getLogger(__name__)
 
@@ -678,6 +679,15 @@ class SignupCheckoutService:
             payload[tier_id] = {
                 "name": str(getattr(tier_obj, "name", None) or "Plan"),
                 "description": str(getattr(tier_obj, "description", None) or "").strip(),
+                "marketing_tagline": str(
+                    getattr(tier_obj, "marketing_tagline", None) or ""
+                ).strip(),
+                "marketing_summary": str(
+                    getattr(tier_obj, "marketing_summary", None) or ""
+                ).strip(),
+                "marketing_bullets": str(
+                    getattr(tier_obj, "marketing_bullets", None) or ""
+                ).strip(),
                 "price_display": monthly_price_display,
                 "monthly_price_display": monthly_price_display,
                 "stripe_lookup_key": monthly_lookup_key,
@@ -875,6 +885,13 @@ class SignupCheckoutService:
         cards: list[dict[str, Any]] = []
         for tier_id, tier_data in available_tiers.items():
             normalized_tier = dict(tier_data or {})
+            marketing_copy = build_marketing_copy(
+                marketing_tagline=normalized_tier.get("marketing_tagline"),
+                marketing_summary=normalized_tier.get("marketing_summary"),
+                marketing_bullets=normalized_tier.get("marketing_bullets"),
+                legacy_description=normalized_tier.get("description"),
+                default_tagline="Monthly plan access.",
+            )
             tier_description = str(normalized_tier.get("description") or "").strip()
             cards.append(
                 {
@@ -886,6 +903,14 @@ class SignupCheckoutService:
                         or "Monthly pricing at secure checkout"
                     ),
                     "description": tier_description,
+                    "tagline": marketing_copy.get("tagline") or "",
+                    "summary": marketing_copy.get("summary") or "",
+                    "summary_html": marketing_copy.get("summary_html"),
+                    "bullets": marketing_copy.get("bullets") or [],
+                    "bullet_html_items": marketing_copy.get("bullets_html") or [],
+                    "uses_legacy_description": bool(
+                        marketing_copy.get("uses_legacy_description")
+                    ),
                     "is_free": bool(normalized_tier.get("is_free", False)),
                 }
             )
