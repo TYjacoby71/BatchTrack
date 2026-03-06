@@ -17,6 +17,7 @@ from app.extensions import db
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
 from app.utils.permissions import any_permission_required, has_permission, require_permission
+from app.utils.settings import is_feature_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -119,13 +120,22 @@ def dashboard():
         .all()
     )
 
-    affiliate_page = request.args.get("affiliate_page", 1, type=int)
-    affiliate_context = AffiliateService.build_organization_dashboard_context(
-        organization, page=affiliate_page, per_page=15
+    is_developer_user = current_user.user_type == "developer"
+    affiliate_feature_visible = bool(
+        is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI") or is_developer_user
     )
-    affiliate_tab_visible = has_permission(current_user, "organization.manage_billing") or has_permission(
-        current_user, "affiliates.view_org_dashboard"
+    can_view_affiliate_tab = bool(
+        is_developer_user
+        or has_permission(current_user, "organization.manage_billing")
+        or has_permission(current_user, "affiliates.view_org_dashboard")
     )
+    affiliate_tab_visible = affiliate_feature_visible and can_view_affiliate_tab
+    affiliate_context = {}
+    if affiliate_tab_visible:
+        affiliate_page = request.args.get("affiliate_page", 1, type=int)
+        affiliate_context = AffiliateService.build_organization_dashboard_context(
+            organization, page=affiliate_page, per_page=15
+        )
     affiliate_payout_account = (
         AffiliateService.get_or_create_payout_account(organization)
         if affiliate_tab_visible

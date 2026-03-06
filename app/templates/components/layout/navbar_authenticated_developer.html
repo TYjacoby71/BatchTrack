@@ -2,6 +2,7 @@
 Synopsis:
 Authenticated developer navigation and developer/customer switcher menus.
 #}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 <!-- Developer Navigation -->
 <div class="navbar-nav me-auto">
     <span class="navbar-text text-danger">
@@ -72,7 +73,9 @@ Authenticated developer navigation and developer/customer switcher menus.
         <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
         {% endif %}
         <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+        {% if help_nav_visible %}
         <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+        {% endif %}
         <li><hr class="dropdown-divider"></li>
         <!-- Admin -->
         <li><h6 class="dropdown-header">Admin</h6></li>

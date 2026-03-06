@@ -55,7 +55,7 @@
             </button>
         </li>
         {% endif %}
-        {% if current_user.user_type == 'customer' and current_user.organization %}
+        {% if affiliate_tab_visible %}
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="affiliate-tab" data-bs-toggle="tab" data-bs-target="#affiliate" type="button" role="tab">
                 <i class="fas fa-handshake"></i> Affiliate
@@ -93,7 +93,7 @@
             {% include 'settings/components/billing_tab.html' %}
         </div>
         {% endif %}
-        {% if current_user.user_type == 'customer' and current_user.organization %}
+        {% if affiliate_tab_visible %}
         <div class="tab-pane fade" id="affiliate" role="tabpanel">
             {% include 'settings/components/affiliate_tab.html' %}
         </div>

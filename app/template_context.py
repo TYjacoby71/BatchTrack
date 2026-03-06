@@ -20,11 +20,11 @@ from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
 from app.extensions import db
+from app.services.marketing_content_service import MarketingContentService
 from app.utils.cache_manager import app_cache
 from app.utils.unit_utils import get_global_unit_list
 
 from .services.lifetime_pricing_service import LifetimePricingService
-from .utils.json_store import read_json_file
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -38,8 +38,6 @@ from .utils.timezone_utils import TimezoneUtils
 logger = logging.getLogger(__name__)
 
 
-_REVIEWS_PATH = Path("data/reviews.json")
-_SPOTLIGHTS_PATH = Path("data/spotlights.json")
 _MARKETING_CONTEXT_ENDPOINTS = {
     "core.index",
     "core.homepage",
@@ -313,8 +311,8 @@ def register_template_context(app: Flask) -> None:
             logger.warning("Suppressed exception fallback at app/template_context.py:283", exc_info=True)
             Organization = User = SubscriptionTier = None
 
-        reviews = read_json_file(_REVIEWS_PATH, default=[]) or []
-        all_spotlights = read_json_file(_SPOTLIGHTS_PATH, default=[]) or []
+        reviews = MarketingContentService.get_reviews()
+        all_spotlights = MarketingContentService.get_spotlights()
         spotlights = [
             spotlight for spotlight in all_spotlights if spotlight.get("approved")
         ]

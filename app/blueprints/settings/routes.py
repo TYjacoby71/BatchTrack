@@ -15,6 +15,7 @@ from ...services.billing.orchestrators.settings_billing_orchestrator import (
 from ...utils.permissions import has_permission, require_permission
 from ...utils.settings import (
     get_settings,
+    is_feature_enabled,
     update_settings_payload,
     update_settings_value,
 )
@@ -85,13 +86,24 @@ def index():
         current_user.organization
     )
     pricing_data = billing_context.pricing_data
-    affiliate_page = request.args.get("affiliate_page", 1, type=int)
-    affiliate_context = AffiliateService.build_user_settings_context(
-        current_user,
-        base_url=request.url_root,
-        page=affiliate_page,
-        per_page=10,
+    is_developer_user = current_user.user_type == "developer"
+    affiliate_tab_visible = bool(
+        is_developer_user
+        or (
+            is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI")
+            and current_user.user_type == "customer"
+            and current_user.organization
+        )
     )
+    affiliate_context = {}
+    if affiliate_tab_visible:
+        affiliate_page = request.args.get("affiliate_page", 1, type=int)
+        affiliate_context = AffiliateService.build_user_settings_context(
+            current_user,
+            base_url=request.url_root,
+            page=affiliate_page,
+            per_page=10,
+        )
 
     return render_template(
         "settings/index.html",
@@ -104,6 +116,7 @@ def index():
         TimezoneUtils=TimezoneUtils,
         pricing_data=pricing_data,
         affiliate_context=affiliate_context,
+        affiliate_tab_visible=affiliate_tab_visible,
     )
 
 
