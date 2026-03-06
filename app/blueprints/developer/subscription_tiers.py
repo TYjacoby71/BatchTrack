@@ -110,6 +110,9 @@ def manage_tiers():
             "id": tier.id,  # Include the tier ID
             "name": tier.name,
             "description": tier.description,
+            "marketing_tagline": tier.marketing_tagline,
+            "marketing_summary": tier.marketing_summary,
+            "marketing_bullets": tier.marketing_bullets,
             "user_limit": tier.user_limit,
             "is_customer_facing": tier.is_customer_facing,
             "is_available": getattr(tier, "is_available", True),
@@ -165,6 +168,9 @@ def create_tier():
         # Data Collection
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "")
+        marketing_tagline = (request.form.get("marketing_tagline") or "").strip()
+        marketing_summary = (request.form.get("marketing_summary") or "").strip()
+        marketing_bullets = request.form.get("marketing_bullets", "")
 
         def _parse_int_allow_neg1(text, default):
             try:
@@ -263,6 +269,9 @@ def create_tier():
         tier = SubscriptionTier(
             name=name,
             description=description,
+            marketing_tagline=marketing_tagline or None,
+            marketing_summary=marketing_summary or None,
+            marketing_bullets=(marketing_bullets or "").strip() or None,
             user_limit=user_limit,
             max_users=max_users,
             max_recipes=max_recipes,
@@ -386,6 +395,15 @@ def edit_tier(tier_id):
         try:
             tier.name = request.form.get("name", tier.name)
             tier.description = request.form.get("description", tier.description)
+            tier.marketing_tagline = (
+                (request.form.get("marketing_tagline") or "").strip() or None
+            )
+            tier.marketing_summary = (
+                (request.form.get("marketing_summary") or "").strip() or None
+            )
+            tier.marketing_bullets = (
+                (request.form.get("marketing_bullets") or "").strip() or None
+            )
             tier.is_customer_facing = "is_customer_facing" in request.form
             # Allow -1 for unlimited
             try:
@@ -711,6 +729,9 @@ def api_get_tiers():
                 "key": str(tier.id),  # Use ID as key for API
                 "name": tier.name,
                 "description": tier.description,
+                "marketing_tagline": tier.marketing_tagline,
+                "marketing_summary": tier.marketing_summary,
+                "marketing_bullets": tier.marketing_bullets,
                 "user_limit": tier.user_limit,
                 "billing_provider": tier.billing_provider,
                 "is_billing_exempt": tier.is_billing_exempt,

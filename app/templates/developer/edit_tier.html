@@ -28,8 +28,47 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="description" class="form-label">Description</label>
+                                    <label for="marketing_tagline" class="form-label">Marketing Tagline</label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="marketing_tagline"
+                                        name="marketing_tagline"
+                                        value="{{ tier.marketing_tagline or '' }}"
+                                        maxlength="255"
+                                        placeholder="Built for makers scaling production"
+                                    >
+                                    <div class="form-text">Optional short top line for pricing/signup cards.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="marketing_summary" class="form-label">Marketing Summary</label>
+                                    <textarea
+                                        class="form-control"
+                                        id="marketing_summary"
+                                        name="marketing_summary"
+                                        rows="2"
+                                        placeholder="Best for growing brands that need stronger inventory and batch controls."
+                                    >{{ tier.marketing_summary or '' }}</textarea>
+                                    <div class="form-text">Optional short summary shown above card bullets. Supports inline <code>**bold**</code>, <code>*italic*</code>, and <code>`code`</code>.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="marketing_bullets" class="form-label">Marketing Bullets</label>
+                                    <textarea
+                                        class="form-control"
+                                        id="marketing_bullets"
+                                        name="marketing_bullets"
+                                        rows="5"
+                                        placeholder="- Unlimited recipes&#10;- FIFO inventory controls&#10;- Team collaboration"
+                                    >{{ tier.marketing_bullets or '' }}</textarea>
+                                    <div class="form-text">Optional, one bullet per line. Prefixes like <code>-</code>, <code>*</code>, and <code>1.</code> are accepted.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description (Legacy Fallback)</label>
                                     <textarea class="form-control" id="description" name="description" rows="3">{{ tier.description or '' }}</textarea>
+                                    <div class="form-text">Existing fallback content. If structured fields above are blank, cards continue to use this text.</div>
                                 </div>
 
                                 <div class="mb-3">

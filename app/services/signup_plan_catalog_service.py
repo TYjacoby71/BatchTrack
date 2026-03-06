@@ -16,6 +16,7 @@ import logging
 from ..models.subscription_tier import SubscriptionTier
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
+from .tier_marketing_copy import build_marketing_copy
 from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import coerce_int, normalize_token_set
 
@@ -223,9 +224,30 @@ class SignupPlanCatalogService:
                 )
             )
             price_display = monthly_price_display or "Contact Sales"
+            marketing_copy = build_marketing_copy(
+                marketing_tagline=getattr(tier_obj, "marketing_tagline", None),
+                marketing_summary=getattr(tier_obj, "marketing_summary", None),
+                marketing_bullets=getattr(tier_obj, "marketing_bullets", None),
+                legacy_description=getattr(tier_obj, "description", None),
+            )
             available_tiers[str(tier_obj.id)] = {
                 "name": tier_obj.name,
                 "description": str(getattr(tier_obj, "description", "") or "").strip(),
+                "marketing_tagline": str(
+                    getattr(tier_obj, "marketing_tagline", "") or ""
+                ).strip(),
+                "marketing_summary": str(
+                    getattr(tier_obj, "marketing_summary", "") or ""
+                ).strip(),
+                "marketing_bullets": str(
+                    getattr(tier_obj, "marketing_bullets", "") or ""
+                ).strip(),
+                "resolved_marketing_tagline": marketing_copy.get("tagline") or "",
+                "resolved_marketing_summary": marketing_copy.get("summary") or "",
+                "resolved_marketing_bullets": marketing_copy.get("bullets") or [],
+                "resolved_marketing_summary_html": marketing_copy.get("summary_html"),
+                "resolved_marketing_bullets_html": marketing_copy.get("bullets_html")
+                or [],
                 "price_display": price_display,
                 "monthly_price_display": monthly_price_display,
                 "yearly_price_display": yearly_price_display,
