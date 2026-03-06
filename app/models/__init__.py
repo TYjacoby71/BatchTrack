@@ -116,6 +116,7 @@ except ImportError:
 from .batchbot_credit import BatchBotCreditBundle
 from .domain_event import DomainEvent
 from .freshness_snapshot import FreshnessSnapshot
+from . import user_lifecycle  # noqa: F401  # register User lifecycle hooks
 
 # Import inventory lot model
 from .inventory_lot import InventoryLot
