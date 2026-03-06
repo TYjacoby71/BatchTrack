@@ -160,6 +160,22 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "title": "Affiliate program",
+        "description": "Controls visibility of affiliate entry points in the UI.",
+        "flags": [
+            {
+                "key": "FEATURE_AFFILIATE_PROGRAM_UI",
+                "label": "Affiliate UI Entry Points",
+                "status": "wired",
+                "default_enabled": True,
+                "description": (
+                    "Show affiliate navigation and tabs on public, settings, and "
+                    "organization surfaces. Does not disable existing affiliate data."
+                ),
+            },
+        ],
+    },
+    {
         "title": "Commerce & POS integrations",
         "description": "Stubbed flags for future ecommerce and POS entry points.",
         "flags": [

@@ -19,6 +19,7 @@ Glossary:
 {% if public_header_signup_source %}
 {% set public_header_signup_href = url_for('core.signup_alias', source=public_header_signup_source) %}
 {% endif %}
+{% set affiliate_nav_visible = is_feature_enabled('FEATURE_AFFILIATE_PROGRAM_UI') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 
 <a class="navbar-brand text-primary" href="{{ public_header_home_url }}" aria-label="BatchTrack home">
     <img
@@ -51,9 +52,11 @@ Glossary:
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('pricing_routes.pricing') }}">Pricing</a>
         </li>
+        {% if affiliate_nav_visible %}
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('core.affiliates_info') }}">Affiliates</a>
         </li>
+        {% endif %}
         {% if show_staging_variant_switcher %}
         <li class="nav-item dropdown">
             <a
