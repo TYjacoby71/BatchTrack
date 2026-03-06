@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from migrations.postgres_helpers import safe_add_column, safe_drop_column
 
 
-revision = "0031_subscription_tier_marketing_copy"
+revision = "0031_sub_tier_marketing_copy"
 down_revision = "0030_marketing_lead_capture"
 branch_labels = None
 depends_on = None
