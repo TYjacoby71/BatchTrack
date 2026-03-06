@@ -697,19 +697,43 @@ def quick_signup():
 
             db.session.commit()
 
+            verification_email_sent = False
             if verification_enabled:
                 try:
-                    EmailService.send_verification_email(
+                    verification_email_sent = EmailService.send_verification_email(
                         user.email,
                         user.email_verification_token,
                         user.first_name or user.username,
                     )
+                    if not verification_email_sent:
+                        user.email_verification_token = None
+                        user.email_verification_sent_at = None
+                        try:
+                            db.session.commit()
+                        except Exception as clear_exc:
+                            db.session.rollback()
+                            logger.warning(
+                                "Quick-signup failed to clear verification cooldown fields for user %s: %s",
+                                user.id,
+                                clear_exc,
+                            )
                 except Exception as exc:
                     logger.warning(
                         "Quick-signup verification email failed for %s: %s",
                         user.email,
                         exc,
                     )
+                    user.email_verification_token = None
+                    user.email_verification_sent_at = None
+                    try:
+                        db.session.commit()
+                    except Exception as clear_exc:
+                        db.session.rollback()
+                        logger.warning(
+                            "Quick-signup failed to clear verification cooldown fields for user %s after send exception: %s",
+                            user.id,
+                            clear_exc,
+                        )
 
             quick_signup_completion_properties = {
                 "signup_source": signup_source,
@@ -732,10 +756,16 @@ def quick_signup():
             SessionService.rotate_user_session(user)
             session["onboarding_welcome"] = True
             if verification_enabled:
-                flash(
-                    "Account created. Please verify your email while you complete setup.",
-                    "info",
-                )
+                if verification_email_sent:
+                    flash(
+                        "Account created. Please verify your email while you complete setup.",
+                        "info",
+                    )
+                else:
+                    flash(
+                        "Account created. We could not send a verification email right now; use resend verification and check email provider settings.",
+                        "warning",
+                    )
 
             return redirect(next_url)
         except Exception as exc:
