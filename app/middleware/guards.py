@@ -237,3 +237,40 @@ def enforce_billing():
                 exc_info=True,
             )
         return None
+
+
+def enforce_customer_onboarding_completion():
+    """Keep first-run onboarding mandatory until checklist completion."""
+    if not current_user.is_authenticated:
+        return None
+    if getattr(current_user, "user_type", None) != "customer":
+        return None
+
+    first_name = (getattr(current_user, "first_name", None) or "").strip()
+    last_name = (getattr(current_user, "last_name", None) or "").strip()
+    missing_required_profile = not (first_name and last_name)
+    requires_onboarding = bool(session.get("onboarding_welcome")) or missing_required_profile
+    if not requires_onboarding:
+        return None
+
+    endpoint = request.endpoint or ""
+    path = request.path or ""
+    if endpoint == "onboarding.welcome" or path.startswith("/onboarding/"):
+        return None
+
+    if wants_json_response():
+        return (
+            jsonify(
+                {
+                    "error": "onboarding_required",
+                    "message": "Complete onboarding before continuing.",
+                    "redirect_url": url_for("onboarding.welcome"),
+                }
+            ),
+            428,
+        )
+
+    if not session.get("onboarding_completion_required_notice"):
+        flash("Please complete onboarding before continuing.", "warning")
+        session["onboarding_completion_required_notice"] = True
+    return redirect(url_for("onboarding.welcome"))

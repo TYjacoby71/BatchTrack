@@ -277,39 +277,6 @@ class SignupService:
             except Exception as bonus_error:
                 logger.warning("Failed to grant BatchBot signup bonus: %s", bonus_error)
 
-            if verification_enabled:
-                try:
-                    verification_email_sent = EmailService.send_verification_email(
-                        owner_user.email,
-                        owner_user.email_verification_token,
-                        owner_user.first_name or owner_user.username,
-                    )
-                    if not verification_email_sent:
-                        owner_user.email_verification_token = None
-                        owner_user.email_verification_sent_at = None
-                        try:
-                            db.session.commit()
-                        except Exception as clear_exc:
-                            db.session.rollback()
-                            logger.warning(
-                                "Failed to clear verification cooldown fields for user %s: %s",
-                                owner_user.id,
-                                clear_exc,
-                            )
-                except Exception as email_error:
-                    logger.warning("Failed to send verification email: %s", email_error)
-                    owner_user.email_verification_token = None
-                    owner_user.email_verification_sent_at = None
-                    try:
-                        db.session.commit()
-                    except Exception as clear_exc:
-                        db.session.rollback()
-                        logger.warning(
-                            "Failed to clear verification cooldown fields for user %s after send exception: %s",
-                            owner_user.id,
-                            clear_exc,
-                        )
-
             try:
                 EmailService.send_welcome_email(
                     owner_user.email,
