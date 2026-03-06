@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 from .authz import configure_login_manager
 from .blueprints_registry import register_blueprints
 from .config import ENV_DIAGNOSTICS
-from .extensions import cache, csrf, db, limiter, migrate, server_session
+from .extensions import cache, csrf, db, limiter, mail, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
 from .resilience import register_resilience_handlers
@@ -44,6 +44,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     _configure_db_timeouts(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    mail.init_app(app)
 
     _configure_cache(app)
     _configure_sessions(app)
