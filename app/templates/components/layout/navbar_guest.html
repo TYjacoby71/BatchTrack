@@ -3,6 +3,7 @@ Synopsis:
 Guest navigation with optional public marketing header component.
 #}
 {% set affiliate_nav_visible = is_feature_enabled('FEATURE_AFFILIATE_PROGRAM_UI') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 {% if use_public_header %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
 {% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else none %}
@@ -24,7 +25,9 @@ Guest navigation with optional public marketing header component.
         {% if global_library_enabled %}
         <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Library</a></li>
         {% endif %}
+        {% if help_nav_visible %}
         <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+        {% endif %}
     </ul>
 </div>
 {% endif %}

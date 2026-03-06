@@ -2,6 +2,7 @@
 Synopsis:
 Authenticated customer navigation and role-aware menu sections.
 #}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 <!-- Customer Navigation -->
 <div class="navbar-nav me-auto">
 </div>
@@ -17,11 +18,13 @@ Authenticated customer navigation and role-aware menu sections.
             🔧 Tools
         </a>
     </li>
+    {% if help_nav_visible %}
     <li class="nav-item">
         <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
             ❓ Help
         </a>
     </li>
+    {% endif %}
     <li class="nav-item">
         <div class="navbar-text">
             <span id="header-clock" class="text-muted">🕐 Loading...</span>
@@ -87,7 +90,9 @@ Authenticated customer navigation and role-aware menu sections.
             </a>
         </li>
         <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+        {% if help_nav_visible %}
         <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+        {% endif %}
         <li><hr class="dropdown-divider"></li>
         <!-- Settings -->
         <li><h6 class="dropdown-header">Settings</h6></li>
@@ -130,7 +135,9 @@ Authenticated customer navigation and role-aware menu sections.
         <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
         {% endif %}
         <li><a class="dropdown-item" href="/tools">🔧 Tools</a></li>
+        {% if help_nav_visible %}
         <li><a class="dropdown-item" href="{{ url_for('help_routes.help_overview') }}">❓ Help</a></li>
+        {% endif %}
         <li><hr class="dropdown-divider"></li>
         <!-- Admin -->
         <li><h6 class="dropdown-header">Admin</h6></li>

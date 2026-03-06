@@ -176,6 +176,22 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "title": "Help center",
+        "description": "Controls whether Help Center entry points are visible in the UI.",
+        "flags": [
+            {
+                "key": "FEATURE_HELP_PAGE_DISPLAY",
+                "label": "Help Page Display",
+                "status": "wired",
+                "default_enabled": False,
+                "description": (
+                    "Show Help Center links in public and authenticated navigation "
+                    "plus public CTA surfaces."
+                ),
+            },
+        ],
+    },
+    {
         "title": "Commerce & POS integrations",
         "description": "Stubbed flags for future ecommerce and POS entry points.",
         "flags": [
