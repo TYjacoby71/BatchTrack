@@ -1,5 +1,3 @@
-import re
-
 from bs4 import BeautifulSoup
 
 
@@ -24,7 +22,7 @@ def test_pricing_page_uses_lightweight_shell_without_heavy_assets(app):
     assert "bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" in html
 
 
-def test_pricing_checkout_labels_are_tier_specific(app):
+def test_pricing_checkout_labels_use_proceed_to_checkout_copy(app):
     client = app.test_client()
     response = client.get("/pricing")
     assert response.status_code == 200
@@ -32,15 +30,20 @@ def test_pricing_checkout_labels_are_tier_specific(app):
 
     assert "Checkout Monthly" not in html
     assert "Checkout Yearly" not in html
+    assert "Monthly and yearly plans" not in html
 
     soup = BeautifulSoup(html, "html.parser")
     checkout_links = [
         link.get_text(strip=True)
         for link in soup.find_all("a")
-        if "Checkout" in link.get_text(strip=True)
+        if "pricing-checkout-link" in (link.get("class") or [])
     ]
+    if not checkout_links:
+        # Empty checkout links are valid when no customer-facing tiers are
+        # eligible in the current fixture state.
+        return
     for label in checkout_links:
-        assert re.match(r"Checkout\s+[A-Za-z0-9][A-Za-z0-9\s-]*\s+(Monthly|Yearly|Lifetime)$", label)
+        assert label == "Proceed to checkout"
 
 
 def test_pricing_comparison_section_rows_use_data_cells(app):

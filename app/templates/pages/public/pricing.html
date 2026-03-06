@@ -355,7 +355,7 @@
   <section class="mb-4 mb-lg-5 pricing-deferred-section" id="plans">
     <div class="section-heading">
       <div>
-        <h2>Monthly and yearly plans</h2>
+        <h2>Monthly plans</h2>
         <p>Pick a tier and go straight to secure checkout from this page.</p>
       </div>
       <span class="text-muted small">Plans shown are ordered from smaller to larger tiers</span>
@@ -363,8 +363,7 @@
     <div class="row g-3">
       {% for tier in pricing_tiers %}
       {% set has_monthly_option = tier.signup_monthly_url %}
-      {% set has_yearly_option = tier.signup_yearly_url %}
-      {% set has_billing_options = has_monthly_option or has_yearly_option %}
+      {% set has_billing_options = has_monthly_option %}
       <div class="{{ pricing_tier_column_class }}">
         <article class="tier-card">
           <span class="tier-chip">
@@ -395,32 +394,17 @@
           <div class="mt-auto d-grid gap-2 align-items-start">
             {% if has_billing_options %}
             <div class="tier-billing-toggle" role="group" aria-label="{{ tier.name }} billing options">
-              {% if has_monthly_option %}
               <a
                 href="{{ tier.signup_monthly_url }}"
-                class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %} pricing-checkout-link"
+                class="btn btn-sm btn-primary pricing-checkout-link"
                 data-tier-id="{{ tier.tier_id }}"
                 data-tier-key="{{ tier.key }}"
                 data-tier-name="{{ tier.name }}"
                 data-billing-mode="standard"
                 data-billing-cycle="monthly"
               >
-                Checkout {{ tier.name }} Monthly
+                Proceed to checkout
               </a>
-              {% endif %}
-              {% if has_yearly_option %}
-              <a
-                href="{{ tier.signup_yearly_url }}"
-                class="btn btn-sm btn-outline-primary pricing-checkout-link"
-                data-tier-id="{{ tier.tier_id }}"
-                data-tier-key="{{ tier.key }}"
-                data-tier-name="{{ tier.name }}"
-                data-billing-mode="standard"
-                data-billing-cycle="yearly"
-              >
-                Checkout {{ tier.name }} Yearly
-              </a>
-              {% endif %}
             </div>
             {% else %}
             <a
@@ -432,7 +416,7 @@
               data-billing-mode="standard"
               data-billing-cycle="monthly"
             >
-              Explore {{ tier.name }}
+              Proceed to checkout
             </a>
             {% endif %}
           </div>

@@ -68,6 +68,7 @@ class PublicPricingPageService:
             db_tiers,
             include_live_pricing=True,
             allow_live_pricing_network=True,
+            include_yearly_pricing=False,
         )
 
         pricing_tiers: list[dict[str, Any]] = []

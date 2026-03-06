@@ -177,11 +177,6 @@ Shared analytics runtime helpers and page-level event capture wiring.
             tier: url.searchParams.get('tier') || null,
             lifetime_tier: url.searchParams.get('lifetime_tier') || null
           });
-        } else if (isLoginDestination) {
-          window.BTAnalytics.capture('public_login_cta_clicked', {
-            cta_text: ctaText,
-            destination_path: path
-          });
         }
       });
     });
