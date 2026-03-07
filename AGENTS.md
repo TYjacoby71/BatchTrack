@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Synopsis
-This file defines default execution behavior for coding agents in this repository. The default is implementation-only work with minimal overhead. Validation, test expansion, and PR-finalization steps run only when explicitly requested by the user.
+This file defines default execution behavior for coding agents in this repository. The default is implementation-only work with minimal overhead and no testing. Validation, test expansion, and PR-finalization steps run only when explicitly requested by the user.
 
 ## Glossary
 - **Implementation mode**: Default mode for normal feature/bug work.
@@ -12,6 +12,7 @@ This file defines default execution behavior for coding agents in this repositor
 
 ### 1) Default mode: Implementation mode
 - Do implementation first.
+- Do **not** run automated or manual tests unless the user explicitly requests testing.
 - Do **not** add new regression tests by default.
 - Do **not** run `pytest`, docs guard, or dependency-install loops by default.
 - Do **not** run repeated validation loops.

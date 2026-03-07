@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const emitCheckoutClick = (payload) => {
         window.BTAnalytics.capture('proceed_to_checkout', payload);
-        window.BTAnalytics.capture('pay_clicked', payload);
     };
 
     document.querySelectorAll('.upgrade-checkout-form').forEach((form) => {

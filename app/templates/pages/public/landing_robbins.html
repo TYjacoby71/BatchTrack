@@ -8,6 +8,7 @@ Glossary:
 - Calm workflow: Low-friction step-by-step UX that reduces cognitive overload.
 #}
 {% extends "layout.html" %}
+{% set help_page_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 
 {% block head %}
 <style>
@@ -269,9 +270,11 @@ Glossary:
       <a href="{{ url_for('core.signup_alias', source=public_header_signup_source if public_header_signup_source is defined else 'lp_robbins_start_free_trial') }}" class="btn btn-primary btn-lg">
         Start Free Trial
       </a>
+      {% if help_page_visible %}
       <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
         Visit Help Center
       </a>
+      {% endif %}
     </div>
   </section>
 </div>
