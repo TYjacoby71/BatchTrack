@@ -2,15 +2,21 @@
 Synopsis:
 Provider-specific analytics loader snippets (GA/PostHog).
 #}
-{% if ga_measurement_id %}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+{% set gtag_loader_id = ga_measurement_id or google_ads_conversion_id %}
+{% if gtag_loader_id %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ gtag_loader_id }}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+  {% if ga_measurement_id %}
   gtag('config', {{ ga_measurement_id | tojson }}, {
     anonymize_ip: true
   });
+  {% endif %}
+  {% if google_ads_conversion_id %}
+  gtag('config', {{ google_ads_conversion_id | tojson }});
+  {% endif %}
 </script>
 {% endif %}
 {% if posthog_api_key %}

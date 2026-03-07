@@ -25,6 +25,20 @@ FIELDS = [
         "recommended": "G-XXXXXXXXXX",
     },
     {
+        "key": "GOOGLE_ADS_CONVERSION_ID",
+        "cast": "str",
+        "default": None,
+        "description": "Google Ads conversion id used for direct conversion tags (AW-XXXXXXXXXX).",
+        "recommended": "AW-XXXXXXXXXX",
+    },
+    {
+        "key": "GOOGLE_ADS_PURCHASE_CONVERSION_LABEL",
+        "cast": "str",
+        "default": None,
+        "description": "Google Ads purchase conversion label paired with GOOGLE_ADS_CONVERSION_ID.",
+        "recommended": "your_purchase_conversion_label",
+    },
+    {
         "key": "POSTHOG_PROJECT_API_KEY",
         "cast": "str",
         "default": None,

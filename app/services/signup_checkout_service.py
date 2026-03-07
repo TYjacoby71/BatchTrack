@@ -21,6 +21,7 @@ from flask import url_for
 
 from ..extensions import db
 from ..models.subscription_tier import SubscriptionTier
+from ..utils.analytics_attribution import extract_click_ids
 from .analytics_tracking_service import AnalyticsTrackingService
 from .affiliate_service import AffiliateService
 from .billing_service import BillingService
@@ -54,6 +55,9 @@ class SignupRequestContext:
     prefill_email: str
     prefill_phone: str
     signup_primary_tier_id: str | None
+    gclid: str | None = None
+    wbraid: str | None = None
+    gbraid: str | None = None
 
 
 # --- SignupViewState ---
@@ -87,6 +91,9 @@ class SignupSubmission:
     effective_promo_code: str | None
     detected_timezone: str | None
     client_first_landing_at: int | None = None
+    gclid: str | None = None
+    wbraid: str | None = None
+    gbraid: str | None = None
     price_lookup_key_override: str | None = None
     stripe_coupon_id: str | None = None
     stripe_promotion_code_id: str | None = None
@@ -141,6 +148,7 @@ class SignupCheckoutService:
             "billing_mode", request.form.get("billing_mode", "")
         )
 
+        click_ids = extract_click_ids(request)
         db_tiers = cls._load_signup_customer_facing_tiers()
         db_tiers = cls._filter_signup_display_tiers(
             db_tiers=db_tiers, preselected_tier=preselected_tier
@@ -245,6 +253,9 @@ class SignupCheckoutService:
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
             signup_primary_tier_id=signup_primary_tier_id,
+            gclid=click_ids.get("gclid"),
+            wbraid=click_ids.get("wbraid"),
+            gbraid=click_ids.get("gbraid"),
         )
 
     @staticmethod
@@ -312,6 +323,9 @@ class SignupCheckoutService:
             "default_tier_id": default_tier_id,
             "contact_email": view_state.contact_email,
             "contact_phone": view_state.contact_phone,
+            "attribution_gclid": context.gclid,
+            "attribution_wbraid": context.wbraid,
+            "attribution_gbraid": context.gbraid,
             "signup_primary_tier_id": context.signup_primary_tier_id,
             "selected_paid_tier_id": selected_paid_tier_id,
             "signup_plan_cards": signup_plan_cards,
@@ -564,6 +578,9 @@ class SignupCheckoutService:
             client_first_landing_at=cls._parse_client_epoch_ms(
                 form_data.get("client_first_landing_at")
             ),
+            gclid=cls._normalize_click_id(form_data.get("gclid") or context.gclid),
+            wbraid=cls._normalize_click_id(form_data.get("wbraid") or context.wbraid),
+            gbraid=cls._normalize_click_id(form_data.get("gbraid") or context.gbraid),
         )
 
         if not context.has_lifetime_capacity and submission.selected_mode == "lifetime":
@@ -761,6 +778,12 @@ class SignupCheckoutService:
             metadata["referral_code"] = context.referral_code
         if submission.effective_promo_code:
             metadata["promo_code"] = submission.effective_promo_code
+        if submission.gclid:
+            metadata["gclid"] = submission.gclid
+        if submission.wbraid:
+            metadata["wbraid"] = submission.wbraid
+        if submission.gbraid:
+            metadata["gbraid"] = submission.gbraid
 
         return metadata
 
@@ -947,6 +970,17 @@ class SignupCheckoutService:
             return None
         if parsed < 946684800000 or parsed > 4102444800000:
             return None
+        return parsed
+
+    @staticmethod
+    def _normalize_click_id(raw_value: Any) -> str | None:
+        if raw_value in (None, ""):
+            return None
+        parsed = str(raw_value).strip()
+        if not parsed:
+            return None
+        if len(parsed) > 256:
+            parsed = parsed[:256]
         return parsed
 
     @staticmethod

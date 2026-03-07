@@ -104,6 +104,9 @@
                     {% if oauth_user_info %}
                     <input type="hidden" name="oauth_signup" value="true">
                     {% endif %}
+                    <input id="attributionGclidInput" type="hidden" name="gclid" value="{{ attribution_gclid or '' }}">
+                    <input id="attributionWbraidInput" type="hidden" name="wbraid" value="{{ attribution_wbraid or '' }}">
+                    <input id="attributionGbraidInput" type="hidden" name="gbraid" value="{{ attribution_gbraid or '' }}">
                 </form>
             </div>
         </div>
@@ -151,10 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const upsellLifetimeBtn = document.getElementById('upsellLifetimeBtn');
     const upsellMonthlyBtn = document.getElementById('upsellMonthlyBtn');
     const upsellDismissBtn = document.getElementById('upsellDismissBtn');
-    const canTrack = Boolean(window.BTAnalytics && typeof window.BTAnalytics.capture === 'function');
+    const analyticsEvents = (
+        window.BTAnalyticsEvents &&
+        typeof window.BTAnalyticsEvents.emit === 'function'
+    ) ? window.BTAnalyticsEvents : null;
     const capture = (eventName, properties) => {
-        if (!canTrack || !eventName) return;
-        window.BTAnalytics.capture(eventName, properties || {});
+        if (!analyticsEvents || !eventName) return;
+        analyticsEvents.emit(eventName, properties || {});
+    };
+    const captureProceedToCheckout = (properties) => {
+        if (!analyticsEvents) return;
+        if (typeof analyticsEvents.proceedToCheckout === 'function') {
+            analyticsEvents.proceedToCheckout(properties || {});
+            return;
+        }
+        analyticsEvents.emit('proceed_to_checkout', properties || {});
     };
 
     capture('signup_page_landed', {
@@ -244,6 +258,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 upsertHidden('client_first_landing_at', firstLandingAt);
             }
         }
+        if (
+            window.BTAnalytics &&
+            typeof window.BTAnalytics.getAttributionParams === 'function'
+        ) {
+            const attribution = window.BTAnalytics.getAttributionParams() || {};
+            if (attribution.gclid) {
+                upsertHidden('gclid', attribution.gclid);
+            }
+            if (attribution.wbraid) {
+                upsertHidden('wbraid', attribution.wbraid);
+            }
+            if (attribution.gbraid) {
+                upsertHidden('gbraid', attribution.gbraid);
+            }
+        }
         checkoutForm.submit();
     };
 
@@ -263,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             artisanUpsellOffer.has_remaining &&
             String(tierId) === String(artisanTierId)
         );
-        capture('proceed_to_checkout', {
+        captureProceedToCheckout({
             checkout_surface: 'signup_plan_card',
             signup_source: signupSource,
             tier_id: String(tierId),
@@ -300,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 base_tier_id: String((selectedTierInput && selectedTierInput.value) || ''),
                 lifetime_tier: String((artisanUpsellOffer && artisanUpsellOffer.key) || '')
             });
-            capture('proceed_to_checkout', {
+            captureProceedToCheckout({
                 checkout_surface: 'lifetime_upgrade_modal',
                 signup_source: signupSource,
                 tier_id: String((selectedTierInput && selectedTierInput.value) || ''),
@@ -324,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!applied) {
                 applyStandardMonthly();
             }
-            capture('proceed_to_checkout', {
+            captureProceedToCheckout({
                 checkout_surface: 'lifetime_upgrade_modal',
                 signup_source: signupSource,
                 tier_id: String((selectedTierInput && selectedTierInput.value) || ''),
