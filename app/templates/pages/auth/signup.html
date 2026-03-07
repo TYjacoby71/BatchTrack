@@ -75,7 +75,7 @@
                             <p class="plan-note mb-1">No credit card required.</p>
                             {% endif %}
                             <div class="plan-card-cta-wrap mt-auto pt-2">
-                                <button type="button" class="btn btn-success w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
+                                <button type="button" class="btn plan-cta-orange w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
                                     {% if card.is_free %}
                                     Get Started Free
                                     {% elif tier_id == (signup_primary_tier_id|string) %}
@@ -467,6 +467,18 @@ document.addEventListener('DOMContentLoaded', () => {
 .plan-note {
     color: #5e6f91;
     font-size: 0.82rem;
+}
+
+.plan-cta-orange {
+    background: linear-gradient(45deg, #ff6b6b, #ffa500);
+    border: none;
+    color: #ffffff;
+}
+
+.plan-cta-orange:hover,
+.plan-cta-orange:focus {
+    filter: brightness(0.95);
+    color: #ffffff;
 }
 
 .plan-card-cta-wrap {

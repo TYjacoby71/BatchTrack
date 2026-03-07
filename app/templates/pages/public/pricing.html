@@ -135,6 +135,18 @@
     flex-wrap: wrap;
   }
 
+  .pricing-card-cta {
+    background: linear-gradient(45deg, #ff6b6b, #ffa500);
+    border: none;
+    color: #ffffff;
+  }
+
+  .pricing-card-cta:hover,
+  .pricing-card-cta:focus {
+    filter: brightness(0.95);
+    color: #ffffff;
+  }
+
   .tier-feature-list {
     list-style: none;
     padding: var(--theme-ext-space-369a047e0c);
@@ -411,7 +423,7 @@
               {% if has_monthly_option %}
               <a
                 href="{{ tier.signup_monthly_url }}"
-                class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %} pricing-checkout-link"
+                class="btn btn-sm pricing-card-cta pricing-checkout-link"
                 data-tier-id="{{ tier.tier_id }}"
                 data-tier-key="{{ tier.key }}"
                 data-tier-name="{{ tier.name }}"
@@ -424,7 +436,7 @@
               {% if has_yearly_option %}
               <a
                 href="{{ tier.signup_yearly_url }}"
-                class="btn btn-sm btn-outline-primary pricing-checkout-link"
+                class="btn btn-sm pricing-card-cta pricing-checkout-link"
                 data-tier-id="{{ tier.tier_id }}"
                 data-tier-key="{{ tier.key }}"
                 data-tier-name="{{ tier.name }}"
@@ -438,7 +450,7 @@
             {% else %}
             <a
               href="{{ url_for('core.signup_alias', source='pricing_' ~ tier.key ~ '_overview') }}"
-              class="btn btn-outline-primary btn-sm pricing-checkout-link"
+              class="btn btn-sm pricing-card-cta pricing-checkout-link"
               data-tier-id="{{ tier.tier_id }}"
               data-tier-key="{{ tier.key }}"
               data-tier-name="{{ tier.name }}"
