@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
             purchasePayload.items = [itemPayload];
         }
 
-        window.gtag('event', 'conversion_event_purchase', purchasePayload);
+        window.gtag('event', 'purchase', purchasePayload);
         if (googleAdsSendTo) {
             const adsConversionPayload = {
                 send_to: googleAdsSendTo,
