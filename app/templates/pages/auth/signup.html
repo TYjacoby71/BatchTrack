@@ -53,8 +53,10 @@
                             aria-pressed="{{ 'true' if tier_id == selected_paid_tier else 'false' }}"
                         >
                             <div class="plan-chip mb-2{% if card.is_free %} plan-chip-free{% endif %}">{{ card.name }}</div>
-                            <h3 class="h5 fw-bold mb-1">{{ card.name }}</h3>
                             <p class="plan-price mb-2{% if card.is_free %} plan-price-free{% endif %}">{{ card.monthly_price_display }}</p>
+                            {% if card.tagline and (card.tagline|lower) != (card.summary|lower) %}
+                            <p class="plan-blurb mb-1">{{ card.tagline }}</p>
+                            {% endif %}
                             {% if card.summary_html %}
                             <p class="plan-copy mb-2">{{ card.summary_html }}</p>
                             {% elif card.description %}
@@ -64,22 +66,16 @@
                             {% endif %}
                             {% if card.bullet_html_items %}
                             <ul class="plan-feature-list mb-2">
-                                {% for bullet in card.bullet_html_items[:5] %}
+                                {% for bullet in card.bullet_html_items %}
                                 <li><span class="plan-feature-check" aria-hidden="true">✓</span><span>{{ bullet }}</span></li>
                                 {% endfor %}
                             </ul>
                             {% endif %}
-                            {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and not card.is_free %}
-                            <p class="plan-note mb-1">Includes a 14-day free trial.</p>
-                            {% endif %}
                             {% if card.is_free %}
                             <p class="plan-note mb-1">No credit card required.</p>
                             {% endif %}
-                            {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and artisan_upsell_offer %}
-                            <p class="plan-note mb-2">Founding Member lifetime option appears at checkout step.</p>
-                            {% endif %}
                             <div class="plan-card-cta-wrap mt-auto pt-2">
-                                <button type="button" class="btn btn-success w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
+                                <button type="button" class="btn plan-cta-orange w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
                                     {% if card.is_free %}
                                     Start Tracking Now
                                     {% else %}
@@ -397,23 +393,26 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .plan-chip {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     border-radius: 999px;
-    background: #e8f0ff;
-    border: 1px solid #9eb8ee;
-    color: #244a97;
-    font-size: 0.72rem;
-    text-transform: uppercase;
+    background: #f3f7ff;
+    border: 1px solid #b9caef;
+    color: #111827;
+    font-size: 0.94rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.01em;
+    padding: 0.26rem 0.72rem;
+    line-height: 1.1;
+    width: 100%;
+    text-align: center;
 }
 
 .plan-chip-free {
-    background: #e6f4ea;
-    border-color: #a8d8b6;
-    color: #1f6b39;
+    background: #edf8f1;
+    border-color: #afdcc0;
+    color: #111827;
 }
 
 .plan-price {
@@ -429,6 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .plan-copy {
     color: #4f5f80;
+}
+
+.plan-blurb {
+    color: #5e6f91;
+    font-size: 0.88rem;
 }
 
 .plan-feature-list {
@@ -456,6 +460,18 @@ document.addEventListener('DOMContentLoaded', () => {
 .plan-note {
     color: #5e6f91;
     font-size: 0.82rem;
+}
+
+.plan-cta-orange {
+    background: linear-gradient(45deg, #ff6b6b, #ffa500);
+    border: none;
+    color: #ffffff;
+}
+
+.plan-cta-orange:hover,
+.plan-cta-orange:focus {
+    filter: brightness(0.95);
+    color: #ffffff;
 }
 
 .plan-card-cta-wrap {
