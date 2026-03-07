@@ -71,14 +71,8 @@
                                 {% endfor %}
                             </ul>
                             {% endif %}
-                            {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and not card.is_free %}
-                            <p class="plan-note mb-1">Includes a 14-day free trial.</p>
-                            {% endif %}
                             {% if card.is_free %}
                             <p class="plan-note mb-1">No credit card required.</p>
-                            {% endif %}
-                            {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and artisan_upsell_offer %}
-                            <p class="plan-note mb-2">Founding Member lifetime option appears at checkout step.</p>
                             {% endif %}
                             <div class="plan-card-cta-wrap mt-auto pt-2">
                                 <button type="button" class="btn btn-success w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
